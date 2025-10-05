@@ -3,6 +3,8 @@
  * Used by both download-images.js and dynamic-calendar-loader.js
  */
 
+const path = require('path');
+
 /**
  * Generate a clean filename from a URL
  * Handles Eventbrite URLs specially with nested URL decoding
@@ -38,7 +40,13 @@ function generateFilenameFromUrl(url) {
     // Handle regular URLs
     const parsedUrl = new URL(url);
     const pathname = parsedUrl.pathname;
-    const ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+    let ext = pathname.includes('.') ? pathname.substring(pathname.lastIndexOf('.')) : '.jpg';
+    
+    // Validate extension - if it looks like a timestamp or is invalid, use .jpg
+    if (!ext.match(/^\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+        ext = '.jpg';
+    }
+    
     let basename = pathname.substring(pathname.lastIndexOf('/') + 1).replace(ext, '') || 'image';
     
     // Sanitize filename - be more conservative with special characters
@@ -85,9 +93,10 @@ function cleanImageUrl(imageUrl) {
 /**
  * Generate a filename for favicon URLs with domain-based naming
  * @param {string} faviconUrl - The favicon URL
+ * @param {string} size - Optional size suffix (e.g., '64', '256')
  * @returns {string} - The generated filename
  */
-function generateFaviconFilename(faviconUrl) {
+function generateFaviconFilename(faviconUrl, size = '64') {
     const parsedUrl = new URL(faviconUrl);
     
     // For Google favicon service, extract the target domain from query parameter
@@ -116,8 +125,8 @@ function generateFaviconFilename(faviconUrl) {
         ext = '.svg';
     }
     
-    // Add size suffix for px-sized favicons (prefer 64px for map markers)
-    const sizeSuffix = '-64px';
+    // Add size suffix for px-sized favicons
+    const sizeSuffix = `-${size}px`;
     return `favicon-${cleanDomain}${sizeSuffix}${ext}`;
 }
 
@@ -151,8 +160,18 @@ function slugify(text) {
  */
 function generateEventFilename(imageUrl, eventInfo) {
     const cleanUrl = cleanImageUrl(imageUrl);
-    const baseFilename = generateFilenameFromUrl(cleanUrl);
-    const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '.jpg';
+    
+    // Extract extension from URL - default to .jpg if none found
+    let ext = '.jpg';
+    const urlExtMatch = cleanUrl.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)(\?|$)/i);
+    if (urlExtMatch) {
+        ext = '.' + urlExtMatch[1].toLowerCase();
+    }
+    
+    // Validate extension - if it looks like a timestamp or is invalid, use .jpg
+    if (!ext.match(/^\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+        ext = '.jpg';
+    }
     
     // Build filename parts
     const parts = [];
@@ -176,6 +195,26 @@ function generateEventFilename(imageUrl, eventInfo) {
 }
 
 /**
+ * Get the directory path for an event based on its type and date
+ * @param {Object} eventInfo - Event information (name, date, recurring) - REQUIRED
+ * @param {string} basePath - The base path (e.g., 'img/events')
+ * @returns {string} - The directory path
+ */
+function getEventDirectoryPath(eventInfo, basePath = 'img/events') {
+    if (eventInfo.recurring) {
+        // Recurring events go in the recurring folder
+        return `${basePath}/recurring`;
+    } else {
+        // One-time events go in year/month folders (YYYY/MM format)
+        const date = eventInfo.startDate instanceof Date ? 
+            eventInfo.startDate : new Date(eventInfo.startDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // MM format
+        return `${basePath}/one-time/${year}/${month}`;
+    }
+}
+
+/**
  * Convert an image URL to a local path with event awareness
  * @param {string} imageUrl - The image URL
  * @param {Object} eventInfo - Event information (name, date, recurring) - REQUIRED
@@ -183,19 +222,20 @@ function generateEventFilename(imageUrl, eventInfo) {
  * @returns {string} - The local file path
  */
 function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events') {
-    const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
     const filename = generateEventFilename(imageUrl, eventInfo);
-    return `${basePath}/${subdirectory}/${filename}`;
+    const dir = getEventDirectoryPath(eventInfo, basePath);
+    return `${dir}/${filename}`;
 }
 
 /**
  * Convert a favicon URL to a local path
  * @param {string} faviconUrl - The favicon URL
  * @param {string} basePath - The base path (e.g., 'img/favicons')
+ * @param {string} size - Optional size for favicons (e.g., '64', '256')
  * @returns {string} - The local file path
  */
-function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
-    const filename = generateFaviconFilename(faviconUrl);
+function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons', size = '64') {
+    const filename = generateFaviconFilename(faviconUrl, size);
     return `${basePath}/${filename}`;
 }
 
@@ -227,6 +267,83 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
     }
 }
 
+/**
+ * Generate a filename from URL with type and size support
+ * @param {string} url - The image URL
+ * @param {string} type - The type of image ('event' or 'favicon')
+ * @param {string} size - Optional size for favicons (e.g., '64', '256')
+ * @returns {string} - The generated filename
+ */
+function generateFilename(url, type = 'event', size = null) {
+    if (type === 'favicon') {
+        const baseFilename = generateFaviconFilename(url, size);
+        if (size) {
+            // Check if filename already contains a size suffix to avoid double suffixes
+            const ext = path.extname(baseFilename);
+            const nameWithoutExt = path.basename(baseFilename, ext);
+            
+            // If the filename already contains a size suffix (like -64px), don't add another one
+            if (nameWithoutExt.includes('-64px') || nameWithoutExt.includes('-32px') || nameWithoutExt.includes('-256px')) {
+                return baseFilename;
+            }
+            
+            // Add size suffix for higher quality favicons
+            return `${nameWithoutExt}-${size}px${ext}`;
+        }
+        return baseFilename;
+    }
+    
+    // For non-favicon images, generate a simple filename from URL
+    const cleanUrl = cleanImageUrl(url);
+    const urlObj = new URL(cleanUrl);
+    const pathname = urlObj.pathname;
+    
+    // Extract filename from path
+    let filename = pathname.split('/').pop() || 'image';
+    
+    // Ensure we have a proper extension
+    let ext = '.jpg';
+    const urlExtMatch = filename.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)(\?|$)/i);
+    if (urlExtMatch) {
+        ext = '.' + urlExtMatch[1].toLowerCase();
+        filename = filename.replace(/\.[^.]*$/, ''); // Remove existing extension
+    }
+    
+    // Generate a hash for uniqueness
+    const hash = require('crypto').createHash('md5').update(cleanUrl).digest('hex').substring(0, 8);
+    
+    // Sanitize filename
+    const sanitized = filename
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    
+    return `${sanitized}_${hash}${ext}`;
+}
+
+/**
+ * Generate a unique filename for Linktree profile pictures based on the Linktree URL
+ * @param {string} linktreeUrl - The Linktree URL
+ * @param {string} size - The size suffix (e.g., '32', '64', '256')
+ * @returns {string} - The generated filename
+ */
+function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
+    try {
+        const parsedUrl = new URL(linktreeUrl);
+        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+        const cleanPath = pathname
+            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+            .replace(/-+/g, '-') // Collapse multiple dashes
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+        
+        return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
+    } catch (error) {
+        // Fallback to hash-based filename
+        const hash = simpleHash(linktreeUrl);
+        return `favicon-linktr.ee-${hash}-${size}px.png`;
+    }
+}
+
 
 /**
  * Simple hash function for filename uniqueness
@@ -250,6 +367,9 @@ if (typeof module !== 'undefined' && module.exports) {
         generateFilenameFromUrl,
         generateFaviconFilename,
         generateEventFilename,
+        generateFilename,
+        generateLinktreeFaviconFilename,
+        getEventDirectoryPath,
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
@@ -265,6 +385,9 @@ if (typeof window !== 'undefined') {
         generateFilenameFromUrl,
         generateFaviconFilename,
         generateEventFilename,
+        generateFilename,
+        generateLinktreeFaviconFilename,
+        getEventDirectoryPath,
         cleanImageUrl,
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,

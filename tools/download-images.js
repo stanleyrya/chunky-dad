@@ -8,7 +8,7 @@ const { URL } = require('url');
 const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, convertImageUrlToLocalPath } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, generateFilename, generateLinktreeFaviconFilename, getEventDirectoryPath, cleanImageUrl, convertImageUrlToLocalPath } = require('../js/filename-utils.js');
 
 // Mock logger for Node.js environment
 global.logger = {
@@ -53,12 +53,14 @@ async function downloadEventImage(imageUrl, eventInfo) {
   try {
     // Generate filename using event information
     const filename = generateEventFilename(imageUrl, eventInfo);
-    const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
-    const dir = path.join(EVENTS_DIR, subdirectory);
+    
+    // Get directory structure using shared utility
+    const dir = getEventDirectoryPath(eventInfo, EVENTS_DIR);
+    
     const localPath = path.join(dir, filename);
     const metadataPath = localPath + '.meta';
     
-    // Ensure subdirectory exists
+    // Ensure directory structure exists
     ensureDir(dir);
     
     // Check if we should download
@@ -77,7 +79,7 @@ async function downloadEventImage(imageUrl, eventInfo) {
     // Download the image
     await downloadFile(imageUrl, localPath);
     
-    // Save metadata with event information
+    // Save metadata with event information (only when actually downloading)
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
@@ -299,45 +301,6 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
   });
 }
 
-// Generate filename from URL using shared utility
-function generateFilename(url, type = 'event', size = null) {
-    if (type === 'favicon') {
-        const baseFilename = generateFaviconFilename(url);
-        if (size) {
-            // Check if filename already contains a size suffix to avoid double suffixes
-            const ext = path.extname(baseFilename);
-            const nameWithoutExt = path.basename(baseFilename, ext);
-            
-            // If the filename already contains a size suffix (like -64px), don't add another one
-            if (nameWithoutExt.includes('-64px') || nameWithoutExt.includes('-32px') || nameWithoutExt.includes('-256px')) {
-                return baseFilename;
-            }
-            
-            // Add size suffix for higher quality favicons
-            return `${nameWithoutExt}-${size}px${ext}`;
-        }
-        return baseFilename;
-    }
-    return generateFilenameFromUrl(url);
-}
-
-// Generate a unique filename for Linktree profile pictures based on the Linktree URL
-function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
-    try {
-        const parsedUrl = new URL(linktreeUrl);
-        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
-        const cleanPath = pathname
-            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
-            .replace(/-+/g, '-') // Collapse multiple dashes
-            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-        
-        return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
-    } catch (error) {
-        // Fallback to hash-based filename
-        const hash = simpleHash(linktreeUrl);
-        return `favicon-linktr.ee-${hash}-${size}px.png`;
-    }
-}
 
 // Download image with a custom filename
 async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 'event', isLinktreeProfile = false, targetSize = 96) {
@@ -397,7 +360,7 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
       }
     }
     
-    // Save metadata
+    // Save metadata (only when actually downloading)
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
@@ -483,7 +446,7 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
     // Download the image
     await downloadFile(imageUrl, localPath);
     
-    // Save metadata
+    // Save metadata (only when actually downloading)
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
@@ -562,7 +525,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
       }
     }
     
-    // Save metadata
+    // Save metadata (only when actually downloading)
     const metadata = {
       originalUrl: imageUrl,
       downloadedAt: new Date().toISOString(),
@@ -674,6 +637,8 @@ async function main() {
   ensureDir(EVENTS_DIR);
   ensureDir(EVENTS_ONETIME_DIR);
   ensureDir(EVENTS_RECURRING_DIR);
+  
+  // Note: Year/month subdirectories for one-time events will be created as needed
   
   // Extract image URLs from calendar data
   const imageUrls = extractImageUrls();
