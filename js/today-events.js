@@ -206,7 +206,15 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
       meta.appendChild(recurringBadge);
     }
 
-    const dateBadgeContent = this.getDateBadgeContent(ev);
+    // For recurring events, pass today's date range to get proper date badge
+    const today = new Date();
+    const startOfToday = new Date(today);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+    
+    const calendarPeriod = ev.recurring ? { start: startOfToday, end: endOfToday } : null;
+    const dateBadgeContent = this.getDateBadgeContent(ev, calendarPeriod);
     if (dateBadgeContent) {
       const dateBadge = document.createElement('span');
       dateBadge.className = 'date-badge';
@@ -263,13 +271,40 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
     // Add link functionality - link directly to the specific event
     card.addEventListener('click', () => {
       const eventSlug = ev.slug || ev.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-      const eventDate = ev.startDate ? new Date(ev.startDate).toISOString().split('T')[0] : '';
+      
+      // For recurring events, calculate the actual occurrence date for today
+      let eventDate = '';
+      if (ev.startDate) {
+        if (ev.recurring) {
+          // For recurring events, find the actual occurrence date for today
+          const today = new Date();
+          const startOfToday = new Date(today);
+          startOfToday.setHours(0, 0, 0, 0);
+          const endOfToday = new Date(today);
+          endOfToday.setHours(23, 59, 59, 999);
+          
+          const visibleDates = this.getVisibleEventDates(ev, startOfToday, endOfToday);
+          if (visibleDates.length > 0) {
+            // Use the first occurrence found for today
+            eventDate = visibleDates[0].toISOString().split('T')[0];
+          } else {
+            // Fallback to original date if no occurrence found for today
+            eventDate = new Date(ev.startDate).toISOString().split('T')[0];
+          }
+        } else {
+          // For one-time events, use the original date
+          eventDate = new Date(ev.startDate).toISOString().split('T')[0];
+        }
+      }
+      
       const eventUrl = eventSlug ? `${ev.cityKey}/?event=${encodeURIComponent(eventSlug)}${eventDate ? `&date=${eventDate}` : ''}` : `${ev.cityKey}/`;
       logger.userInteraction('EVENT', 'Today event clicked', { 
         eventSlug, 
         cityKey: ev.cityKey, 
         eventUrl,
-        eventName: ev.name 
+        eventName: ev.name,
+        isRecurring: ev.recurring,
+        eventDate
       });
       window.location.href = eventUrl;
     });
