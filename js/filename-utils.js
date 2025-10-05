@@ -204,31 +204,14 @@ function generateEventFilename(imageUrl, eventInfo = {}) {
 /**
  * Convert an image URL to a local path with event awareness
  * @param {string} imageUrl - The image URL
- * @param {Object} eventInfo - Event information (name, date, recurring)
+ * @param {Object} eventInfo - Event information (name, date, recurring) - REQUIRED
  * @param {string} basePath - The base path (e.g., 'img/events')
  * @returns {string} - The local file path
  */
-function convertImageUrlToLocalPath(imageUrl, eventInfo = null, basePath = 'img/events') {
-    if (!imageUrl || !imageUrl.startsWith('http')) {
-        return imageUrl;
-    }
-    
-    try {
-        // Determine subdirectory based on event type
-        let subdirectory = '';
-        if (eventInfo) {
-            subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
-            const filename = generateEventFilename(imageUrl, eventInfo);
-            return `${basePath}/${subdirectory}/${filename}`;
-        } else {
-            // Legacy path for backward compatibility during migration
-            const cleanUrl = cleanImageUrl(imageUrl);
-            const filename = generateFilenameFromUrl(cleanUrl);
-            return `${basePath}/${filename}`;
-        }
-    } catch (error) {
-        return imageUrl; // Return original URL as fallback
-    }
+function convertImageUrlToLocalPath(imageUrl, eventInfo, basePath = 'img/events') {
+    const subdirectory = eventInfo.recurring ? 'recurring' : 'one-time';
+    const filename = generateEventFilename(imageUrl, eventInfo);
+    return `${basePath}/${subdirectory}/${filename}`;
 }
 
 /**

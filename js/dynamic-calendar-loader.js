@@ -1561,33 +1561,18 @@ class DynamicCalendarLoader extends CalendarCore {
     }
     
     // Convert external image URL to local path for cached data
-    convertImageUrlToLocal(imageUrl, eventData = null) {
-        if (!imageUrl || !imageUrl.startsWith('http')) {
-            return imageUrl; // Return as-is if not a valid external URL
-        }
+    convertImageUrlToLocal(imageUrl, eventData) {
+        const eventInfo = {
+            name: eventData.name,
+            startDate: eventData.startDate,
+            recurring: eventData.recurring
+        };
         
-        try {
-            // Use shared utility with event information for better filenames
-            const eventInfo = eventData ? {
-                name: eventData.name,
-                startDate: eventData.startDate,
-                recurring: eventData.recurring
-            } : null;
-            
-            const localPath = window.FilenameUtils.convertImageUrlToLocalPath(
-                imageUrl,
-                eventInfo,
-                'img/events'
-            );
-            
-            return localPath;
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to convert image URL to local path', {
-                imageUrl,
-                error: error.message
-            });
-            return imageUrl; // Return original URL as fallback
-        }
+        return window.FilenameUtils.convertImageUrlToLocalPath(
+            imageUrl,
+            eventInfo,
+            'img/events'
+        );
     }
 
 
