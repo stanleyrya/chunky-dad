@@ -943,13 +943,7 @@ body.index-page main {
     transition: 0.3s;
 }
 
-/* Hero Section */
-.hero {
-    background: var(--solid-primary);
-    color: var(--text-inverse);
-    display: flex;
-    align-items: center;
-}
+/* Hero Section - Removed duplicate rule that was overriding gradient background */
 
 
 
