@@ -53,9 +53,9 @@
     
     /* Section Background Gradients - Progressive Transitions */
     --gradient-hero: var(--primary-color);
-    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 75%);
+    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 25%);
     --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%);
-    --gradient-today-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 25%);
+    --gradient-today-events: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 15%);
     --gradient-directory: var(--secondary-color);
     
     /* Alias for backward compatibility */
