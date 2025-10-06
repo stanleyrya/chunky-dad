@@ -2071,6 +2071,7 @@ body.index-page main {
     -webkit-box-orient: vertical;
     overflow: hidden;
     max-height: calc(var(--event-name-line-height) * 3em);
+    color: var(--text-primary);
 }
 
 .event-time {
@@ -4108,6 +4109,15 @@ footer {
     color: white !important;
     font-weight: bold;
     border-radius: 4px;
+}
+
+/* Selected event text colors */
+.event-item.selected .event-name {
+    color: var(--text-inverse) !important;
+}
+
+.event-item.selected .event-time {
+    color: var(--text-inverse) !important;
 }
 
 
