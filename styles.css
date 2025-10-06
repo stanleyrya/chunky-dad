@@ -104,7 +104,7 @@ body {
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;
-    padding-top: 80px; /* Account for fixed header */
+    padding-top: 60px; /* Account for fixed header */
     overflow-x: hidden; /* Prevent horizontal scroll */
     min-height: 100vh;
     display: flex;
