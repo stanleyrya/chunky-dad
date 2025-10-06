@@ -104,7 +104,7 @@ body {
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;
-    padding-top: 80px; /* Account for fixed header */
+    padding-top: 60px; /* Account for fixed header */
     overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
@@ -3321,10 +3321,6 @@ footer {
 }
 
 @media (max-width: 480px) {
-    body {
-        padding-top: 50px; /* Even smaller header height */
-    }
-    
     header {
         height: 50px;
     }
