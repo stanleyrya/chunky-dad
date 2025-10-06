@@ -3687,7 +3687,7 @@ footer {
     }
 }
 
-/* Calendar controls for medium-small screens */
+/* Calendar controls for medium screens */
 @media (max-width: 768px) {
     .calendar-controls {
         flex-direction: row;
@@ -3696,7 +3696,10 @@ footer {
         flex-wrap: wrap;
         justify-content: center;
     }
-    
+}
+
+/* Calendar controls for medium-small screens */
+@media (max-width: 550px) {
     .view-toggle {
         flex-direction: row;
         gap: 2px;
