@@ -117,14 +117,14 @@ html {
     overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
+* {
+    box-sizing: border-box;
+}
+
 /* Prevent all elements from overflowing on small screens */
 @media (max-width: 768px) {
     body {
         padding-top: 60px; /* Reduced header height */
-    }
-    
-    * {
-        box-sizing: border-box;
     }
     
     header {
@@ -495,21 +495,6 @@ body.index-page header.visible {
     transform: translateZ(0);
 }
 
-/* Large desktop displays - use higher resolution */
-@media (min-width: 1024px) {
-    .hero-logo-img {
-        width: 400px;
-        height: 400px;
-    }
-}
-
-/* Extra large displays - use maximum resolution */
-@media (min-width: 1440px) {
-    .hero-logo-img {
-        width: 512px;
-        height: 512px;
-    }
-}
 
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
@@ -1356,28 +1341,6 @@ body.index-page main {
     overflow: hidden;
 }
 
-.bear-events-compact::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-}
-
-/* Add a subtle separator between sections */
-.bear-events-compact::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-}
 
 .bear-events-compact .container h2 {
     color: var(--text-inverse);
@@ -2971,12 +2934,13 @@ footer {
     display: block;
 }
 
+.nav-container {
+    padding: 0.5rem 1rem;
+    height: 60px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
-    .nav-container {
-        padding: 0.5rem 1rem;
-        height: 60px;
-    }
     
     .nav-menu {
         position: fixed;
@@ -3182,12 +3146,12 @@ footer {
 
     .calendar-controls {
         flex-direction: row;
-        gap: 0.3rem;
+        gap: 0.25rem;
+        width: 100%;
         flex-wrap: wrap;
         justify-content: center;
-        align-items: center;
-        width: 100%;
     }
+
 
     .date-navigation {
         order: 1;
@@ -3555,11 +3519,6 @@ footer {
         font-size: 1.5rem;
     }
 
-    .calendar-controls {
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
 
     .view-btn {
         padding: 0.5rem 0.8rem;
@@ -3731,56 +3690,6 @@ footer {
     }
 }
 
-/* Calendar controls for medium-small screens */
-@media (max-width: 550px) {
-    .calendar-controls {
-        flex-direction: row;
-        gap: 0.25rem;
-        width: 100%;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
-    .view-toggle {
-        flex-direction: row;
-        gap: 2px;
-        padding: 2px;
-        flex-shrink: 0;
-    }
-    
-    .view-btn {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.7rem;
-        min-width: auto;
-    }
-    
-    .date-navigation {
-        width: auto;
-        flex-shrink: 0;
-        max-width: 200px;
-        margin: 0;
-        padding: 0.25rem;
-        gap: 0.5rem;
-    }
-    
-    .nav-btn {
-        width: 30px;
-        height: 30px;
-        font-size: 0.9rem;
-    }
-    
-    .date-range {
-        font-size: 0.7rem;
-        min-width: 80px;
-        padding: 0;
-    }
-    
-    .today-btn {
-        padding: 0.5rem 0.8rem;
-        font-size: 0.7rem;
-        flex-shrink: 0;
-    }
-}
 
 /* Extra aggressive spacing reduction for iPhone and very small screens */
 @media (max-width: 480px) {
@@ -4660,10 +4569,6 @@ footer {
         display: none !important;
     }
 
-    .calendar-day.week-view {
-        min-height: 200px;
-        padding: 1rem;
-    }
 
     .event-item.enhanced {
         padding: 0.5rem 0;
