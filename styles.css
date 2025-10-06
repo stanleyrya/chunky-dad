@@ -123,10 +123,6 @@ html {
         padding-top: 60px; /* Reduced header height */
     }
     
-    * {
-        box-sizing: border-box;
-    }
-    
     header {
         height: 60px;
     }
@@ -386,13 +382,13 @@ body.index-page header.visible {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 2rem;
+    padding: 0.5rem 1rem;
     max-width: 1200px;
     margin: 0 auto;
     position: relative;
     width: 100%;
     box-sizing: border-box;
-    height: 100%;
+    height: 60px;
     /* Ensure dropdowns are not clipped */
     overflow: visible;
 }
@@ -495,21 +491,7 @@ body.index-page header.visible {
     transform: translateZ(0);
 }
 
-/* Large desktop displays - use higher resolution */
-@media (min-width: 1024px) {
-    .hero-logo-img {
-        width: 400px;
-        height: 400px;
-    }
-}
 
-/* Extra large displays - use maximum resolution */
-@media (min-width: 1440px) {
-    .hero-logo-img {
-        width: 512px;
-        height: 512px;
-    }
-}
 
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
@@ -1356,28 +1338,6 @@ body.index-page main {
     overflow: hidden;
 }
 
-.bear-events-compact::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-}
-
-/* Add a subtle separator between sections */
-.bear-events-compact::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-}
 
 .bear-events-compact .container h2 {
     color: var(--text-inverse);
@@ -2973,10 +2933,6 @@ footer {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .nav-container {
-        padding: 0.5rem 1rem;
-        height: 60px;
-    }
     
     .nav-menu {
         position: fixed;
@@ -4660,10 +4616,6 @@ footer {
         display: none !important;
     }
 
-    .calendar-day.week-view {
-        min-height: 200px;
-        padding: 1rem;
-    }
 
     .event-item.enhanced {
         padding: 0.5rem 0;
