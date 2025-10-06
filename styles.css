@@ -142,7 +142,7 @@ html {
 
 /* Header and Navigation */
 header {
-    background: var(--gradient-primary);
+    background: var(--solid-primary);
     box-shadow: 0 2px 10px var(--shadow-light);
     position: fixed;
     top: 0;
@@ -323,7 +323,7 @@ body.index-page header.visible {
     left: 0;
     right: 0;
     bottom: 0;
-    background: var(--gradient-primary);
+    background: var(--solid-primary);
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
@@ -442,7 +442,7 @@ body.index-page header.visible {
 
 /* Hero Section */
 .hero {
-    background: var(--gradient-primary);
+    background: var(--solid-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -451,17 +451,6 @@ body.index-page header.visible {
     padding-bottom: 4rem;
 }
 
-.hero::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-    pointer-events: none;
-}
 
 .hero-container {
     max-width: 1200px;
