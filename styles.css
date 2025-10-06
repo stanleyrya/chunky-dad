@@ -943,16 +943,6 @@ body.index-page main {
     transition: 0.3s;
 }
 
-/* Hero Section - Additional properties for alignment and display */
-.hero {
-    color: var(--text-inverse);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    text-align: center;
-    position: relative;
-}
 
 
 
