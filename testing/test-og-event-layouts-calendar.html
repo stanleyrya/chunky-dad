@@ -3,96 +3,88 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📅 chunky.dad's Toolbox - Layout Architect</title>
+  <title>🎨 OpenGraph Image Studio – chunky.dad</title>
   <link rel="stylesheet" href="../styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@300;400;500;600&family=Poppins:wght@300;400;600;700;900&family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --og-bg-1: var(--gradient-primary);
-      --og-bg-2: var(--gradient-success-alt);
-      --og-bg-3: var(--gradient-secondary);
-      --og-bg-4: linear-gradient(135deg, var(--background-dark) 0%, var(--background-darker) 100%);
-      --og-bg-5: radial-gradient(1000px 400px at 0% 0%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%), var(--gradient-warning);
-      --custom-color-1: #8e2de2;
-      --custom-color-2: #4a00e0;
-    }
-
     body { font-family: 'Poppins', sans-serif; background: var(--background-primary); color: var(--text-primary); }
-    .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
-    header { position: sticky; top: 0; background: var(--gradient-primary); z-index: 10; }
-    nav .nav-container { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; max-width: 1280px; margin: 0 auto; }
+    header { position: sticky; top: 0; background: var(--gradient-primary); z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    nav .nav-container { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; max-width: 1400px; margin: 0 auto; }
     .logo h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; }
     .logo a { color: var(--text-inverse); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
     .logo-img { width: 28px; height: 28px; }
 
     main { padding: 24px 0 40px; }
-    .page-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-    .page-title h2 { font-size: 28px; font-weight: 700; margin: 0; }
-    .subtitle { color: var(--text-secondary); font-size: 14px; }
+    .page-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .page-title h2 { font-size: 32px; font-weight: 700; margin: 0; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .subtitle { color: var(--text-secondary); font-size: 15px; line-height: 1.5; }
 
-    .controls { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; background: var(--background-light); padding: 16px; border-radius: 12px; border: 1px solid var(--border-lighter); margin-bottom: 20px; align-items: end; }
-    .controls .field { grid-column: span 2; }
-    .controls .field-2 { grid-column: span 4; }
-    .controls .field-3 { grid-column: span 6; }
-    .controls .field-4 { grid-column: span 8; }
-    .controls label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
-    .controls input, .controls select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); color: var(--text-primary); }
-    .controls .inline { display: flex; gap: 10px; align-items: end; }
-    .controls .inline > * { flex: 1; }
-    .controls .btn { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-lighter); background: var(--white); cursor: pointer; white-space: nowrap; font-size: 12px; }
-    .controls .btn.primary { background: var(--gradient-primary); color: var(--text-inverse); border: 0; }
+    .controls-panel { background: var(--white); border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 24px; border: 2px solid var(--border-lighter); }
+    .controls-section { margin-bottom: 20px; }
+    .controls-section:last-child { margin-bottom: 0; }
+    .controls-section h3 { font-size: 14px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0; }
+    .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .control-field { display: flex; flex-direction: column; gap: 6px; }
+    .control-field label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+    .control-field input, .control-field select { padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border-lighter); background: var(--white); color: var(--text-primary); font-family: inherit; transition: all 0.2s; }
+    .control-field input:focus, .control-field select:focus { outline: none; border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); }
+    .control-field.full { grid-column: 1 / -1; }
+    .button-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { padding: 10px 18px; border-radius: 8px; border: 1.5px solid var(--border-lighter); background: var(--white); cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; font-family: inherit; }
+    .btn:hover { background: var(--background-light); transform: translateY(-1px); }
+    .btn.primary { background: var(--gradient-primary); color: var(--text-inverse); border: 0; }
+    .btn.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3); }
 
-    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
-    .variant-card { background: var(--white); border: 1px solid var(--border-lighter); border-radius: 14px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
-    .variant-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border-lighter); color: var(--text-secondary); font-size: 12px; }
-    .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #111; display: grid; place-items: center; overflow: hidden; position: relative; }
+    .theme-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+    .theme-option { aspect-ratio: 2/1; border-radius: 10px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; position: relative; overflow: hidden; }
+    .theme-option:hover { transform: scale(1.05); border-color: rgba(255, 107, 53, 0.3); }
+    .theme-option.active { border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2); transform: scale(1.05); }
+    .theme-option .theme-name { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; font-size: 11px; font-weight: 600; text-align: center; }
+
+    /* Theme backgrounds */
+    .theme-classic-night { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); }
+    .theme-cool-neon { background: linear-gradient(135deg, #00d4ff 0%, #090979 100%); }
+    .theme-hot-red { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); }
+    .theme-midnight { background: linear-gradient(135deg, #2c3e50 0%, #000000 100%); }
+    .theme-spotlight { background: radial-gradient(1000px 400px at 0% 0%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%), linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .theme-sunset { background: linear-gradient(135deg, #ff512f 0%, #dd2476 100%); }
+    .theme-ocean { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); }
+    .theme-forest { background: linear-gradient(135deg, #134e5e 0%, #71b280 100%); }
+    .theme-fire { background: linear-gradient(135deg, #f12711 0%, #f5af19 100%); }
+    .theme-blurple { background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%); }
+    .theme-pastel { background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); }
+    .theme-blue-bolt { background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%); }
+    .theme-green-glow { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); }
+    .theme-rainbow { background: conic-gradient(from 180deg at 50% 50%, #ff6a00, #ee0979, #8e2de2, #4a00e0, #00c6ff, #00b09b, #ff6a00); }
+    .theme-emerald { background: linear-gradient(135deg, #1f4037 0%, #99f2c8 100%); }
+    .theme-purple-haze { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .theme-rose-gold { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+    .theme-teal-sea { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+    .theme-dark-purple { background: linear-gradient(135deg, #2c003e 0%, #512b58 100%); }
+    .theme-custom { background: linear-gradient(135deg, var(--custom-color-1, #8e2de2), var(--custom-color-2, #4a00e0)); }
+
+    .custom-colors { display: flex; gap: 12px; align-items: end; }
+    .color-picker-field { flex: 1; }
+    .color-input-wrapper { position: relative; }
+    .color-input-wrapper input[type="color"] { width: 100%; height: 44px; border-radius: 8px; border: 1.5px solid var(--border-lighter); cursor: pointer; }
+
+    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+    .variant-card { background: var(--white); border: 2px solid var(--border-lighter); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); transition: all 0.3s; }
+    .variant-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateY(-2px); }
+    .variant-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 2px solid var(--border-lighter); background: var(--background-light); }
+    .variant-title { font-weight: 700; font-size: 14px; color: var(--text-primary); }
+    .variant-description { font-size: 12px; color: var(--text-secondary); }
+    .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #0a0a0a; display: grid; place-items: center; overflow: hidden; position: relative; }
     .artboard { width: 1200px; height: 630px; position: relative; overflow: hidden; transform-origin: top left; font-family: 'Poppins', sans-serif; }
-
-    /* Theme packs (MUCH MORE colors) - All themes now support custom color override */
-    .t1 { background: var(--og-bg-1); }
-    .t1.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t2 { background: var(--og-bg-2); }
-    .t2.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t3 { background: var(--og-bg-3); }
-    .t3.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t4 { background: var(--og-bg-4); }
-    .t4.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t5 { background: var(--og-bg-5); }
-    .t5.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t6 { background: linear-gradient(135deg, #ff512f, #dd2476); }
-    .t6.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t7 { background: linear-gradient(135deg, #2193b0, #6dd5ed); }
-    .t7.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t8 { background: linear-gradient(135deg, #134e5e, #71b280); }
-    .t8.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t9 { background: linear-gradient(135deg, #f12711, #f5af19); }
-    .t9.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t10 { background: linear-gradient(135deg, #8e2de2, #4a00e0); }
-    .t10.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t11 { background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%); }
-    .t11.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t12 { background: linear-gradient(135deg, #00c6ff, #0072ff); }
-    .t12.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t13 { background: linear-gradient(135deg, #00b09b, #96c93d); }
-    .t13.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t14 { background: conic-gradient(from 180deg at 50% 50%, #ff6a00, #ee0979, #8e2de2, #4a00e0, #00c6ff, #00b09b, #ff6a00); }
-    .t14.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t15 { background: linear-gradient(135deg, #1f4037, #99f2c8); }
-    .t15.custom-override { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
-    .t16 { background: linear-gradient(135deg, var(--custom-color-1), var(--custom-color-2)); }
 
     /* Cover image support */
     .artboard .cover { position: absolute; inset: 0; background-position: center; background-size: cover; background-repeat: no-repeat; z-index: 0; }
 
-
-
-
-
-
     /* LAYOUT: Split Screen */
     .layout-split-screen { background: #000; position: relative; }
-    .layout-split-screen .left-side { position: absolute; left: 0; top: 0; bottom: 0; width: 55%; background: var(--og-bg-1); clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%); z-index: 1; }
+    .layout-split-screen .left-side { position: absolute; left: 0; top: 0; bottom: 0; width: 55%; clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%); z-index: 1; }
     .layout-split-screen .left-side .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.3; }
     .layout-split-screen .left-content { position: absolute; left: 60px; top: 60px; bottom: 60px; width: 420px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
     .layout-split-screen .brand { font-size: 20px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; opacity: 0.9; }
@@ -106,7 +98,7 @@
     /* LAYOUT: Minimal */
     .layout-minimal { background: #fafafa; }
     .layout-minimal .card { position: absolute; inset: 60px; background: #fff; border-radius: 30px; box-shadow: 0 30px 100px rgba(0,0,0,0.15); overflow: hidden; z-index: 1; }
-    .layout-minimal .card-header { height: 280px; background: var(--og-bg-2); position: relative; overflow: hidden; }
+    .layout-minimal .card-header { height: 280px; position: relative; overflow: hidden; }
     .layout-minimal .card-header .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.4; }
     .layout-minimal .card-header .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%); }
     .layout-minimal .card-header .date-badge { position: absolute; top: 30px; right: 30px; background: #fff; color: #333; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
@@ -117,8 +109,7 @@
     .layout-minimal .description { font-size: 16px; color: #888; line-height: 1.6; }
     .layout-minimal .brand { position: absolute; bottom: 30px; left: 60px; font-size: 14px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
-
-    /* NEW LAYOUT: Glass Card */
+    /* LAYOUT: Glass Card */
     .layout-glass { position: relative; backdrop-filter: blur(0px); }
     .layout-glass .cover { filter: brightness(0.6); }
     .layout-glass .glass { position: absolute; inset: 80px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 24px; backdrop-filter: blur(12px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
@@ -128,8 +119,7 @@
     .layout-glass .venue { margin-top: 8px; font-size: 22px; opacity: 0.85; }
     .layout-glass .description { position: absolute; left: 40px; right: 40px; bottom: 40px; font-size: 18px; opacity: 0.95; }
 
-
-    /* NEW LAYOUT: Circle Focus */
+    /* LAYOUT: Circle Focus */
     .layout-circle { position: relative; background: #0b0b0f; }
     .layout-circle .ring { position: absolute; width: 560px; height: 560px; border-radius: 50%; left: 60px; top: 35px; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 60%); border: 3px solid rgba(255,255,255,0.18); }
     .layout-circle .event-image { position: absolute; left: 100px; top: 75px; width: 480px; height: 480px; border-radius: 50%; background-size: cover; background-position: center; box-shadow: 0 20px 80px rgba(0,0,0,0.6); }
@@ -139,10 +129,8 @@
     .layout-circle .venue { margin-top: 6px; font-size: 22px; opacity: 0.8; }
     .layout-circle .description { position: absolute; bottom: 60px; right: 60px; width: 480px; color: #fff; opacity: 0.9; line-height: 1.5; }
 
-    /* SPEECH BUBBLE LAYOUTS - Multiple Variations */
-    
-    /* Original Speech Bubble (logo talks) */
-    .layout-speech { background: var(--og-bg-4); position: relative; }
+    /* Speech Bubble (logo talks) */
+    .layout-speech { position: relative; }
     .layout-speech .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.2; }
     .layout-speech .logo-avatar { position: absolute; left: 80px; bottom: 80px; width: 160px; height: 160px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); object-fit: contain; }
     .layout-speech .speech-bubble { position: absolute; left: 270px; bottom: 160px; max-width: 760px; background: #fff; color: #111; border-radius: 22px; padding: 22px 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); font-size: 26px; line-height: 1.25; }
@@ -151,8 +139,8 @@
     .layout-speech .event-image { position: absolute; right: 80px; top: 80px; width: 340px; height: 220px; background-size: cover; background-position: center; border: 8px solid rgba(255,255,255,0.9); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
     .layout-speech .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.85); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 14px; }
 
-    /* Speech Bubble 2: Event Image Speaks */
-    .layout-speech-event { background: var(--og-bg-1); position: relative; }
+    /* Event Image Speaks */
+    .layout-speech-event { position: relative; }
     .layout-speech-event .event-avatar { position: absolute; right: 80px; bottom: 80px; width: 200px; height: 200px; border-radius: 50%; box-shadow: 0 15px 50px rgba(0,0,0,0.5); border: 8px solid rgba(255,255,255,0.95); background-size: cover; background-position: center; }
     .layout-speech-event .speech-bubble { position: absolute; right: 320px; bottom: 180px; max-width: 700px; background: #fff; color: #111; border-radius: 25px; padding: 28px 32px; box-shadow: 0 25px 70px rgba(0,0,0,0.4); font-size: 28px; line-height: 1.3; font-weight: 600; }
     .layout-speech-event .speech-bubble:after { content: ""; position: absolute; right: -32px; bottom: 28px; width: 0; height: 0; border-top: 24px solid transparent; border-bottom: 24px solid transparent; border-left: 32px solid #fff; filter: drop-shadow(0 8px 8px rgba(0,0,0,0.2)); }
@@ -160,8 +148,8 @@
     .layout-speech-event .event-title { position: absolute; left: 80px; top: 90px; right: 80px; color: #fff; font-size: 56px; line-height: 0.95; font-weight: 900; text-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align: center; }
     .layout-speech-event .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.9); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 16px; }
 
-    /* Speech Bubble 3: Dual Conversation */
-    .layout-speech-dual { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; }
+    /* Dual Conversation */
+    .layout-speech-dual { position: relative; }
     .layout-speech-dual .logo-avatar { position: absolute; left: 60px; top: 120px; width: 120px; height: 120px; object-fit: contain; }
     .layout-speech-dual .event-avatar { position: absolute; right: 60px; bottom: 120px; width: 140px; height: 140px; border-radius: 50%; box-shadow: 0 12px 35px rgba(0,0,0,0.4); border: 5px solid rgba(255,255,255,0.9); background-size: cover; background-position: center; }
     .layout-speech-dual .speech-bubble-1 { position: absolute; left: 200px; top: 80px; max-width: 450px; background: #fff; color: #111; border-radius: 18px; padding: 18px 22px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); font-size: 20px; line-height: 1.3; }
@@ -169,10 +157,7 @@
     .layout-speech-dual .speech-bubble-2 { position: absolute; right: 220px; bottom: 80px; max-width: 480px; background: rgba(255,255,255,0.95); color: #111; border-radius: 18px; padding: 18px 22px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); font-size: 18px; line-height: 1.3; }
     .layout-speech-dual .speech-bubble-2:after { content: ""; position: absolute; right: -18px; bottom: 20px; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 18px solid rgba(255,255,255,0.95); filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); }
 
-
-
-
-    /* Speech Bubble 7: Retro Terminal */
+    /* Retro Terminal */
     .layout-speech-terminal { background: #0f3460; position: relative; }
     .layout-speech-terminal:before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px); }
     .layout-speech-terminal .terminal-window { position: absolute; inset: 60px; background: #001122; border: 2px solid #00ff00; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,255,0,0.1); }
@@ -184,7 +169,7 @@
     .layout-speech-terminal .cursor { animation: blink 1s infinite; }
     @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
 
-    /* Speech Bubble 8: Instagram Story Style */
+    /* Instagram Story */
     .layout-speech-story { background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%); position: relative; }
     .layout-speech-story .story-frame { position: absolute; inset: 40px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
     .layout-speech-story .story-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.7); }
@@ -197,8 +182,8 @@
     .layout-speech-story .story-bubble { position: absolute; left: 30px; right: 30px; bottom: 80px; background: rgba(255,255,255,0.95); color: #333; border-radius: 25px; padding: 24px 28px; font-size: 22px; line-height: 1.3; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
     .layout-speech-story .event-title { position: absolute; left: 30px; right: 30px; top: 50%; transform: translateY(-50%); color: #fff; font-size: 42px; line-height: 1.1; font-weight: 900; text-align: center; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
 
-    /* Speech Bubble 9: Thought Cloud */
-    .layout-speech-thought { background: var(--og-bg-2); position: relative; }
+    /* Thought Cloud */
+    .layout-speech-thought { position: relative; }
     .layout-speech-thought .dreamer { position: absolute; left: 80px; bottom: 80px; width: 180px; height: 180px; object-fit: contain; }
     .layout-speech-thought .thought-cloud { position: absolute; left: 320px; bottom: 200px; max-width: 700px; background: #fff; color: #333; border-radius: 50px; padding: 32px 40px; box-shadow: 0 25px 60px rgba(0,0,0,0.3); font-size: 24px; line-height: 1.4; position: relative; }
     .layout-speech-thought .thought-bubble-1 { position: absolute; left: -40px; bottom: 30px; width: 30px; height: 30px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
@@ -207,8 +192,7 @@
     .layout-speech-thought .event-image { position: absolute; right: 80px; top: 80px; width: 320px; height: 240px; background-size: cover; background-position: center; border-radius: 20px; border: 6px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
     .layout-speech-thought .event-title { position: absolute; left: 80px; top: 80px; max-width: 500px; color: #fff; font-size: 52px; line-height: 1.1; font-weight: 900; text-shadow: 0 6px 25px rgba(0,0,0,0.5); }
 
-
-    /* Speech Bubble 11: Messenger Chat */
+    /* Messenger Chat */
     .layout-speech-messenger { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; }
     .layout-speech-messenger .chat-container { position: absolute; inset: 60px; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
     .layout-speech-messenger .chat-header { position: absolute; top: 0; left: 0; right: 0; height: 80px; background: #4267B2; display: flex; align-items: center; padding: 0 20px; gap: 15px; }
@@ -224,7 +208,7 @@
     .layout-speech-messenger .typing-dot:nth-child(2) { animation-delay: -0.16s; }
     @keyframes typingDot { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
-    /* Speech Bubble 12: Discord Style */
+    /* Discord Chat */
     .layout-speech-discord { background: #36393f; position: relative; }
     .layout-speech-discord .discord-container { position: absolute; inset: 40px; background: #2f3136; border-radius: 8px; overflow: hidden; }
     .layout-speech-discord .discord-sidebar { position: absolute; left: 0; top: 0; bottom: 0; width: 200px; background: #202225; border-right: 1px solid #40444b; }
@@ -242,10 +226,11 @@
     .layout-speech-discord .message-embed { background: #2f3136; border-left: 4px solid #5865f2; border-radius: 4px; padding: 15px; margin-top: 10px; }
     .layout-speech-discord .embed-image { width: 300px; height: 180px; background-size: cover; background-position: center; border-radius: 4px; margin-top: 10px; }
 
-
-
-    .preview-meta { padding: 12px 14px; border-top: 1px solid var(--border-lighter); display: grid; gap: 6px; font-size: 12px; color: var(--text-secondary); }
-    .preview-meta code { background: var(--background-light); padding: 3px 6px; border-radius: 6px; color: var(--text-primary); font-size: 11px; word-break: break-all; }
+    @media (max-width: 768px) {
+      .controls-grid { grid-template-columns: 1fr; }
+      .variants-grid { grid-template-columns: 1fr; }
+      .page-title { flex-direction: column; align-items: start; }
+    }
   </style>
 </head>
 <body>
@@ -262,63 +247,123 @@
   <main>
     <div class="container">
       <div class="page-title">
-        <h2>Creative Event OG Layouts (Calendar-powered)</h2>
-        <div class="subtitle">Select a city and event to auto-fill creative layouts • Now with 12+ Speech Bubble Variations!</div>
+        <div>
+          <h2>🎨 OpenGraph Image Studio</h2>
+          <div class="subtitle">Create stunning social media preview images for your events with 12+ beautiful layouts</div>
+        </div>
       </div>
 
-      <section class="controls">
-        <div class="field">
-          <label for="citySelect">City</label>
-          <select id="citySelect"></select>
+      <div class="controls-panel">
+        <div class="controls-section">
+          <h3>📍 Event Selection</h3>
+          <div class="controls-grid">
+            <div class="control-field">
+              <label for="citySelect">City</label>
+              <select id="citySelect"></select>
+            </div>
+            <div class="control-field" style="grid-column: span 2;">
+              <label for="eventSelect">Event</label>
+              <select id="eventSelect"></select>
+            </div>
+            <div class="control-field">
+              <label for="eventSearch">Search Events</label>
+              <input id="eventSearch" type="text" placeholder="Type to filter...">
+            </div>
+          </div>
+          <div class="button-group" style="margin-top: 12px;">
+            <button id="reloadBtn" class="btn">🔄 Reload Events</button>
+            <button id="randomBtn" class="btn">🎲 Random Event</button>
+          </div>
         </div>
-        <div class="field-2">
-          <label for="eventSelect">Event</label>
-          <select id="eventSelect"></select>
+
+        <div class="controls-section">
+          <h3>🎨 Color Theme</h3>
+          <div class="theme-picker">
+            <div class="theme-option theme-classic-night" data-theme="classic-night">
+              <div class="theme-name">Classic Night</div>
+            </div>
+            <div class="theme-option theme-cool-neon" data-theme="cool-neon">
+              <div class="theme-name">Cool Neon</div>
+            </div>
+            <div class="theme-option theme-hot-red" data-theme="hot-red">
+              <div class="theme-name">Hot Red</div>
+            </div>
+            <div class="theme-option theme-midnight" data-theme="midnight">
+              <div class="theme-name">Midnight</div>
+            </div>
+            <div class="theme-option theme-spotlight" data-theme="spotlight">
+              <div class="theme-name">Spotlight</div>
+            </div>
+            <div class="theme-option theme-sunset" data-theme="sunset">
+              <div class="theme-name">Sunset</div>
+            </div>
+            <div class="theme-option theme-ocean" data-theme="ocean">
+              <div class="theme-name">Ocean</div>
+            </div>
+            <div class="theme-option theme-forest" data-theme="forest">
+              <div class="theme-name">Forest</div>
+            </div>
+            <div class="theme-option theme-fire" data-theme="fire">
+              <div class="theme-name">Fire</div>
+            </div>
+            <div class="theme-option theme-blurple" data-theme="blurple">
+              <div class="theme-name">Blurple</div>
+            </div>
+            <div class="theme-option theme-pastel" data-theme="pastel">
+              <div class="theme-name">Pastel</div>
+            </div>
+            <div class="theme-option theme-blue-bolt" data-theme="blue-bolt">
+              <div class="theme-name">Blue Bolt</div>
+            </div>
+            <div class="theme-option theme-green-glow" data-theme="green-glow">
+              <div class="theme-name">Green Glow</div>
+            </div>
+            <div class="theme-option theme-rainbow" data-theme="rainbow">
+              <div class="theme-name">Rainbow</div>
+            </div>
+            <div class="theme-option theme-emerald" data-theme="emerald">
+              <div class="theme-name">Emerald</div>
+            </div>
+            <div class="theme-option theme-purple-haze" data-theme="purple-haze">
+              <div class="theme-name">Purple Haze</div>
+            </div>
+            <div class="theme-option theme-rose-gold" data-theme="rose-gold">
+              <div class="theme-name">Rose Gold</div>
+            </div>
+            <div class="theme-option theme-teal-sea" data-theme="teal-sea">
+              <div class="theme-name">Teal Sea</div>
+            </div>
+            <div class="theme-option theme-dark-purple" data-theme="dark-purple">
+              <div class="theme-name">Dark Purple</div>
+            </div>
+            <div class="theme-option theme-custom" data-theme="custom">
+              <div class="theme-name">Custom ✨</div>
+            </div>
+          </div>
+          <div class="custom-colors" style="margin-top: 16px;">
+            <div class="color-picker-field control-field">
+              <label for="customA">Custom Color 1</label>
+              <div class="color-input-wrapper">
+                <input id="customA" type="color" value="#8e2de2">
+              </div>
+            </div>
+            <div class="color-picker-field control-field">
+              <label for="customB">Custom Color 2</label>
+              <div class="color-input-wrapper">
+                <input id="customB" type="color" value="#4a00e0">
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="field">
-          <label for="eventSearch">Search</label>
-          <input id="eventSearch" type="text" placeholder="Filter events">
+
+        <div class="controls-section">
+          <h3>🖼️ Cover Image</h3>
+          <div class="control-field full">
+            <label for="coverInput">Image URL (optional - uses event image if available)</label>
+            <input id="coverInput" type="url" placeholder="https://example.com/image.jpg">
+          </div>
         </div>
-        <div class="field">
-          <button id="reloadBtn" class="btn">Reload</button>
-        </div>
-        <div class="field">
-          <button id="randomBtn" class="btn">Random</button>
-        </div>
-        <div class="field">
-          <label for="themeSelect">Theme</label>
-          <select id="themeSelect">
-            <option value="t1">Classic Night</option>
-            <option value="t2">Cool Neon</option>
-            <option value="t3">Hot Red</option>
-            <option value="t4">Midnight</option>
-            <option value="t5">Spotlight</option>
-            <option value="t6">Sunset</option>
-            <option value="t7">Ocean</option>
-            <option value="t8">Forest</option>
-            <option value="t9">Fire</option>
-            <option value="t10">Blurple</option>
-            <option value="t11">Soft Pastel</option>
-            <option value="t12">Blue Bolt</option>
-            <option value="t13">Green Glow</option>
-            <option value="t14">Rainbow Ring</option>
-            <option value="t15">Emerald Mist</option>
-            <option value="t16">Custom</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="customA">Custom A</label>
-          <input id="customA" type="color" value="#8e2de2" title="Custom color A">
-        </div>
-        <div class="field">
-          <label for="customB">Custom B</label>
-          <input id="customB" type="color" value="#4a00e0" title="Custom color B">
-        </div>
-        <div class="field-4">
-          <label for="coverInput">Image URL</label>
-          <input id="coverInput" type="url" placeholder="https://example.com/image.jpg">
-        </div>
-      </section>
+      </div>
 
       <section class="variants-grid" id="variantsGrid"></section>
     </div>
@@ -331,18 +376,20 @@
   <script>
     (function(){
       const COMPONENT = 'EVENT';
-      logger.componentInit(COMPONENT, 'Creative calendar-powered OG builder initialized');
+      logger.componentInit(COMPONENT, 'OpenGraph Image Studio initialized');
 
       const citySelect = document.getElementById('citySelect');
       const eventSelect = document.getElementById('eventSelect');
       const eventSearch = document.getElementById('eventSearch');
       const reloadBtn = document.getElementById('reloadBtn');
       const randomBtn = document.getElementById('randomBtn');
-      const themeSelect = document.getElementById('themeSelect');
       const customA = document.getElementById('customA');
       const customB = document.getElementById('customB');
       const coverInput = document.getElementById('coverInput');
       const grid = document.getElementById('variantsGrid');
+      const themeOptions = document.querySelectorAll('.theme-option');
+
+      let currentTheme = 'classic-night';
 
       class CreativeCalendarPreview extends DynamicCalendarLoader {
         constructor() {
@@ -366,8 +413,9 @@
           this.populateCities();
           await this.loadCity(this.currentCity);
           this.attachHandlers();
+          this.updateThemeVars();
           this.render();
-          logger.componentLoad(COMPONENT, 'Creative builder ready');
+          logger.componentLoad(COMPONENT, 'OpenGraph studio ready');
         }
 
         populateCities() {
@@ -377,12 +425,12 @@
         }
 
         async loadCity(cityKey) {
-          logger.apiCall('CALENDAR', 'Loading calendar for creative builder', { cityKey });
+          logger.apiCall('CALENDAR', 'Loading calendar for OpenGraph studio', { cityKey });
           this.currentCity = cityKey;
           const data = await this.loadCalendarData(cityKey);
           if (!data || !this.allEvents || !this.allEvents.length) {
             logger.warn(COMPONENT, 'No events loaded for city', { cityKey });
-            eventSelect.innerHTML = '';
+            eventSelect.innerHTML = '<option>No events found</option>';
             this.filteredEvents = [];
             this.selectedEvent = null;
             this.render();
@@ -427,8 +475,7 @@
             time: ev.time || 'Time TBA',
             city: getCityConfig(this.currentCity)?.name || 'City',
             description: ev.tea || 'Join us for an amazing bear community event!',
-            cover: (coverInput.value || '').trim() || (ev.image || '').trim(),
-            theme: themeSelect.value
+            cover: (coverInput.value || '').trim() || (ev.image || '').trim()
           };
         }
 
@@ -461,54 +508,58 @@
             this.render();
           });
 
-          [themeSelect, coverInput].forEach(el => {
-            el.addEventListener('input', () => this.render());
-            el.addEventListener('change', () => this.render());
+          coverInput.addEventListener('input', () => this.render());
+
+          // Theme selection
+          themeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+              themeOptions.forEach(opt => opt.classList.remove('active'));
+              option.classList.add('active');
+              currentTheme = option.dataset.theme;
+              this.updateThemeVars();
+              this.render();
+            });
           });
-          
-          // Special handling for color inputs to update CSS vars immediately
+
+          // Set initial theme
+          themeOptions[0].classList.add('active');
+
+          // Custom color inputs
           [customA, customB].forEach(el => {
             el.addEventListener('input', () => {
               this.updateThemeVars();
-              this.render();
+              if (currentTheme === 'custom') {
+                this.render();
+              }
             });
-            el.addEventListener('change', () => {
-              this.updateThemeVars();
-              this.render();
-            });
-          });
-          
-          // Update theme vars when theme changes to custom
-          themeSelect.addEventListener('change', () => {
-            this.updateThemeVars();
           });
         }
 
         updateThemeVars() {
-          // Always update custom color variables regardless of theme
           document.documentElement.style.setProperty('--custom-color-1', customA.value);
           document.documentElement.style.setProperty('--custom-color-2', customB.value);
-          logger.debug(COMPONENT, 'Updated custom theme colors', { colorA: customA.value, colorB: customB.value });
+          logger.debug(COMPONENT, 'Updated theme', { theme: currentTheme, customColors: [customA.value, customB.value] });
         }
 
         updateVariant(card, variant, data) {
           const artboard = card.querySelector('.artboard');
           switch(variant.key) {
-
-
             case 'split': {
               const t = artboard.querySelector('.event-title');
               const d = artboard.querySelector('.event-date');
               const v = artboard.querySelector('.venue');
               const desc = artboard.querySelector('.description');
               const img = artboard.querySelector('.event-image');
-              const cov = artboard.querySelector('.left-side .cover');
+              const leftSide = artboard.querySelector('.left-side');
               if (t) t.textContent = data.event;
               if (d) d.textContent = `${data.date} · ${data.time}`;
               if (v) v.textContent = `@ ${data.venue}`;
               if (desc) desc.textContent = data.description;
               if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
-              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
+              if (leftSide) {
+                const cover = leftSide.querySelector('.cover');
+                if (cover && data.cover) cover.style.backgroundImage = `url('${data.cover}')`;
+              }
               break;
             }
             case 'minimal': {
@@ -516,12 +567,15 @@
               const v = artboard.querySelector('.venue');
               const desc = artboard.querySelector('.description');
               const dateBadge = artboard.querySelector('.date-badge');
-              const cov = artboard.querySelector('.card-header .cover');
+              const cardHeader = artboard.querySelector('.card-header');
               if (t) t.textContent = data.event;
               if (v) v.textContent = `@ ${data.venue} · ${data.time}`;
               if (desc) desc.textContent = data.description;
               if (dateBadge) dateBadge.textContent = data.date;
-              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
+              if (cardHeader) {
+                const cover = cardHeader.querySelector('.cover');
+                if (cover && data.cover) cover.style.backgroundImage = `url('${data.cover}')`;
+              }
               break;
             }
             case 'glass': {
@@ -639,7 +693,6 @@ Loading... <span class="cursor">█</span>`;
               if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
-
           }
         }
 
@@ -647,23 +700,17 @@ Loading... <span class="cursor">█</span>`;
           const card = document.createElement('div');
           card.className = 'variant-card';
           
-          // Check if custom colors are being used (not default values)
-          const isCustomOverride = customA.value !== '#8e2de2' || customB.value !== '#4a00e0';
-          const themeClass = isCustomOverride ? `${data.theme} custom-override` : data.theme;
-          
           card.innerHTML = `
             <div class="variant-header">
-              <div><strong>${variant.name}</strong> - ${variant.description}</div>
-            </div>
-            <div class="variant-preview">
-              <div class="artboard ${variant.class} ${themeClass}">
-                ${this.createVariantHTML(variant)}
+              <div>
+                <div class="variant-title">${variant.name}</div>
+                <div class="variant-description">${variant.description}</div>
               </div>
             </div>
-            <div class="preview-meta">
-              <div>og:title: <code>${data.event} – ${data.city} – chunky.dad</code></div>
-              <div>og:description: <code>${data.date} · ${data.time} · @ ${data.venue} · ${data.description}</code></div>
-              <div>og:image: <code>Generated with ${variant.name} layout</code></div>
+            <div class="variant-preview">
+              <div class="artboard ${variant.class} theme-${currentTheme}">
+                ${this.createVariantHTML(variant)}
+              </div>
             </div>
           `;
           return card;
@@ -671,10 +718,9 @@ Loading... <span class="cursor">█</span>`;
 
         createVariantHTML(variant) {
           const layouts = {
-
-
             'split': `
               <div class="left-side">
+                <div class="cover"></div>
               </div>
               <div class="left-content">
                 <div class="brand">chunky.dad</div>
@@ -694,7 +740,7 @@ Loading... <span class="cursor">█</span>`;
                   <div class="overlay"></div>
                   <div class="date-badge"></div>
                 </div>
-                <img class="event-image" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" style="position: absolute; bottom: -20px; left: 60px; width: 160px; height: 160px; border-radius: 20px; border: 8px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2; background: transparent; object-fit: contain;" />
+                <img class="event-image" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
                 <div class="card-body">
                   <div class="event-title"></div>
                   <div class="venue"></div>
@@ -826,13 +872,11 @@ Loading... <span class="cursor">█</span>`;
                 </div>
               </div>
             `,
-
           };
           return layouts[variant.key] || '';
         }
 
         render() {
-          this.updateThemeVars();
           const data = this.getPreviewData();
           const VARIANTS = [
             { key: 'split', name: 'Split Screen', class: 'layout-split-screen', description: 'Dynamic diagonal composition with image focus' },
@@ -840,13 +884,13 @@ Loading... <span class="cursor">█</span>`;
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass over photo backdrop' },
             { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus with side text' },
             { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about the event' },
-            { key: 'speech-event', name: 'Event Image Speaks', class: 'layout-speech-event', description: 'Event image in circular frame speaks about details' },
-            { key: 'speech-dual', name: 'Dual Conversation', class: 'layout-speech-dual', description: 'Logo and event image having a conversation' },
-            { key: 'speech-terminal', name: 'Retro Terminal', class: 'layout-speech-terminal', description: 'Old-school computer terminal with green text' },
-            { key: 'speech-story', name: 'Instagram Story', class: 'layout-speech-story', description: 'Social media story format with profile and bubble' },
-            { key: 'speech-thought', name: 'Thought Cloud', class: 'layout-speech-thought', description: 'Dreamy thought bubble with floating circles' },
-            { key: 'speech-messenger', name: 'Messenger Chat', class: 'layout-speech-messenger', description: 'Facebook Messenger style chat interface' },
-            { key: 'speech-discord', name: 'Discord Chat', class: 'layout-speech-discord', description: 'Gaming chat platform with embed style' }
+            { key: 'speech-event', name: 'Event Image Speaks', class: 'layout-speech-event', description: 'Event image in circular frame speaks' },
+            { key: 'speech-dual', name: 'Dual Conversation', class: 'layout-speech-dual', description: 'Logo and event having a conversation' },
+            { key: 'speech-terminal', name: 'Retro Terminal', class: 'layout-speech-terminal', description: 'Old-school computer terminal' },
+            { key: 'speech-story', name: 'Instagram Story', class: 'layout-speech-story', description: 'Social media story format' },
+            { key: 'speech-thought', name: 'Thought Cloud', class: 'layout-speech-thought', description: 'Dreamy thought bubble' },
+            { key: 'speech-messenger', name: 'Messenger Chat', class: 'layout-speech-messenger', description: 'Facebook Messenger style' },
+            { key: 'speech-discord', name: 'Discord Chat', class: 'layout-speech-discord', description: 'Gaming chat platform style' }
           ];
 
           grid.innerHTML = '';
@@ -889,4 +933,3 @@ Loading... <span class="cursor">█</span>`;
   </script>
 </body>
 </html>
-
