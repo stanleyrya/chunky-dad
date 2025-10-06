@@ -2071,8 +2071,7 @@ body.index-page main {
     -webkit-box-orient: vertical;
     overflow: hidden;
     max-height: calc(var(--event-name-line-height) * 3em);
-    color: #222;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    color: var(--text-primary);
 }
 
 .event-time {
