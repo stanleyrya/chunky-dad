@@ -99,8 +99,8 @@
 body {
     font-family: 'Poppins', sans-serif;
     line-height: 1.6;
-    color: var(--text-primary);
-    background-color: var(--background-primary);
+    color: var(--text-inverse);
+    background-color: var(--primary-color);
     scroll-behavior: smooth;
     margin: 0;
     padding: 0;
