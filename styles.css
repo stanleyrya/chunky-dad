@@ -2077,9 +2077,8 @@ body.index-page main {
 .event-time {
     font-size: 0.75rem;
     color: var(--primary-color);
-    font-weight: 600;
+    font-weight: 500;
     margin-bottom: 0.1rem;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .event-venue {
@@ -4116,8 +4115,7 @@ footer {
 .event-item.selected .event-name,
 .event-item.selected .event-time,
 .event-item.selected .event-venue {
-    color: white !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    color: var(--text-inverse) !important;
 }
 
 
