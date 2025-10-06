@@ -123,10 +123,6 @@ html {
         padding-top: 60px; /* Reduced header height */
     }
     
-    * {
-        box-sizing: border-box;
-    }
-    
     header {
         height: 60px;
     }
@@ -2973,10 +2969,6 @@ footer {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .nav-container {
-        padding: 0.5rem 1rem;
-        height: 60px;
-    }
     
     .nav-menu {
         position: fixed;
@@ -3180,14 +3172,6 @@ footer {
         margin-bottom: 0;
     }
 
-    .calendar-controls {
-        flex-direction: row;
-        gap: 0.3rem;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-    }
 
     .date-navigation {
         order: 1;
@@ -3555,11 +3539,6 @@ footer {
         font-size: 1.5rem;
     }
 
-    .calendar-controls {
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
 
     .view-btn {
         padding: 0.5rem 0.8rem;
@@ -3732,14 +3711,7 @@ footer {
 }
 
 /* Calendar controls for medium-small screens */
-@media (max-width: 550px) {
-    .calendar-controls {
-        flex-direction: row;
-        gap: 0.25rem;
-        width: 100%;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
+@media (max-width: 768px) {
     
     .view-toggle {
         flex-direction: row;
@@ -4660,10 +4632,6 @@ footer {
         display: none !important;
     }
 
-    .calendar-day.week-view {
-        min-height: 200px;
-        padding: 1rem;
-    }
 
     .event-item.enhanced {
         padding: 0.5rem 0;
