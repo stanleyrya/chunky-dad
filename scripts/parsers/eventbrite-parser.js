@@ -534,15 +534,6 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
             }
             
-            // Adjust Eventbrite image URL to get uncropped version
-            if (image) {
-                const originalImage = image;
-                image = this.adjustEventbriteImageUrl(image);
-                if (image !== originalImage) {
-                    console.log(`🎫 Eventbrite: Adjusted image URL for "${title}": ${originalImage} -> ${image}`);
-                }
-            }
-            
             // Extract city from event title for better event organization
             let city = null;
             
@@ -991,52 +982,6 @@ class EventbriteParser {
         }
         
         return cityConfig[city].timezone;
-    }
-
-    /**
-     * Adjust Eventbrite image URLs to get uncropped versions
-     * Converts img.evbuc.com URLs to cdn.evbuc.com uncropped versions
-     * @param {string} imageUrl - The original image URL
-     * @returns {string} - The adjusted URL or original if not an Eventbrite URL
-     */
-    adjustEventbriteImageUrl(imageUrl) {
-        if (!imageUrl || typeof imageUrl !== 'string') {
-            return imageUrl;
-        }
-
-        // Check if this is an Eventbrite img.evbuc.com URL
-        if (!imageUrl.includes('img.evbuc.com')) {
-            return imageUrl;
-        }
-
-        try {
-            // Extract the inner URL from the img.evbuc.com wrapper
-            // Example: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?crop=...
-            // Should become: https://cdn.evbuc.com/images/1107233553/2544065821071/1/original.20250828-015122
-            
-            const url = new URL(imageUrl);
-            const pathname = url.pathname;
-            
-            // The pathname should contain the encoded inner URL
-            // Remove the leading slash and decode the URL
-            const encodedInnerUrl = pathname.substring(1);
-            const innerUrl = decodeURIComponent(encodedInnerUrl);
-            
-            // Check if the inner URL is a cdn.evbuc.com URL
-            if (innerUrl.includes('cdn.evbuc.com')) {
-                // Remove any query parameters to get the uncropped version
-                const innerUrlObj = new URL(innerUrl);
-                const uncroppedUrl = `${innerUrlObj.protocol}//${innerUrlObj.host}${innerUrlObj.pathname}`;
-                
-                console.log(`🎫 Eventbrite: Adjusted image URL from cropped to uncropped: ${imageUrl} -> ${uncroppedUrl}`);
-                return uncroppedUrl;
-            }
-        } catch (error) {
-            console.warn(`🎫 Eventbrite: Failed to adjust image URL: ${error.message}`);
-        }
-
-        // Return original URL if adjustment fails
-        return imageUrl;
     }
 }
 
