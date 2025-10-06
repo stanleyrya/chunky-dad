@@ -95,6 +95,9 @@ function ensureDir(dir) {
 // Download event image with event information
 async function downloadEventImage(imageUrl, eventInfo) {
   try {
+    // Adjust Eventbrite image URLs to get uncropped versions
+    const adjustedUrl = adjustEventbriteImageUrl(imageUrl);
+    
     // Get the directory structure based on event type using shared utility
     const dirPath = getEventDirectoryPath(eventInfo, 'img/events');
     const dir = path.join(ROOT, dirPath);
@@ -103,10 +106,10 @@ async function downloadEventImage(imageUrl, eventInfo) {
     ensureDir(dir);
     
     // First, try to detect the file extension from URL
-    const detectedExtension = detectFileExtension(imageUrl);
+    const detectedExtension = detectFileExtension(adjustedUrl);
     
-    // Generate filename with detected extension
-    const filename = generateEventFilename(imageUrl, eventInfo, detectedExtension);
+    // Generate filename with detected extension using adjusted URL for consistent hashing
+    const filename = generateEventFilename(adjustedUrl, eventInfo, detectedExtension);
     const localPath = path.join(dir, filename);
     const metadataPath = localPath + '.meta';
     
@@ -122,21 +125,22 @@ async function downloadEventImage(imageUrl, eventInfo) {
     console.log(`   Event: ${eventInfo.name}`);
     console.log(`   Type: ${eventInfo.recurring ? 'recurring' : 'one-time'}`);
     console.log(`   Path: ${path.relative(ROOT, localPath)}`);
-    console.log(`   URL: ${imageUrl}`);
+    console.log(`   Original URL: ${imageUrl}`);
+    console.log(`   Adjusted URL: ${adjustedUrl}`);
     console.log(`   Detected extension: ${detectedExtension}`);
     
     // Download the image and get content type
-    const downloadResult = await downloadFile(imageUrl, localPath);
+    const downloadResult = await downloadFile(adjustedUrl, localPath);
     
     // If we got a different content type, regenerate filename with correct extension
     if (downloadResult.contentType) {
-      const actualExtension = detectFileExtension(imageUrl, downloadResult.contentType);
+      const actualExtension = detectFileExtension(adjustedUrl, downloadResult.contentType);
       
       if (actualExtension !== detectedExtension) {
         console.log(`🔄 Content type detected different extension: ${actualExtension} (was ${detectedExtension})`);
         
         // Generate new filename with correct extension
-        const correctFilename = generateEventFilename(imageUrl, eventInfo, actualExtension);
+        const correctFilename = generateEventFilename(adjustedUrl, eventInfo, actualExtension);
         const correctPath = path.join(dir, correctFilename);
         const correctMetadataPath = correctPath + '.meta';
         
@@ -156,6 +160,7 @@ async function downloadEventImage(imageUrl, eventInfo) {
         // Save metadata with event information
         const metadata = {
           originalUrl: imageUrl,
+          adjustedUrl: adjustedUrl,
           downloadedAt: new Date().toISOString(),
           type: 'event',
           filename: finalFilename,
@@ -178,6 +183,7 @@ async function downloadEventImage(imageUrl, eventInfo) {
     // Save metadata with event information
     const metadata = {
       originalUrl: imageUrl,
+      adjustedUrl: adjustedUrl,
       downloadedAt: new Date().toISOString(),
       type: 'event',
       filename: filename,
