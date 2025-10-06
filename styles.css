@@ -106,6 +106,9 @@ body {
     padding: 0;
     padding-top: 80px; /* Account for fixed header */
     overflow-x: hidden; /* Prevent horizontal scroll */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Index page specific styles - no top padding for hero */
@@ -115,6 +118,7 @@ body.index-page {
 
 html {
     overflow-x: hidden; /* Prevent horizontal scroll */
+    height: 100%;
 }
 
 /* Prevent all elements from overflowing on small screens */
@@ -2905,6 +2909,11 @@ body.index-page main {
 
 .error-message a:hover {
     text-decoration: underline;
+}
+
+/* Main content takes remaining space */
+main {
+    flex: 1;
 }
 
 /* Footer */
