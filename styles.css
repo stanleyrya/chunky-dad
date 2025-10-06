@@ -1688,6 +1688,53 @@ body.index-page main {
     background: var(--solid-light);
 }
 
+/* Tablet/Desktop Layout - Map to the right */
+@media (min-width: 1024px) {
+    .city-page {
+        display: grid;
+        grid-template-columns: 1fr 500px;
+        grid-template-rows: auto auto auto;
+        gap: 0 2rem;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 0 2rem;
+    }
+    
+    /* Calendar takes top-left */
+    .city-page .weekly-calendar {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    /* Events take bottom-left */
+    .city-page .events {
+        grid-column: 1;
+        grid-row: 2;
+    }
+    
+    /* Map takes full right column with sticky positioning */
+    .city-page .events-map-section {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        position: sticky;
+        top: 1rem;
+        height: fit-content;
+        max-height: calc(100vh - 2rem);
+        padding: 0;
+    }
+    
+    .city-page .events-map-section .container {
+        padding: 0;
+    }
+    
+    /* Make map taller on desktop */
+    .city-page #events-map {
+        height: 70vh;
+        min-height: 600px;
+        max-height: 800px;
+    }
+}
+
 
 
 /* Smooth content reveal for sections */
