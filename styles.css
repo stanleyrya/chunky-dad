@@ -3321,6 +3321,10 @@ footer {
 }
 
 @media (max-width: 480px) {
+    body {
+        padding-top: 50px; /* Even smaller header height */
+    }
+    
     header {
         height: 50px;
     }
