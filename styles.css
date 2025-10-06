@@ -53,10 +53,10 @@
     
     /* Section Background Gradients - Smooth Transitions */
     --gradient-hero: var(--primary-color);
-    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 75%, var(--secondary-color) 100%);
-    --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 50%, var(--secondary-color) 100%);
-    --gradient-today-events: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 25%, var(--secondary-color) 100%);
-    --gradient-directory: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 60%, var(--secondary-color) 100%);
+    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 50%, var(--secondary-color) 100%);
+    --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 40%, var(--secondary-color) 100%);
+    --gradient-today-events: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 30%, var(--secondary-color) 100%);
+    --gradient-directory: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 20%, var(--secondary-color) 100%);
     
     /* Alias for backward compatibility */
     --gradient-primary: var(--gradient-hero);
