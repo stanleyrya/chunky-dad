@@ -2071,13 +2071,16 @@ body.index-page main {
     -webkit-box-orient: vertical;
     overflow: hidden;
     max-height: calc(var(--event-name-line-height) * 3em);
+    color: #222;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .event-time {
     font-size: 0.75rem;
     color: var(--primary-color);
-    font-weight: 500;
+    font-weight: 600;
     margin-bottom: 0.1rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .event-venue {
@@ -4108,6 +4111,14 @@ footer {
     color: white !important;
     font-weight: bold;
     border-radius: 4px;
+}
+
+/* Ensure all text in selected event items is white */
+.event-item.selected .event-name,
+.event-item.selected .event-time,
+.event-item.selected .event-venue {
+    color: white !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 
