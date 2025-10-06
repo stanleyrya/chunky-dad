@@ -3138,11 +3138,10 @@ footer {
 
     .calendar-controls {
         flex-direction: row;
-        gap: 0.3rem;
+        gap: 0.25rem;
+        width: 100%;
         flex-wrap: wrap;
         justify-content: center;
-        align-items: center;
-        width: 100%;
     }
 
     .date-navigation {
@@ -3689,14 +3688,6 @@ footer {
 
 /* Calendar controls for medium-small screens */
 @media (max-width: 550px) {
-    .calendar-controls {
-        flex-direction: row;
-        gap: 0.25rem;
-        width: 100%;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
     .view-toggle {
         flex-direction: row;
         gap: 2px;
