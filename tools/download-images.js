@@ -10,6 +10,52 @@ const { JSDOM } = require('jsdom');
 // Import shared filename utilities
 const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension } = require('../js/filename-utils.js');
 
+/**
+ * Adjust Eventbrite image URLs to get uncropped versions
+ * Converts img.evbuc.com URLs to cdn.evbuc.com uncropped versions
+ * @param {string} imageUrl - The original image URL
+ * @returns {string} - The adjusted URL or original if not an Eventbrite URL
+ */
+function adjustEventbriteImageUrl(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return imageUrl;
+  }
+
+  // Check if this is an Eventbrite img.evbuc.com URL
+  if (!imageUrl.includes('img.evbuc.com')) {
+    return imageUrl;
+  }
+
+  try {
+    // Extract the inner URL from the img.evbuc.com wrapper
+    // Example: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?crop=...
+    // Should become: https://cdn.evbuc.com/images/1107233553/2544065821071/1/original.20250828-015122
+    
+    const url = new URL(imageUrl);
+    const pathname = url.pathname;
+    
+    // The pathname should contain the encoded inner URL
+    // Remove the leading slash and decode the URL
+    const encodedInnerUrl = pathname.substring(1);
+    const innerUrl = decodeURIComponent(encodedInnerUrl);
+    
+    // Check if the inner URL is a cdn.evbuc.com URL
+    if (innerUrl.includes('cdn.evbuc.com')) {
+      // Remove any query parameters to get the uncropped version
+      const innerUrlObj = new URL(innerUrl);
+      const uncroppedUrl = `${innerUrlObj.protocol}//${innerUrlObj.host}${innerUrlObj.pathname}`;
+      
+      console.log(`🎫 Eventbrite: Adjusted image URL from cropped to uncropped: ${imageUrl} -> ${uncroppedUrl}`);
+      return uncroppedUrl;
+    }
+  } catch (error) {
+    console.warn(`🎫 Eventbrite: Failed to adjust image URL: ${error.message}`);
+  }
+
+  // Return original URL if adjustment fails
+  return imageUrl;
+}
+
 // Mock logger for Node.js environment
 global.logger = {
   componentInit: (component, message, data) => console.log(`[${component}] ${message}`, data || ''),
@@ -682,14 +728,20 @@ function extractImageUrls() {
       if (event.image) {
         const cleanUrl = cleanImageUrl(event.image);
         if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+          // Adjust Eventbrite image URLs to get uncropped versions
+          const adjustedUrl = adjustEventbriteImageUrl(cleanUrl);
+          
           // Store event with its image URL
           imageUrls.eventsWithInfo.push({
-            imageUrl: cleanUrl,
+            imageUrl: adjustedUrl,
             name: event.name,
             startDate: event.startDate,
             recurring: event.recurring || false
           });
           console.log(`📸 Found event image: ${event.name} (${event.recurring ? 'recurring' : 'one-time'})`);
+          if (adjustedUrl !== cleanUrl) {
+            console.log(`🎫 Eventbrite: Adjusted image URL for ${event.name}: ${cleanUrl} -> ${adjustedUrl}`);
+          }
         }
       }
       
