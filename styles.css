@@ -53,9 +53,9 @@
     
     /* Section Background Gradients - Hard Stop Transitions */
     --gradient-hero: var(--primary-color);
-    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 75%, var(--secondary-color) 75%, var(--secondary-color) 100%);
-    --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 60%, var(--secondary-color) 60%, var(--secondary-color) 100%);
-    --gradient-today-events: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 80%, var(--secondary-color) 80%, var(--secondary-color) 100%);
+    --gradient-cities: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 85%, var(--secondary-color) 85%, var(--secondary-color) 100%);
+    --gradient-events: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 50%, var(--secondary-color) 50%, var(--secondary-color) 100%);
+    --gradient-today-events: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 15%, var(--secondary-color) 15%, var(--secondary-color) 100%);
     --gradient-directory: var(--secondary-color);
     
     /* Alias for backward compatibility */
