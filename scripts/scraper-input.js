@@ -228,6 +228,39 @@ const scraperConfig = {
         instagram: { value: "https://www.instagram.com/cubhouse.philly" },
         url: { value: "https://linktr.ee/cubhouse" }
       }
+    },
+    {
+      name: "Goldiloxx",
+      enabled: true,
+      urls: ["https://www.redeyetickets.com/goldiloxx/"],
+      alwaysBear: true,        // Goldiloxx is a bear party
+      urlDiscoveryDepth: 0,    // No additional URL discovery needed for single event page
+      maxAdditionalUrls: null,
+      dryRun: false,           // Override global dryRun if needed
+      
+      // Field priorities for merging data from different sources
+      fieldPriorities: {
+        title: { priority: ["redeyetickets"], merge: "clobber" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["redeyetickets"], merge: "clobber" },
+        bar: { priority: ["redeyetickets"], merge: "clobber" },
+        address: { priority: ["redeyetickets"], merge: "clobber" },
+        startDate: { priority: ["redeyetickets"], merge: "clobber" },
+        endDate: { priority: ["redeyetickets"], merge: "clobber" },
+        url: { priority: ["redeyetickets"], merge: "clobber" },
+        location: { priority: ["redeyetickets"], merge: "clobber" },
+        gmaps: { priority: ["redeyetickets"], merge: "clobber" },
+        image: { priority: ["redeyetickets"], merge: "clobber" },
+        cover: { priority: ["redeyetickets"], merge: "clobber" },
+        ticketUrl: { priority: ["redeyetickets"], merge: "clobber" }
+      },
+      
+      // Static metadata to add to all Goldiloxx events
+      metadata: {
+        shortName: { value: "GOLDILOXX" },
+        instagram: { value: "https://www.instagram.com/redeyetickets" }
+      }
     }
   ],
   // Centralized city configuration
