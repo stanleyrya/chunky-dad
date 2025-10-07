@@ -425,20 +425,42 @@ class RedEyeTicketsParser {
 
     // Extract image URL
     extractImage(html) {
-        // Look for the additional image (goldihalloween25anivclr.jpeg)
-        const additionalImgMatch = html.match(/<img[^>]*src="([^"]*goldihalloween25anivclr[^"]*\.(?:jpg|jpeg|png|gif))"/i);
-        if (additionalImgMatch) {
-            console.log(`🎫 RedEyeTickets: Using additional image: "${additionalImgMatch[1]}"`);
-            return additionalImgMatch[1].trim();
+        // Look for images in the content area (after the main banner)
+        // These are typically event-specific images with larger dimensions
+        const contentImgMatches = html.matchAll(/<img[^>]*src="([^"]*\.(?:jpg|jpeg|png|gif))"[^>]*(?:width="\d+"|height="\d+")[^>]*>/gi);
+        const contentImages = Array.from(contentImgMatches).map(match => match[1]);
+        
+        // Filter out banners, logos, and small images
+        const eventImages = contentImages.filter(img => 
+            !img.toLowerCase().includes('banner') && 
+            !img.toLowerCase().includes('wp-post-image') &&
+            !img.toLowerCase().includes('attachment-post-thumbnail') &&
+            !img.toLowerCase().includes('logo') &&
+            !img.toLowerCase().includes('red_eye_03') && // Logo file
+            !img.toLowerCase().includes('icon')
+        );
+        
+        if (eventImages.length > 0) {
+            // Use the first event-specific image found
+            const selectedImage = eventImages[0];
+            console.log(`🎫 RedEyeTickets: Using event-specific image: "${selectedImage}"`);
+            return selectedImage.trim();
         }
         
-        // Log the main banner for future support
+        // Fallback: Look for any image in wp-block-image (content images)
+        const wpBlockImgMatch = html.match(/<figure[^>]*class="[^"]*wp-block-image[^"]*"[^>]*>.*?<img[^>]*src="([^"]+)"/is);
+        if (wpBlockImgMatch) {
+            console.log(`🎫 RedEyeTickets: Using wp-block-image: "${wpBlockImgMatch[1]}"`);
+            return wpBlockImgMatch[1].trim();
+        }
+        
+        // Log the main banner for reference
         const ogImageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
         if (ogImageMatch) {
-            console.log(`🎫 RedEyeTickets: Found main banner (for future support): "${ogImageMatch[1]}"`);
+            console.log(`🎫 RedEyeTickets: Found main banner: "${ogImageMatch[1]}"`);
         }
         
-        // Try featured image as fallback
+        // Try featured image as final fallback
         const imgMatch = html.match(/<img[^>]*class="[^"]*wp-post-image[^"]*"[^>]*src="([^"]+)"/i);
         if (imgMatch) {
             console.log(`🎫 RedEyeTickets: Using fallback featured image: "${imgMatch[1]}"`);
