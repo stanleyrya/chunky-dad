@@ -50,11 +50,15 @@
     },
     {
       "name": "test-unified-scraper.html",
-      "size": 32062
+      "size": 31782
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 116356
+      "size": 107096
+    },
+    {
+      "name": "wildcard-test.html",
+      "size": 5221
     }
   ]
 }

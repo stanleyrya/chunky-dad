@@ -2194,10 +2194,56 @@ class SharedCore {
         return { action: 'new', reason: 'No conflicts found' };
     }
     
+    // Check if a key matches a pattern with wildcards (pure logic)
+    // Supports * wildcards in any position within pipe-separated segments
+    // Example: "chunk-chicago-presents-sausage-party|2025-10-*|*|chunk" matches "chunk-chicago-presents-sausage-party|2025-10-15|cell-block|chunk"
+    matchesKeyPattern(pattern, key) {
+        if (!pattern || !key) return false;
+        
+        // Split both pattern and key by pipe separator
+        const patternSegments = pattern.split('|');
+        const keySegments = key.split('|');
+        
+        // Must have same number of segments
+        if (patternSegments.length !== keySegments.length) {
+            return false;
+        }
+        
+        // Check each segment for wildcard match
+        for (let i = 0; i < patternSegments.length; i++) {
+            const patternSegment = patternSegments[i];
+            const keySegment = keySegments[i];
+            
+            // If pattern segment is *, it matches anything
+            if (patternSegment === '*') {
+                continue;
+            }
+            
+            // If pattern segment contains *, use wildcard matching
+            if (patternSegment.includes('*')) {
+                // Convert pattern to regex: * becomes .*
+                const regexPattern = patternSegment.replace(/\*/g, '.*');
+                const regex = new RegExp('^' + regexPattern + '$');
+                if (!regex.test(keySegment)) {
+                    return false;
+                }
+            } else {
+                // Exact match required
+                if (patternSegment !== keySegment) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+    
     // Find event by key in existing events (pure logic, no calendar APIs)
+    // First tries exact match, then tries wildcard matching
     findEventByKey(existingEvents, targetKey) {
         if (!targetKey) return null;
         
+        // First pass: exact match
         for (const event of existingEvents) {
             const fields = this.parseNotesIntoFields(event.notes || '');
             const eventKey = fields.key || null;
@@ -2205,6 +2251,20 @@ class SharedCore {
                 return event;
             }
         }
+        
+        // Second pass: wildcard matching
+        // Look for existing events that have wildcard patterns that match the target key
+        for (const event of existingEvents) {
+            const fields = this.parseNotesIntoFields(event.notes || '');
+            const eventKey = fields.key || null;
+            if (eventKey && eventKey.includes('*')) {
+                // This existing event has a wildcard pattern, check if it matches our target
+                if (this.matchesKeyPattern(eventKey, targetKey)) {
+                    return event;
+                }
+            }
+        }
+        
         return null;
     }
     
