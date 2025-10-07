@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="toolbox-icon" content="🏠">
+    <meta name="toolbox-description" content="Tool Shed Home - Browse all of dad's tools in one place">
     <title>🔧 chunky.dad's Toolbox</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Permanent+Marker&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -414,67 +416,13 @@
     </div>
 
     <script>
-        // File descriptions and icons based on filename patterns
-        const fileDescriptions = {
-            'ultimate-style-tester': { icon: '🔨', desc: 'The Big Hammer - Pound your styles into perfect shape with live preview' },
-            'style-test': { icon: '⚙️', desc: 'Heavy-Duty Power Tool - Showcases all the component variations dad\'s got' },
-            'test-enhanced-event-display': { icon: '✨', desc: 'Chrome Polish - Makes your events shine bright and pretty' },
-            'event-test-index': { icon: '📋', desc: 'Tool Inventory - Everything in dad\'s shed, nicely organized' },
-            'event-test-1-carousel': { icon: '🎠', desc: 'The Spinner - Round and round goes the carousel of fun' },
-            'event-test-2-timeline': { icon: '⏰', desc: 'Timeline Wrench - Tighten up your event timeline display' },
-            'event-test-3-map': { icon: '🗺️', desc: 'GPS Drill - Navigate through events with precision mapping' },
-            'event-test-4-masonry': { icon: '🧱', desc: 'Brick Layer - Stack those events nice and tight like masonry' },
-            'event-test-5-heatmap': { icon: '🔥', desc: 'Hot Thermometer - Shows you where things get steamy' },
-            'event-test-6-ticker': { icon: '📜', desc: 'Scroll Saw - Cut through events with a smooth scrolling ticker' },
-            'event-test-7-circular': { icon: '⭕', desc: 'Round Saw - Spin your events in a circular display' },
-            'event-test-8-kanban': { icon: '📊', desc: 'Project Planner - Organize like a contractor with kanban boards' },
-            'event-test-9-bubbles': { icon: '🫧', desc: 'Bubble Level - Check if your event bubbles are balanced' },
-            'event-test-10-flipcards': { icon: '🃏', desc: 'Card Flipper - Flip it, work it, real good' },
-            'event-test-11-weekview': { icon: '📆', desc: 'Week Planner - Plan your week like dad plans his projects' },
-            'event-test-12-swipe-tiles': { icon: '👆', desc: 'Touch Tester - Swipe those tiles, feel the smooth action' },
-            'test-calendar-logging': { icon: '🔍', desc: 'Debug Scope - Look deep inside calendar processing (magnify those logs)' },
-            'test-google-sheets-loader': { icon: '📊', desc: 'Sheet Metal Worker - Loads and shapes Google Sheets data' },
-            'test-display-modes': { icon: '🖥️', desc: 'Monitor Mount - Test how things display on different screens' },
-            'breakpoint-test': { icon: '📐', desc: 'Measuring Tape - See if your breakpoints measure up right' },
-            'css-breakpoint-test': { icon: '🎯', desc: 'Precision Laser - Target those CSS breakpoints exactly' },
-            'multiline-breakpoint-test': { icon: '📏', desc: 'Multi-Line Ruler - Measure responsive breaks across lines' },
-            'hyphenation-test': { icon: '✂️', desc: 'Text Scissors - Snip words into perfect hyphens' },
-            'simplified-hyphenation-test': { icon: '🔪', desc: 'Sharp Knife - Clean cuts for simplified hyphenation' },
-            'hyphenation-debug-test': { icon: '🔬', desc: 'Microscope - Examine tiny hyphenation bugs up close' },
-            'hero-variations-tester': { icon: '💪', desc: 'Flex Tester - Try different hero poses, show off those variations' },
-            'test-map-icons': { icon: '🗺️', desc: 'Icon Stamper - Mark your territory with custom map icons' },
-            'test-og-event-layouts-calendar': { icon: '📅', desc: 'Old School Blueprint - Classic event layouts, tried and true' },
-            'test-unified-scraper': { icon: '🪛', desc: 'Scraper Tool - Extract that data, nice and smooth' },
-            'test-eventbrite-address-fix': { icon: '📍', desc: 'Location Finder - Pin down those Eventbrite addresses' },
-            'location-test': { icon: '🌍', desc: 'Globe Spinner - Test location displays and coordinates' }
-        };
-
-        // Function to get file info
-        function getFileInfo(filename) {
-            const baseName = filename.replace('.html', '');
+        // Function to get file info from manifest data
+        function getFileInfo(file) {
+            const baseName = file.name.replace('.html', '');
             
-            // Check for exact match
-            if (fileDescriptions[baseName]) {
-                return {
-                    ...fileDescriptions[baseName],
-                    displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                };
-            }
-            
-            // Check for pattern matches
-            for (const [pattern, info] of Object.entries(fileDescriptions)) {
-                if (baseName.includes(pattern)) {
-                    return {
-                        ...info,
-                        displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                    };
-                }
-            }
-            
-            // Default
             return {
-                icon: '📄',
-                desc: 'Test file',
+                icon: file.icon || '📄',
+                desc: file.description || 'Test file',
                 displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
             };
         }
@@ -667,7 +615,7 @@
             grid.className = 'test-grid';
 
             existingFiles.forEach(file => {
-                const fileInfo = getFileInfo(file.name);
+                const fileInfo = getFileInfo(file);
                 const card = document.createElement('a');
                 card.href = file.name;
                 card.className = 'test-card';
