@@ -33,7 +33,6 @@
             border-right: 1px solid rgba(255, 255, 255, 0.1);
             padding: 20px;
             overflow-y: auto;
-            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
             max-height: 100vh;
         }
 
@@ -160,7 +159,6 @@
         .theme-btn.active {
             border-color: #4ecdc4;
             background: rgba(78, 205, 196, 0.2);
-            box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
         }
 
         .color-control {
@@ -259,7 +257,6 @@
 
         .action-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
         }
 
         .action-btn.secondary {
@@ -267,7 +264,6 @@
         }
 
         .action-btn.secondary:hover {
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
         }
 
         .action-btn.small {
@@ -800,59 +796,6 @@
                 </div>
             </div>
 
-            <!-- Shadow Colors Section -->
-            <div class="control-section">
-                <h3 onclick="toggleSection(this.parentElement)">
-                    🌑 Shadow Colors
-                    <span class="toggle-icon">▼</span>
-                </h3>
-                <div class="section-content">
-                    <div class="color-grid">
-                        <div class="color-control">
-                            <label>Light</label>
-                            <div class="color-input-group">
-                                                <input type="color" id="shadow-light" class="color-picker" value="#000000">
-                <input type="text" id="shadow-light-text" class="color-input" value="transparent">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Medium</label>
-                            <div class="color-input-group">
-                                                <input type="color" id="shadow-medium" class="color-picker" value="#000000">
-                <input type="text" id="shadow-medium-text" class="color-input" value="transparent">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Heavy</label>
-                            <div class="color-input-group">
-                                                <input type="color" id="shadow-heavy" class="color-picker" value="#000000">
-                <input type="text" id="shadow-heavy-text" class="color-input" value="transparent">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Primary</label>
-                            <div class="color-input-group">
-                                                <input type="color" id="shadow-primary" class="color-picker" value="#667eea">
-                <input type="text" id="shadow-primary-text" class="color-input" value="transparent">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Success</label>
-                            <div class="color-input-group">
-                                                <input type="color" id="shadow-success" class="color-picker" value="#4ecdc4">
-                <input type="text" id="shadow-success-text" class="color-input" value="transparent">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Error</label>
-                            <div class="color-input-group">
-                                                <input type="color" id="shadow-error" class="color-picker" value="#dc2626">
-                <input type="text" id="shadow-error-text" class="color-input" value="transparent">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Gradient Controls Section -->
             <div class="control-section">
@@ -1025,12 +968,6 @@
                         'color-success-dark': '#059669',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#667eea',
                         'gradient-primary-end': '#764ba2',
                         'gradient-secondary-start': '#ff6b6b',
@@ -1071,12 +1008,6 @@
                         'color-success-dark': '#45b7d1',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#4ecdc4',
                         'gradient-primary-end': '#45b7d1',
                         'gradient-secondary-start': '#ff6b6b',
@@ -1117,12 +1048,6 @@
                         'color-success-dark': '#45b7d1',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#000000',
                         'gradient-primary-end': '#8B4513',
                         'gradient-secondary-start': '#8B4513',
@@ -1163,12 +1088,6 @@
                         'color-success-dark': '#00cccc',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#ff00ff',
                         'gradient-primary-end': '#ffff00',
                         'gradient-secondary-start': '#00ffff',
@@ -1209,12 +1128,6 @@
                         'color-success-dark': '#f7931e',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#ff6b35',
                         'gradient-primary-end': '#ffd23f',
                         'gradient-secondary-start': '#f7931e',
@@ -1255,12 +1168,6 @@
                         'color-success-dark': '#00b4d8',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#006994',
                         'gradient-primary-end': '#90e0ef',
                         'gradient-secondary-start': '#00b4d8',
@@ -1301,12 +1208,6 @@
                         'color-success-dark': '#978B7D',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#BCBBA3',
                         'gradient-primary-end': '#E14F38',
                         'gradient-secondary-start': '#978B7D',
@@ -1347,12 +1248,6 @@
                         'color-success-dark': '#2A2D2A',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#51443E',
                         'gradient-primary-end': '#E14F38',
                         'gradient-secondary-start': '#2A2D2A',
@@ -1393,12 +1288,6 @@
                         'color-success-dark': '#E14F38',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#FD9433',
                         'gradient-primary-end': '#7094A0',
                         'gradient-secondary-start': '#E14F38',
@@ -1439,12 +1328,6 @@
                         'color-success-dark': '#d94f57',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#ffcc00',
                         'gradient-primary-end': '#533d8b',
                         'gradient-secondary-start': '#d94f57',
@@ -1485,12 +1368,6 @@
                         'color-success-dark': '#e0940f',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#14213d',
                         'gradient-primary-end': '#fca311',
                         'gradient-secondary-start': '#fca311',
@@ -1531,12 +1408,6 @@
                         'color-success-dark': '#cc6400',
                         'white': '#ffffff',
                         'black': '#000000',
-                        'shadow-light': 'transparent',
-                        'shadow-medium': 'transparent',
-                        'shadow-heavy': 'transparent',
-                        'shadow-primary': 'transparent',
-                        'shadow-success': 'transparent',
-                        'shadow-error': 'transparent',
                         'gradient-primary-start': '#15616d',
                         'gradient-primary-end': '#ff7d00',
                         'gradient-secondary-start': '#ff7d00',
@@ -1735,12 +1606,6 @@
                         --color-success-dark: ${document.getElementById('color-success-dark').value};
                         --white: ${document.getElementById('white').value};
                         --black: ${document.getElementById('black').value};
-                        --shadow-light: ${document.getElementById('shadow-light').value};
-                        --shadow-medium: ${document.getElementById('shadow-medium').value};
-                        --shadow-heavy: ${document.getElementById('shadow-heavy').value};
-                        --shadow-primary: ${document.getElementById('shadow-primary').value};
-                        --shadow-success: ${document.getElementById('shadow-success').value};
-                        --shadow-error: ${document.getElementById('shadow-error').value};
                         
                         /* Solid Color Alternatives for Gradients */
                         --solid-primary: ${document.getElementById('primary-color').value};
@@ -1897,7 +1762,6 @@
                         'color-online', 'color-offline', 'color-busy', 'color-away',
                         'color-danger', 'color-danger-dark', 'color-success-light', 'color-success-dark',
                         'white', 'black',
-                        'shadow-light', 'shadow-medium', 'shadow-heavy', 'shadow-primary', 'shadow-success', 'shadow-error',
                         'gradient-primary-start', 'gradient-primary-end', 'gradient-secondary-start', 'gradient-secondary-end',
                         'gradient-success-start', 'gradient-success-end', 'gradient-light-start', 'gradient-light-end'
                     ];
@@ -1976,12 +1840,6 @@
                     'color-success-dark': accents[13] || shuffledColors[27],
                     'white': shuffledColors[28],
                     'black': shuffledColors[29],
-                    'shadow-light': shuffledColors[30],
-                    'shadow-medium': shuffledColors[31],
-                    'shadow-heavy': shuffledColors[32],
-                    'shadow-primary': accents[14] || shuffledColors[33],
-                    'shadow-success': accents[15] || shuffledColors[34],
-                    'shadow-error': accents[16] || shuffledColors[35],
                     'gradient-primary-start': accents[17] || shuffledColors[36],
                     'gradient-primary-end': accents[18] || shuffledColors[37],
                     'gradient-secondary-start': accents[19] || shuffledColors[38],
@@ -2027,9 +1885,6 @@
                         // Create variations for hex colors
                         const variations = this.createColorVariations(color);
                         colorVariations[key] = variations[Math.floor(Math.random() * variations.length)];
-                    } else if (color.startsWith('rgba')) {
-                        // Handle rgba colors (shadows)
-                        colorVariations[key] = color;
                     } else {
                         colorVariations[key] = color;
                     }
@@ -2190,7 +2045,6 @@
                         'color-online', 'color-offline', 'color-busy', 'color-away',
                         'color-danger', 'color-danger-dark', 'color-success-light', 'color-success-dark',
                         'white', 'black',
-                        'shadow-light', 'shadow-medium', 'shadow-heavy', 'shadow-primary', 'shadow-success', 'shadow-error',
                         'gradient-primary-start', 'gradient-primary-end', 'gradient-secondary-start', 'gradient-secondary-end',
                         'gradient-success-start', 'gradient-success-end', 'gradient-light-start', 'gradient-light-end'
                     ];
@@ -2288,12 +2142,6 @@
                     'color-success-dark': document.getElementById('color-success-dark').value,
                     'white': document.getElementById('white').value,
                     'black': document.getElementById('black').value,
-                    'shadow-light': document.getElementById('shadow-light').value,
-                    'shadow-medium': document.getElementById('shadow-medium').value,
-                    'shadow-heavy': document.getElementById('shadow-heavy').value,
-                    'shadow-primary': document.getElementById('shadow-primary').value,
-                    'shadow-success': document.getElementById('shadow-success').value,
-                    'shadow-error': document.getElementById('shadow-error').value,
                     'gradient-primary-start': document.getElementById('gradient-primary-start').value,
                     'gradient-primary-end': document.getElementById('gradient-primary-end').value,
                     'gradient-secondary-start': document.getElementById('gradient-secondary-start').value,
