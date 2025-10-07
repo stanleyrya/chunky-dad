@@ -304,7 +304,17 @@ class RedEyeTicketsParser {
 
     // Extract venue information
     extractVenueInfo(html) {
-        // Look for venue pattern: "Red Eye NY & The Cockpit- 355 W 41st Street"
+        // First try to get address from footer (contains full city info)
+        const footerMatch = html.match(/<div class="one">[^<]*Red Eye Tickets[^<]*◦\s*([^◦]+)◦\s*([^<]+)</i);
+        if (footerMatch) {
+            const streetAddress = footerMatch[1].trim();
+            const cityStateZip = footerMatch[2].trim();
+            const fullAddress = `${streetAddress}, ${cityStateZip}`;
+            console.log(`🎫 RedEyeTickets: Found footer address: "${fullAddress}"`);
+            return { venue: 'Red Eye NY & The Cockpit', address: fullAddress };
+        }
+        
+        // Fallback: Look for venue pattern: "Red Eye NY & The Cockpit- 355 W 41st Street"
         const venueMatch = html.match(/<p[^>]*><strong>[^<]+<\/strong><br>([^<]+)<\/p>/i);
         if (venueMatch) {
             const venueText = venueMatch[1].trim();
@@ -317,14 +327,6 @@ class RedEyeTicketsParser {
                 const address = parts.slice(1).join('-').trim();
                 return { venue, address };
             }
-        }
-        
-        // Try to get address from footer as fallback
-        const footerMatch = html.match(/<div class="one">[^<]*Red Eye Tickets[^<]*◦\s*([^◦]+)◦/i);
-        if (footerMatch) {
-            const footerAddress = footerMatch[1].trim();
-            console.log(`🎫 RedEyeTickets: Found footer address: "${footerAddress}"`);
-            return { venue: 'Red Eye NY & The Cockpit', address: footerAddress };
         }
         
         // No fallback - return null if venue info not found

@@ -270,7 +270,7 @@ const scraperConfig = {
     "nyc": {
       calendar: "chunky-dad-nyc",
       timezone: "America/New_York",
-      patterns: ["new york", "nyc", "manhattan", "brooklyn", "queens", "bronx", "355 w 41st"]
+      patterns: ["new york", "nyc", "manhattan", "brooklyn", "queens", "bronx"]
     },
     "la": {
       calendar: "chunky-dad-la", 
