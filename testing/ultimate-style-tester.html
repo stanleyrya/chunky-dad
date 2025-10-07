@@ -583,6 +583,13 @@
                                 <input type="text" id="text-inverse-text" class="color-input" value="#ffffff">
                             </div>
                         </div>
+                        <div class="color-control">
+                            <label>Punchline</label>
+                            <div class="color-input-group">
+                                <input type="color" id="joke-punchline-color" class="color-picker" value="#8B4513">
+                                <input type="text" id="joke-punchline-color-text" class="color-input" value="#8B4513">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -629,62 +636,12 @@
                                 <input type="text" id="border-light-text" class="color-input" value="#e8f2ff">
                             </div>
                         </div>
-                        <div class="color-control">
-                            <label>Lighter</label>
-                            <div class="color-input-group">
-                                <input type="color" id="border-lighter" class="color-picker" value="#d0e1ff">
-                                <input type="text" id="border-lighter-text" class="color-input" value="#d0e1ff">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Dark</label>
-                            <div class="color-input-group">
-                                <input type="color" id="border-dark" class="color-picker" value="#333333">
-                                <input type="text" id="border-dark-text" class="color-input" value="#333333">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Joke/Hero Colors Section -->
-            <div class="control-section">
-                <h3 onclick="toggleSection(this.parentElement)">
-                    😄 Joke/Hero Colors
-                    <span class="toggle-icon">▼</span>
-                </h3>
-                <div class="section-content">
-                    <div class="color-grid">
-                        <div class="color-control">
-                            <label>Punchline</label>
-                            <div class="color-input-group">
-                                <input type="color" id="joke-punchline-color" class="color-picker" value="#8B4513">
-                                <input type="text" id="joke-punchline-color-text" class="color-input" value="#8B4513">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Dot/Glow</label>
-                            <div class="color-input-group">
-                                <input type="color" id="joke-dot-color" class="color-picker" value="#ffd93d">
-                                <input type="text" id="joke-dot-color-text" class="color-input" value="#ffd93d">
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
 
 
-            <!-- Gradient Controls Section -->
-            <div class="control-section">
-                <h3 onclick="toggleSection(this.parentElement)">
-                    🌈 Gradient Controls
-                    <span class="toggle-icon">▼</span>
-                </h3>
-                <div class="section-content">
-                    <div class="color-grid">
-                    </div>
-                </div>
-            </div>
+
         </div>
 
         <div class="preview-panel">
@@ -769,8 +726,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#ffffff',
                         'border-light': '#e8f2ff',
-                        'border-lighter': '#d0e1ff',
-                        'border-dark': '#333333',
                         'white': '#ffffff',
                         'black': '#000000',
                     },
@@ -785,8 +740,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#000000',
                         'border-light': '#2a2d2a',
-                        'border-lighter': '#1a1a2e',
-                        'border-dark': '#ffffff',
                         'info-color': '#45b7d1',
                         'color-danger': '#ff6b6b',
                         'color-danger-dark': '#ee5a24',
@@ -804,8 +757,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#000000',
                         'border-light': '#333333',
-                        'border-lighter': '#444444',
-                        'border-dark': '#ffffff',
                         'info-color': '#45b7d1',
                         'color-danger': '#ff6b6b',
                         'color-danger-dark': '#ee5a24',
@@ -823,8 +774,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#000000',
                         'border-light': '#333333',
-                        'border-lighter': '#444444',
-                        'border-dark': '#ffffff',
                         'info-color': '#00ffff',
                         'color-danger': '#ff00ff',
                         'color-danger-dark': '#cc00cc',
@@ -842,8 +791,6 @@
                         'text-muted': '#cccccc',
                         'text-inverse': '#2c1810',
                         'border-light': '#5c4830',
-                        'border-lighter': '#6c5840',
-                        'border-dark': '#ffffff',
                         'info-color': '#f7931e',
                         'color-danger': '#ff6b35',
                         'color-danger-dark': '#cc5528',
@@ -861,8 +808,6 @@
                         'text-muted': '#cccccc',
                         'text-inverse': '#001d3d',
                         'border-light': '#004d6d',
-                        'border-lighter': '#005d7d',
-                        'border-dark': '#ffffff',
                         'info-color': '#00b4d8',
                         'color-danger': '#006994',
                         'color-danger-dark': '#004d6d',
@@ -880,8 +825,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#FEF3CE',
                         'border-light': '#C5C0A0',
-                        'border-lighter': '#D2CDAB',
-                        'border-dark': '#685159',
                         'info-color': '#978B7D',
                         'color-danger': '#E14F38',
                         'color-danger-dark': '#B83D2A',
@@ -899,8 +842,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#FEF3CE',
                         'border-light': '#C5C0A0',
-                        'border-lighter': '#D2CDAB',
-                        'border-dark': '#51443E',
                         'info-color': '#2A2D2A',
                         'color-danger': '#E14F38',
                         'color-danger-dark': '#B83D2A',
@@ -918,8 +859,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#51443E',
                         'border-light': '#4A4D4A',
-                        'border-lighter': '#5A5D5A',
-                        'border-dark': '#000000',
                         'info-color': '#7094A0',
                         'color-danger': '#E14F38',
                         'color-danger-dark': '#B83D2A',
@@ -937,8 +876,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#f2ede5',
                         'border-light': '#e8e2d8',
-                        'border-lighter': '#f8f5f0',
-                        'border-dark': '#2e2e2e',
                         'info-color': '#533d8b',
                         'color-danger': '#d94f57',
                         'color-danger-dark': '#B83D2A',
@@ -956,8 +893,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#ffffff',
                         'border-light': '#e5e5e5',
-                        'border-lighter': '#f0f0f0',
-                        'border-dark': '#14213d',
                         'info-color': '#14213d',
                         'color-danger': '#dc2626',
                         'color-danger-dark': '#b91c1c',
@@ -975,8 +910,6 @@
                         'text-muted': '#999999',
                         'text-inverse': '#001524',
                         'border-light': '#003554',
-                        'border-lighter': '#004564',
-                        'border-dark': '#ffecd1',
                         'info-color': '#15616d',
                         'color-danger': '#ff7d00',
                         'color-danger-dark': '#cc6400',
@@ -1152,8 +1085,6 @@
                         --text-muted: ${document.getElementById('text-muted').value};
                         --text-inverse: ${document.getElementById('text-inverse').value};
                         --border-light: ${document.getElementById('border-light').value};
-                        --border-lighter: ${document.getElementById('border-lighter').value};
-                        --border-dark: ${document.getElementById('border-dark').value};
                         --white: ${document.getElementById('white').value};
                         --black: ${document.getElementById('black').value};
                         
@@ -1166,7 +1097,6 @@
                         /* Joke Bubble Colors */
                         --joke-bubble-background: ${document.getElementById('white').value};
                         --joke-punchline-color: ${document.getElementById('joke-punchline-color').value};
-                        --joke-dot-color: ${document.getElementById('joke-dot-color').value};
                         
                     }
                 `;
@@ -1297,7 +1227,7 @@
                         'primary-color', 'secondary-color', 'accent-color', 
                         'background-primary', 'background-light',
                         'text-primary', 'text-secondary', 'text-muted', 'text-inverse',
-                        'border-light', 'border-lighter', 'border-dark',
+                        'border-light',
                         'color-online', 'color-offline', 'color-busy', 'color-away',
                         'white', 'black',
                     ];
@@ -1552,7 +1482,7 @@
                         'primary-color', 'secondary-color', 'accent-color', 
                         'background-primary', 'background-light',
                         'text-primary', 'text-secondary', 'text-muted', 'text-inverse',
-                        'border-light', 'border-lighter', 'border-dark',
+                        'border-light',
                         'color-online', 'color-offline', 'color-busy', 'color-away',
                         'white', 'black',
                     ];
@@ -1630,8 +1560,6 @@
                     'text-muted': document.getElementById('text-muted').value,
                     'text-inverse': document.getElementById('text-inverse').value,
                     'border-light': document.getElementById('border-light').value,
-                    'border-lighter': document.getElementById('border-lighter').value,
-                    'border-dark': document.getElementById('border-dark').value,
                     'white': document.getElementById('white').value,
                     'black': document.getElementById('black').value,
                 };
