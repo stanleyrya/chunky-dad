@@ -2194,52 +2194,51 @@ class SharedCore {
         return { action: 'new', reason: 'No conflicts found' };
     }
     
-    // Check if a key matches a pattern with wildcards (pure logic)
-    // Supports * wildcards in any position within pipe-separated segments
-    // Example: "chunk-chicago-presents-sausage-party|2025-10-*|*|chunk" matches "chunk-chicago-presents-sausage-party|2025-10-15|cell-block|chunk"
+    // Check if a key matches a regex pattern (pure logic)
+    // Supports direct regex patterns in keys using .* for wildcards
+    // Example: "chunk-chicago-presents-sausage-party|2025-10-.*|.*|chunk" matches "chunk-chicago-presents-sausage-party|2025-10-15|cell-block|chunk"
     matchesKeyPattern(pattern, key) {
         if (!pattern || !key) return false;
         
-        // Split both pattern and key by pipe separator
-        const patternSegments = pattern.split('|');
-        const keySegments = key.split('|');
-        
-        // Must have same number of segments
-        if (patternSegments.length !== keySegments.length) {
-            return false;
-        }
-        
-        // Check each segment for wildcard match
-        for (let i = 0; i < patternSegments.length; i++) {
-            const patternSegment = patternSegments[i];
-            const keySegment = keySegments[i];
+        try {
+            // Escape pipe characters in the pattern to treat them as literal separators
+            // This allows regex patterns within each segment while keeping pipes as separators
+            // We need to be careful not to escape pipes inside character classes [...] or groups (...)
+            let escapedPattern = '';
+            let insideCharClass = false;
+            let insideGroup = false;
             
-            // If pattern segment is *, it matches anything
-            if (patternSegment === '*') {
-                continue;
-            }
-            
-            // If pattern segment contains *, use wildcard matching
-            if (patternSegment.includes('*')) {
-                // Convert pattern to regex: * becomes .*
-                const regexPattern = patternSegment.replace(/\*/g, '.*');
-                const regex = new RegExp('^' + regexPattern + '$');
-                if (!regex.test(keySegment)) {
-                    return false;
-                }
-            } else {
-                // Exact match required
-                if (patternSegment !== keySegment) {
-                    return false;
+            for (let i = 0; i < pattern.length; i++) {
+                const char = pattern[i];
+                if (char === '[') {
+                    insideCharClass = true;
+                    escapedPattern += char;
+                } else if (char === ']') {
+                    insideCharClass = false;
+                    escapedPattern += char;
+                } else if (char === '(') {
+                    insideGroup = true;
+                    escapedPattern += char;
+                } else if (char === ')') {
+                    insideGroup = false;
+                    escapedPattern += char;
+                } else if (char === '|' && !insideCharClass && !insideGroup) {
+                    escapedPattern += '\\|';
+                } else {
+                    escapedPattern += char;
                 }
             }
+            
+            const regex = new RegExp('^' + escapedPattern + '$');
+            return regex.test(key);
+        } catch (error) {
+            // If pattern is not valid regex, fall back to exact match
+            return pattern === key;
         }
-        
-        return true;
     }
     
     // Find event by key in existing events (pure logic, no calendar APIs)
-    // First tries exact match, then tries wildcard matching
+    // First tries exact match, then tries regex pattern matching
     findEventByKey(existingEvents, targetKey) {
         if (!targetKey) return null;
         
@@ -2252,13 +2251,13 @@ class SharedCore {
             }
         }
         
-        // Second pass: wildcard matching
-        // Look for existing events that have wildcard patterns that match the target key
+        // Second pass: regex pattern matching
+        // Look for existing events that have regex patterns that match the target key
         for (const event of existingEvents) {
             const fields = this.parseNotesIntoFields(event.notes || '');
             const eventKey = fields.key || null;
-            if (eventKey && eventKey.includes('*')) {
-                // This existing event has a wildcard pattern, check if it matches our target
+            if (eventKey && (eventKey.includes('.*') || eventKey.includes('[') || eventKey.includes('('))) {
+                // This existing event has a regex pattern, check if it matches our target
                 if (this.matchesKeyPattern(eventKey, targetKey)) {
                     return event;
                 }
