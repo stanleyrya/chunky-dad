@@ -252,40 +252,19 @@ class RedEyeTicketsParser {
         return null;
     }
 
-    // Create date from components
+    // Create date from components using JavaScript's flexible Date constructor
     createDateFromComponents(month, day, year, hour = '9', ampm = 'pm') {
         try {
-            const monthMap = {
-                'january': '01', 'jan': '01',
-                'february': '02', 'feb': '02',
-                'march': '03', 'mar': '03',
-                'april': '04', 'apr': '04',
-                'may': '05',
-                'june': '06', 'jun': '06',
-                'july': '07', 'jul': '07',
-                'august': '08', 'aug': '08',
-                'september': '09', 'sep': '09', 'sept': '09',
-                'october': '10', 'oct': '10',
-                'november': '11', 'nov': '11',
-                'december': '12', 'dec': '12'
-            };
+            // JavaScript Date constructor can handle many formats
+            // Format: "Month Day, Year Hour:Minute AM/PM"
+            const dateString = `${month} ${day}, ${year} ${hour}:00 ${ampm}`;
+            const startDate = new Date(dateString);
             
-            const monthNum = monthMap[month.toLowerCase()];
-            if (!monthNum) {
-                console.warn(`🎫 RedEyeTickets: Unknown month: ${month}`);
+            // Check if date is valid
+            if (isNaN(startDate.getTime())) {
+                console.warn(`🎫 RedEyeTickets: Invalid date string: "${dateString}"`);
                 return null;
             }
-            
-            // Convert hour to 24-hour format
-            let hour24 = parseInt(hour);
-            if (ampm.toLowerCase() === 'pm' && hour24 !== 12) {
-                hour24 += 12;
-            } else if (ampm.toLowerCase() === 'am' && hour24 === 12) {
-                hour24 = 0;
-            }
-            
-            // Create start date
-            const startDate = new Date(`${year}-${monthNum}-${day.padStart(2, '0')}T${hour24.toString().padStart(2, '0')}:00:00`);
             
             // Create end date (assume 4am next day if not specified)
             const endDate = new Date(startDate);
