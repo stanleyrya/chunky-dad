@@ -2194,10 +2194,30 @@ class SharedCore {
         return { action: 'new', reason: 'No conflicts found' };
     }
     
+    // Check if a key matches a pattern with simple wildcards (pure logic)
+    // Supports * wildcards that get converted to .* for regex matching
+    // Example: "chunk-chicago-presents-sausage-party|2025-10-*|*|chunk" matches "chunk-chicago-presents-sausage-party|2025-10-15|cell-block|chunk"
+    matchesKeyPattern(pattern, key) {
+        if (!pattern || !key) return false;
+        
+        // Convert * to .* for simple wildcards, but escape pipe characters
+        const regexPattern = pattern.replace(/\*/g, '.*').replace(/\|/g, '\\|');
+        
+        try {
+            const regex = new RegExp('^' + regexPattern + '$');
+            return regex.test(key);
+        } catch (error) {
+            // If pattern is not valid regex, fall back to exact match
+            return pattern === key;
+        }
+    }
+    
     // Find event by key in existing events (pure logic, no calendar APIs)
+    // First tries exact match, then tries wildcard pattern matching
     findEventByKey(existingEvents, targetKey) {
         if (!targetKey) return null;
         
+        // First pass: exact match
         for (const event of existingEvents) {
             const fields = this.parseNotesIntoFields(event.notes || '');
             const eventKey = fields.key || null;
@@ -2205,6 +2225,20 @@ class SharedCore {
                 return event;
             }
         }
+        
+        // Second pass: wildcard pattern matching
+        // Look for existing events that have wildcard patterns that match the target key
+        for (const event of existingEvents) {
+            const fields = this.parseNotesIntoFields(event.notes || '');
+            const eventKey = fields.key || null;
+            if (eventKey && eventKey.includes('*')) {
+                // This existing event has a wildcard pattern, check if it matches our target
+                if (this.matchesKeyPattern(eventKey, targetKey)) {
+                    return event;
+                }
+            }
+        }
+        
         return null;
     }
     
