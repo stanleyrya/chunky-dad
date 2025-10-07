@@ -319,6 +319,14 @@ class RedEyeTicketsParser {
             }
         }
         
+        // Try to get address from footer as fallback
+        const footerMatch = html.match(/<div class="one">[^<]*Red Eye Tickets[^<]*◦\s*([^◦]+)◦/i);
+        if (footerMatch) {
+            const footerAddress = footerMatch[1].trim();
+            console.log(`🎫 RedEyeTickets: Found footer address: "${footerAddress}"`);
+            return { venue: 'Red Eye NY & The Cockpit', address: footerAddress };
+        }
+        
         // No fallback - return null if venue info not found
         console.log('🎫 RedEyeTickets: No venue information found in page');
         return { venue: null, address: null };
@@ -415,18 +423,27 @@ class RedEyeTicketsParser {
 
     // Extract image URL
     extractImage(html) {
-        // Try og:image first
-        const ogImageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
-        if (ogImageMatch) {
-            return ogImageMatch[1].trim();
+        // Look for the additional image (goldihalloween25anivclr.jpeg)
+        const additionalImgMatch = html.match(/<img[^>]*src="([^"]*goldihalloween25anivclr[^"]*\.(?:jpg|jpeg|png|gif))"/i);
+        if (additionalImgMatch) {
+            console.log(`🎫 RedEyeTickets: Using additional image: "${additionalImgMatch[1]}"`);
+            return additionalImgMatch[1].trim();
         }
         
-        // Try featured image
+        // Log the main banner for future support
+        const ogImageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
+        if (ogImageMatch) {
+            console.log(`🎫 RedEyeTickets: Found main banner (for future support): "${ogImageMatch[1]}"`);
+        }
+        
+        // Try featured image as fallback
         const imgMatch = html.match(/<img[^>]*class="[^"]*wp-post-image[^"]*"[^>]*src="([^"]+)"/i);
         if (imgMatch) {
+            console.log(`🎫 RedEyeTickets: Using fallback featured image: "${imgMatch[1]}"`);
             return imgMatch[1].trim();
         }
         
+        console.log('🎫 RedEyeTickets: No image found');
         return '';
     }
 
