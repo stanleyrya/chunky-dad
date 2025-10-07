@@ -300,12 +300,7 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
               calculatedDate: eventDate
             });
           } else {
-            // Fallback to original date if no occurrence found for today
-            eventDate = new Date(ev.startDate).toISOString().split('T')[0];
-            logger.warn('CALENDAR', 'No occurrence found for today, using original date', {
-              eventName: ev.name,
-              originalDate: eventDate
-            });
+            throw new Error(`No occurrence found for recurring event "${ev.name}" on today's date`);
           }
         } else {
           // For one-time events, use the original date
