@@ -95,7 +95,9 @@ class CompactCardRenderer {
             content.className = 'event-content';
 
             const name = document.createElement('span');
-            name.className = 'event-name';
+            // Use different class for main page vs city page events
+            const isMainPage = document.body.classList.contains('index-page');
+            name.className = isMainPage ? 'main-event-title' : 'event-name';
             name.textContent = item.name;
 
             const dates = document.createElement('span');
@@ -146,7 +148,9 @@ class CompactCardRenderer {
             content.className = 'event-content';
 
             const name = document.createElement('span');
-            name.className = 'event-name';
+            // Use different class for main page vs city page events
+            const isMainPage = document.body.classList.contains('index-page');
+            name.className = isMainPage ? 'main-event-title' : 'event-name';
             name.textContent = 'More Events';
 
             const subtitle = document.createElement('span');
