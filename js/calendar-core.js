@@ -893,6 +893,14 @@ class CalendarCore {
         const pattern = this.parseRecurrencePattern(event.recurrence);
         if (!pattern) return dates;
         
+        logger.debug('CALENDAR', 'Generating visible event dates for recurring event', {
+            eventName: event.name,
+            recurrence: event.recurrence,
+            pattern: pattern,
+            periodStart: periodStart.toISOString().split('T')[0],
+            periodEnd: periodEnd.toISOString().split('T')[0]
+        });
+        
         const startDateStr = event.startDate instanceof Date ? 
             event.startDate.toISOString().split('T')[0] : event.startDate;
         const parts = startDateStr.split('-');
@@ -915,7 +923,39 @@ class CalendarCore {
                     current.setDate(current.getDate() + pattern.interval);
                     break;
                 case 'WEEKLY':
-                    current.setDate(current.getDate() + (7 * pattern.interval));
+                    if (pattern.byDay && pattern.byDay.length > 0) {
+                        // Weekly event with specific days - find next occurrence of the specified day
+                        const targetDayIndex = this.getDayIndexFromCode(pattern.byDay[0]);
+                        logger.debug('CALENDAR', 'Processing weekly event with specific day', {
+                            eventName: event.name,
+                            byDay: pattern.byDay[0],
+                            targetDayIndex: targetDayIndex,
+                            currentDay: current.getDay(),
+                            currentDate: current.toISOString().split('T')[0]
+                        });
+                        
+                        if (targetDayIndex !== -1) {
+                            // Find the next occurrence of the target day
+                            const daysUntilTarget = (targetDayIndex - current.getDay() + 7) % 7;
+                            const daysToAdd = daysUntilTarget === 0 ? (7 * pattern.interval) : daysUntilTarget;
+                            logger.debug('CALENDAR', 'Calculating next occurrence', {
+                                daysUntilTarget: daysUntilTarget,
+                                daysToAdd: daysToAdd,
+                                interval: pattern.interval
+                            });
+                            current.setDate(current.getDate() + daysToAdd);
+                        } else {
+                            // Fallback to simple weekly increment
+                            logger.warn('CALENDAR', 'Invalid day code, using fallback', {
+                                byDay: pattern.byDay[0]
+                            });
+                            current.setDate(current.getDate() + (7 * pattern.interval));
+                        }
+                    } else {
+                        // No specific day specified - use simple weekly increment
+                        logger.debug('CALENDAR', 'Weekly event without specific day, using simple increment');
+                        current.setDate(current.getDate() + (7 * pattern.interval));
+                    }
                     break;
                 case 'MONTHLY':
                     current.setMonth(current.getMonth() + pattern.interval);
