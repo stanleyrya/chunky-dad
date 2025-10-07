@@ -2200,8 +2200,8 @@ class SharedCore {
     matchesKeyPattern(pattern, key) {
         if (!pattern || !key) return false;
         
-        // Convert * to .* for simple wildcards
-        const regexPattern = pattern.replace(/\*/g, '.*');
+        // Convert * to .* for simple wildcards, but escape pipe characters
+        const regexPattern = pattern.replace(/\*/g, '.*').replace(/\|/g, '\\|');
         
         try {
             const regex = new RegExp('^' + regexPattern + '$');
@@ -2213,7 +2213,7 @@ class SharedCore {
     }
     
     // Find event by key in existing events (pure logic, no calendar APIs)
-    // First tries exact match, then tries regex pattern matching
+    // First tries exact match, then tries wildcard pattern matching
     findEventByKey(existingEvents, targetKey) {
         if (!targetKey) return null;
         
@@ -2226,13 +2226,13 @@ class SharedCore {
             }
         }
         
-        // Second pass: regex pattern matching
-        // Look for existing events that have regex patterns that match the target key
+        // Second pass: wildcard pattern matching
+        // Look for existing events that have wildcard patterns that match the target key
         for (const event of existingEvents) {
             const fields = this.parseNotesIntoFields(event.notes || '');
             const eventKey = fields.key || null;
-            if (eventKey && (eventKey.includes('.*') || eventKey.includes('[') || eventKey.includes('('))) {
-                // This existing event has a regex pattern, check if it matches our target
+            if (eventKey && eventKey.includes('*')) {
+                // This existing event has a wildcard pattern, check if it matches our target
                 if (this.matchesKeyPattern(eventKey, targetKey)) {
                     return event;
                 }
