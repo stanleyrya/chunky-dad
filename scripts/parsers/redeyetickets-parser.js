@@ -326,15 +326,53 @@ class RedEyeTicketsParser {
 
     // Extract description
     extractDescription(html) {
-        // Look for description in paragraph tags
-        const descMatch = html.match(/<p[^>]*class="has-text-align-center"[^>]*>([^<]+(?:<br>[^<]+)*)<\/p>/i);
+        // First try to get description from meta tags (most reliable)
+        const metaDescMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
+        if (metaDescMatch) {
+            const metaDesc = metaDescMatch[1].trim();
+            if (metaDesc && metaDesc.length > 20) {
+                console.log(`🎫 RedEyeTickets: Found description in meta tags: "${metaDesc}"`);
+                return metaDesc;
+            }
+        }
+        
+        // Try to get description from og:description
+        const ogDescMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i);
+        if (ogDescMatch) {
+            const ogDesc = ogDescMatch[1].trim();
+            if (ogDesc && ogDesc.length > 20) {
+                console.log(`🎫 RedEyeTickets: Found description in og:description: "${ogDesc}"`);
+                return ogDesc;
+            }
+        }
+        
+        // Look for the main description paragraph with GOLDILOXX content
+        const descMatch = html.match(/<p[^>]*class="has-text-align-center"[^>]*>([^<]+(?:<br[^>]*>[^<]+)*)<\/p>/i);
         if (descMatch) {
             let description = descMatch[1]
                 .replace(/<br\s*\/?>/gi, ' ')
+                .replace(/&amp;/g, '&')
                 .replace(/\s+/g, ' ')
                 .trim();
             
-            if (description && description.length > 10) {
+            // Look for the full description that includes the bear party text
+            if (description.includes('GOLDILOXX') && description.includes('bear party')) {
+                console.log(`🎫 RedEyeTickets: Found description in paragraph: "${description}"`);
+                return description;
+            }
+        }
+        
+        // Try to get the full description from multiple paragraphs
+        const fullDescMatch = html.match(/<p[^>]*class="has-text-align-center"[^>]*>([^<]+(?:<br[^>]*>[^<]+)*)<\/p>.*?<p[^>]*class="has-text-align-center"[^>]*>([^<]+(?:<br[^>]*>[^<]+)*)<\/p>/is);
+        if (fullDescMatch) {
+            let description = (fullDescMatch[1] + ' ' + fullDescMatch[2])
+                .replace(/<br\s*\/?>/gi, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/\s+/g, ' ')
+                .trim();
+            
+            if (description && description.length > 20) {
+                console.log(`🎫 RedEyeTickets: Found description in multiple paragraphs: "${description}"`);
                 return description;
             }
         }
