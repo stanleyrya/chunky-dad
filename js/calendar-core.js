@@ -893,6 +893,14 @@ class CalendarCore {
         const pattern = this.parseRecurrencePattern(event.recurrence);
         if (!pattern) return dates;
         
+        logger.debug('CALENDAR', 'Generating visible event dates for recurring event', {
+            eventName: event.name,
+            recurrence: event.recurrence,
+            pattern: pattern,
+            periodStart: periodStart.toISOString().split('T')[0],
+            periodEnd: periodEnd.toISOString().split('T')[0]
+        });
+        
         const startDateStr = event.startDate instanceof Date ? 
             event.startDate.toISOString().split('T')[0] : event.startDate;
         const parts = startDateStr.split('-');
@@ -915,13 +923,26 @@ class CalendarCore {
                     current.setDate(current.getDate() + pattern.interval);
                     break;
                 case 'WEEKLY':
-                    current.setDate(current.getDate() + (7 * pattern.interval));
+                    if (pattern.byDay && pattern.byDay.length > 0) {
+                        // Weekly event with specific days - find next occurrence of the specified day
+                        const targetDayIndex = this.getDayIndexFromCode(pattern.byDay[0]);
+                        if (targetDayIndex === -1) {
+                            throw new Error(`Invalid day code in recurrence: ${pattern.byDay[0]}`);
+                        }
+                        
+                        // Find the next occurrence of the target day
+                        const daysUntilTarget = (targetDayIndex - current.getDay() + 7) % 7;
+                        const daysToAdd = daysUntilTarget === 0 ? (7 * pattern.interval) : daysUntilTarget;
+                        current.setDate(current.getDate() + daysToAdd);
+                    } else {
+                        throw new Error('Weekly recurrence without BYDAY is not supported');
+                    }
                     break;
                 case 'MONTHLY':
                     current.setMonth(current.getMonth() + pattern.interval);
                     break;
                 default:
-                    return dates; // Unknown frequency, return what we have
+                    throw new Error(`Unsupported recurrence frequency: ${pattern.frequency}`);
             }
             
             iterations++;

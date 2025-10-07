@@ -284,12 +284,23 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
           endOfToday.setHours(23, 59, 59, 999);
           
           const visibleDates = this.getVisibleEventDates(ev, startOfToday, endOfToday);
+          logger.debug('CALENDAR', 'Calculating event date for recurring event', {
+            eventName: ev.name,
+            originalStartDate: ev.startDate,
+            recurrence: ev.recurrence,
+            visibleDates: visibleDates.map(d => d.toISOString().split('T')[0]),
+            today: today.toISOString().split('T')[0]
+          });
+          
           if (visibleDates.length > 0) {
             // Use the first occurrence found for today
             eventDate = visibleDates[0].toISOString().split('T')[0];
+            logger.debug('CALENDAR', 'Using calculated occurrence date', {
+              eventName: ev.name,
+              calculatedDate: eventDate
+            });
           } else {
-            // Fallback to original date if no occurrence found for today
-            eventDate = new Date(ev.startDate).toISOString().split('T')[0];
+            throw new Error(`No occurrence found for recurring event "${ev.name}" on today's date`);
           }
         } else {
           // For one-time events, use the original date
