@@ -17,10 +17,6 @@
     /* Derived Colors - Calculated from core variables */
     --text-muted: #999;
     --text-inverse: #ffffff;
-    --background-lighter: #f8f9fa;
-    --background-secondary: #e8f2ff;
-    --background-dark: #1a1a2e;
-    --background-darker: #0f0f23;
     --border-light: #e8f2ff;
     --border-lighter: #d0e1ff;
     --border-dark: #333;
@@ -1903,7 +1899,7 @@ body.index-page main {
 
 .calendar-day.other-month {
     opacity: 0.4;
-    background: var(--background-lighter);
+    background: var(--background-light);
 }
 
 .calendar-day.other-month:hover {
@@ -3966,7 +3962,7 @@ footer {
     padding: 40px 20px;
     color: var(--text-secondary);
     font-size: 18px;
-    background: var(--background-lighter);
+    background: var(--background-light);
     border-radius: 8px;
     position: relative;
     z-index: 10;
@@ -3977,7 +3973,7 @@ footer {
 .no-events-message {
     text-align: center;
     padding: 40px 20px;
-    background: var(--background-lighter);
+    background: var(--background-light);
     border-radius: 8px;
     margin: 20px 0;
 }
@@ -5063,7 +5059,7 @@ footer {
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    background: var(--background-secondary);
+    background: var(--background-light);
     border-bottom: 1px solid var(--border-color);
     font-size: 0.9rem;
     color: var(--text-secondary);
@@ -5133,7 +5129,7 @@ footer {
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    background: var(--background-secondary);
+    background: var(--background-light);
     border-bottom: 1px solid var(--border-color);
     font-size: 0.9rem;
     color: var(--text-secondary);
@@ -5751,7 +5747,7 @@ footer {
 .error-message {
     text-align: center;
     padding: 40px 20px;
-    background: var(--background-lighter);
+    background: var(--background-light);
     border-radius: 8px;
     border-left: 4px solid #f44336;
     margin: 20px 0;
