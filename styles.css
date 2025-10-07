@@ -925,7 +925,7 @@ body.index-page main {
 }
 
 .cta-button.secondary {
-    background: var(--solid-success);
+    background: var(--accent-color);
     box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
 }
 
@@ -2814,7 +2814,7 @@ body.index-page main {
 
 
 .error-message {
-    background: var(--solid-error);
+    background: var(--secondary-color);
     border: 2px solid var(--secondary-color);
     border-radius: 15px;
     padding: 2rem;
