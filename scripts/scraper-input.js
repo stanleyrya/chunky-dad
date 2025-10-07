@@ -235,7 +235,6 @@ const scraperConfig = {
       urls: ["https://www.redeyetickets.com/goldiloxx/"],
       alwaysBear: true,        // Goldiloxx is a bear party
       urlDiscoveryDepth: 0,    // No additional URL discovery needed for single event page
-      maxAdditionalUrls: null,
       dryRun: false,           // Override global dryRun if needed
       
       // Field priorities for merging data from different sources
@@ -261,7 +260,7 @@ const scraperConfig = {
       metadata: {
         shortName: { value: "GOLDI-LOXX" },
         shorter: { value: "GLX" },
-        instagram: { value: "https://www.instagram.com/goldiloxx__?igsh=MXZxeGIzd3pkd2E3bA==" }
+        instagram: { value: "https://www.instagram.com/goldiloxx__" }
       }
     }
   ],
