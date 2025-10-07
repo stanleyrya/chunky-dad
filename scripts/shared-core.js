@@ -2194,42 +2194,17 @@ class SharedCore {
         return { action: 'new', reason: 'No conflicts found' };
     }
     
-    // Check if a key matches a regex pattern (pure logic)
-    // Supports direct regex patterns in keys using .* for wildcards
-    // Example: "chunk-chicago-presents-sausage-party|2025-10-.*|.*|chunk" matches "chunk-chicago-presents-sausage-party|2025-10-15|cell-block|chunk"
+    // Check if a key matches a pattern with simple wildcards (pure logic)
+    // Supports * wildcards that get converted to .* for regex matching
+    // Example: "chunk-chicago-presents-sausage-party|2025-10-*|*|chunk" matches "chunk-chicago-presents-sausage-party|2025-10-15|cell-block|chunk"
     matchesKeyPattern(pattern, key) {
         if (!pattern || !key) return false;
         
+        // Convert * to .* for simple wildcards
+        const regexPattern = pattern.replace(/\*/g, '.*');
+        
         try {
-            // Escape pipe characters in the pattern to treat them as literal separators
-            // This allows regex patterns within each segment while keeping pipes as separators
-            // We need to be careful not to escape pipes inside character classes [...] or groups (...)
-            let escapedPattern = '';
-            let insideCharClass = false;
-            let insideGroup = false;
-            
-            for (let i = 0; i < pattern.length; i++) {
-                const char = pattern[i];
-                if (char === '[') {
-                    insideCharClass = true;
-                    escapedPattern += char;
-                } else if (char === ']') {
-                    insideCharClass = false;
-                    escapedPattern += char;
-                } else if (char === '(') {
-                    insideGroup = true;
-                    escapedPattern += char;
-                } else if (char === ')') {
-                    insideGroup = false;
-                    escapedPattern += char;
-                } else if (char === '|' && !insideCharClass && !insideGroup) {
-                    escapedPattern += '\\|';
-                } else {
-                    escapedPattern += char;
-                }
-            }
-            
-            const regex = new RegExp('^' + escapedPattern + '$');
+            const regex = new RegExp('^' + regexPattern + '$');
             return regex.test(key);
         } catch (error) {
             // If pattern is not valid regex, fall back to exact match
