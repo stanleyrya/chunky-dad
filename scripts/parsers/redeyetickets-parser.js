@@ -118,17 +118,14 @@ class RedEyeTicketsParser {
             // Extract image
             const image = this.extractImage(html);
             
-            // Determine city (NYC based on address)
-            const city = 'nyc'; // Red Eye NY is in NYC
+            // Extract city from address or venue info
+            const city = this.extractCityFromVenue(venueInfo, cityConfig);
             
-            // Get timezone for NYC
-            const timezone = cityConfig && cityConfig[city] ? cityConfig[city].timezone : 'America/New_York';
+            // Get timezone for detected city
+            const timezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : null;
             
-            // Create coordinates for 355 W 41st Street, NYC
-            const coordinates = {
-                lat: 40.755988,
-                lng: -73.988903
-            };
+            // Extract coordinates from venue info
+            const coordinates = this.extractCoordinates(venueInfo);
             
             const event = {
                 title: title,
@@ -136,7 +133,7 @@ class RedEyeTicketsParser {
                 startDate: dateTime.startDate,
                 endDate: dateTime.endDate,
                 bar: venueInfo.venue,
-                location: `${coordinates.lat}, ${coordinates.lng}`,
+                location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null,
                 address: venueInfo.address,
                 city: city,
                 timezone: timezone,
@@ -322,11 +319,9 @@ class RedEyeTicketsParser {
             }
         }
         
-        // Fallback: use known venue info
-        return {
-            venue: 'Red Eye NY & The Cockpit',
-            address: '355 W 41st Street, New York, NY 10036'
-        };
+        // No fallback - return null if venue info not found
+        console.log('🎫 RedEyeTickets: No venue information found in page');
+        return { venue: null, address: null };
     }
 
     // Extract description
@@ -344,12 +339,8 @@ class RedEyeTicketsParser {
             }
         }
         
-        // Try meta description as fallback
-        const metaDescMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
-        if (metaDescMatch) {
-            return metaDescMatch[1].trim();
-        }
-        
+        // No fallback - return empty string if description not found
+        console.log('🎫 RedEyeTickets: No description found in page');
         return '';
     }
 
@@ -522,6 +513,46 @@ class RedEyeTicketsParser {
         }
         
         return url;
+    }
+
+    // Extract city from venue information
+    extractCityFromVenue(venueInfo, cityConfig) {
+        if (!venueInfo || !cityConfig) return null;
+        
+        const searchText = `${venueInfo.venue || ''} ${venueInfo.address || ''}`.toLowerCase();
+        
+        // Check each city's patterns
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            if (cityData.patterns && Array.isArray(cityData.patterns)) {
+                for (const pattern of cityData.patterns) {
+                    if (searchText.includes(pattern.toLowerCase())) {
+                        console.log(`🎫 RedEyeTickets: Detected city "${cityKey}" from pattern "${pattern}" in "${searchText}"`);
+                        return cityKey;
+                    }
+                }
+            }
+        }
+        
+        console.log(`🎫 RedEyeTickets: No city detected from venue info: "${searchText}"`);
+        return null;
+    }
+
+    // Extract coordinates from venue information
+    extractCoordinates(venueInfo) {
+        if (!venueInfo || !venueInfo.address) return null;
+        
+        // For now, only handle the known NYC venue
+        // This can be extended to support other venues as needed
+        if (venueInfo.address.includes('355 W 41st Street') || 
+            venueInfo.address.includes('355 W 41st St')) {
+            return {
+                lat: 40.755988,
+                lng: -73.988903
+            };
+        }
+        
+        console.log(`🎫 RedEyeTickets: No coordinates available for address: "${venueInfo.address}"`);
+        return null;
     }
 }
 

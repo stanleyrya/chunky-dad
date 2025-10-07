@@ -241,7 +241,8 @@ const scraperConfig = {
       // Field priorities for merging data from different sources
       fieldPriorities: {
         title: { priority: ["redeyetickets"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
+        shortName: { priority: ["static"], merge: "clobber" },
+        shorter: { priority: ["static"], merge: "clobber" },
         instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["redeyetickets"], merge: "clobber" },
         bar: { priority: ["redeyetickets"], merge: "clobber" },
@@ -258,8 +259,9 @@ const scraperConfig = {
       
       // Static metadata to add to all Goldiloxx events
       metadata: {
-        shortName: { value: "GOLDILOXX" },
-        instagram: { value: "https://www.instagram.com/redeyetickets" }
+        shortName: { value: "GOLDI-LOXX" },
+        shorter: { value: "GLX" },
+        instagram: { value: "https://www.instagram.com/goldiloxx__?igsh=MXZxeGIzd3pkd2E3bA==" }
       }
     }
   ],
@@ -268,7 +270,7 @@ const scraperConfig = {
     "nyc": {
       calendar: "chunky-dad-nyc",
       timezone: "America/New_York",
-      patterns: ["new york", "nyc", "manhattan", "brooklyn", "queens", "bronx"]
+      patterns: ["new york", "nyc", "manhattan", "brooklyn", "queens", "bronx", "355 w 41st"]
     },
     "la": {
       calendar: "chunky-dad-la", 
