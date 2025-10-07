@@ -1142,33 +1142,33 @@
             applyCustomColors() {
                 const css = `
                     :root {
-                        --primary-color: ${document.getElementById('primary-color')?.value || '#667eea'};
-                        --secondary-color: ${document.getElementById('secondary-color')?.value || '#ff6b6b'};
-                        --accent-color: ${document.getElementById('accent-color')?.value || '#764ba2'};
-                        --background-primary: ${document.getElementById('background-primary')?.value || '#ffffff'};
-                        --background-light: ${document.getElementById('background-light')?.value || '#f8f9ff'};
-                        --text-primary: ${document.getElementById('text-primary')?.value || '#333333'};
-                        --text-secondary: ${document.getElementById('text-secondary')?.value || '#666666'};
-                        --text-muted: ${document.getElementById('text-muted')?.value || '#999999'};
-                        --text-inverse: ${document.getElementById('text-inverse')?.value || '#ffffff'};
-                        --border-light: ${document.getElementById('border-light')?.value || '#e8f2ff'};
-                        --border-lighter: ${document.getElementById('border-lighter')?.value || '#d0e1ff'};
-                        --border-dark: ${document.getElementById('border-dark')?.value || '#333333'};
-                        --white: ${document.getElementById('white')?.value || '#ffffff'};
-                        --black: ${document.getElementById('black')?.value || '#000000'};
+                        --primary-color: ${document.getElementById('primary-color').value};
+                        --secondary-color: ${document.getElementById('secondary-color').value};
+                        --accent-color: ${document.getElementById('accent-color').value};
+                        --background-primary: ${document.getElementById('background-primary').value};
+                        --background-light: ${document.getElementById('background-light').value};
+                        --text-primary: ${document.getElementById('text-primary').value};
+                        --text-secondary: ${document.getElementById('text-secondary').value};
+                        --text-muted: ${document.getElementById('text-muted').value};
+                        --text-inverse: ${document.getElementById('text-inverse').value};
+                        --border-light: ${document.getElementById('border-light').value};
+                        --border-lighter: ${document.getElementById('border-lighter').value};
+                        --border-dark: ${document.getElementById('border-dark').value};
+                        --white: ${document.getElementById('white').value};
+                        --black: ${document.getElementById('black').value};
                         
                         /* Solid Color Alternatives for Gradients */
-                        --solid-primary: ${document.getElementById('primary-color')?.value || '#667eea'};
-                        --solid-secondary: ${document.getElementById('secondary-color')?.value || '#ff6b6b'};
-                        --solid-success: ${document.getElementById('accent-color')?.value || '#764ba2'};
-                        --solid-warning: ${document.getElementById('background-light')?.value || '#f8f9ff'};
-                        --solid-light: ${document.getElementById('background-light')?.value || '#f8f9ff'};
-                        --solid-error: ${document.getElementById('background-light')?.value || '#f8f9ff'};
+                        --solid-primary: ${document.getElementById('primary-color').value};
+                        --solid-secondary: ${document.getElementById('secondary-color').value};
+                        --solid-success: ${document.getElementById('accent-color').value};
+                        --solid-warning: ${document.getElementById('background-light').value};
+                        --solid-light: ${document.getElementById('background-light').value};
+                        --solid-error: ${document.getElementById('secondary-color').value};
                         
                         /* Joke Bubble Colors */
-                        --joke-bubble-background: ${document.getElementById('white')?.value || '#ffffff'};
-                        --joke-punchline-color: ${document.getElementById('joke-punchline-color')?.value || '#8B4513'};
-                        --joke-dot-color: ${document.getElementById('joke-dot-color')?.value || '#ffd93d'};
+                        --joke-bubble-background: ${document.getElementById('white').value};
+                        --joke-punchline-color: ${document.getElementById('joke-punchline-color').value};
+                        --joke-dot-color: ${document.getElementById('joke-dot-color').value};
                         
                     }
                 `;

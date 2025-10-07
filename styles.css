@@ -51,8 +51,10 @@
     /* Solid Color Alternatives */
     --solid-primary: var(--primary-color);
     --solid-secondary: var(--secondary-color);
+    --solid-success: var(--accent-color);
     --solid-warning: var(--background-light);
     --solid-light: var(--background-light);
+    --solid-error: var(--secondary-color);
     
 }
 
