@@ -226,7 +226,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 opacity: ${progress * 0.9};
                 transition: opacity 0.1s ease;
                 pointer-events: none;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             `;
             indicator.textContent = deltaX > 0 ? '← Previous' : 'Next →';
             
@@ -245,8 +244,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         
-        // Reset transform, opacity, scale, rotation, and shadow with smooth transition
-        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out, box-shadow 0.2s ease-out';
+        // Reset transform, opacity, scale, and rotation with smooth transition
+        calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
         calendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
         calendarGrid.style.opacity = '1';
         calendarGrid.style.boxShadow = '';
@@ -2027,7 +2026,6 @@ class DynamicCalendarLoader extends CalendarCore {
             color: white;
             padding: 12px 24px;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 10000;
             animation: slideUp 0.3s ease-out;
             font-family: 'Poppins', sans-serif;

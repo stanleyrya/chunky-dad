@@ -69,13 +69,6 @@
     --solid-light: var(--background-light);
     --solid-error: var(--error-color);
     
-    /* Shadows */
-    --shadow-light: none;
-    --shadow-medium: none;
-    --shadow-heavy: none;
-    --shadow-primary: none;
-    --shadow-success: none;
-    --shadow-error: none;
 }
 
 /* Dynamic Viewport Height Support for Mobile */
@@ -143,7 +136,6 @@ html {
 /* Header and Navigation */
 header {
     background: var(--solid-primary);
-    box-shadow: 0 2px 10px var(--shadow-light);
     position: fixed;
     top: 0;
     left: 0;
@@ -198,7 +190,6 @@ body.index-page header.visible {
     backdrop-filter: blur(15px);
     color: var(--text-inverse);
     font-family: inherit;
-    box-shadow: 0 4px 20px var(--shadow-medium);
     position: relative;
     overflow: hidden;
 }
@@ -219,7 +210,6 @@ body.index-page header.visible {
 .city-emoji {
     font-size: 1.6rem;
     flex-shrink: 0;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
     transition: transform 0.3s ease;
 }
 
@@ -228,7 +218,6 @@ body.index-page header.visible {
     font-weight: 600;
     white-space: nowrap;
     letter-spacing: 0.3px;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     display: none; /* Hidden by default, shown on larger screens */
     transition: all 0.3s ease;
 }
@@ -238,7 +227,6 @@ body.index-page header.visible {
     margin-left: 0.1rem;
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0.9;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 /* Hover effects only on non-touch devices */
@@ -262,7 +250,6 @@ body.index-page header.visible {
 
 .city-switcher-btn:active {
     transform: translateY(0) scale(0.98);
-    box-shadow: 0 4px 15px var(--shadow-medium);
 }
 
 .city-dropdown {
@@ -271,7 +258,6 @@ body.index-page header.visible {
     right: 0;
     background: var(--dropdown-bg);
     border-radius: 20px;
-    box-shadow: 0 15px 40px var(--shadow-heavy);
     padding: 0.8rem;
     margin-top: 0.8rem;
     min-width: 220px;
@@ -347,7 +333,6 @@ body.index-page header.visible {
     text-align: center;
     position: relative;
     z-index: 1;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 .city-option-name {
@@ -508,7 +493,6 @@ body.index-page header.visible {
     font-size: 6rem;
     font-weight: 700;
     margin-bottom: 0;
-    text-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
     letter-spacing: -3px;
     line-height: 0.8;
     display: flex;
@@ -531,7 +515,6 @@ body.index-page header.visible {
         0 0 10px var(--joke-dot-color),
         0 0 20px var(--joke-dot-color),
         0 0 30px var(--joke-dot-color);
-    filter: drop-shadow(0 0 8px var(--joke-dot-color));
     position: relative;
     z-index: 1;
 }
@@ -603,7 +586,6 @@ body.index-page header.visible {
     color: var(--text-primary);
     padding: 20px 20px 50px 20px;
     border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     font-size: 0.9rem;
     line-height: 1.4;
     animation: heroBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.8s both, bubbleFloat 3s ease-in-out 2.2s infinite;
@@ -964,11 +946,9 @@ body.index-page main {
 
 .cta-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
 .cta-button.secondary:hover {
-    box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
 }
 
 
@@ -1029,7 +1009,6 @@ body.index-page main {
     background: var(--background-light);
     border-radius: 15px;
     padding: 2rem;
-    box-shadow: 0 5px 20px var(--shadow-light);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
 }
@@ -1162,7 +1141,6 @@ body.index-page main {
     justify-content: center;
     width: 80px;
     height: 80px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
 }
 
@@ -1176,14 +1154,12 @@ body.index-page main {
 .event-compact-card:hover .event-emoji-box {
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
 }
 
 /* Shared Emoji Styles */
 .city-compact-card .city-emoji,
 .event-compact-card .event-emoji {
     font-size: 2.5rem;
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
     line-height: 1;
 }
 
@@ -1192,7 +1168,6 @@ body.index-page main {
     font-size: 0.9rem;
     font-weight: 600;
     white-space: nowrap;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     letter-spacing: 0.3px;
     display: block !important; /* Ensure city names are always visible in city cards */
 }
@@ -1202,7 +1177,6 @@ body.index-page main {
     font-size: 0.9rem;
     font-weight: 600;
     white-space: nowrap;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     letter-spacing: 0.3px;
     display: block !important; /* Ensure bear event names are always visible in event cards */
     color: var(--text-inverse); /* Inverse text color like city-name */
@@ -1219,7 +1193,6 @@ body.index-page main {
 .event-compact-card .event-name {
     font-size: 0.95rem;
     font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     letter-spacing: 0.3px;
     line-height: 1.2;
     text-align: center;
@@ -1229,7 +1202,6 @@ body.index-page main {
     font-size: 0.8rem;
     font-weight: 500;
     opacity: 0.9;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     color: rgba(255, 255, 255, 0.9);
 }
 
@@ -1237,7 +1209,6 @@ body.index-page main {
     font-size: 0.75rem;
     font-weight: 500;
     opacity: 0.85;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     color: rgba(255, 255, 255, 0.85);
 }
 
@@ -1245,7 +1216,6 @@ body.index-page main {
     font-size: 0.75rem;
     font-weight: 400;
     opacity: 0.8;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     color: rgba(255, 255, 255, 0.8);
 }
 
@@ -1273,7 +1243,6 @@ body.index-page main {
 .event-compact-card.coming-soon:hover .event-emoji-box {
     background: rgba(255, 107, 107, 0.2);
     border-color: var(--solid-secondary);
-    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
 }
 
 /* Shared Animation */
@@ -1486,12 +1455,10 @@ body.index-page main {
     font-weight: 600;
     font-size: 1.1rem;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .bear-art-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 /* Contact Simple Section */
@@ -1744,7 +1711,6 @@ body.index-page main {
     background: var(--background-primary);
     border-radius: 12px;
     padding: 4px;
-    box-shadow: 0 4px 15px var(--shadow-light);
     border: 2px solid var(--border-light);
 }
 
@@ -1764,7 +1730,6 @@ body.index-page main {
 .view-btn.active {
     background: var(--solid-primary);
     color: var(--text-inverse);
-    box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
 /* Hover effects only on non-touch devices */
@@ -1781,7 +1746,6 @@ body.index-page main {
     background: var(--background-primary);
     border-radius: 12px;
     padding: 0.5rem;
-    box-shadow: 0 4px 15px var(--shadow-light);
     border: 2px solid var(--border-light);
 }
 
@@ -1826,12 +1790,10 @@ body.index-page main {
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 0.9rem;
-    box-shadow: 0 4px 15px var(--shadow-light);
 }
 
 .today-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
 /* Floating clear button removed - was ugly and unnecessary */
@@ -1877,7 +1839,6 @@ body.index-page main {
 
 .calendar-day:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px var(--shadow-medium);
     border-color: var(--primary-color);
 }
 
@@ -1901,7 +1862,6 @@ body.index-page main {
 
 .calendar-day.current:hover {
     transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 18px 40px var(--shadow-primary);
 }
 
 .day-header {
@@ -2173,7 +2133,6 @@ body.index-page main {
     background: var(--background-primary);
     border-radius: 15px;
     padding: 2rem;
-    box-shadow: 0 5px 20px var(--shadow-light);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     will-change: transform;
@@ -2181,7 +2140,6 @@ body.index-page main {
 
 .event-card.detailed:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 30px var(--shadow-medium);
 }
 
 /* Removed detailed highlight - using persistent selection only */
@@ -2428,20 +2386,17 @@ body.index-page main {
     font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin: 4px 6px;
-    box-shadow: 0 2px 8px var(--shadow-primary);
     border: 2px solid transparent;
 }
 
 .event-link:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 20px var(--shadow-primary);
     border-color: rgba(255, 255, 255, 0.3);
     background: var(--solid-primary);
 }
 
 .event-link:active {
     transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 3px 12px var(--shadow-primary);
 }
 
 /* Responsive link styling */
@@ -2529,7 +2484,6 @@ body.index-page main {
     background: var(--background-primary);
     padding: 2rem;
     border-radius: 15px;
-    box-shadow: 0 5px 20px var(--shadow-light);
 }
 
 .contact-form input,
@@ -2567,7 +2521,6 @@ body.index-page main {
 
 .contact-form button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
 /* Enhanced Map Section */
@@ -2624,7 +2577,6 @@ body.index-page main {
     position: relative;
     border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 15px 50px var(--shadow-heavy);
     border: 4px solid var(--background-primary);
     background: var(--solid-primary);
     padding: 4px;
@@ -2637,14 +2589,12 @@ body.index-page main {
     border-radius: 20px;
     position: relative;
     z-index: 1;
-    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {
     .map-container {
         border-radius: 0;
         border: none;
-        box-shadow: none;
         padding: 0;
         margin: 0;
         width: 100%;
@@ -2655,7 +2605,6 @@ body.index-page main {
         height: 60vh;
         min-height: 400px;
         border-radius: 0;
-        box-shadow: none;
         width: 100%;
     }
 }
@@ -2701,7 +2650,6 @@ body.index-page main {
     background: white;
     border: 2px solid var(--primary-color);
     border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transition: border-color 0.3s ease, box-shadow 0.2s ease;
     overflow: hidden;
     box-sizing: border-box;
@@ -2782,7 +2730,6 @@ body.index-page main {
     cursor: pointer;
     font-size: 16px;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 6px var(--shadow-light);
     margin-bottom: 4px;
     backdrop-filter: blur(10px);
 }
@@ -2802,14 +2749,12 @@ body.index-page main {
     background: var(--primary-color);
     color: var(--text-inverse);
     border-color: var(--primary-color);
-    box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
 .leaflet-control-fit-markers,
 .leaflet-control-my-location {
     background: none;
     border: none;
-    box-shadow: none;
 }
 
 /* Location Button Status Styles */
@@ -4059,7 +4004,6 @@ footer {
 .event-card.selected {
     border: 2px solid var(--primary-color);
     background: var(--background-primary);
-    box-shadow: 0 4px 12px var(--shadow-primary);
 }
 
 /* Calendar Event Item Selected State */
@@ -4125,7 +4069,6 @@ footer {
     padding: 1rem;
     text-align: center;
     min-height: 80px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     border: 1px solid var(--border-light);
     transition: all 0.2s ease;
     cursor: pointer;
@@ -4137,7 +4080,6 @@ footer {
 
 .calendar-day.calendar-overview:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px var(--shadow-primary);
     border-color: var(--primary-color);
 }
 
@@ -4229,7 +4171,6 @@ footer {
     width: 90%;
     max-height: 80vh;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: modalSlideIn 0.3s ease;
 }
 
@@ -4510,7 +4451,6 @@ footer {
     background: var(--solid-primary) !important;
     color: var(--text-inverse) !important;
     border-color: var(--primary-color) !important;
-    box-shadow: 0 15px 40px var(--shadow-primary) !important;
     transform: scale(1.02);
 }
 
@@ -4532,12 +4472,10 @@ footer {
 
 .calendar-day.week-view.current h3 {
     color: white !important;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .calendar-day.week-view.current .day-date {
     color: rgba(255,255,255,0.95) !important;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .calendar-day.week-view.current .day-indicator {
@@ -4545,7 +4483,6 @@ footer {
     color: white !important;
     border: 1px solid rgba(255,255,255,0.3);
     font-weight: 600;
-    text-shadow: none;
 }
 
 .calendar-day.week-view.current .event-count {
@@ -4933,7 +4870,6 @@ footer {
 
 .directory-tile:hover {
     transform: translateY(-4px);
-    box-shadow: 0 4px 16px var(--shadow-medium);
 }
 
 .instagram-embed-container {
@@ -5390,7 +5326,6 @@ footer {
 
 .preview-error-link:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     background: var(--solid-secondary);
 }
 
@@ -5413,7 +5348,6 @@ footer {
     min-width: 200px;
     max-width: 300px;
     border: 1px solid var(--border-dark);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(10px);
     user-select: none;
 }
@@ -5442,7 +5376,6 @@ footer {
 .debug-title {
     font-size: 12px;
     color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .debug-close,
@@ -5731,14 +5664,12 @@ footer {
     cursor: pointer;
     transition: all 0.3s ease;
     margin-top: 1rem;
-    box-shadow: 0 2px 10px rgba(255, 107, 53, 0.3);
     font-family: 'Poppins', sans-serif;
 }
 
 .share-intel-footer-btn:hover {
     background: var(--accent);
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 }
 
 @media (max-width: 768px) {
@@ -5792,7 +5723,6 @@ footer {
 .bear-intel-form button:hover {
     background: var(--accent);
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
 }
 
 @keyframes modalFadeIn {
@@ -5866,7 +5796,6 @@ footer {
 .retry-btn:hover {
     background: var(--primary-hover);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 /* Page Effects - Moved from injectDynamicStyles() */
@@ -5900,7 +5829,6 @@ body.loaded {
 
 .contact-item:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
 }
 
 /* Smooth button interactions */
@@ -5911,7 +5839,6 @@ body.loaded {
 
 .cta-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
 }
 
 /* Smooth calendar day interactions */
@@ -5922,7 +5849,6 @@ body.loaded {
 
 .calendar-day:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
 }
 
 /* Smooth event card interactions */
@@ -5933,6 +5859,5 @@ body.loaded {
 
 .event-card.detailed:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
 }
 
