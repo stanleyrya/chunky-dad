@@ -28,12 +28,6 @@
     --black: #000000;
     --transparent: transparent;
     
-    /* Status Colors */
-    --success-color: #4ecdc4;
-    --warning-color: #ffd700;
-    --error-color: #dc2626;
-    --color-online: #10b981;
-    --color-offline: #6b7280;
     
     /* Joke Bubble Colors */
     --joke-bubble-background: var(--white);
@@ -61,10 +55,8 @@
     /* Solid Color Alternatives */
     --solid-primary: var(--primary-color);
     --solid-secondary: var(--secondary-color);
-    --solid-success: var(--success-color);
     --solid-warning: var(--background-light);
     --solid-light: var(--background-light);
-    --solid-error: var(--error-color);
     
 }
 
@@ -354,7 +346,7 @@ body.index-page header.visible {
 }
 
 .debug-label {
-    color: var(--warning-color);
+    color: var(--text-secondary);
     font-weight: bold;
     margin-right: 0.5rem;
 }
@@ -2793,16 +2785,16 @@ body.index-page main {
 }
 
 #location-btn.location-success {
-    color: var(--success-color);
+    color: var(--primary-color);
     background: var(--background-primary);
-    border-color: var(--success-color);
+    border-color: var(--primary-color);
     backdrop-filter: blur(10px);
 }
 
 #location-btn.location-error {
-    color: var(--error-color);
+    color: var(--secondary-color);
     background: var(--background-primary);
-    border-color: var(--error-color);
+    border-color: var(--secondary-color);
     backdrop-filter: blur(10px);
 }
 
@@ -2827,7 +2819,7 @@ body.index-page main {
 
 .error-message {
     background: var(--solid-error);
-    border: 2px solid var(--color-error);
+    border: 2px solid var(--secondary-color);
     border-radius: 15px;
     padding: 2rem;
     margin: 2rem 0;
@@ -2835,19 +2827,19 @@ body.index-page main {
 }
 
 .error-message h3 {
-    color: var(--color-error);
+    color: var(--secondary-color);
     margin-bottom: 1rem;
     font-size: 1.3rem;
 }
 
 .error-message p {
-    color: var(--error-color);
+    color: var(--secondary-color);
     margin-bottom: 1rem;
     line-height: 1.6;
 }
 
 .error-message ul {
-    color: var(--error-color);
+    color: var(--secondary-color);
     text-align: left;
     margin: 1rem 0;
     padding-left: 1.5rem;
@@ -2858,7 +2850,7 @@ body.index-page main {
 }
 
 .error-message a {
-    color: var(--error-color);
+    color: var(--secondary-color);
     font-weight: 600;
     text-decoration: none;
 }
@@ -4087,12 +4079,12 @@ footer {
 }
 
 .calendar-day.calendar-overview.has-events {
-    border-color: var(--color-online);
+    border-color: var(--primary-color);
             background: var(--background-light);
 }
 
 .calendar-day.calendar-overview.has-events:hover {
-    border-color: var(--success-color);
+    border-color: var(--accent-color);
             background: var(--background-light);
 }
 
@@ -4113,7 +4105,7 @@ footer {
 .event-dot {
     width: 6px;
     height: 6px;
-    background: var(--color-online);
+    background: var(--primary-color);
     border-radius: 50%;
 }
 
@@ -4260,20 +4252,20 @@ footer {
 }
 
 .modal-event-item .event-venue {
-    color: var(--color-offline);
+    color: var(--text-muted);
     font-weight: 500;
     font-size: 0.9rem;
 }
 
 .modal-event-item .event-cover {
-    color: var(--success-color);
+    color: var(--primary-color);
     font-weight: 500;
     font-size: 0.9rem;
 }
 
 .no-modal-events {
     text-align: center;
-    color: var(--color-offline);
+    color: var(--text-muted);
     font-style: italic;
     margin: 2rem 0;
 }
@@ -4847,7 +4839,7 @@ footer {
 .error-message {
     text-align: center;
     padding: 4rem 0;
-    color: var(--error-color);
+    color: var(--secondary-color);
 }
 
 /* Directory Grid */
@@ -4938,7 +4930,7 @@ footer {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: var(--error-color);
+    color: var(--secondary-color);
     font-size: 0.9rem;
 }
 
