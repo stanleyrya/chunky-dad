@@ -1197,6 +1197,17 @@ body.index-page main {
     display: block !important; /* Ensure city names are always visible in city cards */
 }
 
+/* Bear Event-Specific Content */
+.event-compact-card .bear-event-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.3px;
+    display: block !important; /* Ensure bear event names are always visible in event cards */
+    color: var(--text-inverse); /* Inverse text color like city-name */
+}
+
 /* Event-Specific Content */
 .event-compact-card .event-content {
     display: flex;
@@ -1574,7 +1585,7 @@ body.index-page main {
         display: block !important; /* Ensure city names are always visible in city cards on mobile */
     }
     
-    .event-compact-card .event-name {
+    .event-compact-card .bear-event-name {
         font-size: 0.85rem;
     }
     
@@ -2013,7 +2024,10 @@ body.index-page main {
     }
 }
 
-.event-name {
+/* Event name styling for city page calendar and events sections */
+.weekly-calendar .event-name,
+.events .event-name,
+.events-map-section .event-name {
     font-weight: 600;
     margin-bottom: 0.2rem;
     word-wrap: break-word;
@@ -4714,7 +4728,10 @@ footer {
 }
 
 /* Event name styling - now handled dynamically in JavaScript with intelligent 3-line building */
-.event-name {
+/* Scoped to city page calendar and events sections */
+.weekly-calendar .event-name,
+.events .event-name,
+.events-map-section .event-name {
   font-size: var(--event-name-font-size);
   font-weight: var(--event-name-font-weight);
   line-height: var(--event-name-line-height);
@@ -4738,7 +4755,9 @@ footer {
 
 /* For browsers that don't support -webkit-line-clamp, use a more basic approach */
 @supports not (-webkit-line-clamp: 3) {
-  .event-name {
+  .weekly-calendar .event-name,
+  .events .event-name,
+  .events-map-section .event-name {
     display: block;
     max-height: calc(var(--event-name-line-height) * 3em);
     overflow: hidden;

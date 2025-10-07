@@ -95,7 +95,7 @@ class CompactCardRenderer {
             content.className = 'event-content';
 
             const name = document.createElement('span');
-            name.className = 'event-name';
+            name.className = 'bear-event-name';
             name.textContent = item.name;
 
             const dates = document.createElement('span');
@@ -146,7 +146,7 @@ class CompactCardRenderer {
             content.className = 'event-content';
 
             const name = document.createElement('span');
-            name.className = 'event-name';
+            name.className = 'bear-event-name';
             name.textContent = 'More Events';
 
             const subtitle = document.createElement('span');
