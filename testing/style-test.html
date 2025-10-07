@@ -14,7 +14,6 @@
             --cd-accent: #764ba2;
             --cd-success: #4ecdc4;
             --cd-warning: #ffd166;
-            --cd-danger: #ef476f;
             --cd-neutral-900: #111827;
             --cd-neutral-700: #374151;
             --cd-neutral-500: #6b7280;
@@ -165,7 +164,6 @@
         .badge.primary { background: rgba(102,126,234,0.12); color: var(--cd-primary); border: 1px solid rgba(102,126,234,0.35); }
         .badge.success { background: rgba(78,205,196,0.12); color: var(--cd-success); border: 1px solid rgba(78,205,196,0.35); }
         .badge.warning { background: rgba(255,209,102,0.18); color: #8a5a00; border: 1px solid rgba(255,209,102,0.45); }
-        .badge.danger { background: rgba(239,71,111,0.1); color: var(--cd-danger); border: 1px solid rgba(239,71,111,0.35); }
 
         .btn {
             display: inline-flex; align-items: center; gap: 8px;
@@ -228,7 +226,6 @@
         .alert { border: 1px solid var(--cd-border); border-left-width: 4px; border-radius: 10px; padding: 12px 14px; background: var(--cd-surface); }
         .alert.success { border-left-color: var(--cd-success); }
         .alert.warning { border-left-color: var(--cd-warning); }
-        .alert.danger { border-left-color: var(--cd-danger); }
 
         /* Back to top */
         .back-to-top { position: fixed; right: 22px; bottom: 22px; width: 48px; height: 48px; border-radius: 999px; display: grid; place-items: center; color: #fff; background: var(--cd-primary); text-decoration: none; box-shadow: var(--cd-shadow-3); }
@@ -349,7 +346,7 @@
                             <div class="meta">Sat 10 PM • Downtown</div>
                             <div class="tags">
                                 <span class="badge primary">Dance</span>
-                                <span class="badge danger">Ticketed</span>
+                                <span class="badge warning">Ticketed</span>
                             </div>
                             <div class="row" style="margin-top:10px">
                                 <button class="btn primary small" data-btn="details">Details</button>
@@ -543,7 +540,7 @@
             <div class="grid-3">
                 <div class="alert success">Success: Your RSVP was recorded.</div>
                 <div class="alert warning">Warning: Limited capacity — arrive early.</div>
-                <div class="alert danger">Error: Something went wrong. Try again.</div>
+                <div class="alert warning">Error: Something went wrong. Try again.</div>
             </div>
         </section>
 

@@ -645,13 +645,6 @@
                             </div>
                         </div>
                         <div class="color-control">
-                            <label>Info</label>
-                            <div class="color-input-group">
-                                <input type="color" id="info-color" class="color-picker" value="#3b82f6">
-                                <input type="text" id="info-color-text" class="color-input" value="#3b82f6">
-                            </div>
-                        </div>
-                        <div class="color-control">
                             <label>Online</label>
                             <div class="color-input-group">
                                 <input type="color" id="color-online" class="color-picker" value="#10b981">
@@ -665,60 +658,18 @@
                                 <input type="text" id="color-offline-text" class="color-input" value="#6b7280">
                             </div>
                         </div>
-                        <div class="color-control">
-                            <label>Busy</label>
-                            <div class="color-input-group">
-                                <input type="color" id="color-busy" class="color-picker" value="#f59e0b">
-                                <input type="text" id="color-busy-text" class="color-input" value="#f59e0b">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Away</label>
-                            <div class="color-input-group">
-                                <input type="color" id="color-away" class="color-picker" value="#f97316">
-                                <input type="text" id="color-away-text" class="color-input" value="#f97316">
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Additional Colors Section -->
+            <!-- Basic Colors Section -->
             <div class="control-section">
                 <h3 onclick="toggleSection(this.parentElement)">
-                    🎨 Additional Colors
+                    🎨 Basic Colors
                     <span class="toggle-icon">▼</span>
                 </h3>
                 <div class="section-content">
                     <div class="color-grid">
-                        <div class="color-control">
-                            <label>Danger</label>
-                            <div class="color-input-group">
-                                <input type="color" id="color-danger" class="color-picker" value="#ff6b6b">
-                                <input type="text" id="color-danger-text" class="color-input" value="#ff6b6b">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Danger Dark</label>
-                            <div class="color-input-group">
-                                <input type="color" id="color-danger-dark" class="color-picker" value="#ee5a24">
-                                <input type="text" id="color-danger-dark-text" class="color-input" value="#ee5a24">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Success Light</label>
-                            <div class="color-input-group">
-                                <input type="color" id="color-success-light" class="color-picker" value="#10b981">
-                                <input type="text" id="color-success-light-text" class="color-input" value="#10b981">
-                            </div>
-                        </div>
-                        <div class="color-control">
-                            <label>Success Dark</label>
-                            <div class="color-input-group">
-                                <input type="color" id="color-success-dark" class="color-picker" value="#059669">
-                                <input type="text" id="color-success-dark-text" class="color-input" value="#059669">
-                            </div>
-                        </div>
                         <div class="color-control">
                             <label>White</label>
                             <div class="color-input-group">
@@ -957,15 +908,8 @@
                         'success-color': '#4ecdc4',
                         'warning-color': '#ffd700',
                         'error-color': '#dc2626',
-                        'info-color': '#3b82f6',
                         'color-online': '#10b981',
                         'color-offline': '#6b7280',
-                        'color-busy': '#f59e0b',
-                        'color-away': '#f97316',
-                        'color-danger': '#ff6b6b',
-                        'color-danger-dark': '#ee5a24',
-                        'color-success-light': '#10b981',
-                        'color-success-dark': '#059669',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#667eea',
@@ -1004,8 +948,6 @@
                         'color-away': '#ff6b6b',
                         'color-danger': '#ff6b6b',
                         'color-danger-dark': '#ee5a24',
-                        'color-success-light': '#4ecdc4',
-                        'color-success-dark': '#45b7d1',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#4ecdc4',
@@ -1044,8 +986,6 @@
                         'color-away': '#ff6b6b',
                         'color-danger': '#ff6b6b',
                         'color-danger-dark': '#ee5a24',
-                        'color-success-light': '#4ecdc4',
-                        'color-success-dark': '#45b7d1',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#000000',
@@ -1084,8 +1024,6 @@
                         'color-away': '#ff00ff',
                         'color-danger': '#ff00ff',
                         'color-danger-dark': '#cc00cc',
-                        'color-success-light': '#00ffff',
-                        'color-success-dark': '#00cccc',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#ff00ff',
@@ -1124,8 +1062,6 @@
                         'color-away': '#ff6b35',
                         'color-danger': '#ff6b35',
                         'color-danger-dark': '#cc5528',
-                        'color-success-light': '#ffd23f',
-                        'color-success-dark': '#f7931e',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#ff6b35',
@@ -1164,8 +1100,6 @@
                         'color-away': '#006994',
                         'color-danger': '#006994',
                         'color-danger-dark': '#004d6d',
-                        'color-success-light': '#90e0ef',
-                        'color-success-dark': '#00b4d8',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#006994',
@@ -1204,8 +1138,6 @@
                         'color-away': '#978B7D',
                         'color-danger': '#E14F38',
                         'color-danger-dark': '#B83D2A',
-                        'color-success-light': '#BCBBA3',
-                        'color-success-dark': '#978B7D',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#BCBBA3',
@@ -1244,8 +1176,6 @@
                         'color-away': '#2A2D2A',
                         'color-danger': '#E14F38',
                         'color-danger-dark': '#B83D2A',
-                        'color-success-light': '#51443E',
-                        'color-success-dark': '#2A2D2A',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#51443E',
@@ -1284,8 +1214,6 @@
                         'color-away': '#7094A0',
                         'color-danger': '#E14F38',
                         'color-danger-dark': '#B83D2A',
-                        'color-success-light': '#FD9433',
-                        'color-success-dark': '#E14F38',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#FD9433',
@@ -1324,8 +1252,6 @@
                         'color-away': '#533d8b',
                         'color-danger': '#d94f57',
                         'color-danger-dark': '#B83D2A',
-                        'color-success-light': '#ffcc00',
-                        'color-success-dark': '#d94f57',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#ffcc00',
@@ -1364,8 +1290,6 @@
                         'color-away': '#fca311',
                         'color-danger': '#dc2626',
                         'color-danger-dark': '#b91c1c',
-                        'color-success-light': '#fca311',
-                        'color-success-dark': '#e0940f',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#14213d',
@@ -1404,8 +1328,6 @@
                         'color-away': '#ff7d00',
                         'color-danger': '#ff7d00',
                         'color-danger-dark': '#cc6400',
-                        'color-success-light': '#ff7d00',
-                        'color-success-dark': '#cc6400',
                         'white': '#ffffff',
                         'black': '#000000',
                         'gradient-primary-start': '#15616d',
@@ -1595,15 +1517,8 @@
                         --success-color: ${document.getElementById('success-color').value};
                         --warning-color: ${document.getElementById('warning-color').value};
                         --error-color: ${document.getElementById('error-color').value};
-                        --info-color: ${document.getElementById('info-color').value};
                         --color-online: ${document.getElementById('color-online').value};
                         --color-offline: ${document.getElementById('color-offline').value};
-                        --color-busy: ${document.getElementById('color-busy').value};
-                        --color-away: ${document.getElementById('color-away').value};
-                        --color-danger: ${document.getElementById('color-danger').value};
-                        --color-danger-dark: ${document.getElementById('color-danger-dark').value};
-                        --color-success-light: ${document.getElementById('color-success-light').value};
-                        --color-success-dark: ${document.getElementById('color-success-dark').value};
                         --white: ${document.getElementById('white').value};
                         --black: ${document.getElementById('black').value};
                         
@@ -1626,7 +1541,6 @@
                         --gradient-success: linear-gradient(45deg, ${document.getElementById('gradient-success-start').value}, ${document.getElementById('gradient-success-end').value} 100%);
                         --gradient-warning: linear-gradient(135deg, ${document.getElementById('background-primary').value} 0%, ${document.getElementById('background-light').value} 100%);
                         --gradient-light: linear-gradient(135deg, ${document.getElementById('gradient-light-start').value} 0%, ${document.getElementById('gradient-light-end').value} 100%);
-                        --gradient-success-alt: linear-gradient(45deg, ${document.getElementById('color-success-light').value}, ${document.getElementById('color-success-dark').value});
                         --gradient-error: linear-gradient(135deg, ${document.getElementById('background-light').value} 0%, ${document.getElementById('background-light').value} 100%);
                     }
                 `;
@@ -1760,7 +1674,6 @@
                         'border-light', 'border-lighter', 'border-dark',
                         'success-color', 'warning-color', 'error-color', 'info-color',
                         'color-online', 'color-offline', 'color-busy', 'color-away',
-                        'color-danger', 'color-danger-dark', 'color-success-light', 'color-success-dark',
                         'white', 'black',
                         'gradient-primary-start', 'gradient-primary-end', 'gradient-secondary-start', 'gradient-secondary-end',
                         'gradient-success-start', 'gradient-success-end', 'gradient-light-start', 'gradient-light-end'
@@ -1829,15 +1742,8 @@
                     'success-color': accents[2] || shuffledColors[16],
                     'warning-color': accents[3] || shuffledColors[17],
                     'error-color': accents[4] || shuffledColors[18],
-                    'info-color': accents[5] || shuffledColors[19],
                     'color-online': accents[6] || shuffledColors[20],
                     'color-offline': accents[7] || shuffledColors[21],
-                    'color-busy': accents[8] || shuffledColors[22],
-                    'color-away': accents[9] || shuffledColors[23],
-                    'color-danger': accents[10] || shuffledColors[24],
-                    'color-danger-dark': accents[11] || shuffledColors[25],
-                    'color-success-light': accents[12] || shuffledColors[26],
-                    'color-success-dark': accents[13] || shuffledColors[27],
                     'white': shuffledColors[28],
                     'black': shuffledColors[29],
                     'gradient-primary-start': accents[17] || shuffledColors[36],
@@ -2043,7 +1949,6 @@
                         'border-light', 'border-lighter', 'border-dark',
                         'success-color', 'warning-color', 'error-color', 'info-color',
                         'color-online', 'color-offline', 'color-busy', 'color-away',
-                        'color-danger', 'color-danger-dark', 'color-success-light', 'color-success-dark',
                         'white', 'black',
                         'gradient-primary-start', 'gradient-primary-end', 'gradient-secondary-start', 'gradient-secondary-end',
                         'gradient-success-start', 'gradient-success-end', 'gradient-light-start', 'gradient-light-end'
@@ -2131,15 +2036,8 @@
                     'success-color': document.getElementById('success-color').value,
                     'warning-color': document.getElementById('warning-color').value,
                     'error-color': document.getElementById('error-color').value,
-                    'info-color': document.getElementById('info-color').value,
                     'color-online': document.getElementById('color-online').value,
                     'color-offline': document.getElementById('color-offline').value,
-                    'color-busy': document.getElementById('color-busy').value,
-                    'color-away': document.getElementById('color-away').value,
-                    'color-danger': document.getElementById('color-danger').value,
-                    'color-danger-dark': document.getElementById('color-danger-dark').value,
-                    'color-success-light': document.getElementById('color-success-light').value,
-                    'color-success-dark': document.getElementById('color-success-dark').value,
                     'white': document.getElementById('white').value,
                     'black': document.getElementById('black').value,
                     'gradient-primary-start': document.getElementById('gradient-primary-start').value,

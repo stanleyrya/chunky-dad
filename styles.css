@@ -32,11 +32,8 @@
     --success-color: #4ecdc4;
     --warning-color: #ffd700;
     --error-color: #dc2626;
-    --info-color: #3b82f6;
     --color-online: #10b981;
     --color-offline: #6b7280;
-    --color-busy: #f59e0b;
-    --color-away: #f97316;
     
     /* Joke Bubble Colors */
     --joke-bubble-background: var(--white);
