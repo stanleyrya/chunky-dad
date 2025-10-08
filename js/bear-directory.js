@@ -804,7 +804,6 @@ class BearDirectory {
                         shareUrl = anyLink.href;
                         shareText = `Check out ${itemName}`;
                     } else {
-                        this.showShareToast('No content to share');
                         return;
                     }
                 }
@@ -827,26 +826,20 @@ class BearDirectory {
                             itemName,
                             shareUrl
                         });
-                        // No toast for successful share - rely on native share sheet experience
                     } catch (err) {
                         if (err.name !== 'AbortError') {
                             logger.error('DIRECTORY', 'Share failed', err);
-                            this.showShareToast('Unable to share content');
                         }
                     }
                 } else if (navigator.clipboard && navigator.clipboard.writeText) {
                     // Simple clipboard copy
                     try {
                         await navigator.clipboard.writeText(shareUrl);
-                        this.showShareToast('Link copied! 📋');
                         logger.info('DIRECTORY', 'Content URL copied to clipboard');
                     } catch (err) {
                         logger.error('DIRECTORY', 'Copy failed', err);
-                        this.showShareToast('Unable to copy link');
                     }
                 } else {
-                    // No share capability available
-                    this.showShareToast('Sharing not supported on this browser');
                     logger.warn('DIRECTORY', 'No share method available');
                 }
             });
@@ -855,68 +848,6 @@ class BearDirectory {
         logger.debug('DIRECTORY', `Set up ${shareButtons.length} share button handlers`);
     }
     
-    // Show toast notification for share feedback
-    showShareToast(message) {
-        // Remove any existing toast
-        const existingToast = document.querySelector('.share-toast');
-        if (existingToast) {
-            existingToast.remove();
-        }
-        
-        // Create new toast
-        const toast = document.createElement('div');
-        toast.className = 'share-toast';
-        toast.textContent = message;
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--primary-color, #8B4513);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            animation: slideUp 0.3s ease-out;
-        `;
-        
-        // Add animation keyframes if not already present
-        if (!document.querySelector('#share-toast-styles')) {
-            const style = document.createElement('style');
-            style.id = 'share-toast-styles';
-            style.textContent = `
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-50%) translateY(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(-50%) translateY(0);
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        document.body.appendChild(toast);
-        
-        // Auto-remove after 3 seconds
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.style.animation = 'slideUp 0.3s ease-out reverse';
-                setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.remove();
-                    }
-                }, 300);
-            }
-        }, 3000);
-    }
 
     showError() {
         this.elements.loadingIndicator.style.display = 'none';
