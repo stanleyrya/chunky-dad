@@ -120,13 +120,13 @@ class RedEyeTicketsParser {
             // Extract coordinates from venue info
             const coordinates = this.extractCoordinates(venueInfo);
             
-            // Set default end date for Goldiloxx events (4am next day)
+            // Set default end date for Red Eye bar events (4am next day)
             let endDate = dateTime.endDate;
-            if (!endDate && dateTime.startDate && parserConfig.name === "Goldiloxx") {
+            if (!endDate && dateTime.startDate && venueInfo.venue && venueInfo.venue.toLowerCase().includes('red eye')) {
                 endDate = new Date(dateTime.startDate);
                 endDate.setDate(endDate.getDate() + 1);
                 endDate.setHours(4, 0, 0, 0);
-                console.log(`🎫 RedEyeTickets: Set default end date for Goldiloxx: ${endDate.toISOString()}`);
+                console.log(`🎫 RedEyeTickets: Set default end date for Red Eye bar event: ${endDate.toISOString()}`);
             }
 
             const event = {
