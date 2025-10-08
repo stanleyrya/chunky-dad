@@ -4824,7 +4824,7 @@ footer {
     align-items: center;
     justify-content: center;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Instagram embed iframe styles */
@@ -4889,6 +4889,36 @@ footer {
     font-size: 0.9rem;
 }
 
+/* Instagram error styling */
+.instagram-error {
+    padding: 2rem;
+    text-align: center;
+    background: var(--background-light);
+    border-radius: 8px;
+    color: var(--text-primary);
+}
+
+.instagram-error p {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.instagram-error a {
+    display: inline-block;
+    background: var(--primary-color);
+    color: var(--white);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.instagram-error a:hover {
+    background: var(--solid-primary);
+}
+
 .tile-content {
     padding: 1.5rem;
 }
@@ -4925,6 +4955,24 @@ footer {
     text-decoration: none;
     font-size: 0.9rem;
     transition: all 0.3s ease;
+}
+
+.tile-link.icon-only {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-color);
+    color: var(--white);
+    border: none;
+}
+
+.tile-link.icon-only:hover {
+    background: var(--solid-primary);
+    transform: scale(1.1);
 }
 
 /* Hover effects only on non-touch devices */

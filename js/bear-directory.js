@@ -261,10 +261,10 @@ class BearDirectory {
                 ${item.city ? `<p class="tile-city">📍 ${item.city}</p>` : ''}
                 <p class="tile-type">${this.getTypeIcon(item.type)} ${item.type}</p>
                 <div class="tile-links">
-                    ${item.shop ? `<a href="${item.shop}" target="_blank" rel="noopener" class="tile-link">Shop</a>` : ''}
-                    ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link">Website</a>` : ''}
-                    ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link">Instagram</a>` : ''}
-                    ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link">Map</a>` : ''}
+                    ${item.shop ? `<a href="${item.shop}" target="_blank" rel="noopener" class="tile-link icon-only" title="Visit Shop" aria-label="Visit Shop"><i class="bi bi-bag"></i></a>` : ''}
+                    ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link icon-only" title="Visit Website" aria-label="Visit Website"><i class="bi bi-globe"></i></a>` : ''}
+                    ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link icon-only" title="View Instagram" aria-label="View Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                    ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link icon-only" title="View on Map" aria-label="View on Map"><i class="bi bi-geo-alt"></i></a>` : ''}
                 </div>
             </div>
         `;
@@ -390,7 +390,7 @@ class BearDirectory {
             });
         }
         
-        this.displayDirectory();
+        this.updateDisplayVisibility();
         this.updateMap();
     }
     
@@ -410,7 +410,7 @@ class BearDirectory {
             }
         });
         
-        this.displayDirectory();
+        this.updateDisplayOrder();
     }
     
     handleFilter(filterType) {
@@ -424,7 +424,7 @@ class BearDirectory {
             );
         }
         
-        this.displayDirectory();
+        this.updateDisplayVisibility();
         this.updateMap();
     }
     
@@ -689,6 +689,58 @@ class BearDirectory {
         logger.debug('DIRECTORY', 'Iframe timeouts set', { count: iframes.length });
     }
     
+    updateDisplayVisibility() {
+        logger.time('DIRECTORY', 'updateDisplayVisibility');
+        
+        // Get all existing tiles
+        const tiles = this.elements.grid.querySelectorAll('.directory-tile');
+        
+        // Create a set of filtered item names for quick lookup
+        const filteredNames = new Set(this.filteredData.map(item => item.name));
+        
+        // Show/hide tiles based on filtered data
+        tiles.forEach(tile => {
+            const tileName = tile.querySelector('.tile-name')?.textContent;
+            if (filteredNames.has(tileName)) {
+                tile.style.display = 'block';
+            } else {
+                tile.style.display = 'none';
+            }
+        });
+        
+        logger.timeEnd('DIRECTORY', 'updateDisplayVisibility');
+        logger.componentLoad('DIRECTORY', 'Display visibility updated', { 
+            visibleItems: this.filteredData.length 
+        });
+    }
+    
+    updateDisplayOrder() {
+        logger.time('DIRECTORY', 'updateDisplayOrder');
+        
+        // Get all existing tiles
+        const tiles = Array.from(this.elements.grid.querySelectorAll('.directory-tile'));
+        
+        // Create a map of tile names to DOM elements
+        const tileMap = new Map();
+        tiles.forEach(tile => {
+            const tileName = tile.querySelector('.tile-name')?.textContent;
+            if (tileName) {
+                tileMap.set(tileName, tile);
+            }
+        });
+        
+        // Reorder tiles based on filtered data order
+        this.filteredData.forEach(item => {
+            const tile = tileMap.get(item.name);
+            if (tile) {
+                this.elements.grid.appendChild(tile);
+            }
+        });
+        
+        logger.timeEnd('DIRECTORY', 'updateDisplayOrder');
+        logger.componentLoad('DIRECTORY', 'Display order updated');
+    }
+
     showError() {
         this.elements.loadingIndicator.style.display = 'none';
         this.elements.errorMessage.style.display = 'block';
