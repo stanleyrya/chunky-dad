@@ -219,18 +219,29 @@ class RedEyeTicketsParser {
     // Parse RedEyeTickets specific date format
     parseRedEyeDateString(dateString) {
         try {
-            // Handle format: "Saturday, October 25, 2025 at 9pm"
-            const fullMatch = dateString.match(/(\w+),\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})\s+at\s+(\d{1,2})(\w+)/i);
-            if (fullMatch) {
-                const [, dayOfWeek, month, day, year, hour, ampm] = fullMatch;
-                return this.createDateFromComponents(month, day, year, hour, ampm);
-            }
+            // Convert RedEyeTickets format to something Date constructor can handle
+            // Input: "Saturday, October 25, 2025 at 9pm" or "Saturday, November 22, 2025 at 8:30pm"
+            // Output: "October 25, 2025 9:00 PM" or "November 22, 2025 8:30 PM"
             
-            // Handle format: "Saturday, November 22, 2025 at 8:30pm" (with minutes)
-            const fullMatchWithMinutes = dateString.match(/(\w+),\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})\s+at\s+(\d{1,2}):(\d{2})(\w+)/i);
-            if (fullMatchWithMinutes) {
-                const [, dayOfWeek, month, day, year, hour, minutes, ampm] = fullMatchWithMinutes;
-                return this.createDateFromComponents(month, day, year, hour, ampm, minutes);
+            const fullMatch = dateString.match(/(\w+),\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})\s+at\s+(\d{1,2})(?::(\d{2}))?(\w+)/i);
+            if (fullMatch) {
+                const [, dayOfWeek, month, day, year, hour, minutes, ampm] = fullMatch;
+                
+                // Normalize the format for Date constructor
+                const normalizedTime = minutes ? `${hour}:${minutes}` : `${hour}:00`;
+                const normalizedAmPm = ampm.toUpperCase();
+                const dateStringForConstructor = `${month} ${day}, ${year} ${normalizedTime} ${normalizedAmPm}`;
+                
+                const startDate = new Date(dateStringForConstructor);
+                
+                // Check if date is valid
+                if (isNaN(startDate.getTime())) {
+                    console.warn(`🎫 RedEyeTickets: Invalid date string: "${dateStringForConstructor}"`);
+                    return null;
+                }
+                
+                console.log(`🎫 RedEyeTickets: Created start date: ${startDate.toISOString()}`);
+                return { startDate, endDate: null };
             }
             
             // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
@@ -245,31 +256,6 @@ class RedEyeTicketsParser {
         }
         
         return null;
-    }
-
-    // Create date from components using JavaScript's flexible Date constructor
-    createDateFromComponents(month, day, year, hour, ampm, minutes = '00') {
-        try {
-            // JavaScript Date constructor can handle many formats
-            // Format: "Month Day, Year Hour:Minute AM/PM"
-            const dateString = `${month} ${day}, ${year} ${hour}:${minutes} ${ampm}`;
-            const startDate = new Date(dateString);
-            
-            // Check if date is valid
-            if (isNaN(startDate.getTime())) {
-                console.warn(`🎫 RedEyeTickets: Invalid date string: "${dateString}"`);
-                return null;
-            }
-            
-            // No end date fallback - only return start date if no end time specified
-            console.log(`🎫 RedEyeTickets: Created start date: ${startDate.toISOString()}`);
-            
-            return { startDate, endDate: null };
-            
-        } catch (error) {
-            console.warn(`🎫 RedEyeTickets: Error creating date from components: ${error}`);
-            return null;
-        }
     }
 
     // Extract venue information
