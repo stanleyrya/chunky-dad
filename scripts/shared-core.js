@@ -1137,12 +1137,21 @@ class SharedCore {
             'googlemaps': 'gmaps',
             'googlemapslink': 'gmaps',
             'google maps': 'gmaps',
+            'gmaps': 'gmaps',
             
             // Ticket/purchase aliases
             'ticketurl': 'ticketUrl',
             'ticket url': 'ticketUrl',
             'tickets': 'ticketUrl',
-            'ticket': 'ticketUrl'
+            'ticket': 'ticketUrl',
+            'ticketUrl': 'ticketUrl',
+            
+            // Other common fields
+            'description': 'description',
+            'image': 'image',
+            'url': 'url',
+            'timezone': 'timezone',
+            'key': 'key'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
