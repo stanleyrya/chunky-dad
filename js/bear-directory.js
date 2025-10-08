@@ -271,7 +271,7 @@ class BearDirectory {
                     ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link icon-only" title="Visit Website" aria-label="Visit Website"><i class="bi bi-globe"></i></a>` : ''}
                     ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link icon-only" title="View Instagram" aria-label="View Instagram"><i class="bi bi-instagram"></i></a>` : ''}
                     ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link icon-only" title="View on Map" aria-label="View on Map"><i class="bi bi-geo-alt"></i></a>` : ''}
-                    <button class="share-directory-btn icon-only" data-item-name="${item.name}" data-item-type="${item.type}" data-item-city="${item.city}" data-item-instagram="${item.instagram || ''}" title="Share this business" aria-label="Share this business">
+                    <button class="share-event-btn icon-only" data-item-name="${item.name}" data-item-type="${item.type}" data-item-city="${item.city}" data-item-instagram="${item.instagram || ''}" title="Share this business" aria-label="Share this business">
                         <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
                     </button>
                 </div>
@@ -751,7 +751,7 @@ class BearDirectory {
     }
 
     setupShareButtons() {
-        const shareButtons = document.querySelectorAll('.share-directory-btn');
+        const shareButtons = document.querySelectorAll('.share-event-btn');
         
         shareButtons.forEach(button => {
             button.addEventListener('click', async (e) => {
