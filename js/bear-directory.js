@@ -762,45 +762,84 @@ class BearDirectory {
                 const itemCity = button.dataset.itemCity;
                 const itemInstagram = button.dataset.itemInstagram;
                 
-                // Build share URL
-                const shareUrl = `${window.location.origin}/bear-directory.html`;
+                // Find the tile this button belongs to
+                const tile = button.closest('.directory-tile');
+                if (!tile) return;
                 
-                // Build share text
-                const shareTitle = `${itemName}`;
-                const shareText = `Check out ${itemName} - ${itemType}${itemCity ? ` in ${itemCity}` : ''}${itemInstagram ? ` (@${itemInstagram})` : ''}`;
+                // Determine what content is being displayed and get the appropriate URL
+                let shareUrl = '';
+                let shareText = '';
+                
+                // Check if Instagram embed is displayed
+                const instagramContainer = tile.querySelector('.instagram-embed-container');
+                if (instagramContainer && itemInstagram) {
+                    shareUrl = `https://instagram.com/${itemInstagram}`;
+                    shareText = `Check out ${itemName} on Instagram`;
+                }
+                // Check if shop preview is displayed
+                else if (tile.querySelector('.shop-preview-container')) {
+                    const shopLink = tile.querySelector('.tile-link[href*="http"]');
+                    if (shopLink) {
+                        shareUrl = shopLink.href;
+                        shareText = `Check out ${itemName}'s shop`;
+                    }
+                }
+                // Check if website preview is displayed
+                else if (tile.querySelector('.website-preview-container')) {
+                    const websiteLink = tile.querySelector('.tile-link[href*="http"]');
+                    if (websiteLink) {
+                        shareUrl = websiteLink.href;
+                        shareText = `Check out ${itemName}'s website`;
+                    }
+                }
+                // Fallback to Instagram if available
+                else if (itemInstagram) {
+                    shareUrl = `https://instagram.com/${itemInstagram}`;
+                    shareText = `Check out ${itemName} on Instagram`;
+                }
+                // Fallback to any available link
+                else {
+                    const anyLink = tile.querySelector('.tile-link[href*="http"]');
+                    if (anyLink) {
+                        shareUrl = anyLink.href;
+                        shareText = `Check out ${itemName}`;
+                    } else {
+                        this.showShareToast('No content to share');
+                        return;
+                    }
+                }
                 
                 logger.userInteraction('DIRECTORY', 'Share button clicked', {
                     itemName,
                     itemType,
-                    itemCity
+                    shareUrl
                 });
                 
                 // Use Web Share API if available, otherwise copy to clipboard
                 if (navigator.share) {
                     try {
                         await navigator.share({
-                            title: shareTitle,
+                            title: itemName,
                             text: shareText,
                             url: shareUrl
                         });
-                        logger.info('DIRECTORY', 'Business shared successfully', {
+                        logger.info('DIRECTORY', 'Content shared successfully', {
                             itemName,
-                            itemType
+                            shareUrl
                         });
                         // No toast for successful share - rely on native share sheet experience
                     } catch (err) {
                         if (err.name !== 'AbortError') {
                             logger.error('DIRECTORY', 'Share failed', err);
-                            this.showShareToast('Unable to share business');
+                            this.showShareToast('Unable to share content');
                         }
                     }
                 } else if (navigator.clipboard && navigator.clipboard.writeText) {
                     // Simple clipboard copy
-                    const shareContent = `${shareText}\n${shareUrl}`;
                     try {
-                        await navigator.clipboard.writeText(shareContent);
+                        await navigator.clipboard.writeText(shareUrl);
                         this.showShareToast('Link copied! 📋');
-                        logger.info('DIRECTORY', 'Business URL copied to clipboard');
+                        logger.info('DIRECTORY', 'Content URL copied to clipboard');
                     } catch (err) {
                         logger.error('DIRECTORY', 'Copy failed', err);
                         this.showShareToast('Unable to copy link');
