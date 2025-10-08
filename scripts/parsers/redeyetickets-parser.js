@@ -273,11 +273,11 @@ class RedEyeTicketsParser {
             const venueText = venueMatch[1].trim();
             console.log(`🎫 RedEyeTickets: Found venue text: "${venueText}"`);
             
-            // Split venue name and address
-            const parts = venueText.split('-');
-            if (parts.length >= 2) {
-                const venue = parts[0].trim();
-                const address = parts.slice(1).join('-').trim();
+            // Split venue name and address - look for the last dash before the address
+            const lastDashIndex = venueText.lastIndexOf('-');
+            if (lastDashIndex > 0) {
+                const venue = venueText.substring(0, lastDashIndex).trim();
+                const address = venueText.substring(lastDashIndex + 1).trim();
                 console.log(`🎫 RedEyeTickets: Extracted venue: "${venue}", address: "${address}"`);
                 return { venue, address };
             }
