@@ -2290,8 +2290,6 @@ class ScriptableAdapter {
         }
         
         function toggleDiffView(button, eventKey) {
-            console.log('toggleDiffView called with eventKey:', eventKey);
-            
             // Convert eventKey to safe ID for DOM lookups - handle both escaped and unescaped keys
             let safeEventKey = eventKey;
             
@@ -2306,20 +2304,8 @@ class ScriptableAdapter {
             // Convert to safe DOM ID (same logic as in HTML generation)
             safeEventKey = safeEventKey.replace(/[^a-zA-Z0-9\-_]/g, '_');
             
-            console.log('safeEventKey after processing:', safeEventKey);
-            
             const tableView = document.getElementById('table-view-' + safeEventKey);
             const lineView = document.getElementById('line-view-' + safeEventKey);
-            
-            console.log('Found elements - tableView:', !!tableView, 'lineView:', !!lineView);
-            
-            // Fallback: if elements not found, try to find them by partial ID match
-            if (!tableView || !lineView) {
-                console.log('Elements not found, trying fallback search...');
-                const allElements = document.querySelectorAll('[id*="' + safeEventKey + '"]');
-                console.log('Found elements with partial match:', allElements.length);
-                allElements.forEach(el => console.log('Element ID:', el.id));
-            }
             
             // Check current state - table view is visible if display is not 'none'
             const isTableVisible = tableView && tableView.style.display !== 'none';
@@ -2338,8 +2324,6 @@ class ScriptableAdapter {
         }
         
         function toggleComparisonSection(eventId) {
-            console.log('toggleComparisonSection called with eventId:', eventId);
-            
             // Convert eventId to safe ID for DOM lookups - handle both escaped and unescaped keys
             let safeEventId = eventId;
             
@@ -2354,21 +2338,9 @@ class ScriptableAdapter {
             // Convert to safe DOM ID (same logic as in HTML generation)
             safeEventId = safeEventId.replace(/[^a-zA-Z0-9\-_]/g, '_');
             
-            console.log('safeEventId after processing:', safeEventId);
-            
             const content = document.getElementById('comparison-content-' + safeEventId);
             const icon = document.getElementById('expand-icon-' + safeEventId);
             const diffToggle = document.getElementById('diff-toggle-' + safeEventId);
-            
-            console.log('Found elements - content:', !!content, 'icon:', !!icon, 'diffToggle:', !!diffToggle);
-            
-            // Fallback: if elements not found, try to find them by partial ID match
-            if (!content || !icon) {
-                console.log('Elements not found, trying fallback search...');
-                const allElements = document.querySelectorAll('[id*="' + safeEventId + '"]');
-                console.log('Found elements with partial match:', allElements.length);
-                allElements.forEach(el => console.log('Element ID:', el.id));
-            }
             
             if (content && content.style.display === 'none') {
                 content.style.display = 'block';
