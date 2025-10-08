@@ -1099,10 +1099,12 @@ class SharedCore {
             'venue': 'bar',
             'location': 'bar',
             'host': 'bar',
+            'bar': 'bar',  // Add case-sensitive mapping
             
             // Price aliases
             'price': 'cover',
             'cost': 'cover',
+            'cover': 'cover',  // Add case-sensitive mapping
             
             // Name aliases
             'shortname': 'shortName',
@@ -1110,6 +1112,8 @@ class SharedCore {
             'shorter name': 'shortName',
             'short title': 'shortName',
             'shorttitle': 'shortName',
+            'nickname': 'shortName',  // Add case-sensitive mapping
+            'shorter': 'shorterName',  // Add case-sensitive mapping
             
             // Social/web aliases (canonicalize case and common variants)
             'instagram': 'instagram',
