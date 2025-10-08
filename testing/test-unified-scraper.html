@@ -421,6 +421,11 @@
                     <option value="all">🌐 All Sources</option>
                     <option value="eventbrite">🎫 Eventbrite (Megawoof America)</option>
                     <option value="bearracuda">🐻 Bearracuda</option>
+                    <option value="bears-sitges">🏖️ Bears Sitges Week</option>
+                    <option value="chunk">🎪 CHUNK</option>
+                    <option value="furball">🎭 Furball</option>
+                    <option value="linktree">🔗 Linktree</option>
+                    <option value="redeyetickets">🎟️ RedEye Tickets</option>
                     <option value="generic">🔧 Generic Parser</option>
                 </select>
             </div>
@@ -490,7 +495,13 @@
     <script src="../scripts/adapters/web-adapter.js" onerror="handleScriptError('web-adapter.js', event)"></script>
     <script src="../scripts/parsers/eventbrite-parser.js" onerror="handleScriptError('eventbrite-parser.js', event)"></script>
     <script src="../scripts/parsers/bearracuda-parser.js" onerror="handleScriptError('bearracuda-parser.js', event)"></script>
+    <script src="../scripts/parsers/bears-sitges-parser.js" onerror="handleScriptError('bears-sitges-parser.js', event)"></script>
+    <script src="../scripts/parsers/chunk-parser.js" onerror="handleScriptError('chunk-parser.js', event)"></script>
+    <script src="../scripts/parsers/furball-parser.js" onerror="handleScriptError('furball-parser.js', event)"></script>
     <script src="../scripts/parsers/generic-parser.js" onerror="handleScriptError('generic-parser.js', event)"></script>
+    <script src="../scripts/parsers/linktree-parser.js" onerror="handleScriptError('linktree-parser.js', event)"></script>
+    <script src="../scripts/parsers/redeyetickets-parser.js" onerror="handleScriptError('redeyetickets-parser.js', event)"></script>
+    <script src="../scripts/scraper-input.js" onerror="handleScriptError('scraper-input.js', event)"></script>
     <script src="../scripts/bear-event-scraper-unified.js" onerror="handleScriptError('bear-event-scraper-unified.js', event)"></script>
 
     <script>
@@ -498,9 +509,12 @@
         let scriptErrors = [];
         
         function handleScriptError(scriptName, event) {
-            const error = `Failed to load ${scriptName}`;
+            const error = `Failed to load ${scriptName}: ${event.target?.src || 'unknown path'}`;
             scriptErrors.push(error);
             console.error(error);
+            
+            // Update status to show script loading issues
+            updateStatus('moduleStatus', `Script error: ${scriptName}`, 'error');
         }
         
         // Enhanced console logging with colors and timestamps
@@ -606,8 +620,14 @@
                 'WebAdapter': typeof WebAdapter !== 'undefined',
                 'EventbriteParser': typeof EventbriteParser !== 'undefined',
                 'BearraccudaParser': typeof BearraccudaParser !== 'undefined',
+                'BearsSitgesParser': typeof BearsSitgesParser !== 'undefined',
+                'ChunkParser': typeof ChunkParser !== 'undefined',
+                'FurballParser': typeof FurballParser !== 'undefined',
                 'GenericParser': typeof GenericParser !== 'undefined',
-                'BearEventScraperOrchestrator': typeof BearEventScraperOrchestrator !== 'undefined'
+                'LinktreeParser': typeof LinktreeParser !== 'undefined',
+                'RedeeyeticketsParser': typeof RedeeyeticketsParser !== 'undefined',
+                'BearEventScraperOrchestrator': typeof BearEventScraperOrchestrator !== 'undefined',
+                'scraperConfig': typeof window.scraperConfig !== 'undefined'
             };
             
             const loadedModules = Object.entries(requiredModules).filter(([name, loaded]) => loaded);
@@ -625,6 +645,30 @@
             // Show script loading errors if any
             if (scriptErrors.length > 0) {
                 console.error(`Script loading errors: ${scriptErrors.join(', ')}`);
+                updateStatus('moduleStatus', `${scriptErrors.length} script errors`, 'error');
+            }
+            
+            // Test basic functionality of loaded modules
+            if (typeof SharedCore !== 'undefined') {
+                try {
+                    const sharedCore = new SharedCore();
+                    console.success('✅ SharedCore instantiated successfully');
+                } catch (error) {
+                    console.error(`❌ SharedCore instantiation failed: ${error.message}`);
+                }
+            }
+            
+            if (typeof WebAdapter !== 'undefined') {
+                try {
+                    const webAdapter = new WebAdapter();
+                    console.success('✅ WebAdapter instantiated successfully');
+                } catch (error) {
+                    console.error(`❌ WebAdapter instantiation failed: ${error.message}`);
+                }
+            }
+            
+            if (typeof window.scraperConfig !== 'undefined') {
+                console.success(`✅ Configuration loaded: ${window.scraperConfig.parsers?.length || 0} parsers configured`);
             }
         }
         
@@ -632,12 +676,24 @@
             try {
                 console.info('📋 Loading scraper configuration...');
                 
-                const response = await fetch('../scripts/scraper-input.json');
+                // Try to load from web-adapter first (supports both JS and JSON)
+                if (typeof WebAdapter !== 'undefined') {
+                    const webAdapter = new WebAdapter();
+                    const config = await webAdapter.loadConfiguration();
+                    console.success(`Configuration loaded via WebAdapter: ${config.parsers?.length || 0} parsers configured`);
+                    updateStatus('configStatus', `${config.parsers?.length || 0} parsers`, 'success');
+                    return config;
+                }
+                
+                // Fallback to direct JS loading
+                const response = await fetch('../scripts/scraper-input.js');
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const config = await response.json();
+                const configText = await response.text();
+                eval(configText);
+                const config = window.scraperConfig;
                 console.success(`Configuration loaded: ${config.parsers?.length || 0} parsers configured`);
                 updateStatus('configStatus', `${config.parsers?.length || 0} parsers`, 'success');
                 
@@ -672,14 +728,29 @@
                 const corsProxy = document.getElementById('corsProxy').value;
                 const dryRun = document.getElementById('dryRunCheckbox').checked;
                 const debugMode = document.getElementById('debugMode').checked;
+                const showRawData = document.getElementById('showRawData').checked;
                 
-                console.info(`Test config: source=${sourceSelect}, days=${daysInput}, dryRun=${dryRun}, debug=${debugMode}`);
+                console.info(`Test config: source=${sourceSelect}, days=${daysInput}, dryRun=${dryRun}, debug=${debugMode}, rawData=${showRawData}`);
                 
                 // Create and run orchestrator
                 const orchestrator = new BearEventScraperOrchestrator();
                 
                 console.info('🔧 Initializing orchestrator...');
                 await orchestrator.initialize();
+                
+                // Test web-adapter functionality if available
+                if (typeof WebAdapter !== 'undefined') {
+                    console.info('🌐 Testing WebAdapter functionality...');
+                    const webAdapter = new WebAdapter();
+                    
+                    // Test configuration loading
+                    try {
+                        const config = await webAdapter.loadConfiguration();
+                        console.success(`WebAdapter config test: ${config.parsers?.length || 0} parsers loaded`);
+                    } catch (configError) {
+                        console.warn(`WebAdapter config test failed: ${configError.message}`);
+                    }
+                }
                 
                 console.info('▶️ Running scraper...');
                 const startTime = Date.now();
@@ -689,8 +760,8 @@
                 console.success(`✅ Test completed in ${duration}ms`);
                 updateStatus('lastTestStatus', `${results.bearEvents} events (${duration}ms)`, 'success');
                 
-                // Display results
-                displayTestResults(results, duration);
+                // Display results with enhanced information
+                displayTestResults(results, duration, showRawData);
                 
             } catch (error) {
                 console.error(`❌ Full test failed: ${error.message}`);
@@ -709,11 +780,11 @@
             }
         }
         
-        function displayTestResults(results, duration) {
+        function displayTestResults(results, duration, showRawData = false) {
             const resultsContainer = document.getElementById('resultsContainer');
             const resultsDiv = document.getElementById('results');
             
-            // Create stats grid
+            // Create enhanced stats grid
             const statsHtml = `
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -721,8 +792,16 @@
                         <div class="stat-label">Total Events</div>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-number">${results.rawBearEvents || results.bearEvents || 0}</div>
+                        <div class="stat-label">Raw Bear Events</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-number">${results.bearEvents || 0}</div>
-                        <div class="stat-label">Bear Events</div>
+                        <div class="stat-label">Final Bear Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${results.duplicatesRemoved || 0}</div>
+                        <div class="stat-label">Duplicates Removed</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number">${results.calendarEvents || 0}</div>
@@ -734,6 +813,25 @@
                     </div>
                 </div>
             `;
+            
+            // Create parser breakdown
+            let parserHtml = '';
+            if (results.parserResults && results.parserResults.length > 0) {
+                parserHtml = `
+                    <h4>🔧 Parser Results</h4>
+                    <div class="stats-grid">
+                        ${results.parserResults.map(parser => `
+                            <div class="stat-card">
+                                <div class="stat-number">${parser.bearEvents || 0}</div>
+                                <div class="stat-label">${parser.name}</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                                    ${parser.totalEvents || 0} total events
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
             
             // Create events display if any
             let eventsHtml = '';
@@ -762,6 +860,7 @@
                                     <div class="event-detail">
                                         <strong>📊</strong> ${event.source || 'Unknown'}
                                     </div>
+                                    ${event._action ? `<div class="event-detail"><strong>⚡</strong> ${event._action}</div>` : ''}
                                     ${event.url ? `<div class="event-detail"><strong>🔗</strong> <a href="${event.url}" target="_blank">View Event</a></div>` : ''}
                                 </div>
                             `).join('')}
@@ -769,6 +868,17 @@
                         ${allEvents.length > 12 ? `<p style="text-align: center; color: #666; margin-top: 20px;">... and ${allEvents.length - 12} more events</p>` : ''}
                     `;
                 }
+            }
+            
+            // Show raw data if requested
+            let rawDataHtml = '';
+            if (showRawData && results) {
+                rawDataHtml = `
+                    <h4>🔍 Raw Results Data</h4>
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0; font-family: monospace; font-size: 12px; overflow-x: auto;">
+                        <pre>${JSON.stringify(results, null, 2)}</pre>
+                    </div>
+                `;
             }
             
             // Show errors if any
@@ -782,21 +892,61 @@
                 `;
             }
             
-            resultsDiv.innerHTML = statsHtml + eventsHtml + errorsHtml;
+            // Add download button for .ics file if events found
+            let downloadHtml = '';
+            if (results.bearEvents > 0 && typeof WebAdapter !== 'undefined') {
+                downloadHtml = `
+                    <div style="text-align: center; margin: 20px 0;">
+                        <button onclick="downloadICSFile()" class="success">
+                            📥 Download .ics File
+                        </button>
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = statsHtml + parserHtml + eventsHtml + rawDataHtml + errorsHtml + downloadHtml;
             resultsContainer.style.display = 'block';
             resultsContainer.scrollIntoView({ behavior: 'smooth' });
         }
         
+        // Download .ics file function
+        function downloadICSFile() {
+            try {
+                if (typeof WebAdapter === 'undefined') {
+                    console.error('WebAdapter not available for .ics download');
+                    return;
+                }
+                
+                // Get events from last test results
+                const resultsContainer = document.getElementById('resultsContainer');
+                if (!resultsContainer || resultsContainer.style.display === 'none') {
+                    console.error('No test results available for download');
+                    return;
+                }
+                
+                // This would need to be implemented to get the actual events from the last run
+                // For now, we'll show a message
+                console.info('📥 .ics download feature - would need to be connected to actual test results');
+                
+            } catch (error) {
+                console.error(`Failed to download .ics file: ${error.message}`);
+            }
+        }
+
         async function testMockData() {
             console.info('🧪 Testing with mock data...');
             
             const mockResults = {
                 totalEvents: 15,
+                rawBearEvents: 10,
                 bearEvents: 8,
+                duplicatesRemoved: 2,
                 calendarEvents: 0,
                 errors: [],
                 parserResults: [{
                     name: 'Mock Parser',
+                    totalEvents: 15,
+                    bearEvents: 8,
                     events: [
                         {
                             title: 'Bear Night Out NYC',
@@ -805,7 +955,8 @@
                             city: 'nyc',
                             isBearEvent: true,
                             source: 'Mock Data',
-                            url: 'https://example.com/event1'
+                            url: 'https://example.com/event1',
+                            _action: 'new'
                         },
                         {
                             title: 'Furball Dance Party',
@@ -814,7 +965,8 @@
                             city: 'nyc',
                             isBearEvent: true,
                             source: 'Mock Data',
-                            url: 'https://example.com/event2'
+                            url: 'https://example.com/event2',
+                            _action: 'new'
                         },
                         {
                             title: 'Bearracuda SF',
@@ -823,14 +975,15 @@
                             city: 'sf',
                             isBearEvent: true,
                             source: 'Mock Data',
-                            url: 'https://example.com/event3'
+                            url: 'https://example.com/event3',
+                            _action: 'new'
                         }
                     ]
                 }]
             };
             
             console.success('✅ Mock data generated successfully');
-            displayTestResults(mockResults, 42);
+            displayTestResults(mockResults, 42, false);
         }
         
         // Initialize on page load

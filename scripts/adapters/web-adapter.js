@@ -66,15 +66,18 @@ class WebAdapter {
                 return {
                     html: html,
                     url: url,
-                    statusCode: response.status
+                    statusCode: response.status,
+                    headers: Object.fromEntries(response.headers.entries())
                 };
             } else {
+                console.error(`🌐 Web: ✗ Empty response from ${url}`);
                 throw new Error(`Empty response from ${url}`);
             }
             
         } catch (error) {
-            console.log(`🌐 Web: ✗ Failed to fetch ${url}: ${error.message}`);
-            throw new Error(`HTTP request failed: ${error.message}`);
+            const errorMessage = `🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`;
+            console.log(errorMessage);
+            throw new Error(`HTTP request failed for ${url}: ${error.message}`);
         }
     }
 
@@ -98,10 +101,21 @@ class WebAdapter {
                 }
                 
                 const configText = await response.text();
+                
+                if (!configText || configText.trim().length === 0) {
+                    throw new Error('Configuration file is empty');
+                }
+                
                 // Execute the JS file to get the configuration
                 eval(configText);
                 config = window.scraperConfig;
             }
+            
+            // Validate configuration structure
+            if (!config.parsers || !Array.isArray(config.parsers)) {
+                throw new Error('Configuration missing parsers array');
+            }
+            
             return config;
             
         } catch (error) {
@@ -227,12 +241,20 @@ class WebAdapter {
         console.error(`%c❌ ${message}`, 'color: #F44336');
     }
 
-    // Results Display
+    // Results Display - Enhanced with detailed analysis
     async displayResults(results) {
         try {
-            console.log('\n' + '='.repeat(50));
+            // Store results for use in other methods
+            this.lastResults = results;
+            
+            // Show enhanced display features in console for debugging
+            await this.displayEventAnalysis(results);
+            await this.displayParserBreakdown(results);
+            
+            // Show console summary
+            console.log('\n' + '='.repeat(60));
             console.log('%c🐻 BEAR EVENT SCRAPER RESULTS', 'font-size: 16px; font-weight: bold; color: #FF6B35');
-            console.log('='.repeat(50));
+            console.log('='.repeat(60));
             
             console.log(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
             console.log(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
@@ -294,7 +316,10 @@ class WebAdapter {
                 console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
             });
             
-            console.log('\n' + '='.repeat(50));
+            // Show summary and recommended actions
+            await this.displaySummaryAndActions(results);
+            
+            console.log('\n' + '='.repeat(60));
             
             // Create results display in DOM if possible
             this.createResultsDisplay(results);
@@ -386,6 +411,131 @@ class WebAdapter {
             console.error(`🌐 Web: ${title} - ${message}`);
         } catch (error) {
             console.log(`Failed to show error alert: ${error.message}`);
+        }
+    }
+
+    // Enhanced Display Methods
+    async displayEventAnalysis(results) {
+        console.log('\n' + '='.repeat(60));
+        console.log('📊 EVENT ANALYSIS & BREAKDOWN');
+        console.log('='.repeat(60));
+        
+        const allEvents = this.getAllEventsFromResults(results);
+        if (!allEvents || !allEvents.length) {
+            console.log('❌ No event data available for analysis');
+            return;
+        }
+
+        // Analyze events by city
+        const cityBreakdown = {};
+        const venueBreakdown = {};
+        const dateBreakdown = {};
+        
+        allEvents.forEach(event => {
+            // City analysis
+            const city = event.city || 'unknown';
+            cityBreakdown[city] = (cityBreakdown[city] || 0) + 1;
+            
+            // Venue analysis
+            const venue = event.venue || 'unknown';
+            venueBreakdown[venue] = (venueBreakdown[venue] || 0) + 1;
+            
+            // Date analysis (by month)
+            if (event.startDate) {
+                const date = new Date(event.startDate);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                dateBreakdown[monthKey] = (dateBreakdown[monthKey] || 0) + 1;
+            }
+        });
+        
+        console.log('🏙️ Events by City:');
+        Object.entries(cityBreakdown)
+            .sort(([,a], [,b]) => b - a)
+            .forEach(([city, count]) => {
+                console.log(`   • ${city}: ${count} events`);
+            });
+        
+        console.log('\n📍 Top Venues:');
+        Object.entries(venueBreakdown)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 10)
+            .forEach(([venue, count]) => {
+                console.log(`   • ${venue}: ${count} events`);
+            });
+        
+        console.log('\n📅 Events by Month:');
+        Object.entries(dateBreakdown)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .forEach(([month, count]) => {
+                console.log(`   • ${month}: ${count} events`);
+            });
+    }
+
+    async displayParserBreakdown(results) {
+        console.log('\n' + '='.repeat(60));
+        console.log('🔧 PARSER PERFORMANCE BREAKDOWN');
+        console.log('='.repeat(60));
+        
+        if (!results.parserResults || !results.parserResults.length) {
+            console.log('❌ No parser results available');
+            return;
+        }
+        
+        results.parserResults.forEach((result, index) => {
+            console.log(`\n📋 Parser ${index + 1}: ${result.name}`);
+            console.log(`   • Total Events: ${result.totalEvents || 0}`);
+            console.log(`   • Bear Events: ${result.bearEvents || 0}`);
+            console.log(`   • Success Rate: ${result.totalEvents > 0 ? Math.round((result.bearEvents / result.totalEvents) * 100) : 0}%`);
+            
+            if (result.errors && result.errors.length > 0) {
+                console.log(`   • Errors: ${result.errors.length}`);
+                result.errors.forEach(error => {
+                    console.log(`     - ${error}`);
+                });
+            }
+        });
+    }
+
+    async displaySummaryAndActions(results) {
+        console.log('\n' + '='.repeat(60));
+        console.log('📋 SUMMARY & RECOMMENDED ACTIONS');
+        console.log('='.repeat(60));
+        
+        const allEvents = this.getAllEventsFromResults(results);
+        
+        if (results.bearEvents === 0) {
+            console.log('⚠️ No bear events found. Consider:');
+            console.log('   • Checking bear keyword filters');
+            console.log('   • Verifying event sources are active');
+            console.log('   • Expanding date range');
+            console.log('   • Reviewing parser configurations');
+        } else if (results.calendarEvents === 0) {
+            console.log('🔒 Dry run mode - events found but not written to calendar');
+            console.log('   • Set dryRun: false to enable calendar writes');
+            console.log('   • Review event details before enabling writes');
+        } else {
+            console.log('✅ Events successfully processed');
+            console.log(`   • ${results.bearEvents} bear events found`);
+            console.log(`   • ${results.calendarEvents} events written to calendar`);
+        }
+        
+        if (results.errors.length > 0) {
+            console.log('\n⚠️ Issues to address:');
+            results.errors.forEach(error => {
+                console.log(`   • ${error}`);
+            });
+        }
+        
+        // Show next steps
+        console.log('\n🎯 Next Steps:');
+        if (results.bearEvents > 0) {
+            console.log('   • Review events in calendar app');
+            console.log('   • Share .ics file with others');
+            console.log('   • Set up automated runs');
+        } else {
+            console.log('   • Check parser configurations');
+            console.log('   • Verify event sources');
+            console.log('   • Review bear detection keywords');
         }
     }
 
