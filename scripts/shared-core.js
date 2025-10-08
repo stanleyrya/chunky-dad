@@ -1099,10 +1099,12 @@ class SharedCore {
             'venue': 'bar',
             'location': 'bar',
             'host': 'bar',
+            'bar': 'bar',
             
             // Price aliases
             'price': 'cover',
             'cost': 'cover',
+            'cover': 'cover',
             
             // Name aliases
             'shortname': 'shortName',
@@ -1110,6 +1112,8 @@ class SharedCore {
             'shorter name': 'shortName',
             'short title': 'shortName',
             'shorttitle': 'shortName',
+            'nickname': 'shortName',
+            'shorter': 'shorterName',
             
             // Social/web aliases (canonicalize case and common variants)
             'instagram': 'instagram',
@@ -1133,12 +1137,21 @@ class SharedCore {
             'googlemaps': 'gmaps',
             'googlemapslink': 'gmaps',
             'google maps': 'gmaps',
+            'gmaps': 'gmaps',
             
             // Ticket/purchase aliases
             'ticketurl': 'ticketUrl',
             'ticket url': 'ticketUrl',
             'tickets': 'ticketUrl',
-            'ticket': 'ticketUrl'
+            'ticket': 'ticketUrl',
+            'ticketUrl': 'ticketUrl',
+            
+            // Other common fields
+            'description': 'description',
+            'image': 'image',
+            'url': 'url',
+            'timezone': 'timezone',
+            'key': 'key'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');

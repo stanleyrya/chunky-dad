@@ -1326,6 +1326,18 @@ class ScriptableAdapter {
             margin-top: 20px;
             display: flex;
             justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .display-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
         }
         
         .sfw-toggle {
@@ -2070,11 +2082,25 @@ class ScriptableAdapter {
             </h1>
         </div>
         <div class="header-controls">
-            <label class="sfw-toggle">
-                <input type="checkbox" id="sfwToggle" onchange="toggleImages()">
-                <span class="toggle-slider"></span>
-                <span class="toggle-label">Show Images</span>
-            </label>
+            <div class="display-toggle">
+                <span style="font-weight: 500;">Display Mode:</span>
+                <span>Pretty</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()">
+                    <span class="slider"></span>
+                </label>
+                <span>Raw</span>
+            </div>
+            
+            <div class="display-toggle" style="margin-left: 20px;">
+                <span style="font-weight: 500;">Images:</span>
+                <span>Hidden</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="sfwToggle" onchange="toggleImages()" checked>
+                    <span class="slider"></span>
+                </label>
+                <span>Show</span>
+            </div>
         </div>
         <div class="stats">
             <div class="stat">
@@ -2109,15 +2135,6 @@ class ScriptableAdapter {
         align-items: center;
         justify-content: space-between;
     ">
-        <div class="display-toggle">
-            <span style="font-weight: 500;">Display Mode:</span>
-            <span>Pretty</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()">
-                <span class="slider"></span>
-            </label>
-            <span>Raw</span>
-        </div>
         
         <div class="search-container" style="
             display: flex;

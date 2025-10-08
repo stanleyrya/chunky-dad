@@ -531,6 +531,7 @@ class CalendarCore {
             line = line.trim();
             if (!line) continue;
             
+            
             // Use escape-aware parsing to find the first unescaped colon
             const colonIndex = this.findUnescaped(line, ':');
             
@@ -546,7 +547,9 @@ class CalendarCore {
                 if (this.isValidMetadataKey(unescapedKey)) {
                     const key = unescapedKey.toLowerCase();
                     const value = unescapedValue;
+                    // Use case-insensitive lookup in keyMap
                     const mappedKey = keyMap[key] || key;
+                    
                     
                     // Additional validation for URLs
                     if (['website', 'instagram', 'facebook', 'gmaps', 'image', 'ticketUrl'].includes(mappedKey)) {
@@ -577,7 +580,7 @@ class CalendarCore {
             hasInstagram: !!data.instagram,
             hasFacebook: !!data.facebook,
             hasGmaps: !!data.gmaps,
-            hasTicketUrl: !!data.ticketUrl
+            hasTicketUrl: !!data.ticketUrl,
         });
         
         return Object.keys(data).length > 0 ? data : null;
