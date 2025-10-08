@@ -37,33 +37,9 @@ class DadJokesManager {
                 punchline: "Because the truth is un-bear-able to hide!"
             },
             {
-                setup: "What do you call a bear who's always on time?",
-                punchline: "A punctual bear!"
-            },
-            {
                 setup: "Why did the bear bring a ladder to the bar?",
                 punchline: "He heard the drinks were on the house!"
             },
-            {
-                setup: "What's a bear's favorite type of sandwich?",
-                punchline: "A club sandwich - because bears love clubs!"
-            },
-            {
-                setup: "Why don't bears ever get cold in winter?",
-                punchline: "Because they're always wearing their bear skin!"
-            },
-            {
-                setup: "What do you call a bear who's a great dancer?",
-                punchline: "A bear-illiant performer!"
-            },
-            {
-                setup: "Why did the bear start a band?",
-                punchline: "He wanted to make some bear-illiant music!"
-            },
-            {
-                setup: "What's a bear's favorite exercise?",
-                punchline: "Bear-lls and weights!"
-            }
         ];
         
         this.init();
