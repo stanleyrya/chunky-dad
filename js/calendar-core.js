@@ -907,7 +907,39 @@ class CalendarCore {
         const eventStartDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         if (eventStartDate > periodEnd) return dates;
         
-        // Generate occurrences based on frequency
+        // For weekly events, use a simpler approach: check each day in the period
+        if (pattern.frequency === 'WEEKLY') {
+            const targetDayOfWeek = pattern.byDay && pattern.byDay.length > 0 ? 
+                this.getDayIndexFromCode(pattern.byDay[0]) : eventStartDate.getDay();
+            
+            if (targetDayOfWeek === -1) {
+                logger.warn('CALENDAR', 'Invalid day code in weekly recurrence', {
+                    eventName: event.name,
+                    byDay: pattern.byDay
+                });
+                return dates;
+            }
+            
+            // Check each day in the period to see if it matches the target day of week
+            const current = new Date(periodStart);
+            while (current <= periodEnd) {
+                if (current.getDay() === targetDayOfWeek && current >= eventStartDate) {
+                    dates.push(new Date(current));
+                }
+                current.setDate(current.getDate() + 1);
+            }
+            
+            logger.debug('CALENDAR', 'Weekly event dates found', {
+                eventName: event.name,
+                targetDayOfWeek,
+                dayName: this.dayNames[targetDayOfWeek],
+                datesFound: dates.map(d => d.toISOString().split('T')[0])
+            });
+            
+            return dates;
+        }
+        
+        // For other frequencies, use the original iterative approach
         let current = new Date(eventStartDate);
         const maxIterations = 100; // Safety limit
         let iterations = 0;
@@ -921,30 +953,6 @@ class CalendarCore {
             switch (pattern.frequency) {
                 case 'DAILY':
                     current.setDate(current.getDate() + pattern.interval);
-                    break;
-                case 'WEEKLY':
-                    if (pattern.byDay && pattern.byDay.length > 0) {
-                        // Weekly event with specific days - find next occurrence of the specified day
-                        const targetDayIndex = this.getDayIndexFromCode(pattern.byDay[0]);
-                        if (targetDayIndex === -1) {
-                            throw new Error(`Invalid day code in recurrence: ${pattern.byDay[0]}`);
-                        }
-                        
-                        // Find the next occurrence of the target day
-                        const daysUntilTarget = (targetDayIndex - current.getDay() + 7) % 7;
-                        const daysToAdd = daysUntilTarget === 0 ? (7 * pattern.interval) : daysUntilTarget;
-                        current.setDate(current.getDate() + daysToAdd);
-                    } else {
-                        // Weekly event without BYDAY - default to same day of week as original event
-                        // Find the day of week of the original event
-                        const originalDayOfWeek = eventStartDate.getDay();
-                        const currentDayOfWeek = current.getDay();
-                        
-                        // Calculate days until the next occurrence of the original day of week
-                        const daysUntilOriginalDay = (originalDayOfWeek - currentDayOfWeek + 7) % 7;
-                        const daysToAdd = daysUntilOriginalDay === 0 ? (7 * pattern.interval) : daysUntilOriginalDay;
-                        current.setDate(current.getDate() + daysToAdd);
-                    }
                     break;
                 case 'MONTHLY':
                     current.setMonth(current.getMonth() + pattern.interval);
