@@ -2,59 +2,87 @@
   "files": [
     {
       "name": "breakpoint-test.html",
-      "size": 34204
+      "size": 34378,
+      "icon": "📐",
+      "description": "Measuring Tape - See if your breakpoints measure up right"
     },
     {
       "name": "hero-variations-tester.html",
-      "size": 26292
+      "size": 26451,
+      "icon": "💪",
+      "description": "Flex Tester - Try different hero poses, show off those variations"
     },
     {
       "name": "index.html",
-      "size": 22109
+      "size": 23898,
+      "icon": "🏠",
+      "description": "Tool Shed Home - Browse all of dad's tools in one place"
     },
     {
       "name": "location-test.html",
-      "size": 9178
+      "size": 9334,
+      "icon": "🌍",
+      "description": "Globe Spinner - Test location displays and coordinates"
     },
     {
       "name": "style-test.html",
-      "size": 33138
+      "size": 33122,
+      "icon": "⚙️",
+      "description": "Heavy-Duty Power Tool - Showcases all the component variations dad's got"
     },
     {
       "name": "test-calendar-logging.html",
-      "size": 68179
+      "size": 68345,
+      "icon": "🔍",
+      "description": "Debug Scope - Look deep inside calendar processing (magnify those logs)"
     },
     {
       "name": "test-display-modes.html",
-      "size": 10743
+      "size": 10896,
+      "icon": "🖥️",
+      "description": "Monitor Mount - Test how things display on different screens"
     },
     {
       "name": "test-enhanced-event-display.html",
-      "size": 8014
+      "size": 8162,
+      "icon": "✨",
+      "description": "Chrome Polish - Makes your events shine bright and pretty"
     },
     {
       "name": "test-eventbrite-address-fix.html",
-      "size": 7180
+      "size": 7330,
+      "icon": "📍",
+      "description": "Location Finder - Pin down those Eventbrite addresses"
     },
     {
       "name": "test-google-sheets-loader.html",
-      "size": 40583
+      "size": 40754,
+      "icon": "📊",
+      "description": "Sheet Metal Worker - Loads and shapes Google Sheets data"
     },
     {
       "name": "test-map-icons.html",
-      "size": 63022
+      "size": 63194,
+      "icon": "🗺️",
+      "description": "Icon Stamper - Mark your territory with custom map icons"
     },
     {
       "name": "test-og-event-layouts-calendar.html",
-      "size": 67883
+      "size": 68040,
+      "icon": "📅",
+      "description": "Old School Blueprint - Classic event layouts, tried and true"
     },
     {
       "name": "test-unified-scraper.html",
-      "size": 31782
+      "size": 31923,
+      "icon": "🪛",
+      "description": "Scraper Tool - Extract that data, nice and smooth"
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 107096
+      "size": 73401,
+      "icon": "🔨",
+      "description": "The Big Hammer - Pound your styles into perfect shape with live preview"
     }
   ]
 }

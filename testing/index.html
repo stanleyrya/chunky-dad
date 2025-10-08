@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="toolbox-icon" content="🏠">
+    <meta name="toolbox-description" content="Tool Shed Home - Browse all of dad's tools in one place">
     <title>🔧 chunky.dad's Toolbox</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Permanent+Marker&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,20 +15,22 @@
         }
 
         body {
-            font-family: 'Roboto Mono', monospace;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%, #0a0a0a 100%);
-            background-size: 400% 400%;
-            animation: constructionGradient 8s ease infinite;
-            color: #e0e0e0;
+            font-family: 'Roboto Condensed', sans-serif;
+            background: 
+                repeating-linear-gradient(
+                    90deg,
+                    #3e2723 0px,
+                    #4a2c24 3px,
+                    #3e2723 6px,
+                    #5d4037 9px,
+                    #4a2c24 12px
+                ),
+                linear-gradient(180deg, #2c1810 0%, #4a2c24 50%, #2c1810 100%);
+            background-size: 100% 10px, 100% 100%;
+            color: #ffd54f;
             min-height: 100vh;
             padding: 40px 20px;
             position: relative;
-        }
-
-        @keyframes constructionGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
         }
 
         body::before {
@@ -37,194 +41,338 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 20% 20%, rgba(255, 140, 0, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(255, 69, 0, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 60%, rgba(255, 165, 0, 0.05) 0%, transparent 50%);
+                radial-gradient(circle at 20% 30%, rgba(255, 193, 7, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(255, 87, 34, 0.06) 0%, transparent 40%);
             pointer-events: none;
-            z-index: -1;
+            z-index: 0;
+            opacity: 0.7;
+        }
+
+        body::after {
+            content: '🔨🔧⚒️🪛🔩⚙️🪚🛠️';
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            font-size: 2rem;
+            opacity: 0.15;
+            letter-spacing: 20px;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
 
         .header {
             text-align: center;
             margin-bottom: 50px;
             position: relative;
+            padding: 40px 20px;
+            background: 
+                linear-gradient(135deg, rgba(109, 76, 65, 0.4) 0%, rgba(78, 52, 46, 0.4) 100%),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%234e342e" width="100" height="100"/><path d="M0 0 L50 50 L0 100 L100 100 L50 50 L100 0 Z" fill="%235d4037" opacity="0.3"/></svg>');
+            background-size: cover;
+            border: 4px solid #8d6e63;
+            border-radius: 15px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.6),
+                inset 0 2px 0 rgba(255, 255, 255, 0.1),
+                inset 0 -2px 8px rgba(0, 0, 0, 0.5);
         }
 
         .header::before {
-            content: '⚡';
+            content: '💪';
             position: absolute;
-            top: -20px;
+            top: -30px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 3rem;
-            opacity: 0.3;
-            animation: sparkle 2s ease-in-out infinite alternate;
+            font-size: 4rem;
+            animation: flex 2s ease-in-out infinite;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
         }
 
-        @keyframes sparkle {
-            0% { opacity: 0.3; transform: translateX(-50%) scale(1); }
-            100% { opacity: 0.6; transform: translateX(-50%) scale(1.1); }
+        @keyframes flex {
+            0%, 100% { transform: translateX(-50%) scale(1) rotate(-5deg); }
+            50% { transform: translateX(-50%) scale(1.1) rotate(5deg); }
         }
 
         .header h1 {
-            font-family: 'Orbitron', monospace;
-            font-size: 3rem;
-            font-weight: 800;
+            font-family: 'Bebas Neue', cursive;
+            font-size: 4rem;
+            font-weight: 700;
             margin-bottom: 15px;
-            background: linear-gradient(45deg, #ff8c00, #ff4500, #ffa500, #ff6347);
-            background-size: 300% 300%;
-            animation: constructionGlow 3s ease infinite;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 0 30px rgba(255, 140, 0, 0.5);
-            letter-spacing: 2px;
+            color: #ffd54f;
+            text-shadow: 
+                3px 3px 0 #d84315,
+                6px 6px 0 rgba(0, 0, 0, 0.4),
+                0 0 30px rgba(255, 193, 7, 0.5);
+            letter-spacing: 4px;
+            position: relative;
         }
 
-        @keyframes constructionGlow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        .toolbox-subtitle {
+            font-family: 'Permanent Marker', cursive;
+            font-size: 1.5rem;
+            color: #ff6f00;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+            transform: rotate(-2deg);
+            display: inline-block;
         }
 
         .header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            color: #ffa500;
-            font-weight: 500;
+            font-size: 1.1rem;
+            color: #ffab91;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            margin-top: 15px;
+        }
+
+        .speech-bubble {
+            background: #fff;
+            color: #4e342e;
+            padding: 15px 25px;
+            border-radius: 20px;
+            position: relative;
+            display: inline-block;
+            margin-top: 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 15px solid #fff;
         }
 
         .back-link {
             display: inline-block;
             margin-bottom: 30px;
-            color: #ffa500;
+            color: #ffd54f;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 1.1rem;
             transition: all 0.3s ease;
-            border: 2px solid transparent;
-            padding: 8px 16px;
-            border-radius: 8px;
-            background: rgba(255, 140, 0, 0.1);
+            border: 3px solid #8d6e63;
+            padding: 12px 24px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(109, 76, 65, 0.6) 0%, rgba(78, 52, 46, 0.6) 100%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
         .back-link:hover {
-            color: #ff4500;
-            transform: translateX(-5px);
-            border-color: #ff8c00;
-            background: rgba(255, 140, 0, 0.2);
-            box-shadow: 0 0 20px rgba(255, 140, 0, 0.3);
+            color: #ff6f00;
+            transform: translateX(-5px) scale(1.05);
+            border-color: #ff6f00;
+            background: linear-gradient(135deg, rgba(255, 111, 0, 0.3) 0%, rgba(213, 67, 21, 0.3) 100%);
+            box-shadow: 0 6px 20px rgba(255, 111, 0, 0.5);
         }
 
         .loading {
             text-align: center;
             padding: 50px;
-            font-size: 1.2rem;
-            opacity: 0.7;
+            font-size: 1.3rem;
+            color: #ffab91;
+            font-weight: 700;
+        }
+
+        .loading::before {
+            content: '🔧';
+            display: block;
+            font-size: 3rem;
+            margin-bottom: 15px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .test-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
             margin-bottom: 50px;
         }
 
         .test-card {
-            background: rgba(45, 45, 45, 0.8);
-            backdrop-filter: blur(20px);
-            border-radius: 12px;
-            padding: 20px;
-            border: 2px solid rgba(255, 140, 0, 0.3);
+            background: 
+                linear-gradient(135deg, rgba(109, 76, 65, 0.5) 0%, rgba(78, 52, 46, 0.5) 100%),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%234e342e" width="100" height="100"/><path d="M0 0 L50 50 L0 100 L100 100 L50 50 L100 0 Z" fill="%235d4037" opacity="0.2"/></svg>');
+            background-size: cover;
+            border-radius: 15px;
+            padding: 25px;
+            border: 3px solid #8d6e63;
             transition: all 0.3s ease;
             cursor: pointer;
             text-decoration: none;
-            color: inherit;
+            color: #ffd54f;
             display: block;
             position: relative;
             overflow: hidden;
+            box-shadow: 
+                0 6px 16px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
         .test-card::before {
+            content: '🔧';
+            position: absolute;
+            bottom: -20px;
+            right: -20px;
+            font-size: 6rem;
+            opacity: 0.1;
+            transition: all 0.4s ease;
+        }
+
+        .test-card::after {
             content: '';
             position: absolute;
             top: 0;
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 140, 0, 0.1), transparent);
-            transition: left 0.5s ease;
+            background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.15), transparent);
+            transition: left 0.6s ease;
         }
 
-        .test-card:hover::before {
+        .test-card:hover::after {
             left: 100%;
         }
 
+        .test-card:hover::before {
+            transform: rotate(15deg) scale(1.2);
+            opacity: 0.2;
+        }
+
         .test-card:hover {
-            background: rgba(255, 140, 0, 0.1);
-            border-color: #ff8c00;
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4);
+            background: 
+                linear-gradient(135deg, rgba(255, 111, 0, 0.4) 0%, rgba(213, 67, 21, 0.4) 100%),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%234e342e" width="100" height="100"/><path d="M0 0 L50 50 L0 100 L100 100 L50 50 L100 0 Z" fill="%235d4037" opacity="0.2"/></svg>');
+            border-color: #ff6f00;
+            transform: translateY(-8px) rotate(-1deg);
+            box-shadow: 
+                0 12px 28px rgba(255, 111, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .test-card h3 {
-            font-family: 'Orbitron', monospace;
-            font-size: 1.1rem;
-            margin-bottom: 10px;
-            color: #ffa500;
+            font-family: 'Bebas Neue', cursive;
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+            color: #ffd54f;
             word-break: break-word;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         .test-card .file-info {
-            font-size: 0.8rem;
-            opacity: 0.6;
-            margin-bottom: 10px;
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 12px;
+            color: #ffab91;
+            font-weight: 600;
         }
 
         .test-card .description {
-            font-size: 0.9rem;
-            opacity: 0.8;
-            line-height: 1.4;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            line-height: 1.5;
+            color: #ffe0b2;
+            font-weight: 400;
         }
 
         .test-card .file-size {
             font-size: 0.75rem;
-            opacity: 0.5;
-            margin-top: 8px;
+            opacity: 0.6;
+            margin-top: 10px;
+            color: #bcaaa4;
+            font-weight: 600;
         }
 
         .category-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
+            font-size: 2.5rem;
+            margin-bottom: 12px;
             display: block;
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
         }
 
         .error {
-            background: rgba(255, 107, 107, 0.1);
-            border: 1px solid rgba(255, 107, 107, 0.3);
-            padding: 20px;
-            border-radius: 10px;
+            background: rgba(211, 47, 47, 0.2);
+            border: 3px solid #d32f2f;
+            padding: 25px;
+            border-radius: 15px;
             text-align: center;
             margin: 50px 0;
+            color: #ffcdd2;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
         }
 
         .stats {
             text-align: center;
             margin-bottom: 30px;
-            font-size: 0.9rem;
-            opacity: 0.7;
+            font-size: 1.1rem;
+            color: #ffab91;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 30px 20px;
+            background: 
+                linear-gradient(135deg, rgba(109, 76, 65, 0.3) 0%, rgba(78, 52, 46, 0.3) 100%);
+            border: 3px solid #8d6e63;
+            border-radius: 15px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .footer-tools {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            letter-spacing: 15px;
+            opacity: 0.6;
+        }
+
+        .footer-text {
+            color: #ffab91;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .footer-tagline {
+            font-family: 'Permanent Marker', cursive;
+            color: #ff6f00;
+            font-size: 1.3rem;
+            margin-top: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
         }
 
         @media (max-width: 768px) {
             .header h1 {
-                font-size: 2rem;
+                font-size: 2.5rem;
+            }
+            
+            .toolbox-subtitle {
+                font-size: 1.2rem;
             }
             
             .test-grid {
@@ -235,11 +383,15 @@
 </head>
 <body>
     <div class="container">
-        <a href="../index.html" class="back-link">← Back to Main Site</a>
+        <a href="../index.html" class="back-link">🏠 Back to Main Site</a>
         
         <div class="header">
+            <div class="toolbox-subtitle">Your Thicc, Handy Helper 🛠️</div>
             <h1>🔧 chunky.dad's Toolbox</h1>
-            <p class="subtitle">Construction Zone • Development Tools • Testing Utilities</p>
+            <div class="speech-bubble">
+                "Let me work on your site with my big... tools 😏"
+            </div>
+            <p>Quality Tools • Expert Handling • Always Ready to Help</p>
         </div>
 
         <div id="debug-info" style="background: #f0f0f0; padding: 10px; margin: 20px 0; border-radius: 5px; font-family: monospace; font-size: 0.9em; display: none;">
@@ -248,70 +400,29 @@
         </div>
         
         <div id="file-grid" class="file-grid">
-            <div class="loading">Loading test files...</div>
+            <div class="loading">Dad's grabbing his tools from the shed...</div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-tools">🔨 🔧 ⚙️ 🪛 🔩 ⚒️ 🪚</div>
+            <div class="footer-text">
+                Built with big tools and even bigger attention to detail.<br>
+                All equipment maintained by your friendly neighborhood chunky.dad.
+            </div>
+            <div class="footer-tagline">
+                "I've got the right tool for every job 😏"
+            </div>
         </div>
     </div>
 
     <script>
-        // File descriptions and icons based on filename patterns
-        const fileDescriptions = {
-            'ultimate-style-tester': { icon: '🔧', desc: 'Master construction tool - comprehensive style testing with live preview' },
-            'style-test': { icon: '⚡', desc: 'Power tool - UI component showcase with all event display variations' },
-            'event-test-index': { icon: '📋', desc: 'Blueprint index - all event display test variations' },
-            'event-test-1-carousel': { icon: '🎠', desc: 'Rotating display mechanism - event carousel test' },
-            'event-test-2-timeline': { icon: '⏰', desc: 'Time measurement tool - timeline view for events' },
-            'event-test-3-map': { icon: '🗺️', desc: 'Navigation system - map-based event display' },
-            'event-test-4-masonry': { icon: '🧱', desc: 'Brick laying tool - masonry grid layout for events' },
-            'event-test-5-heatmap': { icon: '🔥', desc: 'Thermal scanner - event density heatmap visualization' },
-            'event-test-6-ticker': { icon: '📜', desc: 'Scroll mechanism - scrolling ticker display for events' },
-            'event-test-7-circular': { icon: '⭕', desc: 'Circular saw - circular/radial event display' },
-            'event-test-8-kanban': { icon: '📊', desc: 'Project board - kanban style event organization' },
-            'event-test-9-bubbles': { icon: '🫧', desc: 'Bubble level - bubble chart event visualization' },
-            'event-test-10-flipcards': { icon: '🃏', desc: 'Flip mechanism - flip card event display' },
-            'event-test-11-weekview': { icon: '📆', desc: 'Calendar tool - week view calendar display' },
-            'event-test-12-swipe-tiles': { icon: '👆', desc: 'Touch interface - swipeable tile event display' },
-            'test-calendar-logging': { icon: '📝', desc: 'Diagnostic tool - calendar system logging and debugging' },
-            'test-google-sheets-loader': { icon: '📊', desc: 'Data loader - Google Sheets data loader testing' },
-            'test-display-modes': { icon: '🖥️', desc: 'Display calibrator - display mode testing and configuration' },
-            'breakpoint-test': { icon: '📐', desc: 'Measuring tool - responsive breakpoint testing' },
-            'css-breakpoint-test': { icon: '🎯', desc: 'Precision tool - CSS media query breakpoint tester' },
-            'multiline-breakpoint-test': { icon: '📏', desc: 'Multi-line ruler - responsive breakpoint testing' },
-            'hyphenation-test': { icon: '✂️', desc: 'Text cutter - text hyphenation testing' },
-            'simplified-hyphenation-test': { icon: '🔪', desc: 'Precision cutter - simplified hyphenation algorithm testing' },
-            'hyphenation-debug-test': { icon: '🔍', desc: 'Magnifying glass - debug hyphenation issues at 320px width' },
-            'hero-variations-tester': { icon: '🦸', desc: 'Hero builder - hero section variation testing' },
-            'test-map-icons': { icon: '🗺️', desc: 'Icon mapper - map icon testing and configuration' },
-            'test-og-event-layouts-calendar': { icon: '📅', desc: 'Layout architect - OG event layouts calendar testing' },
-            'test-unified-scraper': { icon: '🕷️', desc: 'Data scraper - unified scraper testing tool' },
-            'test-eventbrite-address-fix': { icon: '📍', desc: 'Address fixer - Eventbrite address correction tool' }
-        };
-
-        // Function to get file info
-        function getFileInfo(filename) {
-            const baseName = filename.replace('.html', '');
+        // Function to get file info from manifest data
+        function getFileInfo(file) {
+            const baseName = file.name.replace('.html', '');
             
-            // Check for exact match
-            if (fileDescriptions[baseName]) {
-                return {
-                    ...fileDescriptions[baseName],
-                    displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                };
-            }
-            
-            // Check for pattern matches
-            for (const [pattern, info] of Object.entries(fileDescriptions)) {
-                if (baseName.includes(pattern)) {
-                    return {
-                        ...info,
-                        displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                    };
-                }
-            }
-            
-            // Default
             return {
-                icon: '📄',
-                desc: 'Test file',
+                icon: file.icon || '📄',
+                desc: file.description || 'Test file',
                 displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
             };
         }
@@ -471,8 +582,8 @@
             } catch (error) {
                 document.getElementById('file-grid').innerHTML = `
                     <div class="error">
-                        <h3>Error loading test files</h3>
-                        <p>${error.message}</p>
+                        <h3>🔧 Oops! Tool Shed Malfunction</h3>
+                        <p>Dad dropped his tools: ${error.message}</p>
                     </div>
                 `;
             }
@@ -485,8 +596,8 @@
             if (existingFiles.length === 0) {
                 document.getElementById('file-grid').innerHTML = `
                     <div class="error">
-                        <h3>No test files found</h3>
-                        <p>Make sure test files are present in the testing directory.</p>
+                        <h3>🪛 Empty Tool Shed!</h3>
+                        <p>Dad's tools are missing! Make sure test files are in the testing directory.</p>
                     </div>
                 `;
                 return;
@@ -497,14 +608,14 @@
             
             const stats = document.createElement('div');
             stats.className = 'stats';
-            stats.textContent = `Found ${existingFiles.length} test file${existingFiles.length !== 1 ? 's' : ''}`;
+            stats.textContent = `🛠️ ${existingFiles.length} Tool${existingFiles.length !== 1 ? 's' : ''} in the Shed • Ready to Work`;
             container.appendChild(stats);
 
             const grid = document.createElement('div');
             grid.className = 'test-grid';
 
             existingFiles.forEach(file => {
-                const fileInfo = getFileInfo(file.name);
+                const fileInfo = getFileInfo(file);
                 const card = document.createElement('a');
                 card.href = file.name;
                 card.className = 'test-card';
