@@ -300,13 +300,14 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
               calculatedDate: eventDate
             });
           } else {
-            // Log warning but don't throw error - use original date as fallback
-            logger.warn('CALENDAR', 'No occurrence found for recurring event on today\'s date, using original date', {
+            // Log warning but don't throw error - use today's date as fallback since we're showing today's events
+            logger.warn('CALENDAR', 'No occurrence found for recurring event on today\'s date, using today as fallback', {
               eventName: ev.name,
               originalDate: ev.startDate,
-              recurrence: ev.recurrence
+              recurrence: ev.recurrence,
+              fallbackDate: today.toISOString().split('T')[0]
             });
-            eventDate = new Date(ev.startDate).toISOString().split('T')[0];
+            eventDate = today.toISOString().split('T')[0];
           }
         } else {
           // For one-time events, use the original date
