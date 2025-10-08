@@ -61,22 +61,6 @@
             z-index: 0;
         }
 
-        /* Chunky.dad toolbox branding */
-        .header::after {
-            content: '🪣';
-            position: absolute;
-            top: -20px;
-            right: 20px;
-            font-size: 2.5rem;
-            opacity: 0.7;
-            animation: bounce 3s ease-in-out infinite;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            25% { transform: translateY(-5px) rotate(-5deg); }
-            75% { transform: translateY(-3px) rotate(5deg); }
-        }
 
         .container {
             max-width: 1400px;
@@ -105,23 +89,14 @@
         .header::before {
             content: '';
             position: absolute;
-            top: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 80px;
+            top: -60px;
+            right: 30px;
+            width: 120px;
+            height: 120px;
             background: url('../favicons/favicon-192x192.png') center/contain no-repeat;
-            animation: flex 2s ease-in-out infinite;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
-            border-radius: 50%;
-            background-color: rgba(255, 193, 7, 0.1);
-            border: 3px solid #ffd54f;
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
         }
 
-        @keyframes flex {
-            0%, 100% { transform: translateX(-50%) scale(1) rotate(-5deg); }
-            50% { transform: translateX(-50%) scale(1.1) rotate(5deg); }
-        }
 
         .header h1 {
             font-family: 'Bebas Neue', cursive;
@@ -157,30 +132,40 @@
         }
 
         .speech-bubble {
-            background: #fff;
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
             color: #4e342e;
-            padding: 15px 25px;
-            border-radius: 20px;
-            position: relative;
-            display: inline-block;
-            margin-top: 30px;
+            padding: 18px 28px;
+            border-radius: 25px;
+            position: absolute;
+            top: -20px;
+            right: 160px;
             font-weight: 700;
             font-size: 1.1rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            transform: translateY(-20px);
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.3),
+                0 2px 8px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transform: rotate(-3deg);
+            border: 2px solid rgba(255, 193, 7, 0.3);
+            animation: bubble-bounce 2.5s ease-in-out infinite;
         }
 
         .speech-bubble::after {
             content: '';
             position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
+            bottom: -12px;
+            right: 20px;
             width: 0;
             height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-bottom: 15px solid #fff;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 12px solid #fff;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        @keyframes bubble-bounce {
+            0%, 100% { transform: rotate(-3deg) translateY(0px); }
+            50% { transform: rotate(-3deg) translateY(-3px); }
         }
 
         .back-link {
