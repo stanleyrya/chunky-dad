@@ -226,6 +226,13 @@ class RedEyeTicketsParser {
                 return this.createDateFromComponents(month, day, year, hour, ampm);
             }
             
+            // Handle format: "Saturday, November 22, 2025 at 8:30pm" (with minutes)
+            const fullMatchWithMinutes = dateString.match(/(\w+),\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})\s+at\s+(\d{1,2}):(\d{2})(\w+)/i);
+            if (fullMatchWithMinutes) {
+                const [, dayOfWeek, month, day, year, hour, minutes, ampm] = fullMatchWithMinutes;
+                return this.createDateFromComponents(month, day, year, hour, ampm, minutes);
+            }
+            
             // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
             const shortMatch = dateString.match(/(\w+)\.?\s+(\d{1,2}),?\s+(\d{4})/i);
             if (shortMatch) {
@@ -241,11 +248,11 @@ class RedEyeTicketsParser {
     }
 
     // Create date from components using JavaScript's flexible Date constructor
-    createDateFromComponents(month, day, year, hour, ampm) {
+    createDateFromComponents(month, day, year, hour, ampm, minutes = '00') {
         try {
             // JavaScript Date constructor can handle many formats
             // Format: "Month Day, Year Hour:Minute AM/PM"
-            const dateString = `${month} ${day}, ${year} ${hour}:00 ${ampm}`;
+            const dateString = `${month} ${day}, ${year} ${hour}:${minutes} ${ampm}`;
             const startDate = new Date(dateString);
             
             // Check if date is valid
@@ -267,7 +274,7 @@ class RedEyeTicketsParser {
 
     // Extract venue information
     extractVenueInfo(html) {
-        // First try to extract venue name from the content area: "Red Eye NY & The Cockpit- 355 W 41st Street"
+        // First try to extract venue name from the content area
         const venueMatch = html.match(/<p[^>]*><strong>[^<]+<\/strong><br>([^<]+)<\/p>/i);
         if (venueMatch) {
             const venueText = venueMatch[1].trim();
@@ -277,13 +284,30 @@ class RedEyeTicketsParser {
             const lastDashIndex = venueText.lastIndexOf('-');
             if (lastDashIndex > 0) {
                 const venue = venueText.substring(0, lastDashIndex).trim();
-                const address = venueText.substring(lastDashIndex + 1).trim();
-                console.log(`🎫 RedEyeTickets: Extracted venue: "${venue}", address: "${address}"`);
-                return { venue, address };
+                const contentAddress = venueText.substring(lastDashIndex + 1).trim();
+                
+                // Check if this is a Red Eye Tickets venue (contains "Red Eye" in venue name)
+                const isRedEyeVenue = venue.toLowerCase().includes('red eye');
+                
+                if (isRedEyeVenue) {
+                    // For Red Eye venues, use the footer address (contains full city info)
+                    const footerMatch = html.match(/<div class="one">[^<]*Red Eye Tickets[^<]*◦\s*([^◦]+)◦\s*([^<]+)</i);
+                    if (footerMatch) {
+                        const streetAddress = footerMatch[1].trim();
+                        const cityStateZip = footerMatch[2].trim();
+                        const fullAddress = `${streetAddress}, ${cityStateZip}`;
+                        console.log(`🎫 RedEyeTickets: Red Eye venue detected, using full address from footer: "${fullAddress}"`);
+                        return { venue, address: fullAddress };
+                    }
+                } else {
+                    // For non-Red Eye venues, use the address from content area
+                    console.log(`🎫 RedEyeTickets: Non-Red Eye venue detected, using address from content: "${contentAddress}"`);
+                    return { venue, address: contentAddress };
+                }
             }
         }
         
-        // Fallback: Try to get address from footer (contains full city info)
+        // Fallback: Try to get address from footer (for Red Eye venues without content area venue info)
         const footerMatch = html.match(/<div class="one">[^<]*Red Eye Tickets[^<]*◦\s*([^◦]+)◦\s*([^<]+)</i);
         if (footerMatch) {
             const streetAddress = footerMatch[1].trim();
@@ -291,19 +315,19 @@ class RedEyeTicketsParser {
             const fullAddress = `${streetAddress}, ${cityStateZip}`;
             console.log(`🎫 RedEyeTickets: Found footer address: "${fullAddress}"`);
             
-            // Try to extract venue name from the page content
-            const venueMatch = html.match(/<h1[^>]*>([^<]+)</i) || 
+            // Try to extract venue name from page title/meta
+            const titleMatch = html.match(/<h1[^>]*>([^<]+)</i) || 
                               html.match(/<title[^>]*>([^<]+)</i) ||
                               html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i);
             
-            if (venueMatch) {
-                const venueName = venueMatch[1].trim();
-                console.log(`🎫 RedEyeTickets: Found venue name: "${venueName}"`);
+            if (titleMatch) {
+                const venueName = titleMatch[1].trim();
+                console.log(`🎫 RedEyeTickets: Using venue from title: "${venueName}", full address from footer: "${fullAddress}"`);
                 return { venue: venueName, address: fullAddress };
             }
             
-            // If no venue name found, return null
-            console.log(`🎫 RedEyeTickets: No venue name found, only address: "${fullAddress}"`);
+            // If no venue name found, return null venue but full address
+            console.log(`🎫 RedEyeTickets: No venue name found, using full address from footer: "${fullAddress}"`);
             return { venue: null, address: fullAddress };
         }
         
