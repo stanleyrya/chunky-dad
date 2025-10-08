@@ -936,7 +936,14 @@ class CalendarCore {
                         current.setDate(current.getDate() + daysToAdd);
                     } else {
                         // Weekly event without BYDAY - default to same day of week as original event
-                        current.setDate(current.getDate() + (7 * pattern.interval));
+                        // Find the day of week of the original event
+                        const originalDayOfWeek = eventStartDate.getDay();
+                        const currentDayOfWeek = current.getDay();
+                        
+                        // Calculate days until the next occurrence of the original day of week
+                        const daysUntilOriginalDay = (originalDayOfWeek - currentDayOfWeek + 7) % 7;
+                        const daysToAdd = daysUntilOriginalDay === 0 ? (7 * pattern.interval) : daysUntilOriginalDay;
+                        current.setDate(current.getDate() + daysToAdd);
                     }
                     break;
                 case 'MONTHLY':
