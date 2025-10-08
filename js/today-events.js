@@ -280,10 +280,11 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
           const today = new Date();
           const startOfToday = new Date(today);
           startOfToday.setHours(0, 0, 0, 0);
-          const endOfToday = new Date(today);
-          endOfToday.setHours(23, 59, 59, 999);
+          const endOfTomorrow = new Date(today);
+          endOfTomorrow.setDate(endOfTomorrow.getDate() + 2); // Include tomorrow to match filterEventsForToday logic
+          endOfTomorrow.setHours(0, 0, 0, 0);
           
-          const visibleDates = this.getVisibleEventDates(ev, startOfToday, endOfToday);
+          const visibleDates = this.getVisibleEventDates(ev, startOfToday, endOfTomorrow);
           logger.debug('CALENDAR', 'Calculating event date for recurring event', {
             eventName: ev.name,
             originalStartDate: ev.startDate,
