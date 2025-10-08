@@ -2290,41 +2290,93 @@ class ScriptableAdapter {
         }
         
         function toggleDiffView(button, eventKey) {
-            // Convert eventKey to safe ID for DOM lookups
-            const safeEventKey = eventKey.replace(/[^a-zA-Z0-9\-_]/g, '_');
+            console.log('toggleDiffView called with eventKey:', eventKey);
+            
+            // Convert eventKey to safe ID for DOM lookups - handle both escaped and unescaped keys
+            let safeEventKey = eventKey;
+            
+            // If the key contains escaped characters, unescape them first
+            if (eventKey.includes("\\'")) {
+                safeEventKey = eventKey.replace(/\\'/g, "'");
+            }
+            
+            // Decode HTML entities before creating safe ID
+            safeEventKey = safeEventKey.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+            
+            // Convert to safe DOM ID (same logic as in HTML generation)
+            safeEventKey = safeEventKey.replace(/[^a-zA-Z0-9\-_]/g, '_');
+            
+            console.log('safeEventKey after processing:', safeEventKey);
+            
             const tableView = document.getElementById('table-view-' + safeEventKey);
             const lineView = document.getElementById('line-view-' + safeEventKey);
             
+            console.log('Found elements - tableView:', !!tableView, 'lineView:', !!lineView);
+            
+            // Fallback: if elements not found, try to find them by partial ID match
+            if (!tableView || !lineView) {
+                console.log('Elements not found, trying fallback search...');
+                const allElements = document.querySelectorAll('[id*="' + safeEventKey + '"]');
+                console.log('Found elements with partial match:', allElements.length);
+                allElements.forEach(el => console.log('Element ID:', el.id));
+            }
+            
             // Check current state - table view is visible if display is not 'none'
-            const isTableVisible = tableView.style.display !== 'none';
+            const isTableVisible = tableView && tableView.style.display !== 'none';
             
             if (isTableVisible) {
                 // Switch to line view
-                tableView.style.display = 'none';
-                lineView.style.display = 'block';
+                if (tableView) tableView.style.display = 'none';
+                if (lineView) lineView.style.display = 'block';
                 button.textContent = 'Switch to Table View';
             } else {
                 // Switch to table view
-                tableView.style.display = 'block';
-                lineView.style.display = 'none';
+                if (tableView) tableView.style.display = 'block';
+                if (lineView) lineView.style.display = 'none';
                 button.textContent = 'Switch to Line View';
             }
         }
         
         function toggleComparisonSection(eventId) {
-            // Convert eventId to safe ID for DOM lookups
-            const safeEventId = eventId.replace(/[^a-zA-Z0-9\-_]/g, '_');
+            console.log('toggleComparisonSection called with eventId:', eventId);
+            
+            // Convert eventId to safe ID for DOM lookups - handle both escaped and unescaped keys
+            let safeEventId = eventId;
+            
+            // If the key contains escaped characters, unescape them first
+            if (eventId.includes("\\'")) {
+                safeEventId = eventId.replace(/\\'/g, "'");
+            }
+            
+            // Decode HTML entities before creating safe ID
+            safeEventId = safeEventId.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+            
+            // Convert to safe DOM ID (same logic as in HTML generation)
+            safeEventId = safeEventId.replace(/[^a-zA-Z0-9\-_]/g, '_');
+            
+            console.log('safeEventId after processing:', safeEventId);
+            
             const content = document.getElementById('comparison-content-' + safeEventId);
             const icon = document.getElementById('expand-icon-' + safeEventId);
             const diffToggle = document.getElementById('diff-toggle-' + safeEventId);
             
-            if (content.style.display === 'none') {
+            console.log('Found elements - content:', !!content, 'icon:', !!icon, 'diffToggle:', !!diffToggle);
+            
+            // Fallback: if elements not found, try to find them by partial ID match
+            if (!content || !icon) {
+                console.log('Elements not found, trying fallback search...');
+                const allElements = document.querySelectorAll('[id*="' + safeEventId + '"]');
+                console.log('Found elements with partial match:', allElements.length);
+                allElements.forEach(el => console.log('Element ID:', el.id));
+            }
+            
+            if (content && content.style.display === 'none') {
                 content.style.display = 'block';
-                icon.textContent = '▼';
+                if (icon) icon.textContent = '▼';
                 if (diffToggle) diffToggle.style.display = 'block';
             } else {
-                content.style.display = 'none';
-                icon.textContent = '▶';
+                if (content) content.style.display = 'none';
+                if (icon) icon.textContent = '▶';
                 if (diffToggle) diffToggle.style.display = 'none';
             }
         }
@@ -2789,8 +2841,10 @@ class ScriptableAdapter {
             ${event._original && event._action !== 'new' ? (() => {
                 const hasDifferences = this.hasEventDifferences(event);
                 const eventId = event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
-                const safeEventId = eventId.replace(/[^a-zA-Z0-9\-_]/g, '_'); // Create safe ID for DOM elements
-                const escapedEventId = eventId.replace(/'/g, "\\'"); // Escape single quotes for JavaScript
+                // Decode HTML entities before creating safe ID
+                const decodedEventId = eventId.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                const safeEventId = decodedEventId.replace(/[^a-zA-Z0-9\-_]/g, '_'); // Create safe ID for DOM elements
+                const escapedEventId = decodedEventId.replace(/'/g, "\\'"); // Escape single quotes for JavaScript
                 const isExpanded = false; // Start collapsed; expand on click
                 
                 return `
