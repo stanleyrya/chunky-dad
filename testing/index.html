@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="toolbox-icon" content="🏠">
+    <meta name="toolbox-icon" content="🪣">
     <meta name="toolbox-description" content="Tool Shed Home - Browse all of dad's tools in one place">
-    <title>🔧 chunky.dad's Toolbox</title>
+    <title>🪣 chunky.dad's Toolbox</title>
+    <link rel="icon" type="image/png" href="../favicons/favicon-32x32.png">
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Permanent+Marker&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -60,6 +61,23 @@
             z-index: 0;
         }
 
+        /* Chunky.dad toolbox branding */
+        .header::after {
+            content: '🪣';
+            position: absolute;
+            top: -20px;
+            right: 20px;
+            font-size: 2.5rem;
+            opacity: 0.7;
+            animation: bounce 3s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-5px) rotate(-5deg); }
+            75% { transform: translateY(-3px) rotate(5deg); }
+        }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -74,7 +92,7 @@
             padding: 40px 20px;
             background: 
                 linear-gradient(135deg, rgba(109, 76, 65, 0.4) 0%, rgba(78, 52, 46, 0.4) 100%),
-                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%234e342e" width="100" height="100"/><path d="M0 0 L50 50 L0 100 L100 100 L50 50 L100 0 Z" fill="%235d4037" opacity="0.3"/></svg>');
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%234e342e" width="100" height="100"/><path d="M0 0 L50 50 L0 100 L100 100 L50 50 L100 0 Z" fill="%235d4037" opacity="0.3"/><text x="50" y="50" font-size="20" fill="%23ffd54f" opacity="0.1" text-anchor="middle" dominant-baseline="middle">🪣</text></svg>');
             background-size: cover;
             border: 4px solid #8d6e63;
             border-radius: 15px;
@@ -85,14 +103,19 @@
         }
 
         .header::before {
-            content: '💪';
+            content: '';
             position: absolute;
-            top: -30px;
+            top: -40px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 4rem;
+            width: 80px;
+            height: 80px;
+            background: url('../favicons/favicon-192x192.png') center/contain no-repeat;
             animation: flex 2s ease-in-out infinite;
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+            border-radius: 50%;
+            background-color: rgba(255, 193, 7, 0.1);
+            border: 3px solid #ffd54f;
         }
 
         @keyframes flex {
@@ -140,23 +163,24 @@
             border-radius: 20px;
             position: relative;
             display: inline-block;
-            margin-top: 20px;
+            margin-top: 30px;
             font-weight: 700;
             font-size: 1.1rem;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transform: translateY(-20px);
         }
 
         .speech-bubble::after {
             content: '';
             position: absolute;
-            bottom: -15px;
+            top: -15px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
-            border-top: 15px solid #fff;
+            border-bottom: 15px solid #fff;
         }
 
         .back-link {
@@ -389,7 +413,7 @@
             <div class="toolbox-subtitle">Your Thicc, Handy Helper 🛠️</div>
             <h1>🔧 chunky.dad's Toolbox</h1>
             <div class="speech-bubble">
-                "Let me work on your site with my big... tools 😏"
+                "Time to get my hands dirty with some quality tools! 🪣"
             </div>
             <p>Quality Tools • Expert Handling • Always Ready to Help</p>
         </div>
