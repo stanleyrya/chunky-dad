@@ -472,7 +472,9 @@ class CalendarCore {
             'gmaps': 'gmaps', 'google maps': 'gmaps',
             'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
             'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName',
-            'image': 'image'
+            'image': 'image',
+            // Add case-sensitive mappings for common variations
+            'Bar': 'bar', 'Cover': 'cover', 'Nickname': 'shortName', 'Shorter': 'shorterName'
         };
 
         // Clean up any remaining carriage returns that might interfere with parsing
