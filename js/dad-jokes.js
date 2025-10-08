@@ -29,32 +29,40 @@ class DadJokesManager {
                 punchline: "Because they have bear feet!"
             },
             {
-                setup: "What do you call a bear who loves to travel?",
-                punchline: "A roam-ing bear!"
-            },
-            {
                 setup: "Why did the bear go to therapy?",
                 punchline: "He had too many bear-ied emotions!"
-            },
-            {
-                setup: "What's a bear's favorite drink at the bar?",
-                punchline: "Bear-itas!"
             },
             {
                 setup: "Why don't bears ever lie?",
                 punchline: "Because the truth is un-bear-able to hide!"
             },
             {
-                setup: "What do you call a bear who's great at parties?",
-                punchline: "The life of the bear-ty!"
+                setup: "What do you call a bear who's always on time?",
+                punchline: "A punctual bear!"
             },
             {
-                setup: "Why did the bear become a tour guide?",
-                punchline: "He wanted to show everyone the bear minimum of fun!"
+                setup: "Why did the bear bring a ladder to the bar?",
+                punchline: "He heard the drinks were on the house!"
             },
             {
-                setup: "What's a bear's favorite app?",
-                punchline: "Grindr... I mean, Bear-der!"
+                setup: "What's a bear's favorite type of sandwich?",
+                punchline: "A club sandwich - because bears love clubs!"
+            },
+            {
+                setup: "Why don't bears ever get cold in winter?",
+                punchline: "Because they're always wearing their bear skin!"
+            },
+            {
+                setup: "What do you call a bear who's a great dancer?",
+                punchline: "A bear-illiant performer!"
+            },
+            {
+                setup: "Why did the bear start a band?",
+                punchline: "He wanted to make some bear-illiant music!"
+            },
+            {
+                setup: "What's a bear's favorite exercise?",
+                punchline: "Bear-lls and weights!"
             }
         ];
         
