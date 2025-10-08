@@ -472,9 +472,7 @@ class CalendarCore {
             'gmaps': 'gmaps', 'google maps': 'gmaps',
             'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
             'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName',
-            'image': 'image',
-            // Add case-sensitive mappings for common variations
-            'Bar': 'bar', 'Cover': 'cover', 'Nickname': 'shortName', 'Shorter': 'shorterName'
+            'image': 'image'
         };
 
         // Clean up any remaining carriage returns that might interfere with parsing
@@ -548,6 +546,7 @@ class CalendarCore {
                 if (this.isValidMetadataKey(unescapedKey)) {
                     const key = unescapedKey.toLowerCase();
                     const value = unescapedValue;
+                    // Use case-insensitive lookup in keyMap
                     const mappedKey = keyMap[key] || key;
                     
                     // Additional validation for URLs
