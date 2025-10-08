@@ -935,7 +935,8 @@ class CalendarCore {
                         const daysToAdd = daysUntilTarget === 0 ? (7 * pattern.interval) : daysUntilTarget;
                         current.setDate(current.getDate() + daysToAdd);
                     } else {
-                        throw new Error('Weekly recurrence without BYDAY is not supported');
+                        // Weekly event without BYDAY - default to same day of week as original event
+                        current.setDate(current.getDate() + (7 * pattern.interval));
                     }
                     break;
                 case 'MONTHLY':
