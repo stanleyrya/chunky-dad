@@ -340,26 +340,22 @@ class CalendarCore {
                 });
                 const additionalData = this.parseKeyValueDescription(calendarEvent.description);
                 if (additionalData) {
-                    eventData.bar = additionalData.bar;
-                    if (additionalData.cover) {
-                        eventData.cover = additionalData.cover;
+                    // Apply all extracted fields to eventData
+                    Object.keys(additionalData).forEach(key => {
+                        if (additionalData[key] !== undefined && additionalData[key] !== null && additionalData[key] !== '') {
+                            eventData[key] = additionalData[key];
+                        }
+                    });
+                    
+                    // Special handling for tea field (use description as fallback)
+                    if (additionalData.tea || additionalData.description) {
+                        eventData.tea = additionalData.tea || additionalData.description;
                     }
-                    if (additionalData.image) {
-                        eventData.image = additionalData.image;
-                    }
-                    eventData.tea = additionalData.tea || additionalData.description;
-                    eventData.website = additionalData.website;
-                    eventData.instagram = additionalData.instagram;
-                    eventData.facebook = additionalData.facebook;
-                    eventData.gmaps = additionalData.gmaps;
-                    eventData.ticketUrl = additionalData.ticketUrl;
-                    eventData.shortName = additionalData.shortName;
-                    eventData.shorterName = additionalData.shorterName;
+                    
+                    // Generate links from the data
                     eventData.links = this.parseLinks(additionalData);
                     
-                    if (additionalData.type || additionalData.eventType) {
-                        eventData.eventType = additionalData.type || additionalData.eventType;
-                    }
+                    logger.debug('CALENDAR', `Applied additional data to event: ${Object.keys(additionalData).join(', ')}`);
                 }
             }
             
@@ -531,6 +527,7 @@ class CalendarCore {
             line = line.trim();
             if (!line) continue;
             
+            
             // Use escape-aware parsing to find the first unescaped colon
             const colonIndex = this.findUnescaped(line, ':');
             
@@ -548,6 +545,7 @@ class CalendarCore {
                     const value = unescapedValue;
                     // Use case-insensitive lookup in keyMap
                     const mappedKey = keyMap[key] || key;
+                    
                     
                     // Additional validation for URLs
                     if (['website', 'instagram', 'facebook', 'gmaps', 'image', 'ticketUrl'].includes(mappedKey)) {
@@ -578,7 +576,7 @@ class CalendarCore {
             hasInstagram: !!data.instagram,
             hasFacebook: !!data.facebook,
             hasGmaps: !!data.gmaps,
-            hasTicketUrl: !!data.ticketUrl
+            hasTicketUrl: !!data.ticketUrl,
         });
         
         return Object.keys(data).length > 0 ? data : null;
