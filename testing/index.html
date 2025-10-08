@@ -90,10 +90,10 @@
             content: '';
             position: absolute;
             top: 50%;
-            right: 30px;
+            right: 40px;
             transform: translateY(-50%);
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             background: url('../favicons/favicon-192x192.png') center/contain no-repeat;
             filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
         }
@@ -111,7 +111,7 @@
                 0 0 30px rgba(255, 193, 7, 0.5);
             letter-spacing: 4px;
             position: relative;
-            margin-right: 180px;
+            margin-right: 160px;
         }
 
         .toolbox-subtitle {
@@ -131,7 +131,7 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-top: 15px;
-            margin-right: 180px;
+            margin-right: 160px;
         }
 
         .speech-bubble {
@@ -140,8 +140,8 @@
             padding: 18px 28px;
             border-radius: 25px;
             position: absolute;
-            top: 50%;
-            right: 170px;
+            top: 35%;
+            right: 160px;
             transform: translateY(-50%) rotate(-3deg);
             font-weight: 700;
             font-size: 1.1rem;
@@ -151,13 +151,14 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.8);
             border: 2px solid rgba(255, 193, 7, 0.3);
             animation: bubble-bounce 2.5s ease-in-out infinite;
+            max-width: 280px;
         }
 
         .speech-bubble::after {
             content: '';
             position: absolute;
             bottom: -12px;
-            right: 20px;
+            right: 35px;
             width: 0;
             height: 0;
             border-left: 12px solid transparent;
@@ -379,12 +380,43 @@
         }
 
         @media (max-width: 768px) {
+            .header {
+                padding: 30px 15px;
+            }
+            
+            .header::before {
+                right: 20px;
+                width: 80px;
+                height: 80px;
+            }
+            
             .header h1 {
                 font-size: 2.5rem;
+                margin-right: 100px;
             }
             
             .toolbox-subtitle {
                 font-size: 1.2rem;
+            }
+            
+            .header p {
+                margin-right: 100px;
+                font-size: 1rem;
+            }
+            
+            .speech-bubble {
+                position: relative;
+                top: auto;
+                right: auto;
+                transform: rotate(-3deg);
+                margin: 20px auto 0;
+                max-width: 90%;
+                display: block;
+            }
+            
+            .speech-bubble::after {
+                right: 50%;
+                transform: translateX(50%);
             }
             
             .test-grid {
