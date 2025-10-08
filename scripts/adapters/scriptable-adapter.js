@@ -1322,6 +1322,59 @@ class ScriptableAdapter {
             overflow: hidden;
         }
         
+        .header-controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .sfw-toggle {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .sfw-toggle input[type="checkbox"] {
+            display: none;
+        }
+        
+        .toggle-slider {
+            width: 50px;
+            height: 24px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            position: relative;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+        }
+        
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: white;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s ease;
+        }
+        
+        .sfw-toggle input[type="checkbox"]:checked + .toggle-slider {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .sfw-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+            transform: translateX(26px);
+        }
+        
+        .toggle-label {
+            color: var(--text-inverse);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
         .header::before {
             content: '';
             position: absolute;
@@ -2016,6 +2069,13 @@ class ScriptableAdapter {
                 <div class="header-subtitle">Bear Event Scraper Results</div>
             </h1>
         </div>
+        <div class="header-controls">
+            <label class="sfw-toggle">
+                <input type="checkbox" id="sfwToggle" onchange="toggleImages()">
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Show Images</span>
+            </label>
+        </div>
         <div class="stats">
             <div class="stat">
                 <div class="stat-value">${results.totalEvents}</div>
@@ -2501,6 +2561,19 @@ class ScriptableAdapter {
                 copyToClipboardFallback(jsonString, button);
             }
                 }
+                
+        function toggleImages() {
+            const toggle = document.getElementById('sfwToggle');
+            const imageContainers = document.querySelectorAll('.image-container');
+            
+            imageContainers.forEach(container => {
+                if (toggle.checked) {
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            });
+        }
     </script>
 </body>
 </html>
@@ -2611,7 +2684,7 @@ class ScriptableAdapter {
                 ${event.image ? `
                     <div class=\"event-image\">
                         <a href=\"${this.escapeHtml(event.image)}\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--primary-color); font-weight: 500;\">View Full Image</a>
-                        <div style=\"margin-top: 8px;\">
+                        <div class=\"image-container\" style=\"margin-top: 8px; display: none;\">
                             <img src=\"${this.escapeHtml(event.image)}\" alt=\"Event Image\" onerror=\"this.style.display='none'\">
                         </div>
                     </div>
