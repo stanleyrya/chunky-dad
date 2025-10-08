@@ -314,7 +314,7 @@ class RedEyeTicketsParser {
 
     // Extract description
     extractDescription(html) {
-        // Look for the main description paragraph with GOLDILOXX content
+        // Look for the main description paragraph with event content
         // This extracts the clean description without date/title from the content
         const descMatch = html.match(/<p[^>]*class="has-text-align-center"[^>]*>([^<]+(?:<br[^>]*>[^<]+)*)<\/p>/i);
         if (descMatch) {
@@ -325,36 +325,47 @@ class RedEyeTicketsParser {
                 .replace(/\s+/g, ' ')
                 .trim();
             
-            // Look for the full description that includes the bear party text
-            if (description.includes('GOLDILOXX') && description.includes('bear party')) {
-                // Extract just the description part after the title
-                const descParts = description.split('GOLDILOXX');
-                if (descParts.length > 1) {
-                    // Take everything after "GOLDILOXX" and clean it up
-                    let cleanDesc = descParts[1]
-                        .replace(/^[–-]\s*HALLOWEEN\s*/i, '') // Remove "– HALLOWEEN" prefix
-                        .replace(/^[–-]\s*/i, '') // Remove any remaining dash prefix
+            // Look for descriptions that contain event details (not just titles)
+            if (description.length > 50 && !description.match(/^[A-Z\s&]+$/)) {
+                // Try to extract the description part after the event title
+                // Look for patterns like "EVENT NAME – THEME" followed by description
+                const eventDescMatch = description.match(/^[A-Z\s&]+[–-]\s*[A-Z\s&]*[–-]\s*(.+)$/i);
+                if (eventDescMatch) {
+                    const cleanDesc = eventDescMatch[1].trim();
+                    if (cleanDesc && cleanDesc.length > 10) {
+                        console.log(`🎫 RedEyeTickets: Found clean description in paragraph: "${cleanDesc}"`);
+                        return cleanDesc;
+                    }
+                }
+                
+                // If no dash pattern, try to find the description after the first strong text
+                const strongMatch = description.match(/<strong>([^<]+)<\/strong>[^<]*[–-]\s*<strong>([^<]+)<\/strong>[^<]*<br[^>]*><br[^>]*>([^<]+)/i);
+                if (strongMatch) {
+                    const cleanDesc = strongMatch[3]
+                        .replace(/&amp;/g, '&')
+                        .replace(/&nbsp;/g, ' ')
+                        .replace(/\s+/g, ' ')
                         .trim();
                     
                     if (cleanDesc && cleanDesc.length > 10) {
-                        console.log(`🎫 RedEyeTickets: Found clean description in paragraph: "${cleanDesc}"`);
+                        console.log(`🎫 RedEyeTickets: Found description after strong tags: "${cleanDesc}"`);
                         return cleanDesc;
                     }
                 }
             }
         }
         
-        // Alternative approach: Look for the specific bear party description text
-        const bearPartyMatch = html.match(/<p[^>]*class="has-text-align-center"[^>]*>.*?GOLDILOXX[^<]*<br[^>]*><br[^>]*>([^<]+)<\/p>/i);
-        if (bearPartyMatch) {
-            let cleanDesc = bearPartyMatch[1]
+        // Alternative approach: Look for description text after double line breaks
+        const doubleBrMatch = html.match(/<p[^>]*class="has-text-align-center"[^>]*>.*?<br[^>]*><br[^>]*>([^<]+)<\/p>/i);
+        if (doubleBrMatch) {
+            let cleanDesc = doubleBrMatch[1]
                 .replace(/&amp;/g, '&')
                 .replace(/&nbsp;/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
             
-            if (cleanDesc && cleanDesc.includes('bear party')) {
-                console.log(`🎫 RedEyeTickets: Found bear party description: "${cleanDesc}"`);
+            if (cleanDesc && cleanDesc.length > 20) {
+                console.log(`🎫 RedEyeTickets: Found description after double breaks: "${cleanDesc}"`);
                 return cleanDesc;
             }
         }
@@ -380,10 +391,10 @@ class RedEyeTicketsParser {
         if (metaDescMatch) {
             const metaDesc = metaDescMatch[1].trim();
             if (metaDesc && metaDesc.length > 20) {
-                // Remove date and title from meta description
+                // Remove date and title from meta description using generic patterns
                 let cleanDesc = metaDesc
-                    .replace(/^[^–-]*[–-]\s*GOLDILOXX[–-]\s*/i, '') // Remove date and title prefix
-                    .replace(/^GOLDILOXX[–-]\s*/i, '') // Remove just title prefix
+                    .replace(/^[^–-]*[–-]\s*[A-Z\s&]+[–-]\s*/i, '') // Remove date and title prefix
+                    .replace(/^[A-Z\s&]+[–-]\s*/i, '') // Remove just title prefix
                     .trim();
                 
                 if (cleanDesc && cleanDesc.length > 10) {
@@ -398,10 +409,10 @@ class RedEyeTicketsParser {
         if (ogDescMatch) {
             const ogDesc = ogDescMatch[1].trim();
             if (ogDesc && ogDesc.length > 20) {
-                // Remove date and title from og description
+                // Remove date and title from og description using generic patterns
                 let cleanDesc = ogDesc
-                    .replace(/^[^–-]*[–-]\s*GOLDILOXX[–-]\s*/i, '') // Remove date and title prefix
-                    .replace(/^GOLDILOXX[–-]\s*/i, '') // Remove just title prefix
+                    .replace(/^[^–-]*[–-]\s*[A-Z\s&]+[–-]\s*/i, '') // Remove date and title prefix
+                    .replace(/^[A-Z\s&]+[–-]\s*/i, '') // Remove just title prefix
                     .trim();
                 
                 if (cleanDesc && cleanDesc.length > 10) {
