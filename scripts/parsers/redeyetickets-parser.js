@@ -267,7 +267,23 @@ class RedEyeTicketsParser {
 
     // Extract venue information
     extractVenueInfo(html) {
-        // First try to get address from footer (contains full city info)
+        // First try to extract venue name from the content area: "Red Eye NY & The Cockpit- 355 W 41st Street"
+        const venueMatch = html.match(/<p[^>]*><strong>[^<]+<\/strong><br>([^<]+)<\/p>/i);
+        if (venueMatch) {
+            const venueText = venueMatch[1].trim();
+            console.log(`🎫 RedEyeTickets: Found venue text: "${venueText}"`);
+            
+            // Split venue name and address
+            const parts = venueText.split('-');
+            if (parts.length >= 2) {
+                const venue = parts[0].trim();
+                const address = parts.slice(1).join('-').trim();
+                console.log(`🎫 RedEyeTickets: Extracted venue: "${venue}", address: "${address}"`);
+                return { venue, address };
+            }
+        }
+        
+        // Fallback: Try to get address from footer (contains full city info)
         const footerMatch = html.match(/<div class="one">[^<]*Red Eye Tickets[^<]*◦\s*([^◦]+)◦\s*([^<]+)</i);
         if (footerMatch) {
             const streetAddress = footerMatch[1].trim();
@@ -291,21 +307,6 @@ class RedEyeTicketsParser {
             return { venue: null, address: fullAddress };
         }
         
-        // Fallback: Look for venue pattern: "Red Eye NY & The Cockpit- 355 W 41st Street"
-        const venueMatch = html.match(/<p[^>]*><strong>[^<]+<\/strong><br>([^<]+)<\/p>/i);
-        if (venueMatch) {
-            const venueText = venueMatch[1].trim();
-            console.log(`🎫 RedEyeTickets: Found venue text: "${venueText}"`);
-            
-            // Split venue name and address
-            const parts = venueText.split('-');
-            if (parts.length >= 2) {
-                const venue = parts[0].trim();
-                const address = parts.slice(1).join('-').trim();
-                return { venue, address };
-            }
-        }
-        
         // No fallback - return null if venue info not found
         console.log('🎫 RedEyeTickets: No venue information found in page');
         return { venue: null, address: null };
@@ -313,39 +314,48 @@ class RedEyeTicketsParser {
 
     // Extract description
     extractDescription(html) {
-        // First try to get description from meta tags (most reliable)
-        const metaDescMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
-        if (metaDescMatch) {
-            const metaDesc = metaDescMatch[1].trim();
-            if (metaDesc && metaDesc.length > 20) {
-                console.log(`🎫 RedEyeTickets: Found description in meta tags: "${metaDesc}"`);
-                return metaDesc;
-            }
-        }
-        
-        // Try to get description from og:description
-        const ogDescMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i);
-        if (ogDescMatch) {
-            const ogDesc = ogDescMatch[1].trim();
-            if (ogDesc && ogDesc.length > 20) {
-                console.log(`🎫 RedEyeTickets: Found description in og:description: "${ogDesc}"`);
-                return ogDesc;
-            }
-        }
-        
         // Look for the main description paragraph with GOLDILOXX content
+        // This extracts the clean description without date/title from the content
         const descMatch = html.match(/<p[^>]*class="has-text-align-center"[^>]*>([^<]+(?:<br[^>]*>[^<]+)*)<\/p>/i);
         if (descMatch) {
             let description = descMatch[1]
                 .replace(/<br\s*\/?>/gi, ' ')
                 .replace(/&amp;/g, '&')
+                .replace(/&nbsp;/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
             
             // Look for the full description that includes the bear party text
             if (description.includes('GOLDILOXX') && description.includes('bear party')) {
-                console.log(`🎫 RedEyeTickets: Found description in paragraph: "${description}"`);
-                return description;
+                // Extract just the description part after the title
+                const descParts = description.split('GOLDILOXX');
+                if (descParts.length > 1) {
+                    // Take everything after "GOLDILOXX" and clean it up
+                    let cleanDesc = descParts[1]
+                        .replace(/^[–-]\s*HALLOWEEN\s*/i, '') // Remove "– HALLOWEEN" prefix
+                        .replace(/^[–-]\s*/i, '') // Remove any remaining dash prefix
+                        .trim();
+                    
+                    if (cleanDesc && cleanDesc.length > 10) {
+                        console.log(`🎫 RedEyeTickets: Found clean description in paragraph: "${cleanDesc}"`);
+                        return cleanDesc;
+                    }
+                }
+            }
+        }
+        
+        // Alternative approach: Look for the specific bear party description text
+        const bearPartyMatch = html.match(/<p[^>]*class="has-text-align-center"[^>]*>.*?GOLDILOXX[^<]*<br[^>]*><br[^>]*>([^<]+)<\/p>/i);
+        if (bearPartyMatch) {
+            let cleanDesc = bearPartyMatch[1]
+                .replace(/&amp;/g, '&')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            
+            if (cleanDesc && cleanDesc.includes('bear party')) {
+                console.log(`🎫 RedEyeTickets: Found bear party description: "${cleanDesc}"`);
+                return cleanDesc;
             }
         }
         
@@ -355,12 +365,49 @@ class RedEyeTicketsParser {
             let description = (fullDescMatch[1] + ' ' + fullDescMatch[2])
                 .replace(/<br\s*\/?>/gi, ' ')
                 .replace(/&amp;/g, '&')
+                .replace(/&nbsp;/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
             
             if (description && description.length > 20) {
                 console.log(`🎫 RedEyeTickets: Found description in multiple paragraphs: "${description}"`);
                 return description;
+            }
+        }
+        
+        // Fallback: Try to get description from meta tags (but clean it up)
+        const metaDescMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
+        if (metaDescMatch) {
+            const metaDesc = metaDescMatch[1].trim();
+            if (metaDesc && metaDesc.length > 20) {
+                // Remove date and title from meta description
+                let cleanDesc = metaDesc
+                    .replace(/^[^–-]*[–-]\s*GOLDILOXX[–-]\s*/i, '') // Remove date and title prefix
+                    .replace(/^GOLDILOXX[–-]\s*/i, '') // Remove just title prefix
+                    .trim();
+                
+                if (cleanDesc && cleanDesc.length > 10) {
+                    console.log(`🎫 RedEyeTickets: Found cleaned description in meta tags: "${cleanDesc}"`);
+                    return cleanDesc;
+                }
+            }
+        }
+        
+        // Try to get description from og:description (but clean it up)
+        const ogDescMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i);
+        if (ogDescMatch) {
+            const ogDesc = ogDescMatch[1].trim();
+            if (ogDesc && ogDesc.length > 20) {
+                // Remove date and title from og description
+                let cleanDesc = ogDesc
+                    .replace(/^[^–-]*[–-]\s*GOLDILOXX[–-]\s*/i, '') // Remove date and title prefix
+                    .replace(/^GOLDILOXX[–-]\s*/i, '') // Remove just title prefix
+                    .trim();
+                
+                if (cleanDesc && cleanDesc.length > 10) {
+                    console.log(`🎫 RedEyeTickets: Found cleaned description in og:description: "${cleanDesc}"`);
+                    return cleanDesc;
+                }
             }
         }
         
