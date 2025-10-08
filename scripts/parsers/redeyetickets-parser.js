@@ -23,15 +23,8 @@ class RedEyeTicketsParser {
     constructor(config = {}) {
         this.config = {
             source: 'redeyetickets',
-            maxAdditionalUrls: 10,
             ...config
         };
-        
-        this.bearKeywords = [
-            'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
-            'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
-            'furball', 'leather bears', 'bear night', 'bear party', 'goldiloxx'
-        ];
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
@@ -141,12 +134,7 @@ class RedEyeTicketsParser {
                 cover: pricing,
                 image: image,
                 source: this.config.source,
-                isBearEvent: this.config.alwaysBear || this.isBearEvent({
-                    title: title,
-                    description: description,
-                    venue: venueInfo.venue,
-                    url: sourceUrl
-                })
+                isBearEvent: parserConfig.alwaysBear || false
             };
             
             // Apply source-specific metadata values from config
@@ -510,26 +498,6 @@ class RedEyeTicketsParser {
         } catch (error) {
             return false;
         }
-    }
-
-    // Check if an event is a bear event based on keywords
-    isBearEvent(event) {
-        const title = event.title || '';
-        const description = event.description || '';
-        const venue = event.venue || '';
-        const url = event.url || '';
-
-        // Check if the title, description, venue, or URL contains bear keywords
-        if (this.bearKeywords.some(keyword => 
-            title.toLowerCase().includes(keyword) || 
-            description.toLowerCase().includes(keyword) || 
-            venue.toLowerCase().includes(keyword) || 
-            url.toLowerCase().includes(keyword)
-        )) {
-            return true;
-        }
-
-        return false;
     }
 
     // Normalize URLs
