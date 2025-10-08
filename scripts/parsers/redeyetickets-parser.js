@@ -274,7 +274,21 @@ class RedEyeTicketsParser {
             const cityStateZip = footerMatch[2].trim();
             const fullAddress = `${streetAddress}, ${cityStateZip}`;
             console.log(`🎫 RedEyeTickets: Found footer address: "${fullAddress}"`);
-            return { venue: 'Red Eye NY & The Cockpit', address: fullAddress };
+            
+            // Try to extract venue name from the page content
+            const venueMatch = html.match(/<h1[^>]*>([^<]+)</i) || 
+                              html.match(/<title[^>]*>([^<]+)</i) ||
+                              html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i);
+            
+            if (venueMatch) {
+                const venueName = venueMatch[1].trim();
+                console.log(`🎫 RedEyeTickets: Found venue name: "${venueName}"`);
+                return { venue: venueName, address: fullAddress };
+            }
+            
+            // If no venue name found, return null
+            console.log(`🎫 RedEyeTickets: No venue name found, only address: "${fullAddress}"`);
+            return { venue: null, address: fullAddress };
         }
         
         // Fallback: Look for venue pattern: "Red Eye NY & The Cockpit- 355 W 41st Street"
