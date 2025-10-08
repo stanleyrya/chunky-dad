@@ -29,33 +29,17 @@ class DadJokesManager {
                 punchline: "Because they have bear feet!"
             },
             {
-                setup: "What do you call a bear who loves to travel?",
-                punchline: "A roam-ing bear!"
-            },
-            {
                 setup: "Why did the bear go to therapy?",
                 punchline: "He had too many bear-ied emotions!"
-            },
-            {
-                setup: "What's a bear's favorite drink at the bar?",
-                punchline: "Bear-itas!"
             },
             {
                 setup: "Why don't bears ever lie?",
                 punchline: "Because the truth is un-bear-able to hide!"
             },
             {
-                setup: "What do you call a bear who's great at parties?",
-                punchline: "The life of the bear-ty!"
+                setup: "Why did the bear bring a ladder to the bar?",
+                punchline: "He heard the drinks were on the house!"
             },
-            {
-                setup: "Why did the bear become a tour guide?",
-                punchline: "He wanted to show everyone the bear minimum of fun!"
-            },
-            {
-                setup: "What's a bear's favorite app?",
-                punchline: "Grindr... I mean, Bear-der!"
-            }
         ];
         
         this.init();
