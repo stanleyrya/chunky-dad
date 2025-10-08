@@ -4975,6 +4975,44 @@ footer {
     transform: scale(1.1);
 }
 
+/* Share directory button styling */
+.share-directory-btn {
+    background: var(--solid-secondary, #6c757d);
+    color: var(--white);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+}
+
+.share-directory-btn .share-icon {
+    display: contents;
+    color: var(--white);
+}
+
+.share-directory-btn .share-icon i {
+    color: var(--white);
+    font-size: 1rem;
+}
+
+/* Hover effects only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+    .share-directory-btn:hover {
+        background: var(--secondary-color);
+        transform: scale(1.1);
+    }
+}
+
+.share-directory-btn:active {
+    transform: translateY(0);
+}
+
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .tile-link:hover {

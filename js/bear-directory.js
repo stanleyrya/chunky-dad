@@ -49,6 +49,9 @@ class BearDirectory {
         // Set up event listeners
         this.setupEventListeners();
         
+        // Set up share button handlers
+        this.setupShareButtons();
+        
         // Load Instagram embed script
         this.loadInstagramEmbed();
         
@@ -169,6 +172,9 @@ class BearDirectory {
         // Set up iframe timeouts
         this.setupIframeTimeouts();
         
+        // Set up share button handlers for new tiles
+        this.setupShareButtons();
+        
         logger.timeEnd('DIRECTORY', 'displayDirectory');
         logger.componentLoad('DIRECTORY', 'Directory displayed', { 
             displayedItems: this.filteredData.length 
@@ -265,6 +271,9 @@ class BearDirectory {
                     ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link icon-only" title="Visit Website" aria-label="Visit Website"><i class="bi bi-globe"></i></a>` : ''}
                     ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link icon-only" title="View Instagram" aria-label="View Instagram"><i class="bi bi-instagram"></i></a>` : ''}
                     ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link icon-only" title="View on Map" aria-label="View on Map"><i class="bi bi-geo-alt"></i></a>` : ''}
+                    <button class="share-directory-btn icon-only" data-item-name="${item.name}" data-item-type="${item.type}" data-item-city="${item.city}" data-item-instagram="${item.instagram || ''}" title="Share this business" aria-label="Share this business">
+                        <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
+                    </button>
                 </div>
             </div>
         `;
@@ -739,6 +748,135 @@ class BearDirectory {
         
         logger.timeEnd('DIRECTORY', 'updateDisplayOrder');
         logger.componentLoad('DIRECTORY', 'Display order updated');
+    }
+
+    setupShareButtons() {
+        const shareButtons = document.querySelectorAll('.share-directory-btn');
+        
+        shareButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent tile click
+                
+                const itemName = button.dataset.itemName;
+                const itemType = button.dataset.itemType;
+                const itemCity = button.dataset.itemCity;
+                const itemInstagram = button.dataset.itemInstagram;
+                
+                // Build share URL
+                const shareUrl = `${window.location.origin}/bear-directory.html`;
+                
+                // Build share text
+                const shareTitle = `${itemName}`;
+                const shareText = `Check out ${itemName} - ${itemType}${itemCity ? ` in ${itemCity}` : ''}${itemInstagram ? ` (@${itemInstagram})` : ''}`;
+                
+                logger.userInteraction('DIRECTORY', 'Share button clicked', {
+                    itemName,
+                    itemType,
+                    itemCity
+                });
+                
+                // Use Web Share API if available, otherwise copy to clipboard
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: shareTitle,
+                            text: shareText,
+                            url: shareUrl
+                        });
+                        logger.info('DIRECTORY', 'Business shared successfully', {
+                            itemName,
+                            itemType
+                        });
+                        // No toast for successful share - rely on native share sheet experience
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            logger.error('DIRECTORY', 'Share failed', err);
+                            this.showShareToast('Unable to share business');
+                        }
+                    }
+                } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                    // Simple clipboard copy
+                    const shareContent = `${shareText}\n${shareUrl}`;
+                    try {
+                        await navigator.clipboard.writeText(shareContent);
+                        this.showShareToast('Link copied! 📋');
+                        logger.info('DIRECTORY', 'Business URL copied to clipboard');
+                    } catch (err) {
+                        logger.error('DIRECTORY', 'Copy failed', err);
+                        this.showShareToast('Unable to copy link');
+                    }
+                } else {
+                    // No share capability available
+                    this.showShareToast('Sharing not supported on this browser');
+                    logger.warn('DIRECTORY', 'No share method available');
+                }
+            });
+        });
+        
+        logger.debug('DIRECTORY', `Set up ${shareButtons.length} share button handlers`);
+    }
+    
+    // Show toast notification for share feedback
+    showShareToast(message) {
+        // Remove any existing toast
+        const existingToast = document.querySelector('.share-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Create new toast
+        const toast = document.createElement('div');
+        toast.className = 'share-toast';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color, #8B4513);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.3s ease-out;
+        `;
+        
+        // Add animation keyframes if not already present
+        if (!document.querySelector('#share-toast-styles')) {
+            const style = document.createElement('style');
+            style.id = 'share-toast-styles';
+            style.textContent = `
+                @keyframes slideUp {
+                    from {
+                        opacity: 0;
+                        transform: translateX(-50%) translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(-50%) translateY(0);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideUp 0.3s ease-out reverse';
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, 3000);
     }
 
     showError() {
