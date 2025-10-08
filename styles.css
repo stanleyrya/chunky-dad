@@ -4,7 +4,6 @@
     /* Core Brand Colors - These match the testing file */
     --primary-color: #667eea;
     --secondary-color: #ff6b6b;
-    --accent-color: #764ba2;
     
     /* Text Colors - These match the testing file */
     --text-primary: #333;
@@ -15,16 +14,14 @@
     --background-light: #f8f9ff;
     
     /* Derived Colors - Calculated from core variables */
-    --text-muted: #999;
     --text-inverse: #ffffff;
     --border-light: #e8f2ff;
-    --white: #ffffff;
     --black: #000000;
     --transparent: transparent;
     
     
     /* Joke Bubble Colors */
-    --joke-bubble-background: var(--white);
+    --joke-bubble-background: var(--background-primary);
     --joke-punchline-color: #8B4513;
     
     /* Dropdown Colors */
@@ -884,7 +881,7 @@ body.index-page main {
 }
 
 .cta-button.secondary {
-    background: var(--accent-color);
+    background: var(--primary-color);
     box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
 }
 
@@ -975,7 +972,7 @@ body.index-page main {
 
 .event-date {
     background: var(--solid-secondary);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -1964,7 +1961,7 @@ body.index-page main {
 /* Remove color changes on hover - keep original colors */
 
 .no-events {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-style: italic;
     text-align: center;
     padding: 0;
@@ -2117,7 +2114,7 @@ body.index-page main {
 
 .event-day {
     background: var(--primary-color);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -2143,7 +2140,7 @@ body.index-page main {
 
 .recurring-badge {
     background: var(--primary-color);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
     font-size: 0.8rem;
@@ -2153,7 +2150,7 @@ body.index-page main {
 
 .date-badge {
     background: var(--primary-color);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
     font-size: 0.8rem;
@@ -2163,7 +2160,7 @@ body.index-page main {
 
 .not-checked-badge {
     background: var(--solid-warning, #ff9800);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
     font-size: 0.8rem;
@@ -2174,8 +2171,8 @@ body.index-page main {
 }
 
 .distance-badge {
-    background: var(--accent-color, #4285f4);
-    color: var(--white);
+    background: var(--primary-color, #4285f4);
+    color: var(--text-inverse);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
     font-size: 0.8rem;
@@ -2263,7 +2260,7 @@ body.index-page main {
 
 .event-links a {
     background: var(--solid-primary);
-    color: var(--white);
+    color: var(--text-inverse);
     text-decoration: none;
     padding: 0.3rem 0.8rem;
     border-radius: 20px;
@@ -2279,7 +2276,7 @@ body.index-page main {
 /* Share button styling */
 .share-event-btn {
     background: var(--solid-secondary, #6c757d);
-    color: var(--white);
+    color: var(--text-inverse);
     border: none;
     padding: 0.3rem 0.8rem;
     border-radius: 20px;
@@ -2311,11 +2308,11 @@ body.index-page main {
 
 .share-event-btn .share-icon {
     display: contents; /* Makes the span wrapper transparent to layout */
-    color: var(--white);
+    color: var(--text-inverse);
 }
 
 .share-event-btn .share-icon i {
-    color: var(--white);
+    color: var(--text-inverse);
 }
 
 /* Enhanced event link styling */
@@ -2619,7 +2616,7 @@ body.index-page main {
 /* Text marker styling */
 .favicon-marker-container.text-marker {
     background: var(--primary-color);
-    border-color: var(--white);
+    border-color: var(--text-inverse);
 }
 
 .marker-text {
@@ -2822,7 +2819,7 @@ main {
 /* Footer */
 footer {
     background: var(--black);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 2rem 0;
     text-align: center;
 }
@@ -3490,11 +3487,11 @@ footer {
     
     .share-event-btn .share-icon {
         display: contents; /* Makes the span wrapper transparent to layout */
-        color: var(--white);
+        color: var(--text-inverse);
     }
     
     .share-event-btn .share-icon i {
-        color: var(--white);
+        color: var(--text-inverse);
     }
 
     .event-day {
@@ -3904,7 +3901,7 @@ footer {
     display: inline-block;
     padding: 10px 20px;
     background: var(--gradient-primary);
-    color: var(--white);
+    color: var(--text-inverse);
     text-decoration: none;
     border-radius: 25px;
     transition: transform 0.2s ease;
@@ -3912,7 +3909,7 @@ footer {
 
 .city-link:hover {
     transform: translateY(-2px);
-    color: var(--white);
+    color: var(--text-inverse);
 }
 
 /* Loading Message Styles */
@@ -4029,7 +4026,7 @@ footer {
 
 .calendar-day.calendar-overview.current {
     background: var(--gradient-primary);
-    color: var(--white);
+    color: var(--text-inverse);
     border-color: var(--primary-color);
 }
 
@@ -4039,7 +4036,7 @@ footer {
 }
 
 .calendar-day.calendar-overview.has-events:hover {
-    border-color: var(--accent-color);
+    border-color: var(--primary-color);
             background: var(--background-light);
 }
 
@@ -4207,7 +4204,7 @@ footer {
 }
 
 .modal-event-item .event-venue {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-weight: 500;
     font-size: 0.9rem;
 }
@@ -4220,7 +4217,7 @@ footer {
 
 .no-modal-events {
     text-align: center;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-style: italic;
     margin: 2rem 0;
 }
@@ -4307,7 +4304,7 @@ footer {
 /* Month View Improvements */
 .calendar-day-header {
     background: var(--solid-primary);
-    color: var(--white);
+    color: var(--text-inverse);
     text-align: center;
     padding: 15px 8px;
     font-weight: 600;
@@ -4907,7 +4904,7 @@ footer {
 .instagram-error a {
     display: inline-block;
     background: var(--primary-color);
-    color: var(--white);
+    color: var(--text-inverse);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     text-decoration: none;
@@ -4966,7 +4963,7 @@ footer {
     align-items: center;
     justify-content: center;
     background: var(--primary-color);
-    color: var(--white);
+    color: var(--text-inverse);
     border: none;
 }
 
@@ -5305,7 +5302,7 @@ footer {
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
     background: var(--primary-color);
-    color: var(--white);
+    color: var(--text-inverse);
     text-decoration: none;
     border-radius: 25px;
     font-weight: 500;
