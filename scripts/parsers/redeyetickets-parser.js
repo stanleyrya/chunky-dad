@@ -238,11 +238,11 @@ class RedEyeTicketsParser {
                 return this.createDateFromComponents(month, day, year, hour, ampm);
             }
             
-            // Handle format: "Oct. 25, 2025" (from meta description)
+            // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
             const shortMatch = dateString.match(/(\w+)\.?\s+(\d{1,2}),?\s+(\d{4})/i);
             if (shortMatch) {
-                const [, month, day, year] = shortMatch;
-                return this.createDateFromComponents(month, day, year, '9', 'pm');
+                console.log(`🎫 RedEyeTickets: Found date without time: "${dateString}" - skipping (no time fallback)`);
+                return null;
             }
             
         } catch (error) {
@@ -253,7 +253,7 @@ class RedEyeTicketsParser {
     }
 
     // Create date from components using JavaScript's flexible Date constructor
-    createDateFromComponents(month, day, year, hour = '9', ampm = 'pm') {
+    createDateFromComponents(month, day, year, hour, ampm) {
         try {
             // JavaScript Date constructor can handle many formats
             // Format: "Month Day, Year Hour:Minute AM/PM"
@@ -266,14 +266,10 @@ class RedEyeTicketsParser {
                 return null;
             }
             
-            // Create end date (assume 4am next day if not specified)
-            const endDate = new Date(startDate);
-            endDate.setDate(endDate.getDate() + 1);
-            endDate.setHours(4, 0, 0, 0);
+            // No end date fallback - only return start date if no end time specified
+            console.log(`🎫 RedEyeTickets: Created start date: ${startDate.toISOString()}`);
             
-            console.log(`🎫 RedEyeTickets: Created dates - start: ${startDate.toISOString()}, end: ${endDate.toISOString()}`);
-            
-            return { startDate, endDate };
+            return { startDate, endDate: null };
             
         } catch (error) {
             console.warn(`🎫 RedEyeTickets: Error creating date from components: ${error}`);
@@ -597,19 +593,14 @@ class RedEyeTicketsParser {
 
     // Extract coordinates from venue information
     extractCoordinates(venueInfo) {
-        if (!venueInfo || !venueInfo.address) return null;
-        
-        // For now, only handle the known NYC venue
-        // This can be extended to support other venues as needed
-        if (venueInfo.address.includes('355 W 41st Street') || 
-            venueInfo.address.includes('355 W 41st St')) {
-            return {
-                lat: 40.755988,
-                lng: -73.988903
-            };
+        if (!venueInfo || !venueInfo.address) {
+            console.log('🎫 RedEyeTickets: No venue info or address available for coordinates');
+            return null;
         }
         
-        console.log(`🎫 RedEyeTickets: No coordinates available for address: "${venueInfo.address}"`);
+        // No hardcoded coordinates - return null if not found
+        // In the future, this could be enhanced with geocoding services
+        console.log(`🎫 RedEyeTickets: No coordinates found for address: "${venueInfo.address}"`);
         return null;
     }
 }
