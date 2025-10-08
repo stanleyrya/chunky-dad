@@ -49,6 +49,9 @@ class BearDirectory {
         // Set up event listeners
         this.setupEventListeners();
         
+        // Set up share button handlers
+        this.setupShareButtons();
+        
         // Load Instagram embed script
         this.loadInstagramEmbed();
         
@@ -169,6 +172,9 @@ class BearDirectory {
         // Set up iframe timeouts
         this.setupIframeTimeouts();
         
+        // Set up share button handlers for new tiles
+        this.setupShareButtons();
+        
         logger.timeEnd('DIRECTORY', 'displayDirectory');
         logger.componentLoad('DIRECTORY', 'Directory displayed', { 
             displayedItems: this.filteredData.length 
@@ -261,10 +267,13 @@ class BearDirectory {
                 ${item.city ? `<p class="tile-city">📍 ${item.city}</p>` : ''}
                 <p class="tile-type">${this.getTypeIcon(item.type)} ${item.type}</p>
                 <div class="tile-links">
-                    ${item.shop ? `<a href="${item.shop}" target="_blank" rel="noopener" class="tile-link">Shop</a>` : ''}
-                    ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link">Website</a>` : ''}
-                    ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link">Instagram</a>` : ''}
-                    ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link">Map</a>` : ''}
+                    ${item.shop ? `<a href="${item.shop}" target="_blank" rel="noopener" class="tile-link icon-only" title="Visit Shop" aria-label="Visit Shop"><i class="bi bi-bag"></i></a>` : ''}
+                    ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link icon-only" title="Visit Website" aria-label="Visit Website"><i class="bi bi-globe"></i></a>` : ''}
+                    ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link icon-only" title="View Instagram" aria-label="View Instagram"><i class="bi bi-instagram"></i></a>` : ''}
+                    ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link icon-only" title="View on Map" aria-label="View on Map"><i class="bi bi-geo-alt"></i></a>` : ''}
+                    <button class="share-event-btn icon-only" data-item-name="${item.name}" data-item-type="${item.type}" data-item-city="${item.city}" data-item-instagram="${item.instagram || ''}" title="Share this business" aria-label="Share this business">
+                        <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
+                    </button>
                 </div>
             </div>
         `;
@@ -390,7 +399,7 @@ class BearDirectory {
             });
         }
         
-        this.displayDirectory();
+        this.updateDisplayVisibility();
         this.updateMap();
     }
     
@@ -410,7 +419,7 @@ class BearDirectory {
             }
         });
         
-        this.displayDirectory();
+        this.updateDisplayOrder();
     }
     
     handleFilter(filterType) {
@@ -424,7 +433,7 @@ class BearDirectory {
             );
         }
         
-        this.displayDirectory();
+        this.updateDisplayVisibility();
         this.updateMap();
     }
     
@@ -689,6 +698,157 @@ class BearDirectory {
         logger.debug('DIRECTORY', 'Iframe timeouts set', { count: iframes.length });
     }
     
+    updateDisplayVisibility() {
+        logger.time('DIRECTORY', 'updateDisplayVisibility');
+        
+        // Get all existing tiles
+        const tiles = this.elements.grid.querySelectorAll('.directory-tile');
+        
+        // Create a set of filtered item names for quick lookup
+        const filteredNames = new Set(this.filteredData.map(item => item.name));
+        
+        // Show/hide tiles based on filtered data
+        tiles.forEach(tile => {
+            const tileName = tile.querySelector('.tile-name')?.textContent;
+            if (filteredNames.has(tileName)) {
+                tile.style.display = 'block';
+            } else {
+                tile.style.display = 'none';
+            }
+        });
+        
+        logger.timeEnd('DIRECTORY', 'updateDisplayVisibility');
+        logger.componentLoad('DIRECTORY', 'Display visibility updated', { 
+            visibleItems: this.filteredData.length 
+        });
+    }
+    
+    updateDisplayOrder() {
+        logger.time('DIRECTORY', 'updateDisplayOrder');
+        
+        // Get all existing tiles
+        const tiles = Array.from(this.elements.grid.querySelectorAll('.directory-tile'));
+        
+        // Create a map of tile names to DOM elements
+        const tileMap = new Map();
+        tiles.forEach(tile => {
+            const tileName = tile.querySelector('.tile-name')?.textContent;
+            if (tileName) {
+                tileMap.set(tileName, tile);
+            }
+        });
+        
+        // Reorder tiles based on filtered data order
+        this.filteredData.forEach(item => {
+            const tile = tileMap.get(item.name);
+            if (tile) {
+                this.elements.grid.appendChild(tile);
+            }
+        });
+        
+        logger.timeEnd('DIRECTORY', 'updateDisplayOrder');
+        logger.componentLoad('DIRECTORY', 'Display order updated');
+    }
+
+    setupShareButtons() {
+        const shareButtons = document.querySelectorAll('.share-event-btn');
+        
+        shareButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent tile click
+                
+                const itemName = button.dataset.itemName;
+                const itemType = button.dataset.itemType;
+                const itemCity = button.dataset.itemCity;
+                const itemInstagram = button.dataset.itemInstagram;
+                
+                // Find the tile this button belongs to
+                const tile = button.closest('.directory-tile');
+                if (!tile) return;
+                
+                // Determine what content is being displayed and get the appropriate URL
+                let shareUrl = '';
+                let shareText = '';
+                
+                // Check if Instagram embed is displayed
+                const instagramContainer = tile.querySelector('.instagram-embed-container');
+                if (instagramContainer && itemInstagram) {
+                    shareUrl = `https://instagram.com/${itemInstagram}`;
+                    shareText = `Check out ${itemName} on Instagram`;
+                }
+                // Check if shop preview is displayed
+                else if (tile.querySelector('.shop-preview-container')) {
+                    const shopLink = tile.querySelector('.tile-link[href*="http"]');
+                    if (shopLink) {
+                        shareUrl = shopLink.href;
+                        shareText = `Check out ${itemName}'s shop`;
+                    }
+                }
+                // Check if website preview is displayed
+                else if (tile.querySelector('.website-preview-container')) {
+                    const websiteLink = tile.querySelector('.tile-link[href*="http"]');
+                    if (websiteLink) {
+                        shareUrl = websiteLink.href;
+                        shareText = `Check out ${itemName}'s website`;
+                    }
+                }
+                // Fallback to Instagram if available
+                else if (itemInstagram) {
+                    shareUrl = `https://instagram.com/${itemInstagram}`;
+                    shareText = `Check out ${itemName} on Instagram`;
+                }
+                // Fallback to any available link
+                else {
+                    const anyLink = tile.querySelector('.tile-link[href*="http"]');
+                    if (anyLink) {
+                        shareUrl = anyLink.href;
+                        shareText = `Check out ${itemName}`;
+                    } else {
+                        return;
+                    }
+                }
+                
+                logger.userInteraction('DIRECTORY', 'Share button clicked', {
+                    itemName,
+                    itemType,
+                    shareUrl
+                });
+                
+                // Use Web Share API if available, otherwise copy to clipboard
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: itemName,
+                            text: shareText,
+                            url: shareUrl
+                        });
+                        logger.info('DIRECTORY', 'Content shared successfully', {
+                            itemName,
+                            shareUrl
+                        });
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            logger.error('DIRECTORY', 'Share failed', err);
+                        }
+                    }
+                } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                    // Simple clipboard copy
+                    try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        logger.info('DIRECTORY', 'Content URL copied to clipboard');
+                    } catch (err) {
+                        logger.error('DIRECTORY', 'Copy failed', err);
+                    }
+                } else {
+                    logger.warn('DIRECTORY', 'No share method available');
+                }
+            });
+        });
+        
+        logger.debug('DIRECTORY', `Set up ${shareButtons.length} share button handlers`);
+    }
+    
+
     showError() {
         this.elements.loadingIndicator.style.display = 'none';
         this.elements.errorMessage.style.display = 'block';
