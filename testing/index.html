@@ -70,7 +70,6 @@
         }
 
         .header {
-            text-align: center;
             margin-bottom: 50px;
             position: relative;
             padding: 40px 20px;
@@ -84,18 +83,25 @@
                 0 10px 30px rgba(0, 0, 0, 0.6),
                 inset 0 2px 0 rgba(255, 255, 255, 0.1),
                 inset 0 -2px 8px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-content {
+            flex: 1;
+            text-align: center;
+            padding-right: 40px;
         }
 
         .header::before {
             content: '';
-            position: absolute;
-            top: 50%;
-            right: 40px;
-            transform: translateY(-50%);
+            position: relative;
             width: 100px;
             height: 100px;
             background: url('../favicons/favicon-192x192.png') center/contain no-repeat;
             filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+            flex-shrink: 0;
         }
 
 
@@ -111,7 +117,6 @@
                 0 0 30px rgba(255, 193, 7, 0.5);
             letter-spacing: 4px;
             position: relative;
-            margin-right: 160px;
         }
 
         .toolbox-subtitle {
@@ -131,7 +136,6 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-top: 15px;
-            margin-right: 160px;
         }
 
         .speech-bubble {
@@ -140,8 +144,8 @@
             padding: 18px 28px;
             border-radius: 25px;
             position: absolute;
-            top: 35%;
-            right: 160px;
+            top: 60%;
+            right: 20px;
             transform: translateY(-50%) rotate(-3deg);
             font-weight: 700;
             font-size: 1.1rem;
@@ -152,6 +156,7 @@
             border: 2px solid rgba(255, 193, 7, 0.3);
             animation: bubble-bounce 2.5s ease-in-out infinite;
             max-width: 280px;
+            z-index: 10;
         }
 
         .speech-bubble::after {
@@ -382,17 +387,23 @@
         @media (max-width: 768px) {
             .header {
                 padding: 30px 15px;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .header-content {
+                padding-right: 0;
+                margin-bottom: 20px;
             }
             
             .header::before {
-                right: 20px;
                 width: 80px;
                 height: 80px;
+                margin: 0 auto;
             }
             
             .header h1 {
                 font-size: 2.5rem;
-                margin-right: 100px;
             }
             
             .toolbox-subtitle {
@@ -400,7 +411,6 @@
             }
             
             .header p {
-                margin-right: 100px;
                 font-size: 1rem;
             }
             
@@ -430,12 +440,14 @@
         <a href="../index.html" class="back-link">🏠 Back to Main Site</a>
         
         <div class="header">
-            <div class="toolbox-subtitle">Your Thicc, Handy Helper 🛠️</div>
-            <h1>🔧 chunky.dad's Toolbox</h1>
+            <div class="header-content">
+                <div class="toolbox-subtitle">Your Thicc, Handy Helper 🛠️</div>
+                <h1>🔧 chunky.dad's Toolbox</h1>
+                <p>Quality Tools • Expert Handling • Always Ready to Help</p>
+            </div>
             <div class="speech-bubble">
                 "Time to get my hands dirty with some quality tools! 🪣"
             </div>
-            <p>Quality Tools • Expert Handling • Always Ready to Help</p>
         </div>
 
         <div id="debug-info" style="background: linear-gradient(135deg, rgba(109, 76, 65, 0.8) 0%, rgba(78, 52, 46, 0.8) 100%); padding: 20px; margin: 20px 0; border-radius: 10px; font-family: 'Roboto Condensed', sans-serif; font-size: 0.95em; display: none; border: 2px solid #8d6e63; color: #ffd54f; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);">
