@@ -340,22 +340,26 @@ class CalendarCore {
                 });
                 const additionalData = this.parseKeyValueDescription(calendarEvent.description);
                 if (additionalData) {
-                    // Apply all extracted fields to eventData
-                    Object.keys(additionalData).forEach(key => {
-                        if (additionalData[key] !== undefined && additionalData[key] !== null && additionalData[key] !== '') {
-                            eventData[key] = additionalData[key];
-                        }
-                    });
-                    
-                    // Special handling for tea field (use description as fallback)
-                    if (additionalData.tea || additionalData.description) {
-                        eventData.tea = additionalData.tea || additionalData.description;
+                    eventData.bar = additionalData.bar;
+                    if (additionalData.cover) {
+                        eventData.cover = additionalData.cover;
                     }
-                    
-                    // Generate links from the data
+                    if (additionalData.image) {
+                        eventData.image = additionalData.image;
+                    }
+                    eventData.tea = additionalData.tea || additionalData.description;
+                    eventData.website = additionalData.website;
+                    eventData.instagram = additionalData.instagram;
+                    eventData.facebook = additionalData.facebook;
+                    eventData.gmaps = additionalData.gmaps;
+                    eventData.ticketUrl = additionalData.ticketUrl;
+                    eventData.shortName = additionalData.shortName;
+                    eventData.shorterName = additionalData.shorterName;
                     eventData.links = this.parseLinks(additionalData);
                     
-                    logger.debug('CALENDAR', `Applied additional data to event: ${Object.keys(additionalData).join(', ')}`);
+                    if (additionalData.type || additionalData.eventType) {
+                        eventData.eventType = additionalData.type || additionalData.eventType;
+                    }
                 }
             }
             
