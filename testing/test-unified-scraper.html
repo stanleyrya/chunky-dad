@@ -421,6 +421,11 @@
                     <option value="all">🌐 All Sources</option>
                     <option value="eventbrite">🎫 Eventbrite (Megawoof America)</option>
                     <option value="bearracuda">🐻 Bearracuda</option>
+                    <option value="bears-sitges">🏖️ Bears Sitges Week</option>
+                    <option value="chunk">🎪 CHUNK</option>
+                    <option value="furball">🎭 Furball</option>
+                    <option value="linktree">🔗 Linktree</option>
+                    <option value="redeyetickets">🎟️ RedEye Tickets</option>
                     <option value="generic">🔧 Generic Parser</option>
                 </select>
             </div>
@@ -490,7 +495,13 @@
     <script src="../scripts/adapters/web-adapter.js" onerror="handleScriptError('web-adapter.js', event)"></script>
     <script src="../scripts/parsers/eventbrite-parser.js" onerror="handleScriptError('eventbrite-parser.js', event)"></script>
     <script src="../scripts/parsers/bearracuda-parser.js" onerror="handleScriptError('bearracuda-parser.js', event)"></script>
+    <script src="../scripts/parsers/bears-sitges-parser.js" onerror="handleScriptError('bears-sitges-parser.js', event)"></script>
+    <script src="../scripts/parsers/chunk-parser.js" onerror="handleScriptError('chunk-parser.js', event)"></script>
+    <script src="../scripts/parsers/furball-parser.js" onerror="handleScriptError('furball-parser.js', event)"></script>
     <script src="../scripts/parsers/generic-parser.js" onerror="handleScriptError('generic-parser.js', event)"></script>
+    <script src="../scripts/parsers/linktree-parser.js" onerror="handleScriptError('linktree-parser.js', event)"></script>
+    <script src="../scripts/parsers/redeyetickets-parser.js" onerror="handleScriptError('redeyetickets-parser.js', event)"></script>
+    <script src="../scripts/scraper-input.js" onerror="handleScriptError('scraper-input.js', event)"></script>
     <script src="../scripts/bear-event-scraper-unified.js" onerror="handleScriptError('bear-event-scraper-unified.js', event)"></script>
 
     <script>
@@ -498,9 +509,12 @@
         let scriptErrors = [];
         
         function handleScriptError(scriptName, event) {
-            const error = `Failed to load ${scriptName}`;
+            const error = `Failed to load ${scriptName}: ${event.target?.src || 'unknown path'}`;
             scriptErrors.push(error);
             console.error(error);
+            
+            // Update status to show script loading issues
+            updateStatus('moduleStatus', `Script error: ${scriptName}`, 'error');
         }
         
         // Enhanced console logging with colors and timestamps
@@ -606,8 +620,14 @@
                 'WebAdapter': typeof WebAdapter !== 'undefined',
                 'EventbriteParser': typeof EventbriteParser !== 'undefined',
                 'BearraccudaParser': typeof BearraccudaParser !== 'undefined',
+                'BearsSitgesParser': typeof BearsSitgesParser !== 'undefined',
+                'ChunkParser': typeof ChunkParser !== 'undefined',
+                'FurballParser': typeof FurballParser !== 'undefined',
                 'GenericParser': typeof GenericParser !== 'undefined',
-                'BearEventScraperOrchestrator': typeof BearEventScraperOrchestrator !== 'undefined'
+                'LinktreeParser': typeof LinktreeParser !== 'undefined',
+                'RedeeyeticketsParser': typeof RedeeyeticketsParser !== 'undefined',
+                'BearEventScraperOrchestrator': typeof BearEventScraperOrchestrator !== 'undefined',
+                'scraperConfig': typeof window.scraperConfig !== 'undefined'
             };
             
             const loadedModules = Object.entries(requiredModules).filter(([name, loaded]) => loaded);
@@ -625,6 +645,30 @@
             // Show script loading errors if any
             if (scriptErrors.length > 0) {
                 console.error(`Script loading errors: ${scriptErrors.join(', ')}`);
+                updateStatus('moduleStatus', `${scriptErrors.length} script errors`, 'error');
+            }
+            
+            // Test basic functionality of loaded modules
+            if (typeof SharedCore !== 'undefined') {
+                try {
+                    const sharedCore = new SharedCore();
+                    console.success('✅ SharedCore instantiated successfully');
+                } catch (error) {
+                    console.error(`❌ SharedCore instantiation failed: ${error.message}`);
+                }
+            }
+            
+            if (typeof WebAdapter !== 'undefined') {
+                try {
+                    const webAdapter = new WebAdapter();
+                    console.success('✅ WebAdapter instantiated successfully');
+                } catch (error) {
+                    console.error(`❌ WebAdapter instantiation failed: ${error.message}`);
+                }
+            }
+            
+            if (typeof window.scraperConfig !== 'undefined') {
+                console.success(`✅ Configuration loaded: ${window.scraperConfig.parsers?.length || 0} parsers configured`);
             }
         }
         
