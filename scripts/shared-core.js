@@ -1108,8 +1108,9 @@ class SharedCore {
             
             // Name aliases
             'shortname': 'shortName',
-            'shortername': 'shortName',
-            'shorter name': 'shortName',
+            'shortername': 'shorterName',
+            'shorter name': 'shorterName',
+            'shorter': 'shorterName',
             'short title': 'shortName',
             'shorttitle': 'shortName',
             'nickname': 'shortName',
