@@ -1094,7 +1094,6 @@ class SharedCore {
             // Description aliases
             'tea': 'description',
             'info': 'description',
-            'description': 'description',
             
             // Venue/location aliases
             'venue': 'bar',
