@@ -236,7 +236,6 @@ const scraperConfig = {
       alwaysBear: true,        // Goldiloxx is a bear party
       urlDiscoveryDepth: 0,    // No additional URL discovery needed for single event page
       dryRun: false,           // Override global dryRun if needed
-      isRecurring: true,       // Goldiloxx is a recurring event
       
       // Field priorities for merging data from different sources
       fieldPriorities: {
