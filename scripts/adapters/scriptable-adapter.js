@@ -412,7 +412,7 @@ class ScriptableAdapter {
                                 
                                 const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                                 const nextOccurrence = futureEvents.find(e => 
-                                    e.title === updateTarget.title && 
+                                    e.identifier === updateTarget.identifier && 
                                     e.startDate > updateTarget.startDate
                                 );
                                 
