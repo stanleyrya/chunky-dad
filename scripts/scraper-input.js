@@ -249,18 +249,19 @@ const scraperConfig = {
         startDate: { priority: ["redeyetickets"], merge: "clobber" },
         endDate: { priority: ["redeyetickets"], merge: "clobber" },
         url: { priority: ["redeyetickets"], merge: "clobber" },
-        location: { priority: ["redeyetickets"], merge: "clobber" },
+        location: { priority: ["redeyetickets"], merge: "upsert" },
         gmaps: { priority: ["redeyetickets"], merge: "clobber" },
         image: { priority: ["redeyetickets"], merge: "clobber" },
         cover: { priority: ["redeyetickets"], merge: "clobber" },
-        ticketUrl: { priority: ["redeyetickets"], merge: "clobber" }
+        ticketUrl: { priority: ["static"], merge: "clobber" }
       },
       
       // Static metadata to add to all Goldiloxx events
       metadata: {
         shortName: { value: "GOLDI-LOXX" },
         shorterName: { value: "GLX" },
-        instagram: { value: "https://www.instagram.com/goldiloxx__" }
+        instagram: { value: "https://www.instagram.com/goldiloxx__" },
+        ticketUrl: { value: "https://www.redeyetickets.com/goldiloxx/" }
       }
     }
   ],

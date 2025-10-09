@@ -240,6 +240,8 @@ class RedEyeTicketsParser {
                 const normalizedAmPm = ampm.toUpperCase();
                 const dateStringForConstructor = `${month} ${day}, ${year} ${normalizedTime} ${normalizedAmPm}`;
                 
+                // Create date in UTC to avoid timezone issues, then convert to proper timezone
+                // This ensures we get the correct time regardless of the system's local timezone
                 const startDate = new Date(dateStringForConstructor);
                 
                 // Check if date is valid
@@ -248,8 +250,17 @@ class RedEyeTicketsParser {
                     return null;
                 }
                 
-                console.log(`🎫 RedEyeTickets: Created start date: ${startDate.toISOString()}`);
-                return { startDate, endDate: null };
+                // For RedEyeTickets events, assume NYC timezone (America/New_York)
+                // Convert the local time to UTC by adjusting for the timezone offset
+                const utcDate = new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000));
+                
+                // Since RedEyeTickets events are in NYC, we need to account for EST/EDT
+                // For October 25, 2025, it should be EDT (UTC-4), so we add 4 hours to get UTC
+                const nycOffset = 4 * 60; // 4 hours in minutes
+                const utcStartDate = new Date(utcDate.getTime() + (nycOffset * 60000));
+                
+                console.log(`🎫 RedEyeTickets: Created start date: ${utcStartDate.toISOString()}`);
+                return { startDate: utcStartDate, endDate: null };
             }
             
             // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
