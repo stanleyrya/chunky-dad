@@ -384,7 +384,8 @@ class ScriptableAdapter {
             
             // Count how many events will need recurring event checks
             const updateEvents = analyzedEvents.filter(e => e._action === 'update');
-            console.log(`🔄 RECURRING EVENTS: ${updateEvents.length} events will be checked for recurring patterns`);
+            const mergeEvents = analyzedEvents.filter(e => e._action === 'merge');
+            console.log(`🔄 RECURRING EVENTS: ${updateEvents.length} update events, ${mergeEvents.length} merge events will be checked for recurring patterns`);
             
             const failedEvents = [];
             const actionCounts = { merge: [], update: [], skip: [], create: [] };
