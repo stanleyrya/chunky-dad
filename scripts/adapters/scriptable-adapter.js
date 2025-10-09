@@ -404,12 +404,24 @@ class ScriptableAdapter {
                             
                             // If recurring, move the original event to next occurrence
                             if (updateTarget.recurring) {
-                                const nextOccurrence = new Date(updateTarget.startDate);
-                                nextOccurrence.setDate(nextOccurrence.getDate() + 7); // Next week
-                                updateTarget.startDate = nextOccurrence;
-                                updateTarget.endDate = new Date(nextOccurrence.getTime() + (updateTarget.endDate.getTime() - updateTarget.startDate.getTime()));
-                                await updateTarget.save();
-                                console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.toISOString()}`);
+                                // Find the next occurrence by looking ahead in the calendar
+                                const searchStart = new Date(updateTarget.startDate);
+                                searchStart.setDate(searchStart.getDate() + 1);
+                                const searchEnd = new Date(searchStart);
+                                searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
+                                
+                                const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                                const nextOccurrence = futureEvents.find(e => 
+                                    e.title === updateTarget.title && 
+                                    e.startDate > updateTarget.startDate
+                                );
+                                
+                                if (nextOccurrence) {
+                                    updateTarget.startDate = nextOccurrence.startDate;
+                                    updateTarget.endDate = nextOccurrence.endDate;
+                                    await updateTarget.save();
+                                    console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.startDate.toISOString()}`);
+                                }
                             }
                             
                             // Save the new event normally
