@@ -249,7 +249,7 @@ const scraperConfig = {
         startDate: { priority: ["redeyetickets"], merge: "clobber" },
         endDate: { priority: ["redeyetickets"], merge: "clobber" },
         url: { priority: ["redeyetickets"], merge: "clobber" },
-        location: { priority: ["redeyetickets"], merge: "clobber" },
+        location: { priority: ["redeyetickets"], merge: "upsert" },
         gmaps: { priority: ["redeyetickets"], merge: "clobber" },
         image: { priority: ["redeyetickets"], merge: "clobber" },
         cover: { priority: ["redeyetickets"], merge: "clobber" },

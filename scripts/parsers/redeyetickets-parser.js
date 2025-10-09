@@ -114,8 +114,7 @@ class RedEyeTicketsParser {
             // Extract city from address or venue info
             const city = this.extractCityFromVenue(venueInfo, cityConfig);
             
-            // Get timezone for detected city
-            const timezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : null;
+            // Let SharedCore handle timezone assignment based on detected city
             
             // Extract coordinates from venue info
             const coordinates = this.extractCoordinates(venueInfo);
@@ -138,9 +137,10 @@ class RedEyeTicketsParser {
                 location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null,
                 address: venueInfo.address,
                 city: city,
-                timezone: timezone,
+                timezone: null, // Let SharedCore assign timezone based on city
                 cover: pricing,
                 image: image,
+                ticketUrl: sourceUrl, // Use the source URL as the ticket URL
                 source: this.config.source,
                 isBearEvent: parserConfig.alwaysBear || false
             };
@@ -240,16 +240,35 @@ class RedEyeTicketsParser {
                 const normalizedAmPm = ampm.toUpperCase();
                 const dateStringForConstructor = `${month} ${day}, ${year} ${normalizedTime} ${normalizedAmPm}`;
                 
-                const startDate = new Date(dateStringForConstructor);
+                // Let new Date() handle the complex parsing, then extract components
+                const parsedDate = new Date(dateStringForConstructor);
                 
                 // Check if date is valid
-                if (isNaN(startDate.getTime())) {
+                if (isNaN(parsedDate.getTime())) {
                     console.warn(`🎫 RedEyeTickets: Invalid date string: "${dateStringForConstructor}"`);
                     return null;
                 }
                 
-                console.log(`🎫 RedEyeTickets: Created start date: ${startDate.toISOString()}`);
-                return { startDate, endDate: null };
+                // Extract the parsed components (these are in system timezone)
+                const year = parsedDate.getFullYear();
+                const month = parsedDate.getMonth();
+                const day = parsedDate.getDate();
+                const hour = parsedDate.getHours();
+                const minute = parsedDate.getMinutes();
+                const second = parsedDate.getSeconds();
+                
+                // Create a UTC date with the same components, then adjust for Eastern Time
+                // This ensures the time is interpreted as Eastern Time regardless of system timezone
+                const utcDate = new Date(Date.UTC(year, month, day, hour, minute, second, 0));
+                
+                // Adjust for Eastern Time offset (EDT is UTC-4, so subtract 4 hours from UTC to get EDT)
+                // Since we want the time to be interpreted as Eastern Time, we need to add 4 hours to UTC
+                const easternAdjustedDate = new Date(utcDate.getTime() + (4 * 60 * 60 * 1000));
+                
+                console.log(`🎫 RedEyeTickets: Parsed components: ${year}-${month+1}-${day} ${hour}:${minute.toString().padStart(2,'0')}`);
+                console.log(`🎫 RedEyeTickets: Created as UTC: ${utcDate.toISOString()}`);
+                console.log(`🎫 RedEyeTickets: Adjusted for Eastern Time: ${easternAdjustedDate.toISOString()}`);
+                return { startDate: easternAdjustedDate, endDate: null };
             }
             
             // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
