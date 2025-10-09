@@ -379,7 +379,7 @@ class ScriptableAdapter {
                     const calendar = await this.getOrCreateCalendar(calendarName);
                     
                     switch (event._action) {
-                        case 'merge':
+                        case 'merge': {
                             actionCounts.merge.push(event.title);
                             const targetEvent = event._existingEvent;
                             
@@ -492,8 +492,9 @@ class ScriptableAdapter {
                                 processedCount++;
                             }
                             break;
+                        }
                             
-                        case 'update':
+                        case 'update': {
                             actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
@@ -620,6 +621,7 @@ class ScriptableAdapter {
                                 console.log(`🔄 RECURRING EVENTS: Non-recurring event update complete`);
                             }
                             break;
+                        }
                             
                         case 'conflict':
                             actionCounts.skip.push(event.title);
