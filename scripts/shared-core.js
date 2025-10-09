@@ -468,12 +468,11 @@ class SharedCore {
     deduplicateEvents(events) {
         const seen = new Map();
         const deduplicated = [];
-        const mergeOperations = [];
         
         // Log progress for large batches
         const logProgress = events.length > 10;
         if (logProgress) {
-            console.log(`🔄 RECURRING EVENTS: Starting deduplication of ${events.length} events...`);
+            console.log(`🔄 SharedCore: Deduplicating ${events.length} events...`);
         }
 
         for (const event of events) {
@@ -485,50 +484,29 @@ class SharedCore {
             if (!seen.has(key)) {
                 seen.set(key, event);
                 deduplicated.push(event);
-                if (logProgress) {
-                    console.log(`🔄 RECURRING EVENTS: Added new event "${event.title}" (${event.source})`);
-                }
             } else {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
-                console.log(`🔄 RECURRING EVENTS: DUPLICATE DETECTED - "${event.title}" (${event.source}) matches existing "${existing.title}" (${existing.source})`);
-                console.log(`🔄 RECURRING EVENTS: Event key: ${key}`);
-                
                 const merged = this.mergeParsedEvents(existing, event);
                 merged.key = key; // Ensure merged event has the key
                 seen.set(key, merged);
-                
-                // Track merge operation for summary
-                mergeOperations.push({
-                    existing: existing.title,
-                    existingSource: existing.source,
-                    new: event.title,
-                    newSource: event.source,
-                    key: key
-                });
                 
                 // Update in deduplicated array
                 const index = deduplicated.findIndex(e => e.key === key);
                 if (index !== -1) {
                     deduplicated[index] = merged;
-                    console.log(`🔄 RECURRING EVENTS: Updated existing event in deduplicated array`);
-                } else {
-                    console.log(`🔄 RECURRING EVENTS: WARNING - Could not find existing event in deduplicated array for key: ${key}`);
                 }
             }
         }
         
-        // Log detailed results
-        const duplicatesFound = events.length - deduplicated.length;
-        console.log(`🔄 RECURRING EVENTS: Deduplication complete - ${events.length} input → ${deduplicated.length} unique events`);
-        
-        if (duplicatesFound > 0) {
-            console.log(`🔄 RECURRING EVENTS: ${duplicatesFound} duplicates found and merged:`);
-            mergeOperations.forEach((op, index) => {
-                console.log(`🔄   ${index + 1}. "${op.existing}" (${op.existingSource}) + "${op.new}" (${op.newSource})`);
-            });
-        } else {
-            console.log(`🔄 RECURRING EVENTS: No duplicates found - all events are unique`);
+        // Log results for large batches
+        if (logProgress) {
+            const duplicatesFound = events.length - deduplicated.length;
+            if (duplicatesFound > 0) {
+                console.log(`🔄 SharedCore: Removed ${duplicatesFound} duplicates, ${deduplicated.length} unique events remaining`);
+            } else {
+                console.log(`🔄 SharedCore: No duplicates found, all ${deduplicated.length} events are unique`);
+            }
         }
 
         return deduplicated;
@@ -552,9 +530,6 @@ class SharedCore {
         }
         
         const key = this.generateKeyFromFormat(event, keyFormat);
-        
-        // Log key generation for debugging
-        console.log(`🔄 RECURRING EVENTS: Generated key for "${event.title}" (${event.source}): ${key}`);
         
         return key;
     }
@@ -612,11 +587,8 @@ class SharedCore {
     mergeParsedEvents(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
         
-        // Log the merge operation with clear structure
-        console.log(`🔄 RECURRING EVENTS: MERGE START`);
-        console.log(`🔄   Existing: "${existingEvent.title}" (${existingEvent.source})`);
-        console.log(`🔄   New:      "${newEvent.title}" (${newEvent.source})`);
-        console.log(`🔄   Field priorities available: ${Object.keys(fieldPriorities).length > 0 ? 'YES' : 'NO'}`);
+        // Log the merge operation
+        console.log(`🔄 PARSER MERGE: Merging "${existingEvent.title}" (${existingEvent.source}) with "${newEvent.title}" (${newEvent.source})`);
         
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
@@ -633,7 +605,9 @@ class SharedCore {
             ...Object.keys(newEvent)
         ]);
         
-        console.log(`🔄 RECURRING EVENTS: Processing ${allFields.size} fields for merge`);
+        console.log(`🔄 MERGE DEBUG: All fields to process: ${Array.from(allFields).join(', ')}`);
+        console.log(`🔄 MERGE DEBUG: existingEvent fields: ${JSON.stringify(Object.keys(existingEvent))}`);
+        console.log(`🔄 MERGE DEBUG: newEvent fields: ${JSON.stringify(Object.keys(newEvent))}`);
         
         // Track merge decisions for important fields
         const mergeDecisions = [];
@@ -648,28 +622,21 @@ class SharedCore {
             const existingSource = existingEvent.source;
             const newSource = newEvent.source;
             
-            // Only log field processing for important fields or when values differ
-            const isImportantField = ['title', 'description', 'url', 'location', 'bar', 'startDate', 'endDate'].includes(fieldName);
-            const valuesDiffer = existingValue !== newValue;
-            
-            if (isImportantField || valuesDiffer) {
-                console.log(`🔄 RECURRING EVENTS: Field '${fieldName}' - ${valuesDiffer ? 'VALUES DIFFER' : 'values match'}`);
-                if (valuesDiffer) {
-                    console.log(`🔄   Existing: "${existingValue}" (${existingSource})`);
-                    console.log(`🔄   New:      "${newValue}" (${newSource})`);
-                }
-            }
+            console.log(`🔄 MERGE DEBUG: Processing field '${fieldName}'`);
+            console.log(`🔄 MERGE DEBUG:   existingValue: "${existingValue}" (${existingSource})`);
+            console.log(`🔄 MERGE DEBUG:   newValue: "${newValue}" (${newSource})`);
+            console.log(`🔄 MERGE DEBUG:   priorityConfig: ${priorityConfig ? JSON.stringify(priorityConfig) : 'NONE'}`);
             
             if (!priorityConfig || !priorityConfig.priority) {
-                if (isImportantField || valuesDiffer) {
-                    console.log(`🔄   NO PRIORITY CONFIG - keeping new value`);
-                }
+                console.log(`🔄 MERGE DEBUG:   NO PRIORITY CONFIG - skipping field`);
                 return; // No priority config, keep newEvent value
             }
             
             // Find which source has higher priority
             const existingIndex = priorityConfig.priority.indexOf(existingSource);
             const newIndex = priorityConfig.priority.indexOf(newSource);
+            
+            console.log(`🔄 MERGE DEBUG:   existingIndex: ${existingIndex}, newIndex: ${newIndex}`);
             
             let chosenValue = newValue; // Default
             let reason = 'default';
@@ -684,7 +651,7 @@ class SharedCore {
                         reason = `${newSource} value used because ${existingSource} value is empty`;
                     } else {
                         chosenValue = existingValue;
-                        reason = `${existingSource} has higher priority (${existingIndex} < ${newIndex})`;
+                        reason = `${existingSource} has higher priority (index ${existingIndex} vs ${newIndex})`;
                     }
                 } else if (newIndex < existingIndex) {
                     // New source has higher priority
@@ -694,12 +661,12 @@ class SharedCore {
                         reason = `${existingSource} value used because ${newSource} value is empty`;
                     } else {
                         chosenValue = newValue;
-                        reason = `${newSource} has higher priority (${newIndex} < ${existingIndex})`;
+                        reason = `${newSource} has higher priority (index ${newIndex} vs ${existingIndex})`;
                     }
                 } else {
                     // Same priority - preserve existing value to avoid overriding previous merges
                     chosenValue = existingValue;
-                    reason = `same priority (${existingIndex}) - preserving existing`;
+                    reason = `same priority (index ${existingIndex} vs ${newIndex}) - preserving existing`;
                 }
             } else if (existingIndex !== -1) {
                 // Only existing source is in priority list
@@ -711,10 +678,7 @@ class SharedCore {
                 reason = `only ${newSource} in priority list`;
             }
             
-            // Log the decision for important fields or when values differ
-            if (isImportantField || valuesDiffer) {
-                console.log(`🔄   DECISION: "${chosenValue}" (${reason})`);
-            }
+            console.log(`🔄 MERGE DEBUG:   CHOSEN: "${chosenValue}" (reason: ${reason})`);
             
             mergedEvent[fieldName] = chosenValue;
             
@@ -730,9 +694,9 @@ class SharedCore {
             }
         });
         
-        // Log merge decisions summary
+        // Log merge decisions
         if (mergeDecisions.length > 0) {
-            console.log(`🔄 RECURRING EVENTS: MERGE SUMMARY - ${mergeDecisions.length} fields changed:`);
+            console.log(`🔄 PARSER MERGE DECISIONS for "${mergedEvent.title}":`);
             mergeDecisions.forEach(decision => {
                 const existingStr = decision.existingValue === undefined ? 'undefined' : 
                                    decision.existingValue === null ? 'null' :
@@ -746,13 +710,12 @@ class SharedCore {
                                   decision.chosenValue === null ? 'null' :
                                   decision.chosenValue === '' ? 'empty' : 
                                   `"${decision.chosenValue}"`;
-                console.log(`🔄   ${decision.field}: ${existingStr} → ${chosenStr} (${decision.reason})`);
+                console.log(`🔄   ${decision.field}: ${existingStr} vs ${newStr} → ${chosenStr} (${decision.reason})`);
             });
-        } else {
-            console.log(`🔄 RECURRING EVENTS: MERGE SUMMARY - No field changes needed`);
         }
         
-        console.log(`🔄 RECURRING EVENTS: MERGE COMPLETE - Final event: "${mergedEvent.title}"`);
+        console.log(`🔄 MERGE DEBUG: Final merged event fields: ${JSON.stringify(Object.keys(mergedEvent))}`);
+        console.log(`🔄 MERGE DEBUG: Final merged event 'url': "${mergedEvent.url}"`);
         
         return mergedEvent;
     }
