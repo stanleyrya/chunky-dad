@@ -402,26 +402,24 @@ class ScriptableAdapter {
                             actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
-                            // If recurring, move the original event to next occurrence and create new event
-                            if (updateTarget.recurring) {
-                                // Find the next occurrence by looking ahead in the calendar
-                                const searchStart = new Date(updateTarget.startDate);
-                                searchStart.setDate(searchStart.getDate() + 1);
-                                const searchEnd = new Date(searchStart);
-                                searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
-                                
-                                const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-                                const nextOccurrence = futureEvents.find(e => 
-                                    e.identifier === updateTarget.identifier && 
-                                    e.startDate > updateTarget.startDate
-                                );
-                                
-                                if (nextOccurrence) {
-                                    updateTarget.startDate = nextOccurrence.startDate;
-                                    updateTarget.endDate = nextOccurrence.endDate;
-                                    await updateTarget.save();
-                                    console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.startDate.toISOString()}`);
-                                }
+                            // Find the next occurrence by looking ahead in the calendar
+                            const searchStart = new Date(updateTarget.startDate);
+                            searchStart.setDate(searchStart.getDate() + 1);
+                            const searchEnd = new Date(searchStart);
+                            searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
+                            
+                            const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                            const nextOccurrence = futureEvents.find(e => 
+                                e.identifier === updateTarget.identifier && 
+                                e.startDate > updateTarget.startDate
+                            );
+                            
+                            // If we found a next occurrence, this is a recurring event
+                            if (nextOccurrence) {
+                                updateTarget.startDate = nextOccurrence.startDate;
+                                updateTarget.endDate = nextOccurrence.endDate;
+                                await updateTarget.save();
+                                console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.startDate.toISOString()}`);
                                 
                                 // Create the new event (same logic as 'new' case)
                                 await this.createCalendarEvent(event, calendar);
