@@ -575,8 +575,10 @@ class ScriptableAdapter {
             console.log('\n' + '='.repeat(60));
             console.log('🐻 BEAR EVENT SCRAPER RESULTS');
             console.log('='.repeat(60));
-            console.log('ℹ️  Note: Recurring events will be split at update points');
-            console.log('='.repeat(60));
+            if (results.recurringEvents > 0) {
+                console.log('ℹ️  Note: Recurring events will be split at update points');
+                console.log('='.repeat(60));
+            }
             
             console.log(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
             console.log(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
@@ -2171,11 +2173,13 @@ class ScriptableAdapter {
         <div class="header-controls">
             <!-- Controls moved to a separate section below -->
         </div>
+        ${results.recurringEvents > 0 ? `
         <div class="disclaimer">
             <div class="disclaimer-content">
                 ℹ️ Note: Recurring events will be split at update points
             </div>
         </div>
+        ` : ''}
         <div class="stats">
             <div class="stat">
                 <div class="stat-value">${results.totalEvents}</div>
@@ -2219,7 +2223,7 @@ class ScriptableAdapter {
             <div class="control-group">
                 <div class="control-label">Images</div>
                 <div class="control-toggle">
-                    <span class="toggle-label">Hidden</span>
+                    <span class="toggle-label">Hide</span>
                     <label class="modern-toggle">
                         <input type="checkbox" id="sfwToggle" onchange="toggleImages()" checked>
                         <span class="toggle-slider"></span>
@@ -2723,6 +2727,11 @@ class ScriptableAdapter {
                 }
             });
         }
+        
+        // Initialize image display state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleImages();
+        });
     </script>
 </body>
 </html>
@@ -2833,7 +2842,7 @@ class ScriptableAdapter {
                 ${event.image ? `
                     <div class=\"event-image\">
                         <a href=\"${this.escapeHtml(event.image)}\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--primary-color); font-weight: 500;\">View Full Image</a>
-                        <div class=\"image-container\" style=\"margin-top: 8px; display: none;\">
+                        <div class=\"image-container\" style=\"margin-top: 8px; display: block;\">
                             <img src=\"${this.escapeHtml(event.image)}\" alt=\"Event Image\" onerror=\"this.style.display='none'\">
                         </div>
                     </div>
@@ -3288,8 +3297,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const lines = [];
         lines.push('🐻 BEAR EVENT SCRAPER RESULTS');
         lines.push('='.repeat(40));
-        lines.push('ℹ️  Note: Recurring events will be split at update points');
-        lines.push('='.repeat(40));
+        if (results.recurringEvents > 0) {
+            lines.push('ℹ️  Note: Recurring events will be split at update points');
+            lines.push('='.repeat(40));
+        }
         lines.push('');
         lines.push(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
         lines.push(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
