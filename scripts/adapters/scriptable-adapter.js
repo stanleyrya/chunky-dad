@@ -410,7 +410,10 @@ class ScriptableAdapter {
                             
                             console.log(`🔄 RECURRING EVENTS: Checking if "${event.title}" is recurring...`);
                             console.log(`🔄   Existing event ID: ${updateTarget.identifier}`);
+                            console.log(`🔄   Existing event title: "${updateTarget.title}"`);
                             console.log(`🔄   Existing event date: ${updateTarget.startDate.toISOString()}`);
+                            console.log(`🔄   Existing event end date: ${updateTarget.endDate.toISOString()}`);
+                            console.log(`🔄   Existing event location: ${updateTarget.location || 'None'}`);
                             
                             // Find the next occurrence by looking ahead in the calendar
                             const searchStart = new Date(updateTarget.startDate);
@@ -418,15 +421,58 @@ class ScriptableAdapter {
                             const searchEnd = new Date(searchStart);
                             searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
                             
+                            // Also search a bit before the current event to see if there are past occurrences
+                            const pastSearchStart = new Date(updateTarget.startDate);
+                            pastSearchStart.setDate(pastSearchStart.getDate() - 30); // Look back 30 days
+                            const pastSearchEnd = new Date(updateTarget.startDate);
+                            pastSearchEnd.setDate(pastSearchEnd.getDate() + 1);
+                            
+                            console.log(`🔄   Also checking for past occurrences from ${pastSearchStart.toISOString()} to ${pastSearchEnd.toISOString()}`);
+                            const pastEvents = await CalendarEvent.between(pastSearchStart, pastSearchEnd, [calendar]);
+                            console.log(`🔄   Found ${pastEvents.length} past events in range`);
+                            
+                            if (pastEvents.length > 0) {
+                                console.log(`🔄   Past events found:`);
+                                pastEvents.forEach((e, index) => {
+                                    console.log(`🔄     ${index + 1}. "${e.title}" (ID: ${e.identifier}, Date: ${e.startDate.toISOString()})`);
+                                });
+                            }
+                            
                             console.log(`🔄   Searching for future occurrences from ${searchStart.toISOString()} to ${searchEnd.toISOString()}`);
+                            console.log(`🔄   Searching in calendar: "${calendar.title}" (ID: ${calendar.identifier})`);
                             
                             const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                             console.log(`🔄   Found ${futureEvents.length} future events in calendar`);
                             
+                            // Log details about all future events to debug recurring detection
+                            if (futureEvents.length > 0) {
+                                console.log(`🔄   Future events found:`);
+                                futureEvents.forEach((e, index) => {
+                                    console.log(`🔄     ${index + 1}. "${e.title}" (ID: ${e.identifier}, Date: ${e.startDate.toISOString()})`);
+                                });
+                            }
+                            
+                            console.log(`🔄   Looking for events with same ID: ${updateTarget.identifier}`);
                             const nextOccurrence = futureEvents.find(e => 
                                 e.identifier === updateTarget.identifier && 
                                 e.startDate > updateTarget.startDate
                             );
+                            
+                            if (nextOccurrence) {
+                                console.log(`🔄   Found matching recurring event: "${nextOccurrence.title}" (${nextOccurrence.startDate.toISOString()})`);
+                            } else {
+                                console.log(`🔄   No matching recurring event found with ID ${updateTarget.identifier}`);
+                                
+                                // Also check for events with same title as a fallback
+                                const sameTitleEvents = futureEvents.filter(e => 
+                                    e.title === updateTarget.title && 
+                                    e.startDate > updateTarget.startDate
+                                );
+                                console.log(`🔄   Events with same title "${updateTarget.title}": ${sameTitleEvents.length}`);
+                                sameTitleEvents.forEach((e, index) => {
+                                    console.log(`🔄     ${index + 1}. "${e.title}" (ID: ${e.identifier}, Date: ${e.startDate.toISOString()})`);
+                                });
+                            }
                             
                             // If we found a next occurrence, this is a recurring event
                             if (nextOccurrence) {
