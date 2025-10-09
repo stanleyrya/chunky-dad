@@ -1113,7 +1113,6 @@ class SharedCore {
             'short title': 'shortName',
             'shorttitle': 'shortName',
             'nickname': 'shortName',
-            'shorter': 'shorterName',
             
             // Social/web aliases (canonicalize case and common variants)
             'instagram': 'instagram',

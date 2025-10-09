@@ -242,6 +242,7 @@ const scraperConfig = {
         title: { priority: ["redeyetickets"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "clobber" },
         shorter: { priority: ["static"], merge: "clobber" },
+        shorterName: { priority: ["static"], merge: "clobber" },
         instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["redeyetickets"], merge: "clobber" },
         bar: { priority: ["redeyetickets"], merge: "clobber" },
