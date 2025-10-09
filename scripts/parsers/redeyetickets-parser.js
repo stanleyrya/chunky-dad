@@ -131,7 +131,7 @@ class RedEyeTicketsParser {
 
             const event = {
                 title: title,
-                tea: description,
+                description: description,
                 startDate: dateTime.startDate,
                 endDate: endDate,
                 bar: venueInfo.venue,

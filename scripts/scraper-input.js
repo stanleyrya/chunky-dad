@@ -243,7 +243,7 @@ const scraperConfig = {
         shortName: { priority: ["static"], merge: "clobber" },
         shorterName: { priority: ["static"], merge: "clobber" },
         instagram: { priority: ["static"], merge: "clobber" },
-        tea: { priority: ["redeyetickets"], merge: "clobber" },
+        description: { priority: ["redeyetickets"], merge: "clobber" },
         bar: { priority: ["redeyetickets"], merge: "clobber" },
         address: { priority: ["redeyetickets"], merge: "clobber" },
         startDate: { priority: ["redeyetickets"], merge: "clobber" },
