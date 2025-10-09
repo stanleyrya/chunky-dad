@@ -402,30 +402,54 @@ class ScriptableAdapter {
                             actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
-                            // For updates (exact duplicates), replace everything
-                            const updateChanges = [];
-                            if (updateTarget.title !== event.title) {
-                                updateChanges.push('title');
-                                updateTarget.title = event.title;
+                            // If recurring, move the original event to next occurrence and create new event
+                            if (updateTarget.recurring) {
+                                // Find the next occurrence by looking ahead in the calendar
+                                const searchStart = new Date(updateTarget.startDate);
+                                searchStart.setDate(searchStart.getDate() + 1);
+                                const searchEnd = new Date(searchStart);
+                                searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
+                                
+                                const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                                const nextOccurrence = futureEvents.find(e => 
+                                    e.identifier === updateTarget.identifier && 
+                                    e.startDate > updateTarget.startDate
+                                );
+                                
+                                if (nextOccurrence) {
+                                    updateTarget.startDate = nextOccurrence.startDate;
+                                    updateTarget.endDate = nextOccurrence.endDate;
+                                    await updateTarget.save();
+                                    console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.startDate.toISOString()}`);
+                                }
+                                
+                                // Create the new event (same logic as 'new' case)
+                                await this.createCalendarEvent(event, calendar);
+                                processedCount++;
+                            } else {
+                                // For non-recurring updates, overwrite everything like before
+                                const updateChanges = [];
+                                if (updateTarget.title !== event.title) {
+                                    updateChanges.push('title');
+                                    updateTarget.title = event.title;
+                                }
+                                if (updateTarget.notes !== event.notes) {
+                                    updateChanges.push('notes (replaced)');
+                                    updateTarget.notes = event.notes;
+                                }
+                                if (updateTarget.location !== event.location) {
+                                    updateChanges.push('location (replaced)');
+                                    console.log(`📱 Scriptable: Updating coordinates for "${event.title}": "${updateTarget.location}" → "${event.location}"`);
+                                    updateTarget.location = event.location;
+                                }
+                                if (updateTarget.url !== event.url && event.url) {
+                                    updateChanges.push('url (replaced)');
+                                    updateTarget.url = event.url;
+                                }
+                                
+                                await updateTarget.save();
+                                processedCount++;
                             }
-                            if (updateTarget.notes !== event.notes) {
-                                updateChanges.push('notes (replaced)');
-                                updateTarget.notes = event.notes;
-                            }
-                            if (updateTarget.location !== event.location) {
-                                updateChanges.push('location (replaced)');
-                                console.log(`📱 Scriptable: Updating coordinates for "${event.title}": "${updateTarget.location}" → "${event.location}"`);
-                                updateTarget.location = event.location;
-                            }
-                            if (updateTarget.url !== event.url && event.url) {
-                                updateChanges.push('url (replaced)');
-                                updateTarget.url = event.url;
-                            }
-                            
-                            // Changes tracked in summary (removed verbose per-event logging)
-                            
-                            await updateTarget.save();
-                            processedCount++;
                             break;
                             
                         case 'conflict':
@@ -434,13 +458,6 @@ class ScriptableAdapter {
                             
                         case 'new':
                             actionCounts.create.push(event.title);
-                            const calendarEvent = new CalendarEvent();
-                            calendarEvent.title = event.title;
-                            calendarEvent.startDate = event.startDate;
-                            calendarEvent.endDate = event.endDate;
-                            calendarEvent.location = event.location;
-                            calendarEvent.notes = event.notes;
-                            calendarEvent.calendar = calendar;
                             
                             // Log coordinate handling
                             if (event.location) {
@@ -449,16 +466,7 @@ class ScriptableAdapter {
                                 console.log(`📱 Scriptable: No coordinates to set for new event "${event.title}"`);
                             }
                             
-                            // Detect all-day events at save-time
-                            if (this.isAllDayEvent(event)) {
-                                calendarEvent.isAllDay = true;
-                            }
-                            
-                            if (event.url) {
-                                calendarEvent.url = event.url;
-                            }
-                            
-                            await calendarEvent.save();
+                            await this.createCalendarEvent(event, calendar);
                             processedCount++;
                             break;
                     }
@@ -492,6 +500,25 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: ✗ Calendar execution error: ${error.message}`);
             throw new Error(`Calendar execution failed: ${error.message}`);
         }
+    }
+
+    // Helper method to create and save a calendar event
+    async createCalendarEvent(event, calendar) {
+        const calendarEvent = new CalendarEvent();
+        calendarEvent.title = event.title;
+        calendarEvent.startDate = event.startDate;
+        calendarEvent.endDate = event.endDate;
+        calendarEvent.location = event.location;
+        calendarEvent.notes = event.notes;
+        calendarEvent.url = event.url;
+        calendarEvent.calendar = calendar;
+        
+        if (this.isAllDayEvent(event)) {
+            calendarEvent.isAllDay = true;
+        }
+        
+        await calendarEvent.save();
+        return calendarEvent;
     }
 
     async getOrCreateCalendar(calendarName) {
@@ -547,6 +574,8 @@ class ScriptableAdapter {
             // Show console summary
             console.log('\n' + '='.repeat(60));
             console.log('🐻 BEAR EVENT SCRAPER RESULTS');
+            console.log('='.repeat(60));
+            console.log('ℹ️  Note: Recurring events will be split at update points');
             console.log('='.repeat(60));
             
             console.log(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
@@ -1442,6 +1471,22 @@ class ScriptableAdapter {
             opacity: 0.9;
         }
         
+        .disclaimer {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .disclaimer-content {
+            color: var(--text-inverse);
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+        
         .header .stats {
             display: flex;
             gap: 30px;
@@ -2125,6 +2170,11 @@ class ScriptableAdapter {
         </div>
         <div class="header-controls">
             <!-- Controls moved to a separate section below -->
+        </div>
+        <div class="disclaimer">
+            <div class="disclaimer-content">
+                ℹ️ Note: Recurring events will be split at update points
+            </div>
         </div>
         <div class="stats">
             <div class="stat">
@@ -3237,6 +3287,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     createResultsSummary(results) {
         const lines = [];
         lines.push('🐻 BEAR EVENT SCRAPER RESULTS');
+        lines.push('='.repeat(40));
+        lines.push('ℹ️  Note: Recurring events will be split at update points');
         lines.push('='.repeat(40));
         lines.push('');
         lines.push(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
