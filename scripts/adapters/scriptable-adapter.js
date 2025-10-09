@@ -424,20 +424,7 @@ class ScriptableAdapter {
                                 }
                                 
                                 // Create the new event (same logic as 'new' case)
-                                const calendarEvent = new CalendarEvent();
-                                calendarEvent.title = event.title;
-                                calendarEvent.startDate = event.startDate;
-                                calendarEvent.endDate = event.endDate;
-                                calendarEvent.location = event.location;
-                                calendarEvent.notes = event.notes;
-                                calendarEvent.url = event.url;
-                                calendarEvent.calendar = calendar;
-                                
-                                if (this.isAllDayEvent(event)) {
-                                    calendarEvent.isAllDay = true;
-                                }
-                                
-                                await calendarEvent.save();
+                                await this.createCalendarEvent(event, calendar);
                                 processedCount++;
                             } else {
                                 // For non-recurring updates, overwrite everything like before
@@ -471,13 +458,6 @@ class ScriptableAdapter {
                             
                         case 'new':
                             actionCounts.create.push(event.title);
-                            const calendarEvent = new CalendarEvent();
-                            calendarEvent.title = event.title;
-                            calendarEvent.startDate = event.startDate;
-                            calendarEvent.endDate = event.endDate;
-                            calendarEvent.location = event.location;
-                            calendarEvent.notes = event.notes;
-                            calendarEvent.calendar = calendar;
                             
                             // Log coordinate handling
                             if (event.location) {
@@ -486,16 +466,7 @@ class ScriptableAdapter {
                                 console.log(`📱 Scriptable: No coordinates to set for new event "${event.title}"`);
                             }
                             
-                            // Detect all-day events at save-time
-                            if (this.isAllDayEvent(event)) {
-                                calendarEvent.isAllDay = true;
-                            }
-                            
-                            if (event.url) {
-                                calendarEvent.url = event.url;
-                            }
-                            
-                            await calendarEvent.save();
+                            await this.createCalendarEvent(event, calendar);
                             processedCount++;
                             break;
                     }
@@ -529,6 +500,25 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: ✗ Calendar execution error: ${error.message}`);
             throw new Error(`Calendar execution failed: ${error.message}`);
         }
+    }
+
+    // Helper method to create and save a calendar event
+    async createCalendarEvent(event, calendar) {
+        const calendarEvent = new CalendarEvent();
+        calendarEvent.title = event.title;
+        calendarEvent.startDate = event.startDate;
+        calendarEvent.endDate = event.endDate;
+        calendarEvent.location = event.location;
+        calendarEvent.notes = event.notes;
+        calendarEvent.url = event.url;
+        calendarEvent.calendar = calendar;
+        
+        if (this.isAllDayEvent(event)) {
+            calendarEvent.isAllDay = true;
+        }
+        
+        await calendarEvent.save();
+        return calendarEvent;
     }
 
     async getOrCreateCalendar(calendarName) {
