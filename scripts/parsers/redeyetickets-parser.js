@@ -140,6 +140,7 @@ class RedEyeTicketsParser {
                 timezone: null, // Let SharedCore assign timezone based on city
                 cover: pricing,
                 image: image,
+                ticketUrl: sourceUrl, // Use the source URL as the ticket URL
                 source: this.config.source,
                 isBearEvent: parserConfig.alwaysBear || false
             };
