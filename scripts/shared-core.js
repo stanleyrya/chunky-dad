@@ -1091,9 +1091,10 @@ class SharedCore {
         
         // Map of normalized aliases (lowercased, spaces removed) to canonical field names
         const aliasToCanonical = {
-            // Description aliases
-            'tea': 'description',
-            'info': 'description',
+            // Description aliases (matching calendar-core.js canonicalization)
+            'tea': 'tea',
+            'info': 'tea',
+            'description': 'tea',
             
             // Venue/location aliases
             'venue': 'bar',
