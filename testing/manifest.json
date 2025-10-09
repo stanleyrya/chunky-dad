@@ -14,8 +14,8 @@
     },
     {
       "name": "index.html",
-      "size": 23898,
-      "icon": "🏠",
+      "size": 27683,
+      "icon": "🪣",
       "description": "Tool Shed Home - Browse all of dad's tools in one place"
     },
     {
@@ -43,12 +43,6 @@
       "description": "Monitor Mount - Test how things display on different screens"
     },
     {
-      "name": "test-enhanced-event-display.html",
-      "size": 8162,
-      "icon": "✨",
-      "description": "Chrome Polish - Makes your events shine bright and pretty"
-    },
-    {
       "name": "test-eventbrite-address-fix.html",
       "size": 7330,
       "icon": "📍",
@@ -62,25 +56,25 @@
     },
     {
       "name": "test-map-icons.html",
-      "size": 63194,
+      "size": 63188,
       "icon": "🗺️",
       "description": "Icon Stamper - Mark your territory with custom map icons"
     },
     {
       "name": "test-og-event-layouts-calendar.html",
-      "size": 68040,
+      "size": 65227,
       "icon": "📅",
       "description": "Old School Blueprint - Classic event layouts, tried and true"
     },
     {
       "name": "test-unified-scraper.html",
-      "size": 31923,
+      "size": 40380,
       "icon": "🪛",
       "description": "Scraper Tool - Extract that data, nice and smooth"
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 73401,
+      "size": 65677,
       "icon": "🔨",
       "description": "The Big Hammer - Pound your styles into perfect shape with live preview"
     }
