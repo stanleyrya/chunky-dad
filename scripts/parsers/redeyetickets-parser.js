@@ -114,8 +114,7 @@ class RedEyeTicketsParser {
             // Extract city from address or venue info
             const city = this.extractCityFromVenue(venueInfo, cityConfig);
             
-            // Get timezone for detected city
-            const timezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : null;
+            // Let SharedCore handle timezone assignment based on detected city
             
             // Extract coordinates from venue info
             const coordinates = this.extractCoordinates(venueInfo);
@@ -138,7 +137,7 @@ class RedEyeTicketsParser {
                 location: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : null,
                 address: venueInfo.address,
                 city: city,
-                timezone: timezone,
+                timezone: null, // Let SharedCore assign timezone based on city
                 cover: pricing,
                 image: image,
                 source: this.config.source,
@@ -240,8 +239,8 @@ class RedEyeTicketsParser {
                 const normalizedAmPm = ampm.toUpperCase();
                 const dateStringForConstructor = `${month} ${day}, ${year} ${normalizedTime} ${normalizedAmPm}`;
                 
-                // Create date in UTC to avoid timezone issues, then convert to proper timezone
-                // This ensures we get the correct time regardless of the system's local timezone
+                // Create date as local time - let SharedCore handle timezone conversion
+                // This preserves the original local time from the website
                 const startDate = new Date(dateStringForConstructor);
                 
                 // Check if date is valid
@@ -250,17 +249,8 @@ class RedEyeTicketsParser {
                     return null;
                 }
                 
-                // For RedEyeTickets events, assume NYC timezone (America/New_York)
-                // Convert the local time to UTC by adjusting for the timezone offset
-                const utcDate = new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000));
-                
-                // Since RedEyeTickets events are in NYC, we need to account for EST/EDT
-                // For October 25, 2025, it should be EDT (UTC-4), so we add 4 hours to get UTC
-                const nycOffset = 4 * 60; // 4 hours in minutes
-                const utcStartDate = new Date(utcDate.getTime() + (nycOffset * 60000));
-                
-                console.log(`🎫 RedEyeTickets: Created start date: ${utcStartDate.toISOString()}`);
-                return { startDate: utcStartDate, endDate: null };
+                console.log(`🎫 RedEyeTickets: Created start date: ${startDate.toISOString()}`);
+                return { startDate, endDate: null };
             }
             
             // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
