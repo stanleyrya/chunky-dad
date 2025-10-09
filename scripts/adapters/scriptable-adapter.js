@@ -402,29 +402,24 @@ class ScriptableAdapter {
                             actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
-                            // Check if this is a recurring event by looking for other occurrences with same UID
-                            const isRecurring = await this.hasOtherOccurrences(updateTarget, calendar);
+                            // Find the next occurrence by looking ahead in the calendar
+                            const searchStart = new Date(updateTarget.startDate);
+                            searchStart.setDate(searchStart.getDate() + 1);
+                            const searchEnd = new Date(searchStart);
+                            searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
                             
-                            // If recurring, move the original event to next occurrence and create new event
-                            if (isRecurring) {
-                                // Find the next occurrence by looking ahead in the calendar
-                                const searchStart = new Date(updateTarget.startDate);
-                                searchStart.setDate(searchStart.getDate() + 1);
-                                const searchEnd = new Date(searchStart);
-                                searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
-                                
-                                const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-                                const nextOccurrence = futureEvents.find(e => 
-                                    e.identifier === updateTarget.identifier && 
-                                    e.startDate > updateTarget.startDate
-                                );
-                                
-                                if (nextOccurrence) {
-                                    updateTarget.startDate = nextOccurrence.startDate;
-                                    updateTarget.endDate = nextOccurrence.endDate;
-                                    await updateTarget.save();
-                                    console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.startDate.toISOString()}`);
-                                }
+                            const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                            const nextOccurrence = futureEvents.find(e => 
+                                e.identifier === updateTarget.identifier && 
+                                e.startDate > updateTarget.startDate
+                            );
+                            
+                            // If we found a next occurrence, this is a recurring event
+                            if (nextOccurrence) {
+                                updateTarget.startDate = nextOccurrence.startDate;
+                                updateTarget.endDate = nextOccurrence.endDate;
+                                await updateTarget.save();
+                                console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.startDate.toISOString()}`);
                                 
                                 // Create the new event (same logic as 'new' case)
                                 await this.createCalendarEvent(event, calendar);
@@ -502,27 +497,6 @@ class ScriptableAdapter {
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Calendar execution error: ${error.message}`);
             throw new Error(`Calendar execution failed: ${error.message}`);
-        }
-    }
-
-    // Helper method to check if an event has other occurrences (is recurring)
-    async hasOtherOccurrences(event, calendar) {
-        try {
-            // Extract UID from identifier (format: "UUID:UID@domain.com")
-            const uid = event.identifier.split(':')[1];
-            if (!uid) return false;
-            
-            // Search for other events with the same UID
-            const searchStart = new Date(event.startDate);
-            searchStart.setDate(searchStart.getDate() + 1);
-            const searchEnd = new Date(searchStart);
-            searchEnd.setDate(searchEnd.getDate() + 365);
-            
-            const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-            return futureEvents.some(e => e.identifier.includes(uid) && e.identifier !== event.identifier);
-        } catch (error) {
-            console.log(`📱 Scriptable: Error checking for other occurrences: ${error.message}`);
-            return false;
         }
     }
 
