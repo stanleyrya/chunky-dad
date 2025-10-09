@@ -362,6 +362,12 @@ class ScriptableAdapter {
 
         try {
             console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
+            console.log(`🔄 RECURRING EVENTS: Starting calendar event processing...`);
+            
+            // Count how many events will need recurring event checks
+            const updateEvents = analyzedEvents.filter(e => e._action === 'update');
+            console.log(`🔄 RECURRING EVENTS: ${updateEvents.length} events will be checked for recurring patterns`);
+            
             const failedEvents = [];
             const actionCounts = { merge: [], update: [], skip: [], create: [] };
             let processedCount = 0;
@@ -402,13 +408,21 @@ class ScriptableAdapter {
                             actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
+                            console.log(`🔄 RECURRING EVENTS: Checking if "${event.title}" is recurring...`);
+                            console.log(`🔄   Existing event ID: ${updateTarget.identifier}`);
+                            console.log(`🔄   Existing event date: ${updateTarget.startDate.toISOString()}`);
+                            
                             // Find the next occurrence by looking ahead in the calendar
                             const searchStart = new Date(updateTarget.startDate);
                             searchStart.setDate(searchStart.getDate() + 1);
                             const searchEnd = new Date(searchStart);
                             searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
                             
+                            console.log(`🔄   Searching for future occurrences from ${searchStart.toISOString()} to ${searchEnd.toISOString()}`);
+                            
                             const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                            console.log(`🔄   Found ${futureEvents.length} future events in calendar`);
+                            
                             const nextOccurrence = futureEvents.find(e => 
                                 e.identifier === updateTarget.identifier && 
                                 e.startDate > updateTarget.startDate
@@ -416,37 +430,59 @@ class ScriptableAdapter {
                             
                             // If we found a next occurrence, this is a recurring event
                             if (nextOccurrence) {
+                                console.log(`🔄 RECURRING EVENTS: RECURRING EVENT DETECTED!`);
+                                console.log(`🔄   Next occurrence found: ${nextOccurrence.startDate.toISOString()}`);
+                                console.log(`🔄   Moving existing event to next occurrence...`);
+                                
                                 updateTarget.startDate = nextOccurrence.startDate;
                                 updateTarget.endDate = nextOccurrence.endDate;
                                 await updateTarget.save();
-                                console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.startDate.toISOString()}`);
+                                
+                                console.log(`🔄 RECURRING EVENTS: Successfully moved recurring event to next occurrence`);
+                                console.log(`🔄   New date: ${nextOccurrence.startDate.toISOString()}`);
                                 
                                 // Create the new event (same logic as 'new' case)
+                                console.log(`🔄 RECURRING EVENTS: Creating new event for current occurrence...`);
                                 await this.createCalendarEvent(event, calendar);
                                 processedCount++;
+                                
+                                console.log(`🔄 RECURRING EVENTS: Recurring event handling complete - moved existing, created new`);
                             } else {
+                                console.log(`🔄 RECURRING EVENTS: Not a recurring event - updating existing event in place`);
                                 // For non-recurring updates, overwrite everything like before
                                 const updateChanges = [];
+                                console.log(`🔄 RECURRING EVENTS: Updating non-recurring event fields...`);
+                                
                                 if (updateTarget.title !== event.title) {
                                     updateChanges.push('title');
+                                    console.log(`🔄   Title: "${updateTarget.title}" → "${event.title}"`);
                                     updateTarget.title = event.title;
                                 }
                                 if (updateTarget.notes !== event.notes) {
                                     updateChanges.push('notes (replaced)');
+                                    console.log(`🔄   Notes: ${updateTarget.notes ? updateTarget.notes.length : 0} chars → ${event.notes ? event.notes.length : 0} chars`);
                                     updateTarget.notes = event.notes;
                                 }
                                 if (updateTarget.location !== event.location) {
                                     updateChanges.push('location (replaced)');
-                                    console.log(`📱 Scriptable: Updating coordinates for "${event.title}": "${updateTarget.location}" → "${event.location}"`);
+                                    console.log(`🔄   Location: "${updateTarget.location}" → "${event.location}"`);
                                     updateTarget.location = event.location;
                                 }
                                 if (updateTarget.url !== event.url && event.url) {
                                     updateChanges.push('url (replaced)');
+                                    console.log(`🔄   URL: "${updateTarget.url}" → "${event.url}"`);
                                     updateTarget.url = event.url;
+                                }
+                                
+                                if (updateChanges.length > 0) {
+                                    console.log(`🔄 RECURRING EVENTS: Updated ${updateChanges.length} fields: ${updateChanges.join(', ')}`);
+                                } else {
+                                    console.log(`🔄 RECURRING EVENTS: No field changes needed`);
                                 }
                                 
                                 await updateTarget.save();
                                 processedCount++;
+                                console.log(`🔄 RECURRING EVENTS: Non-recurring event update complete`);
                             }
                             break;
                             
@@ -484,6 +520,7 @@ class ScriptableAdapter {
                 if (actionCounts.skip.length > 0) actionSummary.push(`${actionCounts.skip.length} skipped`);
                 
                 console.log(`📱 Scriptable: ✓ Processed ${processedCount} events: ${actionSummary.join(', ')}`);
+                console.log(`🔄 RECURRING EVENTS: Calendar event processing complete`);
             }
             
             if (failedEvents.length > 0) {
@@ -502,6 +539,11 @@ class ScriptableAdapter {
 
     // Helper method to create and save a calendar event
     async createCalendarEvent(event, calendar) {
+        console.log(`🔄 RECURRING EVENTS: Creating new calendar event "${event.title}"`);
+        console.log(`🔄   Date: ${event.startDate.toISOString()}`);
+        console.log(`🔄   Location: ${event.location || 'None'}`);
+        console.log(`🔄   Calendar: ${calendar.title}`);
+        
         const calendarEvent = new CalendarEvent();
         calendarEvent.title = event.title;
         calendarEvent.startDate = event.startDate;
@@ -513,9 +555,11 @@ class ScriptableAdapter {
         
         if (this.isAllDayEvent(event)) {
             calendarEvent.isAllDay = true;
+            console.log(`🔄   All-day event: Yes`);
         }
         
         await calendarEvent.save();
+        console.log(`🔄 RECURRING EVENTS: Successfully created calendar event with ID: ${calendarEvent.identifier}`);
         return calendarEvent;
     }
 
