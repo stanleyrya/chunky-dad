@@ -1969,60 +1969,102 @@ class ScriptableAdapter {
             color: var(--text-secondary);
         }
         
-        .display-toggle {
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .control-label {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        
+        .control-toggle {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: var(--background-primary);
-            border-radius: 10px;
-            box-shadow: var(--card-shadow);
+            gap: 12px;
+            justify-content: center;
         }
         
-        .toggle-switch {
+        .toggle-label {
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+        
+        .modern-toggle {
             position: relative;
             display: inline-block;
-            width: 60px;
-            height: 34px;
+            width: 50px;
+            height: 28px;
         }
         
-        .toggle-switch input {
+        .modern-toggle input {
             opacity: 0;
             width: 0;
             height: 0;
         }
         
-        .slider {
+        .toggle-slider {
             position: absolute;
             cursor: pointer;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
+            background: linear-gradient(135deg, #e0e0e0, #c0c0c0);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 28px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .slider:before {
+        .toggle-slider:before {
             position: absolute;
             content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
         
-        input:checked + .slider {
-            background-color: var(--primary-color);
+        .modern-toggle input:checked + .toggle-slider {
+            background: linear-gradient(135deg, var(--primary-color), #667eea);
+            box-shadow: inset 0 2px 4px rgba(102, 126, 234, 0.3);
         }
         
-        input:checked + .slider:before {
-            transform: translateX(26px);
+        .modern-toggle input:checked + .toggle-slider:before {
+            transform: translateX(22px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+        
+        .modern-toggle:hover .toggle-slider {
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+        }
+        
+        .modern-toggle:hover input:checked + .toggle-slider {
+            box-shadow: inset 0 2px 6px rgba(102, 126, 234, 0.4);
         }
         
         .raw-display {
@@ -2082,25 +2124,7 @@ class ScriptableAdapter {
             </h1>
         </div>
         <div class="header-controls">
-            <div class="display-toggle">
-                <span style="font-weight: 500;">Display Mode:</span>
-                <span>Pretty</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()">
-                    <span class="slider"></span>
-                </label>
-                <span>Raw</span>
-            </div>
-            
-            <div class="display-toggle" style="margin-left: 20px;">
-                <span style="font-weight: 500;">Images:</span>
-                <span>Hidden</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="sfwToggle" onchange="toggleImages()" checked>
-                    <span class="slider"></span>
-                </label>
-                <span>Show</span>
-            </div>
+            <!-- Controls moved to a separate section below -->
         </div>
         <div class="stats">
             <div class="stat">
@@ -2118,6 +2142,40 @@ class ScriptableAdapter {
             <div class="stat">
                 <div class="stat-value">${results.calendarEvents}</div>
                 <div class="stat-label">Calendar Actions${results.calendarEvents === 0 ? ' (dry run/preview mode)' : ''}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="controls-section" style="
+        background: var(--background-primary);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: var(--card-shadow);
+    ">
+        <div class="controls-grid">
+            <div class="control-group">
+                <div class="control-label">Display Mode</div>
+                <div class="control-toggle">
+                    <span class="toggle-label">Pretty</span>
+                    <label class="modern-toggle">
+                        <input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Raw</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-label">Images</div>
+                <div class="control-toggle">
+                    <span class="toggle-label">Hidden</span>
+                    <label class="modern-toggle">
+                        <input type="checkbox" id="sfwToggle" onchange="toggleImages()" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Show</span>
+                </div>
             </div>
         </div>
     </div>

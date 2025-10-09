@@ -139,7 +139,6 @@ class RedEyeTicketsParser {
                 address: venueInfo.address,
                 city: city,
                 timezone: timezone,
-                url: sourceUrl,
                 cover: pricing,
                 image: image,
                 source: this.config.source,
@@ -467,11 +466,20 @@ class RedEyeTicketsParser {
                 return aNum - bNum;
             });
             
+            let priceString;
             if (uniquePrices.length === 1) {
-                return uniquePrices[0];
+                priceString = uniquePrices[0];
             } else {
-                return `${uniquePrices[0]} - ${uniquePrices[uniquePrices.length - 1]}`;
+                priceString = `${uniquePrices[0]} - ${uniquePrices[uniquePrices.length - 1]}`;
             }
+            
+            // Add availability hint like eventbrite parser
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            priceString += ` (as of ${month}/${day})`;
+            
+            return priceString;
         }
         
         return '';
