@@ -23,6 +23,7 @@ class RedEyeTicketsParser {
     constructor(config = {}) {
         this.config = {
             source: 'redeyetickets',
+            maxAdditionalUrls: 20,
             ...config
         };
     }
@@ -250,22 +251,22 @@ class RedEyeTicketsParser {
                 }
                 
                 // Extract the parsed components (these are in system timezone)
-                const year = parsedDate.getFullYear();
-                const month = parsedDate.getMonth();
-                const day = parsedDate.getDate();
-                const hour = parsedDate.getHours();
-                const minute = parsedDate.getMinutes();
-                const second = parsedDate.getSeconds();
+                const parsedYear = parsedDate.getFullYear();
+                const parsedMonth = parsedDate.getMonth();
+                const parsedDay = parsedDate.getDate();
+                const parsedHour = parsedDate.getHours();
+                const parsedMinute = parsedDate.getMinutes();
+                const parsedSecond = parsedDate.getSeconds();
                 
                 // Create a UTC date with the same components, then adjust for Eastern Time
                 // This ensures the time is interpreted as Eastern Time regardless of system timezone
-                const utcDate = new Date(Date.UTC(year, month, day, hour, minute, second, 0));
+                const utcDate = new Date(Date.UTC(parsedYear, parsedMonth, parsedDay, parsedHour, parsedMinute, parsedSecond, 0));
                 
                 // Adjust for Eastern Time offset (EDT is UTC-4, so subtract 4 hours from UTC to get EDT)
                 // Since we want the time to be interpreted as Eastern Time, we need to add 4 hours to UTC
                 const easternAdjustedDate = new Date(utcDate.getTime() + (4 * 60 * 60 * 1000));
                 
-                console.log(`🎫 RedEyeTickets: Parsed components: ${year}-${month+1}-${day} ${hour}:${minute.toString().padStart(2,'0')}`);
+                console.log(`🎫 RedEyeTickets: Parsed components: ${parsedYear}-${parsedMonth+1}-${parsedDay} ${parsedHour}:${parsedMinute.toString().padStart(2,'0')}`);
                 console.log(`🎫 RedEyeTickets: Created as UTC: ${utcDate.toISOString()}`);
                 console.log(`🎫 RedEyeTickets: Adjusted for Eastern Time: ${easternAdjustedDate.toISOString()}`);
                 return { startDate: easternAdjustedDate, endDate: null };
