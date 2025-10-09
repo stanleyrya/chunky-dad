@@ -402,7 +402,7 @@ class ScriptableAdapter {
                             actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
-                            // If recurring, move the original event to next occurrence
+                            // If recurring, move the original event to next occurrence and create new event
                             if (updateTarget.recurring) {
                                 // Find the next occurrence by looking ahead in the calendar
                                 const searchStart = new Date(updateTarget.startDate);
@@ -422,24 +422,47 @@ class ScriptableAdapter {
                                     await updateTarget.save();
                                     console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.startDate.toISOString()}`);
                                 }
+                                
+                                // Create the new event (same logic as 'new' case)
+                                const calendarEvent = new CalendarEvent();
+                                calendarEvent.title = event.title;
+                                calendarEvent.startDate = event.startDate;
+                                calendarEvent.endDate = event.endDate;
+                                calendarEvent.location = event.location;
+                                calendarEvent.notes = event.notes;
+                                calendarEvent.url = event.url;
+                                calendarEvent.calendar = calendar;
+                                
+                                if (this.isAllDayEvent(event)) {
+                                    calendarEvent.isAllDay = true;
+                                }
+                                
+                                await calendarEvent.save();
+                                processedCount++;
+                            } else {
+                                // For non-recurring updates, overwrite everything like before
+                                const updateChanges = [];
+                                if (updateTarget.title !== event.title) {
+                                    updateChanges.push('title');
+                                    updateTarget.title = event.title;
+                                }
+                                if (updateTarget.notes !== event.notes) {
+                                    updateChanges.push('notes (replaced)');
+                                    updateTarget.notes = event.notes;
+                                }
+                                if (updateTarget.location !== event.location) {
+                                    updateChanges.push('location (replaced)');
+                                    console.log(`📱 Scriptable: Updating coordinates for "${event.title}": "${updateTarget.location}" → "${event.location}"`);
+                                    updateTarget.location = event.location;
+                                }
+                                if (updateTarget.url !== event.url && event.url) {
+                                    updateChanges.push('url (replaced)');
+                                    updateTarget.url = event.url;
+                                }
+                                
+                                await updateTarget.save();
+                                processedCount++;
                             }
-                            
-                            // Save the new event normally
-                            const calendarEvent = new CalendarEvent();
-                            calendarEvent.title = event.title;
-                            calendarEvent.startDate = event.startDate;
-                            calendarEvent.endDate = event.endDate;
-                            calendarEvent.location = event.location;
-                            calendarEvent.notes = event.notes;
-                            calendarEvent.url = event.url;
-                            calendarEvent.calendar = calendar;
-                            
-                            if (this.isAllDayEvent(event)) {
-                                calendarEvent.isAllDay = true;
-                            }
-                            
-                            await calendarEvent.save();
-                            processedCount++;
                             break;
                             
                         case 'conflict':
