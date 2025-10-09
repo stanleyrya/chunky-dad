@@ -402,35 +402,32 @@ class ScriptableAdapter {
                             actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
-                            // Check if this is a recurring event that needs splitting
+                            // If recurring, move the original event to next occurrence
                             if (updateTarget.recurring) {
-                                console.log(`📱 Scriptable: Handling recurring event update for "${event.title}"`);
-                                await this.handleRecurringEventUpdate(updateTarget, event, calendar);
-                                processedCount++;
-                            } else {
-                                // For non-recurring updates, replace everything
-                                const updateChanges = [];
-                                if (updateTarget.title !== event.title) {
-                                    updateChanges.push('title');
-                                    updateTarget.title = event.title;
-                                }
-                                if (updateTarget.notes !== event.notes) {
-                                    updateChanges.push('notes (replaced)');
-                                    updateTarget.notes = event.notes;
-                                }
-                                if (updateTarget.location !== event.location) {
-                                    updateChanges.push('location (replaced)');
-                                    console.log(`📱 Scriptable: Updating coordinates for "${event.title}": "${updateTarget.location}" → "${event.location}"`);
-                                    updateTarget.location = event.location;
-                                }
-                                if (updateTarget.url !== event.url && event.url) {
-                                    updateChanges.push('url (replaced)');
-                                    updateTarget.url = event.url;
-                                }
-                                
+                                const nextOccurrence = new Date(updateTarget.startDate);
+                                nextOccurrence.setDate(nextOccurrence.getDate() + 7); // Next week
+                                updateTarget.startDate = nextOccurrence;
+                                updateTarget.endDate = new Date(nextOccurrence.getTime() + (updateTarget.endDate.getTime() - updateTarget.startDate.getTime()));
                                 await updateTarget.save();
-                                processedCount++;
+                                console.log(`📱 Scriptable: Moved recurring event to next occurrence: ${nextOccurrence.toISOString()}`);
                             }
+                            
+                            // Save the new event normally
+                            const calendarEvent = new CalendarEvent();
+                            calendarEvent.title = event.title;
+                            calendarEvent.startDate = event.startDate;
+                            calendarEvent.endDate = event.endDate;
+                            calendarEvent.location = event.location;
+                            calendarEvent.notes = event.notes;
+                            calendarEvent.url = event.url;
+                            calendarEvent.calendar = calendar;
+                            
+                            if (this.isAllDayEvent(event)) {
+                                calendarEvent.isAllDay = true;
+                            }
+                            
+                            await calendarEvent.save();
+                            processedCount++;
                             break;
                             
                         case 'conflict':
@@ -496,66 +493,6 @@ class ScriptableAdapter {
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Calendar execution error: ${error.message}`);
             throw new Error(`Calendar execution failed: ${error.message}`);
-        }
-    }
-
-    // Handle recurring event updates by splitting the series
-    async handleRecurringEventUpdate(existingEvent, newEvent, calendar) {
-        try {
-            console.log(`📱 Scriptable: Splitting recurring event "${existingEvent.title}"`);
-            
-            // Step 1: Update the existing recurring event to end before the new event date
-            const newEventDate = new Date(newEvent.startDate);
-            const existingEventDate = new Date(existingEvent.startDate);
-            
-            // If the new event is in the future, truncate the existing series
-            if (newEventDate > existingEventDate) {
-                // Set the existing event to end just before the new event
-                const truncateDate = new Date(newEventDate);
-                truncateDate.setDate(truncateDate.getDate() - 1);
-                truncateDate.setHours(23, 59, 59, 999);
-                
-                // Update the existing event's end date
-                existingEvent.endDate = truncateDate;
-                
-                // Remove all recurrence rules to stop the series
-                existingEvent.removeAllRecurrenceRules();
-                
-                console.log(`📱 Scriptable: Truncated existing series to end at ${truncateDate.toISOString()}`);
-                await existingEvent.save();
-            }
-            
-            // Step 2: Create a new recurring event starting from the new event date
-            const newRecurringEvent = new CalendarEvent();
-            newRecurringEvent.title = newEvent.title;
-            newRecurringEvent.startDate = newEvent.startDate;
-            newRecurringEvent.endDate = newEvent.endDate;
-            newRecurringEvent.location = newEvent.location;
-            newRecurringEvent.notes = newEvent.notes;
-            newRecurringEvent.url = newEvent.url;
-            newRecurringEvent.calendar = calendar;
-            
-            // Copy recurrence rules from the original event if it had any
-            // Note: We can't directly copy recurrence rules in Scriptable, so we'll create a basic weekly rule
-            // This is a simplified approach - in practice, you might want to analyze the original recurrence pattern
-            if (existingEvent.recurring) {
-                // Create a weekly recurrence rule (most common for events like Goldiloxx)
-                const weeklyRule = RecurrenceRule.weekly(1); // Every week
-                newRecurringEvent.addRecurrenceRule(weeklyRule);
-                console.log(`📱 Scriptable: Added weekly recurrence to new event`);
-            }
-            
-            // Detect all-day events
-            if (this.isAllDayEvent(newEvent)) {
-                newRecurringEvent.isAllDay = true;
-            }
-            
-            await newRecurringEvent.save();
-            console.log(`📱 Scriptable: Created new recurring event starting from ${newEvent.startDate.toISOString()}`);
-            
-        } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to handle recurring event update: ${error.message}`);
-            throw error;
         }
     }
 
