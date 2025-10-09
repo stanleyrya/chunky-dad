@@ -241,6 +241,24 @@ class ScriptableAdapter {
         throw new Error(`No timezone configuration found for city: ${city}`);
     }
 
+    // Helper method to perform regular merge operations
+    performRegularMerge(targetEvent, event) {
+        // Apply the final merged values (event object already contains final values)
+        targetEvent.title = event.title;
+        targetEvent.startDate = event.startDate;
+        targetEvent.endDate = event.endDate;
+        targetEvent.location = event.location;
+        targetEvent.notes = event.notes;
+        targetEvent.url = event.url;
+        
+        // Log coordinate handling
+        if (event.location) {
+            console.log(`📱 Scriptable: Setting coordinates for merge event "${event.title}": ${event.location}`);
+        } else {
+            console.log(`📱 Scriptable: No coordinates to set for merge event "${event.title}"`);
+        }
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
@@ -366,7 +384,8 @@ class ScriptableAdapter {
             
             // Count how many events will need recurring event checks
             const updateEvents = analyzedEvents.filter(e => e._action === 'update');
-            console.log(`🔄 RECURRING EVENTS: ${updateEvents.length} events will be checked for recurring patterns`);
+            const mergeEvents = analyzedEvents.filter(e => e._action === 'merge');
+            console.log(`🔄 RECURRING EVENTS: ${updateEvents.length} update events, ${mergeEvents.length} merge events will be checked for recurring patterns`);
             
             const failedEvents = [];
             const actionCounts = { merge: [], update: [], skip: [], create: [] };
@@ -383,25 +402,160 @@ class ScriptableAdapter {
                             actionCounts.merge.push(event.title);
                             const targetEvent = event._existingEvent;
                             
-                            // Track merge details for later summary (verbose details removed for cleaner logs)
-                            
-                            // Apply the final merged values (event object already contains final values)
-                            targetEvent.title = event.title;
-                            targetEvent.startDate = event.startDate;
-                            targetEvent.endDate = event.endDate;
-                            targetEvent.location = event.location;
-                            targetEvent.notes = event.notes;
-                            targetEvent.url = event.url;
-                            
-                            // Log coordinate handling
-                            if (event.location) {
-                                console.log(`📱 Scriptable: Setting coordinates for merge event "${event.title}": ${event.location}`);
+                            // Goldiloxx is recurring - reuse existing recurring logic
+                            if (event.title === 'GOLDILOXX') {
+                                // Move to update case logic (copy the exact same code)
+                                console.log(`🔄 RECURRING EVENTS: Checking if "${event.title}" is recurring...`);
+                                console.log(`🔄   Existing event ID: ${targetEvent.identifier}`);
+                                console.log(`🔄   Existing event title: "${targetEvent.title}"`);
+                                console.log(`🔄   Existing event date: ${targetEvent.startDate.toISOString()}`);
+                                console.log(`🔄   Existing event end date: ${targetEvent.endDate.toISOString()}`);
+                                console.log(`🔄   Existing event location: ${targetEvent.location || 'None'}`);
+                                
+                                // Find the next occurrence by looking ahead in the calendar
+                                const searchStart = new Date(targetEvent.startDate);
+                                searchStart.setDate(searchStart.getDate() + 1);
+                                const searchEnd = new Date(searchStart);
+                                searchEnd.setDate(searchEnd.getDate() + 365); // Look ahead a year
+                                
+                                // Also search a bit before the current event to see if there are past occurrences
+                                const pastSearchStart = new Date(targetEvent.startDate);
+                                pastSearchStart.setDate(pastSearchStart.getDate() - 30); // Look back 30 days
+                                const pastSearchEnd = new Date(targetEvent.startDate);
+                                pastSearchEnd.setDate(pastSearchEnd.getDate() + 1);
+                                
+                                console.log(`🔄   Also checking for past occurrences from ${pastSearchStart.toISOString()} to ${pastSearchEnd.toISOString()}`);
+                                const pastEvents = await CalendarEvent.between(pastSearchStart, pastSearchEnd, [calendar]);
+                                console.log(`🔄   Found ${pastEvents.length} past events in range`);
+                                
+                                if (pastEvents.length > 0) {
+                                    console.log(`🔄   Past events found:`);
+                                    pastEvents.forEach((e, index) => {
+                                        console.log(`🔄     ${index + 1}. "${e.title}" (ID: ${e.identifier}, Date: ${e.startDate.toISOString()})`);
+                                    });
+                                }
+                                
+                                console.log(`🔄   Searching for future occurrences from ${searchStart.toISOString()} to ${searchEnd.toISOString()}`);
+                                console.log(`🔄   Searching in calendar: "${calendar.title}" (ID: ${calendar.identifier})`);
+                                
+                                const futureEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                                console.log(`🔄   Found ${futureEvents.length} future events in calendar`);
+                                
+                                // Log details about all future events to debug recurring detection
+                                if (futureEvents.length > 0) {
+                                    console.log(`🔄   Future events found:`);
+                                    futureEvents.forEach((e, index) => {
+                                        console.log(`🔄     ${index + 1}. "${e.title}" (ID: ${e.identifier}, Date: ${e.startDate.toISOString()})`);
+                                    });
+                                }
+                                
+                                console.log(`🔄   Looking for events with same ID: ${targetEvent.identifier}`);
+                                const nextOccurrence = futureEvents.find(e => 
+                                    e.identifier === targetEvent.identifier && 
+                                    e.startDate > targetEvent.startDate
+                                );
+                                
+                                if (nextOccurrence) {
+                                    console.log(`🔄   Found matching recurring event: "${nextOccurrence.title}" (${nextOccurrence.startDate.toISOString()})`);
+                                } else {
+                                    console.log(`🔄   No matching recurring event found with ID ${targetEvent.identifier}`);
+                                    
+                                    // Also check for events with same title as a fallback
+                                    const sameTitleEvents = futureEvents.filter(e => 
+                                        e.title === targetEvent.title && 
+                                        e.startDate > targetEvent.startDate
+                                    );
+                                    console.log(`🔄   Events with same title "${targetEvent.title}": ${sameTitleEvents.length}`);
+                                    sameTitleEvents.forEach((e, index) => {
+                                        console.log(`🔄     ${index + 1}. "${e.title}" (ID: ${e.identifier}, Date: ${e.startDate.toISOString()})`);
+                                    });
+                                }
+                                
+                                // If we found a next occurrence, this is a recurring event
+                                if (nextOccurrence) {
+                                    console.log(`🔄 RECURRING EVENTS: RECURRING EVENT DETECTED!`);
+                                    console.log(`🔄   Next occurrence found: ${nextOccurrence.startDate.toISOString()}`);
+                                    console.log(`🔄   Moving existing event to next occurrence...`);
+                                    
+                                    targetEvent.startDate = nextOccurrence.startDate;
+                                    targetEvent.endDate = nextOccurrence.endDate;
+                                    await targetEvent.save();
+                                    
+                                    console.log(`🔄 RECURRING EVENTS: Successfully moved recurring event to next occurrence`);
+                                    console.log(`🔄   New date: ${nextOccurrence.startDate.toISOString()}`);
+                                    
+                                    // Create the new event (same logic as 'new' case)
+                                    console.log(`🔄 RECURRING EVENTS: Creating new event for current occurrence...`);
+                                    await this.createCalendarEvent(event, calendar);
+                                    processedCount++;
+                                    
+                                    console.log(`🔄 RECURRING EVENTS: Recurring event handling complete - moved existing, created new`);
+                                } else {
+                                    console.log(`🔄 RECURRING EVENTS: Not a recurring event - updating existing event in place`);
+                                    // For non-recurring updates, overwrite everything like before
+                                    const updateChanges = [];
+                                    console.log(`🔄 RECURRING EVENTS: Updating non-recurring event fields...`);
+                                    
+                                    if (targetEvent.title !== event.title) {
+                                        updateChanges.push('title');
+                                        console.log(`🔄   Title: "${targetEvent.title}" → "${event.title}"`);
+                                        targetEvent.title = event.title;
+                                    }
+                                    if (targetEvent.notes !== event.notes) {
+                                        updateChanges.push('notes (replaced)');
+                                        console.log(`🔄   Notes: ${targetEvent.notes ? targetEvent.notes.length : 0} chars → ${event.notes ? event.notes.length : 0} chars`);
+                                        targetEvent.notes = event.notes;
+                                    }
+                                    if (targetEvent.startDate.getTime() !== event.startDate.getTime()) {
+                                        updateChanges.push('startDate');
+                                        console.log(`🔄   Start: ${targetEvent.startDate.toISOString()} → ${event.startDate.toISOString()}`);
+                                        targetEvent.startDate = event.startDate;
+                                    }
+                                    if (targetEvent.endDate.getTime() !== event.endDate.getTime()) {
+                                        updateChanges.push('endDate');
+                                        console.log(`🔄   End: ${targetEvent.endDate.toISOString()} → ${event.endDate.toISOString()}`);
+                                        targetEvent.endDate = event.endDate;
+                                    }
+                                    if (targetEvent.location !== event.location) {
+                                        updateChanges.push('location');
+                                        console.log(`🔄   Location: "${targetEvent.location}" → "${event.location}"`);
+                                        targetEvent.location = event.location;
+                                    }
+                                    if (targetEvent.url !== event.url) {
+                                        updateChanges.push('url');
+                                        console.log(`🔄   URL: "${targetEvent.url}" → "${event.url}"`);
+                                        targetEvent.url = event.url;
+                                    }
+                                    
+                                    if (updateChanges.length > 0) {
+                                        console.log(`🔄 RECURRING EVENTS: Updated ${updateChanges.length} fields: ${updateChanges.join(', ')}`);
+                                    } else {
+                                        console.log(`🔄 RECURRING EVENTS: No field changes needed`);
+                                    }
+                                    
+                                    await targetEvent.save();
+                                    processedCount++;
+                                    console.log(`🔄 RECURRING EVENTS: Non-recurring event update complete`);
+                                }
                             } else {
-                                console.log(`📱 Scriptable: No coordinates to set for merge event "${event.title}"`);
+                                // Regular merge logic for non-Goldiloxx events
+                                targetEvent.title = event.title;
+                                targetEvent.startDate = event.startDate;
+                                targetEvent.endDate = event.endDate;
+                                targetEvent.location = event.location;
+                                targetEvent.notes = event.notes;
+                                targetEvent.url = event.url;
+                                
+                                // Log coordinate handling
+                                if (event.location) {
+                                    console.log(`📱 Scriptable: Setting coordinates for merge event "${event.title}": ${event.location}`);
+                                } else {
+                                    console.log(`📱 Scriptable: No coordinates to set for merge event "${event.title}"`);
+                                }
+                                
+                                await targetEvent.save();
+                                processedCount++;
                             }
-                            
-                            await targetEvent.save();
-                            processedCount++;
                             break;
                             
                         case 'update':

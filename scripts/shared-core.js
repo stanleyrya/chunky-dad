@@ -1902,6 +1902,11 @@ class SharedCore {
                 }
             });
         }
+
+        // Apply parser-level configuration flags to events
+        if (parserConfig?.isRecurring) {
+            event.recurring = true;
+        }
         
         
         // Return the event with all fields intact
