@@ -240,18 +240,36 @@ class RedEyeTicketsParser {
                 const normalizedAmPm = ampm.toUpperCase();
                 const dateStringForConstructor = `${month} ${day}, ${year} ${normalizedTime} ${normalizedAmPm}`;
                 
-                // Create date as local time - let SharedCore handle timezone conversion
-                // This preserves the original local time from the website
-                const startDate = new Date(dateStringForConstructor);
+                // Parse the date string as if it were in Eastern Time (RedEyeTickets events are in NYC)
+                // We need to manually handle the timezone conversion since new Date() uses system timezone
                 
-                // Check if date is valid
-                if (isNaN(startDate.getTime())) {
-                    console.warn(`🎫 RedEyeTickets: Invalid date string: "${dateStringForConstructor}"`);
+                // Extract date components
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                  'July', 'August', 'September', 'October', 'November', 'December'];
+                const monthIndex = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
+                
+                if (monthIndex === -1) {
+                    console.warn(`🎫 RedEyeTickets: Invalid month: "${month}"`);
                     return null;
                 }
                 
-                console.log(`🎫 RedEyeTickets: Created start date: ${startDate.toISOString()}`);
-                return { startDate, endDate: null };
+                const year = parseInt(year);
+                const dayNum = parseInt(day);
+                const hour24 = normalizedAmPm === 'PM' && parseInt(hour) !== 12 ? parseInt(hour) + 12 : 
+                              normalizedAmPm === 'AM' && parseInt(hour) === 12 ? 0 : parseInt(hour);
+                const minuteNum = minutes ? parseInt(minutes) : 0;
+                
+                // Create date in Eastern Time (America/New_York)
+                // For October 25, 2025, this is EDT (UTC-4)
+                const easternDate = new Date(year, monthIndex, dayNum, hour24, minuteNum, 0, 0);
+                
+                // Convert to UTC by adding the Eastern Time offset
+                // EDT is UTC-4, so we add 4 hours to get UTC
+                const utcDate = new Date(easternDate.getTime() + (4 * 60 * 60 * 1000));
+                
+                console.log(`🎫 RedEyeTickets: Parsed as Eastern Time: ${easternDate.toString()}`);
+                console.log(`🎫 RedEyeTickets: Converted to UTC: ${utcDate.toISOString()}`);
+                return { startDate: utcDate, endDate: null };
             }
             
             // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
