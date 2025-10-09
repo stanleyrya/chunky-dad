@@ -259,7 +259,7 @@ const scraperConfig = {
       // Static metadata to add to all Goldiloxx events
       metadata: {
         shortName: { value: "GOLDI-LOXX" },
-        shorter: { value: "GLX" },
+        shorterName: { value: "GLX" },
         instagram: { value: "https://www.instagram.com/goldiloxx__" }
       }
     }
