@@ -485,7 +485,7 @@ class ScriptableAdapter {
     applyMergedFieldsToEvent(targetEvent, mergedEvent) {
         const updateChanges = [];
         
-        // Update all the standard fields that might have been merged
+        // Update the standard fields that are actually used
         if (targetEvent.title !== mergedEvent.title) {
             updateChanges.push('title');
             targetEvent.title = mergedEvent.title;
@@ -504,34 +504,6 @@ class ScriptableAdapter {
         if (targetEvent.url !== mergedEvent.url && mergedEvent.url) {
             updateChanges.push('url');
             targetEvent.url = mergedEvent.url;
-        }
-        
-        // Update start/end dates if they changed
-        if (targetEvent.startDate.getTime() !== mergedEvent.startDate.getTime()) {
-            updateChanges.push('startDate');
-            targetEvent.startDate = mergedEvent.startDate;
-        }
-        
-        if (targetEvent.endDate.getTime() !== mergedEvent.endDate.getTime()) {
-            updateChanges.push('endDate');
-            targetEvent.endDate = mergedEvent.endDate;
-        }
-        
-        // Update all-day status if it changed
-        if (targetEvent.isAllDay !== mergedEvent.isAllDay) {
-            updateChanges.push('isAllDay');
-            targetEvent.isAllDay = mergedEvent.isAllDay;
-        }
-        
-        // Update scriptable-specific properties
-        if (targetEvent.availability !== mergedEvent.availability && mergedEvent.availability !== undefined) {
-            updateChanges.push('availability');
-            targetEvent.availability = mergedEvent.availability;
-        }
-        
-        if (targetEvent.timeZone !== mergedEvent.timeZone && mergedEvent.timeZone !== undefined) {
-            updateChanges.push('timeZone');
-            targetEvent.timeZone = mergedEvent.timeZone;
         }
         
         if (updateChanges.length > 0) {
