@@ -378,6 +378,14 @@ class ScriptableAdapter {
                             actionCounts.merge.push(event.title);
                             const targetEvent = event._existingEvent;
                             
+                            // Apply the final merged values (event object already contains final values)
+                            targetEvent.title = event.title;
+                            targetEvent.startDate = event.startDate;
+                            targetEvent.endDate = event.endDate;
+                            targetEvent.location = event.location;
+                            targetEvent.notes = event.notes;
+                            targetEvent.url = event.url;
+                            
                             // Log coordinate handling
                             if (event.location) {
                                 console.log(`📱 Scriptable: Setting coordinates for merge event "${event.title}": ${event.location}`);
@@ -385,7 +393,6 @@ class ScriptableAdapter {
                                 console.log(`📱 Scriptable: No coordinates to set for merge event "${event.title}"`);
                             }
                             
-                            // Save the merged event directly
                             await targetEvent.save();
                             processedCount++;
                             break;
