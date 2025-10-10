@@ -383,16 +383,6 @@ class ScriptableAdapter {
                             actionCounts.merge.push(event.title);
                             const targetEvent = event._existingEvent;
                             
-                            // Track merge details for later summary (verbose details removed for cleaner logs)
-                            
-                            // Apply the final merged values (event object already contains final values)
-                            targetEvent.title = event.title;
-                            targetEvent.startDate = event.startDate;
-                            targetEvent.endDate = event.endDate;
-                            targetEvent.location = event.location;
-                            targetEvent.notes = event.notes;
-                            targetEvent.url = event.url;
-                            
                             // Log coordinate handling
                             if (event.location) {
                                 console.log(`📱 Scriptable: Setting coordinates for merge event "${event.title}": ${event.location}`);
@@ -471,8 +461,9 @@ class ScriptableAdapter {
                             if (nextOccurrence) {
                                 console.log(`🔄 RECURRING EVENTS: RECURRING EVENT DETECTED!`);
                                 console.log(`🔄   Next occurrence found: ${nextOccurrence.startDate.toISOString()}`);
-                                console.log(`🔄   Moving existing event to next occurrence...`);
+                                console.log(`🔄   Moving existing event to next occurrence (keeping original data)...`);
                                 
+                                // Move existing event to next occurrence WITHOUT changing any data
                                 targetEvent.startDate = nextOccurrence.startDate;
                                 targetEvent.endDate = nextOccurrence.endDate;
                                 await targetEvent.save();
@@ -480,7 +471,7 @@ class ScriptableAdapter {
                                 console.log(`🔄 RECURRING EVENTS: Successfully moved recurring event to next occurrence`);
                                 console.log(`🔄   New date: ${nextOccurrence.startDate.toISOString()}`);
                                 
-                                // Create the new event (same logic as 'new' case)
+                                // Create the new event for current occurrence with fresh scraped data
                                 console.log(`🔄 RECURRING EVENTS: Creating new event for current occurrence...`);
                                 await this.createCalendarEvent(event, calendar);
                                 processedCount++;
@@ -568,8 +559,9 @@ class ScriptableAdapter {
                             if (nextOccurrence) {
                                 console.log(`🔄 RECURRING EVENTS: RECURRING EVENT DETECTED!`);
                                 console.log(`🔄   Next occurrence found: ${nextOccurrence.startDate.toISOString()}`);
-                                console.log(`🔄   Moving existing event to next occurrence...`);
+                                console.log(`🔄   Moving existing event to next occurrence (keeping original data)...`);
                                 
+                                // Move existing event to next occurrence WITHOUT changing any data
                                 updateTarget.startDate = nextOccurrence.startDate;
                                 updateTarget.endDate = nextOccurrence.endDate;
                                 await updateTarget.save();
@@ -577,7 +569,7 @@ class ScriptableAdapter {
                                 console.log(`🔄 RECURRING EVENTS: Successfully moved recurring event to next occurrence`);
                                 console.log(`🔄   New date: ${nextOccurrence.startDate.toISOString()}`);
                                 
-                                // Create the new event (same logic as 'new' case)
+                                // Create the new event for current occurrence with fresh scraped data
                                 console.log(`🔄 RECURRING EVENTS: Creating new event for current occurrence...`);
                                 await this.createCalendarEvent(event, calendar);
                                 processedCount++;
