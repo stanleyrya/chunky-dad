@@ -523,6 +523,17 @@ class ScriptableAdapter {
             targetEvent.isAllDay = mergedEvent.isAllDay;
         }
         
+        // Update scriptable-specific properties
+        if (targetEvent.availability !== mergedEvent.availability && mergedEvent.availability !== undefined) {
+            updateChanges.push('availability');
+            targetEvent.availability = mergedEvent.availability;
+        }
+        
+        if (targetEvent.timeZone !== mergedEvent.timeZone && mergedEvent.timeZone !== undefined) {
+            updateChanges.push('timeZone');
+            targetEvent.timeZone = mergedEvent.timeZone;
+        }
+        
         if (updateChanges.length > 0) {
             console.log(`📱 Scriptable: Updated ${updateChanges.length} fields: ${updateChanges.join(', ')}`);
         } else {
