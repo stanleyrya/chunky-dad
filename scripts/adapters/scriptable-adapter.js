@@ -534,15 +534,31 @@ class ScriptableAdapter {
             targetEvent.timeZone = mergedEvent.timeZone;
         }
         
-        // Preserve Scriptable-specific methods and properties that shouldn't be overwritten
-        // These are methods/properties that exist on CalendarEvent but shouldn't be copied from mergedEvent
-        const scriptableMethods = ['addRecurrenceRule', 'removeAllRecurrenceRules', 'presentEdit', 'save', 'remove'];
-        const scriptableProperties = ['identifier', 'calendar', '_staticFields'];
+        // Use the same exclusion logic as formatEventNotes in shared-core.js
+        const excludeFields = new Set([
+            'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
+            'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
+            '_original', '_mergeInfo', '_changes', '_mergeDiff',
+            'originalTitle', 'name', // These are usually duplicates of title
+            // Scriptable-specific properties that shouldn't be copied
+            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
+            // Location-specific fields that shouldn't be copied (used internally)
+            'placeId'
+        ]);
         
-        // Copy any additional fields from mergedEvent, but skip Scriptable methods/properties
+        // Helper function to check if a field should be included
+        const shouldIncludeField = (obj, field) => {
+            if (field.startsWith('_')) return false;
+            if (typeof obj[field] === 'function') return false;
+            if (excludeFields.has(field)) return false;
+            return true;
+        };
+        
+        // Copy any additional fields from mergedEvent, but skip excluded fields
         Object.keys(mergedEvent).forEach(key => {
-            if (!scriptableMethods.includes(key) && 
-                !scriptableProperties.includes(key) && 
+            if (shouldIncludeField(mergedEvent, key) && 
                 !['title', 'notes', 'location', 'url', 'startDate', 'endDate', 'isAllDay', 'availability', 'timeZone'].includes(key)) {
                 
                 if (targetEvent[key] !== mergedEvent[key]) {
