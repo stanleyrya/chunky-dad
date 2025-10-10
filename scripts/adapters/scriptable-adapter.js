@@ -385,7 +385,9 @@ class ScriptableAdapter {
                                 console.log(`📱 Scriptable: No coordinates to set for merge event "${event.title}"`);
                             }
                             
-                            // Save the merged event
+                            // Apply all merged fields to the existing event
+                            this.applyMergedFieldsToEvent(targetEvent, event);
+                            
                             await targetEvent.save();
                             processedCount++;
                             break;
@@ -395,29 +397,8 @@ class ScriptableAdapter {
                             actionCounts.update.push(event.title);
                             const updateTarget = event._existingEvent;
                             
-                            // Update fields
-                            const updateChanges = [];
-                            
-                            if (updateTarget.title !== event.title) {
-                                updateChanges.push('title');
-                                updateTarget.title = event.title;
-                            }
-                            if (updateTarget.notes !== event.notes) {
-                                updateChanges.push('notes');
-                                updateTarget.notes = event.notes;
-                            }
-                            if (updateTarget.location !== event.location) {
-                                updateChanges.push('location');
-                                updateTarget.location = event.location;
-                            }
-                            if (updateTarget.url !== event.url && event.url) {
-                                updateChanges.push('url');
-                                updateTarget.url = event.url;
-                            }
-                            
-                            if (updateChanges.length > 0) {
-                                console.log(`📱 Scriptable: Updated ${updateChanges.length} fields: ${updateChanges.join(', ')}`);
-                            }
+                            // Apply all merged fields to the existing event
+                            this.applyMergedFieldsToEvent(updateTarget, event);
                             
                             await updateTarget.save();
                             processedCount++;
@@ -498,6 +479,55 @@ class ScriptableAdapter {
         await calendarEvent.save();
         console.log(`📱 Scriptable: Successfully created calendar event with ID: ${calendarEvent.identifier}`);
         return calendarEvent;
+    }
+
+    // Apply merged fields from the analyzed event to the existing calendar event
+    applyMergedFieldsToEvent(targetEvent, mergedEvent) {
+        const updateChanges = [];
+        
+        // Update all the standard fields that might have been merged
+        if (targetEvent.title !== mergedEvent.title) {
+            updateChanges.push('title');
+            targetEvent.title = mergedEvent.title;
+        }
+        
+        if (targetEvent.notes !== mergedEvent.notes) {
+            updateChanges.push('notes');
+            targetEvent.notes = mergedEvent.notes;
+        }
+        
+        if (targetEvent.location !== mergedEvent.location) {
+            updateChanges.push('location');
+            targetEvent.location = mergedEvent.location;
+        }
+        
+        if (targetEvent.url !== mergedEvent.url && mergedEvent.url) {
+            updateChanges.push('url');
+            targetEvent.url = mergedEvent.url;
+        }
+        
+        // Update start/end dates if they changed
+        if (targetEvent.startDate.getTime() !== mergedEvent.startDate.getTime()) {
+            updateChanges.push('startDate');
+            targetEvent.startDate = mergedEvent.startDate;
+        }
+        
+        if (targetEvent.endDate.getTime() !== mergedEvent.endDate.getTime()) {
+            updateChanges.push('endDate');
+            targetEvent.endDate = mergedEvent.endDate;
+        }
+        
+        // Update all-day status if it changed
+        if (targetEvent.isAllDay !== mergedEvent.isAllDay) {
+            updateChanges.push('isAllDay');
+            targetEvent.isAllDay = mergedEvent.isAllDay;
+        }
+        
+        if (updateChanges.length > 0) {
+            console.log(`📱 Scriptable: Updated ${updateChanges.length} fields: ${updateChanges.join(', ')}`);
+        } else {
+            console.log(`📱 Scriptable: No field changes needed`);
+        }
     }
 
     async getOrCreateCalendar(calendarName) {

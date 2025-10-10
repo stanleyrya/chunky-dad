@@ -753,7 +753,8 @@ class SharedCore {
         // Apply merge strategies for ALL fields (both scraped and existing)
         // Filter out Scriptable-specific methods and properties
         const scriptableFields = new Set([
-            'identifier', 'availability', 'timeZone', 'calendar', 'save', 'remove', 'presentEdit', '_staticFields'
+            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields'
         ]);
         
         const allFieldNames = new Set([
@@ -1920,7 +1921,8 @@ class SharedCore {
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
             'originalTitle', 'name', // These are usually duplicates of title
             // Scriptable-specific properties that shouldn't be in notes
-            'identifier', 'availability', 'timeZone', 'calendar', 'save', 'remove', 'presentEdit', '_staticFields',
+            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
             // Location-specific fields that shouldn't be in notes (used internally)
             'placeId'
         ]);
@@ -2389,7 +2391,7 @@ class SharedCore {
             }
             
             // Process other direct fields that might exist on conflict
-            const directFields = ['title', 'description', 'startDate', 'endDate', 'eventType'];
+            const directFields = ['title', 'description', 'startDate', 'endDate', 'recurrence', 'eventType', 'recurring'];
             directFields.forEach(fieldName => {
                 if (conflict[fieldName] && !existingFieldsFromNotes[fieldName]) {
                     applyMergeStrategy(fieldName, conflict[fieldName], event[fieldName]);
