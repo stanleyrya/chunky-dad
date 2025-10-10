@@ -120,25 +120,21 @@ class RedEyeTicketsParser {
             // Extract coordinates from venue info
             const coordinates = this.extractCoordinates(venueInfo);
             
-            // Set default end date for Red Eye bar events (4am next day in Eastern Time)
+            // Set default end date for Red Eye bar events (4am next day)
             let endDate = dateTime.endDate;
             if (!endDate && dateTime.startDate && venueInfo.venue && venueInfo.venue.toLowerCase().includes('red eye')) {
-                // Create end date in Eastern Time to match the start date timezone
+                // Create end date by adding 1 day and setting to 4am
+                // The start date is already in the correct timezone, so we'll work with that
                 const startDate = new Date(dateTime.startDate);
                 const nextDay = new Date(startDate);
                 nextDay.setDate(nextDay.getDate() + 1);
                 
-                // Extract the date components and create 4am Eastern Time
-                const year = nextDay.getFullYear();
-                const month = nextDay.getMonth();
-                const day = nextDay.getDate();
+                // Set to 4am in the same timezone as the start date
+                // This preserves the timezone that was already applied to the start date
+                nextDay.setHours(4, 0, 0, 0);
+                endDate = nextDay;
                 
-                // Create 4am Eastern Time (UTC-4 for EDT, UTC-5 for EST)
-                // We'll use UTC-4 (EDT) as the default since most events are in summer
-                const eastern4amUTC = new Date(Date.UTC(year, month, day, 8, 0, 0, 0)); // 4am EDT = 8am UTC
-                endDate = eastern4amUTC;
-                
-                console.log(`🎫 RedEyeTickets: Set default end date for Red Eye bar event: ${endDate.toISOString()} (4am Eastern Time)`);
+                console.log(`🎫 RedEyeTickets: Set default end date for Red Eye bar event: ${endDate.toISOString()} (4am local time)`);
             }
 
             const event = {
@@ -215,7 +211,7 @@ class RedEyeTicketsParser {
             console.log(`🎫 RedEyeTickets: Found date/time string: "${dateTimeString}"`);
             
             // Parse the date string
-            const parsedDate = this.parseRedEyeDateString(dateTimeString);
+            const parsedDate = this.parseRedEyeDateString(dateTimeString, cityConfig, city);
             if (parsedDate) {
                 return parsedDate;
             }
@@ -227,7 +223,7 @@ class RedEyeTicketsParser {
             const desc = metaDescMatch[1];
             const dateMatch = desc.match(/(\w+\.\s+\d{1,2},?\s+\d{4})/i);
             if (dateMatch) {
-                const parsedDate = this.parseRedEyeDateString(dateMatch[1] + ' at 9pm');
+                const parsedDate = this.parseRedEyeDateString(dateMatch[1] + ' at 9pm', cityConfig, city);
                 if (parsedDate) {
                     return parsedDate;
                 }
@@ -238,7 +234,7 @@ class RedEyeTicketsParser {
     }
 
     // Parse RedEyeTickets specific date format
-    parseRedEyeDateString(dateString) {
+    parseRedEyeDateString(dateString, cityConfig = null, city = null) {
         try {
             // Convert RedEyeTickets format to something Date constructor can handle
             // Input: "Saturday, October 25, 2025 at 9pm" or "Saturday, November 22, 2025 at 8:30pm"
@@ -270,18 +266,21 @@ class RedEyeTicketsParser {
                 const parsedMinute = parsedDate.getMinutes();
                 const parsedSecond = parsedDate.getSeconds();
                 
-                // Create a UTC date with the same components, then adjust for Eastern Time
-                // This ensures the time is interpreted as Eastern Time regardless of system timezone
+                // Get the timezone for the detected city, default to Eastern Time
+                const cityTimezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : 'America/New_York';
+                
+                // Create a UTC date with the same components
                 const utcDate = new Date(Date.UTC(parsedYear, parsedMonth, parsedDay, parsedHour, parsedMinute, parsedSecond, 0));
                 
-                // Adjust for Eastern Time offset (EDT is UTC-4, so subtract 4 hours from UTC to get EDT)
-                // Since we want the time to be interpreted as Eastern Time, we need to add 4 hours to UTC
-                const easternAdjustedDate = new Date(utcDate.getTime() + (4 * 60 * 60 * 1000));
+                // Adjust for the city's timezone offset
+                // This is a simplified approach - in production, you'd use a proper timezone library
+                const timezoneOffset = this.getTimezoneOffset(cityTimezone);
+                const adjustedDate = new Date(utcDate.getTime() - (timezoneOffset * 60 * 60 * 1000));
                 
                 console.log(`🎫 RedEyeTickets: Parsed components: ${parsedYear}-${parsedMonth+1}-${parsedDay} ${parsedHour}:${parsedMinute.toString().padStart(2,'0')}`);
                 console.log(`🎫 RedEyeTickets: Created as UTC: ${utcDate.toISOString()}`);
-                console.log(`🎫 RedEyeTickets: Adjusted for Eastern Time: ${easternAdjustedDate.toISOString()}`);
-                return { startDate: easternAdjustedDate, endDate: null };
+                console.log(`🎫 RedEyeTickets: Adjusted for ${cityTimezone}: ${adjustedDate.toISOString()}`);
+                return { startDate: adjustedDate, endDate: null };
             }
             
             // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
@@ -701,6 +700,26 @@ class RedEyeTicketsParser {
         // In the future, this could be enhanced with geocoding services
         console.log(`🎫 RedEyeTickets: No coordinates found for address: "${venueInfo.address}"`);
         return null;
+    }
+
+    // Helper method to get timezone offset in minutes
+    getTimezoneOffset(timezone) {
+        // Simple timezone offset mapping for common timezones
+        // This is a simplified approach - in production, you'd use a proper timezone library
+        const timezoneOffsets = {
+            'America/New_York': -5, // EST (UTC-5), EDT is UTC-4
+            'America/Chicago': -6, // CST (UTC-6), CDT is UTC-5  
+            'America/Denver': -7,  // MST (UTC-7), MDT is UTC-6
+            'America/Los_Angeles': -8, // PST (UTC-8), PDT is UTC-7
+            'America/Phoenix': -7, // MST (no DST)
+            'America/Toronto': -5, // EST (UTC-5), EDT is UTC-4
+            'Europe/London': 0,    // GMT (UTC+0), BST is UTC+1
+            'Europe/Berlin': 1,    // CET (UTC+1), CEST is UTC+2
+            'Europe/Madrid': 1     // CET (UTC+1), CEST is UTC+2
+        };
+        
+        // Default to Eastern Time if timezone not found
+        return timezoneOffsets[timezone] || -5;
     }
 }
 
