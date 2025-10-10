@@ -120,13 +120,25 @@ class RedEyeTicketsParser {
             // Extract coordinates from venue info
             const coordinates = this.extractCoordinates(venueInfo);
             
-            // Set default end date for Red Eye bar events (4am next day)
+            // Set default end date for Red Eye bar events (4am next day in Eastern Time)
             let endDate = dateTime.endDate;
             if (!endDate && dateTime.startDate && venueInfo.venue && venueInfo.venue.toLowerCase().includes('red eye')) {
-                endDate = new Date(dateTime.startDate);
-                endDate.setDate(endDate.getDate() + 1);
-                endDate.setHours(4, 0, 0, 0);
-                console.log(`🎫 RedEyeTickets: Set default end date for Red Eye bar event: ${endDate.toISOString()}`);
+                // Create end date in Eastern Time to match the start date timezone
+                const startDate = new Date(dateTime.startDate);
+                const nextDay = new Date(startDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+                
+                // Extract the date components and create 4am Eastern Time
+                const year = nextDay.getFullYear();
+                const month = nextDay.getMonth();
+                const day = nextDay.getDate();
+                
+                // Create 4am Eastern Time (UTC-4 for EDT, UTC-5 for EST)
+                // We'll use UTC-4 (EDT) as the default since most events are in summer
+                const eastern4amUTC = new Date(Date.UTC(year, month, day, 8, 0, 0, 0)); // 4am EDT = 8am UTC
+                endDate = eastern4amUTC;
+                
+                console.log(`🎫 RedEyeTickets: Set default end date for Red Eye bar event: ${endDate.toISOString()} (4am Eastern Time)`);
             }
 
             const event = {
