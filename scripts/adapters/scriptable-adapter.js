@@ -534,13 +534,23 @@ class ScriptableAdapter {
             targetEvent.timeZone = mergedEvent.timeZone;
         }
         
-        // Preserve Scriptable-specific methods and properties that shouldn't be overwritten:
-        // - addRecurrenceRule, removeAllRecurrenceRules (methods)
-        // - presentEdit (method)
-        // - _staticFields (internal property)
-        // - identifier (read-only)
-        // - calendar (should not be changed)
-        // - save, remove (methods)
+        // Preserve Scriptable-specific methods and properties that shouldn't be overwritten
+        // These are methods/properties that exist on CalendarEvent but shouldn't be copied from mergedEvent
+        const scriptableMethods = ['addRecurrenceRule', 'removeAllRecurrenceRules', 'presentEdit', 'save', 'remove'];
+        const scriptableProperties = ['identifier', 'calendar', '_staticFields'];
+        
+        // Copy any additional fields from mergedEvent, but skip Scriptable methods/properties
+        Object.keys(mergedEvent).forEach(key => {
+            if (!scriptableMethods.includes(key) && 
+                !scriptableProperties.includes(key) && 
+                !['title', 'notes', 'location', 'url', 'startDate', 'endDate', 'isAllDay', 'availability', 'timeZone'].includes(key)) {
+                
+                if (targetEvent[key] !== mergedEvent[key]) {
+                    updateChanges.push(key);
+                    targetEvent[key] = mergedEvent[key];
+                }
+            }
+        });
         
         if (updateChanges.length > 0) {
             console.log(`📱 Scriptable: Updated ${updateChanges.length} fields: ${updateChanges.join(', ')}`);
