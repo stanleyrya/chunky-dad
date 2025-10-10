@@ -506,6 +506,42 @@ class ScriptableAdapter {
             targetEvent.url = mergedEvent.url;
         }
         
+        // Update start/end dates if they changed
+        if (targetEvent.startDate.getTime() !== mergedEvent.startDate.getTime()) {
+            updateChanges.push('startDate');
+            targetEvent.startDate = mergedEvent.startDate;
+        }
+        
+        if (targetEvent.endDate.getTime() !== mergedEvent.endDate.getTime()) {
+            updateChanges.push('endDate');
+            targetEvent.endDate = mergedEvent.endDate;
+        }
+        
+        // Update all-day status if it changed
+        if (targetEvent.isAllDay !== mergedEvent.isAllDay) {
+            updateChanges.push('isAllDay');
+            targetEvent.isAllDay = mergedEvent.isAllDay;
+        }
+        
+        // Update scriptable-specific properties (but preserve methods)
+        if (targetEvent.availability !== mergedEvent.availability && mergedEvent.availability !== undefined) {
+            updateChanges.push('availability');
+            targetEvent.availability = mergedEvent.availability;
+        }
+        
+        if (targetEvent.timeZone !== mergedEvent.timeZone && mergedEvent.timeZone !== undefined) {
+            updateChanges.push('timeZone');
+            targetEvent.timeZone = mergedEvent.timeZone;
+        }
+        
+        // Preserve Scriptable-specific methods and properties that shouldn't be overwritten:
+        // - addRecurrenceRule, removeAllRecurrenceRules (methods)
+        // - presentEdit (method)
+        // - _staticFields (internal property)
+        // - identifier (read-only)
+        // - calendar (should not be changed)
+        // - save, remove (methods)
+        
         if (updateChanges.length > 0) {
             console.log(`📱 Scriptable: Updated ${updateChanges.length} fields: ${updateChanges.join(', ')}`);
         } else {
