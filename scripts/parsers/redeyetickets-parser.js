@@ -222,18 +222,7 @@ class RedEyeTicketsParser {
             }
         }
         
-        // Fallback: try to extract from meta description
-        const metaDescMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
-        if (metaDescMatch) {
-            const desc = metaDescMatch[1];
-            const dateMatch = desc.match(/(\w+\.\s+\d{1,2},?\s+\d{4})/i);
-            if (dateMatch) {
-                const parsedDate = this.parseRedEyeDateString(dateMatch[1] + ' at 9pm', cityConfig, city);
-                if (parsedDate) {
-                    return parsedDate;
-                }
-            }
-        }
+        // No fallback for time - only parse if time is explicitly found
         
         return { startDate: null, endDate: null };
     }
