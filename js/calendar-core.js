@@ -152,7 +152,253 @@ class CalendarCore {
             }, 0) / events.length) : 0
         });
         
-        return events;
+        // Merge recurring events with their overrides
+        const mergedEvents = this.mergeRecurringEvents(events);
+        
+        logger.info('CALENDAR', `📊 Event merging complete. ${events.length} original events, ${mergedEvents.length} after merging`, {
+            originalCount: events.length,
+            mergedCount: mergedEvents.length,
+            eventsRemoved: events.length - mergedEvents.length
+        });
+        
+        return mergedEvents;
+    }
+
+    // Merge recurring events with their overrides
+    mergeRecurringEvents(events) {
+        logger.time('CALENDAR', 'Event merging');
+        logger.debug('CALENDAR', 'Starting event merging process', {
+            totalEvents: events.length
+        });
+        
+        // Group events by UID
+        const eventsByUid = new Map();
+        const overrides = [];
+        
+        for (const event of events) {
+            if (!event.uid) {
+                // Events without UID are kept as-is
+                continue;
+            }
+            
+            if (event.recurrenceId) {
+                // This is an override event
+                overrides.push(event);
+            } else {
+                // This is a base recurring event
+                if (!eventsByUid.has(event.uid)) {
+                    eventsByUid.set(event.uid, []);
+                }
+                eventsByUid.get(event.uid).push(event);
+            }
+        }
+        
+        logger.debug('CALENDAR', 'Event grouping complete', {
+            uniqueUIDs: eventsByUid.size,
+            overrideEvents: overrides.length
+        });
+        
+        const mergedEvents = [];
+        
+        // Process each UID group
+        for (const [uid, baseEvents] of eventsByUid) {
+            // Find overrides for this UID
+            const uidOverrides = overrides.filter(override => override.uid === uid);
+            
+            if (uidOverrides.length === 0) {
+                // No overrides, keep all base events
+                mergedEvents.push(...baseEvents);
+                continue;
+            }
+            
+            logger.debug('CALENDAR', `Processing UID ${uid}`, {
+                baseEvents: baseEvents.length,
+                overrides: uidOverrides.length
+            });
+            
+            // For each base event, check if it has overrides
+            for (const baseEvent of baseEvents) {
+                if (!baseEvent.recurring || !baseEvent.recurrence) {
+                    // Non-recurring event, keep as-is
+                    mergedEvents.push(baseEvent);
+                    continue;
+                }
+                
+                // Find overrides for this specific recurring event
+                const eventOverrides = uidOverrides.filter(override => {
+                    // Check if the override date matches any occurrence of the recurring event
+                    return this.isOverrideForRecurringEvent(override, baseEvent);
+                });
+                
+                if (eventOverrides.length === 0) {
+                    // No overrides for this recurring event
+                    mergedEvents.push(baseEvent);
+                    continue;
+                }
+                
+                // Create merged events for each override
+                for (const override of eventOverrides) {
+                    const mergedEvent = this.mergeEventWithOverride(baseEvent, override);
+                    mergedEvents.push(mergedEvent);
+                    
+                    logger.debug('CALENDAR', `Merged event with override`, {
+                        eventName: mergedEvent.name,
+                        overrideDate: override.recurrenceId ? override.recurrenceId.toISOString().split('T')[0] : 'unknown',
+                        hasRecurrence: !!mergedEvent.recurrence
+                    });
+                }
+                
+                // Remove the base recurring event since we've created overrides for it
+                // The base event will be filtered out in the final step
+            }
+        }
+        
+        // Add events without UID (they weren't processed above)
+        for (const event of events) {
+            if (!event.uid) {
+                mergedEvents.push(event);
+            }
+        }
+        
+        // Remove duplicate base recurring events that have overrides
+        const finalEvents = this.removeDuplicateBaseEvents(mergedEvents, overrides);
+        
+        logger.timeEnd('CALENDAR', 'Event merging');
+        logger.info('CALENDAR', 'Event merging completed', {
+            originalCount: events.length,
+            finalCount: finalEvents.length,
+            overridesProcessed: overrides.length
+        });
+        
+        return finalEvents;
+    }
+
+    // Check if an override event applies to a recurring event
+    isOverrideForRecurringEvent(override, baseEvent) {
+        if (!override.recurrenceId || !baseEvent.recurring || !baseEvent.recurrence) {
+            return false;
+        }
+        
+        // Check if the override date matches the base event's start date
+        // or if it matches any occurrence of the recurring pattern
+        const overrideDate = override.recurrenceId;
+        const baseDate = baseEvent.startDate;
+        
+        // Simple check: if the override date matches the base date, it's an override
+        if (this.isSameDate(overrideDate, baseDate)) {
+            return true;
+        }
+        
+        // For recurring events, check if the override date matches any occurrence
+        // of the recurring pattern. For now, we'll use a simple approach:
+        // if both events have the same UID and the override has a RECURRENCE-ID,
+        // then it's an override for that recurring event
+        if (override.uid === baseEvent.uid) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    // Check if two dates are the same (ignoring time)
+    isSameDate(date1, date2) {
+        if (!date1 || !date2) return false;
+        
+        const d1 = new Date(date1);
+        const d2 = new Date(date2);
+        
+        return d1.getFullYear() === d2.getFullYear() &&
+               d1.getMonth() === d2.getMonth() &&
+               d1.getDate() === d2.getDate();
+    }
+
+    // Merge a base recurring event with its override
+    mergeEventWithOverride(baseEvent, override) {
+        // Start with the base event data
+        const merged = { ...baseEvent };
+        
+        // Override specific fields from the override event
+        if (override.startDate) {
+            merged.startDate = override.startDate;
+        }
+        if (override.endDate) {
+            merged.endDate = override.endDate;
+        }
+        if (override.description) {
+            merged.unprocessedDescription = override.description;
+        }
+        if (override.location) {
+            merged.coordinates = override.coordinates;
+        }
+        
+        // Update derived fields
+        merged.day = this.getDayFromDate(merged.startDate);
+        merged.time = this.getTimeRange(merged.startDate, merged.endDate);
+        
+        // Parse description for additional data (this will override base event data)
+        if (override.description) {
+            const additionalData = this.parseKeyValueDescription(override.description);
+            if (additionalData) {
+                // Override specific fields
+                if (additionalData.bar) merged.bar = additionalData.bar;
+                if (additionalData.cover) merged.cover = additionalData.cover;
+                if (additionalData.image) merged.image = additionalData.image;
+                if (additionalData.tea) merged.tea = additionalData.tea;
+                if (additionalData.website) merged.website = additionalData.website;
+                if (additionalData.instagram) merged.instagram = additionalData.instagram;
+                if (additionalData.facebook) merged.facebook = additionalData.facebook;
+                if (additionalData.gmaps) merged.gmaps = additionalData.gmaps;
+                if (additionalData.ticketUrl) merged.ticketUrl = additionalData.ticketUrl;
+                if (additionalData.shortName) merged.shortName = additionalData.shortName;
+                if (additionalData.shorterName) merged.shorterName = additionalData.shorterName;
+                if (additionalData.type || additionalData.eventType) {
+                    merged.eventType = additionalData.type || additionalData.eventType;
+                }
+                
+                // Update links
+                merged.links = this.parseLinks(additionalData);
+            }
+        }
+        
+        // Mark this as an override event (but keep recurrence data)
+        merged.isOverride = true;
+        merged.overrideDate = override.recurrenceId;
+        
+        // Keep the original recurrence data from the base event
+        // This ensures we still show recurrence information
+        merged.recurring = baseEvent.recurring;
+        merged.recurrence = baseEvent.recurrence;
+        merged.eventType = baseEvent.eventType;
+        
+        return merged;
+    }
+
+    // Remove duplicate base events that have overrides
+    removeDuplicateBaseEvents(events, overrides) {
+        const overrideDates = new Set();
+        
+        // Collect all override dates
+        for (const override of overrides) {
+            if (override.recurrenceId) {
+                const dateStr = override.recurrenceId.toISOString().split('T')[0];
+                overrideDates.add(dateStr);
+            }
+        }
+        
+        // Filter out base events that have overrides for the same date
+        return events.filter(event => {
+            if (!event.recurring || !event.startDate) {
+                return true; // Keep non-recurring events
+            }
+            
+            // Don't filter out merged override events
+            if (event.isOverride) {
+                return true;
+            }
+            
+            const eventDateStr = event.startDate.toISOString().split('T')[0];
+            return !overrideDates.has(eventDateStr);
+        });
     }
 
     // Parse VTIMEZONE data from iCal text
@@ -282,14 +528,32 @@ class CalendarCore {
         } else if (line.startsWith('UID:')) {
             currentEvent.uid = line.substring(4).trim();
             parsed = true;
-        } else if (line.startsWith('DTSTAMP:') || line.startsWith('CREATED:') || 
+        } else if (line.startsWith('RECURRENCE-ID')) {
+            // Handle RECURRENCE-ID with potential timezone information
+            if (line.includes(';TZID=')) {
+                const match = line.match(/RECURRENCE-ID;TZID=([^:]+):(.+)/);
+                if (match) {
+                    currentEvent.recurrenceIdTimezone = match[1];
+                    currentEvent.recurrenceId = this.parseICalDate(`TZID=${match[1]}:${match[2]}`);
+                }
+            } else {
+                const dateMatch = line.match(/RECURRENCE-ID:(.+)/);
+                if (dateMatch) {
+                    currentEvent.recurrenceId = this.parseICalDate(dateMatch[1]);
+                }
+            }
+            parsed = true;
+        } else if (line.startsWith('BEGIN:VALARM') || line.startsWith('END:VALARM') ||
+                   line.startsWith('ACTION:') || line.startsWith('TRIGGER:') || line.startsWith('TRIGGER;') ||
+                   line.startsWith('X-APPLE-CREATOR-IDENTITY:') || line.startsWith('X-APPLE-CREATOR-TEAM-IDENTITY:') ||
+                   line.startsWith('DTSTAMP:') || line.startsWith('CREATED:') || 
                    line.startsWith('LAST-MODIFIED:') || line.startsWith('SEQUENCE:') || line.startsWith('STATUS:') || 
                    line.startsWith('TRANSP:') || line.startsWith('ORGANIZER:') || line.startsWith('ATTENDEE:') ||
                    line.startsWith('CLASS:') || line.startsWith('PRIORITY:') || line.startsWith('CATEGORIES:') ||
                    line.startsWith('COMMENT:') || line.startsWith('CONTACT:') || line.startsWith('REQUEST-STATUS:') ||
                    line.startsWith('RELATED-TO:') || line.startsWith('RESOURCES:') || line.startsWith('RDATE:') ||
                    line.startsWith('EXDATE:') || line.startsWith('EXRULE:') || line.startsWith('ATTACH:') ||
-                   line.startsWith('ALARM:') || line.startsWith('VALARM:') || line.startsWith('FREEBUSY:') ||
+                   line.startsWith('ALARM:') || line.startsWith('FREEBUSY:') ||
                    line.startsWith('DURATION:') || line.startsWith('TZID:') || line.startsWith('TZOFFSETFROM:') ||
                    line.startsWith('TZOFFSETTO:') || line.startsWith('TZNAME:') || line.startsWith('DTSTART:') ||
                    line.startsWith('FREQ:') || line.startsWith('UNTIL:') || line.startsWith('COUNT:') ||
@@ -326,7 +590,10 @@ class CalendarCore {
                 // Store calendar default timezone as fallback
                 calendarTimezone: this.calendarTimezone || null,
                 // Store whether the original time was in UTC format (for debugging)
-                wasUTC: calendarEvent.start?._wasUTC || false
+                wasUTC: calendarEvent.start?._wasUTC || false,
+                // Store UID and recurrence ID for event merging
+                uid: calendarEvent.uid || null,
+                recurrenceId: calendarEvent.recurrenceId || null
             };
             
 
