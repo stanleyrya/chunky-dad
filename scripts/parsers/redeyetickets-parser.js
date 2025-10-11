@@ -93,15 +93,18 @@ class RedEyeTicketsParser {
                 return null;
             }
             
-            // Extract date and time
-            const dateTime = this.extractDateTime(html);
+            // Extract venue and address FIRST so we can get city for date parsing
+            const venueInfo = this.extractVenueInfo(html);
+            
+            // Extract city from address or venue info
+            const city = this.extractCityFromVenue(venueInfo, cityConfig);
+            
+            // Extract date and time (now we can pass city info)
+            const dateTime = this.extractDateTime(html, cityConfig, city);
             if (!dateTime.startDate) {
                 console.warn('🎫 RedEyeTickets: No valid date found');
                 return null;
             }
-            
-            // Extract venue and address
-            const venueInfo = this.extractVenueInfo(html);
             
             // Extract description
             const description = this.extractDescription(html);
@@ -112,9 +115,6 @@ class RedEyeTicketsParser {
             // Extract image
             const image = this.extractImage(html);
             
-            // Extract city from address or venue info
-            const city = this.extractCityFromVenue(venueInfo, cityConfig);
-            
             // Let SharedCore handle timezone assignment based on detected city
             
             // Extract coordinates from venue info
@@ -124,7 +124,7 @@ class RedEyeTicketsParser {
             let endDate = dateTime.endDate;
             if (!endDate && dateTime.startDate && venueInfo.venue && venueInfo.venue.toLowerCase().includes('red eye')) {
                 // Get the timezone for the detected city, default to Eastern Time
-                const cityTimezone = 'America/New_York'; // Default to Eastern Time, will be updated later when city is detected
+                const cityTimezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : 'America/New_York';
                 
                 // Create end date by adding 1 day and setting to 4am
                 const startDate = new Date(dateTime.startDate);
@@ -208,7 +208,7 @@ class RedEyeTicketsParser {
     }
 
     // Extract date and time information
-    extractDateTime(html) {
+    extractDateTime(html, cityConfig = null, city = null) {
         // Look for date pattern: "Saturday, October 25, 2025 at 9pm"
         const dateTimeMatch = html.match(/<p[^>]*><strong>([^<]+)<\/strong>/i);
         if (dateTimeMatch) {
@@ -216,7 +216,7 @@ class RedEyeTicketsParser {
             console.log(`🎫 RedEyeTickets: Found date/time string: "${dateTimeString}"`);
             
             // Parse the date string
-            const parsedDate = this.parseRedEyeDateString(dateTimeString, cityConfig);
+            const parsedDate = this.parseRedEyeDateString(dateTimeString, cityConfig, city);
             if (parsedDate) {
                 return parsedDate;
             }
@@ -228,7 +228,7 @@ class RedEyeTicketsParser {
     }
 
     // Parse RedEyeTickets specific date format
-    parseRedEyeDateString(dateString, cityConfig = null) {
+    parseRedEyeDateString(dateString, cityConfig = null, city = null) {
         try {
             // Convert RedEyeTickets format to something Date constructor can handle
             // Input: "Saturday, October 25, 2025 at 9pm" or "Saturday, November 22, 2025 at 8:30pm"
@@ -261,7 +261,7 @@ class RedEyeTicketsParser {
                 const parsedSecond = parsedDate.getSeconds();
                 
                 // Get the timezone for the detected city, default to Eastern Time
-                const cityTimezone = 'America/New_York'; // Default to Eastern Time, will be updated later when city is detected
+                const cityTimezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : 'America/New_York';
                 
                 // Use proper timezone conversion instead of hardcoded offsets
                 const adjustedDate = this.convertLocalTimeToUTC(
