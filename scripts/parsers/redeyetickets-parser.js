@@ -123,10 +123,23 @@ class RedEyeTicketsParser {
             // Set default end date for Red Eye bar events (4am next day)
             let endDate = dateTime.endDate;
             if (!endDate && dateTime.startDate && venueInfo.venue && venueInfo.venue.toLowerCase().includes('red eye')) {
-                endDate = new Date(dateTime.startDate);
-                endDate.setDate(endDate.getDate() + 1);
-                endDate.setHours(4, 0, 0, 0);
-                console.log(`🎫 RedEyeTickets: Set default end date for Red Eye bar event: ${endDate.toISOString()}`);
+                // Get the timezone for the detected city, default to Eastern Time
+                const cityTimezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : 'America/New_York';
+                
+                // Create end date by adding 1 day and setting to 4am
+                const startDate = new Date(dateTime.startDate);
+                const nextDay = new Date(startDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+                
+                // Extract date components for the next day
+                const year = nextDay.getFullYear();
+                const month = nextDay.getMonth();
+                const day = nextDay.getDate();
+                
+                // Use proper timezone conversion for 4am in the event's timezone
+                endDate = this.convertLocalTimeToUTC(year, month, day, 4, 0, 0, cityTimezone);
+                
+                console.log(`🎫 RedEyeTickets: Set default end date for Red Eye bar event: ${endDate.toISOString()} (4am ${cityTimezone})`);
             }
 
             const event = {
@@ -203,30 +216,19 @@ class RedEyeTicketsParser {
             console.log(`🎫 RedEyeTickets: Found date/time string: "${dateTimeString}"`);
             
             // Parse the date string
-            const parsedDate = this.parseRedEyeDateString(dateTimeString);
+            const parsedDate = this.parseRedEyeDateString(dateTimeString, cityConfig, city);
             if (parsedDate) {
                 return parsedDate;
             }
         }
         
-        // Fallback: try to extract from meta description
-        const metaDescMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
-        if (metaDescMatch) {
-            const desc = metaDescMatch[1];
-            const dateMatch = desc.match(/(\w+\.\s+\d{1,2},?\s+\d{4})/i);
-            if (dateMatch) {
-                const parsedDate = this.parseRedEyeDateString(dateMatch[1] + ' at 9pm');
-                if (parsedDate) {
-                    return parsedDate;
-                }
-            }
-        }
+        // No fallback for time - only parse if time is explicitly found
         
         return { startDate: null, endDate: null };
     }
 
     // Parse RedEyeTickets specific date format
-    parseRedEyeDateString(dateString) {
+    parseRedEyeDateString(dateString, cityConfig = null, city = null) {
         try {
             // Convert RedEyeTickets format to something Date constructor can handle
             // Input: "Saturday, October 25, 2025 at 9pm" or "Saturday, November 22, 2025 at 8:30pm"
@@ -258,18 +260,17 @@ class RedEyeTicketsParser {
                 const parsedMinute = parsedDate.getMinutes();
                 const parsedSecond = parsedDate.getSeconds();
                 
-                // Create a UTC date with the same components, then adjust for Eastern Time
-                // This ensures the time is interpreted as Eastern Time regardless of system timezone
-                const utcDate = new Date(Date.UTC(parsedYear, parsedMonth, parsedDay, parsedHour, parsedMinute, parsedSecond, 0));
+                // Get the timezone for the detected city, default to Eastern Time
+                const cityTimezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : 'America/New_York';
                 
-                // Adjust for Eastern Time offset (EDT is UTC-4, so subtract 4 hours from UTC to get EDT)
-                // Since we want the time to be interpreted as Eastern Time, we need to add 4 hours to UTC
-                const easternAdjustedDate = new Date(utcDate.getTime() + (4 * 60 * 60 * 1000));
+                // Use proper timezone conversion instead of hardcoded offsets
+                const adjustedDate = this.convertLocalTimeToUTC(
+                    parsedYear, parsedMonth, parsedDay, parsedHour, parsedMinute, parsedSecond, cityTimezone
+                );
                 
                 console.log(`🎫 RedEyeTickets: Parsed components: ${parsedYear}-${parsedMonth+1}-${parsedDay} ${parsedHour}:${parsedMinute.toString().padStart(2,'0')}`);
-                console.log(`🎫 RedEyeTickets: Created as UTC: ${utcDate.toISOString()}`);
-                console.log(`🎫 RedEyeTickets: Adjusted for Eastern Time: ${easternAdjustedDate.toISOString()}`);
-                return { startDate: easternAdjustedDate, endDate: null };
+                console.log(`🎫 RedEyeTickets: Converted to UTC using ${cityTimezone}: ${adjustedDate.toISOString()}`);
+                return { startDate: adjustedDate, endDate: null };
             }
             
             // Handle format: "Oct. 25, 2025" (from meta description) - NO TIME FALLBACK
@@ -689,6 +690,61 @@ class RedEyeTicketsParser {
         // In the future, this could be enhanced with geocoding services
         console.log(`🎫 RedEyeTickets: No coordinates found for address: "${venueInfo.address}"`);
         return null;
+    }
+
+    // Helper method to get timezone offset in minutes using Intl.DateTimeFormat
+    getTimezoneOffset(timezone, date = new Date()) {
+        try {
+            // Use Intl.DateTimeFormat to get the correct offset for this timezone at this date
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            });
+            
+            const parts = formatter.formatToParts(date);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            
+            if (offsetPart && offsetPart.value) {
+                // Parse offset like "GMT-04:00" or "GMT+09:00"
+                const offsetMatch = offsetPart.value.match(/GMT([+-])(\d{2}):(\d{2})/);
+                if (offsetMatch) {
+                    const sign = offsetMatch[1] === '+' ? 1 : -1;
+                    const offsetHours = parseInt(offsetMatch[2]);
+                    const offsetMinutes = parseInt(offsetMatch[3]);
+                    const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
+                    
+                    console.log(`🎫 RedEyeTickets: Got timezone offset for ${timezone}: ${totalOffsetMinutes} minutes`);
+                    return totalOffsetMinutes;
+                }
+            }
+            
+            console.warn(`🎫 RedEyeTickets: Could not parse timezone offset for ${timezone}, using default`);
+            return -300; // Default to EST (UTC-5)
+        } catch (error) {
+            console.warn(`🎫 RedEyeTickets: Error getting timezone offset for ${timezone}: ${error.message}`);
+            return -300; // Default to EST (UTC-5)
+        }
+    }
+
+    // Helper method to convert a local time to UTC using proper timezone handling
+    convertLocalTimeToUTC(year, month, day, hour, minute, second, timezone) {
+        try {
+            // Create a date in the local timezone
+            const localDate = new Date(year, month, day, hour, minute, second, 0);
+            
+            // Get the timezone offset for this specific date
+            const offsetMinutes = this.getTimezoneOffset(timezone, localDate);
+            
+            // Convert to UTC by subtracting the offset
+            const utcDate = new Date(localDate.getTime() - (offsetMinutes * 60 * 1000));
+            
+            console.log(`🎫 RedEyeTickets: Converted ${year}-${month+1}-${day} ${hour}:${minute} ${timezone} to UTC: ${utcDate.toISOString()}`);
+            return utcDate;
+        } catch (error) {
+            console.warn(`🎫 RedEyeTickets: Error converting local time to UTC: ${error.message}`);
+            // Fallback to simple UTC conversion
+            return new Date(Date.UTC(year, month, day, hour, minute, second, 0));
+        }
     }
 }
 
