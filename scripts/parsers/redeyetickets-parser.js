@@ -93,15 +93,18 @@ class RedEyeTicketsParser {
                 return null;
             }
             
-            // Extract date and time
-            const dateTime = this.extractDateTime(html);
+            // Extract venue and address FIRST so we can get city for date parsing
+            const venueInfo = this.extractVenueInfo(html);
+            
+            // Extract city from address or venue info
+            const city = this.extractCityFromVenue(venueInfo, cityConfig);
+            
+            // Extract date and time (now we can pass city info)
+            const dateTime = this.extractDateTime(html, cityConfig, city);
             if (!dateTime.startDate) {
                 console.warn('🎫 RedEyeTickets: No valid date found');
                 return null;
             }
-            
-            // Extract venue and address
-            const venueInfo = this.extractVenueInfo(html);
             
             // Extract description
             const description = this.extractDescription(html);
@@ -111,9 +114,6 @@ class RedEyeTicketsParser {
             
             // Extract image
             const image = this.extractImage(html);
-            
-            // Extract city from address or venue info
-            const city = this.extractCityFromVenue(venueInfo, cityConfig);
             
             // Let SharedCore handle timezone assignment based on detected city
             
@@ -208,7 +208,7 @@ class RedEyeTicketsParser {
     }
 
     // Extract date and time information
-    extractDateTime(html) {
+    extractDateTime(html, cityConfig = null, city = null) {
         // Look for date pattern: "Saturday, October 25, 2025 at 9pm"
         const dateTimeMatch = html.match(/<p[^>]*><strong>([^<]+)<\/strong>/i);
         if (dateTimeMatch) {
