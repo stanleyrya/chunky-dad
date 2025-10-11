@@ -124,7 +124,7 @@ class RedEyeTicketsParser {
             let endDate = dateTime.endDate;
             if (!endDate && dateTime.startDate && venueInfo.venue && venueInfo.venue.toLowerCase().includes('red eye')) {
                 // Get the timezone for the detected city, default to Eastern Time
-                const cityTimezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : 'America/New_York';
+                const cityTimezone = 'America/New_York'; // Default to Eastern Time, will be updated later when city is detected
                 
                 // Create end date by adding 1 day and setting to 4am
                 const startDate = new Date(dateTime.startDate);
@@ -216,7 +216,7 @@ class RedEyeTicketsParser {
             console.log(`🎫 RedEyeTickets: Found date/time string: "${dateTimeString}"`);
             
             // Parse the date string
-            const parsedDate = this.parseRedEyeDateString(dateTimeString, cityConfig, city);
+            const parsedDate = this.parseRedEyeDateString(dateTimeString, cityConfig);
             if (parsedDate) {
                 return parsedDate;
             }
@@ -228,7 +228,7 @@ class RedEyeTicketsParser {
     }
 
     // Parse RedEyeTickets specific date format
-    parseRedEyeDateString(dateString, cityConfig = null, city = null) {
+    parseRedEyeDateString(dateString, cityConfig = null) {
         try {
             // Convert RedEyeTickets format to something Date constructor can handle
             // Input: "Saturday, October 25, 2025 at 9pm" or "Saturday, November 22, 2025 at 8:30pm"
@@ -261,7 +261,7 @@ class RedEyeTicketsParser {
                 const parsedSecond = parsedDate.getSeconds();
                 
                 // Get the timezone for the detected city, default to Eastern Time
-                const cityTimezone = city && cityConfig && cityConfig[city] ? cityConfig[city].timezone : 'America/New_York';
+                const cityTimezone = 'America/New_York'; // Default to Eastern Time, will be updated later when city is detected
                 
                 // Use proper timezone conversion instead of hardcoded offsets
                 const adjustedDate = this.convertLocalTimeToUTC(
