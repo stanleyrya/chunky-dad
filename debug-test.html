@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Calendar Parsing</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; white-space: pre-wrap; }
+        .event { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Debug Calendar Parsing</h1>
+    <div id="results"></div>
+
+    <script src="js/logger.js"></script>
+    <script src="js/calendar-core.js"></script>
+    <script>
+        async function debugParsing() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                // Load the NYC calendar data
+                const response = await fetch('data/calendars/new-york.ics');
+                const icalText = await response.text();
+                
+                // Parse the calendar
+                const calendar = new CalendarCore();
+                const events = calendar.parseICalData(icalText);
+                
+                // Find GOLDILOXX events
+                const goldiloxxEvents = events.filter(e => e.name && e.name.includes('GOLDILOXX'));
+                
+                resultsDiv.innerHTML = `
+                    <h2>Debug Results</h2>
+                    <p><strong>Total events parsed:</strong> ${events.length}</p>
+                    <p><strong>GOLDILOXX events found:</strong> ${goldiloxxEvents.length}</p>
+                    
+                    <h3>All Events (first 10):</h3>
+                    <pre>${JSON.stringify(events.slice(0, 10).map(e => ({
+                        name: e.name,
+                        uid: e.uid,
+                        recurring: e.recurring,
+                        recurrenceId: e.recurrenceId,
+                        startDate: e.startDate ? e.startDate.toISOString().split('T')[0] : null
+                    })), null, 2)}</pre>
+                    
+                    <h3>GOLDILOXX Events:</h3>
+                    ${goldiloxxEvents.map((event, index) => `
+                        <div class="event">
+                            <h4>Event ${index + 1}</h4>
+                            <pre>${JSON.stringify({
+                                name: event.name,
+                                uid: event.uid,
+                                recurring: event.recurring,
+                                recurrence: event.recurrence,
+                                recurrenceId: event.recurrenceId,
+                                startDate: event.startDate ? event.startDate.toISOString().split('T')[0] : null,
+                                bar: event.bar,
+                                cover: event.cover
+                            }, null, 2)}</pre>
+                        </div>
+                    `).join('')}
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Debug error:', error);
+            }
+        }
+        
+        // Run the debug when page loads
+        debugParsing();
+    </script>
+</body>
+</html>

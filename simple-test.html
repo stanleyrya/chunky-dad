@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test</title>
+</head>
+<body>
+    <h1>Simple Test</h1>
+    <div id="output"></div>
+
+    <script src="js/logger.js"></script>
+    <script src="js/calendar-core.js"></script>
+    <script>
+        console.log('Script loaded');
+        
+        async function test() {
+            try {
+                console.log('Starting test...');
+                const response = await fetch('data/calendars/new-york.ics');
+                console.log('Response received:', response.status);
+                
+                const icalText = await response.text();
+                console.log('iCal text length:', icalText.length);
+                
+                const calendar = new CalendarCore();
+                console.log('Calendar created');
+                
+                const events = calendar.parseICalData(icalText);
+                console.log('Events parsed:', events.length);
+                
+                const goldiloxxEvents = events.filter(e => e.name && e.name.includes('GOLDILOXX'));
+                console.log('GOLDILOXX events:', goldiloxxEvents.length);
+                
+                goldiloxxEvents.forEach((event, index) => {
+                    console.log(`GOLDILOXX ${index + 1}:`, {
+                        name: event.name,
+                        uid: event.uid,
+                        recurring: event.recurring,
+                        recurrenceId: event.recurrenceId,
+                        startDate: event.startDate ? event.startDate.toISOString().split('T')[0] : null
+                    });
+                });
+                
+                document.getElementById('output').innerHTML = `
+                    <p>Total events: ${events.length}</p>
+                    <p>GOLDILOXX events: ${goldiloxxEvents.length}</p>
+                    <p>Check console for details</p>
+                `;
+                
+            } catch (error) {
+                console.error('Test error:', error);
+                document.getElementById('output').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>

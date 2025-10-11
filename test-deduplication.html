@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Calendar Deduplication</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .event { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .recurring { background-color: #e8f4f8; }
+        .exception { background-color: #fff3cd; }
+        .merged { background-color: #d4edda; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Calendar Deduplication Test</h1>
+    <div id="results"></div>
+
+    <script src="js/logger.js"></script>
+    <script src="js/calendar-core.js"></script>
+    <script>
+        // Test the deduplication logic
+        async function testDeduplication() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                // Load the NYC calendar data
+                const response = await fetch('data/calendars/new-york.ics');
+                const icalText = await response.text();
+                
+                // Parse the calendar
+                const calendar = new CalendarCore();
+                const events = calendar.parseICalData(icalText);
+                
+                // Find GOLDILOXX events
+                const goldiloxxEvents = events.filter(e => e.name && e.name.includes('GOLDILOXX'));
+                
+                resultsDiv.innerHTML = `
+                    <h2>Test Results</h2>
+                    <p><strong>Total events parsed:</strong> ${events.length}</p>
+                    <p><strong>GOLDILOXX events found:</strong> ${goldiloxxEvents.length}</p>
+                    
+                    <h3>GOLDILOXX Events:</h3>
+                    ${goldiloxxEvents.map((event, index) => `
+                        <div class="event ${event.recurring ? 'recurring' : 'exception'}">
+                            <h4>Event ${index + 1}</h4>
+                            <p><strong>Name:</strong> ${event.name}</p>
+                            <p><strong>Date:</strong> ${event.startDate ? event.startDate.toISOString().split('T')[0] : 'N/A'}</p>
+                            <p><strong>Time:</strong> ${event.time || 'N/A'}</p>
+                            <p><strong>Recurring:</strong> ${event.recurring ? 'Yes' : 'No'}</p>
+                            <p><strong>Recurrence:</strong> ${event.recurrence || 'N/A'}</p>
+                            <p><strong>UID:</strong> ${event.uid || 'N/A'}</p>
+                            <p><strong>Recurrence ID:</strong> ${event.recurrenceId ? event.recurrenceId.toISOString().split('T')[0] : 'N/A'}</p>
+                            <p><strong>Bar:</strong> ${event.bar || 'N/A'}</p>
+                            <p><strong>Cover:</strong> ${event.cover || 'N/A'}</p>
+                        </div>
+                    `).join('')}
+                    
+                    <h3>Raw Event Data:</h3>
+                    <pre>${JSON.stringify(goldiloxxEvents, null, 2)}</pre>
+                `;
+                
+                // Check if we have exactly one GOLDILOXX event (the merged one)
+                if (goldiloxxEvents.length === 1) {
+                    resultsDiv.innerHTML += '<p style="color: green; font-weight: bold;">✅ SUCCESS: Only one GOLDILOXX event found (deduplication working!)</p>';
+                } else {
+                    resultsDiv.innerHTML += `<p style="color: red; font-weight: bold;">❌ FAILED: Expected 1 GOLDILOXX event, found ${goldiloxxEvents.length}</p>`;
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Test error:', error);
+            }
+        }
+        
+        // Run the test when page loads
+        testDeduplication();
+    </script>
+</body>
+</html>

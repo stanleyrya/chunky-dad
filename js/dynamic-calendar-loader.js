@@ -1865,7 +1865,10 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Generate event card
     generateEventCard(event) {
-        const linksHtml = event.links ? event.links.map(link => {
+        // Get effective event data (handles exceptions for recurring events)
+        const effectiveEvent = this.getEffectiveEventData(event);
+        
+        const linksHtml = effectiveEvent.links ? effectiveEvent.links.map(link => {
             const labelLower = (link.label || '').toLowerCase();
             let iconClass = 'bi-link-45deg';
             let aria = 'Open link';
@@ -1881,9 +1884,9 @@ class DynamicCalendarLoader extends CalendarCore {
             return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="${aria}" title="${aria}"><i class="bi ${iconClass}"></i></a>`;
         }).join(' ') : '';
 
-        const teaHtml = this.generateTeaHtml(event);
-        const locationHtml = this.generateLocationHtml(event);
-        const coverHtml = this.generateCoverHtml(event);
+        const teaHtml = this.generateTeaHtml(effectiveEvent);
+        const locationHtml = this.generateLocationHtml(effectiveEvent);
+        const coverHtml = this.generateCoverHtml(effectiveEvent);
 
         // Get current calendar period bounds for contextual date display
         const periodBounds = this.getCurrentPeriodBounds();
@@ -1893,27 +1896,27 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.getEnhancedDayTimeDisplay(event, this.currentView, periodBounds);
         };
         
-        const recurringBadgeContent = this.getRecurringBadgeContent(event);
+        const recurringBadgeContent = this.getRecurringBadgeContent(effectiveEvent);
         const recurringBadge = recurringBadgeContent ? 
             `<span class="recurring-badge">${recurringBadgeContent}</span>` : '';
         
-        const dateBadgeContent = this.getDateBadgeContent(event, periodBounds);
+        const dateBadgeContent = this.getDateBadgeContent(effectiveEvent, periodBounds);
         const dateBadge = dateBadgeContent ? 
             `<span class="date-badge">${dateBadgeContent}</span>` : '';
         
-        const notCheckedBadge = event.notChecked ? 
+        const notCheckedBadge = effectiveEvent.notChecked ? 
             `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
 
         // Add distance badge if location features are enabled and distance is available
-        const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ? 
-            `<span class="distance-badge" title="Distance from your location"><i class="bi bi-geo-alt"></i> ${event.distanceFromUser} mi</span>` : '';
+        const distanceBadge = this.locationFeaturesEnabled && effectiveEvent.distanceFromUser !== undefined ? 
+            `<span class="distance-badge" title="Distance from your location"><i class="bi bi-geo-alt"></i> ${effectiveEvent.distanceFromUser} mi</span>` : '';
 
         return `
-            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
+            <div class="event-card detailed" data-event-slug="${effectiveEvent.slug}" data-lat="${effectiveEvent.coordinates?.lat || ''}" data-lng="${effectiveEvent.coordinates?.lng || ''}">
                 <div class="event-header">
-                    <h3>${event.name}</h3>
+                    <h3>${effectiveEvent.name}</h3>
                     <div class="event-meta">
-                        <div class="event-day">${formatDayTime(event)}</div>
+                        <div class="event-day">${formatDayTime(effectiveEvent)}</div>
                         ${recurringBadge}
                         ${dateBadge}
                         ${notCheckedBadge}
@@ -1926,7 +1929,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
-                        <button class="share-event-btn icon-only" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day} ${event.time}" title="Share this event" aria-label="Share this event">
+                        <button class="share-event-btn icon-only" data-event-slug="${effectiveEvent.slug}" data-event-name="${effectiveEvent.name}" data-event-venue="${effectiveEvent.bar || ''}" data-event-time="${effectiveEvent.day} ${effectiveEvent.time}" title="Share this event" aria-label="Share this event">
                             <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
                         </button>
                     </div>
@@ -3254,6 +3257,26 @@ class DynamicCalendarLoader extends CalendarCore {
             });
         });
         logger.debug('EVENT', `Attached selection handlers to ${cards.length} event cards`);
+    }
+
+    // Get effective event data for a specific date (handles exceptions)
+    getEffectiveEventData(event, targetDate = null) {
+        // If this is a merged recurring event with exceptions, check for exception data
+        if (event.getEffectiveDataForDate && typeof event.getEffectiveDataForDate === 'function') {
+            const dateToCheck = targetDate || event.startDate;
+            const exceptionData = event.getEffectiveDataForDate(dateToCheck);
+            if (exceptionData) {
+                logger.debug('CALENDAR', 'Using exception data for event', {
+                    eventName: event.name,
+                    targetDate: dateToCheck,
+                    isException: true
+                });
+                return exceptionData;
+            }
+        }
+        
+        // Return the original event data
+        return event;
     }
 
     // Ensure view toggle buttons reflect current view

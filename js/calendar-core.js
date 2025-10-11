@@ -152,7 +152,183 @@ class CalendarCore {
             }, 0) / events.length) : 0
         });
         
-        return events;
+        // Deduplicate recurring events with their exceptions
+        const deduplicatedEvents = this.deduplicateRecurringEvents(events);
+        
+        logger.info('CALENDAR', `🔄 Deduplication complete. ${events.length} → ${deduplicatedEvents.length} events`, {
+            removedDuplicates: events.length - deduplicatedEvents.length
+        });
+        
+        return deduplicatedEvents;
+    }
+
+    // Deduplicate recurring events with their exceptions
+    deduplicateRecurringEvents(events) {
+        logger.time('CALENDAR', 'Event deduplication');
+        
+        // Group events by UID
+        const eventsByUid = new Map();
+        const exceptionEvents = [];
+        
+        for (const event of events) {
+            if (!event.uid) {
+                // Events without UID are kept as-is - add them to the final result
+                continue;
+            }
+            
+            if (event.recurrenceId) {
+                // This is an exception event (has RECURRENCE-ID)
+                exceptionEvents.push(event);
+            } else {
+                // This is a regular event (recurring or one-time)
+                if (!eventsByUid.has(event.uid)) {
+                    eventsByUid.set(event.uid, []);
+                }
+                eventsByUid.get(event.uid).push(event);
+            }
+        }
+        
+        logger.debug('CALENDAR', 'Event grouping complete', {
+            totalEvents: events.length,
+            uniqueUIDs: eventsByUid.size,
+            exceptionEvents: exceptionEvents.length
+        });
+        
+        const deduplicatedEvents = [];
+        
+        // Add events without UID first (they can't be deduplicated)
+        for (const event of events) {
+            if (!event.uid) {
+                deduplicatedEvents.push(event);
+            }
+        }
+        
+        // Process each UID group
+        for (const [uid, uidEvents] of eventsByUid) {
+            if (uidEvents.length === 1) {
+                // Single event - keep as-is
+                deduplicatedEvents.push(uidEvents[0]);
+                continue;
+            }
+            
+            // Multiple events with same UID - find the recurring one and exceptions
+            const recurringEvent = uidEvents.find(e => e.recurring && e.recurrence);
+            const oneTimeEvents = uidEvents.filter(e => !e.recurring || !e.recurrence);
+            
+            if (!recurringEvent) {
+                // No recurring event found - keep all one-time events
+                deduplicatedEvents.push(...uidEvents);
+                continue;
+            }
+            
+            // Find exceptions for this recurring event
+            const exceptions = exceptionEvents.filter(e => e.uid === uid);
+            
+            if (exceptions.length === 0) {
+                // No exceptions - keep the recurring event
+                deduplicatedEvents.push(recurringEvent);
+                if (oneTimeEvents.length > 0) {
+                    // Keep one-time events as separate events
+                    deduplicatedEvents.push(...oneTimeEvents);
+                }
+                continue;
+            }
+            
+            // Merge recurring event with its exceptions
+            const mergedEvent = this.mergeRecurringWithExceptions(recurringEvent, exceptions);
+            deduplicatedEvents.push(mergedEvent);
+            
+            // Keep one-time events as separate events
+            if (oneTimeEvents.length > 0) {
+                deduplicatedEvents.push(...oneTimeEvents);
+            }
+        }
+        
+        // Process exception events that have corresponding recurring events
+        // (these were already merged above, so we skip them here)
+        const processedExceptionUIDs = new Set();
+        for (const [uid, uidEvents] of eventsByUid) {
+            const recurringEvent = uidEvents.find(e => e.recurring && e.recurrence);
+            if (recurringEvent) {
+                const exceptions = exceptionEvents.filter(e => e.uid === uid);
+                if (exceptions.length > 0) {
+                    exceptions.forEach(exception => processedExceptionUIDs.add(exception.uid));
+                }
+            }
+        }
+        
+        // Add exception events that don't have a corresponding recurring event
+        for (const exception of exceptionEvents) {
+            if (!eventsByUid.has(exception.uid) && !processedExceptionUIDs.has(exception.uid)) {
+                // This exception doesn't have a corresponding recurring event
+                // Convert it to a regular one-time event
+                const oneTimeEvent = { ...exception };
+                delete oneTimeEvent.recurrenceId;
+                oneTimeEvent.recurring = false;
+                oneTimeEvent.recurrence = null;
+                deduplicatedEvents.push(oneTimeEvent);
+            }
+        }
+        
+        logger.timeEnd('CALENDAR', 'Event deduplication');
+        return deduplicatedEvents;
+    }
+
+    // Merge a recurring event with its exceptions
+    mergeRecurringWithExceptions(recurringEvent, exceptions) {
+        logger.debug('CALENDAR', 'Merging recurring event with exceptions', {
+            eventName: recurringEvent.name,
+            exceptionsCount: exceptions.length,
+            recurringUID: recurringEvent.uid
+        });
+        
+        // Create a map of exception dates for quick lookup
+        const exceptionMap = new Map();
+        for (const exception of exceptions) {
+            const exceptionDate = this.getDateKey(exception.startDate);
+            exceptionMap.set(exceptionDate, exception);
+        }
+        
+        // Create a new event that combines recurring data with exception overrides
+        const mergedEvent = {
+            ...recurringEvent,
+            // Store the original recurring data
+            _originalRecurring: {
+                recurrence: recurringEvent.recurrence,
+                recurring: recurringEvent.recurring,
+                eventType: recurringEvent.eventType
+            },
+            // Store exceptions for reference
+            _exceptions: exceptions,
+            // Add a method to get the effective data for a specific date
+            getEffectiveDataForDate: (date) => {
+                const dateKey = this.getDateKey(date);
+                const exception = exceptionMap.get(dateKey);
+                if (exception) {
+                    // Return exception data but preserve recurrence info
+                    return {
+                        ...exception,
+                        // Preserve recurrence data from the original recurring event
+                        recurring: recurringEvent.recurring,
+                        recurrence: recurringEvent.recurrence,
+                        eventType: recurringEvent.eventType,
+                        // Mark this as an exception
+                        isException: true,
+                        exceptionDate: date
+                    };
+                }
+                return null; // No exception for this date
+            }
+        };
+        
+        return mergedEvent;
+    }
+
+    // Get a date key for comparison (YYYY-MM-DD format)
+    getDateKey(date) {
+        if (!date) return null;
+        const d = date instanceof Date ? date : new Date(date);
+        return d.toISOString().split('T')[0];
     }
 
     // Parse VTIMEZONE data from iCal text
@@ -279,6 +455,20 @@ class CalendarCore {
             }
         } else if (line.startsWith('RRULE:')) {
             currentEvent.recurrence = line.substring(6);
+        } else if (line.startsWith('RECURRENCE-ID')) {
+            // Handle RECURRENCE-ID for exception events
+            if (line.includes(';TZID=')) {
+                const match = line.match(/RECURRENCE-ID;TZID=([^:]+):(.+)/);
+                if (match) {
+                    currentEvent.recurrenceId = this.parseICalDate(`TZID=${match[1]}:${match[2]}`);
+                }
+            } else {
+                const dateMatch = line.match(/RECURRENCE-ID:(.+)/);
+                if (dateMatch) {
+                    currentEvent.recurrenceId = this.parseICalDate(dateMatch[1]);
+                }
+            }
+            parsed = true;
         } else if (line.startsWith('UID:')) {
             currentEvent.uid = line.substring(4).trim();
             parsed = true;
@@ -326,7 +516,10 @@ class CalendarCore {
                 // Store calendar default timezone as fallback
                 calendarTimezone: this.calendarTimezone || null,
                 // Store whether the original time was in UTC format (for debugging)
-                wasUTC: calendarEvent.start?._wasUTC || false
+                wasUTC: calendarEvent.start?._wasUTC || false,
+                // Store UID and recurrence ID for deduplication
+                uid: calendarEvent.uid || null,
+                recurrenceId: calendarEvent.recurrenceId || null
             };
             
 
