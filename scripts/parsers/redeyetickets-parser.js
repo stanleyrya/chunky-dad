@@ -729,13 +729,18 @@ class RedEyeTicketsParser {
     // Helper method to convert a local time to UTC using proper timezone handling
     convertLocalTimeToUTC(year, month, day, hour, minute, second, timezone) {
         try {
-            // Create a date in the local timezone
-            const localDate = new Date(year, month, day, hour, minute, second, 0);
+            // Create a date string in ISO format
+            const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
+            
+            // Create a date object representing the local time in the target timezone
+            const localDate = new Date(dateString + 'Z'); // Start with UTC
             
             // Get the timezone offset for this specific date
             const offsetMinutes = this.getTimezoneOffset(timezone, localDate);
             
-            // Convert to UTC by subtracting the offset
+            // Convert from local time to UTC
+            // The offset represents how many minutes the timezone is behind UTC
+            // So to convert local time to UTC, we SUBTRACT the offset (since local time is behind UTC)
             const utcDate = new Date(localDate.getTime() - (offsetMinutes * 60 * 1000));
             
             console.log(`🎫 RedEyeTickets: Converted ${year}-${month+1}-${day} ${hour}:${minute} ${timezone} to UTC: ${utcDate.toISOString()}`);
