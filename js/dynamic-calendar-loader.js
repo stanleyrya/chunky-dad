@@ -2329,7 +2329,6 @@ class DynamicCalendarLoader extends CalendarCore {
             // If there are multiple events for the same date/UID, prioritize overrides
             const overrideEvents = eventGroup.filter(e => e.recurrenceId);
             const expandedRecurringEvents = eventGroup.filter(e => e.isExpanded && e.recurring && !e.recurrenceId);
-            const originalRecurringEvents = eventGroup.filter(e => e.recurring && !e.recurrenceId && !e.isExpanded);
             
             // Keep override events if they exist, otherwise keep expanded recurring events
             if (overrideEvents.length > 0) {
@@ -2338,24 +2337,15 @@ class DynamicCalendarLoader extends CalendarCore {
                     date: key.split('-')[0],
                     uid: key.split('-')[1],
                     overrideCount: overrideEvents.length,
-                    expandedRecurringCount: expandedRecurringEvents.length,
-                    originalRecurringCount: originalRecurringEvents.length
+                    expandedRecurringCount: expandedRecurringEvents.length
                 });
-            } else if (expandedRecurringEvents.length > 0) {
+            } else {
                 // Keep expanded recurring events (these are the individual occurrences)
                 deduplicatedEvents.push(...expandedRecurringEvents);
                 logger.debug('CALENDAR', 'Keeping expanded recurring events', {
                     date: key.split('-')[0],
                     uid: key.split('-')[1],
                     expandedRecurringCount: expandedRecurringEvents.length
-                });
-            } else {
-                // Fallback to original recurring events (shouldn't happen with new logic)
-                deduplicatedEvents.push(...originalRecurringEvents);
-                logger.debug('CALENDAR', 'Keeping original recurring events (fallback)', {
-                    date: key.split('-')[0],
-                    uid: key.split('-')[1],
-                    originalRecurringCount: originalRecurringEvents.length
                 });
             }
         }
