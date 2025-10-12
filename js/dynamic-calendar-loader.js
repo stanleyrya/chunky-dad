@@ -2247,7 +2247,8 @@ class DynamicCalendarLoader extends CalendarCore {
         
         for (const event of events) {
             const eventDate = new Date(event.startDate);
-            const dateKey = eventDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            // Normalize to UTC date for consistent comparison across timezones
+            const dateKey = eventDate.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
             const uid = event.uid || event.slug || event.name;
             const key = `${dateKey}-${uid}`;
             
