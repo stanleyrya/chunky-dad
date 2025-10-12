@@ -2113,8 +2113,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return isInPeriod;
         });
         
-        // Apply simple deduplication: for each date, show either recurring event OR override, never both
-        const deduplicatedEvents = this.deduplicateByDate(filtered);
+        // Apply deduplication based on UID and recurrenceId
+        const deduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filtered);
         
         // Sort events by upcoming time (earliest first)
         deduplicatedEvents.sort((a, b) => {
@@ -2293,68 +2293,77 @@ class DynamicCalendarLoader extends CalendarCore {
         return eventDate.getDay() === checkDate.getDay();
     }
 
-    // Simple deduplication: for each date, show either recurring event OR override, never both
-    deduplicateByDate(events) {
-        logger.debug('CALENDAR', 'Applying simple date-based deduplication', {
+    // Deduplicate events based on UID and recurrenceId (null is ok for recurrenceId)
+    deduplicateByUIDAndRecurrenceId(events) {
+        logger.debug('CALENDAR', 'Applying UID and recurrenceId-based deduplication', {
             totalEvents: events.length
         });
 
-        // Group events by date and UID
-        const eventsByDateAndUID = new Map();
+        // Group events by UID and recurrenceId
+        const eventsByUIDAndRecurrenceId = new Map();
         
         for (const event of events) {
-            const eventDate = new Date(event.startDate);
-            // Use local date components instead of UTC to avoid timezone conversion issues
-            const dateKey = this.getLocalDateKey(eventDate);
-            const uid = event.uid || event.slug || event.name;
-            const key = `${dateKey}-${uid}`;
-            
-            
-            if (!eventsByDateAndUID.has(key)) {
-                eventsByDateAndUID.set(key, []);
-            }
-            eventsByDateAndUID.get(key).push(event);
-        }
-        
-        // For each date/UID combination, keep only the appropriate event
-        const deduplicatedEvents = [];
-        
-        for (const [key, eventGroup] of eventsByDateAndUID) {
-            
-            // If there's only one event for this date/UID, keep it
-            if (eventGroup.length === 1) {
-                deduplicatedEvents.push(eventGroup[0]);
+            // Skip events without proper identification
+            if (!event) {
+                logger.warn('CALENDAR', 'Skipping null/undefined event in deduplication');
                 continue;
             }
             
-            // If there are multiple events for the same date/UID, prioritize overrides
-            const overrideEvents = eventGroup.filter(e => e.recurrenceId);
-            const expandedRecurringEvents = eventGroup.filter(e => e.isExpanded && e.recurring && !e.recurrenceId);
+            const uid = event.uid || event.slug || event.name;
+            const recurrenceId = event.recurrenceId || null;
             
-            // Keep override events if they exist, otherwise keep expanded recurring events
-            if (overrideEvents.length > 0) {
-                deduplicatedEvents.push(...overrideEvents);
-                logger.debug('CALENDAR', 'Keeping override event, removing recurring', {
-                    date: key.split('-')[0],
-                    uid: key.split('-')[1],
-                    overrideCount: overrideEvents.length,
-                    expandedRecurringCount: expandedRecurringEvents.length
+            // Create a key that handles null recurrenceId properly
+            // For Date objects, use ISO string; for null, use 'null'
+            const recurrenceIdKey = recurrenceId instanceof Date ? recurrenceId.toISOString() : 'null';
+            const key = `${uid}-${recurrenceIdKey}`;
+            
+            logger.debug('CALENDAR', 'Processing event for deduplication', {
+                eventName: event.name,
+                uid: uid,
+                recurrenceId: recurrenceId,
+                recurrenceIdKey: recurrenceIdKey,
+                key: key
+            });
+            
+            if (!eventsByUIDAndRecurrenceId.has(key)) {
+                eventsByUIDAndRecurrenceId.set(key, []);
+            }
+            eventsByUIDAndRecurrenceId.get(key).push(event);
+        }
+        
+        // For each UID/recurrenceId combination, keep only one event
+        const deduplicatedEvents = [];
+        
+        for (const [key, eventGroup] of eventsByUIDAndRecurrenceId) {
+            if (eventGroup.length === 1) {
+                // Only one event for this UID/recurrenceId combination
+                deduplicatedEvents.push(eventGroup[0]);
+                logger.debug('CALENDAR', 'Keeping single event', {
+                    uid: eventGroup[0].uid,
+                    recurrenceId: eventGroup[0].recurrenceId,
+                    eventName: eventGroup[0].name
                 });
             } else {
-                // Keep expanded recurring events (these are the individual occurrences)
-                deduplicatedEvents.push(...expandedRecurringEvents);
-                logger.debug('CALENDAR', 'Keeping expanded recurring events', {
-                    date: key.split('-')[0],
-                    uid: key.split('-')[1],
-                    expandedRecurringCount: expandedRecurringEvents.length
+                // Multiple events with same UID and recurrenceId - keep the first one
+                // This handles cases where the same event appears multiple times
+                const eventToKeep = eventGroup[0];
+                deduplicatedEvents.push(eventToKeep);
+                
+                logger.info('CALENDAR', 'Deduplicating multiple events with same UID/recurrenceId', {
+                    uid: eventToKeep.uid,
+                    recurrenceId: eventToKeep.recurrenceId,
+                    eventName: eventToKeep.name,
+                    duplicateCount: eventGroup.length - 1,
+                    duplicates: eventGroup.slice(1).map(e => e.name)
                 });
             }
         }
         
-        logger.debug('CALENDAR', 'Date-based deduplication complete', {
+        logger.info('CALENDAR', 'UID and recurrenceId-based deduplication complete', {
             originalEvents: events.length,
             deduplicatedEvents: deduplicatedEvents.length,
-            removedDuplicates: events.length - deduplicatedEvents.length
+            removedDuplicates: events.length - deduplicatedEvents.length,
+            uniqueUIDRecurrenceIdCombinations: eventsByUIDAndRecurrenceId.size
         });
         
         return deduplicatedEvents;
