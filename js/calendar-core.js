@@ -988,18 +988,56 @@ class CalendarCore {
                     
                     current.setMonth(current.getMonth() + pattern.interval);
                     
-                    // For "last Saturday" (BYDAY=-1SA), we need special handling
-                    if (pattern.byDay && pattern.byDay.includes('-1SA')) {
-                        // Find the last Saturday of the month
-                        const lastDayOfMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0);
-                        const lastSaturday = new Date(lastDayOfMonth);
-                        const dayOfWeek = lastDayOfMonth.getDay();
-                        const daysToSubtract = (dayOfWeek + 1) % 7; // Saturday is 6
-                        lastSaturday.setDate(lastDayOfMonth.getDate() - daysToSubtract);
-                        lastSaturday.setHours(originalHours, originalMinutes, originalSeconds);
-                        current = lastSaturday;
+                    // Handle BYDAY patterns for monthly events
+                    if (pattern.byDay && pattern.byDay.length > 0) {
+                        // Parse the BYDAY pattern (e.g., "-1SA", "2SA", "1MO")
+                        const byDayPattern = pattern.byDay[0]; // Use first pattern if multiple
+                        const dayMatch = byDayPattern.match(/^(-?\d+)([A-Z]{2})$/);
+                        
+                        if (dayMatch) {
+                            const occurrence = parseInt(dayMatch[1]);
+                            const dayCode = dayMatch[2];
+                            
+                            // Convert day code to day of week (0=Sunday, 6=Saturday)
+                            const dayCodeToDayNumber = {
+                                'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
+                            };
+                            
+                            const targetDayOfWeek = dayCodeToDayNumber[dayCode];
+                            if (targetDayOfWeek !== undefined) {
+                                // Calculate the specific occurrence of that day in the month
+                                const calculatedDate = this.calculateByDayDate(
+                                    current.getFullYear(), 
+                                    current.getMonth() + 1, 
+                                    byDayPattern
+                                );
+                                
+                                if (calculatedDate) {
+                                    calculatedDate.setHours(originalHours, originalMinutes, originalSeconds);
+                                    current = calculatedDate;
+                                } else {
+                                    // Fallback to regular monthly handling
+                                    const lastDayOfMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+                                    const targetDay = Math.min(originalDay, lastDayOfMonth);
+                                    current.setDate(targetDay);
+                                    current.setHours(originalHours, originalMinutes, originalSeconds);
+                                }
+                            } else {
+                                // Invalid day code, fallback to regular handling
+                                const lastDayOfMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+                                const targetDay = Math.min(originalDay, lastDayOfMonth);
+                                current.setDate(targetDay);
+                                current.setHours(originalHours, originalMinutes, originalSeconds);
+                            }
+                        } else {
+                            // Invalid BYDAY pattern, fallback to regular handling
+                            const lastDayOfMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+                            const targetDay = Math.min(originalDay, lastDayOfMonth);
+                            current.setDate(targetDay);
+                            current.setHours(originalHours, originalMinutes, originalSeconds);
+                        }
                     } else {
-                        // Regular monthly handling
+                        // No BYDAY pattern, use regular monthly handling
                         const lastDayOfMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
                         const targetDay = Math.min(originalDay, lastDayOfMonth);
                         current.setDate(targetDay);
