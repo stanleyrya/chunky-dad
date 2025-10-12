@@ -927,10 +927,9 @@ class CalendarCore {
             periodEnd: periodEnd.toISOString().split('T')[0]
         });
         
-        const startDateStr = event.startDate instanceof Date ? 
-            event.startDate.toISOString().split('T')[0] : event.startDate;
-        const parts = startDateStr.split('-');
-        const eventStartDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        // Use the original startDate directly to preserve timezone information
+        const eventStartDate = event.startDate instanceof Date ? 
+            new Date(event.startDate) : new Date(event.startDate);
         if (eventStartDate > periodEnd) return dates;
         
         // For weekly events, use a simpler approach: check each day in the period
@@ -981,7 +980,20 @@ class CalendarCore {
                     current.setDate(current.getDate() + pattern.interval);
                     break;
                 case 'MONTHLY':
+                    // For monthly events, preserve the original day and time
+                    const originalDay = eventStartDate.getDate();
+                    const originalHours = eventStartDate.getHours();
+                    const originalMinutes = eventStartDate.getMinutes();
+                    const originalSeconds = eventStartDate.getSeconds();
+                    
                     current.setMonth(current.getMonth() + pattern.interval);
+                    
+                    // Ensure we don't go past the end of the month
+                    const lastDayOfMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+                    const targetDay = Math.min(originalDay, lastDayOfMonth);
+                    
+                    current.setDate(targetDay);
+                    current.setHours(originalHours, originalMinutes, originalSeconds);
                     break;
                 default:
                     throw new Error(`Unsupported recurrence frequency: ${pattern.frequency}`);
