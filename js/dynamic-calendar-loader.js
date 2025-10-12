@@ -2115,9 +2115,9 @@ class DynamicCalendarLoader extends CalendarCore {
             return isInPeriod;
         });
         
-        // Apply deduplication logic for recurring events and overrides
+        // Apply simple deduplication for recurring events and overrides
         // This ensures that recurring events with overrides are properly handled across all views
-        const deduplicatedEvents = this.applyDeduplicationToPeriod(filtered, start, end);
+        const deduplicatedEvents = this.deduplicateEvents(filtered);
         
         // Sort events by upcoming time (earliest first)
         deduplicatedEvents.sort((a, b) => {
@@ -2310,38 +2310,48 @@ class DynamicCalendarLoader extends CalendarCore {
         return filteredEvents;
     }
 
-    // Apply deduplication logic for recurring events and overrides across all views
-    applyDeduplicationToPeriod(events, periodStart, periodEnd) {
-        logger.debug('CALENDAR', 'Applying deduplication logic for all views', {
-            totalEvents: events.length,
-            periodStart: periodStart.toISOString().split('T')[0],
-            periodEnd: periodEnd.toISOString().split('T')[0]
+    // Simple deduplication for recurring events and overrides
+    deduplicateEvents(events) {
+        logger.debug('CALENDAR', 'Applying simple deduplication', {
+            totalEvents: events.length
         });
 
-        // For list/map views, we need to apply deduplication across the entire period
-        // by checking each day and collecting unique events
-        const deduplicatedEvents = [];
-        const processedEvents = new Set();
+        // Group events by UID to handle recurring events and their overrides
+        const eventsByUID = new Map();
         
-        // Check each day in the period
-        const current = new Date(periodStart);
-        while (current <= periodEnd) {
-            // Apply the existing deduplication logic for this specific date
-            const deduplicatedForDate = this.filterEventsWithOverrides(events, current);
+        for (const event of events) {
+            const uid = event.uid || event.slug || event.name;
             
-            // Add unique events to the result (avoid duplicates across dates)
-            for (const event of deduplicatedForDate) {
-                const eventKey = `${event.uid || event.slug || event.name}-${event.startDate}`;
-                if (!processedEvents.has(eventKey)) {
-                    processedEvents.add(eventKey);
-                    deduplicatedEvents.push(event);
-                }
+            if (!eventsByUID.has(uid)) {
+                eventsByUID.set(uid, []);
             }
-            
-            current.setDate(current.getDate() + 1);
+            eventsByUID.get(uid).push(event);
         }
         
-        logger.debug('CALENDAR', 'Deduplication logic applied successfully', {
+        // For each UID group, keep only the appropriate events
+        const deduplicatedEvents = [];
+        
+        for (const [uid, eventGroup] of eventsByUID) {
+            // If there's only one event for this UID, keep it
+            if (eventGroup.length === 1) {
+                deduplicatedEvents.push(eventGroup[0]);
+                continue;
+            }
+            
+            // If there are multiple events for the same UID, prioritize overrides
+            const overrideEvents = eventGroup.filter(e => e.recurrenceId);
+            const recurringEvents = eventGroup.filter(e => e.recurring && !e.recurrenceId);
+            
+            // Keep all override events (they override the recurring event)
+            deduplicatedEvents.push(...overrideEvents);
+            
+            // Keep recurring events only if there are no overrides
+            if (overrideEvents.length === 0) {
+                deduplicatedEvents.push(...recurringEvents);
+            }
+        }
+        
+        logger.debug('CALENDAR', 'Simple deduplication complete', {
             originalEvents: events.length,
             deduplicatedEvents: deduplicatedEvents.length,
             removedDuplicates: events.length - deduplicatedEvents.length
