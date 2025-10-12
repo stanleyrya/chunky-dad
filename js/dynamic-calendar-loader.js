@@ -2115,9 +2115,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return isInPeriod;
         });
         
-        // Apply deduplication for recurring events and overrides
-        // This ensures that recurring events with overrides are properly handled across all views
-        const deduplicatedEvents = this.filterEventsWithOverrides(filtered, start, end);
+        // Apply simple deduplication: for each date, show either recurring event OR override, never both
+        const deduplicatedEvents = this.deduplicateByDate(filtered);
         
         // Sort events by upcoming time (earliest first)
         deduplicatedEvents.sort((a, b) => {
@@ -2237,106 +2236,62 @@ class DynamicCalendarLoader extends CalendarCore {
         return eventDate.getDay() === checkDate.getDay();
     }
 
-    // Filter out recurring events that have overrides for a specific date or period
-    filterEventsWithOverrides(events, dateOrStart, endDate = null) {
-        // Handle both single date and period (start/end) cases
-        const isPeriod = endDate !== null;
-        const startDate = dateOrStart;
+    // Simple deduplication: for each date, show either recurring event OR override, never both
+    deduplicateByDate(events) {
+        logger.debug('CALENDAR', 'Applying simple date-based deduplication', {
+            totalEvents: events.length
+        });
+
+        // Group events by date and UID
+        const eventsByDateAndUID = new Map();
         
-        if (isPeriod) {
-            // For periods, we need to check each day in the period
-            const deduplicatedEvents = [];
-            const processedEvents = new Set();
+        for (const event of events) {
+            const eventDate = new Date(event.startDate);
+            const dateKey = eventDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            const uid = event.uid || event.slug || event.name;
+            const key = `${dateKey}-${uid}`;
             
-            const current = new Date(startDate);
-            while (current <= endDate) {
-                const dayEvents = this.filterEventsWithOverrides(events, current);
-                
-                // Add unique events to the result (avoid duplicates across dates)
-                for (const event of dayEvents) {
-                    const eventKey = `${event.uid || event.slug || event.name}-${event.startDate}`;
-                    if (!processedEvents.has(eventKey)) {
-                        processedEvents.add(eventKey);
-                        deduplicatedEvents.push(event);
-                    }
-                }
-                
-                current.setDate(current.getDate() + 1);
+            if (!eventsByDateAndUID.has(key)) {
+                eventsByDateAndUID.set(key, []);
             }
-            
-            return deduplicatedEvents;
+            eventsByDateAndUID.get(key).push(event);
         }
         
-        // Single date case (original logic)
-        const dateStr = startDate.toISOString().split('T')[0];
+        // For each date/UID combination, keep only the appropriate event
+        const deduplicatedEvents = [];
         
-        // Find all override events that occur on this date
-        // Override events are events with recurrenceId that actually occur on the target date
-        const overrideEvents = events.filter(event => {
-            if (!event.recurrenceId) return false;
-            
-            // Check if the override event's start date matches the target date
-            const eventDate = new Date(event.startDate);
-            const eventLocalDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-            const targetLocalDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            
-            return eventLocalDate.getTime() === targetLocalDate.getTime();
-        });
-        
-        // Create a map of UIDs that have overrides for this date
-        const overrideUIDs = new Set(overrideEvents.map(event => event.uid));
-        
-        logger.debug('CALENDAR', 'Filtering events with overrides', {
-            date: dateStr,
-            totalEvents: events.length,
-            overrideEvents: overrideEvents.length,
-            overrideUIDs: Array.from(overrideUIDs),
-            overrideEventNames: overrideEvents.map(e => e.name),
-            overrideEventDetails: overrideEvents.map(e => ({
-                name: e.name,
-                startDate: e.startDate ? e.startDate.toISOString() : null,
-                startDateLocal: e.startDate ? new Date(e.startDate.getFullYear(), e.startDate.getMonth(), e.startDate.getDate()).toISOString().split('T')[0] : null,
-                recurrenceId: e.recurrenceId ? e.recurrenceId.toISOString() : null
-            }))
-        });
-        
-        // Filter events: keep override events and recurring events that don't have overrides
-        const filteredEvents = events.filter(event => {
-            // Keep all non-recurring events
-            if (!event.recurring) {
-                return true;
+        for (const [key, eventGroup] of eventsByDateAndUID) {
+            // If there's only one event for this date/UID, keep it
+            if (eventGroup.length === 1) {
+                deduplicatedEvents.push(eventGroup[0]);
+                continue;
             }
             
-            // If this is an override event (has recurrenceId), keep it
-            if (event.recurrenceId) {
-                logger.debug('CALENDAR', 'Keeping override event', {
-                    eventName: event.name,
-                    eventUID: event.uid,
-                    recurrenceId: event.recurrenceId ? event.recurrenceId.toISOString() : null,
-                    date: dateStr
+            // If there are multiple events for the same date/UID, prioritize overrides
+            const overrideEvents = eventGroup.filter(e => e.recurrenceId);
+            const recurringEvents = eventGroup.filter(e => e.recurring && !e.recurrenceId);
+            
+            // Keep override events if they exist, otherwise keep recurring events
+            if (overrideEvents.length > 0) {
+                deduplicatedEvents.push(...overrideEvents);
+                logger.debug('CALENDAR', 'Keeping override event, removing recurring', {
+                    date: key.split('-')[0],
+                    uid: key.split('-')[1],
+                    overrideCount: overrideEvents.length,
+                    recurringCount: recurringEvents.length
                 });
-                return true;
+            } else {
+                deduplicatedEvents.push(...recurringEvents);
             }
-            
-            // For recurring events, only keep them if they don't have overrides for this date
-            const hasOverride = overrideUIDs.has(event.uid);
-            if (hasOverride) {
-                logger.debug('CALENDAR', 'Filtering out recurring event with override', {
-                    eventName: event.name,
-                    eventUID: event.uid,
-                    date: dateStr
-                });
-            }
-            return !hasOverride;
+        }
+        
+        logger.debug('CALENDAR', 'Date-based deduplication complete', {
+            originalEvents: events.length,
+            deduplicatedEvents: deduplicatedEvents.length,
+            removedDuplicates: events.length - deduplicatedEvents.length
         });
         
-        logger.debug('CALENDAR', 'Event filtering complete', {
-            originalCount: events.length,
-            filteredCount: filteredEvents.length,
-            removedCount: events.length - filteredEvents.length
-        });
-        
-        return filteredEvents;
+        return deduplicatedEvents;
     }
 
 
