@@ -107,17 +107,6 @@ class CalendarCore {
                             recurring: eventData.recurring
                         });
                         
-                        // Enhanced debugging for GOLDILOXX events
-                        if (eventData.name && eventData.name.includes('GOLDILOXX')) {
-                            logger.debug('CALENDAR', 'GOLDILOXX event UID details', {
-                                eventName: eventData.name,
-                                uid: eventData.uid,
-                                recurrenceId: eventData.recurrenceId,
-                                recurring: eventData.recurring,
-                                eventType: eventData.eventType,
-                                startDate: eventData.startDate ? eventData.startDate.toISOString() : 'No start date'
-                            });
-                        }
                     } else {
                         logger.warn('CALENDAR', `❌ Failed to parse event: ${currentEvent.title}`, {
                             eventNumber: eventCount,

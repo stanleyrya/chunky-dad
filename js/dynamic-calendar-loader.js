@@ -2163,16 +2163,6 @@ class DynamicCalendarLoader extends CalendarCore {
                     originalStartDate: event.startDate // Keep reference to original
                 };
                 
-                // Enhanced debugging for GOLDILOXX events
-                if (event.name && event.name.includes('GOLDILOXX')) {
-                    logger.debug('CALENDAR', 'GOLDILOXX recurring event expanded', {
-                        eventName: event.name,
-                        originalStartDate: event.startDate.toISOString(),
-                        expandedStartDate: occurrence.toISOString(),
-                        uid: event.uid,
-                        recurring: event.recurring
-                    });
-                }
                 
                 expandedEvents.push(expandedEvent);
             }
@@ -2318,20 +2308,6 @@ class DynamicCalendarLoader extends CalendarCore {
             const uid = event.uid || event.slug || event.name;
             const key = `${dateKey}-${uid}`;
             
-            // Enhanced debugging for GOLDILOXX events
-            if (event.name && event.name.includes('GOLDILOXX')) {
-                logger.debug('CALENDAR', 'GOLDILOXX event deduplication details', {
-                    eventName: event.name,
-                    eventDate: eventDate.toISOString(),
-                    dateKey: dateKey,
-                    uid: uid,
-                    key: key,
-                    recurring: event.recurring,
-                    recurrenceId: event.recurrenceId,
-                    eventType: event.eventType,
-                    isExpanded: event.isExpanded
-                });
-            }
             
             if (!eventsByDateAndUID.has(key)) {
                 eventsByDateAndUID.set(key, []);
@@ -2343,31 +2319,10 @@ class DynamicCalendarLoader extends CalendarCore {
         const deduplicatedEvents = [];
         
         for (const [key, eventGroup] of eventsByDateAndUID) {
-            // Enhanced debugging for GOLDILOXX events
-            const hasGoldiloxx = eventGroup.some(e => e.name && e.name.includes('GOLDILOXX'));
-            if (hasGoldiloxx) {
-                logger.debug('CALENDAR', 'GOLDILOXX event group processing', {
-                    key: key,
-                    groupSize: eventGroup.length,
-                    events: eventGroup.map(e => ({
-                        name: e.name,
-                        recurring: e.recurring,
-                        recurrenceId: e.recurrenceId,
-                        eventType: e.eventType,
-                        startDate: e.startDate.toISOString()
-                    }))
-                });
-            }
             
             // If there's only one event for this date/UID, keep it
             if (eventGroup.length === 1) {
                 deduplicatedEvents.push(eventGroup[0]);
-                if (hasGoldiloxx) {
-                    logger.debug('CALENDAR', 'GOLDILOXX: Single event, keeping it', {
-                        eventName: eventGroup[0].name,
-                        recurring: eventGroup[0].recurring
-                    });
-                }
                 continue;
             }
             
@@ -2386,13 +2341,6 @@ class DynamicCalendarLoader extends CalendarCore {
                     expandedRecurringCount: expandedRecurringEvents.length,
                     originalRecurringCount: originalRecurringEvents.length
                 });
-                if (hasGoldiloxx) {
-                    logger.debug('CALENDAR', 'GOLDILOXX: Keeping override events', {
-                        overrideEvents: overrideEvents.map(e => e.name),
-                        expandedRecurringEvents: expandedRecurringEvents.map(e => e.name),
-                        originalRecurringEvents: originalRecurringEvents.map(e => e.name)
-                    });
-                }
             } else if (expandedRecurringEvents.length > 0) {
                 // Keep expanded recurring events (these are the individual occurrences)
                 deduplicatedEvents.push(...expandedRecurringEvents);
@@ -2401,11 +2349,6 @@ class DynamicCalendarLoader extends CalendarCore {
                     uid: key.split('-')[1],
                     expandedRecurringCount: expandedRecurringEvents.length
                 });
-                if (hasGoldiloxx) {
-                    logger.debug('CALENDAR', 'GOLDILOXX: Keeping expanded recurring events', {
-                        expandedRecurringEvents: expandedRecurringEvents.map(e => e.name)
-                    });
-                }
             } else {
                 // Fallback to original recurring events (shouldn't happen with new logic)
                 deduplicatedEvents.push(...originalRecurringEvents);
@@ -2414,11 +2357,6 @@ class DynamicCalendarLoader extends CalendarCore {
                     uid: key.split('-')[1],
                     originalRecurringCount: originalRecurringEvents.length
                 });
-                if (hasGoldiloxx) {
-                    logger.debug('CALENDAR', 'GOLDILOXX: Keeping original recurring events (fallback)', {
-                        originalRecurringEvents: originalRecurringEvents.map(e => e.name)
-                    });
-                }
             }
         }
         
