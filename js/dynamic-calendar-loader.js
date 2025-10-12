@@ -2360,6 +2360,81 @@ class DynamicCalendarLoader extends CalendarCore {
         return deduplicatedEvents;
     }
 
+    // Deduplicate events based on UID and recurrenceId for list/map views
+    deduplicateByUIDAndRecurrenceId(events) {
+        logger.debug('CALENDAR', 'Applying UID and recurrenceId-based deduplication for list/map views', {
+            totalEvents: events.length
+        });
+
+        // Group events by UID and recurrenceId
+        const eventsByUIDAndRecurrenceId = new Map();
+        
+        for (const event of events) {
+            // Skip events without proper identification
+            if (!event) {
+                logger.warn('CALENDAR', 'Skipping null/undefined event in deduplication');
+                continue;
+            }
+            
+            const uid = event.uid || event.slug || event.name;
+            const recurrenceId = event.recurrenceId || null;
+            
+            // Create a key that handles null recurrenceId properly
+            // For Date objects, use ISO string; for null, use 'null'
+            const recurrenceIdKey = recurrenceId instanceof Date ? recurrenceId.toISOString() : 'null';
+            const key = `${uid}-${recurrenceIdKey}`;
+            
+            logger.debug('CALENDAR', 'Processing event for UID/recurrenceId deduplication', {
+                eventName: event.name,
+                uid: uid,
+                recurrenceId: recurrenceId,
+                recurrenceIdKey: recurrenceIdKey,
+                key: key
+            });
+            
+            if (!eventsByUIDAndRecurrenceId.has(key)) {
+                eventsByUIDAndRecurrenceId.set(key, []);
+            }
+            eventsByUIDAndRecurrenceId.get(key).push(event);
+        }
+        
+        // For each UID/recurrenceId combination, keep only one event
+        const deduplicatedEvents = [];
+        
+        for (const [key, eventGroup] of eventsByUIDAndRecurrenceId) {
+            if (eventGroup.length === 1) {
+                // Only one event for this UID/recurrenceId combination
+                deduplicatedEvents.push(eventGroup[0]);
+                logger.debug('CALENDAR', 'Keeping single event for list/map', {
+                    uid: eventGroup[0].uid,
+                    recurrenceId: eventGroup[0].recurrenceId,
+                    eventName: eventGroup[0].name
+                });
+            } else {
+                // Multiple events with same UID and recurrenceId - keep the first one
+                const eventToKeep = eventGroup[0];
+                deduplicatedEvents.push(eventToKeep);
+                
+                logger.info('CALENDAR', 'Deduplicating multiple events with same UID/recurrenceId for list/map', {
+                    uid: eventToKeep.uid,
+                    recurrenceId: eventToKeep.recurrenceId,
+                    eventName: eventToKeep.name,
+                    duplicateCount: eventGroup.length - 1,
+                    duplicates: eventGroup.slice(1).map(e => e.name)
+                });
+            }
+        }
+        
+        logger.info('CALENDAR', 'UID and recurrenceId-based deduplication complete for list/map', {
+            originalEvents: events.length,
+            deduplicatedEvents: deduplicatedEvents.length,
+            removedDuplicates: events.length - deduplicatedEvents.length,
+            uniqueUIDRecurrenceIdCombinations: eventsByUIDAndRecurrenceId.size
+        });
+        
+        return deduplicatedEvents;
+    }
+
     // Helper method to get a timezone-aware date key for deduplication
     // Uses local date components instead of UTC to avoid timezone conversion issues
     getLocalDateKey(date) {
@@ -2998,12 +3073,20 @@ class DynamicCalendarLoader extends CalendarCore {
                         } : 'no events'
                     });
                     
-                    const eventCardsHtml = filteredEvents.map(event => this.generateEventCard(event)).join('');
+                    // Apply UID/recurrenceId deduplication for list view
+                    logger.info('CALENDAR', 'Applying UID/recurrenceId deduplication for list view', {
+                        originalEventCount: filteredEvents.length
+                    });
+                    const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
+                    
+                    const eventCardsHtml = listDeduplicatedEvents.map(event => this.generateEventCard(event)).join('');
                     eventsList.innerHTML = eventCardsHtml;
                     
                     logger.debug('CALENDAR', '✅ UPDATE_DISPLAY: Successfully updated events list', {
                         htmlLength: eventCardsHtml.length,
-                        eventCount: filteredEvents.length
+                        originalEventCount: filteredEvents.length,
+                        deduplicatedEventCount: listDeduplicatedEvents.length,
+                        removedDuplicates: filteredEvents.length - listDeduplicatedEvents.length
                     });
                 } catch (cardError) {
                     logger.componentError('CALENDAR', 'Failed to generate event cards', cardError);
@@ -3051,7 +3134,12 @@ class DynamicCalendarLoader extends CalendarCore {
             if (mapSection && !hideEvents) {
                 logger.debug('CALENDAR', 'Initializing map for events display');
                 mapSection.style.display = 'block';
-                this.initializeMap(this.currentCityConfig, filteredEvents);
+                // Apply UID/recurrenceId deduplication for map view
+                logger.info('CALENDAR', 'Applying UID/recurrenceId deduplication for map view', {
+                    originalEventCount: filteredEvents.length
+                });
+                const mapDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
+                this.initializeMap(this.currentCityConfig, mapDeduplicatedEvents);
                 logger.debug('CALENDAR', 'Map initialization completed');
                 
                 // Update visual selection state again after map is initialized
