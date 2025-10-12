@@ -152,7 +152,40 @@ class CalendarCore {
             }, 0) / events.length) : 0
         });
         
-        return events;
+        // Simple fix: if same UID and has recurrenceId, use the override event
+        const filteredEvents = this.filterDuplicateEvents(events);
+        
+        logger.info('CALENDAR', `📊 Event filtering complete. ${events.length} original events, ${filteredEvents.length} after filtering`, {
+            originalCount: events.length,
+            filteredCount: filteredEvents.length,
+            eventsRemoved: events.length - filteredEvents.length
+        });
+        
+        return filteredEvents;
+    }
+
+    // Simple filter: keep recurring events, but skip base event if override exists for same date
+    filterDuplicateEvents(events) {
+        const overrideDates = new Set();
+        
+        // Collect all override dates
+        for (const event of events) {
+            if (event.recurrenceId) {
+                const dateStr = event.recurrenceId.toISOString().split('T')[0];
+                overrideDates.add(dateStr);
+            }
+        }
+        
+        // Keep all events, but skip base recurring events that have overrides for the same date
+        return events.filter(event => {
+            if (!event.recurring || !event.startDate || !event.uid) {
+                return true; // Keep non-recurring events and events without UID
+            }
+            
+            // Skip base recurring events that have overrides for the same date
+            const eventDateStr = event.startDate.toISOString().split('T')[0];
+            return !overrideDates.has(eventDateStr);
+        });
     }
 
     // Parse VTIMEZONE data from iCal text
@@ -282,6 +315,21 @@ class CalendarCore {
         } else if (line.startsWith('UID:')) {
             currentEvent.uid = line.substring(4).trim();
             parsed = true;
+        } else if (line.startsWith('RECURRENCE-ID')) {
+            // Handle RECURRENCE-ID with potential timezone information
+            if (line.includes(';TZID=')) {
+                const match = line.match(/RECURRENCE-ID;TZID=([^:]+):(.+)/);
+                if (match) {
+                    currentEvent.recurrenceIdTimezone = match[1];
+                    currentEvent.recurrenceId = this.parseICalDate(`TZID=${match[1]}:${match[2]}`);
+                }
+            } else {
+                const dateMatch = line.match(/RECURRENCE-ID:(.+)/);
+                if (dateMatch) {
+                    currentEvent.recurrenceId = this.parseICalDate(dateMatch[1]);
+                }
+            }
+            parsed = true;
         } else if (line.startsWith('DTSTAMP:') || line.startsWith('CREATED:') || 
                    line.startsWith('LAST-MODIFIED:') || line.startsWith('SEQUENCE:') || line.startsWith('STATUS:') || 
                    line.startsWith('TRANSP:') || line.startsWith('ORGANIZER:') || line.startsWith('ATTENDEE:') ||
@@ -326,7 +374,10 @@ class CalendarCore {
                 // Store calendar default timezone as fallback
                 calendarTimezone: this.calendarTimezone || null,
                 // Store whether the original time was in UTC format (for debugging)
-                wasUTC: calendarEvent.start?._wasUTC || false
+                wasUTC: calendarEvent.start?._wasUTC || false,
+                // Store UID and recurrence ID for event merging
+                uid: calendarEvent.uid || null,
+                recurrenceId: calendarEvent.recurrenceId || null
             };
             
 
