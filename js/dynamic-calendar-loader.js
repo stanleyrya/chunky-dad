@@ -2232,6 +2232,71 @@ class DynamicCalendarLoader extends CalendarCore {
         return eventDate.getDay() === checkDate.getDay();
     }
 
+    // Filter out recurring events that have overrides for a specific date
+    filterEventsWithOverrides(events, date) {
+        const dateStr = date.toISOString().split('T')[0];
+        
+        // Find all override events for this date
+        // Need to compare dates properly accounting for timezone differences
+        const overrideEvents = events.filter(event => {
+            if (!event.recurrenceId) return false;
+            
+            // Convert both dates to local date strings for comparison
+            const recurrenceDate = new Date(event.recurrenceId);
+            const recurrenceDateStr = recurrenceDate.toISOString().split('T')[0];
+            
+            // Also check if the recurrence date falls on the same calendar date
+            // by comparing the local date components
+            const recurrenceLocalDate = new Date(recurrenceDate.getFullYear(), recurrenceDate.getMonth(), recurrenceDate.getDate());
+            const targetLocalDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            
+            return recurrenceLocalDate.getTime() === targetLocalDate.getTime();
+        });
+        
+        // Create a map of UIDs that have overrides for this date
+        const overrideUIDs = new Set(overrideEvents.map(event => event.uid));
+        
+        logger.debug('CALENDAR', 'Filtering events with overrides', {
+            date: dateStr,
+            totalEvents: events.length,
+            overrideEvents: overrideEvents.length,
+            overrideUIDs: Array.from(overrideUIDs),
+            overrideEventNames: overrideEvents.map(e => e.name),
+            overrideEventDetails: overrideEvents.map(e => ({
+                name: e.name,
+                recurrenceId: e.recurrenceId ? e.recurrenceId.toISOString() : null,
+                recurrenceIdLocal: e.recurrenceId ? new Date(e.recurrenceId.getFullYear(), e.recurrenceId.getMonth(), e.recurrenceId.getDate()).toISOString().split('T')[0] : null
+            }))
+        });
+        
+        // Filter events: keep override events and recurring events that don't have overrides
+        const filteredEvents = events.filter(event => {
+            // Keep all non-recurring events
+            if (!event.recurring) {
+                return true;
+            }
+            
+            // Keep recurring events that don't have overrides for this date
+            const hasOverride = overrideUIDs.has(event.uid);
+            if (hasOverride) {
+                logger.debug('CALENDAR', 'Filtering out recurring event with override', {
+                    eventName: event.name,
+                    eventUID: event.uid,
+                    date: dateStr
+                });
+            }
+            return !hasOverride;
+        });
+        
+        logger.debug('CALENDAR', 'Event filtering complete', {
+            originalCount: events.length,
+            filteredCount: filteredEvents.length,
+            removedCount: events.length - filteredEvents.length
+        });
+        
+        return filteredEvents;
+    }
+
     // Helper function to calculate the specific occurrence of a day in a month
     // occurrence: positive number (1-5) for nth occurrence, negative (-1) for last occurrence
     // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
@@ -2328,9 +2393,12 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 return eventDate.getTime() === dayDate.getTime();
             });
+            
+            // Filter out recurring events that have overrides for this specific date
+            const filteredDayEvents = this.filterEventsWithOverrides(dayEvents, day);
 
-            const eventsHtml = dayEvents.length > 0 
-                ? dayEvents.map(event => {
+            const eventsHtml = filteredDayEvents.length > 0 
+                ? filteredDayEvents.map(event => {
                     const mobileTime = this.formatTimeForMobile(event.time);
                     
                     return `
@@ -2346,7 +2414,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const isToday = day.getTime() === today.getTime();
             const currentClass = isToday ? ' current' : '';
             const dayName = daysOfWeek[day.getDay()];
-            const eventCount = dayEvents.length;
+            const eventCount = filteredDayEvents.length;
 
             return `
                 <div class="calendar-day week-view${currentClass}" data-day="${dayName}" data-date="${day.toISOString().split('T')[0]}">
@@ -2422,16 +2490,19 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 return eventDate.getTime() === dayDate.getTime();
             });
+            
+            // Filter out recurring events that have overrides for this specific date
+            const filteredDayEvents = this.filterEventsWithOverrides(dayEvents, day);
 
             const isToday = day.getTime() === today.getTime();
             const isCurrentMonth = day.getMonth() === start.getMonth();
             const currentClass = isToday ? ' current' : '';
             const otherMonthClass = isCurrentMonth ? '' : ' other-month';
-            const hasEventsClass = dayEvents.length > 0 ? ' has-events' : '';
+            const hasEventsClass = filteredDayEvents.length > 0 ? ' has-events' : '';
 
             // Ultra-simplified month view: show only 2 events with shortened names for better mobile viewing
-            const eventsToShow = dayEvents.slice(0, 2);
-            const additionalEventsCount = Math.max(0, dayEvents.length - 2);
+            const eventsToShow = filteredDayEvents.slice(0, 2);
+            const additionalEventsCount = Math.max(0, filteredDayEvents.length - 2);
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {

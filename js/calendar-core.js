@@ -152,41 +152,13 @@ class CalendarCore {
             }, 0) / events.length) : 0
         });
         
-        // Simple fix: if same UID and has recurrenceId, use the override event
-        const filteredEvents = this.filterDuplicateEvents(events);
-        
-        logger.info('CALENDAR', `📊 Event filtering complete. ${events.length} original events, ${filteredEvents.length} after filtering`, {
-            originalCount: events.length,
-            filteredCount: filteredEvents.length,
-            eventsRemoved: events.length - filteredEvents.length
+        logger.info('CALENDAR', `📊 Event parsing complete. Found ${events.length} events`, {
+            eventCount: events.length
         });
         
-        return filteredEvents;
+        return events;
     }
 
-    // Simple filter: keep recurring events, but skip base event if override exists for same date
-    filterDuplicateEvents(events) {
-        const overrideDates = new Set();
-        
-        // Collect all override dates
-        for (const event of events) {
-            if (event.recurrenceId) {
-                const dateStr = event.recurrenceId.toISOString().split('T')[0];
-                overrideDates.add(dateStr);
-            }
-        }
-        
-        // Keep all events, but skip base recurring events that have overrides for the same date
-        return events.filter(event => {
-            if (!event.recurring || !event.startDate || !event.uid) {
-                return true; // Keep non-recurring events and events without UID
-            }
-            
-            // Skip base recurring events that have overrides for the same date
-            const eventDateStr = event.startDate.toISOString().split('T')[0];
-            return !overrideDates.has(eventDateStr);
-        });
-    }
 
     // Parse VTIMEZONE data from iCal text
     parseVTimezone(icalText) {
