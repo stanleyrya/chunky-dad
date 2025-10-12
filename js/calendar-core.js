@@ -106,6 +106,7 @@ class CalendarCore {
                             venue: eventData.bar,
                             recurring: eventData.recurring
                         });
+                        
                     } else {
                         logger.warn('CALENDAR', `❌ Failed to parse event: ${currentEvent.title}`, {
                             eventNumber: eventCount,
