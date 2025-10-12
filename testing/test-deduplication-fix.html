@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Deduplication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .event-list {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .event-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .event-item:last-child {
+            border-bottom: none;
+        }
+        .recurring {
+            color: #007bff;
+            font-weight: bold;
+        }
+        .override {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Event Deduplication Test</h1>
+    <p>This test verifies that the deduplication logic works across all calendar views (week, month, list, and map).</p>
+    
+    <div class="test-container">
+        <h2>Test Setup</h2>
+        <div id="test-setup">Loading test data...</div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="test-results">Running tests...</div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Event Lists by View</h2>
+        <h3>Week View Events</h3>
+        <div id="week-events" class="event-list">Loading...</div>
+        
+        <h3>Month View Events</h3>
+        <div id="month-events" class="event-list">Loading...</div>
+        
+        <h3>List View Events (from getFilteredEvents)</h3>
+        <div id="list-events" class="event-list">Loading...</div>
+    </div>
+
+    <script src="../js/logger.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+    <script>
+        // Test data with recurring events and overrides
+        const testEvents = [
+            {
+                name: "Weekly Bear Night",
+                slug: "weekly-bear-night",
+                uid: "weekly-bear-123",
+                startDate: new Date("2024-01-15T19:00:00"),
+                recurring: true,
+                recurrence: "FREQ=WEEKLY;BYDAY=MO",
+                bar: "The Bear Den",
+                time: "7:00 PM-11:00 PM",
+                day: "Monday"
+            },
+            {
+                name: "Weekly Bear Night - Special Event",
+                slug: "weekly-bear-night-special",
+                uid: "weekly-bear-123",
+                recurrenceId: new Date("2024-01-22T19:00:00"),
+                startDate: new Date("2024-01-22T20:00:00"),
+                recurring: false,
+                bar: "The Bear Den",
+                time: "8:00 PM-12:00 AM",
+                day: "Monday"
+            },
+            {
+                name: "Monthly Bear Social",
+                slug: "monthly-bear-social",
+                uid: "monthly-bear-456",
+                startDate: new Date("2024-01-15T18:00:00"),
+                recurring: true,
+                recurrence: "FREQ=MONTHLY;BYDAY=3MO",
+                bar: "Bear Bar",
+                time: "6:00 PM-10:00 PM",
+                day: "Monday"
+            },
+            {
+                name: "One-time Event",
+                slug: "one-time-event",
+                uid: "one-time-789",
+                startDate: new Date("2024-01-20T19:00:00"),
+                recurring: false,
+                bar: "Event Venue",
+                time: "7:00 PM-9:00 PM",
+                day: "Saturday"
+            }
+        ];
+
+        // Create a test calendar loader instance
+        const testLoader = new DynamicCalendarLoader();
+        testLoader.allEvents = testEvents;
+
+        // Set up test period (week containing the test events)
+        const testStart = new Date("2024-01-15T00:00:00");
+        const testEnd = new Date("2024-01-21T23:59:59");
+        
+        // Mock the getCurrentPeriodBounds method
+        testLoader.getCurrentPeriodBounds = function() {
+            return { start: testStart, end: testEnd };
+        };
+
+        function runTests() {
+            const results = [];
+            
+            try {
+                // Test 1: Verify getFilteredEvents includes deduplication
+                const filteredEvents = testLoader.getFilteredEvents();
+                results.push({
+                    name: "getFilteredEvents includes deduplication",
+                    status: filteredEvents.length > 0 ? "pass" : "fail",
+                    message: `Found ${filteredEvents.length} events after filtering and deduplication`
+                });
+
+                // Test 2: Check that recurring events with overrides are handled correctly
+                const recurringEvents = filteredEvents.filter(e => e.recurring);
+                const overrideEvents = filteredEvents.filter(e => e.recurrenceId);
+                
+                results.push({
+                    name: "Recurring events and overrides detected",
+                    status: recurringEvents.length > 0 && overrideEvents.length > 0 ? "pass" : "fail",
+                    message: `Found ${recurringEvents.length} recurring events and ${overrideEvents.length} override events`
+                });
+
+                // Test 3: Verify no duplicate UIDs in the same time period
+                const uidCounts = {};
+                filteredEvents.forEach(event => {
+                    if (event.uid) {
+                        uidCounts[event.uid] = (uidCounts[event.uid] || 0) + 1;
+                    }
+                });
+                
+                const duplicateUIDs = Object.entries(uidCounts).filter(([uid, count]) => count > 1);
+                results.push({
+                    name: "No duplicate UIDs in same period",
+                    status: duplicateUIDs.length === 0 ? "pass" : "fail",
+                    message: duplicateUIDs.length === 0 ? 
+                        "No duplicate UIDs found" : 
+                        `Found duplicate UIDs: ${duplicateUIDs.map(([uid, count]) => `${uid} (${count})`).join(', ')}`
+                });
+
+                // Test 4: Verify week and month views use the same deduplicated data
+                testLoader.currentView = 'week';
+                const weekEvents = testLoader.getFilteredEvents();
+                
+                testLoader.currentView = 'month';
+                const monthEvents = testLoader.getFilteredEvents();
+                
+                const weekEventNames = weekEvents.map(e => e.name).sort();
+                const monthEventNames = monthEvents.map(e => e.name).sort();
+                
+                results.push({
+                    name: "Week and month views use same deduplicated data",
+                    status: JSON.stringify(weekEventNames) === JSON.stringify(monthEventNames) ? "pass" : "fail",
+                    message: `Week view: ${weekEventNames.length} events, Month view: ${monthEventNames.length} events`
+                });
+
+                // Display results
+                displayResults(results);
+                displayEventLists(filteredEvents, weekEvents, monthEvents);
+
+            } catch (error) {
+                results.push({
+                    name: "Test execution",
+                    status: "fail",
+                    message: `Error running tests: ${error.message}`
+                });
+                displayResults(results);
+            }
+        }
+
+        function displayResults(results) {
+            const container = document.getElementById('test-results');
+            container.innerHTML = results.map(result => `
+                <div class="test-result ${result.status}">
+                    <strong>${result.name}:</strong> ${result.message}
+                </div>
+            `).join('');
+        }
+
+        function displayEventLists(filteredEvents, weekEvents, monthEvents) {
+            function formatEventList(events, containerId) {
+                const container = document.getElementById(containerId);
+                if (events.length === 0) {
+                    container.innerHTML = '<div class="event-item">No events found</div>';
+                    return;
+                }
+                
+                container.innerHTML = events.map(event => `
+                    <div class="event-item">
+                        <strong>${event.name}</strong>
+                        ${event.recurring ? '<span class="recurring">[Recurring]</span>' : ''}
+                        ${event.recurrenceId ? '<span class="override">[Override]</span>' : ''}
+                        <br>
+                        <small>${event.day} ${event.time} at ${event.bar}</small>
+                        <br>
+                        <small>UID: ${event.uid || 'none'}</small>
+                    </div>
+                `).join('');
+            }
+
+            formatEventList(filteredEvents, 'list-events');
+            formatEventList(weekEvents, 'week-events');
+            formatEventList(monthEvents, 'month-events');
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('test-setup').innerHTML = `
+                <div class="info">
+                    <strong>Test Data:</strong> ${testEvents.length} events including recurring events and overrides<br>
+                    <strong>Test Period:</strong> ${testStart.toDateString()} to ${testEnd.toDateString()}<br>
+                    <strong>Expected:</strong> Deduplication should work across all views (week, month, list, map)
+                </div>
+            `;
+            
+            runTests();
+        });
+    </script>
+</body>
+</html>

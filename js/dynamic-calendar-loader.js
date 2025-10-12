@@ -2115,8 +2115,12 @@ class DynamicCalendarLoader extends CalendarCore {
             return isInPeriod;
         });
         
+        // Apply deduplication logic for recurring events and overrides
+        // This ensures that recurring events with overrides are properly handled across all views
+        const deduplicatedEvents = this.applyDeduplicationLogic(filtered, start, end);
+        
         // Sort events by upcoming time (earliest first)
-        filtered.sort((a, b) => {
+        deduplicatedEvents.sort((a, b) => {
             const dateA = new Date(a.startDate);
             const dateB = new Date(b.startDate);
             
@@ -2129,13 +2133,14 @@ class DynamicCalendarLoader extends CalendarCore {
             return dateA.getTime() - dateB.getTime();
         });
         
-        logger.debug('CALENDAR', '🔍 FILTER: Event filtering complete', {
+        logger.debug('CALENDAR', '🔍 FILTER: Event filtering complete with deduplication', {
             totalEvents: this.allEvents.length,
             filteredEvents: filtered.length,
-            filteredEventNames: filtered.map(e => e.name)
+            deduplicatedEvents: deduplicatedEvents.length,
+            filteredEventNames: deduplicatedEvents.map(e => e.name)
         });
         
-        return filtered;
+        return deduplicatedEvents;
     }
 
     isRecurringEventInPeriod(event, start, end) {
@@ -2305,6 +2310,66 @@ class DynamicCalendarLoader extends CalendarCore {
         return filteredEvents;
     }
 
+    // Apply deduplication logic for recurring events and overrides across all views
+    applyDeduplicationLogic(events, periodStart, periodEnd) {
+        logger.debug('CALENDAR', 'Applying deduplication logic for all views', {
+            totalEvents: events.length,
+            periodStart: periodStart.toISOString().split('T')[0],
+            periodEnd: periodEnd.toISOString().split('T')[0]
+        });
+
+        // For each day in the period, apply the deduplication logic
+        const deduplicatedEvents = [];
+        const processedEvents = new Set();
+        
+        // Get all unique dates in the period
+        const datesInPeriod = [];
+        const current = new Date(periodStart);
+        while (current <= periodEnd) {
+            datesInPeriod.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+        
+        // Process each date in the period
+        for (const date of datesInPeriod) {
+            // Find events that occur on this specific date
+            const eventsForDate = events.filter(event => {
+                if (!event.startDate) return false;
+                
+                if (event.recurring) {
+                    return this.isEventOccurringOnDate(event, date);
+                }
+                
+                const eventDate = new Date(event.startDate);
+                eventDate.setHours(0, 0, 0, 0);
+                const checkDate = new Date(date);
+                checkDate.setHours(0, 0, 0, 0);
+                
+                return eventDate.getTime() === checkDate.getTime();
+            });
+            
+            // Apply deduplication for this specific date
+            const deduplicatedForDate = this.filterEventsWithOverrides(eventsForDate, date);
+            
+            // Add unique events to the result (avoid duplicates across dates)
+            for (const event of deduplicatedForDate) {
+                const eventKey = `${event.uid || event.slug || event.name}-${event.startDate}`;
+                if (!processedEvents.has(eventKey)) {
+                    processedEvents.add(eventKey);
+                    deduplicatedEvents.push(event);
+                }
+            }
+        }
+        
+        logger.debug('CALENDAR', 'Deduplication logic applied successfully', {
+            originalEvents: events.length,
+            deduplicatedEvents: deduplicatedEvents.length,
+            removedDuplicates: events.length - deduplicatedEvents.length
+        });
+        
+        return deduplicatedEvents;
+    }
+
     // Helper function to calculate the specific occurrence of a day in a month
     // occurrence: positive number (1-5) for nth occurrence, negative (-1) for last occurrence
     // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
@@ -2402,8 +2467,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 return eventDate.getTime() === dayDate.getTime();
             });
             
-            // Filter out recurring events that have overrides for this specific date
-            const filteredDayEvents = this.filterEventsWithOverrides(dayEvents, day);
+            // Events are already deduplicated in getFilteredEvents, so use them directly
+            const filteredDayEvents = dayEvents;
 
             const eventsHtml = filteredDayEvents.length > 0 
                 ? filteredDayEvents.map(event => {
@@ -2499,8 +2564,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 return eventDate.getTime() === dayDate.getTime();
             });
             
-            // Filter out recurring events that have overrides for this specific date
-            const filteredDayEvents = this.filterEventsWithOverrides(dayEvents, day);
+            // Events are already deduplicated in getFilteredEvents, so use them directly
+            const filteredDayEvents = dayEvents;
 
             const isToday = day.getTime() === today.getTime();
             const isCurrentMonth = day.getMonth() === start.getMonth();

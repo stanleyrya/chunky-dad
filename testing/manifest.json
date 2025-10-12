@@ -37,6 +37,12 @@
       "description": "Debug Scope - Look deep inside calendar processing (magnify those logs)"
     },
     {
+      "name": "test-deduplication-fix.html",
+      "size": 10423,
+      "icon": "📄",
+      "description": "Test file"
+    },
+    {
       "name": "test-display-modes.html",
       "size": 10896,
       "icon": "🖥️",
