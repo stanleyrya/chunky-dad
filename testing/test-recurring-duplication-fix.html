@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Recurring Event Duplication Fix</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Roboto Condensed', sans-serif;
+            padding: 20px;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #333;
+        }
+        
+        .test-title {
+            color: #FFA500;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #FFA500;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .btn:hover {
+            background: #FFB84D;
+        }
+        
+        .btn.secondary {
+            background: #333;
+            color: #e0e0e0;
+        }
+        
+        .btn.secondary:hover {
+            background: #444;
+        }
+        
+        .results {
+            background: #0f0f0f;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .calendar-day {
+            background: #222;
+            border-radius: 8px;
+            padding: 10px;
+            min-height: 100px;
+            border: 1px solid #333;
+        }
+        
+        .calendar-day-header {
+            background: #333;
+            color: #FFA500;
+            font-weight: 600;
+            text-align: center;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .event-item {
+            background: #FFA500;
+            color: #000;
+            padding: 5px 8px;
+            border-radius: 4px;
+            margin: 2px 0;
+            font-size: 0.8rem;
+        }
+        
+        .event-item.recurring {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .event-item.expanded {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #222;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #FFA500;
+        }
+        
+        .stat-label {
+            color: #ccc;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Recurring Event Duplication Fix Test</h1>
+        
+        <div class="test-section">
+            <div class="test-title">Test Controls</div>
+            <div class="test-controls">
+                <button class="btn" onclick="loadTestData()">Load Test Data</button>
+                <button class="btn secondary" onclick="testWeekView()">Test Week View</button>
+                <button class="btn secondary" onclick="testMonthView()">Test Month View</button>
+                <button class="btn secondary" onclick="clearResults()">Clear Results</button>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-events">0</div>
+                    <div class="stat-label">Total Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="recurring-events">0</div>
+                    <div class="stat-label">Recurring Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="expanded-events">0</div>
+                    <div class="stat-label">Expanded Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="duplicates">0</div>
+                    <div class="stat-label">Duplicates Found</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Test Results</div>
+            <div class="results" id="test-results">Click "Load Test Data" to begin testing...</div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Calendar View</div>
+            <div id="calendar-container"></div>
+        </div>
+    </div>
+
+    <!-- Include the calendar modules -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+    
+    <script>
+        let calendarLoader;
+        let testEvents = [];
+        let currentView = 'week';
+        
+        // Initialize logger
+        logger.setLogLevel('DEBUG');
+        
+        function log(message, data = null) {
+            const results = document.getElementById('test-results');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}${data ? '\n' + JSON.stringify(data, null, 2) : ''}\n`;
+            results.textContent += logEntry;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('test-results').textContent = '';
+        }
+        
+        function updateStats() {
+            document.getElementById('total-events').textContent = testEvents.length;
+            document.getElementById('recurring-events').textContent = testEvents.filter(e => e.recurring).length;
+            document.getElementById('expanded-events').textContent = testEvents.filter(e => e.isExpanded).length;
+            
+            // Check for duplicates by counting events with same name and date
+            const duplicates = findDuplicates(testEvents);
+            document.getElementById('duplicates').textContent = duplicates.length;
+        }
+        
+        function findDuplicates(events) {
+            const seen = new Map();
+            const duplicates = [];
+            
+            events.forEach(event => {
+                const key = `${event.name}-${new Date(event.startDate).toISOString().split('T')[0]}`;
+                if (seen.has(key)) {
+                    duplicates.push({ event, duplicateOf: seen.get(key) });
+                } else {
+                    seen.set(key, event);
+                }
+            });
+            
+            return duplicates;
+        }
+        
+        function loadTestData() {
+            log('Loading test data...');
+            
+            // Create test events with recurring patterns
+            const today = new Date();
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+            
+            testEvents = [
+                // Non-recurring event
+                {
+                    name: 'One-time Event',
+                    startDate: today,
+                    time: '7:00 PM',
+                    bar: 'Test Venue',
+                    recurring: false,
+                    slug: 'one-time-event'
+                },
+                // Weekly recurring event
+                {
+                    name: 'Weekly Bear Night',
+                    startDate: today,
+                    time: '9:00 PM',
+                    bar: 'Bear Bar',
+                    recurring: true,
+                    recurrence: 'FREQ=WEEKLY;BYDAY=FR',
+                    eventType: 'weekly',
+                    slug: 'weekly-bear-night'
+                },
+                // Monthly recurring event
+                {
+                    name: 'Monthly Bear Meetup',
+                    startDate: today,
+                    time: '6:00 PM',
+                    bar: 'Community Center',
+                    recurring: true,
+                    recurrence: 'FREQ=MONTHLY;BYMONTHDAY=15',
+                    eventType: 'monthly',
+                    slug: 'monthly-bear-meetup'
+                }
+            ];
+            
+            log('Test data loaded', {
+                totalEvents: testEvents.length,
+                recurringEvents: testEvents.filter(e => e.recurring).length
+            });
+            
+            updateStats();
+        }
+        
+        function testWeekView() {
+            log('Testing Week View...');
+            currentView = 'week';
+            
+            // Initialize calendar loader
+            calendarLoader = new DynamicCalendarLoader();
+            calendarLoader.currentView = 'week';
+            calendarLoader.currentDate = new Date();
+            calendarLoader.allEvents = testEvents;
+            
+            // Test the filtering logic
+            const { start, end } = calendarLoader.getCurrentPeriodBounds();
+            log('Week view period bounds', { start: start.toISOString(), end: end.toISOString() });
+            
+            // Get filtered events
+            const filteredEvents = calendarLoader.getFilteredEvents();
+            log('Week view filtered events', {
+                count: filteredEvents.length,
+                events: filteredEvents.map(e => ({
+                    name: e.name,
+                    date: new Date(e.startDate).toISOString().split('T')[0],
+                    isExpanded: e.isExpanded,
+                    recurring: e.recurring
+                }))
+            });
+            
+            // Check for duplicates
+            const duplicates = findDuplicates(filteredEvents);
+            if (duplicates.length > 0) {
+                log('❌ DUPLICATES FOUND in week view!', duplicates);
+            } else {
+                log('✅ No duplicates found in week view');
+            }
+            
+            // Generate calendar view
+            generateCalendarView(filteredEvents);
+        }
+        
+        function testMonthView() {
+            log('Testing Month View...');
+            currentView = 'month';
+            
+            // Initialize calendar loader
+            calendarLoader = new DynamicCalendarLoader();
+            calendarLoader.currentView = 'month';
+            calendarLoader.currentDate = new Date();
+            calendarLoader.allEvents = testEvents;
+            
+            // Test the filtering logic
+            const { start, end } = calendarLoader.getCurrentPeriodBounds();
+            log('Month view period bounds', { start: start.toISOString(), end: end.toISOString() });
+            
+            // Get filtered events
+            const filteredEvents = calendarLoader.getFilteredEvents();
+            log('Month view filtered events', {
+                count: filteredEvents.length,
+                events: filteredEvents.map(e => ({
+                    name: e.name,
+                    date: new Date(e.startDate).toISOString().split('T')[0],
+                    isExpanded: e.isExpanded,
+                    recurring: e.recurring
+                }))
+            });
+            
+            // Check for duplicates
+            const duplicates = findDuplicates(filteredEvents);
+            if (duplicates.length > 0) {
+                log('❌ DUPLICATES FOUND in month view!', duplicates);
+            } else {
+                log('✅ No duplicates found in month view');
+            }
+            
+            // Generate calendar view
+            generateCalendarView(filteredEvents);
+        }
+        
+        function generateCalendarView(events) {
+            const container = document.getElementById('calendar-container');
+            
+            if (currentView === 'week') {
+                container.innerHTML = calendarLoader.generateWeekView(events, 
+                    calendarLoader.getCurrentPeriodBounds().start, 
+                    calendarLoader.getCurrentPeriodBounds().end, 
+                    new Date(), false);
+            } else {
+                container.innerHTML = calendarLoader.generateMonthView(events, 
+                    calendarLoader.getCurrentPeriodBounds().start, 
+                    calendarLoader.getCurrentPeriodBounds().end, 
+                    new Date(), false);
+            }
+            
+            // Add visual indicators for event types
+            const eventItems = container.querySelectorAll('.event-item');
+            eventItems.forEach(item => {
+                const eventSlug = item.dataset.eventSlug;
+                const event = events.find(e => e.slug === eventSlug);
+                if (event) {
+                    if (event.isExpanded) {
+                        item.classList.add('expanded');
+                    } else if (event.recurring) {
+                        item.classList.add('recurring');
+                    }
+                }
+            });
+            
+            log(`Generated ${currentView} view with ${events.length} events`);
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Test page loaded. Click "Load Test Data" to begin.');
+        });
+    </script>
+</body>
+</html>
