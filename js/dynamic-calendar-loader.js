@@ -2080,7 +2080,10 @@ class DynamicCalendarLoader extends CalendarCore {
             currentView: this.currentView
         });
         
-        const filtered = this.allEvents.filter(event => {
+        // Expand recurring events into separate instances for each occurrence
+        const expandedEvents = this.expandRecurringEvents(this.allEvents, start, end);
+        
+        const filtered = expandedEvents.filter(event => {
             // Special case: Always include measurement test events
             if (event.slug === 'measurement-test') {
                 logger.debug('CALENDAR', `🔍 FILTER: Measurement test event ${event.name}: INCLUDED (special case)`);
@@ -2098,19 +2101,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 return false;
             }
             
-            // For recurring events, check if they occur in this period
-            if (event.recurring) {
-                const isInPeriod = this.isRecurringEventInPeriod(event, start, end);
-                logger.debug('CALENDAR', `🔍 FILTER: Recurring event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`);
-                return isInPeriod;
-            }
-            
-            // For one-time events, check if they fall within the period
+            // For all events (including expanded recurring events), check if they fall within the period
             const isInPeriod = this.isEventInPeriod(event.startDate, start, end);
-            logger.debug('CALENDAR', `🔍 FILTER: One-time event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
+            logger.debug('CALENDAR', `🔍 FILTER: Event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
                 eventDate: new Date(event.startDate).toISOString(),
                 periodStart: start.toISOString(),
-                periodEnd: end.toISOString()
+                periodEnd: end.toISOString(),
+                isRecurring: event.recurring,
+                isExpanded: event.isExpanded
             });
             return isInPeriod;
         });
@@ -2140,6 +2138,74 @@ class DynamicCalendarLoader extends CalendarCore {
         });
         
         return deduplicatedEvents;
+    }
+
+    // Expand recurring events into separate instances for each occurrence
+    expandRecurringEvents(events, start, end) {
+        const expandedEvents = [];
+        
+        for (const event of events) {
+            // Always include non-recurring events
+            if (!event.recurring) {
+                expandedEvents.push(event);
+                continue;
+            }
+            
+            // For recurring events, create separate instances for each occurrence
+            const occurrences = this.getRecurringEventOccurrences(event, start, end);
+            
+            for (const occurrence of occurrences) {
+                // Create a new event instance for this occurrence
+                const expandedEvent = {
+                    ...event,
+                    startDate: occurrence,
+                    isExpanded: true, // Mark as expanded instance
+                    originalStartDate: event.startDate // Keep reference to original
+                };
+                
+                // Enhanced debugging for GOLDILOXX events
+                if (event.name && event.name.includes('GOLDILOXX')) {
+                    logger.debug('CALENDAR', 'GOLDILOXX recurring event expanded', {
+                        eventName: event.name,
+                        originalStartDate: event.startDate.toISOString(),
+                        expandedStartDate: occurrence.toISOString(),
+                        uid: event.uid,
+                        recurring: event.recurring
+                    });
+                }
+                
+                expandedEvents.push(expandedEvent);
+            }
+        }
+        
+        logger.debug('CALENDAR', 'Recurring events expanded', {
+            originalEvents: events.length,
+            expandedEvents: expandedEvents.length,
+            recurringEvents: events.filter(e => e.recurring).length
+        });
+        
+        return expandedEvents;
+    }
+    
+    // Get all occurrences of a recurring event within a date range
+    getRecurringEventOccurrences(event, start, end) {
+        const occurrences = [];
+        
+        if (!event.recurring || !event.startDate) {
+            return occurrences;
+        }
+        
+        const current = new Date(start);
+        
+        // Check each day in the period
+        while (current <= end) {
+            if (this.isEventOccurringOnDate(event, current)) {
+                occurrences.push(new Date(current));
+            }
+            current.setDate(current.getDate() + 1);
+        }
+        
+        return occurrences;
     }
 
     isRecurringEventInPeriod(event, start, end) {
@@ -2252,6 +2318,20 @@ class DynamicCalendarLoader extends CalendarCore {
             const uid = event.uid || event.slug || event.name;
             const key = `${dateKey}-${uid}`;
             
+            // Enhanced debugging for GOLDILOXX events
+            if (event.name && event.name.includes('GOLDILOXX')) {
+                logger.debug('CALENDAR', 'GOLDILOXX event deduplication details', {
+                    eventName: event.name,
+                    eventDate: eventDate.toISOString(),
+                    dateKey: dateKey,
+                    uid: uid,
+                    key: key,
+                    recurring: event.recurring,
+                    recurrenceId: event.recurrenceId,
+                    eventType: event.eventType,
+                    isExpanded: event.isExpanded
+                });
+            }
             
             if (!eventsByDateAndUID.has(key)) {
                 eventsByDateAndUID.set(key, []);
@@ -2263,32 +2343,82 @@ class DynamicCalendarLoader extends CalendarCore {
         const deduplicatedEvents = [];
         
         for (const [key, eventGroup] of eventsByDateAndUID) {
+            // Enhanced debugging for GOLDILOXX events
+            const hasGoldiloxx = eventGroup.some(e => e.name && e.name.includes('GOLDILOXX'));
+            if (hasGoldiloxx) {
+                logger.debug('CALENDAR', 'GOLDILOXX event group processing', {
+                    key: key,
+                    groupSize: eventGroup.length,
+                    events: eventGroup.map(e => ({
+                        name: e.name,
+                        recurring: e.recurring,
+                        recurrenceId: e.recurrenceId,
+                        eventType: e.eventType,
+                        startDate: e.startDate.toISOString()
+                    }))
+                });
+            }
+            
             // If there's only one event for this date/UID, keep it
             if (eventGroup.length === 1) {
                 deduplicatedEvents.push(eventGroup[0]);
+                if (hasGoldiloxx) {
+                    logger.debug('CALENDAR', 'GOLDILOXX: Single event, keeping it', {
+                        eventName: eventGroup[0].name,
+                        recurring: eventGroup[0].recurring
+                    });
+                }
                 continue;
             }
             
             // If there are multiple events for the same date/UID, prioritize overrides
             const overrideEvents = eventGroup.filter(e => e.recurrenceId);
-            const recurringEvents = eventGroup.filter(e => e.recurring && !e.recurrenceId);
+            const expandedRecurringEvents = eventGroup.filter(e => e.isExpanded && e.recurring && !e.recurrenceId);
+            const originalRecurringEvents = eventGroup.filter(e => e.recurring && !e.recurrenceId && !e.isExpanded);
             
-            // Keep override events if they exist, otherwise keep recurring events
+            // Keep override events if they exist, otherwise keep expanded recurring events
             if (overrideEvents.length > 0) {
                 deduplicatedEvents.push(...overrideEvents);
                 logger.debug('CALENDAR', 'Keeping override event, removing recurring', {
                     date: key.split('-')[0],
                     uid: key.split('-')[1],
                     overrideCount: overrideEvents.length,
-                    recurringCount: recurringEvents.length
+                    expandedRecurringCount: expandedRecurringEvents.length,
+                    originalRecurringCount: originalRecurringEvents.length
                 });
-            } else {
-                deduplicatedEvents.push(...recurringEvents);
-                logger.debug('CALENDAR', 'Keeping recurring event (no overrides)', {
+                if (hasGoldiloxx) {
+                    logger.debug('CALENDAR', 'GOLDILOXX: Keeping override events', {
+                        overrideEvents: overrideEvents.map(e => e.name),
+                        expandedRecurringEvents: expandedRecurringEvents.map(e => e.name),
+                        originalRecurringEvents: originalRecurringEvents.map(e => e.name)
+                    });
+                }
+            } else if (expandedRecurringEvents.length > 0) {
+                // Keep expanded recurring events (these are the individual occurrences)
+                deduplicatedEvents.push(...expandedRecurringEvents);
+                logger.debug('CALENDAR', 'Keeping expanded recurring events', {
                     date: key.split('-')[0],
                     uid: key.split('-')[1],
-                    recurringCount: recurringEvents.length
+                    expandedRecurringCount: expandedRecurringEvents.length
                 });
+                if (hasGoldiloxx) {
+                    logger.debug('CALENDAR', 'GOLDILOXX: Keeping expanded recurring events', {
+                        expandedRecurringEvents: expandedRecurringEvents.map(e => e.name)
+                    });
+                }
+            } else {
+                // Fallback to original recurring events (shouldn't happen with new logic)
+                deduplicatedEvents.push(...originalRecurringEvents);
+                logger.debug('CALENDAR', 'Keeping original recurring events (fallback)', {
+                    date: key.split('-')[0],
+                    uid: key.split('-')[1],
+                    originalRecurringCount: originalRecurringEvents.length
+                });
+                if (hasGoldiloxx) {
+                    logger.debug('CALENDAR', 'GOLDILOXX: Keeping original recurring events (fallback)', {
+                        originalRecurringEvents: originalRecurringEvents.map(e => e.name)
+                    });
+                }
             }
         }
         
