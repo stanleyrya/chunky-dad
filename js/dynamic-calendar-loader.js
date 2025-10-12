@@ -2276,7 +2276,18 @@ class DynamicCalendarLoader extends CalendarCore {
                 return true;
             }
             
-            // Keep recurring events that don't have overrides for this date
+            // If this is an override event (has recurrenceId), keep it
+            if (event.recurrenceId) {
+                logger.debug('CALENDAR', 'Keeping override event', {
+                    eventName: event.name,
+                    eventUID: event.uid,
+                    recurrenceId: event.recurrenceId ? event.recurrenceId.toISOString() : null,
+                    date: dateStr
+                });
+                return true;
+            }
+            
+            // For recurring events, only keep them if they don't have overrides for this date
             const hasOverride = overrideUIDs.has(event.uid);
             if (hasOverride) {
                 logger.debug('CALENDAR', 'Filtering out recurring event with override', {
