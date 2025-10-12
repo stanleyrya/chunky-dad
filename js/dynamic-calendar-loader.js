@@ -2247,9 +2247,11 @@ class DynamicCalendarLoader extends CalendarCore {
         
         for (const event of events) {
             const eventDate = new Date(event.startDate);
-            const dateKey = eventDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            // Use local date components instead of UTC to avoid timezone conversion issues
+            const dateKey = this.getLocalDateKey(eventDate);
             const uid = event.uid || event.slug || event.name;
             const key = `${dateKey}-${uid}`;
+            
             
             if (!eventsByDateAndUID.has(key)) {
                 eventsByDateAndUID.set(key, []);
@@ -2282,6 +2284,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 });
             } else {
                 deduplicatedEvents.push(...recurringEvents);
+                logger.debug('CALENDAR', 'Keeping recurring event (no overrides)', {
+                    date: key.split('-')[0],
+                    uid: key.split('-')[1],
+                    recurringCount: recurringEvents.length
+                });
             }
         }
         
@@ -2294,6 +2301,14 @@ class DynamicCalendarLoader extends CalendarCore {
         return deduplicatedEvents;
     }
 
+    // Helper method to get a timezone-aware date key for deduplication
+    // Uses local date components instead of UTC to avoid timezone conversion issues
+    getLocalDateKey(date) {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
 
     // Helper function to calculate the specific occurrence of a day in a month
     // occurrence: positive number (1-5) for nth occurrence, negative (-1) for last occurrence
