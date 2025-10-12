@@ -2117,7 +2117,7 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Apply deduplication logic for recurring events and overrides
         // This ensures that recurring events with overrides are properly handled across all views
-        const deduplicatedEvents = this.applyDeduplicationLogic(filtered, start, end);
+        const deduplicatedEvents = this.applyDeduplicationToPeriod(filtered, start, end);
         
         // Sort events by upcoming time (earliest first)
         deduplicatedEvents.sort((a, b) => {
@@ -2311,45 +2311,23 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Apply deduplication logic for recurring events and overrides across all views
-    applyDeduplicationLogic(events, periodStart, periodEnd) {
+    applyDeduplicationToPeriod(events, periodStart, periodEnd) {
         logger.debug('CALENDAR', 'Applying deduplication logic for all views', {
             totalEvents: events.length,
             periodStart: periodStart.toISOString().split('T')[0],
             periodEnd: periodEnd.toISOString().split('T')[0]
         });
 
-        // For each day in the period, apply the deduplication logic
+        // For list/map views, we need to apply deduplication across the entire period
+        // by checking each day and collecting unique events
         const deduplicatedEvents = [];
         const processedEvents = new Set();
         
-        // Get all unique dates in the period
-        const datesInPeriod = [];
+        // Check each day in the period
         const current = new Date(periodStart);
         while (current <= periodEnd) {
-            datesInPeriod.push(new Date(current));
-            current.setDate(current.getDate() + 1);
-        }
-        
-        // Process each date in the period
-        for (const date of datesInPeriod) {
-            // Find events that occur on this specific date
-            const eventsForDate = events.filter(event => {
-                if (!event.startDate) return false;
-                
-                if (event.recurring) {
-                    return this.isEventOccurringOnDate(event, date);
-                }
-                
-                const eventDate = new Date(event.startDate);
-                eventDate.setHours(0, 0, 0, 0);
-                const checkDate = new Date(date);
-                checkDate.setHours(0, 0, 0, 0);
-                
-                return eventDate.getTime() === checkDate.getTime();
-            });
-            
-            // Apply deduplication for this specific date
-            const deduplicatedForDate = this.filterEventsWithOverrides(eventsForDate, date);
+            // Apply the existing deduplication logic for this specific date
+            const deduplicatedForDate = this.filterEventsWithOverrides(events, current);
             
             // Add unique events to the result (avoid duplicates across dates)
             for (const event of deduplicatedForDate) {
@@ -2359,6 +2337,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     deduplicatedEvents.push(event);
                 }
             }
+            
+            current.setDate(current.getDate() + 1);
         }
         
         logger.debug('CALENDAR', 'Deduplication logic applied successfully', {
