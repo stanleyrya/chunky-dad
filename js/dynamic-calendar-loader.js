@@ -2236,21 +2236,17 @@ class DynamicCalendarLoader extends CalendarCore {
     filterEventsWithOverrides(events, date) {
         const dateStr = date.toISOString().split('T')[0];
         
-        // Find all override events for this date
-        // Need to compare dates properly accounting for timezone differences
+        // Find all override events that occur on this date
+        // Override events are events with recurrenceId that actually occur on the target date
         const overrideEvents = events.filter(event => {
             if (!event.recurrenceId) return false;
             
-            // Convert both dates to local date strings for comparison
-            const recurrenceDate = new Date(event.recurrenceId);
-            const recurrenceDateStr = recurrenceDate.toISOString().split('T')[0];
-            
-            // Also check if the recurrence date falls on the same calendar date
-            // by comparing the local date components
-            const recurrenceLocalDate = new Date(recurrenceDate.getFullYear(), recurrenceDate.getMonth(), recurrenceDate.getDate());
+            // Check if the override event's start date matches the target date
+            const eventDate = new Date(event.startDate);
+            const eventLocalDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
             const targetLocalDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
             
-            return recurrenceLocalDate.getTime() === targetLocalDate.getTime();
+            return eventLocalDate.getTime() === targetLocalDate.getTime();
         });
         
         // Create a map of UIDs that have overrides for this date
@@ -2264,8 +2260,9 @@ class DynamicCalendarLoader extends CalendarCore {
             overrideEventNames: overrideEvents.map(e => e.name),
             overrideEventDetails: overrideEvents.map(e => ({
                 name: e.name,
-                recurrenceId: e.recurrenceId ? e.recurrenceId.toISOString() : null,
-                recurrenceIdLocal: e.recurrenceId ? new Date(e.recurrenceId.getFullYear(), e.recurrenceId.getMonth(), e.recurrenceId.getDate()).toISOString().split('T')[0] : null
+                startDate: e.startDate ? e.startDate.toISOString() : null,
+                startDateLocal: e.startDate ? new Date(e.startDate.getFullYear(), e.startDate.getMonth(), e.startDate.getDate()).toISOString().split('T')[0] : null,
+                recurrenceId: e.recurrenceId ? e.recurrenceId.toISOString() : null
             }))
         });
         
