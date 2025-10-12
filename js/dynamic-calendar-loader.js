@@ -2171,7 +2171,8 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.debug('CALENDAR', 'Recurring events expanded', {
             originalEvents: events.length,
             expandedEvents: expandedEvents.length,
-            recurringEvents: events.filter(e => e.recurring).length
+            recurringEvents: events.filter(e => e.recurring).length,
+            expandedRecurringEvents: expandedEvents.filter(e => e.isExpanded).length
         });
         
         return expandedEvents;
@@ -2453,10 +2454,22 @@ class DynamicCalendarLoader extends CalendarCore {
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
                 
+                // For already expanded recurring events, just check if the date matches
+                if (event.isExpanded) {
+                    const eventDate = new Date(event.startDate);
+                    eventDate.setHours(0, 0, 0, 0);
+                    const dayDate = new Date(day);
+                    dayDate.setHours(0, 0, 0, 0);
+                    
+                    return eventDate.getTime() === dayDate.getTime();
+                }
+                
+                // For non-expanded recurring events, use the occurrence check
                 if (event.recurring) {
                     return this.isEventOccurringOnDate(event, day);
                 }
                 
+                // For non-recurring events, check exact date match
                 const eventDate = new Date(event.startDate);
                 eventDate.setHours(0, 0, 0, 0);
                 const dayDate = new Date(day);
@@ -2550,10 +2563,40 @@ class DynamicCalendarLoader extends CalendarCore {
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
                 
-                if (event.recurring) {
-                    return this.isEventOccurringOnDate(event, day);
+                // For already expanded recurring events, just check if the date matches
+                if (event.isExpanded) {
+                    const eventDate = new Date(event.startDate);
+                    eventDate.setHours(0, 0, 0, 0);
+                    const dayDate = new Date(day);
+                    dayDate.setHours(0, 0, 0, 0);
+                    
+                    const matches = eventDate.getTime() === dayDate.getTime();
+                    if (matches) {
+                        logger.debug('CALENDAR', 'Month view: Expanded recurring event matches day', {
+                            eventName: event.name,
+                            eventDate: eventDate.toISOString().split('T')[0],
+                            dayDate: dayDate.toISOString().split('T')[0],
+                            isExpanded: true
+                        });
+                    }
+                    return matches;
                 }
                 
+                // For non-expanded recurring events, use the occurrence check
+                if (event.recurring) {
+                    const matches = this.isEventOccurringOnDate(event, day);
+                    if (matches) {
+                        logger.debug('CALENDAR', 'Month view: Non-expanded recurring event matches day', {
+                            eventName: event.name,
+                            dayDate: day.toISOString().split('T')[0],
+                            isExpanded: false,
+                            recurring: true
+                        });
+                    }
+                    return matches;
+                }
+                
+                // For non-recurring events, check exact date match
                 const eventDate = new Date(event.startDate);
                 eventDate.setHours(0, 0, 0, 0);
                 const dayDate = new Date(day);
