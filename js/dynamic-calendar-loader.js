@@ -2113,8 +2113,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return isInPeriod;
         });
         
-        // Apply deduplication based on UID and recurrenceId
-        const deduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filtered);
+        // Apply simple deduplication: for each date, show either recurring event OR override, never both
+        const deduplicatedEvents = this.deduplicateByDate(filtered);
         
         // Sort events by upcoming time (earliest first)
         deduplicatedEvents.sort((a, b) => {
@@ -2293,9 +2293,76 @@ class DynamicCalendarLoader extends CalendarCore {
         return eventDate.getDay() === checkDate.getDay();
     }
 
-    // Deduplicate events based on UID and recurrenceId (null is ok for recurrenceId)
+    // Simple deduplication: for each date, show either recurring event OR override, never both
+    deduplicateByDate(events) {
+        logger.debug('CALENDAR', 'Applying simple date-based deduplication', {
+            totalEvents: events.length
+        });
+
+        // Group events by date and UID
+        const eventsByDateAndUID = new Map();
+        
+        for (const event of events) {
+            const eventDate = new Date(event.startDate);
+            // Use local date components instead of UTC to avoid timezone conversion issues
+            const dateKey = this.getLocalDateKey(eventDate);
+            const uid = event.uid || event.slug || event.name;
+            const key = `${dateKey}-${uid}`;
+            
+            
+            if (!eventsByDateAndUID.has(key)) {
+                eventsByDateAndUID.set(key, []);
+            }
+            eventsByDateAndUID.get(key).push(event);
+        }
+        
+        // For each date/UID combination, keep only the appropriate event
+        const deduplicatedEvents = [];
+        
+        for (const [key, eventGroup] of eventsByDateAndUID) {
+            
+            // If there's only one event for this date/UID, keep it
+            if (eventGroup.length === 1) {
+                deduplicatedEvents.push(eventGroup[0]);
+                continue;
+            }
+            
+            // If there are multiple events for the same date/UID, prioritize overrides
+            const overrideEvents = eventGroup.filter(e => e.recurrenceId);
+            const expandedRecurringEvents = eventGroup.filter(e => e.isExpanded && e.recurring && !e.recurrenceId);
+            
+            // Keep override events if they exist, otherwise keep expanded recurring events
+            if (overrideEvents.length > 0) {
+                deduplicatedEvents.push(...overrideEvents);
+                logger.debug('CALENDAR', 'Keeping override event, removing recurring', {
+                    date: key.split('-')[0],
+                    uid: key.split('-')[1],
+                    overrideCount: overrideEvents.length,
+                    expandedRecurringCount: expandedRecurringEvents.length
+                });
+            } else {
+                // Keep expanded recurring events (these are the individual occurrences)
+                deduplicatedEvents.push(...expandedRecurringEvents);
+                logger.debug('CALENDAR', 'Keeping expanded recurring events', {
+                    date: key.split('-')[0],
+                    uid: key.split('-')[1],
+                    expandedRecurringCount: expandedRecurringEvents.length
+                });
+            }
+        }
+        
+        logger.debug('CALENDAR', 'Date-based deduplication complete', {
+            originalEvents: events.length,
+            deduplicatedEvents: deduplicatedEvents.length,
+            removedDuplicates: events.length - deduplicatedEvents.length
+        });
+        
+        return deduplicatedEvents;
+    }
+
+    // Deduplicate events based on UID and recurrenceId for list/map views
     deduplicateByUIDAndRecurrenceId(events) {
-        logger.debug('CALENDAR', 'Applying UID and recurrenceId-based deduplication', {
+        logger.debug('CALENDAR', 'Applying UID and recurrenceId-based deduplication for list/map views', {
             totalEvents: events.length
         });
 
@@ -2317,7 +2384,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const recurrenceIdKey = recurrenceId instanceof Date ? recurrenceId.toISOString() : 'null';
             const key = `${uid}-${recurrenceIdKey}`;
             
-            logger.debug('CALENDAR', 'Processing event for deduplication', {
+            logger.debug('CALENDAR', 'Processing event for UID/recurrenceId deduplication', {
                 eventName: event.name,
                 uid: uid,
                 recurrenceId: recurrenceId,
@@ -2338,18 +2405,17 @@ class DynamicCalendarLoader extends CalendarCore {
             if (eventGroup.length === 1) {
                 // Only one event for this UID/recurrenceId combination
                 deduplicatedEvents.push(eventGroup[0]);
-                logger.debug('CALENDAR', 'Keeping single event', {
+                logger.debug('CALENDAR', 'Keeping single event for list/map', {
                     uid: eventGroup[0].uid,
                     recurrenceId: eventGroup[0].recurrenceId,
                     eventName: eventGroup[0].name
                 });
             } else {
                 // Multiple events with same UID and recurrenceId - keep the first one
-                // This handles cases where the same event appears multiple times
                 const eventToKeep = eventGroup[0];
                 deduplicatedEvents.push(eventToKeep);
                 
-                logger.info('CALENDAR', 'Deduplicating multiple events with same UID/recurrenceId', {
+                logger.info('CALENDAR', 'Deduplicating multiple events with same UID/recurrenceId for list/map', {
                     uid: eventToKeep.uid,
                     recurrenceId: eventToKeep.recurrenceId,
                     eventName: eventToKeep.name,
@@ -2359,7 +2425,7 @@ class DynamicCalendarLoader extends CalendarCore {
             }
         }
         
-        logger.info('CALENDAR', 'UID and recurrenceId-based deduplication complete', {
+        logger.info('CALENDAR', 'UID and recurrenceId-based deduplication complete for list/map', {
             originalEvents: events.length,
             deduplicatedEvents: deduplicatedEvents.length,
             removedDuplicates: events.length - deduplicatedEvents.length,
@@ -3007,12 +3073,20 @@ class DynamicCalendarLoader extends CalendarCore {
                         } : 'no events'
                     });
                     
-                    const eventCardsHtml = filteredEvents.map(event => this.generateEventCard(event)).join('');
+                    // Apply UID/recurrenceId deduplication for list view
+                    logger.info('CALENDAR', 'Applying UID/recurrenceId deduplication for list view', {
+                        originalEventCount: filteredEvents.length
+                    });
+                    const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
+                    
+                    const eventCardsHtml = listDeduplicatedEvents.map(event => this.generateEventCard(event)).join('');
                     eventsList.innerHTML = eventCardsHtml;
                     
                     logger.debug('CALENDAR', '✅ UPDATE_DISPLAY: Successfully updated events list', {
                         htmlLength: eventCardsHtml.length,
-                        eventCount: filteredEvents.length
+                        originalEventCount: filteredEvents.length,
+                        deduplicatedEventCount: listDeduplicatedEvents.length,
+                        removedDuplicates: filteredEvents.length - listDeduplicatedEvents.length
                     });
                 } catch (cardError) {
                     logger.componentError('CALENDAR', 'Failed to generate event cards', cardError);
@@ -3060,7 +3134,12 @@ class DynamicCalendarLoader extends CalendarCore {
             if (mapSection && !hideEvents) {
                 logger.debug('CALENDAR', 'Initializing map for events display');
                 mapSection.style.display = 'block';
-                this.initializeMap(this.currentCityConfig, filteredEvents);
+                // Apply UID/recurrenceId deduplication for map view
+                logger.info('CALENDAR', 'Applying UID/recurrenceId deduplication for map view', {
+                    originalEventCount: filteredEvents.length
+                });
+                const mapDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
+                this.initializeMap(this.currentCityConfig, mapDeduplicatedEvents);
                 logger.debug('CALENDAR', 'Map initialization completed');
                 
                 // Update visual selection state again after map is initialized
