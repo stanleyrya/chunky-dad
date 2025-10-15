@@ -1,0 +1,41 @@
+[
+  {
+    "name": "The Eagle NYC",
+    "importId": "eagle-nyc-001",
+    "city": "new-york",
+    "googleMaps": "https://maps.google.com/?q=The+Eagle+NYC",
+    "address": "554 W 28th St, New York, NY 10001",
+    "coordinates": "40.7505, -74.0015",
+    "instagram": "https://instagram.com/eaglenyc",
+    "website": "https://eaglenyc.com",
+    "nickname": "The Eagle",
+    "type": "bar",
+    "hours": "Mon-Fri: 4pm-4am, Sat-Sun: 2pm-4am"
+  },
+  {
+    "name": "The Stonewall Inn",
+    "importId": "stonewall-001",
+    "city": "new-york",
+    "googleMaps": "https://maps.google.com/?q=The+Stonewall+Inn",
+    "address": "53 Christopher St, New York, NY 10014",
+    "coordinates": "40.7338, -74.0021",
+    "instagram": "https://instagram.com/stonewallinnnyc",
+    "website": "https://thestonewallinnnyc.com",
+    "nickname": "Stonewall",
+    "type": "bar",
+    "hours": "Daily: 2pm-4am"
+  },
+  {
+    "name": "The Monster",
+    "importId": "monster-001",
+    "city": "new-york",
+    "googleMaps": "https://maps.google.com/?q=The+Monster+NYC",
+    "address": "80 Grove St, New York, NY 10014",
+    "coordinates": "40.7339, -74.0028",
+    "instagram": "https://instagram.com/themonsternyc",
+    "website": "https://themonsternyc.com",
+    "nickname": "The Monster",
+    "type": "bar",
+    "hours": "Daily: 4pm-4am"
+  }
+]

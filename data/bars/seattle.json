@@ -1,0 +1,28 @@
+[
+  {
+    "name": "The Cuff Complex",
+    "importId": "cuff-001",
+    "city": "seattle",
+    "googleMaps": "https://maps.google.com/?q=The+Cuff+Complex+Seattle",
+    "address": "1533 13th Ave, Seattle, WA 98122",
+    "coordinates": "47.6145, -122.3161",
+    "instagram": "https://instagram.com/cuffcomplex",
+    "website": "https://cuffcomplex.com",
+    "nickname": "The Cuff",
+    "type": "bar",
+    "hours": "Daily: 4pm-2am"
+  },
+  {
+    "name": "The Eagle Seattle",
+    "importId": "eagle-sea-001",
+    "city": "seattle",
+    "googleMaps": "https://maps.google.com/?q=The+Eagle+Seattle",
+    "address": "314 E Pike St, Seattle, WA 98122",
+    "coordinates": "47.6140, -122.3195",
+    "instagram": "https://instagram.com/eagleseattle",
+    "website": "https://eagleseattle.com",
+    "nickname": "The Eagle",
+    "type": "bar",
+    "hours": "Daily: 4pm-2am"
+  }
+]

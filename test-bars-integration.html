@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bars Integration Test - chunky.dad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .bars-container {
+            margin-top: 20px;
+        }
+        .bar-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .bar-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+        .bar-details {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .bar-links a {
+            margin-right: 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .bar-links a:hover {
+            text-decoration: underline;
+        }
+        .config-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .config-input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .config-label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🍺 Bars Integration Test - chunky.dad</h1>
+    
+    <div class="config-section">
+        <h3>Google Sheets Configuration</h3>
+        <label class="config-label" for="sheets-url">Google App Script URL:</label>
+        <input type="url" id="sheets-url" class="config-input" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec">
+        
+        <label class="config-label" for="secret-key">Secret Key:</label>
+        <input type="text" id="secret-key" class="config-input" placeholder="Your secret key">
+        
+        <button class="test-button" onclick="setConfiguration()">Set Configuration</button>
+        <div id="config-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Bars System Tests</h2>
+        
+        <div class="test-section">
+            <h3>1. Initialize Bars System</h3>
+            <button class="test-button" onclick="testInitialize()">Initialize Bars</button>
+            <div id="init-result" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Load Bars Data</h3>
+            <button class="test-button" onclick="testLoadBars()">Load from Google Sheets</button>
+            <div id="load-result" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Test Bar Addition</h3>
+            <button class="test-button" onclick="testAddBar()">Add Test Bar</button>
+            <div id="add-result" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Display Bars</h3>
+            <button class="test-button" onclick="testDisplayBars()">Show Bars</button>
+            <div id="display-result" class="test-result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="bars-container" id="bars-display"></div>
+
+    <!-- Load required scripts -->
+    <script src="js/logger.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/bars-core.js"></script>
+    <script src="js/bars-loader.js"></script>
+
+    <script>
+        let barsLoader = null;
+        let testBarData = {
+            name: "Test Bar " + new Date().getTime(),
+            city: "new-york",
+            type: "bar",
+            address: "123 Test St, New York, NY 10001",
+            coordinates: "40.7831, -73.9712",
+            website: "https://example.com",
+            instagram: "https://instagram.com/testbar",
+            nickname: "Test Bar",
+            hours: "Daily: 12pm-12am"
+        };
+
+        function setConfiguration() {
+            const url = document.getElementById('sheets-url').value;
+            const key = document.getElementById('secret-key').value;
+            const resultDiv = document.getElementById('config-result');
+            
+            if (!url || !key) {
+                showResult('config-result', 'Please enter both URL and secret key', 'error');
+                return;
+            }
+
+            // Store in window for the bars system to use
+            window.GOOGLE_APP_SCRIPT_URL = url;
+            window.GOOGLE_APP_SCRIPT_KEY = key;
+            
+            showResult('config-result', 'Configuration set successfully!', 'success');
+        }
+
+        function testInitialize() {
+            try {
+                if (!window.GOOGLE_APP_SCRIPT_URL || !window.GOOGLE_APP_SCRIPT_KEY) {
+                    showResult('init-result', 'Please set Google Sheets configuration first', 'error');
+                    return;
+                }
+
+                barsLoader = new DynamicBarsLoader();
+                showResult('init-result', 'Bars loader created successfully!', 'success');
+            } catch (error) {
+                showResult('init-result', 'Error: ' + error.message, 'error');
+            }
+        }
+
+        async function testLoadBars() {
+            try {
+                if (!barsLoader) {
+                    showResult('load-result', 'Please initialize bars system first', 'error');
+                    return;
+                }
+
+                // Set configuration
+                barsLoader.setGoogleSheetsConfig(window.GOOGLE_APP_SCRIPT_URL, window.GOOGLE_APP_SCRIPT_KEY);
+                
+                const bars = await barsLoader.loadBarsData();
+                showResult('load-result', `Loaded ${bars.length} bars successfully!`, 'success');
+            } catch (error) {
+                showResult('load-result', 'Error: ' + error.message, 'error');
+            }
+        }
+
+        async function testAddBar() {
+            try {
+                if (!barsLoader) {
+                    showResult('add-result', 'Please initialize bars system first', 'error');
+                    return;
+                }
+
+                const result = await barsLoader.saveBarData(testBarData);
+                showResult('add-result', 'Bar added successfully: ' + result, 'success');
+            } catch (error) {
+                showResult('add-result', 'Error: ' + error.message, 'error');
+            }
+        }
+
+        function testDisplayBars() {
+            try {
+                if (!barsLoader || !barsLoader.allBars) {
+                    showResult('display-result', 'Please load bars data first', 'error');
+                    return;
+                }
+
+                const displayDiv = document.getElementById('bars-display');
+                const bars = barsLoader.allBars;
+
+                if (bars.length === 0) {
+                    displayDiv.innerHTML = '<p>No bars loaded</p>';
+                    showResult('display-result', 'No bars to display', 'info');
+                    return;
+                }
+
+                let html = '<h3>Loaded Bars:</h3>';
+                bars.forEach(bar => {
+                    html += `
+                        <div class="bar-card">
+                            <div class="bar-name">${bar.name}</div>
+                            <div class="bar-details">
+                                <strong>City:</strong> ${bar.city}<br>
+                                <strong>Type:</strong> ${bar.type}<br>
+                                <strong>Address:</strong> ${bar.address || 'N/A'}<br>
+                                <strong>Hours:</strong> ${bar.hours || 'N/A'}
+                            </div>
+                            <div class="bar-links">
+                                ${bar.links ? bar.links.map(link => `<a href="${link.url}" target="_blank">${link.label}</a>`).join('') : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                displayDiv.innerHTML = html;
+                showResult('display-result', `Displayed ${bars.length} bars`, 'success');
+            } catch (error) {
+                showResult('display-result', 'Error: ' + error.message, 'error');
+            }
+        }
+
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = 'test-result ' + type;
+            element.style.display = 'block';
+        }
+
+        // Initialize logger
+        if (typeof logger !== 'undefined') {
+            logger.setLogLevel('DEBUG');
+        }
+    </script>
+</body>
+</html>

@@ -115,6 +115,7 @@ class ChunkyDadApp {
         this.pageEffectsManager = null;
         this.formsManager = null;
         this.calendarLoader = null;
+        this.barsLoader = null;
         this.bearDirectory = null;
         this.debugOverlay = null;
         this.cityRenderer = null;
@@ -358,9 +359,33 @@ class ChunkyDadApp {
             } else {
                 logger.warn('SYSTEM', 'DynamicCalendarLoader not available');
             }
+
+            // Bars functionality needed on city pages
+            if (window.DynamicBarsLoader && (this.isCityPage || this.isTestPage)) {
+                this.barsLoader = new DynamicBarsLoader();
+                // Make it globally accessible for debugging
+                window.barsLoader = this.barsLoader;
+                
+                // Initialize bars system for the current city
+                const citySlug = this.getCitySlugFromPath();
+                if (citySlug && hasCityBars(citySlug)) {
+                    // Don't await - let bars load in background
+                    this.barsLoader.initialize(citySlug).catch(error => {
+                        logger.componentError('SYSTEM', 'Bars initialization failed (non-blocking)', error);
+                        return null;
+                    });
+                } else {
+                    logger.debug('SYSTEM', 'Bars not enabled for current city or no city detected', {
+                        citySlug,
+                        hasBars: citySlug ? hasCityBars(citySlug) : false
+                    });
+                }
+            } else {
+                logger.debug('SYSTEM', 'DynamicBarsLoader not available or not needed on this page');
+            }
             
             const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
-            logger.componentLoad('SYSTEM', `${pageType} modules initialized (calendar loading in background)`);
+            logger.componentLoad('SYSTEM', `${pageType} modules initialized (calendar and bars loading in background)`);
         } catch (error) {
             const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
             logger.componentError('SYSTEM', `${pageType} module initialization failed`, error);
@@ -400,6 +425,10 @@ class ChunkyDadApp {
 
     getCalendarLoader() {
         return this.calendarLoader;
+    }
+
+    getBarsLoader() {
+        return this.barsLoader;
     }
 
     getBearDirectory() {
