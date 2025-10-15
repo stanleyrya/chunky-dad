@@ -17,11 +17,13 @@ async function syncBars() {
         console.log('🔄 Syncing bars data from Google Sheets...');
         
         // Fetch data from Google Sheets
-        const response = await fetch(googleAppScriptUrl, {
+        const url = new URL(googleAppScriptUrl);
+        url.searchParams.set('token', secretKey);
+        
+        const response = await fetch(url.toString(), {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${secretKey}`
+                'Content-Type': 'application/json'
             }
         });
         
@@ -61,6 +63,33 @@ async function syncBars() {
         console.error('❌ Error syncing bars:', error.message);
         process.exit(1);
     }
+}
+
+// Function to save a bar to Google Sheets
+async function saveBarToSheets(barData) {
+    const googleAppScriptUrl = process.env.GOOGLE_APP_SCRIPT_URL;
+    const secretKey = process.env.GOOGLE_APP_SCRIPT_KEY;
+    
+    if (!googleAppScriptUrl || !secretKey) {
+        throw new Error('Missing required environment variables');
+    }
+    
+    const response = await fetch(googleAppScriptUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            ...barData,
+            token: secretKey
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.text();
 }
 
 // Run the sync
