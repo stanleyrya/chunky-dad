@@ -160,15 +160,15 @@ function findBarsToUpload(sheetsBars, localBars) {
 async function uploadBarsToSheets(barsToUpload, url, secretKey) {
     for (const bar of barsToUpload) {
         try {
-            const response = await fetch(url, {
+            const requestUrl = new URL(url);
+            requestUrl.searchParams.set('token', secretKey);
+            
+            const response = await fetch(requestUrl.toString(), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    ...bar,
-                    token: secretKey
-                })
+                body: JSON.stringify(bar)
             });
             
             if (!response.ok) {
