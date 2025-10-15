@@ -1,0 +1,52 @@
+name: Sync Bars Data
+
+on:
+  schedule:
+    # Run every 2 hours
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync-bars:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+      
+    - name: Create bars data directory
+      run: mkdir -p data/bars
+      
+    - name: Sync bars data
+      env:
+        GOOGLE_APP_SCRIPT_URL: ${{ secrets.GOOGLE_APP_SCRIPT_URL }}
+        GOOGLE_APP_SCRIPT_KEY: ${{ secrets.GOOGLE_APP_SCRIPT_KEY }}
+      run: node tools/sync-bars.js
+      
+    - name: Commit updated bars data
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "Bars Sync Bot"
+        
+        # Add all bars data files
+        git add data/bars/
+        
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+          echo "No bars data changes to commit"
+        else
+          # Count the number of changed files
+          CHANGED_FILES=$(git diff --staged --name-only | wc -l)
+          CHANGED_BAR_FILES=$(git diff --staged --name-only | grep '\.json$' | wc -l)
+          
+          git commit -m "🍺 Sync bars data from Google Sheets - $(date -u '+%Y-%m-%d %H:%M UTC') (${CHANGED_BAR_FILES} files changed)"
+          git push
+          echo "✓ Bars data synced and committed (${CHANGED_FILES} files changed)"
+        fi

@@ -203,6 +203,7 @@ function hasCityCalendar(cityKey) {
     return config && config.calendarId;
 }
 
+
 // Make functions globally available for browser use
 if (typeof window !== 'undefined') {
   window.CITY_CONFIG = CITY_CONFIG;
