@@ -211,19 +211,19 @@ async function enrichBarsWithImportUrl(bars) {
 
 // Check if a bar needs scraping based on missing data
 function shouldScrapeBar(bar) {
-    // Only scrape if we're missing data that Wikipedia could provide
+    // Only scrape if we're missing data that Wikipedia can actually provide
+    // Based on testing, Wikipedia scraping works for: address, coordinates, image
+    // It doesn't reliably work for: website, nickname
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
     if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
-    if (!bar.website || bar.website.trim() === '') missingFields.push('website');
-    if (!bar.nickname || bar.nickname.trim() === '') missingFields.push('nickname');
     if (!bar.image || bar.image.trim() === '') missingFields.push('image');
     
     const needsScraping = missingFields.length > 0;
     
     if (needsScraping) {
-        console.log(`📋 ${bar.name} missing fields: ${missingFields.join(', ')}`);
+        console.log(`📋 ${bar.name} missing scrapable fields: ${missingFields.join(', ')}`);
     }
     
     return needsScraping;
