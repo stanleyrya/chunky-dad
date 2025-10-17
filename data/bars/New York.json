@@ -11,7 +11,8 @@
     "website": "https://www.rockbarnyc.com",
     "nickname": "",
     "type": "",
-    "hours": ""
+    "hours": "",
+    "image": ""
   },
   {
     "timestamp": "",
@@ -19,13 +20,14 @@
     "importUrl": "https://en.wikipedia.org/wiki/Eagle_NYC",
     "city": "New York",
     "googleMaps": "",
-    "address": "",
-    "coordinates": "",
+    "address": "554 West 28th Street New York , NY 10001 United States",
+    "coordinates": "40.751694, -74.004306",
     "instagram": "",
-    "website": "",
+    "website": "http://eagle-ny.com",
     "nickname": "",
     "type": "",
-    "hours": ""
+    "hours": "",
+    "image": "//upload.wikimedia.org/wikipedia/en/thumb/d/d1/Eagle_NYC_logo.png/250px-Eagle_NYC_logo.png"
   },
   {
     "timestamp": "",
@@ -33,13 +35,14 @@
     "importUrl": "https://en.wikipedia.org/wiki/3_Dollar_Bill",
     "city": "New York",
     "googleMaps": "",
-    "address": "",
-    "coordinates": "",
+    "address": "260 Meserole Street, Brooklyn, New York, 11206, United States",
+    "coordinates": "40.708471, -73.938175",
     "instagram": "",
     "website": "",
     "nickname": "",
     "type": "",
-    "hours": ""
+    "hours": "",
+    "image": "//upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Threedollarbill1.jpg/250px-Threedollarbill1.jpg"
   },
   {
     "timestamp": "",
@@ -53,6 +56,7 @@
     "website": "",
     "nickname": "",
     "type": "",
-    "hours": ""
+    "hours": "",
+    "image": ""
   }
 ]

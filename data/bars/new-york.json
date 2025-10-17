@@ -10,7 +10,8 @@
     "website": "https://eaglenyc.com",
     "nickname": "The Eagle",
     "type": "bar",
-    "hours": "Mon-Fri: 4pm-4am, Sat-Sun: 2pm-4am"
+    "hours": "Mon-Fri: 4pm-4am, Sat-Sun: 2pm-4am",
+    "image": ""
   },
   {
     "name": "The Stonewall Inn",
@@ -23,7 +24,8 @@
     "website": "https://thestonewallinnnyc.com",
     "nickname": "Stonewall",
     "type": "bar",
-    "hours": "Daily: 2pm-4am"
+    "hours": "Daily: 2pm-4am",
+    "image": ""
   },
   {
     "name": "The Monster",
@@ -36,6 +38,7 @@
     "website": "https://themonsternyc.com",
     "nickname": "The Monster",
     "type": "bar",
-    "hours": "Daily: 4pm-4am"
+    "hours": "Daily: 4pm-4am",
+    "image": ""
   }
 ]

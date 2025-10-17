@@ -10,7 +10,8 @@
     "website": "https://eaglesf.com",
     "nickname": "The Eagle",
     "type": "bar",
-    "hours": "Daily: 4pm-2am"
+    "hours": "Daily: 4pm-2am",
+    "image": ""
   },
   {
     "name": "The Stud",
@@ -23,6 +24,7 @@
     "website": "https://thestudsf.com",
     "nickname": "The Stud",
     "type": "bar",
-    "hours": "Wed-Sun: 8pm-2am"
+    "hours": "Wed-Sun: 8pm-2am",
+    "image": ""
   }
 ]
