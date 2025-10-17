@@ -324,7 +324,12 @@ async function scrapeWikipediaData(url) {
         imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*alt="[^"]*logo[^"]*"[^>]*>/i);
     }
     if (imageMatch) {
-        data.image = imageMatch[1].trim();
+        let imageUrl = imageMatch[1].trim();
+        // Fix protocol-relative URLs
+        if (imageUrl.startsWith('//')) {
+            imageUrl = 'https:' + imageUrl;
+        }
+        data.image = imageUrl;
     }
     
     return data;
