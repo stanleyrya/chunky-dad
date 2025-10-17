@@ -10,7 +10,8 @@
     "website": "https://cuffcomplex.com",
     "nickname": "The Cuff",
     "type": "bar",
-    "hours": "Daily: 4pm-2am"
+    "hours": "Daily: 4pm-2am",
+    "image": ""
   },
   {
     "name": "The Eagle Seattle",
@@ -23,6 +24,7 @@
     "website": "https://eagleseattle.com",
     "nickname": "The Eagle",
     "type": "bar",
-    "hours": "Daily: 4pm-2am"
+    "hours": "Daily: 4pm-2am",
+    "image": ""
   }
 ]
