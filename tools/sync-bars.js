@@ -95,21 +95,35 @@ async function loadLocalBars() {
     return allBars;
 }
 
+// Normalize city name to kebab-case format
+function normalizeCityName(cityName) {
+    if (!cityName) return 'unknown';
+    
+    return cityName
+        .toLowerCase()
+        .replace(/\s+/g, '-')           // Replace spaces with hyphens
+        .replace(/[^a-z0-9\-]/g, '')    // Remove special characters except hyphens
+        .replace(/-+/g, '-')            // Replace multiple hyphens with single hyphen
+        .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+}
+
 // Merge bars from sheets and local, deduplicating by name + city
 function mergeBars(sheetsBars, localBars) {
     const merged = new Map();
     
-    // Add sheets bars first
+    // Add sheets bars first, with normalized city names
     sheetsBars.forEach(bar => {
-        const key = `${bar.name}-${bar.city}`.toLowerCase();
-        merged.set(key, bar);
+        const normalizedBar = { ...bar, city: normalizeCityName(bar.city) };
+        const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
+        merged.set(key, normalizedBar);
     });
     
-    // Add local bars, only if not already present
+    // Add local bars, only if not already present, with normalized city names
     localBars.forEach(bar => {
-        const key = `${bar.name}-${bar.city}`.toLowerCase();
+        const normalizedBar = { ...bar, city: normalizeCityName(bar.city) };
+        const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
         if (!merged.has(key)) {
-            merged.set(key, bar);
+            merged.set(key, normalizedBar);
         }
     });
     
@@ -124,17 +138,17 @@ async function saveBarsLocally(allBars) {
         fs.mkdirSync(barsDir, { recursive: true });
     }
     
-    // Group by city
+    // Group by normalized city name
     const barsByCity = {};
     allBars.forEach(bar => {
-        const city = bar.city || 'unknown';
-        if (!barsByCity[city]) {
-            barsByCity[city] = [];
+        const normalizedCity = normalizeCityName(bar.city);
+        if (!barsByCity[normalizedCity]) {
+            barsByCity[normalizedCity] = [];
         }
-        barsByCity[city].push(bar);
+        barsByCity[normalizedCity].push(bar);
     });
     
-    // Write city-specific JSON files
+    // Write city-specific JSON files with normalized city names
     for (const [city, bars] of Object.entries(barsByCity)) {
         const filePath = path.join(barsDir, `${city}.json`);
         fs.writeFileSync(filePath, JSON.stringify(bars, null, 2));
@@ -154,8 +168,12 @@ async function enrichBarsWithImportUrl(bars) {
             enrichedBar.image = '';
         }
         
-        // If bar has an importUrl and is missing data, try to scrape it
-        if (bar.importUrl && (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org'))) {
+        // Check if bar needs scraping - only scrape if missing data that would be scraped
+        const needsScraping = bar.importUrl && 
+            (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org')) &&
+            shouldScrapeBar(bar);
+        
+        if (needsScraping) {
             try {
                 console.log(`🔍 Scraping data for ${bar.name} from ${bar.importUrl}`);
                 const scrapedData = await scrapeWikipediaData(bar.importUrl);
@@ -181,12 +199,34 @@ async function enrichBarsWithImportUrl(bars) {
             } catch (error) {
                 console.warn(`⚠️  Failed to scrape data for ${bar.name}:`, error.message);
             }
+        } else if (bar.importUrl && (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org'))) {
+            console.log(`⏭️  Skipping scraping for ${bar.name} - already has valid data`);
         }
         
         enrichedBars.push(enrichedBar);
     }
     
     return enrichedBars;
+}
+
+// Check if a bar needs scraping based on missing data
+function shouldScrapeBar(bar) {
+    // Only scrape if we're missing data that Wikipedia can actually provide
+    // Based on testing, Wikipedia scraping works for: address, coordinates, image
+    // It doesn't reliably work for: website, nickname
+    const missingFields = [];
+    
+    if (!bar.address || bar.address.trim() === '') missingFields.push('address');
+    if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
+    if (!bar.image || bar.image.trim() === '') missingFields.push('image');
+    
+    const needsScraping = missingFields.length > 0;
+    
+    if (needsScraping) {
+        console.log(`📋 ${bar.name} missing scrapable fields: ${missingFields.join(', ')}`);
+    }
+    
+    return needsScraping;
 }
 
 // Scrape Wikipedia data for a bar
