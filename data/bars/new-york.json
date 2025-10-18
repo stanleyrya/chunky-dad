@@ -49,16 +49,16 @@
     "name": "Ty's",
     "importUrl": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
     "city": "new-york",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id%3AChIJaVvpXJNZwokRT3p02KL_TrY&utm_campaign=ml-sul",
-    "address": "114 Christopher St, New York, NY 10014",
-    "coordinates": "40.7326941, -74.0097216",
-    "instagram": "https://www.instagram.com/tysbar/",
-    "facebook": "https://m.facebook.com/TysNYC/",
-    "website": "https://tys.nyc",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY",
+    "address": "",
+    "coordinates": "",
+    "instagram": "https://www.instagram.com/tysbar",
+    "website": "",
     "nickname": "",
     "type": "",
     "hours": "",
-    "image": ""
+    "image": "",
+    "facebook": "https://www.facebook.com/TysNYC"
   },
   {
     "name": "The Eagle NYC",
