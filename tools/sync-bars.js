@@ -156,7 +156,7 @@ async function saveBarsLocally(allBars) {
     }
 }
 
-// Enrich bars with data from importUrl (Wikipedia scraping)
+// Enrich bars with data from importUrl (Wikipedia and GayCities scraping)
 async function enrichBarsWithImportUrl(bars) {
     const enrichedBars = [];
     
@@ -169,13 +169,17 @@ async function enrichBarsWithImportUrl(bars) {
         }
         
         // Check if bar needs scraping - only scrape if missing data that would be scraped
-        const needsScraping = bar.importUrl && 
+        const needsWikipediaScraping = bar.importUrl && 
             (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org')) &&
             shouldScrapeBar(bar);
         
-        if (needsScraping) {
+        const needsGayCitiesScraping = bar.importUrl && 
+            bar.importUrl.includes('gaycities.com') &&
+            shouldScrapeGayCitiesBar(bar);
+        
+        if (needsWikipediaScraping) {
             try {
-                console.log(`🔍 Scraping data for ${bar.name} from ${bar.importUrl}`);
+                console.log(`🔍 Scraping Wikipedia data for ${bar.name} from ${bar.importUrl}`);
                 const scrapedData = await scrapeWikipediaData(bar.importUrl);
                 
                 // Only update fields that are currently empty
@@ -195,12 +199,46 @@ async function enrichBarsWithImportUrl(bars) {
                     enrichedBar.image = scrapedData.image;
                 }
                 
-                console.log(`✅ Enriched ${bar.name} with scraped data`);
+                console.log(`✅ Enriched ${bar.name} with Wikipedia data`);
             } catch (error) {
-                console.warn(`⚠️  Failed to scrape data for ${bar.name}:`, error.message);
+                console.warn(`⚠️  Failed to scrape Wikipedia data for ${bar.name}:`, error.message);
+            }
+        } else if (needsGayCitiesScraping) {
+            try {
+                console.log(`🔍 Scraping GayCities data for ${bar.name} from ${bar.importUrl}`);
+                const scrapedData = await scrapeGayCitiesData(bar.importUrl);
+                
+                // Only update fields that are currently empty
+                if (!enrichedBar.address && scrapedData.address) {
+                    enrichedBar.address = scrapedData.address;
+                }
+                if (!enrichedBar.coordinates && scrapedData.coordinates) {
+                    enrichedBar.coordinates = scrapedData.coordinates;
+                }
+                if (!enrichedBar.website && scrapedData.website) {
+                    enrichedBar.website = scrapedData.website;
+                }
+                if (!enrichedBar.instagram && scrapedData.instagram) {
+                    enrichedBar.instagram = scrapedData.instagram;
+                }
+                if (!enrichedBar.facebook && scrapedData.facebook) {
+                    enrichedBar.facebook = scrapedData.facebook;
+                }
+                if (!enrichedBar.googleMaps && scrapedData.googleMaps) {
+                    enrichedBar.googleMaps = scrapedData.googleMaps;
+                }
+                if (!enrichedBar.image && scrapedData.image) {
+                    enrichedBar.image = scrapedData.image;
+                }
+                
+                console.log(`✅ Enriched ${bar.name} with GayCities data`);
+            } catch (error) {
+                console.warn(`⚠️  Failed to scrape GayCities data for ${bar.name}:`, error.message);
             }
         } else if (bar.importUrl && (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org'))) {
-            console.log(`⏭️  Skipping scraping for ${bar.name} - already has valid data`);
+            console.log(`⏭️  Skipping Wikipedia scraping for ${bar.name} - already has valid data`);
+        } else if (bar.importUrl && bar.importUrl.includes('gaycities.com')) {
+            console.log(`⏭️  Skipping GayCities scraping for ${bar.name} - already has valid data`);
         }
         
         enrichedBars.push(enrichedBar);
@@ -223,7 +261,29 @@ function shouldScrapeBar(bar) {
     const needsScraping = missingFields.length > 0;
     
     if (needsScraping) {
-        console.log(`📋 ${bar.name} missing scrapable fields: ${missingFields.join(', ')}`);
+        console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
+    }
+    
+    return needsScraping;
+}
+
+// Check if a bar needs GayCities scraping based on missing data
+function shouldScrapeGayCitiesBar(bar) {
+    // Only scrape if we're missing data that GayCities can provide
+    // GayCities scraping works for: address, coordinates, website, instagram, facebook, googleMaps
+    const missingFields = [];
+    
+    if (!bar.address || bar.address.trim() === '') missingFields.push('address');
+    if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
+    if (!bar.website || bar.website.trim() === '') missingFields.push('website');
+    if (!bar.instagram || bar.instagram.trim() === '') missingFields.push('instagram');
+    if (!bar.facebook || bar.facebook.trim() === '') missingFields.push('facebook');
+    if (!bar.googleMaps || bar.googleMaps.trim() === '') missingFields.push('googleMaps');
+    
+    const needsScraping = missingFields.length > 0;
+    
+    if (needsScraping) {
+        console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
     }
     
     return needsScraping;
@@ -362,6 +422,140 @@ async function scrapeWikipediaData(url) {
     }
     if (!imageMatch) {
         imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*alt="[^"]*logo[^"]*"[^>]*>/i);
+    }
+    if (imageMatch) {
+        let imageUrl = imageMatch[1].trim();
+        // Fix protocol-relative URLs
+        if (imageUrl.startsWith('//')) {
+            imageUrl = 'https:' + imageUrl;
+        }
+        data.image = imageUrl;
+    }
+    
+    return data;
+}
+
+// Scrape GayCities data for a bar
+async function scrapeGayCitiesData(url) {
+    const response = await fetch(url, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; BarDataScraper/1.0)'
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const html = await response.text();
+    
+    // Parse the HTML to extract data
+    const data = {
+        address: '',
+        coordinates: '',
+        website: '',
+        instagram: '',
+        facebook: '',
+        googleMaps: '',
+        image: ''
+    };
+    
+    // Extract address - look for address in various patterns
+    let addressMatch = html.match(/<div[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/div>/i);
+    if (!addressMatch) {
+        addressMatch = html.match(/<span[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/span>/i);
+    }
+    if (!addressMatch) {
+        addressMatch = html.match(/Address[^>]*>([^<]+)</i);
+    }
+    if (!addressMatch) {
+        // Look for address in structured data or meta tags
+        addressMatch = html.match(/"address"[^>]*>([^<]+)</i);
+    }
+    if (addressMatch) {
+        data.address = addressMatch[1].trim().replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+    }
+    
+    // Extract coordinates - look for coordinates in various patterns
+    let coordMatch = html.match(/<div[^>]*class="[^"]*coordinates[^"]*"[^>]*>([^<]+)<\/div>/i);
+    if (!coordMatch) {
+        coordMatch = html.match(/<span[^>]*class="[^"]*coordinates[^"]*"[^>]*>([^<]+)<\/span>/i);
+    }
+    if (!coordMatch) {
+        // Look for coordinates in data attributes or meta tags
+        coordMatch = html.match(/"coordinates"[^>]*>([^<]+)</i);
+    }
+    if (!coordMatch) {
+        // Look for lat/lng in data attributes
+        const latMatch = html.match(/data-lat="([^"]+)"/i);
+        const lngMatch = html.match(/data-lng="([^"]+)"/i);
+        if (latMatch && lngMatch) {
+            data.coordinates = `${latMatch[1]}, ${lngMatch[1]}`;
+        }
+    } else {
+        data.coordinates = coordMatch[1].trim();
+    }
+    
+    // Extract website - look for website links
+    let websiteMatch = html.match(/<a[^>]*href="([^"]+)"[^>]*>Website/i);
+    if (!websiteMatch) {
+        websiteMatch = html.match(/Website[^>]*<a[^>]*href="([^"]+)"/i);
+    }
+    if (!websiteMatch) {
+        // Look for external website links
+        websiteMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>.*?Website/i);
+    }
+    if (websiteMatch) {
+        data.website = websiteMatch[1].trim();
+    }
+    
+    // Extract Instagram - look for Instagram links
+    let instagramMatch = html.match(/<a[^>]*href="([^"]*instagram[^"]*)"[^>]*>/i);
+    if (!instagramMatch) {
+        instagramMatch = html.match(/Instagram[^>]*<a[^>]*href="([^"]+)"/i);
+    }
+    if (!instagramMatch) {
+        // Look for Instagram in social media section
+        instagramMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*instagram[^"]*)"[^>]*>/i);
+    }
+    if (instagramMatch) {
+        data.instagram = instagramMatch[1].trim();
+    }
+    
+    // Extract Facebook - look for Facebook links
+    let facebookMatch = html.match(/<a[^>]*href="([^"]*facebook[^"]*)"[^>]*>/i);
+    if (!facebookMatch) {
+        facebookMatch = html.match(/Facebook[^>]*<a[^>]*href="([^"]+)"/i);
+    }
+    if (!facebookMatch) {
+        // Look for Facebook in social media section
+        facebookMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*facebook[^"]*)"[^>]*>/i);
+    }
+    if (facebookMatch) {
+        data.facebook = facebookMatch[1].trim();
+    }
+    
+    // Extract Google Maps - look for Google Maps links
+    let googleMapsMatch = html.match(/<a[^>]*href="([^"]*google[^"]*maps[^"]*)"[^>]*>/i);
+    if (!googleMapsMatch) {
+        googleMapsMatch = html.match(/<a[^>]*href="([^"]*maps\.google[^"]*)"[^>]*>/i);
+    }
+    if (!googleMapsMatch) {
+        // Look for Google Maps in location section
+        googleMapsMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*maps\.google[^"]*)"[^>]*>/i);
+    }
+    if (googleMapsMatch) {
+        data.googleMaps = googleMapsMatch[1].trim();
+    }
+    
+    // Extract image - look for bar images
+    let imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*alt="[^"]*bar[^"]*"[^>]*>/i);
+    if (!imageMatch) {
+        imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*class="[^"]*bar[^"]*"[^>]*>/i);
+    }
+    if (!imageMatch) {
+        // Look for any image in the main content area
+        imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*class="[^"]*main[^"]*"[^>]*>/i);
     }
     if (imageMatch) {
         let imageUrl = imageMatch[1].trim();
