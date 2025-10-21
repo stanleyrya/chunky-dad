@@ -457,8 +457,7 @@ async function scrapeGayCitiesData(url) {
         instagram: '',
         facebook: '',
         twitter: '',
-        googleMaps: '',
-        image: ''
+        googleMaps: ''
     };
     
     // Extract address using structured data (itemprop attributes)
@@ -603,31 +602,7 @@ async function scrapeGayCitiesData(url) {
         data.googleMaps = `https://www.google.com/maps/place/${encodedName},+${encodedAddress}/@${lat},${lng},16z/data=!4m6!3m5!1s0x0:0x0!8m2!3d${lat}!4d${lng}!16s%2Fm%2F0k1cf07?g_ep=Eg1tbF8yMDI1MTAxNV8wIJvbDyoASAJQAg%3D%3D`;
     }
     
-    // Extract image - look for bar images
-    let imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*alt="[^"]*bar[^"]*"[^>]*>/i);
-    if (!imageMatch) {
-        imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*class="[^"]*bar[^"]*"[^>]*>/i);
-    }
-    if (!imageMatch) {
-        // Look for any image in the main content area
-        imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*class="[^"]*main[^"]*"[^>]*>/i);
-    }
-    if (!imageMatch) {
-        // Look for GayCities listing images (main bar image)
-        imageMatch = html.match(/<img[^>]*src="([^"]*gaycities-listing-images[^"]*)"[^>]*>/i);
-    }
-    if (!imageMatch) {
-        // Look for any image with role="presentation" (main content images)
-        imageMatch = html.match(/<img[^>]*role="presentation"[^>]*src="([^"]*)"[^>]*>/i);
-    }
-    if (imageMatch) {
-        let imageUrl = imageMatch[1].trim();
-        // Fix protocol-relative URLs
-        if (imageUrl.startsWith('//')) {
-            imageUrl = 'https:' + imageUrl;
-        }
-        data.image = imageUrl;
-    }
+        // Note: We don't extract images from GayCities as they are just photos, not logos
     
     return data;
 }
