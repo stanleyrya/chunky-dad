@@ -262,6 +262,46 @@ const scraperConfig = {
         shorterName: { value: "GLX" },
         instagram: { value: "https://www.instagram.com/goldiloxx__" }
       }
+    },
+    {
+      name: "Gaycities Bars",
+      enabled: true,
+      urls: [
+        "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
+        "https://newyork.gaycities.com/bars/",
+        "https://losangeles.gaycities.com/bars/",
+        "https://chicago.gaycities.com/bars/",
+        "https://sanfrancisco.gaycities.com/bars/"
+      ],
+      alwaysBear: false,       // Not all bars are bear bars - use keyword detection
+      urlDiscoveryDepth: 2,    // Follow links to individual bar pages
+      maxAdditionalUrls: 50,   // Allow more URLs since we're discovering bars
+      dryRun: false,           // Override global dryRun if needed
+      
+      // Field priorities for merging data from different sources
+      fieldPriorities: {
+        title: { priority: ["gaycities"], merge: "clobber" },
+        shortName: { priority: ["gaycities"], merge: "upsert" },
+        instagram: { priority: ["gaycities"], merge: "clobber" },
+        facebook: { priority: ["gaycities"], merge: "clobber" },
+        website: { priority: ["gaycities"], merge: "clobber" },
+        phone: { priority: ["gaycities"], merge: "clobber" },
+        description: { priority: ["gaycities"], merge: "clobber" },
+        bar: { priority: ["gaycities"], merge: "clobber" },
+        address: { priority: ["gaycities"], merge: "clobber" },
+        startDate: { priority: ["gaycities"], merge: "preserve" }, // Bars don't have start dates
+        endDate: { priority: ["gaycities"], merge: "preserve" },   // Bars don't have end dates
+        url: { priority: ["gaycities"], merge: "clobber" },
+        location: { priority: ["gaycities"], merge: "clobber" },
+        gmaps: { priority: ["gaycities"], merge: "clobber" },
+        image: { priority: ["gaycities"], merge: "clobber" },
+        cover: { priority: ["gaycities"], merge: "clobber" }
+      },
+      
+      // Static metadata to add to all Gaycities bar events
+      metadata: {
+        // No static metadata needed - all data comes from parsing
+      }
     }
   ],
   // Centralized city configuration
