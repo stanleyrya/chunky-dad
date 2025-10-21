@@ -456,6 +456,7 @@ async function scrapeGayCitiesData(url) {
         website: '',
         instagram: '',
         facebook: '',
+        twitter: '',
         googleMaps: '',
         image: ''
     };
@@ -518,6 +519,26 @@ async function scrapeGayCitiesData(url) {
         // Look for external website links
         websiteMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>.*?Website/i);
     }
+    if (!websiteMatch) {
+        // Look for any external link that's not a social media platform
+        const externalLinks = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>/g);
+        if (externalLinks) {
+            for (const link of externalLinks) {
+                const href = link.match(/href="([^"]+)"/);
+                if (href && !href[1].includes('gaycities.com') && 
+                    !href[1].includes('google.com') && 
+                    !href[1].includes('facebook.com') && 
+                    !href[1].includes('instagram.com') && 
+                    !href[1].includes('x.com') && 
+                    !href[1].includes('twitter.com') &&
+                    !href[1].includes('4sqi.net') &&
+                    !href[1].includes('imgix.net')) {
+                    data.website = href[1].trim();
+                    break;
+                }
+            }
+        }
+    }
     if (websiteMatch) {
         data.website = websiteMatch[1].trim();
     }
@@ -546,6 +567,19 @@ async function scrapeGayCitiesData(url) {
     }
     if (facebookMatch) {
         data.facebook = facebookMatch[1].trim();
+    }
+    
+    // Extract Twitter/X - look for Twitter/X links
+    let twitterMatch = html.match(/<a[^>]*href="([^"]*x\.com[^"]*)"[^>]*>/i);
+    if (!twitterMatch) {
+        twitterMatch = html.match(/<a[^>]*href="([^"]*twitter[^"]*)"[^>]*>/i);
+    }
+    if (!twitterMatch) {
+        // Look for Twitter/X in social media section
+        twitterMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*x\.com[^"]*)"[^>]*>/i);
+    }
+    if (twitterMatch) {
+        data.twitter = twitterMatch[1].trim();
     }
     
     // Extract Google Maps - look for Google Maps links
@@ -577,6 +611,14 @@ async function scrapeGayCitiesData(url) {
     if (!imageMatch) {
         // Look for any image in the main content area
         imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*class="[^"]*main[^"]*"[^>]*>/i);
+    }
+    if (!imageMatch) {
+        // Look for GayCities listing images (main bar image)
+        imageMatch = html.match(/<img[^>]*src="([^"]*gaycities-listing-images[^"]*)"[^>]*>/i);
+    }
+    if (!imageMatch) {
+        // Look for any image with role="presentation" (main content images)
+        imageMatch = html.match(/<img[^>]*role="presentation"[^>]*src="([^"]*)"[^>]*>/i);
     }
     if (imageMatch) {
         let imageUrl = imageMatch[1].trim();
