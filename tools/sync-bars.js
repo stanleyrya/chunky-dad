@@ -460,40 +460,53 @@ async function scrapeGayCitiesData(url) {
         image: ''
     };
     
-    // Extract address - look for address in various patterns
-    let addressMatch = html.match(/<div[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/div>/i);
-    if (!addressMatch) {
-        addressMatch = html.match(/<span[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/span>/i);
-    }
-    if (!addressMatch) {
-        addressMatch = html.match(/Address[^>]*>([^<]+)</i);
-    }
-    if (!addressMatch) {
-        // Look for address in structured data or meta tags
-        addressMatch = html.match(/"address"[^>]*>([^<]+)</i);
-    }
-    if (addressMatch) {
-        data.address = addressMatch[1].trim().replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+    // Extract address using structured data (itemprop attributes)
+    // Look for all address components individually since the nested structure is complex
+    const streetAddress = html.match(/<span[^>]*itemprop="streetAddress"[^>]*>([^<]+)<\/span>/);
+    const addressLocality = html.match(/<span[^>]*itemprop="addressLocality"[^>]*>([^<]+)<\/span>/);
+    const addressRegion = html.match(/<span[^>]*itemprop="addressRegion"[^>]*>([^<]+)<\/span>/);
+    const postalCode = html.match(/<span[^>]*itemprop="postalCode"[^>]*>([^<]+)<\/span>/);
+    
+    if (streetAddress) {
+        let address = streetAddress[1].trim();
+        if (addressLocality) {
+            address += ', ' + addressLocality[1].trim();
+        }
+        if (addressRegion) {
+            address += ', ' + addressRegion[1].trim();
+        }
+        if (postalCode) {
+            address += ' ' + postalCode[1].trim();
+        }
+        data.address = address;
     }
     
-    // Extract coordinates - look for coordinates in various patterns
-    let coordMatch = html.match(/<div[^>]*class="[^"]*coordinates[^"]*"[^>]*>([^<]+)<\/div>/i);
-    if (!coordMatch) {
-        coordMatch = html.match(/<span[^>]*class="[^"]*coordinates[^"]*"[^>]*>([^<]+)<\/span>/i);
-    }
-    if (!coordMatch) {
-        // Look for coordinates in data attributes or meta tags
-        coordMatch = html.match(/"coordinates"[^>]*>([^<]+)</i);
-    }
-    if (!coordMatch) {
-        // Look for lat/lng in data attributes
-        const latMatch = html.match(/data-lat="([^"]+)"/i);
-        const lngMatch = html.match(/data-lng="([^"]+)"/i);
-        if (latMatch && lngMatch) {
-            data.coordinates = `${latMatch[1]}, ${lngMatch[1]}`;
+    // Fallback: try other address patterns if structured data not found
+    if (!data.address) {
+        let addressMatch = html.match(/<div[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/div>/i);
+        if (!addressMatch) {
+            addressMatch = html.match(/<span[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/span>/i);
         }
+        if (!addressMatch) {
+            addressMatch = html.match(/Address[^>]*>([^<]+)</i);
+        }
+        if (addressMatch) {
+            data.address = addressMatch[1].trim().replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+        }
+    }
+    
+    // Extract coordinates from JavaScript code (lat/lng patterns)
+    const latMatch = html.match(/lat:\s*([0-9.-]+)/i);
+    const lngMatch = html.match(/lng:\s*([0-9.-]+)/i);
+    if (latMatch && lngMatch) {
+        data.coordinates = `${latMatch[1]}, ${lngMatch[1]}`;
     } else {
-        data.coordinates = coordMatch[1].trim();
+        // Fallback: look for coordinates in data attributes
+        const dataLatMatch = html.match(/data-lat="([^"]+)"/i);
+        const dataLngMatch = html.match(/data-lng="([^"]+)"/i);
+        if (dataLatMatch && dataLngMatch) {
+            data.coordinates = `${dataLatMatch[1]}, ${dataLngMatch[1]}`;
+        }
     }
     
     // Extract website - look for website links
@@ -546,6 +559,14 @@ async function scrapeGayCitiesData(url) {
     }
     if (googleMapsMatch) {
         data.googleMaps = googleMapsMatch[1].trim();
+    } else if (data.address && data.coordinates) {
+        // Generate a proper Google Maps URL if we have address and coordinates
+        const [lat, lng] = data.coordinates.split(', ');
+        const placeName = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+        const name = placeName ? placeName[1].trim() : 'Bar';
+        const encodedName = encodeURIComponent(name);
+        const encodedAddress = encodeURIComponent(data.address);
+        data.googleMaps = `https://www.google.com/maps/place/${encodedName},+${encodedAddress}/@${lat},${lng},16z/data=!4m6!3m5!1s0x0:0x0!8m2!3d${lat}!4d${lng}!16s%2Fm%2F0k1cf07?g_ep=Eg1tbF8yMDI1MTAxNV8wIJvbDyoASAJQAg%3D%3D`;
     }
     
     // Extract image - look for bar images
