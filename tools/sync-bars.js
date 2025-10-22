@@ -90,8 +90,12 @@ function parseGoogleSheetsData(json) {
             image: ''                          // K: twitter (not used, image field empty for now)
         };
         
-        // Normalize city name immediately
-        bar.city = normalizeCityName(bar.city);
+        // Only normalize city name if it's not empty and looks like a real city name
+        if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
+            bar.city = normalizeCityName(bar.city);
+        } else {
+            bar.city = 'unknown';
+        }
         
         // Clean Instagram username - remove @ symbol and trim
         if (bar.instagram) {
@@ -150,14 +154,30 @@ function mergeBars(sheetsBars, localBars) {
     
     // Add sheets bars first, with normalized city names
     sheetsBars.forEach(bar => {
-        const normalizedBar = { ...bar, city: normalizeCityName(bar.city) };
+        // Only normalize city if it's a real city name, not a URL
+        let normalizedCity = bar.city;
+        if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
+            normalizedCity = normalizeCityName(bar.city);
+        } else {
+            normalizedCity = 'unknown';
+        }
+        
+        const normalizedBar = { ...bar, city: normalizedCity };
         const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
         merged.set(key, normalizedBar);
     });
     
     // Add local bars, only if not already present, with normalized city names
     localBars.forEach(bar => {
-        const normalizedBar = { ...bar, city: normalizeCityName(bar.city) };
+        // Only normalize city if it's a real city name, not a URL
+        let normalizedCity = bar.city;
+        if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
+            normalizedCity = normalizeCityName(bar.city);
+        } else {
+            normalizedCity = 'unknown';
+        }
+        
+        const normalizedBar = { ...bar, city: normalizedCity };
         const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
         if (!merged.has(key)) {
             merged.set(key, normalizedBar);
