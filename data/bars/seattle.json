@@ -11,22 +11,19 @@
     "name": "The Lumber Yard Bar",
     "city": "seattle",
     "gayCities": "https://seattle.gaycities.com/bars/the-lumber-yard-bar-seattle",
-    "coordinates": "47.6062095, -122.3320708",
-    "website": "https://www.threads.com/@gaycities"
+    "coordinates": "47.6062095, -122.3320708"
   },
   {
     "name": "The Cuff Complex",
     "city": "seattle",
     "gayCities": "https://seattle.gaycities.com/bars/the-cuff-complex",
-    "coordinates": "47.6062095, -122.3320708",
-    "website": "https://www.threads.com/@gaycities"
+    "coordinates": "47.6062095, -122.3320708"
   },
   {
     "name": "Seattle Eagle",
     "city": "seattle",
     "gayCities": "https://seattle.gaycities.com/bars/seattle-eagle",
-    "coordinates": "47.6062095, -122.3320708",
-    "website": "https://www.threads.com/@gaycities"
+    "coordinates": "47.6062095, -122.3320708"
   },
   {
     "name": "CC’s Seattle",
@@ -34,7 +31,6 @@
     "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle",
     "address": "1701 E Olive Wy, Seattle, WA 98102",
     "coordinates": "47.6196626, -122.3233158",
-    "website": "https://www.ccsseattle.com/",
     "facebook": "https://www.facebook.com/ccsseattle",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I"
   },

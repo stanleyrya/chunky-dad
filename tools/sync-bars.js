@@ -449,29 +449,24 @@ async function scrapeGayCitiesData(url) {
         data.coordinates = `${latMatch[1]}, ${lngMatch[1]}`;
     }
     
-    // Extract website - look for specific website links in contact/social sections
+    // Extract website - only if there's a clear "Website" label or in contact section
     let websiteMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>.*?Website.*?<\/a>/i);
     if (!websiteMatch) {
-        // Look for external links that are not social media or tracking
-        const externalLinks = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>/g);
-        if (externalLinks) {
-            for (const link of externalLinks) {
-                const href = link.match(/href="([^"]+)"/);
-                if (href && isValidWebsiteUrl(href[1])) {
-                    data.website = href[1].trim();
-                    break;
-                }
-            }
-        }
-    } else {
+        // Look for website in contact/social media sections specifically
+        websiteMatch = html.match(/<div[^>]*class="[^"]*contact[^"]*"[^>]*>.*?<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>/i);
+    }
+    if (!websiteMatch) {
+        // Look for website in social media sections
+        websiteMatch = html.match(/<div[^>]*class="[^"]*social[^"]*"[^>]*>.*?<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>/i);
+    }
+    
+    if (websiteMatch && isValidWebsiteUrl(websiteMatch[1])) {
         data.website = websiteMatch[1].trim();
     }
     
     // Debug: log what we found for website
     if (data.website) {
         console.log(`    📍 Found website: ${data.website}`);
-    } else {
-        console.log(`    📍 No valid website found`);
     }
     
     // Extract Instagram - look for specific Instagram profile links (not GayCities' own)
@@ -482,7 +477,6 @@ async function scrapeGayCitiesData(url) {
     }
     if (instagramMatch && isValidBarSocialLink(instagramMatch[1], 'instagram')) {
         data.instagram = instagramMatch[1].trim();
-        console.log(`    📍 Found Instagram: ${data.instagram}`);
     }
     
     // Extract Facebook - look for specific Facebook page links (not GayCities' own)
@@ -493,7 +487,6 @@ async function scrapeGayCitiesData(url) {
     }
     if (facebookMatch && isValidBarSocialLink(facebookMatch[1], 'facebook')) {
         data.facebook = facebookMatch[1].trim();
-        console.log(`    📍 Found Facebook: ${data.facebook}`);
     }
     
     // Extract Google Maps - look for specific Google Maps links
@@ -546,7 +539,8 @@ function isValidWebsiteUrl(url) {
             'imgix.net',
             '4sqi.net',
             'foursquare.com',
-            'iglta.org'  // This was showing up incorrectly
+            'iglta.org',  // This was showing up incorrectly
+            'q.digital'   // Another incorrect link
         ];
         
         // Check if hostname contains any excluded domains
