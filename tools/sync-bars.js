@@ -470,26 +470,28 @@ async function scrapeGayCitiesData(url) {
     // Debug: log what we found for website
     if (data.website) {
         console.log(`    📍 Found website: ${data.website}`);
+    } else {
+        console.log(`    📍 No valid website found`);
     }
     
-    // Extract Instagram - look for specific Instagram profile links
+    // Extract Instagram - look for specific Instagram profile links (not GayCities' own)
     let instagramMatch = html.match(/<a[^>]*href="(https?:\/\/(?:www\.)?instagram\.com\/[^"]+)"[^>]*>/i);
     if (!instagramMatch) {
         // Look for Instagram links in social media sections
         instagramMatch = html.match(/Instagram[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?instagram\.com\/[^"]+)"/i);
     }
-    if (instagramMatch) {
+    if (instagramMatch && isValidBarSocialLink(instagramMatch[1], 'instagram')) {
         data.instagram = instagramMatch[1].trim();
         console.log(`    📍 Found Instagram: ${data.instagram}`);
     }
     
-    // Extract Facebook - look for specific Facebook page links
+    // Extract Facebook - look for specific Facebook page links (not GayCities' own)
     let facebookMatch = html.match(/<a[^>]*href="(https?:\/\/(?:www\.)?facebook\.com\/[^"]+)"[^>]*>/i);
     if (!facebookMatch) {
         // Look for Facebook links in social media sections
         facebookMatch = html.match(/Facebook[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?facebook\.com\/[^"]+)"/i);
     }
-    if (facebookMatch) {
+    if (facebookMatch && isValidBarSocialLink(facebookMatch[1], 'facebook')) {
         data.facebook = facebookMatch[1].trim();
         console.log(`    📍 Found Facebook: ${data.facebook}`);
     }
@@ -530,6 +532,7 @@ function isValidWebsiteUrl(url) {
             'x.com',
             'tiktok.com',
             'youtube.com',
+            'threads.com',
             'google.com',
             'googleapis.com',
             'googletagmanager.com',
@@ -542,7 +545,8 @@ function isValidWebsiteUrl(url) {
             'cloudfront.net',
             'imgix.net',
             '4sqi.net',
-            'foursquare.com'
+            'foursquare.com',
+            'iglta.org'  // This was showing up incorrectly
         ];
         
         // Check if hostname contains any excluded domains
@@ -559,6 +563,34 @@ function isValidWebsiteUrl(url) {
         
         // Must have a valid domain (not just a path)
         if (hostname.length < 3 || !hostname.includes('.')) {
+            return false;
+        }
+        
+        // Exclude social media profile URLs (they should be in their own fields)
+        const path = urlObj.pathname.toLowerCase();
+        if (path.includes('/@') || path.includes('/user/') || path.includes('/profile/')) {
+            return false;
+        }
+        
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+// Helper function to check if social media links are actually for the bar (not GayCities)
+function isValidBarSocialLink(url, platform) {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+        
+        // Must be the correct platform
+        if (platform === 'instagram' && !hostname.includes('instagram.com')) return false;
+        if (platform === 'facebook' && !hostname.includes('facebook.com')) return false;
+        
+        // Exclude GayCities' own social media accounts
+        const path = urlObj.pathname.toLowerCase();
+        if (path.includes('gaycities') || path.includes('gay-cities')) {
             return false;
         }
         
