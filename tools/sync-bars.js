@@ -35,9 +35,9 @@ async function syncBars() {
         console.log('💾 Saving merged data locally...');
         await saveBarsLocally(mergedBars);
         
-        // 5. Enrich bars with data from importUrl (Wikipedia scraping)
-        console.log('🌐 Enriching bars with data from importUrl...');
-        const enrichedBars = await enrichBarsWithImportUrl(mergedBars);
+        // 5. Enrich bars with data from Wikipedia and GayCities fields
+        console.log('🌐 Enriching bars with data from Wikipedia and GayCities...');
+        const enrichedBars = await enrichBarsWithExternalData(mergedBars);
         console.log(`✨ Enriched ${enrichedBars.length} bars with additional data`);
         
         // 6. Save enriched data locally
@@ -156,31 +156,26 @@ async function saveBarsLocally(allBars) {
     }
 }
 
-// Enrich bars with data from importUrl (Wikipedia and GayCities scraping)
-async function enrichBarsWithImportUrl(bars) {
+// Enrich bars with data from Wikipedia and GayCities fields
+async function enrichBarsWithExternalData(bars) {
     const enrichedBars = [];
     
     for (const bar of bars) {
         let enrichedBar = { ...bar };
         
-        // Add image field if it doesn't exist
-        if (!enrichedBar.image) {
-            enrichedBar.image = '';
-        }
+        // Clean up the bar object by removing empty fields
+        enrichedBar = cleanBarObject(enrichedBar);
         
-        // Check if bar needs scraping - only scrape if missing data that would be scraped
-        const needsWikipediaScraping = bar.importUrl && 
-            (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org')) &&
-            shouldScrapeBar(bar);
+        // Check if bar needs Wikipedia scraping
+        const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(bar);
         
-        const needsGayCitiesScraping = bar.importUrl && 
-            bar.importUrl.includes('gaycities.com') &&
-            shouldScrapeGayCitiesBar(bar);
+        // Check if bar needs GayCities scraping
+        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(bar);
         
         if (needsWikipediaScraping) {
             try {
-                console.log(`🔍 Scraping Wikipedia data for ${bar.name} from ${bar.importUrl}`);
-                const scrapedData = await scrapeWikipediaData(bar.importUrl);
+                console.log(`🔍 Scraping Wikipedia data for ${bar.name} from ${bar.wikipedia}`);
+                const scrapedData = await scrapeWikipediaData(bar.wikipedia);
                 
                 // Only update fields that are currently empty
                 if (!enrichedBar.address && scrapedData.address) {
@@ -192,9 +187,6 @@ async function enrichBarsWithImportUrl(bars) {
                 if (!enrichedBar.website && scrapedData.website) {
                     enrichedBar.website = scrapedData.website;
                 }
-                if (!enrichedBar.nickname && scrapedData.nickname) {
-                    enrichedBar.nickname = scrapedData.nickname;
-                }
                 if (!enrichedBar.image && scrapedData.image) {
                     enrichedBar.image = scrapedData.image;
                 }
@@ -205,8 +197,8 @@ async function enrichBarsWithImportUrl(bars) {
             }
         } else if (needsGayCitiesScraping) {
             try {
-                console.log(`🔍 Scraping GayCities data for ${bar.name} from ${bar.importUrl}`);
-                const scrapedData = await scrapeGayCitiesData(bar.importUrl);
+                console.log(`🔍 Scraping GayCities data for ${bar.name} from ${bar.gayCities}`);
+                const scrapedData = await scrapeGayCitiesData(bar.gayCities);
                 
                 // Only update fields that are currently empty
                 if (!enrichedBar.address && scrapedData.address) {
@@ -227,17 +219,14 @@ async function enrichBarsWithImportUrl(bars) {
                 if (!enrichedBar.googleMaps && scrapedData.googleMaps) {
                     enrichedBar.googleMaps = scrapedData.googleMaps;
                 }
-                if (!enrichedBar.image && scrapedData.image) {
-                    enrichedBar.image = scrapedData.image;
-                }
                 
                 console.log(`✅ Enriched ${bar.name} with GayCities data`);
             } catch (error) {
                 console.warn(`⚠️  Failed to scrape GayCities data for ${bar.name}:`, error.message);
             }
-        } else if (bar.importUrl && (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org'))) {
+        } else if (bar.wikipedia) {
             console.log(`⏭️  Skipping Wikipedia scraping for ${bar.name} - already has valid data`);
-        } else if (bar.importUrl && bar.importUrl.includes('gaycities.com')) {
+        } else if (bar.gayCities) {
             console.log(`⏭️  Skipping GayCities scraping for ${bar.name} - already has valid data`);
         }
         
@@ -247,11 +236,26 @@ async function enrichBarsWithImportUrl(bars) {
     return enrichedBars;
 }
 
-// Check if a bar needs scraping based on missing data
-function shouldScrapeBar(bar) {
+// Clean up bar object by removing empty fields
+function cleanBarObject(bar) {
+    const cleaned = {};
+    
+    // Keep only fields that have values
+    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities'];
+    
+    fieldsToKeep.forEach(field => {
+        if (bar[field] && bar[field].toString().trim() !== '') {
+            cleaned[field] = bar[field];
+        }
+    });
+    
+    return cleaned;
+}
+
+// Check if a bar needs Wikipedia scraping based on missing data
+function shouldScrapeWikipediaBar(bar) {
     // Only scrape if we're missing data that Wikipedia can actually provide
     // Based on testing, Wikipedia scraping works for: address, coordinates, image
-    // It doesn't reliably work for: website, nickname
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
@@ -308,7 +312,6 @@ async function scrapeWikipediaData(url) {
         address: '',
         coordinates: '',
         website: '',
-        nickname: '',
         image: ''
     };
     
@@ -403,17 +406,6 @@ async function scrapeWikipediaData(url) {
         data.website = websiteMatch[1].trim();
     }
     
-    // Extract nickname from infobox - try multiple patterns
-    let nicknameMatch = html.match(/<th[^>]*scope="row"[^>]*class="infobox-label"[^>]*>Nickname[^>]*<\/th>\s*<td[^>]*class="infobox-data"[^>]*>([^<]+)<\/td>/i);
-    if (!nicknameMatch) {
-        nicknameMatch = html.match(/<th[^>]*>Nickname[^>]*<\/th>\s*<td[^>]*>([^<]+)<\/td>/i);
-    }
-    if (!nicknameMatch) {
-        nicknameMatch = html.match(/<th[^>]*>Also known as[^>]*<\/th>\s*<td[^>]*>([^<]+)<\/td>/i);
-    }
-    if (nicknameMatch) {
-        data.nickname = nicknameMatch[1].trim();
-    }
     
     // Extract logo image - look for the first image in infobox-image
     let imageMatch = html.match(/<td[^>]*class="infobox-image"[^>]*>.*?<img[^>]*src="([^"]+)"[^>]*>/i);
@@ -456,7 +448,6 @@ async function scrapeGayCitiesData(url) {
         website: '',
         instagram: '',
         facebook: '',
-        twitter: '',
         googleMaps: ''
     };
     
@@ -568,18 +559,6 @@ async function scrapeGayCitiesData(url) {
         data.facebook = facebookMatch[1].trim();
     }
     
-    // Extract Twitter/X - look for Twitter/X links
-    let twitterMatch = html.match(/<a[^>]*href="([^"]*x\.com[^"]*)"[^>]*>/i);
-    if (!twitterMatch) {
-        twitterMatch = html.match(/<a[^>]*href="([^"]*twitter[^"]*)"[^>]*>/i);
-    }
-    if (!twitterMatch) {
-        // Look for Twitter/X in social media section
-        twitterMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*x\.com[^"]*)"[^>]*>/i);
-    }
-    if (twitterMatch) {
-        data.twitter = twitterMatch[1].trim();
-    }
     
     // Extract Google Maps - look for Google Maps links
     let googleMapsMatch = html.match(/<a[^>]*href="([^"]*google[^"]*maps[^"]*)"[^>]*>/i);
