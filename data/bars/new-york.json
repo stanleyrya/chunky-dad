@@ -2,8 +2,12 @@
   {
     "name": "Rockbar",
     "city": "new-york",
-    "wikipedia": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
-    "image": "https://i.gaycities.com/v7/_gc-blog-prodweb_/outthere/content/uploads/2022/06/gaycities-logo.png?auto=format&auto=compress&func=fit&w=320"
+    "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
+    "address": "185 Christopher St, New York, NY 10014",
+    "coordinates": "40.7326534, -74.0096996",
+    "instagram": "https://www.instagram.com/rockbarnyc",
+    "facebook": "https://www.facebook.com/Rockbar-NYC",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc"
   },
   {
     "name": "Eagle NYC",
@@ -23,13 +27,17 @@
   {
     "name": "Ty's",
     "city": "new-york",
-    "wikipedia": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
-    "image": "https://i.gaycities.com/v7/_gc-blog-prodweb_/outthere/content/uploads/2022/06/gaycities-logo.png?auto=format&auto=compress&func=fit&w=320"
+    "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
+    "address": "114 Christopher St, New York, NY 10014",
+    "coordinates": "40.7330387, -74.0052985",
+    "instagram": "https://www.instagram.com/tysbar",
+    "facebook": "https://www.facebook.com/TysNYC",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY"
   },
   {
     "name": "Nowhere Bar",
     "city": "new-york",
-    "wikipedia": "https://newyork.gaycities.com/bars/nowhere-bar-ny",
-    "image": "https://i.gaycities.com/v7/_gc-blog-prodweb_/outthere/content/uploads/2022/06/gaycities-logo.png?auto=format&auto=compress&func=fit&w=320"
+    "gayCities": "https://newyork.gaycities.com/bars/nowhere-bar-ny",
+    "coordinates": "40.7127753, -74.0059728"
   }
 ]

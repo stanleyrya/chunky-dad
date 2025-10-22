@@ -76,10 +76,19 @@ function parseGoogleSheetsData(json) {
         const cells = row.c;
         
         // Extract data from cells - correct column mapping based on actual sheet structure
+        let wikipedia = cells[1]?.v || '';     // B: wikipedia
+        let gayCities = cells[2]?.v || '';     // C: gayCities
+        
+        // Fix mixed up data: if wikipedia field contains gaycities.com, move it to gayCities
+        if (wikipedia && wikipedia.includes('gaycities.com')) {
+            gayCities = wikipedia;
+            wikipedia = '';
+        }
+        
         const bar = {
             name: cells[0]?.v || '',           // A: name
-            wikipedia: cells[1]?.v || '',      // B: wikipedia
-            gayCities: cells[2]?.v || '',      // C: gayCities
+            wikipedia: wikipedia,               // B: wikipedia (corrected)
+            gayCities: gayCities,              // C: gayCities (corrected)
             city: cells[3]?.v || '',           // D: city
             googleMaps: cells[4]?.v || '',     // E: googleMaps
             address: cells[5]?.v || '',        // F: address
@@ -413,7 +422,10 @@ async function scrapeWikipediaData(url) {
         if (imageUrl.startsWith('//')) {
             imageUrl = 'https:' + imageUrl;
         }
-        data.image = imageUrl;
+        // Don't use GayCities logo images
+        if (!imageUrl.includes('gaycities.com') && !imageUrl.includes('gaycities-logo')) {
+            data.image = imageUrl;
+        }
     }
     
     return data;
@@ -506,7 +518,12 @@ async function scrapeGayCitiesData(url) {
         facebookMatch = html.match(/Facebook[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?facebook\.com\/[^"]+)"/i);
     }
     if (facebookMatch && isValidBarSocialLink(facebookMatch[1], 'facebook')) {
-        data.facebook = facebookMatch[1].trim();
+        let facebookUrl = facebookMatch[1].trim();
+        // Fix double URLs (remove duplicate facebook.com)
+        if (facebookUrl.includes('https://www.facebook.com/https://www.facebook.com/')) {
+            facebookUrl = facebookUrl.replace('https://www.facebook.com/https://www.facebook.com/', 'https://www.facebook.com/');
+        }
+        data.facebook = facebookUrl;
     }
     
     // Extract Google Maps - look for specific Google Maps links
