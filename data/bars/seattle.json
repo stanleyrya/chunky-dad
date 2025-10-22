@@ -2,65 +2,61 @@
   {
     "name": "Diesel",
     "city": "seattle",
+    "wikipedia": "https://en.wikipedia.org/wiki/Diesel_(gay_bar)",
     "coordinates": "47.6133, -122.3143",
     "website": "http://dieselseattle.com/DIESEL.html",
-    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Diesel_%28gay_bar%29_logo.png/250px-Diesel_%28gay_bar%29_logo.png",
-    "wikipedia": "https://en.wikipedia.org/wiki/Diesel_(gay_bar)"
+    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Diesel_%28gay_bar%29_logo.png/250px-Diesel_%28gay_bar%29_logo.png"
   },
   {
     "name": "The Lumber Yard Bar",
     "city": "seattle",
+    "gayCities": "https://seattle.gaycities.com/bars/the-lumber-yard-bar-seattle",
     "coordinates": "47.6062095, -122.3320708",
-    "website": "https://www.iglta.org",
     "instagram": "https://instagram.com/gaycities",
-    "facebook": "https://www.facebook.com/GayCities/",
-    "gayCities": "https://seattle.gaycities.com/bars/the-lumber-yard-bar-seattle"
+    "facebook": "https://www.facebook.com/GayCities/"
   },
   {
     "name": "The Cuff Complex",
     "city": "seattle",
+    "gayCities": "https://seattle.gaycities.com/bars/the-cuff-complex",
     "coordinates": "47.6062095, -122.3320708",
-    "website": "https://www.iglta.org",
     "instagram": "https://instagram.com/gaycities",
-    "facebook": "https://www.facebook.com/GayCities/",
-    "gayCities": "https://seattle.gaycities.com/bars/the-cuff-complex"
+    "facebook": "https://www.facebook.com/GayCities/"
   },
   {
     "name": "Seattle Eagle",
     "city": "seattle",
+    "gayCities": "https://seattle.gaycities.com/bars/seattle-eagle",
     "coordinates": "47.6062095, -122.3320708",
-    "website": "https://www.iglta.org",
     "instagram": "https://instagram.com/gaycities",
-    "facebook": "https://www.facebook.com/GayCities/",
-    "gayCities": "https://seattle.gaycities.com/bars/seattle-eagle"
+    "facebook": "https://www.facebook.com/GayCities/"
   },
   {
     "name": "CC’s Seattle",
     "city": "seattle",
+    "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle",
     "address": "1701 E Olive Wy, Seattle, WA 98102",
     "coordinates": "47.6196626, -122.3233158",
-    "website": "https://www.ccsseattle.com/",
     "instagram": "https://instagram.com/gaycities",
     "facebook": "https://www.facebook.com/ccsseattle",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I",
-    "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle"
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I"
   },
   {
     "name": "Madison Pub",
     "city": "seattle",
+    "wikipedia": "https://en.wikipedia.org/wiki/Madison_Pub",
     "address": "1315 East Madison Street",
     "coordinates": "47.613442, -122.314883",
     "website": "http://madisonpub.com",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Mad_Pub_4.jpg/250px-Mad_Pub_4.jpg",
-    "wikipedia": "https://en.wikipedia.org/wiki/Madison_Pub"
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Mad_Pub_4.jpg/250px-Mad_Pub_4.jpg"
   },
   {
     "name": "Pony",
     "city": "seattle",
+    "wikipedia": "https://en.wikipedia.org/wiki/Pony_(Seattle)",
     "address": "1221 E. Madison Street",
     "coordinates": "47.61309, -122.31575",
     "website": "http://ponyseattle.com",
-    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/d/dd/Pony_%28Seattle%29_logo.png/250px-Pony_%28Seattle%29_logo.png",
-    "wikipedia": "https://en.wikipedia.org/wiki/Pony_(Seattle)"
+    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/d/dd/Pony_%28Seattle%29_logo.png/250px-Pony_%28Seattle%29_logo.png"
   }
 ]

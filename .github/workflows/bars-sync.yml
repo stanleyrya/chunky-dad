@@ -25,9 +25,6 @@ jobs:
       run: mkdir -p data/bars
       
     - name: Sync bars data
-      env:
-        GOOGLE_APP_SCRIPT_URL: ${{ secrets.GOOGLE_APP_SCRIPT_URL }}
-        GOOGLE_APP_SCRIPT_KEY: ${{ secrets.GOOGLE_APP_SCRIPT_KEY }}
       run: node tools/sync-bars.js
       
     - name: Commit updated bars data

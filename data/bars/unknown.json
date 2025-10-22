@@ -1,0 +1,38 @@
+[
+  {
+    "name": "The Lumber Yard Bar",
+    "city": "unknown",
+    "address": "https://seattle.gaycities.com/bars/the-lumber-yard-bar-seattle",
+    "coordinates": "Seattle"
+  },
+  {
+    "name": "The Cuff Complex",
+    "city": "unknown",
+    "address": "https://seattle.gaycities.com/bars/the-cuff-complex",
+    "coordinates": "Seattle"
+  },
+  {
+    "name": "Seattle Eagle",
+    "city": "unknown",
+    "address": "https://seattle.gaycities.com/bars/seattle-eagle",
+    "coordinates": "Seattle"
+  },
+  {
+    "name": "CC’s Seattle",
+    "city": "unknown",
+    "address": "https://seattle.gaycities.com/bars/505-ccs-seattle",
+    "coordinates": "Seattle"
+  },
+  {
+    "name": "Eagle LA",
+    "city": "unknown",
+    "address": "https://losangeles.gaycities.com/bars/357-eagle-la",
+    "coordinates": "Los Angeles"
+  },
+  {
+    "name": "Precinct LA",
+    "city": "unknown",
+    "address": "https://losangeles.gaycities.com/bars/precinct-la",
+    "coordinates": "Los Angeles"
+  }
+]
