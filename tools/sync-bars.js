@@ -449,29 +449,57 @@ async function scrapeGayCitiesData(url) {
         data.coordinates = `${latMatch[1]}, ${lngMatch[1]}`;
     }
     
-    // Extract website
-    let websiteMatch = html.match(/<a[^>]*href="([^"]+)"[^>]*>Website/i);
+    // Extract website - look for specific website links in contact/social sections
+    let websiteMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>.*?Website.*?<\/a>/i);
     if (!websiteMatch) {
-        websiteMatch = html.match(/Website[^>]*<a[^>]*href="([^"]+)"/i);
-    }
-    if (websiteMatch) {
+        // Look for external links that are not social media or tracking
+        const externalLinks = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>/g);
+        if (externalLinks) {
+            for (const link of externalLinks) {
+                const href = link.match(/href="([^"]+)"/);
+                if (href && isValidWebsiteUrl(href[1])) {
+                    data.website = href[1].trim();
+                    break;
+                }
+            }
+        }
+    } else {
         data.website = websiteMatch[1].trim();
     }
     
-    // Extract Instagram
-    let instagramMatch = html.match(/<a[^>]*href="([^"]*instagram[^"]*)"[^>]*>/i);
+    // Debug: log what we found for website
+    if (data.website) {
+        console.log(`    📍 Found website: ${data.website}`);
+    }
+    
+    // Extract Instagram - look for specific Instagram profile links
+    let instagramMatch = html.match(/<a[^>]*href="(https?:\/\/(?:www\.)?instagram\.com\/[^"]+)"[^>]*>/i);
+    if (!instagramMatch) {
+        // Look for Instagram links in social media sections
+        instagramMatch = html.match(/Instagram[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?instagram\.com\/[^"]+)"/i);
+    }
     if (instagramMatch) {
         data.instagram = instagramMatch[1].trim();
+        console.log(`    📍 Found Instagram: ${data.instagram}`);
     }
     
-    // Extract Facebook
-    let facebookMatch = html.match(/<a[^>]*href="([^"]*facebook[^"]*)"[^>]*>/i);
+    // Extract Facebook - look for specific Facebook page links
+    let facebookMatch = html.match(/<a[^>]*href="(https?:\/\/(?:www\.)?facebook\.com\/[^"]+)"[^>]*>/i);
+    if (!facebookMatch) {
+        // Look for Facebook links in social media sections
+        facebookMatch = html.match(/Facebook[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?facebook\.com\/[^"]+)"/i);
+    }
     if (facebookMatch) {
         data.facebook = facebookMatch[1].trim();
+        console.log(`    📍 Found Facebook: ${data.facebook}`);
     }
     
-    // Extract Google Maps
-    let googleMapsMatch = html.match(/<a[^>]*href="([^"]*google[^"]*maps[^"]*)"[^>]*>/i);
+    // Extract Google Maps - look for specific Google Maps links
+    let googleMapsMatch = html.match(/<a[^>]*href="(https?:\/\/(?:www\.)?google\.com\/maps\/[^"]+)"[^>]*>/i);
+    if (!googleMapsMatch) {
+        // Look for Google Maps in location/contact sections
+        googleMapsMatch = html.match(/Google Maps[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?google\.com\/maps\/[^"]+)"/i);
+    }
     if (googleMapsMatch) {
         data.googleMaps = googleMapsMatch[1].trim();
     } else if (data.address && data.coordinates) {
@@ -485,6 +513,59 @@ async function scrapeGayCitiesData(url) {
     }
     
     return data;
+}
+
+// Helper function to validate if a URL is a legitimate website (not social media, tracking, etc.)
+function isValidWebsiteUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+        
+        // Exclude social media platforms, tracking domains, and internal GayCities links
+        const excludedDomains = [
+            'gaycities.com',
+            'facebook.com',
+            'instagram.com',
+            'twitter.com',
+            'x.com',
+            'tiktok.com',
+            'youtube.com',
+            'google.com',
+            'googleapis.com',
+            'googletagmanager.com',
+            'google-analytics.com',
+            'facebook.net',
+            'doubleclick.net',
+            'googlesyndication.com',
+            'amazon.com',
+            'amazonaws.com',
+            'cloudfront.net',
+            'imgix.net',
+            '4sqi.net',
+            'foursquare.com'
+        ];
+        
+        // Check if hostname contains any excluded domains
+        for (const domain of excludedDomains) {
+            if (hostname.includes(domain)) {
+                return false;
+            }
+        }
+        
+        // Must be http or https
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+            return false;
+        }
+        
+        // Must have a valid domain (not just a path)
+        if (hostname.length < 3 || !hostname.includes('.')) {
+            return false;
+        }
+        
+        return true;
+    } catch (e) {
+        return false;
+    }
 }
 
 // Convert DMS coordinates to decimal degrees
