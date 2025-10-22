@@ -1,72 +1,43 @@
 [
   {
     "name": "Rockbar",
-    "wikipedia": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
-    "gayCities": "",
     "city": "new-york",
-    "googleMaps": "",
-    "address": "",
-    "coordinates": "",
-    "instagram": "",
-    "website": "",
-    "facebook": "",
-    "twitter": "",
-    "image": ""
+    "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
+    "address": "185 Christopher St, New York, NY 10014",
+    "coordinates": "40.7326534, -74.0096996",
+    "instagram": "https://www.instagram.com/rockbarnyc",
+    "facebook": "https://www.facebook.com/Rockbar-NYC",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc"
   },
   {
     "name": "Eagle NYC",
-    "wikipedia": "https://en.wikipedia.org/wiki/Eagle_NYC",
-    "gayCities": "",
     "city": "new-york",
-    "googleMaps": "",
-    "address": "",
-    "coordinates": "",
-    "instagram": "",
-    "website": "",
-    "facebook": "",
-    "twitter": "",
-    "image": ""
+    "wikipedia": "https://en.wikipedia.org/wiki/Eagle_NYC",
+    "coordinates": "40.751694, -74.004306",
+    "website": "http://eagle-ny.com",
+    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d1/Eagle_NYC_logo.png/250px-Eagle_NYC_logo.png"
   },
   {
     "name": "3 Dollar Bill",
-    "wikipedia": "https://en.wikipedia.org/wiki/3_Dollar_Bill",
-    "gayCities": "",
     "city": "new-york",
-    "googleMaps": "",
-    "address": "",
-    "coordinates": "",
-    "instagram": "",
-    "website": "",
-    "facebook": "",
-    "twitter": "",
-    "image": ""
+    "wikipedia": "https://en.wikipedia.org/wiki/3_Dollar_Bill",
+    "coordinates": "40.708471, -73.938175",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Threedollarbill1.jpg/250px-Threedollarbill1.jpg"
   },
   {
     "name": "Ty's",
-    "wikipedia": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
-    "gayCities": "",
     "city": "new-york",
-    "googleMaps": "",
-    "address": "",
-    "coordinates": "",
-    "instagram": "",
-    "website": "",
-    "facebook": "",
-    "twitter": "",
-    "image": ""
+    "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
+    "address": "114 Christopher St, New York, NY 10014",
+    "coordinates": "40.7330387, -74.0052985",
+    "instagram": "https://www.instagram.com/tysbar",
+    "facebook": "https://www.facebook.com/TysNYC",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY"
   },
   {
     "name": "Nowhere Bar",
-    "wikipedia": "https://newyork.gaycities.com/bars/nowhere-bar-ny",
-    "gayCities": "",
     "city": "new-york",
-    "googleMaps": "",
-    "address": "",
-    "coordinates": "",
-    "instagram": "",
-    "website": "",
-    "facebook": "",
-    "twitter": "",
-    "image": ""
+    "gayCities": "https://newyork.gaycities.com/bars/nowhere-bar-ny",
+    "coordinates": "40.7127753, -74.0059728"
   }
 ]

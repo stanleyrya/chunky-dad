@@ -3,22 +3,18 @@
 const fs = require('fs');
 const path = require('path');
 
-// Simple bars sync script - bidirectional merge
+// Simplified bars sync script using public Google Sheets (like bear artists)
 async function syncBars() {
-    const googleAppScriptUrl = process.env.GOOGLE_APP_SCRIPT_URL;
-    const secretKey = process.env.GOOGLE_APP_SCRIPT_KEY;
-    
-    if (!googleAppScriptUrl || !secretKey) {
-        console.error('Missing required environment variables: GOOGLE_APP_SCRIPT_URL, GOOGLE_APP_SCRIPT_KEY');
-        process.exit(1);
-    }
+    console.log('🔄 Starting simplified bars sync...');
     
     try {
-        console.log('🔄 Starting bidirectional bars sync...');
+        // Google Sheets configuration
+        const sheetId = '1-HxzEgKX8LWnWd3KovRcaNCK2JAN9YjbTY8glsVcEAE';
+        const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
         
         // 1. Download bars from Google Sheets
         console.log('📥 Downloading bars from Google Sheets...');
-        const sheetsBars = await downloadBarsFromSheets(googleAppScriptUrl, secretKey);
+        const sheetsBars = await downloadBarsFromSheets(sheetUrl);
         console.log(`📊 Received ${sheetsBars.length} bars from Google Sheets`);
         
         // 2. Load existing local bars
@@ -31,20 +27,16 @@ async function syncBars() {
         const mergedBars = mergeBars(sheetsBars, localBars);
         console.log(`🔗 Merged into ${mergedBars.length} total bars`);
         
-        // 4. Save merged data locally
-        console.log('💾 Saving merged data locally...');
-        await saveBarsLocally(mergedBars);
-        
-        // 5. Enrich bars with data from importUrl (Wikipedia scraping)
-        console.log('🌐 Enriching bars with data from importUrl...');
-        const enrichedBars = await enrichBarsWithImportUrl(mergedBars);
+        // 4. Enrich bars with external data
+        console.log('🌐 Enriching bars with external data...');
+        const enrichedBars = await enrichBarsWithExternalData(mergedBars);
         console.log(`✨ Enriched ${enrichedBars.length} bars with additional data`);
         
-        // 6. Save enriched data locally
-        console.log('💾 Saving enriched data locally...');
+        // 5. Save merged data locally
+        console.log('💾 Saving merged data locally...');
         await saveBarsLocally(enrichedBars);
         
-        console.log('✅ Bidirectional sync completed successfully!');
+        console.log('✅ Simplified sync completed successfully!');
         
     } catch (error) {
         console.error('❌ Error syncing bars:', error.message);
@@ -52,15 +44,11 @@ async function syncBars() {
     }
 }
 
-// Download bars from Google Sheets
-async function downloadBarsFromSheets(url, secretKey) {
-    const requestUrl = new URL(url);
-    requestUrl.searchParams.set('token', secretKey);
-    
-    const response = await fetch(requestUrl.toString(), {
-        method: 'GET',
+// Download bars from Google Sheets using public API
+async function downloadBarsFromSheets(sheetUrl) {
+    const response = await fetch(sheetUrl, {
         headers: {
-            'Content-Type': 'application/json'
+            'User-Agent': 'Mozilla/5.0 (compatible; BarDataScraper/1.0)'
         }
     });
     
@@ -68,7 +56,69 @@ async function downloadBarsFromSheets(url, secretKey) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    return await response.json();
+    const text = await response.text();
+    
+    // Parse Google Sheets JSON response (same as bear artists)
+    const jsonString = text.substring(47).slice(0, -2);
+    const json = JSON.parse(jsonString);
+    
+    return parseGoogleSheetsData(json);
+}
+
+// Parse Google Sheets data (adapted from bear artists)
+function parseGoogleSheetsData(json) {
+    const rows = json.table.rows;
+    const data = [];
+    
+    // Skip header row
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.c;
+        
+        // Extract data from cells - correct column mapping based on actual sheet structure
+        let wikipedia = cells[1]?.v || '';     // B: wikipedia
+        let gayCities = cells[2]?.v || '';     // C: gayCities
+        
+        // Fix mixed up data: if wikipedia field contains gaycities.com, move it to gayCities
+        if (wikipedia && wikipedia.includes('gaycities.com')) {
+            gayCities = wikipedia;
+            wikipedia = '';
+        }
+        
+        const bar = {
+            name: cells[0]?.v || '',           // A: name
+            wikipedia: wikipedia,               // B: wikipedia (corrected)
+            gayCities: gayCities,              // C: gayCities (corrected)
+            city: cells[3]?.v || '',           // D: city
+            googleMaps: cells[4]?.v || '',     // E: googleMaps
+            address: cells[5]?.v || '',        // F: address
+            coordinates: cells[6]?.v || '',    // G: coordinates
+            instagram: cells[7]?.v || '',      // H: instagram
+            website: cells[8]?.v || '',        // I: website
+            facebook: cells[9]?.v || '',       // J: facebook
+            image: ''                          // K: twitter (not used, image field empty for now)
+        };
+        
+        // Only normalize city name if it's not empty and looks like a real city name
+        if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
+            bar.city = normalizeCityName(bar.city);
+        } else {
+            bar.city = 'unknown';
+        }
+        
+        // Clean Instagram username - remove @ symbol and trim
+        if (bar.instagram) {
+            bar.instagram = bar.instagram.replace('@', '').trim();
+        }
+        
+        // Only add if name exists and city is valid
+        if (bar.name && bar.city && bar.city !== 'unknown') {
+            data.push(bar);
+        }
+    }
+    
+    console.log(`📋 Parsed ${data.length} bars from Google Sheets`);
+    return data;
 }
 
 // Load existing local bars
@@ -113,14 +163,30 @@ function mergeBars(sheetsBars, localBars) {
     
     // Add sheets bars first, with normalized city names
     sheetsBars.forEach(bar => {
-        const normalizedBar = { ...bar, city: normalizeCityName(bar.city) };
+        // Only normalize city if it's a real city name, not a URL
+        let normalizedCity = bar.city;
+        if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
+            normalizedCity = normalizeCityName(bar.city);
+        } else {
+            normalizedCity = 'unknown';
+        }
+        
+        const normalizedBar = { ...bar, city: normalizedCity };
         const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
         merged.set(key, normalizedBar);
     });
     
     // Add local bars, only if not already present, with normalized city names
     localBars.forEach(bar => {
-        const normalizedBar = { ...bar, city: normalizeCityName(bar.city) };
+        // Only normalize city if it's a real city name, not a URL
+        let normalizedCity = bar.city;
+        if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
+            normalizedCity = normalizeCityName(bar.city);
+        } else {
+            normalizedCity = 'unknown';
+        }
+        
+        const normalizedBar = { ...bar, city: normalizedCity };
         const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
         if (!merged.has(key)) {
             merged.set(key, normalizedBar);
@@ -128,6 +194,139 @@ function mergeBars(sheetsBars, localBars) {
     });
     
     return Array.from(merged.values());
+}
+
+// Clean up bar object by removing empty fields
+function cleanBarObject(bar) {
+    const cleaned = {};
+    
+    // Keep only fields that have values
+    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities'];
+    
+    fieldsToKeep.forEach(field => {
+        if (bar[field] && bar[field].toString().trim() !== '') {
+            cleaned[field] = bar[field];
+        }
+    });
+    
+    return cleaned;
+}
+
+// Check if a bar needs Wikipedia scraping based on missing data
+function shouldScrapeWikipediaBar(bar) {
+    const missingFields = [];
+    
+    if (!bar.address || bar.address.trim() === '') missingFields.push('address');
+    if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
+    if (!bar.image || bar.image.trim() === '') missingFields.push('image');
+    
+    const needsScraping = missingFields.length > 0;
+    
+    if (needsScraping) {
+        console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
+    }
+    
+    return needsScraping;
+}
+
+// Check if a bar needs GayCities scraping based on missing data
+function shouldScrapeGayCitiesBar(bar) {
+    const missingFields = [];
+    
+    if (!bar.address || bar.address.trim() === '') missingFields.push('address');
+    if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
+    if (!bar.website || bar.website.trim() === '') missingFields.push('website');
+    if (!bar.instagram || bar.instagram.trim() === '') missingFields.push('instagram');
+    if (!bar.facebook || bar.facebook.trim() === '') missingFields.push('facebook');
+    if (!bar.googleMaps || bar.googleMaps.trim() === '') missingFields.push('googleMaps');
+    
+    const needsScraping = missingFields.length > 0;
+    
+    if (needsScraping) {
+        console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
+    }
+    
+    return needsScraping;
+}
+
+// Enrich bars with data from Wikipedia and GayCities fields
+async function enrichBarsWithExternalData(bars) {
+    const enrichedBars = [];
+    
+    for (const bar of bars) {
+        let enrichedBar = { ...bar };
+        
+        // Clean up the bar object by removing empty fields
+        enrichedBar = cleanBarObject(enrichedBar);
+        
+        // Check if bar needs Wikipedia scraping
+        const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(bar);
+        
+        // Check if bar needs GayCities scraping
+        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(bar);
+        
+        if (needsWikipediaScraping) {
+            try {
+                console.log(`🔍 Scraping Wikipedia data for ${bar.name} from ${bar.wikipedia}`);
+                const scrapedData = await scrapeWikipediaData(bar.wikipedia);
+                
+                // Only update fields that are currently empty
+                if (!enrichedBar.address && scrapedData.address) {
+                    enrichedBar.address = scrapedData.address;
+                }
+                if (!enrichedBar.coordinates && scrapedData.coordinates) {
+                    enrichedBar.coordinates = scrapedData.coordinates;
+                }
+                if (!enrichedBar.website && scrapedData.website) {
+                    enrichedBar.website = scrapedData.website;
+                }
+                if (!enrichedBar.image && scrapedData.image) {
+                    enrichedBar.image = scrapedData.image;
+                }
+                
+                console.log(`✅ Enriched ${bar.name} with Wikipedia data`);
+            } catch (error) {
+                console.warn(`⚠️  Failed to scrape Wikipedia data for ${bar.name}:`, error.message);
+            }
+        } else if (needsGayCitiesScraping) {
+            try {
+                console.log(`🔍 Scraping GayCities data for ${bar.name} from ${bar.gayCities}`);
+                const scrapedData = await scrapeGayCitiesData(bar.gayCities);
+                
+                // Only update fields that are currently empty
+                if (!enrichedBar.address && scrapedData.address) {
+                    enrichedBar.address = scrapedData.address;
+                }
+                if (!enrichedBar.coordinates && scrapedData.coordinates) {
+                    enrichedBar.coordinates = scrapedData.coordinates;
+                }
+                if (!enrichedBar.website && scrapedData.website) {
+                    enrichedBar.website = scrapedData.website;
+                }
+                if (!enrichedBar.instagram && scrapedData.instagram) {
+                    enrichedBar.instagram = scrapedData.instagram;
+                }
+                if (!enrichedBar.facebook && scrapedData.facebook) {
+                    enrichedBar.facebook = scrapedData.facebook;
+                }
+                if (!enrichedBar.googleMaps && scrapedData.googleMaps) {
+                    enrichedBar.googleMaps = scrapedData.googleMaps;
+                }
+                
+                console.log(`✅ Enriched ${bar.name} with GayCities data`);
+            } catch (error) {
+                console.warn(`⚠️  Failed to scrape GayCities data for ${bar.name}:`, error.message);
+            }
+        } else if (bar.wikipedia) {
+            console.log(`⏭️  Skipping Wikipedia scraping for ${bar.name} - already has valid data`);
+        } else if (bar.gayCities) {
+            console.log(`⏭️  Skipping GayCities scraping for ${bar.name} - already has valid data`);
+        }
+        
+        enrichedBars.push(enrichedBar);
+    }
+    
+    return enrichedBars;
 }
 
 // Save merged bars locally, grouped by city
@@ -156,140 +355,7 @@ async function saveBarsLocally(allBars) {
     }
 }
 
-// Enrich bars with data from importUrl (Wikipedia and GayCities scraping)
-async function enrichBarsWithImportUrl(bars) {
-    const enrichedBars = [];
-    
-    for (const bar of bars) {
-        let enrichedBar = { ...bar };
-        
-        // Add image field if it doesn't exist
-        if (!enrichedBar.image) {
-            enrichedBar.image = '';
-        }
-        
-        // Check if bar needs scraping - only scrape if missing data that would be scraped
-        const needsWikipediaScraping = bar.importUrl && 
-            (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org')) &&
-            shouldScrapeBar(bar);
-        
-        const needsGayCitiesScraping = bar.importUrl && 
-            bar.importUrl.includes('gaycities.com') &&
-            shouldScrapeGayCitiesBar(bar);
-        
-        if (needsWikipediaScraping) {
-            try {
-                console.log(`🔍 Scraping Wikipedia data for ${bar.name} from ${bar.importUrl}`);
-                const scrapedData = await scrapeWikipediaData(bar.importUrl);
-                
-                // Only update fields that are currently empty
-                if (!enrichedBar.address && scrapedData.address) {
-                    enrichedBar.address = scrapedData.address;
-                }
-                if (!enrichedBar.coordinates && scrapedData.coordinates) {
-                    enrichedBar.coordinates = scrapedData.coordinates;
-                }
-                if (!enrichedBar.website && scrapedData.website) {
-                    enrichedBar.website = scrapedData.website;
-                }
-                if (!enrichedBar.nickname && scrapedData.nickname) {
-                    enrichedBar.nickname = scrapedData.nickname;
-                }
-                if (!enrichedBar.image && scrapedData.image) {
-                    enrichedBar.image = scrapedData.image;
-                }
-                
-                console.log(`✅ Enriched ${bar.name} with Wikipedia data`);
-            } catch (error) {
-                console.warn(`⚠️  Failed to scrape Wikipedia data for ${bar.name}:`, error.message);
-            }
-        } else if (needsGayCitiesScraping) {
-            try {
-                console.log(`🔍 Scraping GayCities data for ${bar.name} from ${bar.importUrl}`);
-                const scrapedData = await scrapeGayCitiesData(bar.importUrl);
-                
-                // Only update fields that are currently empty
-                if (!enrichedBar.address && scrapedData.address) {
-                    enrichedBar.address = scrapedData.address;
-                }
-                if (!enrichedBar.coordinates && scrapedData.coordinates) {
-                    enrichedBar.coordinates = scrapedData.coordinates;
-                }
-                if (!enrichedBar.website && scrapedData.website) {
-                    enrichedBar.website = scrapedData.website;
-                }
-                if (!enrichedBar.instagram && scrapedData.instagram) {
-                    enrichedBar.instagram = scrapedData.instagram;
-                }
-                if (!enrichedBar.facebook && scrapedData.facebook) {
-                    enrichedBar.facebook = scrapedData.facebook;
-                }
-                if (!enrichedBar.googleMaps && scrapedData.googleMaps) {
-                    enrichedBar.googleMaps = scrapedData.googleMaps;
-                }
-                if (!enrichedBar.image && scrapedData.image) {
-                    enrichedBar.image = scrapedData.image;
-                }
-                
-                console.log(`✅ Enriched ${bar.name} with GayCities data`);
-            } catch (error) {
-                console.warn(`⚠️  Failed to scrape GayCities data for ${bar.name}:`, error.message);
-            }
-        } else if (bar.importUrl && (bar.importUrl.includes('wikipedia.org') || bar.importUrl.includes('en.wikipedia.org'))) {
-            console.log(`⏭️  Skipping Wikipedia scraping for ${bar.name} - already has valid data`);
-        } else if (bar.importUrl && bar.importUrl.includes('gaycities.com')) {
-            console.log(`⏭️  Skipping GayCities scraping for ${bar.name} - already has valid data`);
-        }
-        
-        enrichedBars.push(enrichedBar);
-    }
-    
-    return enrichedBars;
-}
-
-// Check if a bar needs scraping based on missing data
-function shouldScrapeBar(bar) {
-    // Only scrape if we're missing data that Wikipedia can actually provide
-    // Based on testing, Wikipedia scraping works for: address, coordinates, image
-    // It doesn't reliably work for: website, nickname
-    const missingFields = [];
-    
-    if (!bar.address || bar.address.trim() === '') missingFields.push('address');
-    if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
-    if (!bar.image || bar.image.trim() === '') missingFields.push('image');
-    
-    const needsScraping = missingFields.length > 0;
-    
-    if (needsScraping) {
-        console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
-    }
-    
-    return needsScraping;
-}
-
-// Check if a bar needs GayCities scraping based on missing data
-function shouldScrapeGayCitiesBar(bar) {
-    // Only scrape if we're missing data that GayCities can provide
-    // GayCities scraping works for: address, coordinates, website, instagram, facebook, googleMaps
-    const missingFields = [];
-    
-    if (!bar.address || bar.address.trim() === '') missingFields.push('address');
-    if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
-    if (!bar.website || bar.website.trim() === '') missingFields.push('website');
-    if (!bar.instagram || bar.instagram.trim() === '') missingFields.push('instagram');
-    if (!bar.facebook || bar.facebook.trim() === '') missingFields.push('facebook');
-    if (!bar.googleMaps || bar.googleMaps.trim() === '') missingFields.push('googleMaps');
-    
-    const needsScraping = missingFields.length > 0;
-    
-    if (needsScraping) {
-        console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
-    }
-    
-    return needsScraping;
-}
-
-// Scrape Wikipedia data for a bar
+// Scrape Wikipedia data for a bar (simplified version)
 async function scrapeWikipediaData(url) {
     const response = await fetch(url, {
         headers: {
@@ -303,139 +369,69 @@ async function scrapeWikipediaData(url) {
     
     const html = await response.text();
     
-    // Parse the HTML to extract data
     const data = {
         address: '',
         coordinates: '',
         website: '',
-        nickname: '',
         image: ''
     };
     
-    // Extract address from infobox - try multiple patterns
+    // Extract address from infobox
     let addressMatch = html.match(/<th[^>]*scope="row"[^>]*class="infobox-label"[^>]*>Address[^>]*<\/th>\s*<td[^>]*class="infobox-data[^"]*"[^>]*>([^<]+)<\/td>/i);
-    if (!addressMatch) {
-        addressMatch = html.match(/<th[^>]*scope="row"[^>]*class="infobox-label"[^>]*>Location[^>]*<\/th>\s*<td[^>]*class="infobox-data"[^>]*>([^<]+)<\/td>/i);
-    }
     if (!addressMatch) {
         addressMatch = html.match(/<th[^>]*>Address[^>]*<\/th>\s*<td[^>]*>([^<]+)<\/td>/i);
     }
-    if (!addressMatch) {
-        addressMatch = html.match(/<th[^>]*>Location[^>]*<\/th>\s*<td[^>]*>([^<]+)<\/td>/i);
-    }
-    if (!addressMatch) {
-        // Try to match the full address with HTML tags and line breaks
-        addressMatch = html.match(/<th[^>]*scope="row"[^>]*class="infobox-label"[^>]*>Address[^>]*<\/th>\s*<td[^>]*class="infobox-data[^"]*"[^>]*>([^<]+(?:<[^>]*>[^<]*<\/[^>]*>)*[^<]*)<\/td>/i);
-    }
-    if (!addressMatch) {
-        // Try a more flexible pattern that handles the specific Eagle NYC structure
-        addressMatch = html.match(/Address.*?<td[^>]*>([^<]+(?:<[^>]*>[^<]*<\/[^>]*>)*[^<]*)<\/td>/i);
-    }
-    if (!addressMatch) {
-        // Fallback: look for the specific address pattern in the HTML
-        const addressPattern = /554 West.*?28th Street.*?New York.*?NY 10001.*?United States/i;
-        if (html.match(addressPattern)) {
-            // Extract the address by finding the text between Address and the next </td>
-            const addressSection = html.match(/Address.*?<td[^>]*>.*?554 West.*?United States.*?<\/td>/i);
-            if (addressSection) {
-                // Extract just the text content and remove "Address" prefix
-                const textContent = addressSection[0].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-                data.address = textContent.replace(/^Address\s+/, '');
-            }
-        }
-    }
     if (addressMatch) {
-        // Clean up the address by removing HTML tags and normalizing
         let address = addressMatch[1].trim();
         address = address.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
         data.address = address;
     }
     
-    // Extract coordinates from infobox - look for decimal coordinates in geo span
+    // Extract coordinates from infobox
     let coordMatch = html.match(/<span[^>]*class="geo"[^>]*>([^<]+)<\/span>/i);
     if (coordMatch) {
         const coordText = coordMatch[1].trim();
-        // Check if it's already in decimal format
         if (coordText.includes('°N') || coordText.includes('°S') || coordText.includes('°E') || coordText.includes('°W')) {
             data.coordinates = convertDMSToDecimal(coordText);
         } else {
-            // It might already be in decimal format, clean it up
             const cleanCoords = coordText.replace(/[^\d.,\-\s;]/g, '').trim();
             if (cleanCoords.includes(',')) {
                 data.coordinates = cleanCoords;
             } else if (cleanCoords.includes(';')) {
-                // Handle semicolon-separated coordinates
                 data.coordinates = cleanCoords.replace(';', ',');
             }
         }
     }
     
-    // Also try to extract coordinates from the hidden geo span
-    if (!data.coordinates) {
-        const hiddenGeoMatch = html.match(/<span[^>]*style="display:none"[^>]*>.*?<span[^>]*class="geo"[^>]*>([^<]+)<\/span>/i);
-        if (hiddenGeoMatch) {
-            const coordText = hiddenGeoMatch[1].trim();
-            const cleanCoords = coordText.replace(/[^\d.,\-\s;]/g, '').trim();
-            if (cleanCoords.includes(',')) {
-                data.coordinates = cleanCoords;
-            } else if (cleanCoords.includes(';')) {
-                // Handle semicolon-separated coordinates
-                data.coordinates = cleanCoords.replace(';', ',');
-            }
-        }
-    }
-    
-    // Extract website from infobox - try multiple patterns
+    // Extract website from infobox
     let websiteMatch = html.match(/Website.*?<a[^>]*href="([^"]+)"[^>]*>/i);
     if (!websiteMatch) {
-        websiteMatch = html.match(/<th[^>]*scope="row"[^>]*class="infobox-label"[^>]*>Website[^>]*<\/th>\s*<td[^>]*class="infobox-data"[^>]*><a[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a><\/td>/i);
-    }
-    if (!websiteMatch) {
-        websiteMatch = html.match(/<th[^>]*colspan="2"[^>]*class="infobox-header"[^>]*>Website[^>]*<\/th>.*?<td[^>]*class="infobox-full-data"[^>]*>.*?<a[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/i);
-    }
-    if (!websiteMatch) {
         websiteMatch = html.match(/<th[^>]*>Website[^>]*<\/th>\s*<td[^>]*><a[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a><\/td>/i);
-    }
-    if (!websiteMatch) {
-        websiteMatch = html.match(/<th[^>]*>Website[^>]*<\/th>\s*<td[^>]*>([^<]+)<\/td>/i);
     }
     if (websiteMatch) {
         data.website = websiteMatch[1].trim();
     }
     
-    // Extract nickname from infobox - try multiple patterns
-    let nicknameMatch = html.match(/<th[^>]*scope="row"[^>]*class="infobox-label"[^>]*>Nickname[^>]*<\/th>\s*<td[^>]*class="infobox-data"[^>]*>([^<]+)<\/td>/i);
-    if (!nicknameMatch) {
-        nicknameMatch = html.match(/<th[^>]*>Nickname[^>]*<\/th>\s*<td[^>]*>([^<]+)<\/td>/i);
-    }
-    if (!nicknameMatch) {
-        nicknameMatch = html.match(/<th[^>]*>Also known as[^>]*<\/th>\s*<td[^>]*>([^<]+)<\/td>/i);
-    }
-    if (nicknameMatch) {
-        data.nickname = nicknameMatch[1].trim();
-    }
-    
-    // Extract logo image - look for the first image in infobox-image
+    // Extract logo image
     let imageMatch = html.match(/<td[^>]*class="infobox-image"[^>]*>.*?<img[^>]*src="([^"]+)"[^>]*>/i);
     if (!imageMatch) {
         imageMatch = html.match(/<img[^>]*src="([^"]*logo[^"]*)"[^>]*>/i);
     }
-    if (!imageMatch) {
-        imageMatch = html.match(/<img[^>]*src="([^"]*)"[^>]*alt="[^"]*logo[^"]*"[^>]*>/i);
-    }
     if (imageMatch) {
         let imageUrl = imageMatch[1].trim();
-        // Fix protocol-relative URLs
         if (imageUrl.startsWith('//')) {
             imageUrl = 'https:' + imageUrl;
         }
-        data.image = imageUrl;
+        // Don't use GayCities logo images
+        if (!imageUrl.includes('gaycities.com') && !imageUrl.includes('gaycities-logo')) {
+            data.image = imageUrl;
+        }
     }
     
     return data;
 }
 
-// Scrape GayCities data for a bar
+// Scrape GayCities data for a bar (simplified version)
 async function scrapeGayCitiesData(url) {
     const response = await fetch(url, {
         headers: {
@@ -449,19 +445,16 @@ async function scrapeGayCitiesData(url) {
     
     const html = await response.text();
     
-    // Parse the HTML to extract data
     const data = {
         address: '',
         coordinates: '',
         website: '',
         instagram: '',
         facebook: '',
-        twitter: '',
         googleMaps: ''
     };
     
-    // Extract address using structured data (itemprop attributes)
-    // Look for all address components individually since the nested structure is complex
+    // Extract address using structured data
     const streetAddress = html.match(/<span[^>]*itemprop="streetAddress"[^>]*>([^<]+)<\/span>/);
     const addressLocality = html.match(/<span[^>]*itemprop="addressLocality"[^>]*>([^<]+)<\/span>/);
     const addressRegion = html.match(/<span[^>]*itemprop="addressRegion"[^>]*>([^<]+)<\/span>/);
@@ -481,119 +474,68 @@ async function scrapeGayCitiesData(url) {
         data.address = address;
     }
     
-    // Fallback: try other address patterns if structured data not found
-    if (!data.address) {
-        let addressMatch = html.match(/<div[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/div>/i);
-        if (!addressMatch) {
-            addressMatch = html.match(/<span[^>]*class="[^"]*address[^"]*"[^>]*>([^<]+)<\/span>/i);
-        }
-        if (!addressMatch) {
-            addressMatch = html.match(/Address[^>]*>([^<]+)</i);
-        }
-        if (addressMatch) {
-            data.address = addressMatch[1].trim().replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
-        }
-    }
-    
-    // Extract coordinates from JavaScript code (lat/lng patterns)
+    // Extract coordinates from JavaScript code
     const latMatch = html.match(/lat:\s*([0-9.-]+)/i);
     const lngMatch = html.match(/lng:\s*([0-9.-]+)/i);
     if (latMatch && lngMatch) {
         data.coordinates = `${latMatch[1]}, ${lngMatch[1]}`;
-    } else {
-        // Fallback: look for coordinates in data attributes
-        const dataLatMatch = html.match(/data-lat="([^"]+)"/i);
-        const dataLngMatch = html.match(/data-lng="([^"]+)"/i);
-        if (dataLatMatch && dataLngMatch) {
-            data.coordinates = `${dataLatMatch[1]}, ${dataLngMatch[1]}`;
-        }
     }
     
-    // Extract website - look for website links
-    let websiteMatch = html.match(/<a[^>]*href="([^"]+)"[^>]*>Website/i);
+    // Extract website - only if there's a clear "Website" label or in contact section
+    let websiteMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>.*?Website.*?<\/a>/i);
     if (!websiteMatch) {
-        websiteMatch = html.match(/Website[^>]*<a[^>]*href="([^"]+)"/i);
+        // Look for website in contact/social media sections specifically
+        websiteMatch = html.match(/<div[^>]*class="[^"]*contact[^"]*"[^>]*>.*?<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>/i);
     }
     if (!websiteMatch) {
-        // Look for external website links
-        websiteMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>.*?Website/i);
+        // Look for website in social media sections
+        websiteMatch = html.match(/<div[^>]*class="[^"]*social[^"]*"[^>]*>.*?<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>/i);
     }
-    if (!websiteMatch) {
-        // Look for any external link that's not a social media platform
-        const externalLinks = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>/g);
-        if (externalLinks) {
-            for (const link of externalLinks) {
-                const href = link.match(/href="([^"]+)"/);
-                if (href && !href[1].includes('gaycities.com') && 
-                    !href[1].includes('google.com') && 
-                    !href[1].includes('facebook.com') && 
-                    !href[1].includes('instagram.com') && 
-                    !href[1].includes('x.com') && 
-                    !href[1].includes('twitter.com') &&
-                    !href[1].includes('4sqi.net') &&
-                    !href[1].includes('imgix.net')) {
-                    data.website = href[1].trim();
-                    break;
-                }
-            }
-        }
-    }
-    if (websiteMatch) {
+    
+    if (websiteMatch && isValidWebsiteUrl(websiteMatch[1])) {
         data.website = websiteMatch[1].trim();
     }
     
-    // Extract Instagram - look for Instagram links
-    let instagramMatch = html.match(/<a[^>]*href="([^"]*instagram[^"]*)"[^>]*>/i);
-    if (!instagramMatch) {
-        instagramMatch = html.match(/Instagram[^>]*<a[^>]*href="([^"]+)"/i);
+    // Debug: log what we found for website
+    if (data.website) {
+        console.log(`    📍 Found website: ${data.website}`);
     }
+    
+    // Extract Instagram - look for specific Instagram profile links (not GayCities' own)
+    let instagramMatch = html.match(/<a[^>]*href="(https?:\/\/(?:www\.)?instagram\.com\/[^"]+)"[^>]*>/i);
     if (!instagramMatch) {
-        // Look for Instagram in social media section
-        instagramMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*instagram[^"]*)"[^>]*>/i);
+        // Look for Instagram links in social media sections
+        instagramMatch = html.match(/Instagram[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?instagram\.com\/[^"]+)"/i);
     }
-    if (instagramMatch) {
+    if (instagramMatch && isValidBarSocialLink(instagramMatch[1], 'instagram')) {
         data.instagram = instagramMatch[1].trim();
     }
     
-    // Extract Facebook - look for Facebook links
-    let facebookMatch = html.match(/<a[^>]*href="([^"]*facebook[^"]*)"[^>]*>/i);
+    // Extract Facebook - look for specific Facebook page links (not GayCities' own)
+    let facebookMatch = html.match(/<a[^>]*href="(https?:\/\/(?:www\.)?facebook\.com\/[^"]+)"[^>]*>/i);
     if (!facebookMatch) {
-        facebookMatch = html.match(/Facebook[^>]*<a[^>]*href="([^"]+)"/i);
+        // Look for Facebook links in social media sections
+        facebookMatch = html.match(/Facebook[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?facebook\.com\/[^"]+)"/i);
     }
-    if (!facebookMatch) {
-        // Look for Facebook in social media section
-        facebookMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*facebook[^"]*)"[^>]*>/i);
-    }
-    if (facebookMatch) {
-        data.facebook = facebookMatch[1].trim();
+    if (facebookMatch && isValidBarSocialLink(facebookMatch[1], 'facebook')) {
+        let facebookUrl = facebookMatch[1].trim();
+        // Fix double URLs (remove duplicate facebook.com)
+        if (facebookUrl.includes('https://www.facebook.com/https://www.facebook.com/')) {
+            facebookUrl = facebookUrl.replace('https://www.facebook.com/https://www.facebook.com/', 'https://www.facebook.com/');
+        }
+        data.facebook = facebookUrl;
     }
     
-    // Extract Twitter/X - look for Twitter/X links
-    let twitterMatch = html.match(/<a[^>]*href="([^"]*x\.com[^"]*)"[^>]*>/i);
-    if (!twitterMatch) {
-        twitterMatch = html.match(/<a[^>]*href="([^"]*twitter[^"]*)"[^>]*>/i);
-    }
-    if (!twitterMatch) {
-        // Look for Twitter/X in social media section
-        twitterMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*x\.com[^"]*)"[^>]*>/i);
-    }
-    if (twitterMatch) {
-        data.twitter = twitterMatch[1].trim();
-    }
-    
-    // Extract Google Maps - look for Google Maps links
-    let googleMapsMatch = html.match(/<a[^>]*href="([^"]*google[^"]*maps[^"]*)"[^>]*>/i);
+    // Extract Google Maps - look for specific Google Maps links
+    let googleMapsMatch = html.match(/<a[^>]*href="(https?:\/\/(?:www\.)?google\.com\/maps\/[^"]+)"[^>]*>/i);
     if (!googleMapsMatch) {
-        googleMapsMatch = html.match(/<a[^>]*href="([^"]*maps\.google[^"]*)"[^>]*>/i);
-    }
-    if (!googleMapsMatch) {
-        // Look for Google Maps in location section
-        googleMapsMatch = html.match(/<a[^>]*href="(https?:\/\/[^"]*maps\.google[^"]*)"[^>]*>/i);
+        // Look for Google Maps in location/contact sections
+        googleMapsMatch = html.match(/Google Maps[^>]*<a[^>]*href="(https?:\/\/(?:www\.)?google\.com\/maps\/[^"]+)"/i);
     }
     if (googleMapsMatch) {
         data.googleMaps = googleMapsMatch[1].trim();
     } else if (data.address && data.coordinates) {
-        // Generate a proper Google Maps URL if we have address and coordinates
+        // Generate Google Maps URL if we have address and coordinates
         const [lat, lng] = data.coordinates.split(', ');
         const placeName = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
         const name = placeName ? placeName[1].trim() : 'Bar';
@@ -602,14 +544,95 @@ async function scrapeGayCitiesData(url) {
         data.googleMaps = `https://www.google.com/maps/place/${encodedName},+${encodedAddress}/@${lat},${lng},16z/data=!4m6!3m5!1s0x0:0x0!8m2!3d${lat}!4d${lng}!16s%2Fm%2F0k1cf07?g_ep=Eg1tbF8yMDI1MTAxNV8wIJvbDyoASAJQAg%3D%3D`;
     }
     
-        // Note: We don't extract images from GayCities as they are just photos, not logos
-    
     return data;
+}
+
+// Helper function to validate if a URL is a legitimate website (not social media, tracking, etc.)
+function isValidWebsiteUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+        
+        // Exclude social media platforms, tracking domains, and internal GayCities links
+        const excludedDomains = [
+            'gaycities.com',
+            'facebook.com',
+            'instagram.com',
+            'twitter.com',
+            'x.com',
+            'tiktok.com',
+            'youtube.com',
+            'threads.com',
+            'google.com',
+            'googleapis.com',
+            'googletagmanager.com',
+            'google-analytics.com',
+            'facebook.net',
+            'doubleclick.net',
+            'googlesyndication.com',
+            'amazon.com',
+            'amazonaws.com',
+            'cloudfront.net',
+            'imgix.net',
+            '4sqi.net',
+            'foursquare.com',
+            'iglta.org',  // This was showing up incorrectly
+            'q.digital'   // Another incorrect link
+        ];
+        
+        // Check if hostname contains any excluded domains
+        for (const domain of excludedDomains) {
+            if (hostname.includes(domain)) {
+                return false;
+            }
+        }
+        
+        // Must be http or https
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+            return false;
+        }
+        
+        // Must have a valid domain (not just a path)
+        if (hostname.length < 3 || !hostname.includes('.')) {
+            return false;
+        }
+        
+        // Exclude social media profile URLs (they should be in their own fields)
+        const path = urlObj.pathname.toLowerCase();
+        if (path.includes('/@') || path.includes('/user/') || path.includes('/profile/')) {
+            return false;
+        }
+        
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+// Helper function to check if social media links are actually for the bar (not GayCities)
+function isValidBarSocialLink(url, platform) {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+        
+        // Must be the correct platform
+        if (platform === 'instagram' && !hostname.includes('instagram.com')) return false;
+        if (platform === 'facebook' && !hostname.includes('facebook.com')) return false;
+        
+        // Exclude GayCities' own social media accounts
+        const path = urlObj.pathname.toLowerCase();
+        if (path.includes('gaycities') || path.includes('gay-cities')) {
+            return false;
+        }
+        
+        return true;
+    } catch (e) {
+        return false;
+    }
 }
 
 // Convert DMS coordinates to decimal degrees
 function convertDMSToDecimal(dms) {
-    // Example: "40°45′06.1″N 74°00′15.5″W"
     const match = dms.match(/(\d+)°(\d+)′([\d.]+)″([NS])\s*(\d+)°(\d+)′([\d.]+)″([EW])/);
     if (!match) return '';
     
