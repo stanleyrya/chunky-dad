@@ -37,7 +37,11 @@
   {
     "name": "Nowhere Bar",
     "city": "new-york",
-    "gayCities": "https://newyork.gaycities.com/bars/nowhere-bar-ny",
-    "coordinates": "40.7127753, -74.0059728"
+    "gayCities": "https://newyork.gaycities.com/bars/415-nowhere-bar",
+    "address": "322 E 14th St, New York, NY 10003",
+    "coordinates": "40.7316977, -73.9841737",
+    "instagram": "https://www.instagram.com/nowherenyc",
+    "facebook": "https://www.facebook.com/nowherebar",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY"
   }
 ]
