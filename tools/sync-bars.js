@@ -277,23 +277,22 @@ function shouldScrapeWikipediaBar(bar, urlTracking) {
     if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
     if (!bar.image || bar.image.trim() === '') missingFields.push('image');
     
-    // Check for URL changes
+    // Check if URL changed from what we saved last time
     const barKey = `${bar.name}-${bar.city}`.toLowerCase();
-    const lastKnownUrl = urlTracking[barKey]?.wikipedia;
+    const savedUrl = urlTracking[barKey]?.wikipedia;
     const currentUrl = bar.wikipedia;
     
-    const hasUrlChanged = currentUrl && lastKnownUrl && currentUrl !== lastKnownUrl;
-    const needsScraping = missingFields.length > 0 || hasUrlChanged;
-    
-    if (needsScraping) {
-        if (hasUrlChanged) {
-            console.log(`🔄 ${bar.name} Wikipedia URL changed: ${lastKnownUrl} → ${currentUrl}`);
-        } else {
-            console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
-        }
+    if (currentUrl && savedUrl && currentUrl !== savedUrl) {
+        console.log(`🔄 ${bar.name} Wikipedia URL changed: ${savedUrl} → ${currentUrl}`);
+        return true;
     }
     
-    return needsScraping;
+    if (missingFields.length > 0) {
+        console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
+        return true;
+    }
+    
+    return false;
 }
 
 // Check if a bar needs GayCities scraping based on missing data or URL changes
@@ -307,23 +306,22 @@ function shouldScrapeGayCitiesBar(bar, urlTracking) {
     if (!bar.facebook || bar.facebook.trim() === '') missingFields.push('facebook');
     if (!bar.googleMaps || bar.googleMaps.trim() === '') missingFields.push('googleMaps');
     
-    // Check for URL changes
+    // Check if URL changed from what we saved last time
     const barKey = `${bar.name}-${bar.city}`.toLowerCase();
-    const lastKnownUrl = urlTracking[barKey]?.gayCities;
+    const savedUrl = urlTracking[barKey]?.gayCities;
     const currentUrl = bar.gayCities;
     
-    const hasUrlChanged = currentUrl && lastKnownUrl && currentUrl !== lastKnownUrl;
-    const needsScraping = missingFields.length > 0 || hasUrlChanged;
-    
-    if (needsScraping) {
-        if (hasUrlChanged) {
-            console.log(`🔄 ${bar.name} GayCities URL changed: ${lastKnownUrl} → ${currentUrl}`);
-        } else {
-            console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
-        }
+    if (currentUrl && savedUrl && currentUrl !== savedUrl) {
+        console.log(`🔄 ${bar.name} GayCities URL changed: ${savedUrl} → ${currentUrl}`);
+        return true;
     }
     
-    return needsScraping;
+    if (missingFields.length > 0) {
+        console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
+        return true;
+    }
+    
+    return false;
 }
 
 // Enrich bars with data from Wikipedia and GayCities fields
