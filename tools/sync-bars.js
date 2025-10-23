@@ -3,6 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// URL tracking file path
+const URL_TRACKING_FILE = path.join(__dirname, '..', 'data', 'bar-url-tracking.json');
+
 // Simplified bars sync script using public Google Sheets (like bear artists)
 async function syncBars() {
     console.log('🔄 Starting simplified bars sync...');
@@ -27,12 +30,20 @@ async function syncBars() {
         const mergedBars = mergeBars(sheetsBars, localBars);
         console.log(`🔗 Merged into ${mergedBars.length} total bars`);
         
-        // 4. Enrich bars with external data
+        // 4. Load URL tracking data
+        console.log('📊 Loading URL tracking data...');
+        const urlTracking = await loadUrlTrackingData();
+        
+        // 5. Enrich bars with external data
         console.log('🌐 Enriching bars with external data...');
-        const enrichedBars = await enrichBarsWithExternalData(mergedBars);
+        const enrichedBars = await enrichBarsWithExternalData(mergedBars, urlTracking);
         console.log(`✨ Enriched ${enrichedBars.length} bars with additional data`);
         
-        // 5. Save merged data locally
+        // 6. Save updated URL tracking data
+        console.log('💾 Saving updated URL tracking data...');
+        await saveUrlTrackingData(urlTracking);
+        
+        // 7. Save merged data locally
         console.log('💾 Saving merged data locally...');
         await saveBarsLocally(enrichedBars);
         
@@ -121,6 +132,37 @@ function parseGoogleSheetsData(json) {
     return data;
 }
 
+// Load URL tracking data
+async function loadUrlTrackingData() {
+    try {
+        if (fs.existsSync(URL_TRACKING_FILE)) {
+            const data = JSON.parse(fs.readFileSync(URL_TRACKING_FILE, 'utf8'));
+            console.log(`📊 Loaded URL tracking data for ${Object.keys(data).length} bars`);
+            return data;
+        }
+    } catch (error) {
+        console.warn(`⚠️  Could not load URL tracking data:`, error.message);
+    }
+    
+    console.log('📊 Starting with empty URL tracking data');
+    return {};
+}
+
+// Save URL tracking data
+async function saveUrlTrackingData(urlTracking) {
+    try {
+        const trackingDir = path.dirname(URL_TRACKING_FILE);
+        if (!fs.existsSync(trackingDir)) {
+            fs.mkdirSync(trackingDir, { recursive: true });
+        }
+        
+        fs.writeFileSync(URL_TRACKING_FILE, JSON.stringify(urlTracking, null, 2));
+        console.log(`💾 Saved URL tracking data for ${Object.keys(urlTracking).length} bars`);
+    } catch (error) {
+        console.warn(`⚠️  Could not save URL tracking data:`, error.message);
+    }
+}
+
 // Load existing local bars
 async function loadLocalBars() {
     const barsDir = path.join(__dirname, '..', 'data', 'bars');
@@ -190,6 +232,21 @@ function mergeBars(sheetsBars, localBars) {
         const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
         if (!merged.has(key)) {
             merged.set(key, normalizedBar);
+        } else {
+            // If bar already exists from sheets, merge the enriched data from local
+            const existingBar = merged.get(key);
+            const enrichedBar = { ...existingBar };
+            
+            // Preserve enriched fields from local bar if they exist
+            if (bar.address && bar.address.trim() !== '') enrichedBar.address = bar.address;
+            if (bar.coordinates && bar.coordinates.trim() !== '') enrichedBar.coordinates = bar.coordinates;
+            if (bar.website && bar.website.trim() !== '') enrichedBar.website = bar.website;
+            if (bar.instagram && bar.instagram.trim() !== '') enrichedBar.instagram = bar.instagram;
+            if (bar.facebook && bar.facebook.trim() !== '') enrichedBar.facebook = bar.facebook;
+            if (bar.googleMaps && bar.googleMaps.trim() !== '') enrichedBar.googleMaps = bar.googleMaps;
+            if (bar.image && bar.image.trim() !== '') enrichedBar.image = bar.image;
+            
+            merged.set(key, enrichedBar);
         }
     });
     
@@ -212,25 +269,35 @@ function cleanBarObject(bar) {
     return cleaned;
 }
 
-// Check if a bar needs Wikipedia scraping based on missing data
-function shouldScrapeWikipediaBar(bar) {
+// Check if a bar needs Wikipedia scraping based on missing data or URL changes
+function shouldScrapeWikipediaBar(bar, urlTracking) {
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
     if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
     if (!bar.image || bar.image.trim() === '') missingFields.push('image');
     
-    const needsScraping = missingFields.length > 0;
+    // Check for URL changes
+    const barKey = `${bar.name}-${bar.city}`.toLowerCase();
+    const lastKnownUrl = urlTracking[barKey]?.wikipedia;
+    const currentUrl = bar.wikipedia;
+    
+    const hasUrlChanged = currentUrl && lastKnownUrl && currentUrl !== lastKnownUrl;
+    const needsScraping = missingFields.length > 0 || hasUrlChanged;
     
     if (needsScraping) {
-        console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
+        if (hasUrlChanged) {
+            console.log(`🔄 ${bar.name} Wikipedia URL changed: ${lastKnownUrl} → ${currentUrl}`);
+        } else {
+            console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
+        }
     }
     
     return needsScraping;
 }
 
-// Check if a bar needs GayCities scraping based on missing data
-function shouldScrapeGayCitiesBar(bar) {
+// Check if a bar needs GayCities scraping based on missing data or URL changes
+function shouldScrapeGayCitiesBar(bar, urlTracking) {
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
@@ -240,17 +307,27 @@ function shouldScrapeGayCitiesBar(bar) {
     if (!bar.facebook || bar.facebook.trim() === '') missingFields.push('facebook');
     if (!bar.googleMaps || bar.googleMaps.trim() === '') missingFields.push('googleMaps');
     
-    const needsScraping = missingFields.length > 0;
+    // Check for URL changes
+    const barKey = `${bar.name}-${bar.city}`.toLowerCase();
+    const lastKnownUrl = urlTracking[barKey]?.gayCities;
+    const currentUrl = bar.gayCities;
+    
+    const hasUrlChanged = currentUrl && lastKnownUrl && currentUrl !== lastKnownUrl;
+    const needsScraping = missingFields.length > 0 || hasUrlChanged;
     
     if (needsScraping) {
-        console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
+        if (hasUrlChanged) {
+            console.log(`🔄 ${bar.name} GayCities URL changed: ${lastKnownUrl} → ${currentUrl}`);
+        } else {
+            console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
+        }
     }
     
     return needsScraping;
 }
 
 // Enrich bars with data from Wikipedia and GayCities fields
-async function enrichBarsWithExternalData(bars) {
+async function enrichBarsWithExternalData(bars, urlTracking) {
     const enrichedBars = [];
     
     for (const bar of bars) {
@@ -260,10 +337,10 @@ async function enrichBarsWithExternalData(bars) {
         enrichedBar = cleanBarObject(enrichedBar);
         
         // Check if bar needs Wikipedia scraping
-        const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(bar);
+        const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(enrichedBar, urlTracking);
         
         // Check if bar needs GayCities scraping
-        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(bar);
+        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(enrichedBar, urlTracking);
         
         if (needsWikipediaScraping) {
             try {
@@ -321,6 +398,18 @@ async function enrichBarsWithExternalData(bars) {
             console.log(`⏭️  Skipping Wikipedia scraping for ${bar.name} - already has valid data`);
         } else if (bar.gayCities) {
             console.log(`⏭️  Skipping GayCities scraping for ${bar.name} - already has valid data`);
+        }
+        
+        // Update URL tracking data for this bar
+        const barKey = `${bar.name}-${bar.city}`.toLowerCase();
+        if (!urlTracking[barKey]) {
+            urlTracking[barKey] = {};
+        }
+        if (bar.wikipedia) {
+            urlTracking[barKey].wikipedia = bar.wikipedia;
+        }
+        if (bar.gayCities) {
+            urlTracking[barKey].gayCities = bar.gayCities;
         }
         
         enrichedBars.push(enrichedBar);

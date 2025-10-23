@@ -1,0 +1,47 @@
+{
+  "rockbar-new-york": {
+    "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc"
+  },
+  "eagle nyc-new-york": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Eagle_NYC"
+  },
+  "3 dollar bill-new-york": {
+    "wikipedia": "https://en.wikipedia.org/wiki/3_Dollar_Bill"
+  },
+  "ty's-new-york": {
+    "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc"
+  },
+  "nowhere bar-new-york": {
+    "gayCities": "https://newyork.gaycities.com/bars/415-nowhere-bar"
+  },
+  "diesel-seattle": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Diesel_(gay_bar)"
+  },
+  "the lumber yard bar-seattle": {
+    "gayCities": "https://seattle.gaycities.com/bars/the-lumber-yard-bar-seattle"
+  },
+  "the cuff complex-seattle": {
+    "gayCities": "https://seattle.gaycities.com/bars/the-cuff-complex"
+  },
+  "seattle eagle-seattle": {
+    "gayCities": "https://seattle.gaycities.com/bars/seattle-eagle"
+  },
+  "cc’s seattle-seattle": {
+    "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle"
+  },
+  "eagle la-los-angeles": {
+    "gayCities": "https://losangeles.gaycities.com/bars/357-eagle-la"
+  },
+  "precinct la-los-angeles": {
+    "gayCities": "https://losangeles.gaycities.com/bars/precinct-la"
+  },
+  "madison pub-seattle": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Madison_Pub"
+  },
+  "pony-seattle": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Pony_(Seattle)"
+  },
+  "royal vauxhall tavern-london": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Royal_Vauxhall_Tavern"
+  }
+}
