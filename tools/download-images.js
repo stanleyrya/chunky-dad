@@ -103,80 +103,39 @@ function extractDomainFromFaviconUrl(faviconUrl) {
   }
 }
 
-// Detect image type based on URL and context
-function detectImageType(imageUrl, info) {
-  // Check if it's a favicon URL (Google favicon service)
-  if (imageUrl.includes('google.com/s2/favicons')) {
-    return 'favicon';
-  }
-  
-  // Check if it's a Linktree profile picture
-  if (info && info.linktreeUrl) {
-    return 'favicon'; // Linktree profile pictures are treated as favicons
-  }
-  
-  // Check if it's a Wikipedia image
-  if (imageUrl.includes('wikipedia.org') || imageUrl.includes('wikimedia.org')) {
-    return 'bar'; // Wikipedia images are typically bar logos
-  }
-  
-  // Check if it's an Eventbrite image
-  if (imageUrl.includes('evbuc.com') || imageUrl.includes('eventbrite.com')) {
-    return 'event'; // Eventbrite images are typically event images
-  }
-  
-  // Check context from info object
-  if (info) {
-    // If it has event-specific fields, it's an event
-    if (info.startDate !== undefined || info.recurring !== undefined) {
-      return 'event';
-    }
-    
-    // If it has bar-specific fields, it's a bar
-    if (info.city !== undefined || info.wikipedia !== undefined) {
-      return 'bar';
-    }
-  }
-  
-  // Default to event for backward compatibility
-  return 'event';
-}
-
-// Unified image downloader that auto-detects type
+// Simple image downloader - just downloads images based on URL
 async function downloadImageWithInfo(imageUrl, info) {
   try {
-    // Auto-detect the type based on URL and context
-    const type = detectImageType(imageUrl, info);
+    // Adjust Eventbrite image URLs to get uncropped versions
+    const adjustedUrl = adjustEventbriteImageUrl(imageUrl);
     
-    // Adjust Eventbrite image URLs to get uncropped versions (only for events)
-    const adjustedUrl = type === 'event' ? adjustEventbriteImageUrl(imageUrl) : imageUrl;
-    
-    // Get the directory structure based on detected type
+    // Determine directory based on URL pattern
     let dirPath;
-    if (type === 'event') {
-      dirPath = getEventDirectoryPath(info, 'img/events');
-    } else if (type === 'bar') {
+    if (imageUrl.includes('google.com/s2/favicons')) {
+      dirPath = 'img/favicons';
+    } else if (imageUrl.includes('wikipedia.org') || imageUrl.includes('wikimedia.org')) {
       dirPath = 'img/bars';
     } else {
-      dirPath = 'img/favicons';
+      // Default to events directory
+      dirPath = info && info.startDate ? getEventDirectoryPath(info, 'img/events') : 'img/events';
     }
     
     const dir = path.join(ROOT, dirPath);
-    
-    // Ensure directory exists
     ensureDir(dir);
     
-    // First, try to detect the file extension from URL
+    // Detect file extension
     const detectedExtension = detectFileExtension(adjustedUrl);
     
-    // Generate filename with detected extension
+    // Generate filename based on URL
     let filename;
-    if (type === 'event') {
-      filename = generateEventFilename(adjustedUrl, info, detectedExtension);
-    } else if (type === 'bar') {
+    if (imageUrl.includes('google.com/s2/favicons')) {
+      filename = generateFaviconFilename(adjustedUrl, detectedExtension);
+    } else if (imageUrl.includes('wikipedia.org') || imageUrl.includes('wikimedia.org')) {
       filename = generateBarFilename(adjustedUrl, info, detectedExtension);
+    } else if (info && info.linktreeUrl) {
+      filename = generateLinktreeFaviconFilename(adjustedUrl, detectedExtension);
     } else {
-      filename = generateFilename(adjustedUrl, type, detectedExtension);
+      filename = generateEventFilename(adjustedUrl, info, detectedExtension);
     }
     
     const localPath = path.join(dir, filename);
@@ -186,19 +145,11 @@ async function downloadImageWithInfo(imageUrl, info) {
     const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
     
     if (!shouldDownload) {
-      console.log(`⏭️  Skipping ${type} image: ${filename} (${reason})`);
+      console.log(`⏭️  Skipping image: ${filename} (${reason})`);
       return { success: true, skipped: true, filename, reason };
     }
     
-    console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
-    if (type === 'event') {
-      console.log(`   Event: ${info.name}`);
-      console.log(`   Type: ${info.recurring ? 'recurring' : 'one-time'}`);
-    } else if (type === 'bar') {
-      console.log(`   Bar: ${info.name} (${info.city})`);
-    } else if (type === 'favicon') {
-      console.log(`   Favicon: ${info.website || 'unknown domain'}`);
-    }
+    console.log(`📥 Downloading image: ${filename} (${reason})`);
     console.log(`   Path: ${path.relative(ROOT, localPath)}`);
     console.log(`   Original URL: ${imageUrl}`);
     if (adjustedUrl !== imageUrl) {
@@ -206,10 +157,10 @@ async function downloadImageWithInfo(imageUrl, info) {
     }
     console.log(`   Detected extension: ${detectedExtension}`);
     
-    // Download the image and get content type
+    // Download the image
     const downloadResult = await downloadFile(adjustedUrl, localPath);
     
-    // If we got a different content type, regenerate filename with correct extension
+    // Handle extension correction if needed
     if (downloadResult.contentType) {
       const actualExtension = detectFileExtension(adjustedUrl, downloadResult.contentType);
       
@@ -218,12 +169,14 @@ async function downloadImageWithInfo(imageUrl, info) {
         
         // Generate new filename with correct extension
         let correctFilename;
-        if (type === 'event') {
-          correctFilename = generateEventFilename(adjustedUrl, info, actualExtension);
-        } else if (type === 'bar') {
+        if (imageUrl.includes('google.com/s2/favicons')) {
+          correctFilename = generateFaviconFilename(adjustedUrl, actualExtension);
+        } else if (imageUrl.includes('wikipedia.org') || imageUrl.includes('wikimedia.org')) {
           correctFilename = generateBarFilename(adjustedUrl, info, actualExtension);
+        } else if (info && info.linktreeUrl) {
+          correctFilename = generateLinktreeFaviconFilename(adjustedUrl, actualExtension);
         } else {
-          correctFilename = generateFilename(adjustedUrl, type, actualExtension);
+          correctFilename = generateEventFilename(adjustedUrl, info, actualExtension);
         }
         
         const correctPath = path.join(dir, correctFilename);
@@ -237,25 +190,20 @@ async function downloadImageWithInfo(imageUrl, info) {
           }
         }
         
-        // Update variables to use correct paths
-        const finalFilename = correctFilename;
-        const finalPath = correctPath;
-        const finalMetadataPath = correctMetadataPath;
+        // Save metadata
+        const metadata = createMetadata(imageUrl, adjustedUrl, filename, downloadResult, info);
+        fs.writeFileSync(correctMetadataPath, JSON.stringify(metadata, null, 2));
         
-        // Save metadata with type-specific information
-        const metadata = createMetadata(imageUrl, adjustedUrl, type, finalFilename, downloadResult, info);
-        fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
-        
-        console.log(`✅ Downloaded ${type} image: ${finalFilename} (${actualExtension})`);
-        return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
+        console.log(`✅ Downloaded image: ${correctFilename} (${actualExtension})`);
+        return { success: true, skipped: false, filename: correctFilename, localPath: correctPath };
       }
     }
     
-    // Save metadata with type-specific information
-    const metadata = createMetadata(imageUrl, adjustedUrl, type, filename, downloadResult, info);
+    // Save metadata
+    const metadata = createMetadata(imageUrl, adjustedUrl, filename, downloadResult, info);
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
     
-    console.log(`✅ Downloaded ${type} image: ${filename} (${detectedExtension})`);
+    console.log(`✅ Downloaded image: ${filename} (${detectedExtension})`);
     return { success: true, skipped: false, filename, localPath };
     
   } catch (error) {
@@ -265,33 +213,16 @@ async function downloadImageWithInfo(imageUrl, info) {
 }
 
 // Create metadata object based on type
-function createMetadata(originalUrl, adjustedUrl, type, filename, downloadResult, info) {
-  const baseMetadata = {
-    originalUrl: originalUrl,
-    adjustedUrl: adjustedUrl,
+function createMetadata(originalUrl, adjustedUrl, filename, downloadResult, info) {
+  return {
+    originalUrl,
+    adjustedUrl,
+    filename,
     downloadedAt: new Date().toISOString(),
-    type: type,
-    filename: filename,
     contentType: downloadResult.contentType,
-    contentLength: downloadResult.contentLength
+    contentLength: downloadResult.contentLength,
+    info: info || {}
   };
-  
-  if (type === 'event') {
-    baseMetadata.eventInfo = {
-      name: info.name,
-      startDate: info.startDate,
-      recurring: info.recurring
-    };
-  } else if (type === 'bar') {
-    baseMetadata.barInfo = {
-      name: info.name,
-      city: info.city,
-      wikipedia: info.wikipedia,
-      website: info.website
-    };
-  }
-  
-  return baseMetadata;
 }
 
 // Legacy function for backward compatibility
