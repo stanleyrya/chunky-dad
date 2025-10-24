@@ -207,6 +207,156 @@ async function downloadEventImage(imageUrl, eventInfo) {
   }
 }
 
+// Download bar image with bar information
+async function downloadBarImage(imageUrl, barInfo) {
+  try {
+    // Get the directory structure for bars
+    const dirPath = 'img/bars';
+    const dir = path.join(ROOT, dirPath);
+    
+    // Ensure directory exists
+    ensureDir(dir);
+    
+    // First, try to detect the file extension from URL
+    const detectedExtension = detectFileExtension(imageUrl);
+    
+    // Generate filename with detected extension
+    const filename = generateBarFilename(imageUrl, barInfo, detectedExtension);
+    const localPath = path.join(dir, filename);
+    const metadataPath = localPath + '.meta';
+    
+    // Check if we should download
+    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
+    
+    if (!shouldDownload) {
+      console.log(`⏭️  Skipping bar image: ${filename} (${reason})`);
+      return { success: true, skipped: true, filename, reason };
+    }
+    
+    console.log(`📥 Downloading bar image: ${filename} (${reason})`);
+    console.log(`   Bar: ${barInfo.name} (${barInfo.city})`);
+    console.log(`   Path: ${path.relative(ROOT, localPath)}`);
+    console.log(`   URL: ${imageUrl}`);
+    console.log(`   Detected extension: ${detectedExtension}`);
+    
+    // Download the image and get content type
+    const downloadResult = await downloadFile(imageUrl, localPath);
+    
+    // If we got a different content type, regenerate filename with correct extension
+    if (downloadResult.contentType) {
+      const actualExtension = detectFileExtension(imageUrl, downloadResult.contentType);
+      
+      if (actualExtension !== detectedExtension) {
+        console.log(`🔄 Content type detected different extension: ${actualExtension} (was ${detectedExtension})`);
+        
+        // Generate new filename with correct extension
+        const correctFilename = generateBarFilename(imageUrl, barInfo, actualExtension);
+        const correctPath = path.join(dir, correctFilename);
+        const correctMetadataPath = correctPath + '.meta';
+        
+        // Move the file to the correct name
+        if (fs.existsSync(localPath)) {
+          fs.renameSync(localPath, correctPath);
+          if (fs.existsSync(metadataPath)) {
+            fs.renameSync(metadataPath, correctMetadataPath);
+          }
+        }
+        
+        // Update variables to use correct paths
+        const finalFilename = correctFilename;
+        const finalPath = correctPath;
+        const finalMetadataPath = correctMetadataPath;
+        
+        // Save metadata with bar information
+        const metadata = {
+          originalUrl: imageUrl,
+          downloadedAt: new Date().toISOString(),
+          type: 'bar',
+          filename: finalFilename,
+          contentType: downloadResult.contentType,
+          contentLength: downloadResult.contentLength,
+          barInfo: {
+            name: barInfo.name,
+            city: barInfo.city,
+            wikipedia: barInfo.wikipedia,
+            website: barInfo.website
+          }
+        };
+        
+        fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
+        
+        console.log(`✅ Downloaded bar image: ${finalFilename} (${actualExtension})`);
+        return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
+      }
+    }
+    
+    // Save metadata with bar information
+    const metadata = {
+      originalUrl: imageUrl,
+      downloadedAt: new Date().toISOString(),
+      type: 'bar',
+      filename: filename,
+      contentType: downloadResult.contentType,
+      contentLength: downloadResult.contentLength,
+      barInfo: {
+        name: barInfo.name,
+        city: barInfo.city,
+        wikipedia: barInfo.wikipedia,
+        website: barInfo.website
+      }
+    };
+    
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    
+    console.log(`✅ Downloaded bar image: ${filename} (${detectedExtension})`);
+    return { success: true, skipped: false, filename, localPath };
+    
+  } catch (error) {
+    console.error(`❌ Failed to download bar image from ${imageUrl}:`, error.message);
+    return { success: false, error: error.message, url: imageUrl };
+  }
+}
+
+// Generate filename for bar images
+function generateBarFilename(imageUrl, barInfo, extension) {
+  try {
+    // Use Wikipedia URL as base if available, otherwise use bar name + city
+    let baseName;
+    if (barInfo.wikipedia) {
+      const url = new URL(barInfo.wikipedia);
+      const pathname = url.pathname.substring(1); // Remove leading slash
+      baseName = pathname
+        .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+        .replace(/-+/g, '-') // Collapse multiple dashes
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    } else {
+      // Fallback to bar name + city
+      baseName = `${barInfo.name}-${barInfo.city}`
+        .toLowerCase()
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    }
+    
+    return `bar-${baseName}${extension}`;
+  } catch (error) {
+    // Fallback to hash-based filename
+    const hash = simpleHash(imageUrl);
+    return `bar-${hash}${extension}`;
+  }
+}
+
+// Simple hash function for fallback filenames
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
 // Check if a URL is a Linktree
 function isLinktreeUrl(url) {
   try {
@@ -702,6 +852,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
 function extractImageUrls() {
   const imageUrls = {
     eventsWithInfo: [],  // Changed to array of event objects with image info
+    barsWithInfo: [],    // Array of bar objects with image info
     favicons64: new Set(),  // Higher quality for map markers
     favicons256: new Set()   // High quality for cards/OG
   };
@@ -781,8 +932,69 @@ function extractImageUrls() {
     }
   }
   
+  // Extract bar images from bars data
+  console.log('\\n🍺 Extracting bar images...');
+  const barsDir = path.join(ROOT, 'data', 'bars');
+  if (fs.existsSync(barsDir)) {
+    const barFiles = fs.readdirSync(barsDir).filter(file => file.endsWith('.json'));
+    
+    for (const file of barFiles) {
+      const filePath = path.join(barsDir, file);
+      try {
+        const cityBars = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        
+        for (const bar of cityBars) {
+          // Extract bar images from Wikipedia scraping
+          if (bar.image) {
+            const cleanUrl = cleanImageUrl(bar.image);
+            if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+              imageUrls.barsWithInfo.push({
+                imageUrl: cleanUrl,
+                name: bar.name,
+                city: bar.city,
+                wikipedia: bar.wikipedia,
+                website: bar.website
+              });
+              console.log(`🍺 Found bar image: ${bar.name} (${bar.city})`);
+            }
+          }
+          
+          // Extract website URLs for favicons
+          if (bar.website) {
+            try {
+              const domain = new URL(bar.website).hostname;
+              
+              // Check if it's a Linktree URL
+              if (isLinktreeUrl(bar.website)) {
+                console.log(`🔗 Found Linktree URL: ${bar.website}`);
+                // Store the Linktree URL for special processing
+                imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
+                imageUrls.linktreeUrls.add(bar.website);
+              } else {
+                // Use Google's favicon service for regular domains with multiple sizes
+                const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
+                
+                imageUrls.favicons64.add(faviconUrl64);
+                imageUrls.favicons256.add(faviconUrl256);
+                
+                console.log(`🌐 Found bar website for favicons: ${domain}`);
+                console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
+                console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
+              }
+            } catch (error) {
+              console.warn(`⚠️  Could not extract domain from bar website URL: ${bar.website}`, error.message);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️  Could not parse bar file ${file}:`, error.message);
+      }
+    }
+  }
+  
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
+  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.barsWithInfo.length} bar images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
   return imageUrls;
 }
 
@@ -832,6 +1044,25 @@ async function main() {
     }
   }
   
+  // Download bar images with bar information
+  console.log('\\n🍺 Downloading bar images...');
+  for (const barWithImage of imageUrls.barsWithInfo) {
+    const result = await downloadBarImage(barWithImage.imageUrl, {
+      name: barWithImage.name,
+      city: barWithImage.city,
+      wikipedia: barWithImage.wikipedia,
+      website: barWithImage.website
+    });
+    if (result.success) {
+      if (result.skipped) {
+        totalSkipped++;
+      } else {
+        totalDownloaded++;
+      }
+    } else {
+      totalFailed++;
+    }
+  }
   
   // Download high-quality favicons (64px for map markers)
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
@@ -929,4 +1160,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, downloadBarImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage, generateBarFilename };
