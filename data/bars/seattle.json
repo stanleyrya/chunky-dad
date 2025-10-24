@@ -10,20 +10,29 @@
   {
     "name": "The Lumber Yard Bar",
     "city": "seattle",
-    "gayCities": "https://seattle.gaycities.com/bars/the-lumber-yard-bar-seattle",
-    "coordinates": "47.6062095, -122.3320708"
+    "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
+    "address": "9630 16th Ave SW, Seattle, WA 98106",
+    "coordinates": "47.5165235, -122.3548059",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0"
   },
   {
     "name": "The Cuff Complex",
     "city": "seattle",
-    "gayCities": "https://seattle.gaycities.com/bars/the-cuff-complex",
-    "coordinates": "47.6062095, -122.3320708"
+    "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
+    "address": "1533 13th Ave, Seattle, WA 98122",
+    "coordinates": "47.6150778, -122.3157208",
+    "facebook": "https://www.facebook.com/thecuffcomplex",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY"
   },
   {
     "name": "Seattle Eagle",
     "city": "seattle",
-    "gayCities": "https://seattle.gaycities.com/bars/seattle-eagle",
-    "coordinates": "47.6062095, -122.3320708"
+    "wikipedia": "https://en.wikipedia.org/wiki/Seattle_Eagle",
+    "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
+    "address": "314 Pike Street",
+    "coordinates": "47.61427, -122.32708",
+    "website": "http://seattleeagle.com",
+    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/3/3f/Seattle_Eagle_logo.png/250px-Seattle_Eagle_logo.png"
   },
   {
     "name": "CC’s Seattle",
