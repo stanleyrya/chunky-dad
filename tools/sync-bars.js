@@ -121,6 +121,27 @@ function parseGoogleSheetsData(json) {
     return data;
 }
 
+
+// Find a specific local bar by name and city
+async function findLocalBar(name, city) {
+    const barsDir = path.join(__dirname, '..', 'data', 'bars');
+    const cityFile = path.join(barsDir, `${city}.json`);
+    
+    if (!fs.existsSync(cityFile)) {
+        return null;
+    }
+    
+    try {
+        const cityBars = JSON.parse(fs.readFileSync(cityFile, 'utf8'));
+        return cityBars.find(bar => 
+            bar.name.toLowerCase() === name.toLowerCase() && 
+            bar.city === city
+        ) || null;
+    } catch (error) {
+        return null;
+    }
+}
+
 // Load existing local bars
 async function loadLocalBars() {
     const barsDir = path.join(__dirname, '..', 'data', 'bars');
@@ -212,25 +233,30 @@ function cleanBarObject(bar) {
     return cleaned;
 }
 
-// Check if a bar needs Wikipedia scraping based on missing data
-function shouldScrapeWikipediaBar(bar) {
+// Check if a bar needs Wikipedia scraping based on missing data or URL changes
+function shouldScrapeWikipediaBar(bar, localBar) {
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
     if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
     if (!bar.image || bar.image.trim() === '') missingFields.push('image');
     
-    const needsScraping = missingFields.length > 0;
-    
-    if (needsScraping) {
-        console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
+    // Check if URL changed from what we have saved locally
+    if (bar.wikipedia && localBar?.wikipedia && bar.wikipedia !== localBar.wikipedia) {
+        console.log(`🔄 ${bar.name} Wikipedia URL changed: ${localBar.wikipedia} → ${bar.wikipedia}`);
+        return true;
     }
     
-    return needsScraping;
+    if (missingFields.length > 0) {
+        console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
+        return true;
+    }
+    
+    return false;
 }
 
-// Check if a bar needs GayCities scraping based on missing data
-function shouldScrapeGayCitiesBar(bar) {
+// Check if a bar needs GayCities scraping based on missing data or URL changes
+function shouldScrapeGayCitiesBar(bar, localBar) {
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
@@ -240,13 +266,18 @@ function shouldScrapeGayCitiesBar(bar) {
     if (!bar.facebook || bar.facebook.trim() === '') missingFields.push('facebook');
     if (!bar.googleMaps || bar.googleMaps.trim() === '') missingFields.push('googleMaps');
     
-    const needsScraping = missingFields.length > 0;
-    
-    if (needsScraping) {
-        console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
+    // Check if URL changed from what we have saved locally
+    if (bar.gayCities && localBar?.gayCities && bar.gayCities !== localBar.gayCities) {
+        console.log(`🔄 ${bar.name} GayCities URL changed: ${localBar.gayCities} → ${bar.gayCities}`);
+        return true;
     }
     
-    return needsScraping;
+    if (missingFields.length > 0) {
+        console.log(`📋 ${bar.name} missing GayCities scrapable fields: ${missingFields.join(', ')}`);
+        return true;
+    }
+    
+    return false;
 }
 
 // Enrich bars with data from Wikipedia and GayCities fields
@@ -259,11 +290,14 @@ async function enrichBarsWithExternalData(bars) {
         // Clean up the bar object by removing empty fields
         enrichedBar = cleanBarObject(enrichedBar);
         
+        // Find the original local bar data for URL comparison
+        const localBar = await findLocalBar(bar.name, bar.city);
+        
         // Check if bar needs Wikipedia scraping
-        const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(bar);
+        const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(bar, localBar);
         
         // Check if bar needs GayCities scraping
-        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(bar);
+        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(bar, localBar);
         
         if (needsWikipediaScraping) {
             try {
