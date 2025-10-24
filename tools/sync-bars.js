@@ -122,6 +122,26 @@ function parseGoogleSheetsData(json) {
 }
 
 
+// Find a specific local bar by name and city
+async function findLocalBar(name, city) {
+    const barsDir = path.join(__dirname, '..', 'data', 'bars');
+    const cityFile = path.join(barsDir, `${city}.json`);
+    
+    if (!fs.existsSync(cityFile)) {
+        return null;
+    }
+    
+    try {
+        const cityBars = JSON.parse(fs.readFileSync(cityFile, 'utf8'));
+        return cityBars.find(bar => 
+            bar.name.toLowerCase() === name.toLowerCase() && 
+            bar.city === city
+        ) || null;
+    } catch (error) {
+        return null;
+    }
+}
+
 // Load existing local bars
 async function loadLocalBars() {
     const barsDir = path.join(__dirname, '..', 'data', 'bars');
@@ -191,21 +211,6 @@ function mergeBars(sheetsBars, localBars) {
         const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
         if (!merged.has(key)) {
             merged.set(key, normalizedBar);
-        } else {
-            // If bar already exists from sheets, merge the enriched data from local
-            const existingBar = merged.get(key);
-            const enrichedBar = { ...existingBar };
-            
-            // Preserve enriched fields from local bar if they exist
-            if (bar.address && bar.address.trim() !== '') enrichedBar.address = bar.address;
-            if (bar.coordinates && bar.coordinates.trim() !== '') enrichedBar.coordinates = bar.coordinates;
-            if (bar.website && bar.website.trim() !== '') enrichedBar.website = bar.website;
-            if (bar.instagram && bar.instagram.trim() !== '') enrichedBar.instagram = bar.instagram;
-            if (bar.facebook && bar.facebook.trim() !== '') enrichedBar.facebook = bar.facebook;
-            if (bar.googleMaps && bar.googleMaps.trim() !== '') enrichedBar.googleMaps = bar.googleMaps;
-            if (bar.image && bar.image.trim() !== '') enrichedBar.image = bar.image;
-            
-            merged.set(key, enrichedBar);
         }
     });
     
@@ -229,16 +234,16 @@ function cleanBarObject(bar) {
 }
 
 // Check if a bar needs Wikipedia scraping based on missing data or URL changes
-function shouldScrapeWikipediaBar(bar, existingBar) {
+function shouldScrapeWikipediaBar(bar, localBar) {
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
     if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
     if (!bar.image || bar.image.trim() === '') missingFields.push('image');
     
-    // Check if URL changed from what we have saved
-    if (bar.wikipedia && existingBar?.wikipedia && bar.wikipedia !== existingBar.wikipedia) {
-        console.log(`🔄 ${bar.name} Wikipedia URL changed: ${existingBar.wikipedia} → ${bar.wikipedia}`);
+    // Check if URL changed from what we have saved locally
+    if (bar.wikipedia && localBar?.wikipedia && bar.wikipedia !== localBar.wikipedia) {
+        console.log(`🔄 ${bar.name} Wikipedia URL changed: ${localBar.wikipedia} → ${bar.wikipedia}`);
         return true;
     }
     
@@ -251,7 +256,7 @@ function shouldScrapeWikipediaBar(bar, existingBar) {
 }
 
 // Check if a bar needs GayCities scraping based on missing data or URL changes
-function shouldScrapeGayCitiesBar(bar, existingBar) {
+function shouldScrapeGayCitiesBar(bar, localBar) {
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
@@ -261,9 +266,9 @@ function shouldScrapeGayCitiesBar(bar, existingBar) {
     if (!bar.facebook || bar.facebook.trim() === '') missingFields.push('facebook');
     if (!bar.googleMaps || bar.googleMaps.trim() === '') missingFields.push('googleMaps');
     
-    // Check if URL changed from what we have saved
-    if (bar.gayCities && existingBar?.gayCities && bar.gayCities !== existingBar.gayCities) {
-        console.log(`🔄 ${bar.name} GayCities URL changed: ${existingBar.gayCities} → ${bar.gayCities}`);
+    // Check if URL changed from what we have saved locally
+    if (bar.gayCities && localBar?.gayCities && bar.gayCities !== localBar.gayCities) {
+        console.log(`🔄 ${bar.name} GayCities URL changed: ${localBar.gayCities} → ${bar.gayCities}`);
         return true;
     }
     
@@ -285,11 +290,14 @@ async function enrichBarsWithExternalData(bars) {
         // Clean up the bar object by removing empty fields
         enrichedBar = cleanBarObject(enrichedBar);
         
+        // Find the original local bar data for URL comparison
+        const localBar = await findLocalBar(bar.name, bar.city);
+        
         // Check if bar needs Wikipedia scraping
-        const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(enrichedBar, bar);
+        const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(bar, localBar);
         
         // Check if bar needs GayCities scraping
-        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(enrichedBar, bar);
+        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(bar, localBar);
         
         if (needsWikipediaScraping) {
             try {
