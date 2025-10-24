@@ -92,14 +92,22 @@ function ensureDir(dir) {
   }
 }
 
-// Download event image with event information
-async function downloadEventImage(imageUrl, eventInfo) {
+// Unified image downloader for events and bars
+async function downloadImageWithInfo(imageUrl, info, type = 'event') {
   try {
-    // Adjust Eventbrite image URLs to get uncropped versions
-    const adjustedUrl = adjustEventbriteImageUrl(imageUrl);
+    // Adjust Eventbrite image URLs to get uncropped versions (only for events)
+    const adjustedUrl = type === 'event' ? adjustEventbriteImageUrl(imageUrl) : imageUrl;
     
-    // Get the directory structure based on event type using shared utility
-    const dirPath = getEventDirectoryPath(eventInfo, 'img/events');
+    // Get the directory structure based on type
+    let dirPath;
+    if (type === 'event') {
+      dirPath = getEventDirectoryPath(info, 'img/events');
+    } else if (type === 'bar') {
+      dirPath = 'img/bars';
+    } else {
+      dirPath = type === 'favicon' ? 'img/favicons' : 'img/events';
+    }
+    
     const dir = path.join(ROOT, dirPath);
     
     // Ensure directory exists
@@ -108,8 +116,16 @@ async function downloadEventImage(imageUrl, eventInfo) {
     // First, try to detect the file extension from URL
     const detectedExtension = detectFileExtension(adjustedUrl);
     
-    // Generate filename with detected extension using adjusted URL for consistent hashing
-    const filename = generateEventFilename(adjustedUrl, eventInfo, detectedExtension);
+    // Generate filename with detected extension
+    let filename;
+    if (type === 'event') {
+      filename = generateEventFilename(adjustedUrl, info, detectedExtension);
+    } else if (type === 'bar') {
+      filename = generateBarFilename(adjustedUrl, info, detectedExtension);
+    } else {
+      filename = generateFilename(adjustedUrl, type, detectedExtension);
+    }
+    
     const localPath = path.join(dir, filename);
     const metadataPath = localPath + '.meta';
     
@@ -117,16 +133,22 @@ async function downloadEventImage(imageUrl, eventInfo) {
     const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
     
     if (!shouldDownload) {
-      console.log(`⏭️  Skipping event image: ${filename} (${reason})`);
+      console.log(`⏭️  Skipping ${type} image: ${filename} (${reason})`);
       return { success: true, skipped: true, filename, reason };
     }
     
-    console.log(`📥 Downloading event image: ${filename} (${reason})`);
-    console.log(`   Event: ${eventInfo.name}`);
-    console.log(`   Type: ${eventInfo.recurring ? 'recurring' : 'one-time'}`);
+    console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
+    if (type === 'event') {
+      console.log(`   Event: ${info.name}`);
+      console.log(`   Type: ${info.recurring ? 'recurring' : 'one-time'}`);
+    } else if (type === 'bar') {
+      console.log(`   Bar: ${info.name} (${info.city})`);
+    }
     console.log(`   Path: ${path.relative(ROOT, localPath)}`);
     console.log(`   Original URL: ${imageUrl}`);
-    console.log(`   Adjusted URL: ${adjustedUrl}`);
+    if (adjustedUrl !== imageUrl) {
+      console.log(`   Adjusted URL: ${adjustedUrl}`);
+    }
     console.log(`   Detected extension: ${detectedExtension}`);
     
     // Download the image and get content type
@@ -140,7 +162,15 @@ async function downloadEventImage(imageUrl, eventInfo) {
         console.log(`🔄 Content type detected different extension: ${actualExtension} (was ${detectedExtension})`);
         
         // Generate new filename with correct extension
-        const correctFilename = generateEventFilename(adjustedUrl, eventInfo, actualExtension);
+        let correctFilename;
+        if (type === 'event') {
+          correctFilename = generateEventFilename(adjustedUrl, info, actualExtension);
+        } else if (type === 'bar') {
+          correctFilename = generateBarFilename(adjustedUrl, info, actualExtension);
+        } else {
+          correctFilename = generateFilename(adjustedUrl, type, actualExtension);
+        }
+        
         const correctPath = path.join(dir, correctFilename);
         const correctMetadataPath = correctPath + '.meta';
         
@@ -157,164 +187,66 @@ async function downloadEventImage(imageUrl, eventInfo) {
         const finalPath = correctPath;
         const finalMetadataPath = correctMetadataPath;
         
-        // Save metadata with event information
-        const metadata = {
-          originalUrl: imageUrl,
-          adjustedUrl: adjustedUrl,
-          downloadedAt: new Date().toISOString(),
-          type: 'event',
-          filename: finalFilename,
-          contentType: downloadResult.contentType,
-          contentLength: downloadResult.contentLength,
-          eventInfo: {
-            name: eventInfo.name,
-            startDate: eventInfo.startDate,
-            recurring: eventInfo.recurring
-          }
-        };
-        
+        // Save metadata with type-specific information
+        const metadata = createMetadata(imageUrl, adjustedUrl, type, finalFilename, downloadResult, info);
         fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
         
-        console.log(`✅ Downloaded event image: ${finalFilename} (${actualExtension})`);
+        console.log(`✅ Downloaded ${type} image: ${finalFilename} (${actualExtension})`);
         return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
       }
     }
     
-    // Save metadata with event information
-    const metadata = {
-      originalUrl: imageUrl,
-      adjustedUrl: adjustedUrl,
-      downloadedAt: new Date().toISOString(),
-      type: 'event',
-      filename: filename,
-      contentType: downloadResult.contentType,
-      contentLength: downloadResult.contentLength,
-      eventInfo: {
-        name: eventInfo.name,
-        startDate: eventInfo.startDate,
-        recurring: eventInfo.recurring
-      }
-    };
-    
+    // Save metadata with type-specific information
+    const metadata = createMetadata(imageUrl, adjustedUrl, type, filename, downloadResult, info);
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
     
-    console.log(`✅ Downloaded event image: ${filename} (${detectedExtension})`);
+    console.log(`✅ Downloaded ${type} image: ${filename} (${detectedExtension})`);
     return { success: true, skipped: false, filename, localPath };
     
   } catch (error) {
-    console.error(`❌ Failed to download event image from ${imageUrl}:`, error.message);
+    console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
     return { success: false, error: error.message, url: imageUrl };
   }
 }
 
-// Download bar image with bar information
-async function downloadBarImage(imageUrl, barInfo) {
-  try {
-    // Get the directory structure for bars
-    const dirPath = 'img/bars';
-    const dir = path.join(ROOT, dirPath);
-    
-    // Ensure directory exists
-    ensureDir(dir);
-    
-    // First, try to detect the file extension from URL
-    const detectedExtension = detectFileExtension(imageUrl);
-    
-    // Generate filename with detected extension
-    const filename = generateBarFilename(imageUrl, barInfo, detectedExtension);
-    const localPath = path.join(dir, filename);
-    const metadataPath = localPath + '.meta';
-    
-    // Check if we should download
-    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
-    
-    if (!shouldDownload) {
-      console.log(`⏭️  Skipping bar image: ${filename} (${reason})`);
-      return { success: true, skipped: true, filename, reason };
-    }
-    
-    console.log(`📥 Downloading bar image: ${filename} (${reason})`);
-    console.log(`   Bar: ${barInfo.name} (${barInfo.city})`);
-    console.log(`   Path: ${path.relative(ROOT, localPath)}`);
-    console.log(`   URL: ${imageUrl}`);
-    console.log(`   Detected extension: ${detectedExtension}`);
-    
-    // Download the image and get content type
-    const downloadResult = await downloadFile(imageUrl, localPath);
-    
-    // If we got a different content type, regenerate filename with correct extension
-    if (downloadResult.contentType) {
-      const actualExtension = detectFileExtension(imageUrl, downloadResult.contentType);
-      
-      if (actualExtension !== detectedExtension) {
-        console.log(`🔄 Content type detected different extension: ${actualExtension} (was ${detectedExtension})`);
-        
-        // Generate new filename with correct extension
-        const correctFilename = generateBarFilename(imageUrl, barInfo, actualExtension);
-        const correctPath = path.join(dir, correctFilename);
-        const correctMetadataPath = correctPath + '.meta';
-        
-        // Move the file to the correct name
-        if (fs.existsSync(localPath)) {
-          fs.renameSync(localPath, correctPath);
-          if (fs.existsSync(metadataPath)) {
-            fs.renameSync(metadataPath, correctMetadataPath);
-          }
-        }
-        
-        // Update variables to use correct paths
-        const finalFilename = correctFilename;
-        const finalPath = correctPath;
-        const finalMetadataPath = correctMetadataPath;
-        
-        // Save metadata with bar information
-        const metadata = {
-          originalUrl: imageUrl,
-          downloadedAt: new Date().toISOString(),
-          type: 'bar',
-          filename: finalFilename,
-          contentType: downloadResult.contentType,
-          contentLength: downloadResult.contentLength,
-          barInfo: {
-            name: barInfo.name,
-            city: barInfo.city,
-            wikipedia: barInfo.wikipedia,
-            website: barInfo.website
-          }
-        };
-        
-        fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
-        
-        console.log(`✅ Downloaded bar image: ${finalFilename} (${actualExtension})`);
-        return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
-      }
-    }
-    
-    // Save metadata with bar information
-    const metadata = {
-      originalUrl: imageUrl,
-      downloadedAt: new Date().toISOString(),
-      type: 'bar',
-      filename: filename,
-      contentType: downloadResult.contentType,
-      contentLength: downloadResult.contentLength,
-      barInfo: {
-        name: barInfo.name,
-        city: barInfo.city,
-        wikipedia: barInfo.wikipedia,
-        website: barInfo.website
-      }
+// Create metadata object based on type
+function createMetadata(originalUrl, adjustedUrl, type, filename, downloadResult, info) {
+  const baseMetadata = {
+    originalUrl: originalUrl,
+    adjustedUrl: adjustedUrl,
+    downloadedAt: new Date().toISOString(),
+    type: type,
+    filename: filename,
+    contentType: downloadResult.contentType,
+    contentLength: downloadResult.contentLength
+  };
+  
+  if (type === 'event') {
+    baseMetadata.eventInfo = {
+      name: info.name,
+      startDate: info.startDate,
+      recurring: info.recurring
     };
-    
-    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-    
-    console.log(`✅ Downloaded bar image: ${filename} (${detectedExtension})`);
-    return { success: true, skipped: false, filename, localPath };
-    
-  } catch (error) {
-    console.error(`❌ Failed to download bar image from ${imageUrl}:`, error.message);
-    return { success: false, error: error.message, url: imageUrl };
+  } else if (type === 'bar') {
+    baseMetadata.barInfo = {
+      name: info.name,
+      city: info.city,
+      wikipedia: info.wikipedia,
+      website: info.website
+    };
   }
+  
+  return baseMetadata;
+}
+
+// Legacy function for backward compatibility
+async function downloadEventImage(imageUrl, eventInfo) {
+  return downloadImageWithInfo(imageUrl, eventInfo, 'event');
+}
+
+// Legacy function for backward compatibility
+async function downloadBarImage(imageUrl, barInfo) {
+  return downloadImageWithInfo(imageUrl, barInfo, 'bar');
 }
 
 // Generate filename for bar images
@@ -1028,11 +960,11 @@ async function main() {
   // Download event images with event information
   console.log('\n📸 Downloading event images...');
   for (const eventWithImage of imageUrls.eventsWithInfo) {
-    const result = await downloadEventImage(eventWithImage.imageUrl, {
+    const result = await downloadImageWithInfo(eventWithImage.imageUrl, {
       name: eventWithImage.name,
       startDate: eventWithImage.startDate,
       recurring: eventWithImage.recurring
-    });
+    }, 'event');
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
@@ -1047,12 +979,12 @@ async function main() {
   // Download bar images with bar information
   console.log('\\n🍺 Downloading bar images...');
   for (const barWithImage of imageUrls.barsWithInfo) {
-    const result = await downloadBarImage(barWithImage.imageUrl, {
+    const result = await downloadImageWithInfo(barWithImage.imageUrl, {
       name: barWithImage.name,
       city: barWithImage.city,
       wikipedia: barWithImage.wikipedia,
       website: barWithImage.website
-    });
+    }, 'bar');
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
@@ -1160,4 +1092,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, downloadBarImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage, generateBarFilename };
+module.exports = { downloadImage, downloadImageWithSize, downloadImageWithInfo, downloadEventImage, downloadBarImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage, generateBarFilename };

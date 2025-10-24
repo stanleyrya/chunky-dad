@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Import the extended image downloader
-const { downloadBarImage, generateBarFilename } = require('./download-images.js');
+const { downloadImageWithInfo } = require('./download-images.js');
 
 // Simplified bars sync script using public Google Sheets (like bear artists)
 async function syncBars() {
@@ -697,12 +697,12 @@ async function downloadBarImages(bars) {
     for (const bar of bars) {
         if (bar.image) {
             try {
-                const result = await downloadBarImage(bar.image, {
+                const result = await downloadImageWithInfo(bar.image, {
                     name: bar.name,
                     city: bar.city,
                     wikipedia: bar.wikipedia,
                     website: bar.website
-                });
+                }, 'bar');
                 
                 if (result.success) {
                     if (result.skipped) {
