@@ -702,7 +702,7 @@ async function downloadBarImages(bars) {
                     city: bar.city,
                     wikipedia: bar.wikipedia,
                     website: bar.website
-                }, 'bar');
+                });
                 
                 if (result.success) {
                     if (result.skipped) {

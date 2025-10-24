@@ -92,20 +92,73 @@ function ensureDir(dir) {
   }
 }
 
-// Unified image downloader for events and bars
-async function downloadImageWithInfo(imageUrl, info, type = 'event') {
+// Extract domain from Google favicon URL
+function extractDomainFromFaviconUrl(faviconUrl) {
   try {
+    const url = new URL(faviconUrl);
+    const domain = url.searchParams.get('domain');
+    return domain ? `https://${domain}` : 'unknown';
+  } catch (error) {
+    return 'unknown';
+  }
+}
+
+// Detect image type based on URL and context
+function detectImageType(imageUrl, info) {
+  // Check if it's a favicon URL (Google favicon service)
+  if (imageUrl.includes('google.com/s2/favicons')) {
+    return 'favicon';
+  }
+  
+  // Check if it's a Linktree profile picture
+  if (info && info.linktreeUrl) {
+    return 'favicon'; // Linktree profile pictures are treated as favicons
+  }
+  
+  // Check if it's a Wikipedia image
+  if (imageUrl.includes('wikipedia.org') || imageUrl.includes('wikimedia.org')) {
+    return 'bar'; // Wikipedia images are typically bar logos
+  }
+  
+  // Check if it's an Eventbrite image
+  if (imageUrl.includes('evbuc.com') || imageUrl.includes('eventbrite.com')) {
+    return 'event'; // Eventbrite images are typically event images
+  }
+  
+  // Check context from info object
+  if (info) {
+    // If it has event-specific fields, it's an event
+    if (info.startDate !== undefined || info.recurring !== undefined) {
+      return 'event';
+    }
+    
+    // If it has bar-specific fields, it's a bar
+    if (info.city !== undefined || info.wikipedia !== undefined) {
+      return 'bar';
+    }
+  }
+  
+  // Default to event for backward compatibility
+  return 'event';
+}
+
+// Unified image downloader that auto-detects type
+async function downloadImageWithInfo(imageUrl, info) {
+  try {
+    // Auto-detect the type based on URL and context
+    const type = detectImageType(imageUrl, info);
+    
     // Adjust Eventbrite image URLs to get uncropped versions (only for events)
     const adjustedUrl = type === 'event' ? adjustEventbriteImageUrl(imageUrl) : imageUrl;
     
-    // Get the directory structure based on type
+    // Get the directory structure based on detected type
     let dirPath;
     if (type === 'event') {
       dirPath = getEventDirectoryPath(info, 'img/events');
     } else if (type === 'bar') {
       dirPath = 'img/bars';
     } else {
-      dirPath = type === 'favicon' ? 'img/favicons' : 'img/events';
+      dirPath = 'img/favicons';
     }
     
     const dir = path.join(ROOT, dirPath);
@@ -143,6 +196,8 @@ async function downloadImageWithInfo(imageUrl, info, type = 'event') {
       console.log(`   Type: ${info.recurring ? 'recurring' : 'one-time'}`);
     } else if (type === 'bar') {
       console.log(`   Bar: ${info.name} (${info.city})`);
+    } else if (type === 'favicon') {
+      console.log(`   Favicon: ${info.website || 'unknown domain'}`);
     }
     console.log(`   Path: ${path.relative(ROOT, localPath)}`);
     console.log(`   Original URL: ${imageUrl}`);
@@ -204,7 +259,7 @@ async function downloadImageWithInfo(imageUrl, info, type = 'event') {
     return { success: true, skipped: false, filename, localPath };
     
   } catch (error) {
-    console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+    console.error(`❌ Failed to download image from ${imageUrl}:`, error.message);
     return { success: false, error: error.message, url: imageUrl };
   }
 }
@@ -241,12 +296,12 @@ function createMetadata(originalUrl, adjustedUrl, type, filename, downloadResult
 
 // Legacy function for backward compatibility
 async function downloadEventImage(imageUrl, eventInfo) {
-  return downloadImageWithInfo(imageUrl, eventInfo, 'event');
+  return downloadImageWithInfo(imageUrl, eventInfo);
 }
 
 // Legacy function for backward compatibility
 async function downloadBarImage(imageUrl, barInfo) {
-  return downloadImageWithInfo(imageUrl, barInfo, 'bar');
+  return downloadImageWithInfo(imageUrl, barInfo);
 }
 
 // Generate filename for bar images
@@ -964,7 +1019,7 @@ async function main() {
       name: eventWithImage.name,
       startDate: eventWithImage.startDate,
       recurring: eventWithImage.recurring
-    }, 'event');
+    });
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
@@ -984,7 +1039,7 @@ async function main() {
       city: barWithImage.city,
       wikipedia: barWithImage.wikipedia,
       website: barWithImage.website
-    }, 'bar');
+    });
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
@@ -999,7 +1054,7 @@ async function main() {
   // Download high-quality favicons (64px for map markers)
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
   for (const url of imageUrls.favicons64) {
-    const result = await downloadImageWithSize(url, 'favicon', '64');
+    const result = await downloadImageWithInfo(url, { website: extractDomainFromFaviconUrl(url), size: '64' });
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
@@ -1014,7 +1069,7 @@ async function main() {
   // Download ultra-high-quality favicons (256px for cards/OG)
   console.log('\n🎨 Downloading ultra-high-quality favicons (256px)...');
   for (const url of imageUrls.favicons256) {
-    const result = await downloadImageWithSize(url, 'favicon', '256');
+    const result = await downloadImageWithInfo(url, { website: extractDomainFromFaviconUrl(url), size: '256' });
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
