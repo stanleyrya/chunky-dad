@@ -56,16 +56,6 @@ function adjustEventbriteImageUrl(imageUrl) {
   return imageUrl;
 }
 
-// Simple hash function for fallback filenames
-function simpleHash(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return Math.abs(hash).toString(36);
-}
 
 // Mock logger for Node.js environment
 global.logger = {
@@ -278,65 +268,27 @@ async function extractLinktreeProfilePicture(linktreeUrl) {
 
 // Extract logo image URL from Wikipedia page
 async function extractWikipediaLogo(wikipediaUrl) {
-  try {
-    console.log(`🔍 Extracting logo from Wikipedia: ${wikipediaUrl}`);
-    
-    // Fetch the Wikipedia page HTML
-    const html = await fetchPageContent(wikipediaUrl);
-    
-    // Parse HTML with JSDOM
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
-    
-    // Look for logo image in infobox
-    let logoUrl = null;
-    
-    // First try: infobox-image class
-    const infoboxImage = document.querySelector('td.infobox-image img');
-    if (infoboxImage && infoboxImage.src) {
-      logoUrl = infoboxImage.src;
-    }
-    
-    // Second try: look for logo in infobox
-    if (!logoUrl) {
-      const infoboxImages = document.querySelectorAll('.infobox img');
-      for (const img of infoboxImages) {
-        if (img.src && (img.src.includes('logo') || img.alt?.toLowerCase().includes('logo'))) {
-          logoUrl = img.src;
-          break;
-        }
-      }
-    }
-    
-    // Third try: look for any image in infobox
-    if (!logoUrl) {
-      const infoboxImages = document.querySelectorAll('.infobox img');
-      if (infoboxImages.length > 0) {
-        logoUrl = infoboxImages[0].src;
-      }
-    }
-    
-    if (!logoUrl) {
-      console.log('⚠️  No logo image found in Wikipedia infobox');
-      return null;
-    }
-    
-    // Convert relative URLs to absolute
-    if (logoUrl.startsWith('//')) {
-      logoUrl = 'https:' + logoUrl;
-    } else if (logoUrl.startsWith('/')) {
-      const parsedUrl = new URL(wikipediaUrl);
-      logoUrl = parsedUrl.protocol + '//' + parsedUrl.hostname + logoUrl;
-    }
-    
-    console.log(`✅ Found Wikipedia logo URL: ${logoUrl}`);
-    
-    return logoUrl;
-    
-  } catch (error) {
-    console.error(`❌ Failed to extract logo from Wikipedia:`, error.message);
-    return null;
+  console.log(`🔍 Extracting logo from Wikipedia: ${wikipediaUrl}`);
+  
+  const html = await fetchPageContent(wikipediaUrl);
+  const dom = new JSDOM(html);
+  const document = dom.window.document;
+  
+  const infoboxImage = document.querySelector('td.infobox-image img');
+  if (!infoboxImage?.src) {
+    throw new Error('No logo found in Wikipedia infobox');
   }
+  
+  let logoUrl = infoboxImage.src;
+  if (logoUrl.startsWith('//')) {
+    logoUrl = 'https:' + logoUrl;
+  } else if (logoUrl.startsWith('/')) {
+    const parsedUrl = new URL(wikipediaUrl);
+    logoUrl = parsedUrl.protocol + '//' + parsedUrl.hostname + logoUrl;
+  }
+  
+  console.log(`✅ Found Wikipedia logo URL: ${logoUrl}`);
+  return logoUrl;
 }
 
 // Fetch page content with proper headers
@@ -519,38 +471,26 @@ function generateFilename(url, type = 'event', size = null) {
 
 // Generate a unique filename for Linktree profile pictures based on the Linktree URL
 function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
-    try {
-        const parsedUrl = new URL(linktreeUrl);
-        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
-        const cleanPath = pathname
-            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
-            .replace(/-+/g, '-') // Collapse multiple dashes
-            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-        
-        return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
-    } catch (error) {
-        // Fallback to hash-based filename
-        const hash = simpleHash(linktreeUrl);
-        return `favicon-linktr.ee-${hash}-${size}px.png`;
-    }
+    const parsedUrl = new URL(linktreeUrl);
+    const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+    const cleanPath = pathname
+        .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+        .replace(/-+/g, '-') // Collapse multiple dashes
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    
+    return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
 }
 
 // Generate a unique filename for Wikipedia logos based on the Wikipedia URL
 function generateWikipediaFaviconFilename(wikipediaUrl, size = '32') {
-    try {
-        const parsedUrl = new URL(wikipediaUrl);
-        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
-        const cleanPath = pathname
-            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
-            .replace(/-+/g, '-') // Collapse multiple dashes
-            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-        
-        return `favicon-wikipedia-${cleanPath}-${size}px.png`;
-    } catch (error) {
-        // Fallback to hash-based filename
-        const hash = simpleHash(wikipediaUrl);
-        return `favicon-wikipedia-${hash}-${size}px.png`;
-    }
+    const parsedUrl = new URL(wikipediaUrl);
+    const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+    const cleanPath = pathname
+        .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+        .replace(/-+/g, '-') // Collapse multiple dashes
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    
+    return `favicon-wikipedia-${cleanPath}-${size}px.png`;
 }
 
 // Download image with a custom filename
