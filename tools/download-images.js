@@ -1240,9 +1240,9 @@ async function main() {
   }
   
   // Process Wikipedia images with multiple sizes
-  if (imageUrls.wikipediaUrls && imageUrls.wikipediaUrls.size > 0) {
+  if (allImageUrls.wikipediaUrls && allImageUrls.wikipediaUrls.size > 0) {
     console.log('\\n📚 Processing Wikipedia images with multiple sizes...');
-    for (const wikipediaUrl of imageUrls.wikipediaUrls) {
+    for (const wikipediaUrl of allImageUrls.wikipediaUrls) {
       try {
         // Extract image URL from Wikipedia page
         const imageUrl = await extractWikipediaImage(wikipediaUrl);
