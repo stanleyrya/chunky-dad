@@ -207,11 +207,129 @@ async function downloadEventImage(imageUrl, eventInfo) {
   }
 }
 
+// Download bar image with bar information
+async function downloadBarImage(imageUrl, barInfo) {
+  try {
+    // Get the directory structure for bars
+    const dir = path.join(ROOT, 'img', 'bars');
+    
+    // Ensure directory exists
+    ensureDir(dir);
+    
+    // First, try to detect the file extension from URL
+    const detectedExtension = detectFileExtension(imageUrl);
+    
+    // Generate filename with detected extension
+    const filename = generateBarFilename(imageUrl, barInfo, detectedExtension);
+    const localPath = path.join(dir, filename);
+    const metadataPath = localPath + '.meta';
+    
+    // Check if we should download
+    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
+    
+    if (!shouldDownload) {
+      console.log(`⏭️  Skipping bar image: ${filename} (${reason})`);
+      return { success: true, skipped: true, filename, reason };
+    }
+    
+    console.log(`📥 Downloading bar image: ${filename} (${reason})`);
+    console.log(`   Bar: ${barInfo.name}`);
+    console.log(`   City: ${barInfo.city}`);
+    console.log(`   Path: ${path.relative(ROOT, localPath)}`);
+    console.log(`   URL: ${imageUrl}`);
+    console.log(`   Detected extension: ${detectedExtension}`);
+    
+    // Download the image and get content type
+    const downloadResult = await downloadFile(imageUrl, localPath);
+    
+    // If we got a different content type, regenerate filename with correct extension
+    if (downloadResult.contentType) {
+      const actualExtension = detectFileExtension(imageUrl, downloadResult.contentType);
+      
+      if (actualExtension !== detectedExtension) {
+        console.log(`🔄 Content type detected different extension: ${actualExtension} (was ${detectedExtension})`);
+        
+        // Generate new filename with correct extension
+        const correctFilename = generateBarFilename(imageUrl, barInfo, actualExtension);
+        const correctPath = path.join(dir, correctFilename);
+        const correctMetadataPath = correctPath + '.meta';
+        
+        // Move the file to the correct name
+        if (fs.existsSync(localPath)) {
+          fs.renameSync(localPath, correctPath);
+          if (fs.existsSync(metadataPath)) {
+            fs.renameSync(metadataPath, correctMetadataPath);
+          }
+        }
+        
+        // Update variables to use correct paths
+        const finalFilename = correctFilename;
+        const finalPath = correctPath;
+        const finalMetadataPath = correctMetadataPath;
+        
+        // Save metadata with bar information
+        const metadata = {
+          originalUrl: imageUrl,
+          downloadedAt: new Date().toISOString(),
+          type: 'bar',
+          filename: finalFilename,
+          contentType: downloadResult.contentType,
+          contentLength: downloadResult.contentLength,
+          barInfo: {
+            name: barInfo.name,
+            city: barInfo.city
+          }
+        };
+        
+        fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
+        
+        console.log(`✅ Downloaded bar image: ${finalFilename} (${actualExtension})`);
+        return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
+      }
+    }
+    
+    // Save metadata with bar information
+    const metadata = {
+      originalUrl: imageUrl,
+      downloadedAt: new Date().toISOString(),
+      type: 'bar',
+      filename: filename,
+      contentType: downloadResult.contentType,
+      contentLength: downloadResult.contentLength,
+      barInfo: {
+        name: barInfo.name,
+        city: barInfo.city
+      }
+    };
+    
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    
+    console.log(`✅ Downloaded bar image: ${filename} (${detectedExtension})`);
+    return { success: true, skipped: false, filename, localPath };
+    
+  } catch (error) {
+    console.error(`❌ Failed to download bar image from ${imageUrl}:`, error.message);
+    return { success: false, error: error.message, url: imageUrl };
+  }
+}
+
 // Check if a URL is a Linktree
 function isLinktreeUrl(url) {
   try {
     const parsedUrl = new URL(url);
     return parsedUrl.hostname === 'linktr.ee' || parsedUrl.hostname === 'www.linktr.ee';
+  } catch (error) {
+    return false;
+  }
+}
+
+// Check if a URL is a Wikipedia page
+function isWikipediaUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname === 'en.wikipedia.org' || 
+           parsedUrl.hostname === 'www.en.wikipedia.org' ||
+           parsedUrl.hostname.endsWith('.wikipedia.org');
   } catch (error) {
     return false;
   }
@@ -249,6 +367,58 @@ async function extractLinktreeProfilePicture(linktreeUrl) {
     
   } catch (error) {
     console.error(`❌ Failed to extract profile picture from Linktree:`, error.message);
+    return null;
+  }
+}
+
+// Extract image URL from Wikipedia page
+async function extractWikipediaImage(wikipediaUrl) {
+  try {
+    console.log(`🔍 Extracting image from Wikipedia: ${wikipediaUrl}`);
+    
+    // Fetch the Wikipedia page HTML
+    const html = await fetchPageContent(wikipediaUrl);
+    
+    // Parse HTML with JSDOM
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    
+    // Look for infobox image first (most reliable)
+    let imageUrl = null;
+    
+    // Try infobox-image class first
+    const infoboxImage = document.querySelector('td.infobox-image img');
+    if (infoboxImage && infoboxImage.src) {
+      imageUrl = infoboxImage.src;
+    } else {
+      // Fallback: look for any image with "logo" in the src
+      const logoImages = document.querySelectorAll('img[src*="logo"]');
+      for (const img of logoImages) {
+        if (img.src && !img.src.includes('gaycities.com') && !img.src.includes('gaycities-logo')) {
+          imageUrl = img.src;
+          break;
+        }
+      }
+    }
+    
+    if (imageUrl) {
+      // Convert relative URLs to absolute
+      if (imageUrl.startsWith('//')) {
+        imageUrl = 'https:' + imageUrl;
+      } else if (imageUrl.startsWith('/')) {
+        const parsedUrl = new URL(wikipediaUrl);
+        imageUrl = parsedUrl.protocol + '//' + parsedUrl.hostname + imageUrl;
+      }
+      
+      console.log(`✅ Found Wikipedia image URL: ${imageUrl}`);
+      return imageUrl;
+    } else {
+      console.log('⚠️  No suitable image found on Wikipedia page');
+      return null;
+    }
+    
+  } catch (error) {
+    console.error(`❌ Failed to extract image from Wikipedia:`, error.message);
     return null;
   }
 }
@@ -446,6 +616,62 @@ function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
         // Fallback to hash-based filename
         const hash = simpleHash(linktreeUrl);
         return `favicon-linktr.ee-${hash}-${size}px.png`;
+    }
+}
+
+// Generate a unique filename for Wikipedia images based on the Wikipedia URL
+function generateWikipediaFaviconFilename(wikipediaUrl, size = '32') {
+    try {
+        const parsedUrl = new URL(wikipediaUrl);
+        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+        const cleanPath = pathname
+            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+            .replace(/-+/g, '-') // Collapse multiple dashes
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+        
+        return `favicon-wikipedia-${cleanPath}-${size}px.png`;
+    } catch (error) {
+        // Fallback to hash-based filename
+        const hash = simpleHash(wikipediaUrl);
+        return `favicon-wikipedia-${hash}-${size}px.png`;
+    }
+}
+
+// Simple hash function for fallback filenames
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+}
+
+// Generate filename for bar images
+function generateBarFilename(imageUrl, barInfo, extension) {
+    try {
+        // Create a clean filename based on bar name and city
+        const cleanName = barInfo.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        
+        const cleanCity = barInfo.city
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        
+        // Create a hash of the URL for uniqueness
+        const urlHash = simpleHash(imageUrl).substring(0, 8);
+        
+        return `bar-${cleanCity}-${cleanName}-${urlHash}${extension}`;
+    } catch (error) {
+        // Fallback to URL-based filename
+        const urlHash = simpleHash(imageUrl);
+        return `bar-${urlHash}${extension}`;
     }
 }
 
@@ -698,6 +924,93 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
   }
 }
 
+// Extract image URLs from bars data
+function extractBarsImageUrls() {
+  const imageUrls = {
+    barsWithInfo: [],  // Array of bar objects with image info
+    favicons64: new Set(),  // Higher quality for map markers
+    favicons256: new Set()   // High quality for cards/OG
+  };
+  
+  // Read all bars files
+  const barsDir = path.join(ROOT, 'data', 'bars');
+  if (!fs.existsSync(barsDir)) {
+    console.log('📁 No bars directory found, skipping bars image extraction');
+    return imageUrls;
+  }
+  
+  const barFiles = fs.readdirSync(barsDir).filter(file => file.endsWith('.json'));
+  
+  for (const file of barFiles) {
+    const filePath = path.join(barsDir, file);
+    const content = fs.readFileSync(filePath, 'utf8');
+    
+    console.log(`🍺 Processing bars file: ${file}`);
+    
+    try {
+      const bars = JSON.parse(content);
+      console.log(`   Found ${bars.length} bars`);
+      
+      for (const bar of bars) {
+        // Extract bar images from the image field
+        if (bar.image) {
+          const cleanUrl = cleanImageUrl(bar.image);
+          if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+            // Store bar with its image URL
+            imageUrls.barsWithInfo.push({
+              imageUrl: cleanUrl,
+              name: bar.name,
+              city: bar.city,
+              type: 'bar'
+            });
+            console.log(`📸 Found bar image: ${bar.name} (${bar.city})`);
+          }
+        }
+        
+        // Extract website URLs for favicons
+        if (bar.website) {
+          try {
+            const domain = new URL(bar.website).hostname;
+            
+            // Check if it's a Linktree URL
+            if (isLinktreeUrl(bar.website)) {
+              console.log(`🔗 Found Linktree URL: ${bar.website}`);
+              // Store the Linktree URL for special processing
+              imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
+              imageUrls.linktreeUrls.add(bar.website);
+            } else if (isWikipediaUrl(bar.website)) {
+              console.log(`📚 Found Wikipedia URL: ${bar.website}`);
+              // Store the Wikipedia URL for special processing
+              imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
+              imageUrls.wikipediaUrls.add(bar.website);
+            } else {
+              // Use Google's favicon service for regular domains with multiple sizes
+              const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+              const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
+              
+              imageUrls.favicons64.add(faviconUrl64);
+              imageUrls.favicons256.add(faviconUrl256);
+              
+              console.log(`🌐 Found website for favicons: ${domain}`);
+              console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
+              console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
+            }
+          } catch (error) {
+            console.warn(`⚠️  Could not extract domain from website URL: ${bar.website}`, error.message);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️  Could not parse bars file ${file}:`, error.message);
+    }
+  }
+  
+  const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
+  const wikipediaCount = imageUrls.wikipediaUrls ? imageUrls.wikipediaUrls.size : 0;
+  console.log(`🔍 Found ${imageUrls.barsWithInfo.length} bar images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), ${linktreeCount} Linktree URLs, and ${wikipediaCount} Wikipedia URLs`);
+  return imageUrls;
+}
+
 // Extract image URLs from calendar data using calendar loader
 function extractImageUrls() {
   const imageUrls = {
@@ -762,6 +1075,11 @@ function extractImageUrls() {
             // Store the Linktree URL for special processing
             imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
             imageUrls.linktreeUrls.add(event.website);
+          } else if (isWikipediaUrl(event.website)) {
+            console.log(`📚 Found Wikipedia URL: ${event.website}`);
+            // Store the Wikipedia URL for special processing
+            imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
+            imageUrls.wikipediaUrls.add(event.website);
           } else {
             // Use Google's favicon service for regular domains with multiple sizes
             const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
@@ -782,7 +1100,8 @@ function extractImageUrls() {
   }
   
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
+  const wikipediaCount = imageUrls.wikipediaUrls ? imageUrls.wikipediaUrls.size : 0;
+  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), ${linktreeCount} Linktree URLs, and ${wikipediaCount} Wikipedia URLs`);
   return imageUrls;
 }
 
@@ -807,7 +1126,21 @@ async function main() {
   ensureDir(path.join(ROOT, sampleOneTimeDir));
   
   // Extract image URLs from calendar data
-  const imageUrls = extractImageUrls();
+  // Extract image URLs from calendar data
+  const eventImageUrls = extractImageUrls();
+  
+  // Extract image URLs from bars data
+  const barsImageUrls = extractBarsImageUrls();
+  
+  // Merge the image URLs
+  const allImageUrls = {
+    eventsWithInfo: eventImageUrls.eventsWithInfo,
+    barsWithInfo: barsImageUrls.barsWithInfo,
+    favicons64: new Set([...eventImageUrls.favicons64, ...barsImageUrls.favicons64]),
+    favicons256: new Set([...eventImageUrls.favicons256, ...barsImageUrls.favicons256]),
+    linktreeUrls: new Set([...(eventImageUrls.linktreeUrls || []), ...(barsImageUrls.linktreeUrls || [])]),
+    wikipediaUrls: new Set([...(eventImageUrls.wikipediaUrls || []), ...(barsImageUrls.wikipediaUrls || [])])
+  };
   
   let totalDownloaded = 0;
   let totalSkipped = 0;
@@ -815,7 +1148,7 @@ async function main() {
   
   // Download event images with event information
   console.log('\n📸 Downloading event images...');
-  for (const eventWithImage of imageUrls.eventsWithInfo) {
+  for (const eventWithImage of allImageUrls.eventsWithInfo) {
     const result = await downloadEventImage(eventWithImage.imageUrl, {
       name: eventWithImage.name,
       startDate: eventWithImage.startDate,
@@ -835,7 +1168,7 @@ async function main() {
   
   // Download high-quality favicons (64px for map markers)
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
-  for (const url of imageUrls.favicons64) {
+  for (const url of allImageUrls.favicons64) {
     const result = await downloadImageWithSize(url, 'favicon', '64');
     if (result.success) {
       if (result.skipped) {
@@ -850,7 +1183,7 @@ async function main() {
   
   // Download ultra-high-quality favicons (256px for cards/OG)
   console.log('\n🎨 Downloading ultra-high-quality favicons (256px)...');
-  for (const url of imageUrls.favicons256) {
+  for (const url of allImageUrls.favicons256) {
     const result = await downloadImageWithSize(url, 'favicon', '256');
     if (result.success) {
       if (result.skipped) {
@@ -864,9 +1197,9 @@ async function main() {
   }
   
   // Process Linktree profile pictures with multiple sizes
-  if (imageUrls.linktreeUrls && imageUrls.linktreeUrls.size > 0) {
+  if (allImageUrls.linktreeUrls && allImageUrls.linktreeUrls.size > 0) {
     console.log('\n🔗 Processing Linktree profile pictures with multiple sizes...');
-    for (const linktreeUrl of imageUrls.linktreeUrls) {
+    for (const linktreeUrl of allImageUrls.linktreeUrls) {
       try {
         // Extract profile picture URL from Linktree page
         const profilePictureUrl = await extractLinktreeProfilePicture(linktreeUrl);
@@ -906,6 +1239,49 @@ async function main() {
     }
   }
   
+  // Process Wikipedia images with multiple sizes
+  if (imageUrls.wikipediaUrls && imageUrls.wikipediaUrls.size > 0) {
+    console.log('\\n📚 Processing Wikipedia images with multiple sizes...');
+    for (const wikipediaUrl of imageUrls.wikipediaUrls) {
+      try {
+        // Extract image URL from Wikipedia page
+        const imageUrl = await extractWikipediaImage(wikipediaUrl);
+        
+        if (imageUrl) {
+          // Generate multiple sizes for Wikipedia images
+          const sizes = [
+            { size: '64', targetSize: 64, description: 'Map markers (64px)' },
+            { size: '256', targetSize: 256, description: 'Cards/OG images (256px)' }
+          ];
+          
+          for (const { size, targetSize, description } of sizes) {
+            const wikipediaFilename = generateWikipediaFaviconFilename(wikipediaUrl, size);
+            
+            console.log(`📥 Processing Wikipedia ${description}: ${wikipediaFilename}`);
+            
+            // Download and process the image with the custom filename
+            const result = await downloadImageWithCustomFilename(imageUrl, wikipediaFilename, 'favicon', false, targetSize);
+            if (result.success) {
+              if (result.skipped) {
+                totalSkipped++;
+              } else {
+                totalDownloaded++;
+              }
+            } else {
+              totalFailed++;
+            }
+          }
+        } else {
+          console.log(`⚠️  Could not extract image from ${wikipediaUrl}`);
+          totalFailed++;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to process Wikipedia ${wikipediaUrl}:`, error.message);
+        totalFailed++;
+      }
+    }
+  }
+  
   // Summary
   console.log('\n📊 Download Summary:');
   console.log(`✅ Downloaded: ${totalDownloaded}`);
@@ -929,4 +1305,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaImage, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
