@@ -3,6 +3,7 @@
     "name": "Diesel",
     "city": "seattle",
     "wikipedia": "https://en.wikipedia.org/wiki/Diesel_(gay_bar)",
+    "gayCities": "https://seattle.gaycities.com/bars/302690-diesel",
     "coordinates": "47.6133, -122.3143",
     "website": "http://dieselseattle.com/DIESEL.html",
     "image": "https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Diesel_%28gay_bar%29_logo.png/250px-Diesel_%28gay_bar%29_logo.png"
@@ -47,6 +48,7 @@
     "name": "Madison Pub",
     "city": "seattle",
     "wikipedia": "https://en.wikipedia.org/wiki/Madison_Pub",
+    "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
     "address": "1315 East Madison Street",
     "coordinates": "47.613442, -122.314883",
     "website": "http://madisonpub.com",
@@ -56,6 +58,7 @@
     "name": "Pony",
     "city": "seattle",
     "wikipedia": "https://en.wikipedia.org/wiki/Pony_(Seattle)",
+    "gayCities": "https://seattle.gaycities.com/bars/2442-pony",
     "address": "1221 E. Madison Street",
     "coordinates": "47.61309, -122.31575",
     "website": "http://ponyseattle.com",

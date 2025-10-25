@@ -13,6 +13,7 @@
     "name": "Eagle NYC",
     "city": "new-york",
     "wikipedia": "https://en.wikipedia.org/wiki/Eagle_NYC",
+    "gayCities": "https://newyork.gaycities.com/bars/400-eagle-nyc",
     "coordinates": "40.751694, -74.004306",
     "website": "http://eagle-ny.com",
     "image": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d1/Eagle_NYC_logo.png/250px-Eagle_NYC_logo.png"
@@ -21,6 +22,7 @@
     "name": "3 Dollar Bill",
     "city": "new-york",
     "wikipedia": "https://en.wikipedia.org/wiki/3_Dollar_Bill",
+    "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill",
     "coordinates": "40.708471, -73.938175",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Threedollarbill1.jpg/250px-Threedollarbill1.jpg"
   },
