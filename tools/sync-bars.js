@@ -3,6 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// Import the extended image downloader
+const { downloadImageWithInfo } = require('./download-images.js');
+
 // Simplified bars sync script using public Google Sheets (like bear artists)
 async function syncBars() {
     console.log('🔄 Starting simplified bars sync...');
@@ -35,6 +38,10 @@ async function syncBars() {
         // 5. Save merged data locally
         console.log('💾 Saving merged data locally...');
         await saveBarsLocally(enrichedBars);
+        
+        // 6. Download bar images using the extended image downloader
+        console.log('🖼️  Downloading bar images...');
+        await downloadBarImages(enrichedBars);
         
         console.log('✅ Simplified sync completed successfully!');
         
@@ -679,6 +686,44 @@ function convertDMSToDecimal(dms) {
     const lonDecimal = lonDir === 'W' ? -lon : lon;
     
     return `${latDecimal}, ${lonDecimal}`;
+}
+
+// Download bar images using the extended image downloader
+async function downloadBarImages(bars) {
+    let totalDownloaded = 0;
+    let totalSkipped = 0;
+    let totalFailed = 0;
+    
+    for (const bar of bars) {
+        if (bar.image) {
+            try {
+                const result = await downloadImageWithInfo(bar.image, {
+                    name: bar.name,
+                    city: bar.city,
+                    wikipedia: bar.wikipedia,
+                    website: bar.website
+                });
+                
+                if (result.success) {
+                    if (result.skipped) {
+                        totalSkipped++;
+                    } else {
+                        totalDownloaded++;
+                    }
+                } else {
+                    totalFailed++;
+                }
+            } catch (error) {
+                console.error(`❌ Failed to download image for ${bar.name}:`, error.message);
+                totalFailed++;
+            }
+        }
+    }
+    
+    console.log(`📊 Bar image download summary:`);
+    console.log(`✅ Downloaded: ${totalDownloaded}`);
+    console.log(`⏭️  Skipped: ${totalSkipped}`);
+    console.log(`❌ Failed: ${totalFailed}`);
 }
 
 // Run the sync

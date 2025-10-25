@@ -92,24 +92,52 @@ function ensureDir(dir) {
   }
 }
 
-// Download event image with event information
-async function downloadEventImage(imageUrl, eventInfo) {
+// Extract domain from Google favicon URL
+function extractDomainFromFaviconUrl(faviconUrl) {
+  try {
+    const url = new URL(faviconUrl);
+    const domain = url.searchParams.get('domain');
+    return domain ? `https://${domain}` : 'unknown';
+  } catch (error) {
+    return 'unknown';
+  }
+}
+
+// Simple image downloader - just downloads images based on URL
+async function downloadImageWithInfo(imageUrl, info) {
   try {
     // Adjust Eventbrite image URLs to get uncropped versions
     const adjustedUrl = adjustEventbriteImageUrl(imageUrl);
     
-    // Get the directory structure based on event type using shared utility
-    const dirPath = getEventDirectoryPath(eventInfo, 'img/events');
-    const dir = path.join(ROOT, dirPath);
+    // Determine directory based on URL pattern
+    let dirPath;
+    if (imageUrl.includes('google.com/s2/favicons')) {
+      dirPath = 'img/favicons';
+    } else if (imageUrl.includes('wikipedia.org') || imageUrl.includes('wikimedia.org')) {
+      dirPath = 'img/bars';
+    } else {
+      // Default to events directory
+      dirPath = info && info.startDate ? getEventDirectoryPath(info, 'img/events') : 'img/events';
+    }
     
-    // Ensure directory exists
+    const dir = path.join(ROOT, dirPath);
     ensureDir(dir);
     
-    // First, try to detect the file extension from URL
+    // Detect file extension
     const detectedExtension = detectFileExtension(adjustedUrl);
     
-    // Generate filename with detected extension using adjusted URL for consistent hashing
-    const filename = generateEventFilename(adjustedUrl, eventInfo, detectedExtension);
+    // Generate filename based on URL
+    let filename;
+    if (imageUrl.includes('google.com/s2/favicons')) {
+      filename = generateFaviconFilename(adjustedUrl, detectedExtension);
+    } else if (imageUrl.includes('wikipedia.org') || imageUrl.includes('wikimedia.org')) {
+      filename = generateBarFilename(adjustedUrl, info, detectedExtension);
+    } else if (info && info.linktreeUrl) {
+      filename = generateLinktreeFaviconFilename(adjustedUrl, detectedExtension);
+    } else {
+      filename = generateEventFilename(adjustedUrl, info, detectedExtension);
+    }
+    
     const localPath = path.join(dir, filename);
     const metadataPath = localPath + '.meta';
     
@@ -117,22 +145,22 @@ async function downloadEventImage(imageUrl, eventInfo) {
     const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
     
     if (!shouldDownload) {
-      console.log(`⏭️  Skipping event image: ${filename} (${reason})`);
+      console.log(`⏭️  Skipping image: ${filename} (${reason})`);
       return { success: true, skipped: true, filename, reason };
     }
     
-    console.log(`📥 Downloading event image: ${filename} (${reason})`);
-    console.log(`   Event: ${eventInfo.name}`);
-    console.log(`   Type: ${eventInfo.recurring ? 'recurring' : 'one-time'}`);
+    console.log(`📥 Downloading image: ${filename} (${reason})`);
     console.log(`   Path: ${path.relative(ROOT, localPath)}`);
     console.log(`   Original URL: ${imageUrl}`);
-    console.log(`   Adjusted URL: ${adjustedUrl}`);
+    if (adjustedUrl !== imageUrl) {
+      console.log(`   Adjusted URL: ${adjustedUrl}`);
+    }
     console.log(`   Detected extension: ${detectedExtension}`);
     
-    // Download the image and get content type
+    // Download the image
     const downloadResult = await downloadFile(adjustedUrl, localPath);
     
-    // If we got a different content type, regenerate filename with correct extension
+    // Handle extension correction if needed
     if (downloadResult.contentType) {
       const actualExtension = detectFileExtension(adjustedUrl, downloadResult.contentType);
       
@@ -140,7 +168,17 @@ async function downloadEventImage(imageUrl, eventInfo) {
         console.log(`🔄 Content type detected different extension: ${actualExtension} (was ${detectedExtension})`);
         
         // Generate new filename with correct extension
-        const correctFilename = generateEventFilename(adjustedUrl, eventInfo, actualExtension);
+        let correctFilename;
+        if (imageUrl.includes('google.com/s2/favicons')) {
+          correctFilename = generateFaviconFilename(adjustedUrl, actualExtension);
+        } else if (imageUrl.includes('wikipedia.org') || imageUrl.includes('wikimedia.org')) {
+          correctFilename = generateBarFilename(adjustedUrl, info, actualExtension);
+        } else if (info && info.linktreeUrl) {
+          correctFilename = generateLinktreeFaviconFilename(adjustedUrl, actualExtension);
+        } else {
+          correctFilename = generateEventFilename(adjustedUrl, info, actualExtension);
+        }
+        
         const correctPath = path.join(dir, correctFilename);
         const correctMetadataPath = correctPath + '.meta';
         
@@ -152,59 +190,89 @@ async function downloadEventImage(imageUrl, eventInfo) {
           }
         }
         
-        // Update variables to use correct paths
-        const finalFilename = correctFilename;
-        const finalPath = correctPath;
-        const finalMetadataPath = correctMetadataPath;
+        // Save metadata
+        const metadata = createMetadata(imageUrl, adjustedUrl, filename, downloadResult, info);
+        fs.writeFileSync(correctMetadataPath, JSON.stringify(metadata, null, 2));
         
-        // Save metadata with event information
-        const metadata = {
-          originalUrl: imageUrl,
-          adjustedUrl: adjustedUrl,
-          downloadedAt: new Date().toISOString(),
-          type: 'event',
-          filename: finalFilename,
-          contentType: downloadResult.contentType,
-          contentLength: downloadResult.contentLength,
-          eventInfo: {
-            name: eventInfo.name,
-            startDate: eventInfo.startDate,
-            recurring: eventInfo.recurring
-          }
-        };
-        
-        fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
-        
-        console.log(`✅ Downloaded event image: ${finalFilename} (${actualExtension})`);
-        return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
+        console.log(`✅ Downloaded image: ${correctFilename} (${actualExtension})`);
+        return { success: true, skipped: false, filename: correctFilename, localPath: correctPath };
       }
     }
     
-    // Save metadata with event information
-    const metadata = {
-      originalUrl: imageUrl,
-      adjustedUrl: adjustedUrl,
-      downloadedAt: new Date().toISOString(),
-      type: 'event',
-      filename: filename,
-      contentType: downloadResult.contentType,
-      contentLength: downloadResult.contentLength,
-      eventInfo: {
-        name: eventInfo.name,
-        startDate: eventInfo.startDate,
-        recurring: eventInfo.recurring
-      }
-    };
-    
+    // Save metadata
+    const metadata = createMetadata(imageUrl, adjustedUrl, filename, downloadResult, info);
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
     
-    console.log(`✅ Downloaded event image: ${filename} (${detectedExtension})`);
+    console.log(`✅ Downloaded image: ${filename} (${detectedExtension})`);
     return { success: true, skipped: false, filename, localPath };
     
   } catch (error) {
-    console.error(`❌ Failed to download event image from ${imageUrl}:`, error.message);
+    console.error(`❌ Failed to download image from ${imageUrl}:`, error.message);
     return { success: false, error: error.message, url: imageUrl };
   }
+}
+
+// Create metadata object based on type
+function createMetadata(originalUrl, adjustedUrl, filename, downloadResult, info) {
+  return {
+    originalUrl,
+    adjustedUrl,
+    filename,
+    downloadedAt: new Date().toISOString(),
+    contentType: downloadResult.contentType,
+    contentLength: downloadResult.contentLength,
+    info: info || {}
+  };
+}
+
+// Legacy function for backward compatibility
+async function downloadEventImage(imageUrl, eventInfo) {
+  return downloadImageWithInfo(imageUrl, eventInfo);
+}
+
+// Legacy function for backward compatibility
+async function downloadBarImage(imageUrl, barInfo) {
+  return downloadImageWithInfo(imageUrl, barInfo);
+}
+
+// Generate filename for bar images
+function generateBarFilename(imageUrl, barInfo, extension) {
+  try {
+    // Use Wikipedia URL as base if available, otherwise use bar name + city
+    let baseName;
+    if (barInfo.wikipedia) {
+      const url = new URL(barInfo.wikipedia);
+      const pathname = url.pathname.substring(1); // Remove leading slash
+      baseName = pathname
+        .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+        .replace(/-+/g, '-') // Collapse multiple dashes
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    } else {
+      // Fallback to bar name + city
+      baseName = `${barInfo.name}-${barInfo.city}`
+        .toLowerCase()
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    }
+    
+    return `bar-${baseName}${extension}`;
+  } catch (error) {
+    // Fallback to hash-based filename
+    const hash = simpleHash(imageUrl);
+    return `bar-${hash}${extension}`;
+  }
+}
+
+// Simple hash function for fallback filenames
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
 }
 
 // Check if a URL is a Linktree
@@ -702,6 +770,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
 function extractImageUrls() {
   const imageUrls = {
     eventsWithInfo: [],  // Changed to array of event objects with image info
+    barsWithInfo: [],    // Array of bar objects with image info
     favicons64: new Set(),  // Higher quality for map markers
     favicons256: new Set()   // High quality for cards/OG
   };
@@ -781,8 +850,69 @@ function extractImageUrls() {
     }
   }
   
+  // Extract bar images from bars data
+  console.log('\\n🍺 Extracting bar images...');
+  const barsDir = path.join(ROOT, 'data', 'bars');
+  if (fs.existsSync(barsDir)) {
+    const barFiles = fs.readdirSync(barsDir).filter(file => file.endsWith('.json'));
+    
+    for (const file of barFiles) {
+      const filePath = path.join(barsDir, file);
+      try {
+        const cityBars = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        
+        for (const bar of cityBars) {
+          // Extract bar images from Wikipedia scraping
+          if (bar.image) {
+            const cleanUrl = cleanImageUrl(bar.image);
+            if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
+              imageUrls.barsWithInfo.push({
+                imageUrl: cleanUrl,
+                name: bar.name,
+                city: bar.city,
+                wikipedia: bar.wikipedia,
+                website: bar.website
+              });
+              console.log(`🍺 Found bar image: ${bar.name} (${bar.city})`);
+            }
+          }
+          
+          // Extract website URLs for favicons
+          if (bar.website) {
+            try {
+              const domain = new URL(bar.website).hostname;
+              
+              // Check if it's a Linktree URL
+              if (isLinktreeUrl(bar.website)) {
+                console.log(`🔗 Found Linktree URL: ${bar.website}`);
+                // Store the Linktree URL for special processing
+                imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
+                imageUrls.linktreeUrls.add(bar.website);
+              } else {
+                // Use Google's favicon service for regular domains with multiple sizes
+                const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
+                
+                imageUrls.favicons64.add(faviconUrl64);
+                imageUrls.favicons256.add(faviconUrl256);
+                
+                console.log(`🌐 Found bar website for favicons: ${domain}`);
+                console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
+                console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
+              }
+            } catch (error) {
+              console.warn(`⚠️  Could not extract domain from bar website URL: ${bar.website}`, error.message);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️  Could not parse bar file ${file}:`, error.message);
+      }
+    }
+  }
+  
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
+  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.barsWithInfo.length} bar images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
   return imageUrls;
 }
 
@@ -816,7 +946,7 @@ async function main() {
   // Download event images with event information
   console.log('\n📸 Downloading event images...');
   for (const eventWithImage of imageUrls.eventsWithInfo) {
-    const result = await downloadEventImage(eventWithImage.imageUrl, {
+    const result = await downloadImageWithInfo(eventWithImage.imageUrl, {
       name: eventWithImage.name,
       startDate: eventWithImage.startDate,
       recurring: eventWithImage.recurring
@@ -832,11 +962,30 @@ async function main() {
     }
   }
   
+  // Download bar images with bar information
+  console.log('\\n🍺 Downloading bar images...');
+  for (const barWithImage of imageUrls.barsWithInfo) {
+    const result = await downloadImageWithInfo(barWithImage.imageUrl, {
+      name: barWithImage.name,
+      city: barWithImage.city,
+      wikipedia: barWithImage.wikipedia,
+      website: barWithImage.website
+    });
+    if (result.success) {
+      if (result.skipped) {
+        totalSkipped++;
+      } else {
+        totalDownloaded++;
+      }
+    } else {
+      totalFailed++;
+    }
+  }
   
   // Download high-quality favicons (64px for map markers)
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
   for (const url of imageUrls.favicons64) {
-    const result = await downloadImageWithSize(url, 'favicon', '64');
+    const result = await downloadImageWithInfo(url, { website: extractDomainFromFaviconUrl(url), size: '64' });
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
@@ -851,7 +1000,7 @@ async function main() {
   // Download ultra-high-quality favicons (256px for cards/OG)
   console.log('\n🎨 Downloading ultra-high-quality favicons (256px)...');
   for (const url of imageUrls.favicons256) {
-    const result = await downloadImageWithSize(url, 'favicon', '256');
+    const result = await downloadImageWithInfo(url, { website: extractDomainFromFaviconUrl(url), size: '256' });
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
@@ -929,4 +1078,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, downloadImageWithInfo, downloadEventImage, downloadBarImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage, generateBarFilename };

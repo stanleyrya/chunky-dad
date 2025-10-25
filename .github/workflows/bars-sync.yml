@@ -27,6 +27,18 @@ jobs:
     - name: Sync bars data
       run: node tools/sync-bars.js
       
+    - name: Download bar images and favicons
+      run: |
+        node tools/download-images.js
+        git add -A img/bars/ img/favicons/ 2>/dev/null || true
+        if git diff --staged --quiet; then
+          echo "No bar image changes to commit"
+        else
+          git commit -m "🖼️ Download/update bar images and favicons"
+          git push
+          echo "✓ Bar images and favicons updated and committed"
+        fi
+      
     - name: Commit updated bars data
       run: |
         git config --local user.email "action@github.com"
