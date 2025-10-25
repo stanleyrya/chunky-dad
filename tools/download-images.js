@@ -56,6 +56,7 @@ function adjustEventbriteImageUrl(imageUrl) {
   return imageUrl;
 }
 
+
 // Mock logger for Node.js environment
 global.logger = {
   componentInit: (component, message, data) => console.log(`[${component}] ${message}`, data || ''),
@@ -217,6 +218,18 @@ function isLinktreeUrl(url) {
   }
 }
 
+// Check if a URL is a Wikipedia page
+function isWikipediaUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname === 'en.wikipedia.org' || 
+           parsedUrl.hostname === 'www.en.wikipedia.org' ||
+           parsedUrl.hostname.endsWith('.wikipedia.org');
+  } catch (error) {
+    return false;
+  }
+}
+
 // Extract profile picture URL from Linktree page
 async function extractLinktreeProfilePicture(linktreeUrl) {
   try {
@@ -251,6 +264,31 @@ async function extractLinktreeProfilePicture(linktreeUrl) {
     console.error(`❌ Failed to extract profile picture from Linktree:`, error.message);
     return null;
   }
+}
+
+// Extract logo image URL from Wikipedia page
+async function extractWikipediaLogo(wikipediaUrl) {
+  console.log(`🔍 Extracting logo from Wikipedia: ${wikipediaUrl}`);
+  
+  const html = await fetchPageContent(wikipediaUrl);
+  const dom = new JSDOM(html);
+  const document = dom.window.document;
+  
+  const infoboxImage = document.querySelector('td.infobox-image img');
+  if (!infoboxImage?.src) {
+    throw new Error('No logo found in Wikipedia infobox');
+  }
+  
+  let logoUrl = infoboxImage.src;
+  if (logoUrl.startsWith('//')) {
+    logoUrl = 'https:' + logoUrl;
+  } else if (logoUrl.startsWith('/')) {
+    const parsedUrl = new URL(wikipediaUrl);
+    logoUrl = parsedUrl.protocol + '//' + parsedUrl.hostname + logoUrl;
+  }
+  
+  console.log(`✅ Found Wikipedia logo URL: ${logoUrl}`);
+  return logoUrl;
 }
 
 // Fetch page content with proper headers
@@ -433,20 +471,26 @@ function generateFilename(url, type = 'event', size = null) {
 
 // Generate a unique filename for Linktree profile pictures based on the Linktree URL
 function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
-    try {
-        const parsedUrl = new URL(linktreeUrl);
-        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
-        const cleanPath = pathname
-            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
-            .replace(/-+/g, '-') // Collapse multiple dashes
-            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-        
-        return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
-    } catch (error) {
-        // Fallback to hash-based filename
-        const hash = simpleHash(linktreeUrl);
-        return `favicon-linktr.ee-${hash}-${size}px.png`;
-    }
+    const parsedUrl = new URL(linktreeUrl);
+    const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+    const cleanPath = pathname
+        .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+        .replace(/-+/g, '-') // Collapse multiple dashes
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    
+    return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
+}
+
+// Generate a unique filename for Wikipedia logos based on the Wikipedia URL
+function generateWikipediaFaviconFilename(wikipediaUrl, size = '32') {
+    const parsedUrl = new URL(wikipediaUrl);
+    const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
+    const cleanPath = pathname
+        .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+        .replace(/-+/g, '-') // Collapse multiple dashes
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    
+    return `favicon-wikipedia-${cleanPath}-${size}px.png`;
 }
 
 // Download image with a custom filename
@@ -762,6 +806,11 @@ function extractImageUrls() {
             // Store the Linktree URL for special processing
             imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
             imageUrls.linktreeUrls.add(event.website);
+          } else if (isWikipediaUrl(event.website)) {
+            console.log(`📚 Found Wikipedia URL: ${event.website}`);
+            // Store the Wikipedia URL for special processing
+            imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
+            imageUrls.wikipediaUrls.add(event.website);
           } else {
             // Use Google's favicon service for regular domains with multiple sizes
             const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
@@ -782,7 +831,8 @@ function extractImageUrls() {
   }
   
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${linktreeCount} Linktree URLs`);
+  const wikipediaCount = imageUrls.wikipediaUrls ? imageUrls.wikipediaUrls.size : 0;
+  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), ${linktreeCount} Linktree URLs, and ${wikipediaCount} Wikipedia URLs`);
   return imageUrls;
 }
 
@@ -906,6 +956,49 @@ async function main() {
     }
   }
   
+  // Process Wikipedia logos with multiple sizes
+  if (imageUrls.wikipediaUrls && imageUrls.wikipediaUrls.size > 0) {
+    console.log('\\n📚 Processing Wikipedia logos with multiple sizes...');
+    for (const wikipediaUrl of imageUrls.wikipediaUrls) {
+      try {
+        // Extract logo URL from Wikipedia page
+        const logoUrl = await extractWikipediaLogo(wikipediaUrl);
+        
+        if (logoUrl) {
+          // Generate multiple sizes for Wikipedia logos
+          const sizes = [
+            { size: '64', targetSize: 64, description: 'Map markers (64px)' },
+            { size: '256', targetSize: 256, description: 'Cards/OG images (256px)' }
+          ];
+          
+          for (const { size, targetSize, description } of sizes) {
+            const wikipediaFilename = generateWikipediaFaviconFilename(wikipediaUrl, size);
+            
+            console.log(`📥 Processing Wikipedia ${description}: ${wikipediaFilename}`);
+            
+            // Download and process the logo with the custom filename
+            const result = await downloadImageWithCustomFilename(logoUrl, wikipediaFilename, 'favicon', true, targetSize);
+            if (result.success) {
+              if (result.skipped) {
+                totalSkipped++;
+              } else {
+                totalDownloaded++;
+              }
+            } else {
+              totalFailed++;
+            }
+          }
+        } else {
+          console.log(`⚠️  Could not extract logo from ${wikipediaUrl}`);
+          totalFailed++;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to process Wikipedia ${wikipediaUrl}:`, error.message);
+        totalFailed++;
+      }
+    }
+  }
+  
   // Summary
   console.log('\n📊 Download Summary:');
   console.log(`✅ Downloaded: ${totalDownloaded}`);
@@ -929,4 +1022,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, fetchPageContent, generateLinktreeFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaLogo, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
