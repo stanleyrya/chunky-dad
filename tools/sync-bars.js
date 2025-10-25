@@ -446,21 +446,7 @@ async function scrapeWikipediaData(url) {
         data.website = websiteMatch[1].trim();
     }
     
-    // Extract logo image
-    let imageMatch = html.match(/<td[^>]*class="infobox-image"[^>]*>.*?<img[^>]*src="([^"]+)"[^>]*>/i);
-    if (!imageMatch) {
-        imageMatch = html.match(/<img[^>]*src="([^"]*logo[^"]*)"[^>]*>/i);
-    }
-    if (imageMatch) {
-        let imageUrl = imageMatch[1].trim();
-        if (imageUrl.startsWith('//')) {
-            imageUrl = 'https:' + imageUrl;
-        }
-        // Don't use GayCities logo images
-        if (!imageUrl.includes('gaycities.com') && !imageUrl.includes('gaycities-logo')) {
-            data.image = imageUrl;
-        }
-    }
+    // Wikipedia logo extraction removed - logos are now handled by the image download action
     
     return data;
 }
