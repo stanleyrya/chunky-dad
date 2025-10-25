@@ -5,8 +5,7 @@
     "wikipedia": "https://en.wikipedia.org/wiki/Diesel_(gay_bar)",
     "gayCities": "https://seattle.gaycities.com/bars/302690-diesel",
     "coordinates": "47.6133, -122.3143",
-    "website": "http://dieselseattle.com/DIESEL.html",
-    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Diesel_%28gay_bar%29_logo.png/250px-Diesel_%28gay_bar%29_logo.png"
+    "website": "http://dieselseattle.com/DIESEL.html"
   },
   {
     "name": "The Lumber Yard Bar",
@@ -32,8 +31,7 @@
     "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
     "address": "314 Pike Street",
     "coordinates": "47.61427, -122.32708",
-    "website": "http://seattleeagle.com",
-    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/3/3f/Seattle_Eagle_logo.png/250px-Seattle_Eagle_logo.png"
+    "website": "http://seattleeagle.com"
   },
   {
     "name": "CC’s Seattle",
@@ -51,8 +49,7 @@
     "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
     "address": "1315 East Madison Street",
     "coordinates": "47.613442, -122.314883",
-    "website": "http://madisonpub.com",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Mad_Pub_4.jpg/250px-Mad_Pub_4.jpg"
+    "website": "http://madisonpub.com"
   },
   {
     "name": "Pony",
@@ -61,7 +58,6 @@
     "gayCities": "https://seattle.gaycities.com/bars/2442-pony",
     "address": "1221 E. Madison Street",
     "coordinates": "47.61309, -122.31575",
-    "website": "http://ponyseattle.com",
-    "image": "https://upload.wikimedia.org/wikipedia/en/thumb/d/dd/Pony_%28Seattle%29_logo.png/250px-Pony_%28Seattle%29_logo.png"
+    "website": "http://ponyseattle.com"
   }
 ]
