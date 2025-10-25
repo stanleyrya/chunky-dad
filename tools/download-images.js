@@ -1165,6 +1165,23 @@ async function main() {
     }
   }
   
+  // Download bar images with bar information
+  console.log('\\n🍺 Downloading bar images...');
+  for (const barWithImage of allImageUrls.barsWithInfo) {
+    const result = await downloadBarImage(barWithImage.imageUrl, {
+      name: barWithImage.name,
+      city: barWithImage.city
+    });
+    if (result.success) {
+      if (result.skipped) {
+        totalSkipped++;
+      } else {
+        totalDownloaded++;
+      }
+    } else {
+      totalFailed++;
+    }
+  }
   
   // Download high-quality favicons (64px for map markers)
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
@@ -1305,4 +1322,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaImage, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, downloadBarImage, extractImageUrls, extractBarsImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaImage, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, generateBarFilename, downloadImageWithCustomFilename, shouldDownloadImage };
