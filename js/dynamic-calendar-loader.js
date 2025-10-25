@@ -1226,7 +1226,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 // Convert to local favicon URL if using cached data
                 if (this.dataSource === 'cached') {
-                    faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+                    faviconUrl = window.FilenameUtils.convertUrlToImagePath(url, '/img/favicons');
                     
                     logger.debug('MAP', 'Using local favicon for cached data', {
                         website: url,
@@ -1567,10 +1567,10 @@ class DynamicCalendarLoader extends CalendarCore {
             recurring: eventData.recurring
         };
         
-        return window.FilenameUtils.convertImageUrlToLocalPath(
+        return window.FilenameUtils.convertUrlToImagePath(
             imageUrl,
-            eventInfo,
-            'img/events'
+            'img/events',
+            eventInfo
         );
     }
 

@@ -253,6 +253,158 @@ function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
     }
 }
 
+/**
+ * Check if a URL is a Wikipedia URL
+ * @param {string} url - The URL to check
+ * @returns {boolean} - True if it's a Wikipedia URL
+ */
+function isWikipediaUrl(url) {
+    try {
+        const parsedUrl = new URL(url);
+        return parsedUrl.hostname === 'en.wikipedia.org' || 
+               parsedUrl.hostname === 'www.en.wikipedia.org' ||
+               parsedUrl.hostname.includes('wikipedia.org');
+    } catch (error) {
+        return false;
+    }
+}
+
+/**
+ * Extract image URL from Wikipedia page
+ * @param {string} wikipediaUrl - The Wikipedia URL
+ * @returns {Promise<string|null>} - The image URL or null if not found
+ */
+async function extractWikipediaImageUrl(wikipediaUrl) {
+    try {
+        const response = await fetch(wikipediaUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; chunky.dad-image-downloader/1.0)'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const html = await response.text();
+        
+        // Look for infobox image first
+        let imageMatch = html.match(/<td[^>]*class="infobox-image"[^>]*>.*?<img[^>]*src="([^"]+)"[^>]*>/i);
+        if (!imageMatch) {
+            // Look for any logo image
+            imageMatch = html.match(/<img[^>]*src="([^"]*logo[^"]*)"[^>]*>/i);
+        }
+        
+        if (imageMatch) {
+            let imageUrl = imageMatch[1].trim();
+            if (imageUrl.startsWith('//')) {
+                imageUrl = 'https:' + imageUrl;
+            }
+            // Don't use GayCities logo images
+            if (!imageUrl.includes('gaycities.com') && !imageUrl.includes('gaycities-logo')) {
+                return imageUrl;
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.warn(`Failed to extract image from Wikipedia URL ${wikipediaUrl}:`, error.message);
+        return null;
+    }
+}
+
+/**
+ * Generate a filename for Wikipedia images
+ * @param {string} wikipediaUrl - The Wikipedia URL
+ * @param {string} basePath - The base path (e.g., 'img/favicons')
+ * @returns {string} - The local file path
+ */
+function convertWikipediaUrlToImagePath(wikipediaUrl, basePath = 'img/favicons') {
+    try {
+        const parsedUrl = new URL(wikipediaUrl);
+        const pathname = parsedUrl.pathname;
+        
+        // Extract the article title from the URL path
+        const articleTitle = pathname.replace('/wiki/', '').replace(/_/g, '-');
+        const cleanTitle = articleTitle
+            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
+            .replace(/-+/g, '-') // Collapse multiple dashes
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+        
+        const filename = `wikipedia-${cleanTitle}-64px.png`;
+        return `${basePath}/${filename}`;
+    } catch (error) {
+        // Fallback to hash-based filename
+        const hash = simpleHash(wikipediaUrl);
+        return `${basePath}/wikipedia-${hash}-64px.png`;
+    }
+}
+
+/**
+ * Universal function to convert any URL to a local image path
+ * Handles regular websites, Linktree, Wikipedia, and direct image URLs
+ * @param {string} url - The URL to convert
+ * @param {string} basePath - The base path (e.g., 'img/favicons')
+ * @param {Object} eventInfo - Optional event information for event images
+ * @returns {string} - The local file path
+ */
+function convertUrlToImagePath(url, basePath = 'img/favicons', eventInfo = null) {
+    if (!url || !url.startsWith('http')) {
+        return url; // Return as-is if not a valid URL
+    }
+    
+    try {
+        const parsedUrl = new URL(url);
+        
+        // Handle direct image URLs
+        if (isImageUrl(url)) {
+            if (eventInfo) {
+                // Use event-specific logic for event images
+                return convertImageUrlToLocalPath(url, eventInfo, basePath);
+            } else {
+                // Use generic image filename
+                const filename = generateFilenameFromUrl(url);
+                return `${basePath}/${filename}`;
+            }
+        }
+        
+        // Handle Wikipedia URLs
+        if (isWikipediaUrl(url)) {
+            return convertWikipediaUrlToImagePath(url, basePath);
+        }
+        
+        // Handle Linktree URLs
+        if (parsedUrl.hostname === 'linktr.ee' || parsedUrl.hostname === 'www.linktr.ee') {
+            return convertWebsiteUrlToFaviconPath(url, basePath);
+        }
+        
+        // Handle regular website URLs (favicons)
+        return convertWebsiteUrlToFaviconPath(url, basePath);
+        
+    } catch (error) {
+        console.warn(`Failed to convert URL to image path: ${url}`, error.message);
+        return url; // Return original URL if conversion fails
+    }
+}
+
+/**
+ * Check if a URL is a direct image URL
+ * @param {string} url - The URL to check
+ * @returns {boolean} - True if it's an image URL
+ */
+function isImageUrl(url) {
+    try {
+        const parsedUrl = new URL(url);
+        const pathname = parsedUrl.pathname.toLowerCase();
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff'];
+        
+        // Check if URL ends with image extension
+        return imageExtensions.some(ext => pathname.endsWith(ext));
+    } catch (error) {
+        return false;
+    }
+}
+
 
 /**
  * Detect file extension from URL and content type
@@ -326,7 +478,12 @@ if (typeof module !== 'undefined' && module.exports) {
         convertWebsiteUrlToFaviconPath,
         detectFileExtension,
         slugify,
-        simpleHash
+        simpleHash,
+        isWikipediaUrl,
+        extractWikipediaImageUrl,
+        convertWikipediaUrlToImagePath,
+        convertUrlToImagePath,
+        isImageUrl
     };
 }
 
@@ -343,6 +500,11 @@ if (typeof window !== 'undefined') {
         convertWebsiteUrlToFaviconPath,
         detectFileExtension,
         slugify,
-        simpleHash
+        simpleHash,
+        isWikipediaUrl,
+        extractWikipediaImageUrl,
+        convertWikipediaUrlToImagePath,
+        convertUrlToImagePath,
+        isImageUrl
     };
 }
