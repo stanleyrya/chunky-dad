@@ -771,6 +771,22 @@ function processWebsiteUrl(url, context = '') {
   }
 }
 
+// Add a processed URL result to the imageUrls collections
+function addProcessedUrl(imageUrls, result) {
+  if (!result) return;
+  
+  if (result.type === 'linktree') {
+    imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
+    imageUrls.linktreeUrls.add(result.url);
+  } else if (result.type === 'wikipedia') {
+    imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
+    imageUrls.wikipediaUrls.add(result.url);
+  } else if (result.type === 'favicon') {
+    imageUrls.favicons64.add(result.urls.favicon64);
+    imageUrls.favicons256.add(result.urls.favicon256);
+  }
+}
+
 // Extract image URLs from calendar data using calendar loader
 function extractImageUrls() {
   const imageUrls = {
@@ -827,18 +843,7 @@ function extractImageUrls() {
       // Extract website URLs for favicons
       if (event.website) {
         const result = processWebsiteUrl(event.website);
-        if (result) {
-          if (result.type === 'linktree') {
-            imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
-            imageUrls.linktreeUrls.add(result.url);
-          } else if (result.type === 'wikipedia') {
-            imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
-            imageUrls.wikipediaUrls.add(result.url);
-          } else if (result.type === 'favicon') {
-            imageUrls.favicons64.add(result.urls.favicon64);
-            imageUrls.favicons256.add(result.urls.favicon256);
-          }
-        }
+        addProcessedUrl(imageUrls, result);
       }
     }
   }
@@ -860,27 +865,13 @@ function extractImageUrls() {
         // Process Wikipedia URLs for bar logos
         if (bar.wikipedia) {
           const result = processWebsiteUrl(bar.wikipedia, ` for ${bar.name}`);
-          if (result && result.type === 'wikipedia') {
-            imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
-            imageUrls.wikipediaUrls.add(result.url);
-          }
+          addProcessedUrl(imageUrls, result);
         }
         
         // Process website URLs for bar favicons
         if (bar.website) {
           const result = processWebsiteUrl(bar.website, ` for ${bar.name}`);
-          if (result) {
-            if (result.type === 'linktree') {
-              imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
-              imageUrls.linktreeUrls.add(result.url);
-            } else if (result.type === 'wikipedia') {
-              imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
-              imageUrls.wikipediaUrls.add(result.url);
-            } else if (result.type === 'favicon') {
-              imageUrls.favicons64.add(result.urls.favicon64);
-              imageUrls.favicons256.add(result.urls.favicon256);
-            }
-          }
+          addProcessedUrl(imageUrls, result);
         }
       }
     }
