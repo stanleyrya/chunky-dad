@@ -742,6 +742,35 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
   }
 }
 
+// Process a website URL and add it to the appropriate collection
+function processWebsiteUrl(url, context = '') {
+  try {
+    const domain = new URL(url).hostname;
+    
+    // Check if it's a Linktree URL
+    if (isLinktreeUrl(url)) {
+      console.log(`🔗 Found Linktree URL${context}: ${url}`);
+      return { type: 'linktree', url };
+    } else if (isWikipediaUrl(url)) {
+      console.log(`📚 Found Wikipedia URL${context}: ${url}`);
+      return { type: 'wikipedia', url };
+    } else {
+      // Use Google's favicon service for regular domains with multiple sizes
+      const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
+      
+      console.log(`🌐 Found website for favicons${context}: ${domain}`);
+      console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
+      console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
+      
+      return { type: 'favicon', urls: { favicon64: faviconUrl64, favicon256: faviconUrl256 } };
+    }
+  } catch (error) {
+    console.warn(`⚠️  Could not extract domain from website URL${context}: ${url}`, error.message);
+    return null;
+  }
+}
+
 // Extract image URLs from calendar data using calendar loader
 function extractImageUrls() {
   const imageUrls = {
@@ -797,34 +826,18 @@ function extractImageUrls() {
       
       // Extract website URLs for favicons
       if (event.website) {
-        try {
-          const domain = new URL(event.website).hostname;
-          
-          // Check if it's a Linktree URL
-          if (isLinktreeUrl(event.website)) {
-            console.log(`🔗 Found Linktree URL: ${event.website}`);
-            // Store the Linktree URL for special processing
+        const result = processWebsiteUrl(event.website);
+        if (result) {
+          if (result.type === 'linktree') {
             imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
-            imageUrls.linktreeUrls.add(event.website);
-          } else if (isWikipediaUrl(event.website)) {
-            console.log(`📚 Found Wikipedia URL: ${event.website}`);
-            // Store the Wikipedia URL for special processing
+            imageUrls.linktreeUrls.add(result.url);
+          } else if (result.type === 'wikipedia') {
             imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
-            imageUrls.wikipediaUrls.add(event.website);
-          } else {
-            // Use Google's favicon service for regular domains with multiple sizes
-            const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-            const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
-            
-            imageUrls.favicons64.add(faviconUrl64);
-            imageUrls.favicons256.add(faviconUrl256);
-            
-            console.log(`🌐 Found website for favicons: ${domain}`);
-            console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
-            console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
+            imageUrls.wikipediaUrls.add(result.url);
+          } else if (result.type === 'favicon') {
+            imageUrls.favicons64.add(result.urls.favicon64);
+            imageUrls.favicons256.add(result.urls.favicon256);
           }
-        } catch (error) {
-          console.warn(`⚠️  Could not extract domain from website URL: ${event.website}`, error.message);
         }
       }
     }
@@ -846,48 +859,27 @@ function extractImageUrls() {
       for (const bar of bars) {
         // Process Wikipedia URLs for bar logos
         if (bar.wikipedia) {
-          try {
-            if (isWikipediaUrl(bar.wikipedia)) {
-              console.log(`📚 Found bar Wikipedia URL: ${bar.name} - ${bar.wikipedia}`);
-              // Store the Wikipedia URL for special processing
-              imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
-              imageUrls.wikipediaUrls.add(bar.wikipedia);
-            }
-          } catch (error) {
-            console.warn(`⚠️  Could not process Wikipedia URL for ${bar.name}: ${bar.wikipedia}`, error.message);
+          const result = processWebsiteUrl(bar.wikipedia, ` for ${bar.name}`);
+          if (result && result.type === 'wikipedia') {
+            imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
+            imageUrls.wikipediaUrls.add(result.url);
           }
         }
         
         // Process website URLs for bar favicons
         if (bar.website) {
-          try {
-            const domain = new URL(bar.website).hostname;
-            
-            // Check if it's a Linktree URL
-            if (isLinktreeUrl(bar.website)) {
-              console.log(`🔗 Found bar Linktree URL: ${bar.name} - ${bar.website}`);
-              // Store the Linktree URL for special processing
+          const result = processWebsiteUrl(bar.website, ` for ${bar.name}`);
+          if (result) {
+            if (result.type === 'linktree') {
               imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
-              imageUrls.linktreeUrls.add(bar.website);
-            } else if (isWikipediaUrl(bar.website)) {
-              console.log(`📚 Found bar Wikipedia URL: ${bar.name} - ${bar.website}`);
-              // Store the Wikipedia URL for special processing
+              imageUrls.linktreeUrls.add(result.url);
+            } else if (result.type === 'wikipedia') {
               imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
-              imageUrls.wikipediaUrls.add(bar.website);
-            } else {
-              // Use Google's favicon service for regular domains with multiple sizes
-              const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-              const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
-              
-              imageUrls.favicons64.add(faviconUrl64);
-              imageUrls.favicons256.add(faviconUrl256);
-              
-              console.log(`🌐 Found bar website for favicons: ${bar.name} - ${domain}`);
-              console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
-              console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
+              imageUrls.wikipediaUrls.add(result.url);
+            } else if (result.type === 'favicon') {
+              imageUrls.favicons64.add(result.urls.favicon64);
+              imageUrls.favicons256.add(result.urls.favicon256);
             }
-          } catch (error) {
-            console.warn(`⚠️  Could not extract domain from bar website URL: ${bar.website}`, error.message);
           }
         }
       }
