@@ -46,16 +46,16 @@
     "name": "Madison Pub",
     "city": "seattle",
     "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
-    "address": "1315 East Madison Street",
-    "coordinates": "47.613442, -122.314883",
-    "website": "http://madisonpub.com"
+    "address": "1315 E Madison St, Seattle, WA 98122",
+    "coordinates": "47.6133619, -122.3149054",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJB_-ecc5qkFQRS1xH4lgadrg"
   },
   {
     "name": "Pony",
     "city": "seattle",
     "gayCities": "https://seattle.gaycities.com/bars/2442-pony",
-    "address": "1221 E. Madison Street",
-    "coordinates": "47.61309, -122.31575",
-    "website": "http://ponyseattle.com"
+    "address": "1221 E Madison St, Seattle, WA 98122",
+    "coordinates": "47.6130663, -122.3157243",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJRUOyfc5qkFQRDZLLFj1Q264"
   }
 ]
