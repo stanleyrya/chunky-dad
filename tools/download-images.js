@@ -830,6 +830,72 @@ function extractImageUrls() {
     }
   }
   
+  // Process bar data for logo extraction
+  const barsDir = path.join(ROOT, 'data', 'bars');
+  if (fs.existsSync(barsDir)) {
+    console.log('🍺 Processing bar data for logo extraction...');
+    
+    const barFiles = fs.readdirSync(barsDir).filter(file => file.endsWith('.json'));
+    
+    for (const file of barFiles) {
+      const filePath = path.join(barsDir, file);
+      const bars = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      
+      console.log(`📋 Processing bar file: ${file} (${bars.length} bars)`);
+      
+      for (const bar of bars) {
+        // Process Wikipedia URLs for bar logos
+        if (bar.wikipedia) {
+          try {
+            if (isWikipediaUrl(bar.wikipedia)) {
+              console.log(`📚 Found bar Wikipedia URL: ${bar.name} - ${bar.wikipedia}`);
+              // Store the Wikipedia URL for special processing
+              imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
+              imageUrls.wikipediaUrls.add(bar.wikipedia);
+            }
+          } catch (error) {
+            console.warn(`⚠️  Could not process Wikipedia URL for ${bar.name}: ${bar.wikipedia}`, error.message);
+          }
+        }
+        
+        // Process website URLs for bar favicons
+        if (bar.website) {
+          try {
+            const domain = new URL(bar.website).hostname;
+            
+            // Check if it's a Linktree URL
+            if (isLinktreeUrl(bar.website)) {
+              console.log(`🔗 Found bar Linktree URL: ${bar.name} - ${bar.website}`);
+              // Store the Linktree URL for special processing
+              imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
+              imageUrls.linktreeUrls.add(bar.website);
+            } else if (isWikipediaUrl(bar.website)) {
+              console.log(`📚 Found bar Wikipedia URL: ${bar.name} - ${bar.website}`);
+              // Store the Wikipedia URL for special processing
+              imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
+              imageUrls.wikipediaUrls.add(bar.website);
+            } else {
+              // Use Google's favicon service for regular domains with multiple sizes
+              const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+              const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
+              
+              imageUrls.favicons64.add(faviconUrl64);
+              imageUrls.favicons256.add(faviconUrl256);
+              
+              console.log(`🌐 Found bar website for favicons: ${bar.name} - ${domain}`);
+              console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
+              console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
+            }
+          } catch (error) {
+            console.warn(`⚠️  Could not extract domain from bar website URL: ${bar.website}`, error.message);
+          }
+        }
+      }
+    }
+  } else {
+    console.log('📁 No bars directory found, skipping bar logo extraction');
+  }
+  
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
   const wikipediaCount = imageUrls.wikipediaUrls ? imageUrls.wikipediaUrls.size : 0;
   console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), ${linktreeCount} Linktree URLs, and ${wikipediaCount} Wikipedia URLs`);
