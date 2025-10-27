@@ -20,9 +20,12 @@
   {
     "name": "3 Dollar Bill",
     "city": "new-york",
-    "wikipedia": "https://en.wikipedia.org/wiki/3_Dollar_Bill",
     "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill",
-    "coordinates": "40.708471, -73.938175"
+    "address": "260 Meserole St, Brooklyn, NY 11206",
+    "coordinates": "40.7084144, -73.9380583",
+    "instagram": "https://www.instagram.com/3dollarbillbk",
+    "facebook": "https://www.facebook.com/3dollarbillbk",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc"
   },
   {
     "name": "Ty's",
