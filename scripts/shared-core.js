@@ -67,6 +67,10 @@ class SharedCore {
             {
                 pattern: /redeyetickets\.com/i,
                 parser: 'redeyetickets'
+            },
+            {
+                pattern: /gaycities\.com/i,
+                parser: 'gaycities'
             }
             // Generic parser will be used as fallback if no pattern matches
         ];
