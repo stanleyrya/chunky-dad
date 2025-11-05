@@ -398,7 +398,12 @@ class DynamicCalendarLoader extends CalendarCore {
             const hash = window.location.hash.replace('#', '');
             return hash || 'new-york';
         } catch (e) {
-            logger.warn('CITY', 'Failed to resolve city from URL, defaulting to new-york', { error: e?.message });
+            // Use logger if available, otherwise use console
+            if (typeof logger !== 'undefined') {
+                logger.warn('CITY', 'Failed to resolve city from URL, defaulting to new-york', { error: e?.message });
+            } else {
+                console.warn('Failed to resolve city from URL, defaulting to new-york', e?.message);
+            }
             return 'new-york';
         }
     }
@@ -1418,11 +1423,16 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Load calendar data for specific city (uses cached data from GitHub Actions)
     async loadCalendarData(cityKey) {
+        console.log('DEBUG: loadCalendarData called for:', cityKey);
         const cityConfig = getCityConfig(cityKey);
         if (!cityConfig) {
-            logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
+            console.error('DEBUG: No calendar configuration found for city:', cityKey);
+            if (typeof logger !== 'undefined') {
+                logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
+            }
             return null;
         }
+        console.log('DEBUG: City config found:', cityConfig.name);
         
         // Check for proxy URL parameter - only use proxy when explicitly requested
         const urlParams = new URLSearchParams(window.location.search);
@@ -3541,35 +3551,62 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Main render function
     async renderCityPage() {
-        this.currentCity = this.getCityFromURL();
-        this.currentCityConfig = getCityConfig(this.currentCity);
-        
-        // Parse initial state (view/date/event) from URL before rendering
-        this.parseStateFromUrl();
-        
-        logger.info('CITY', `Rendering city page for: ${this.currentCity}`);
-        
-        // Header update is now handled immediately during page load - no longer needed here
-        // This prevents blocking header updates on slow calendar initialization
-        
-        // Set up city selector
-        this.setupCitySelector();
-        
-        // Check if city exists and has calendar
-        if (!this.currentCityConfig) {
-            logger.componentError('CITY', `City configuration not found: ${this.currentCity}`);
+        try {
+            this.currentCity = this.getCityFromURL();
+            console.log('DEBUG: Detected city:', this.currentCity);
+            
+            this.currentCityConfig = getCityConfig(this.currentCity);
+            console.log('DEBUG: City config:', this.currentCityConfig);
+            
+            // Parse initial state (view/date/event) from URL before rendering
+            this.parseStateFromUrl();
+            
+            if (typeof logger !== 'undefined') {
+                logger.info('CITY', `Rendering city page for: ${this.currentCity}`);
+            } else {
+                console.log('Rendering city page for:', this.currentCity);
+            }
+            
+            // Header update is now handled immediately during page load - no longer needed here
+            // This prevents blocking header updates on slow calendar initialization
+            
+            // Set up city selector
+            this.setupCitySelector();
+            
+            // Check if city exists and has calendar
+            if (!this.currentCityConfig) {
+                console.error('DEBUG: City configuration not found:', this.currentCity);
+                if (typeof logger !== 'undefined') {
+                    logger.componentError('CITY', `City configuration not found: ${this.currentCity}`);
+                }
+                this.showCityNotFound();
+                return;
+            }
+            
+            if (!hasCityCalendar(this.currentCity)) {
+                console.log('DEBUG: City has no calendar configured:', this.currentCity);
+                if (typeof logger !== 'undefined') {
+                    logger.info('CITY', `City ${this.currentCity} doesn't have calendar configured yet`);
+                }
+                // Show empty calendar when no events are configured
+                this.updatePageContent(this.currentCityConfig, []);
+                return;
+            }
+            
+            console.log('DEBUG: Starting calendar loading for:', this.currentCity);
+        } catch (error) {
+            console.error('DEBUG: Error in renderCityPage:', error);
+            if (typeof logger !== 'undefined') {
+                logger.componentError('CITY', 'Error in renderCityPage', error);
+            }
             this.showCityNotFound();
             return;
         }
         
-        if (!hasCityCalendar(this.currentCity)) {
-            logger.info('CITY', `City ${this.currentCity} doesn't have calendar configured yet`);
-            // Show empty calendar when no events are configured
-            this.updatePageContent(this.currentCityConfig, []);
-            return;
+        console.log('DEBUG: Starting calendar initialization');
+        if (typeof logger !== 'undefined') {
+            logger.info('CALENDAR', 'Starting calendar initialization with proper order of operations');
         }
-        
-        logger.info('CALENDAR', 'Starting calendar initialization with proper order of operations');
         
         // STEP 1: Create a fake event for accurate width measurement
         // Ensure the fake event date falls within the current period bounds
