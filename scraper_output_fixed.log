@@ -1,0 +1,298 @@
+🐻 Bear Event Scraper - Unified Version Starting...
+🐻 Bear Event Scraper: Auto-executing...
+🐻 Orchestrator: Not initialized, initializing now...
+🐻 Orchestrator: Initializing for Node.js environment
+🟢 Loading Node.js modules...
+🗺️ SharedCore: Created city mappings: {"new york|nyc|manhattan|brooklyn|queens|bronx":"nyc","los angeles|hollywood|west hollywood|weho|dtla|downtown los angeles|long beach|santa monica":"la","san francisco|sf|castro|san jose|oakland":"sf","atlanta|atl":"atlanta","miami|south beach|miami beach|fort lauderdale|key west":"miami","denver":"denver","las vegas|vegas":"vegas","palm springs":"palm-springs","sitges":"sitges","seattle":"seattle","portland":"portland","chicago|chi":"chicago","new orleans":"new-orleans","boston|boton|bostom|bostun|bostan":"boston","philadelphia|philly":"philadelphia","austin":"austin","dallas":"dallas","houston":"houston","phoenix":"phoenix","san diego":"san-diego","sacramento":"sacramento","toronto":"toronto","london":"london","berlin":"berlin"}
+ℹ️ SYSTEM: Starting event processing...
+ℹ️ SYSTEM: Processing 7 parser configurations
+ℹ️ SYSTEM: Processing parser 1/7: Megawoof America
+ℹ️ SYSTEM: Detected 'eventbrite' parser from URL: https://www.eventbrite.com/o/megawoof-america-18118978189
+ℹ️ SYSTEM: Processing: Megawoof America using eventbrite parser
+ℹ️ SYSTEM: URLs to process: 1
+ℹ️ SYSTEM:   URL 1: https://www.eventbrite.com/o/megawoof-america-18118978189
+ℹ️ SYSTEM: Fetching URL 1/1: https://www.eventbrite.com/o/megawoof-america-18118978189
+🎫 Eventbrite: Found window.__SERVER_DATA__
+🎫 Eventbrite: Found 4 future events in JSON data (organizer page)
+🎫 Eventbrite: Date check - event: 2025-10-05T04:00:00.000Z, now: 2025-10-02T19:05:57.453Z, isFuture: true
+🎫 Eventbrite: Found original timezone in event data: America/Phoenix
+🎫 Eventbrite: Date processing for "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF": start="2025-10-05T04:00:00Z", end="2025-10-05T09:00:00Z"
+🎫 Eventbrite: Venue details for "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF": venue="Kobalt", address="3110 North Central Avenue, Phoenix, AZ 85012"
+🎫 Eventbrite: Found coordinates in venue.address for "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF": 33.4833086, -112.0754149
+🎫 Eventbrite: Price extraction debug for "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF":
+🎫 Eventbrite:   - eventData.is_free: false
+🎫 Eventbrite:   - eventData.price_range: $11.58 - $22.10
+🎫 Eventbrite:   - serverData exists: true
+🎫 Eventbrite:   - event_listing_response exists: false
+🎫 Eventbrite:   - tickets exists: false
+🎫 Eventbrite:   - ticketClasses exists: false
+🎫 Eventbrite: Taking price_range path for "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF": $11.58 - $22.10
+🎫 Eventbrite: Final price result for "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF": "$11.58 - $22.10 (as of 10/2)"
+🎫 Eventbrite: Extracted city "phoenix" from title: "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF"
+🎫 Eventbrite: Passing place_id "ChIJkRBEr18SK4cR8jynbFt5fPM" to SharedCore for iOS-compatible URL generation for "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF"
+🎫 Eventbrite: Using city-based timezone for "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF": America/Phoenix
+🎫 Eventbrite: Created event "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF" with URL: https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-tickets-1675720327609
+🎫 Eventbrite: Parsed future event: MEGAWOOF (Sun Oct 05 2025 04:00:00 GMT+0000 (Coordinated Universal Time))
+🎫 Eventbrite: Date check - event: 2025-10-25T20:00:00.000Z, now: 2025-10-02T19:05:57.459Z, isFuture: true
+🎫 Eventbrite: Found original timezone in event data: Europe/Rome
+🎫 Eventbrite: Date processing for "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION": start="2025-10-25T20:00:00Z", end="2025-10-26T03:00:00Z"
+🎫 Eventbrite: Price extraction debug for "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION":
+🎫 Eventbrite:   - eventData.is_free: false
+🎫 Eventbrite:   - eventData.price_range: $22.10 - $39.98
+🎫 Eventbrite:   - serverData exists: true
+🎫 Eventbrite:   - event_listing_response exists: false
+🎫 Eventbrite:   - tickets exists: false
+🎫 Eventbrite:   - ticketClasses exists: false
+🎫 Eventbrite: Taking price_range path for "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION": $22.10 - $39.98
+🎫 Eventbrite: Final price result for "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION": "$22.10 - $39.98 (as of 10/2)"
+🎫 Eventbrite: Found D>U>R>O pattern in title, mapping to LA as fallback: "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION"
+🎫 Eventbrite: Note - timezone will be preserved from Eventbrite data, not overridden by city mapping
+🎫 Eventbrite: Extracted city "la" from title: "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION"
+🎫 Eventbrite: Using city-based timezone for "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION": America/Los_Angeles
+🎫 Eventbrite: Overriding Eventbrite timezone "Europe/Rome" with city-based timezone "America/Los_Angeles" for "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION"
+🎫 Eventbrite: Converting time from Europe/Rome to America/Los_Angeles for "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION"
+🎫 Eventbrite: Original UTC times - start: 2025-10-25T20:00:00Z, end: 2025-10-26T03:00:00Z
+🎫 Eventbrite: Original would be 2025-10-25, 22:00:00 in Europe/Rome
+🎫 Eventbrite: Converged after 1 iterations
+🎫 Eventbrite: Time converted - start: 2025-10-26T05:00:00.000Z, end: 2025-10-26T12:00:00.000Z
+🎫 Eventbrite: Local time 2025-10-25, 22:00:00 now properly in America/Los_Angeles
+🎫 Eventbrite: Created event "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION" with URL: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119
+🎫 Eventbrite: Parsed future event: MEGAWOOF (Sun Oct 26 2025 05:00:00 GMT+0000 (Coordinated Universal Time))
+🎫 Eventbrite: Date check - event: 2025-11-01T04:00:00.000Z, now: 2025-10-02T19:05:57.505Z, isFuture: true
+🎫 Eventbrite: Found original timezone in event data: America/Los_Angeles
+🎫 Eventbrite: Date processing for "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF": start="2025-11-01T04:00:00Z", end="2025-11-01T11:00:00Z"
+🎫 Eventbrite: Venue details for "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF": venue="The Rail", address="3796 Fifth Avenue, San Diego, CA 92103"
+🎫 Eventbrite: Found coordinates in venue.address for "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF": 32.7468303, -117.1607394
+🎫 Eventbrite: Price extraction debug for "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF":
+🎫 Eventbrite:   - eventData.is_free: false
+🎫 Eventbrite:   - eventData.price_range: $16.84 - $22.10
+🎫 Eventbrite:   - serverData exists: true
+🎫 Eventbrite:   - event_listing_response exists: false
+🎫 Eventbrite:   - tickets exists: false
+🎫 Eventbrite:   - ticketClasses exists: false
+🎫 Eventbrite: Taking price_range path for "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF": $16.84 - $22.10
+🎫 Eventbrite: Final price result for "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF": "$16.84 - $22.10 (as of 10/2)"
+🎫 Eventbrite: Passing place_id "ChIJwdJrt9pU2YARYuac9G61qQE" to SharedCore for iOS-compatible URL generation for "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF"
+🎫 Eventbrite: Using original Eventbrite timezone for "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF": America/Los_Angeles
+🎫 Eventbrite: Created event "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF" with URL: https://www.eventbrite.com/e/megawoof-america-10-year-san-diego-debut-international-hallowoof-tickets-1692702351299
+🎫 Eventbrite: Parsed future event: MEGAWOOF (Sat Nov 01 2025 04:00:00 GMT+0000 (Coordinated Universal Time))
+🎫 Eventbrite: Date check - event: 2025-11-02T04:00:00.000Z, now: 2025-10-02T19:05:57.505Z, isFuture: true
+🎫 Eventbrite: Found original timezone in event data: America/Los_Angeles
+🎫 Eventbrite: Date processing for "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS": start="2025-11-02T04:00:00Z", end="2025-11-02T11:00:00Z"
+🎫 Eventbrite: Venue details for "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS": venue="Dust Las Vegas", address="855 East Twain Avenue, Las Vegas, NV 89169"
+🎫 Eventbrite: Found coordinates in venue.address for "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS": 36.1214368, -115.144945
+🎫 Eventbrite: Price extraction debug for "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS":
+🎫 Eventbrite:   - eventData.is_free: false
+🎫 Eventbrite:   - eventData.price_range: $14.73 - $32.63
+🎫 Eventbrite:   - serverData exists: true
+🎫 Eventbrite:   - event_listing_response exists: false
+🎫 Eventbrite:   - tickets exists: false
+🎫 Eventbrite:   - ticketClasses exists: false
+🎫 Eventbrite: Taking price_range path for "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS": $14.73 - $32.63
+🎫 Eventbrite: Final price result for "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS": "$14.73 - $32.63 (as of 10/2)"
+🎫 Eventbrite: Extracted city "vegas" from title: "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS"
+🎫 Eventbrite: Passing place_id "ChIJxfTt6N_FyIARvHYdOaAV7t8" to SharedCore for iOS-compatible URL generation for "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS"
+🎫 Eventbrite: Using city-based timezone for "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS": America/Los_Angeles
+🎫 Eventbrite: Created event "MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL HALLOWOOF  LAS VEGAS" with URL: https://www.eventbrite.com/e/megawoof-10-year-us-anniversary-international-hallowoof-las-vegas-tickets-1636556246789
+🎫 Eventbrite: Parsed future event: MEGAWOOF (Sun Nov 02 2025 04:00:00 GMT+0000 (Coordinated Universal Time))
+🎫 Eventbrite: Successfully extracted 4 future events from JSON data
+🎫 Eventbrite: Found 4 events in embedded JSON data
+🎫 Eventbrite: Found 4 events, 0 additional links
+ℹ️ SYSTEM: Parsed 216608 chars → 4 events, 0 additional links
+🗺️ SharedCore: Using city from event.city: "phoenix" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "phoenix" to "phoenix"
+🗺️ SharedCore: Found mapping for "phoenix" -> "phoenix"
+🗺️ SharedCore: Normalized city "phoenix" to "phoenix"
+🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: [object Object], placeId: "ChIJkRBEr18SK4cR8jynbFt5fPM", address: "3110 North Central Avenue, Phoenix, AZ 85012"
+🗺️ SharedCore: Using place_id + coordinates method
+🗺️ SharedCore: Using city from event.city: "la" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "la" to "la"
+🗺️ SharedCore: No mapping found for "la", returning as-is
+🗺️ SharedCore: Normalized city "la" to "la"
+🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: null, placeId: "null", address: "null"
+🗺️ SharedCore: No valid data for URL generation, returning null
+🗺️ SharedCore: Extracting city from title: "megawoof"
+🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: [object Object], placeId: "ChIJwdJrt9pU2YARYuac9G61qQE", address: "3796 Fifth Avenue, San Diego, CA 92103"
+🗺️ SharedCore: Using place_id + coordinates method
+🗺️ SharedCore: Using city from event.city: "vegas" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "vegas" to "vegas"
+🗺️ SharedCore: Found mapping for "vegas" -> "vegas"
+🗺️ SharedCore: Normalized city "vegas" to "vegas"
+🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: [object Object], placeId: "ChIJxfTt6N_FyIARvHYdOaAV7t8", address: "855 East Twain Avenue, Las Vegas, NV 89169"
+🗺️ SharedCore: Using place_id + coordinates method
+✅ SYSTEM: Added 4 enriched events from https://www.eventbrite.com/o/megawoof-america-18118978189
+ℹ️ SYSTEM: Total events collected: 4
+ℹ️ SYSTEM: Filtering events: 4 total → processing...
+🗺️ SharedCore: Using city from event.city: "phoenix" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "phoenix" to "phoenix"
+🗺️ SharedCore: Found mapping for "phoenix" -> "phoenix"
+🗺️ SharedCore: Normalized city "phoenix" to "phoenix"
+🗺️ SharedCore: Using city from event.city: "la" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "la" to "la"
+🗺️ SharedCore: No mapping found for "la", returning as-is
+🗺️ SharedCore: Normalized city "la" to "la"
+🗺️ SharedCore: Using city from event.city: "san-diego" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "san-diego" to "san-diego"
+🗺️ SharedCore: No mapping found for "san-diego", returning as-is
+🗺️ SharedCore: Normalized city "san-diego" to "san-diego"
+🗺️ SharedCore: Using city from event.city: "vegas" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "vegas" to "vegas"
+🗺️ SharedCore: Found mapping for "vegas" -> "vegas"
+🗺️ SharedCore: Normalized city "vegas" to "vegas"
+ℹ️ SYSTEM: Event filtering complete: 4 → 4 future → 4 bear → 4 final
+✅ SYSTEM: Megawoof America: 4 bear events found
+✅ SYSTEM: Completed parser Megawoof America: 4 bear events found
+ℹ️ SYSTEM: Skipping disabled parser: Bear Happy Hour
+ℹ️ SYSTEM: Skipping disabled parser: Bearracuda Events
+ℹ️ SYSTEM: Skipping disabled parser: CHUNK
+ℹ️ SYSTEM: Skipping disabled parser: Furball
+ℹ️ SYSTEM: Skipping disabled parser: Bears Sitges Week
+ℹ️ SYSTEM: Processing parser 7/7: Cubhouse
+ℹ️ SYSTEM: Detected 'linktree' parser from URL: https://linktr.ee/cubhouse
+ℹ️ SYSTEM: Processing: Cubhouse using linktree parser
+ℹ️ SYSTEM: URLs to process: 1
+ℹ️ SYSTEM:   URL 1: https://linktr.ee/cubhouse
+ℹ️ SYSTEM: Fetching URL 1/1: https://linktr.ee/cubhouse
+🔗 Linktree: Extracting ticket links from Linktree page
+🔗 Linktree: Found ticket link: https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339 (TICKETS - HALLOWEEN NIGHT (10/31))
+🔗 Linktree: Found 1 ticket links
+🔗 Linktree: Created event placeholder for: TICKETS - HALLOWEEN NIGHT (10/31)
+🔗 Linktree: Extracting additional URLs
+🔗 Linktree: Extracting ticket links from Linktree page
+🔗 Linktree: Found ticket link: https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339 (TICKETS - HALLOWEEN NIGHT (10/31))
+🔗 Linktree: Extracted 1 additional URLs
+🔗 Linktree: Found 1 events, 1 additional links
+ℹ️ SYSTEM: Parsed 108383 chars → 1 events, 1 additional links
+🗺️ SharedCore: Extracting city from title: "tickets - halloween night (10/31)"
+🚨 ERROR: No timezone configuration found for city: unknown
+🚨 EVENT DETAILS:
+   Title: "TICKETS - HALLOWEEN NIGHT (10/31)"
+   Address: "null"
+   Venue: "null"
+   URL: "https://linktr.ee/cubhouse"
+   Source: "linktree"
+   City extracted from: event.city field
+🚨 Available cities: ["nyc","la","sf","atlanta","miami","denver","vegas","palm-springs","sitges","seattle","portland","chicago","new-orleans","boston","philadelphia","austin","dallas","houston","phoenix","san-diego","sacramento","toronto","london","berlin"]
+🚨 This error is coming from SharedCore
+🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: null, placeId: "null", address: "null"
+🗺️ SharedCore: No valid data for URL generation, returning null
+✅ SYSTEM: Added 1 enriched events from https://linktr.ee/cubhouse
+ℹ️ SYSTEM: Processing 1 additional URLs → 1 unique for detail pages
+ℹ️ SYSTEM: Processing 1 additional URLs for event enrichment (depth: 1/2)
+🎫 Eventbrite: Found window.__SERVER_DATA__
+🎫 Eventbrite: Debug - serverData top-level keys: [
+  'app_name',
+  'urgencySignals',
+  'event_listing_response',
+  'user',
+  'organizer',
+  'event',
+  'experimentation',
+  'gaSettings',
+  'stableId',
+  'tracking',
+  'env',
+  'highlights',
+  'settings',
+  'request',
+  'components',
+  'app_version',
+  'footerLinks'
+]
+🎫 Eventbrite: Found individual event data in JSON
+🎫 Eventbrite: Date check - event: 2025-11-01T01:00:00.000Z, now: 2025-10-02T19:05:58.940Z, isFuture: true
+🎫 Eventbrite: Detail page validation - hasFields: https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339, isFuture: true, name: "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY"
+🎫 Eventbrite: Found original timezone in event data: America/New_York
+🎫 Eventbrite: Date processing for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY": start="2025-11-01T01:00:00Z", end="2025-11-01T06:00:00Z"
+🎫 Eventbrite: Found coordinates in detail page eventMap for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY": 39.9470542, -75.161054
+🎫 Eventbrite: Detail page venue data for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY": venue="254", address="254 South 12th Street, Philadelphia, PA 19107"
+🎫 Eventbrite: Price extraction debug for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY":
+🎫 Eventbrite:   - eventData.is_free: undefined
+🎫 Eventbrite:   - eventData.price_range: undefined
+🎫 Eventbrite:   - serverData exists: true
+🎫 Eventbrite:   - event_listing_response exists: true
+🎫 Eventbrite:   - tickets exists: true
+🎫 Eventbrite:   - ticketClasses exists: true
+🎫 Eventbrite:   - ticketClasses length: 3
+🎫 Eventbrite: Taking ticketClasses path for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY"
+🎫 Eventbrite: Extracted price range from detail page for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY": $18.09 - $29.14 (as of 10/2)
+🎫 Eventbrite: Final price result for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY": "$18.09 - $29.14 (as of 10/2)"
+🎫 Eventbrite: Found image in eventHero for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY": https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29
+🎫 Eventbrite: Extracted city "philadelphia" from title: "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY"
+🎫 Eventbrite: Found place_id in components.eventDetails.location: "101718083"
+🎫 Eventbrite: Using city-based timezone for "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY": America/New_York
+🎫 Eventbrite: Created event "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY" with URL: https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339
+🎫 Eventbrite: Parsed individual event: CUBHOUSE PHILLY HALLOWEEN DANCE PARTY (Sat Nov 01 2025 01:00:00 GMT+0000 (Coordinated Universal Time))
+🎫 Eventbrite: Successfully extracted individual event from JSON data
+🎫 Eventbrite: Found 1 events in embedded JSON data
+🎫 Eventbrite: Extracting additional event URLs from JSON data
+🎫 Eventbrite: Extracted 0 additional event links from JSON data
+🎫 Eventbrite: Found 1 events, 0 additional links
+🗺️ SharedCore: Using city from event.city: "philadelphia" for event: "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY"
+🗺️ SharedCore: Normalizing city name "philadelphia" to "philadelphia"
+🗺️ SharedCore: Found mapping for "philadelphia" -> "philadelphia"
+🗺️ SharedCore: Normalized city "philadelphia" to "philadelphia"
+🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: [object Object], placeId: "101718083", address: "254 South 12th Street, Philadelphia, PA 19107"
+🗺️ SharedCore: Using place_id + coordinates method
+✅ SYSTEM: Added 1 new events from detail page https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339
+✅ SYSTEM: Enriched 2 events with detail page information
+ℹ️ SYSTEM: Total events collected: 2
+ℹ️ SYSTEM: Filtering events: 2 total → processing...
+🗺️ SharedCore: Using city from event.city: "philadelphia" for event: "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY"
+🗺️ SharedCore: Normalizing city name "philadelphia" to "philadelphia"
+🗺️ SharedCore: Found mapping for "philadelphia" -> "philadelphia"
+🗺️ SharedCore: Normalized city "philadelphia" to "philadelphia"
+ℹ️ SYSTEM: Event filtering complete: 2 → 1 future → 1 bear → 1 final
+✅ SYSTEM: Cubhouse: 1 bear events found
+✅ SYSTEM: Completed parser Cubhouse: 1 bear events found
+ℹ️ SYSTEM: Event processing complete. Total: 6 (all sources), Final bear: 5 (no duplicates)
+🐻 Orchestrator: ✓ Event processing completed
+🐻 Orchestrator: Processing 5 events for calendar...
+🐻 Orchestrator: Analyzing events for calendar actions...
+🐻 Orchestrator: Performing cross-parser deduplication on 5 events...
+🗺️ SharedCore: Using city from event.city: "phoenix" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "phoenix" to "phoenix"
+🗺️ SharedCore: Found mapping for "phoenix" -> "phoenix"
+🗺️ SharedCore: Normalized city "phoenix" to "phoenix"
+🗺️ SharedCore: Using city from event.city: "la" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "la" to "la"
+🗺️ SharedCore: No mapping found for "la", returning as-is
+🗺️ SharedCore: Normalized city "la" to "la"
+🗺️ SharedCore: Using city from event.city: "san-diego" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "san-diego" to "san-diego"
+🗺️ SharedCore: No mapping found for "san-diego", returning as-is
+🗺️ SharedCore: Normalized city "san-diego" to "san-diego"
+🗺️ SharedCore: Using city from event.city: "vegas" for event: "MEGAWOOF"
+🗺️ SharedCore: Normalizing city name "vegas" to "vegas"
+🗺️ SharedCore: Found mapping for "vegas" -> "vegas"
+🗺️ SharedCore: Normalized city "vegas" to "vegas"
+🗺️ SharedCore: Using city from event.city: "philadelphia" for event: "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY"
+🗺️ SharedCore: Normalizing city name "philadelphia" to "philadelphia"
+🗺️ SharedCore: Found mapping for "philadelphia" -> "philadelphia"
+🗺️ SharedCore: Normalized city "philadelphia" to "philadelphia"
+🐻 Orchestrator: ✓ After cross-parser deduplication: 5 unique events
+🐻 Orchestrator: ✓ Analyzed 5 events for calendar actions
+🐻 Orchestrator: Dry run mode or calendar not supported - skipping calendar integration
+🐻 Orchestrator: Displaying results...
+
+==================================================
+🐻 BEAR EVENT SCRAPER RESULTS
+==================================================
+📊 Total Events Found: 6 (all events from all sources)
+🐻 Raw Bear Events: 5 (after bear filtering)
+🐻 Final Bear Events: 5 (no duplicates found)
+📅 Calendar Events: 0 (dry run/preview mode - no events written)
+💡 Math Breakdown: 6 total → 1 past events filtered out → 5 future bear events
+
+🎯 Event Actions:
+   ➕ NEW: 5
+
+📋 Parser Results:
+   • Megawoof America: 4 bear events
+   • Cubhouse: 1 bear events
+
+==================================================
+🟢 Node.js: Skipping DOM results display (not available in Node.js)
+🌐 Web: Events available for .ics download
+🐻 Orchestrator: ✓ Event scraping completed successfully
+🐻 Bear Event Scraper: Execution completed successfully
