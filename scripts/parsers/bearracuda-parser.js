@@ -155,6 +155,8 @@ class BearraccudaParser {
                 console.log(`🐻 Bearracuda: Fallback link values - FB: "${links.facebook}", EB: "${links.eventbrite}"`);
             }
             
+            // Note: GPS coordinates will be extracted from Eventbrite URLs by shared-core during enrichment
+            
             // Extract special info (like anniversary details)
             const specialInfo = this.extractSpecialInfo(html);
             
@@ -243,7 +245,7 @@ class BearraccudaParser {
                 startDate: startDate,
                 endDate: endDate,
                 bar: venueInfo.name, // Use 'bar' field name that calendar-core.js expects
-                location: null, // No coordinates available in HTML parsing
+                location: null, // GPS coordinates will be extracted from Eventbrite URLs by shared-core during enrichment
                 address: address,
                 city: city,
                 timezone: this.getTimezoneForCity(city, cityConfig),
@@ -1266,6 +1268,7 @@ class BearraccudaParser {
         
         return null;
     }
+    
 }
 
 // Export for both environments
