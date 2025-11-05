@@ -80,6 +80,7 @@ class BearEventScraperOrchestrator {
             const bearsSitgesParserModule = importModule('parsers/bears-sitges-parser');
             const linktreeParserModule = importModule('parsers/linktree-parser');
             const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
+            const gaycitiesParserModule = importModule('parsers/gaycities-parser');
             
             // Store modules
             this.modules = {
@@ -93,7 +94,8 @@ class BearEventScraperOrchestrator {
                     furball: furballParserModule.FurballParser,
                     'bears-sitges': bearsSitgesParserModule.BearsSitgesParser,
                     linktree: linktreeParserModule.LinktreeParser,
-                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser
+                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
+                    gaycities: gaycitiesParserModule.GaycitiesParser
                 }
             };
         } catch (error) {
@@ -119,6 +121,7 @@ class BearEventScraperOrchestrator {
             const bearsSitgesParserModule = require('./parsers/bears-sitges-parser');
             const linktreeParserModule = require('./parsers/linktree-parser');
             const redeyeticketsParserModule = require('./parsers/redeyetickets-parser');
+            const gaycitiesParserModule = require('./parsers/gaycities-parser');
             
             // Store modules
             this.modules = {
@@ -132,7 +135,8 @@ class BearEventScraperOrchestrator {
                     furball: furballParserModule.FurballParser,
                     'bears-sitges': bearsSitgesParserModule.BearsSitgesParser,
                     linktree: linktreeParserModule.LinktreeParser,
-                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser
+                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
+                    gaycities: gaycitiesParserModule.GaycitiesParser
                 }
             };
         } catch (error) {
@@ -169,7 +173,8 @@ class BearEventScraperOrchestrator {
                     furball: window.FurballParser,
                     'bears-sitges': window.BearsSitgesParser,
                     linktree: window.LinktreeParser,
-                    redeyetickets: window.RedEyeTicketsParser
+                    redeyetickets: window.RedEyeTicketsParser,
+                    gaycities: window.GaycitiesParser
                 }
             };
         } catch (error) {
