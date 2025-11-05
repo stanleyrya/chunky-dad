@@ -617,7 +617,15 @@ class DynamicCalendarLoader extends CalendarCore {
             allCalendarItems.forEach(item => {
                 item.classList.remove('selected');
             });
-            
+
+            // Also ensure any newly created elements from recent re-renders are properly unselected
+            // Use a slight delay to catch any DOM updates that might have happened after initial call
+            setTimeout(() => {
+                document.querySelectorAll('.event-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+            }, 50);
+
             logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
         }
     }
@@ -2852,14 +2860,17 @@ class DynamicCalendarLoader extends CalendarCore {
                                 // Select the event and scroll to it
                                 const eventDateISO = event.date || this.formatDateToISO(this.currentDate);
                                 this.toggleEventSelection(event.slug, eventDateISO);
-                                
-                                const eventCard = document.querySelector(`.event-card[data-event-slug="${event.slug}"]`);
-                                if (eventCard) {
-                                    eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    logger.userInteraction('MAP', 'Marker clicked, event selected and scrolled to', { eventSlug: event.slug });
-                                } else {
-                                    logger.warn('MAP', 'Event card not found for marker click', { eventSlug: event.slug });
-                                }
+
+                                // Use requestAnimationFrame to ensure visual state is updated before scrolling
+                                requestAnimationFrame(() => {
+                                    const eventCard = document.querySelector(`.event-card[data-event-slug="${event.slug}"]`);
+                                    if (eventCard) {
+                                        eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        logger.userInteraction('MAP', 'Marker clicked, event selected and scrolled to', { eventSlug: event.slug });
+                                    } else {
+                                        logger.warn('MAP', 'Event card not found for marker click', { eventSlug: event.slug });
+                                    }
+                                });
                             });
                         markers.push(marker);
                         markersAdded++;
@@ -3377,14 +3388,17 @@ class DynamicCalendarLoader extends CalendarCore {
                             
                             // Toggle selection and sync URL
                             this.toggleEventSelection(eventSlug, dayISO);
-                            
-                            const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
-                            if (eventCard) {
-                                eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                logger.debug('EVENT', `Scrolled to event card: ${eventSlug}`);
-                            } else {
-                                logger.warn('EVENT', `Event card not found for: ${eventSlug}`);
-                            }
+
+                            // Use requestAnimationFrame to ensure visual state is updated before scrolling
+                            requestAnimationFrame(() => {
+                                const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
+                                if (eventCard) {
+                                    eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    logger.debug('EVENT', `Scrolled to event card: ${eventSlug}`);
+                                } else {
+                                    logger.warn('EVENT', `Event card not found for: ${eventSlug}`);
+                                }
+                            });
                         } catch (clickError) {
                             logger.warn('EVENT', `Error handling event click`, { error: clickError.message, eventSlug: item.dataset.eventSlug });
                         }
