@@ -1,823 +1,1642 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="toolbox-icon" content="📐">
-    <meta name="toolbox-description" content="Measuring Tape - See if your breakpoints measure up right">
-    <title>📐 chunky.dad's Toolbox - Measuring Tape</title>
-    <link rel="stylesheet" href="../styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Permanent+Marker&family=Roboto+Condensed:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            padding-top: 80px;
-            font-family: 'Poppins', sans-serif;
-            background: #f5f5f5;
-        }
-        
-        .test-container {
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 2rem;
-        }
-        
-        .iframe-container {
-            position: relative;
-            margin: 2rem 0;
-            border: 2px solid #ddd;
-            border-radius: 12px;
-            overflow: hidden;
-            background: white;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        }
-        
-        .iframe-controls {
-            background: linear-gradient(135deg, #333 0%, #444 100%);
-            color: white;
-            padding: 1.5rem;
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            flex-wrap: wrap;
-            border-bottom: 1px solid #555;
-        }
-        
-        .iframe-controls button {
-            padding: 0.75rem 1.25rem;
-            background: #555;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-        
-        .iframe-controls button:hover {
-            background: #666;
-            transform: translateY(-1px);
-        }
-        
-        .iframe-controls button.active {
-            background: var(--primary-color);
-            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
-        }
-        
-        .size-display {
-            margin-left: auto;
-            font-size: 0.95rem;
-            opacity: 0.9;
-            background: rgba(255,255,255,0.1);
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-        }
-        
-        .iframe-wrapper {
-            position: relative;
-            margin: 0 auto;
-            background: white;
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-        
-        #city-iframe {
-            width: 100%;
-            height: 800px;
-            border: none;
-            background: white;
-            display: block;
-        }
-        
-        .config-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 2rem;
-            margin: 2rem 0;
-        }
-        
-        .config-panel {
-            padding: 2rem;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-        }
-        
-        .config-panel h2 {
-            margin-top: 0;
-            color: #333;
-            font-size: 1.4rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .config-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .config-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        .config-item label {
-            font-weight: 600;
-            color: #444;
-            font-size: 0.9rem;
-        }
-        
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="toolbox-icon" content="🛠️">
+  <meta name="toolbox-description" content="Build chunky.dad calendar events and preview them instantly.">
+  <title>🛠️ chunky.dad Event Builder</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+    }
 
-        
-        .config-item small {
-            display: block;
-            color: #666;
-            font-size: 0.8rem;
-            margin-top: 0.25rem;
-        }
-        
-        .config-item input, .config-item select {
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 1rem;
-            transition: border-color 0.2s;
-        }
-        
-        .config-item input:focus, .config-item select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
-        }
-        
-        .update-btn {
-            margin-top: 1.5rem;
-            padding: 0.75rem 2rem;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-            font-size: 1rem;
-        }
-        
-        .update-btn:hover {
-            background: #3367d6;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
-        }
-        
-        .test-results {
-            margin-top: 2rem;
-            padding: 2rem;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-        }
-        
-        .test-results h2 {
-            margin-top: 0;
-            color: #333;
-            font-size: 1.4rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .result-item {
-            padding: 1rem;
-            margin: 0.75rem 0;
-            background: #f9f9f9;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s;
-        }
-        
-        .result-item:hover {
-            background: #f0f0f0;
-            transform: translateX(4px);
-        }
-        
-        .result-name {
-            font-weight: 600;
-            color: #333;
-        }
-        
-        .result-output {
-            font-family: 'Monaco', 'Menlo', monospace;
-            color: #666;
-            background: white;
-            padding: 0.5rem;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-        
-        .event-controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .fake-size-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(255, 193, 7, 0.9);
-            color: #333;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            z-index: 1000;
-            pointer-events: none;
-            display: none;
-        }
-        
-        @media (max-width: 1200px) {
-            .config-section {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .config-section {
-                grid-template-columns: 1fr;
-            }
-            
-            .iframe-controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .size-display {
-                margin-left: 0;
-                text-align: center;
-            }
-        }
-    </style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(180deg, #f4f7ff 0%, #ffffff 60%);
+      color: #1d2245;
+    }
+
+    .page-wrapper {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    .hero {
+      margin-bottom: 2.25rem;
+    }
+
+    .hero .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6c63ff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      margin: 0 0 0.75rem;
+      color: #181c35;
+    }
+
+    .hero-text {
+      max-width: 720px;
+      margin: 0;
+      color: #4a4f73;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 1.75rem;
+      box-shadow: 0 16px 45px rgba(19, 24, 56, 0.08);
+      border: 1px solid rgba(102, 114, 172, 0.08);
+    }
+
+    .panel h2 {
+      margin: 0 0 1.25rem;
+      font-size: 1.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #1d2245;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .field-group label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #2a2f54;
+    }
+
+    .field-group small {
+      font-size: 0.78rem;
+      color: #7076a9;
+      line-height: 1.5;
+    }
+
+    .field-group.disabled {
+      opacity: 0.55;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+      font-family: inherit;
+      font-size: 0.95rem;
+      border: 1px solid rgba(112, 125, 169, 0.35);
+      border-radius: 10px;
+      padding: 0.65rem 0.75rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background: #ffffff;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #6c63ff;
+      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+    }
+
+    .input-with-action {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .input-with-action input {
+      flex: 1 1 auto;
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-weight: 500;
+      color: #2a2f54;
+    }
+
+    .duration-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 1.1rem;
+      border-radius: 999px;
+      font-weight: 600;
+      color: #2a2f54;
+      background: rgba(108, 99, 255, 0.12);
+      border: 1px solid rgba(108, 99, 255, 0.35);
+    }
+
+    .duration-badge[data-state="missing"] {
+      background: rgba(255, 193, 7, 0.18);
+      border-color: rgba(255, 193, 7, 0.35);
+      color: #8a6200;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .primary-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 0.95rem;
+      padding: 0.65rem 1.1rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .primary-button {
+      background: linear-gradient(135deg, #6c63ff, #5145cd);
+      color: #ffffff;
+      box-shadow: 0 12px 32px rgba(81, 69, 205, 0.28);
+    }
+
+    .primary-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 15px 36px rgba(81, 69, 205, 0.32);
+    }
+
+    .secondary-button {
+      background: #edf1ff;
+      color: #3d3f68;
+      border: 1px solid rgba(108, 99, 255, 0.3);
+    }
+
+    .secondary-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .ghost-button {
+      background: rgba(108, 99, 255, 0.1);
+      color: #3f47a6;
+      border: 1px solid transparent;
+      padding-inline: 0.9rem;
+    }
+
+    .ghost-button:hover:not(:disabled) {
+      background: rgba(108, 99, 255, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .share-section {
+      margin-top: 1.75rem;
+    }
+
+    .share-section label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      color: #2a2f54;
+    }
+
+    .share-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .share-row input {
+      flex: 1 1 auto;
+      background: #f7f8ff;
+    }
+
+    .calendar-preview-card {
+      border-radius: 16px;
+      border: 1px solid rgba(111, 118, 172, 0.12);
+      background: #f7f8ff;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.1rem 1.2rem;
+      border-bottom: 1px solid rgba(111, 118, 172, 0.12);
+      background: rgba(108, 99, 255, 0.08);
+    }
+
+    .preview-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #1f2340;
+    }
+
+    #calendar-preview {
+      width: 100%;
+      height: 560px;
+      border: none;
+      background: #ffffff;
+    }
+
+    .status-badge {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+
+    .status-loading {
+      background: rgba(108, 99, 255, 0.18);
+      border-color: rgba(108, 99, 255, 0.35);
+      color: #3f47a6;
+    }
+
+    .status-sending {
+      background: rgba(255, 213, 137, 0.25);
+      border-color: rgba(255, 213, 137, 0.4);
+      color: #946300;
+    }
+
+    .status-ready {
+      background: rgba(82, 196, 132, 0.18);
+      border-color: rgba(82, 196, 132, 0.35);
+      color: #146b3a;
+    }
+
+    .status-warn {
+      background: rgba(255, 193, 7, 0.18);
+      border-color: rgba(255, 193, 7, 0.35);
+      color: #8a6200;
+    }
+
+    .status-error {
+      background: rgba(244, 67, 54, 0.18);
+      border-color: rgba(244, 67, 54, 0.35);
+      color: #a12317;
+    }
+
+    .json-preview {
+      margin-top: 1.75rem;
+      border-radius: 16px;
+      border: 1px solid rgba(111, 118, 172, 0.12);
+      background: #fcfdff;
+      overflow: hidden;
+    }
+
+    .json-block {
+      margin: 0;
+      padding: 1.25rem;
+      background: #0f1427;
+      color: #f6f8ff;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    input.is-auto {
+      background: rgba(108, 99, 255, 0.06);
+    }
+
+    @media (max-width: 1080px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .page-wrapper {
+        padding: 1.75rem 1rem 3rem;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .primary-actions {
+        width: 100%;
+      }
+
+      .primary-actions button {
+        flex: 1 1 auto;
+      }
+
+      .share-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="test-container">
-        <h1>🎯 Enhanced Breakpoint Testing Tool</h1>
-        <p>Test character limits and event display across different screen sizes with fake viewport simulation and manual width control. Perfect for debugging hyphenation issues like "Rock-strap" appearing when it doesn't need to wrap to the next line.</p>
-        
-        <div class="config-section">
-            <div class="config-panel">
-                <h2>📏 Dynamic Character Calculation</h2>
-                <p style="margin-bottom: 1.5rem; color: #666; font-size: 0.95rem;">
-                    Uses actual font metrics and hidden div measurement to calculate precise character limits based on real available width.
-                </p>
-                
-                <div class="config-grid">
-                    <div class="config-item">
-                        <label>Characters per Pixel</label>
-                        <input type="number" id="chars-per-pixel" value="0.09" step="0.001" min="0.05" max="0.15" onchange="updatePixelRatio()">
-                        <small>Auto-calculated from font metrics</small>
-                    </div>
-                    <div class="config-item">
-                        <label>Pixels per Character</label>
-                        <input type="number" id="pixels-per-char" readonly style="background: #f5f5f5;">
-                        <small>Calculated automatically</small>
-                    </div>
-                    <div class="config-item">
-                        <label>Quick Adjustments</label>
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <button type="button" onclick="setPixelRatio(0.08)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Tighter</button>
-                            <button type="button" onclick="setPixelRatio(0.09)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Default</button>
-                            <button type="button" onclick="setPixelRatio(0.10)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Looser</button>
-                            <button type="button" onclick="calculateFromFont()" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">Auto-Calc</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <div class="page-wrapper">
+    <header class="hero">
+      <p class="eyebrow">chunky.dad toolbox</p>
+      <h1>🛠️ Event Builder</h1>
+      <p class="hero-text">
+        Craft chunky.dad calendar events with friendly inputs, preview them instantly, and share a URL that keeps every field in sync. Export a ready-to-import ICS file when you are happy with the details.
+      </p>
+    </header>
 
-            <div class="config-panel">
-                <h2>📐 Manual Width Control</h2>
-                <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">
-                    Perfect for debugging hyphenation issues like "Rock-strap" - test exact widths to find where unnecessary hyphens appear.
-                </p>
-                <div class="config-grid">
-                    <div class="config-item">
-                        <label>Width (px)</label>
-                        <input type="range" id="width-slider" min="280" max="1600" value="1200" oninput="updateManualWidth()">
-                    </div>
-                    <div class="config-item">
-                        <label>Exact Width</label>
-                        <input type="number" id="width-input" min="280" max="1600" value="1200" onchange="updateManualWidth()">
-                    </div>
-                    <div class="config-item">
-                        <label>Viewport Mode</label>
-                        <select id="viewport-mode" onchange="updateManualWidth()">
-                            <option value="real">Real Size</option>
-                            <option value="fake">Fake Viewport (Scaled)</option>
-                        </select>
-                    </div>
-                    <div class="config-item">
-                        <label>Quick Tests</label>
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <button type="button" onclick="testWidth(350)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">350px</button>
-                            <button type="button" onclick="testWidth(400)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">400px</button>
-                            <button type="button" onclick="testWidth(500)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">500px</button>
-                            <button type="button" onclick="testWidth(600)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">600px</button>
-                        </div>
-                    </div>
-                </div>
-                <button class="update-btn" onclick="updateManualWidth()">Apply Manual Width</button>
+    <main class="layout">
+      <section class="panel form-panel">
+        <h2>Event Details</h2>
+        <form id="event-form">
+          <div class="field-grid">
+            <div class="field-group">
+              <label for="event-name">Event Name</label>
+              <input type="text" id="event-name" autocomplete="off" placeholder="Bearracuda Chicago">
             </div>
-            
-            <div class="config-panel">
-                <h2>🎪 Test Event Settings</h2>
-                <div class="event-controls">
-                    <div class="config-item">
-                        <label>Event Name</label>
-                        <input type="text" id="event-name" value="Bear Night at The Eagle">
-                    </div>
-                    <div class="config-item">
-                        <label>Short Name</label>
-                        <input type="text" id="event-short-name" value="Bear-Night">
-                    </div>
-                    <div class="config-item">
-                        <label>Venue</label>
-                        <input type="text" id="event-venue" value="The Eagle NYC">
-                    </div>
-                    <div class="config-item">
-                        <label>Time</label>
-                        <input type="text" id="event-time" value="9PM-2AM">
-                    </div>
-                </div>
-                <button class="update-btn" onclick="updateTestEvent()">Add Test Event to Calendar</button>
+            <div class="field-group">
+              <label for="event-short-name">Card Short Name</label>
+              <input type="text" id="event-short-name" autocomplete="off" placeholder="Bearracuda">
+              <small>Used when the calendar needs a shorter label.</small>
             </div>
-        </div>
-        
-        <div class="iframe-container">
-            <div class="iframe-controls">
-                <button onclick="setIframeWidth(320, true)" data-width="320">📱 iPhone SE (320px)</button>
-                <button onclick="setIframeWidth(375, true)" data-width="375">📱 iPhone 12 (375px)</button>
-                <button onclick="setIframeWidth(414, true)" data-width="414">📱 iPhone Plus (414px)</button>
-                <button onclick="setIframeWidth(768, true)" data-width="768">📱 iPad (768px)</button>
-                <button onclick="setIframeWidth(1024, true)" data-width="1024">💻 iPad Pro (1024px)</button>
-                <button onclick="setIframeWidth(1200, false)" data-width="1200" class="active">🖥️ Desktop (1200px)</button>
-                <button onclick="setIframeWidth(1400, false)" data-width="1400">🖥️ Large (1400px)</button>
-                <div class="size-display">Current: <span id="current-size">1200px (Real)</span></div>
+            <div class="field-group">
+              <label for="event-slug">Slug (optional)</label>
+              <input type="text" id="event-slug" autocomplete="off" placeholder="bearracuda-preview-night">
+              <small>Only if you want to test a specific slug.</small>
             </div>
-            <div class="iframe-wrapper">
-                <div class="fake-size-indicator" id="fake-size-indicator">Fake Size: 320px</div>
-                <iframe id="city-iframe" src="../city.html?city=new-york"></iframe>
+            <div class="field-group">
+              <label for="event-city">City</label>
+              <select id="event-city"></select>
             </div>
-        </div>
-        
-        <div class="test-results">
-            <h2>🧪 Test Results</h2>
-            <p>Testing event names with current character limits and settings:</p>
-            <div id="test-output"></div>
-        </div>
-    </div>
+            <div class="field-group">
+              <label for="event-venue">Venue</label>
+              <input type="text" id="event-venue" autocomplete="off" placeholder="The Eagle NYC">
+            </div>
+            <div class="field-group">
+              <label for="event-address">Address</label>
+              <input type="text" id="event-address" autocomplete="off" placeholder="554 W 28th St, New York, NY">
+            </div>
+          </div>
 
-    <script>
-        // Characters per pixel ratio for dynamic calculation
-        let charsPerPixel = 0.11;   // ~9.1 pixels per character
-        
-        // Test event configuration
-        let testEvent = {
-            name: "Bear Night at The Eagle",
-            shortName: "Bear-Night",
-            venue: "The Eagle NYC",
-            time: "9PM-2AM"
+          <div class="field-group">
+            <label for="event-description">Tea / Description</label>
+            <textarea id="event-description" placeholder="Chunky bears takeover with DJs, go-go cubs, and midnight surprises."></textarea>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="event-start">Start (local)</label>
+              <input type="datetime-local" id="event-start">
+            </div>
+            <div class="field-group">
+              <label for="event-end">End (local)</label>
+              <input type="datetime-local" id="event-end">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="event-time">Time Label</label>
+              <div class="input-with-action">
+                <input type="text" id="event-time" placeholder="Auto: 9PM-1AM">
+                <button type="button" class="ghost-button" id="auto-time-button" title="Use automatic time label">Use automatic</button>
+              </div>
+              <small id="time-helper">Auto label updates with start/end times.</small>
+            </div>
+            <div class="field-group">
+              <label for="event-timezone">Timezone</label>
+              <div class="input-with-action">
+                <input type="text" id="event-timezone" placeholder="America/New_York">
+                <button type="button" class="ghost-button" id="city-timezone-button" title="Reset to city default">Use city default</button>
+              </div>
+            </div>
+            <div class="field-group duration-group">
+              <label>Duration</label>
+              <span id="duration-badge" class="duration-badge" data-state="missing">Add start &amp; end</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="event-cover">Cover</label>
+              <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
+            </div>
+            <div class="field-group">
+              <label for="event-source">Source</label>
+              <input type="text" id="event-source" autocomplete="off" placeholder="Eventbrite, Facebook, promoter name">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="event-recurring">
+                <span>Recurring event</span>
+              </label>
+            </div>
+            <div class="field-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="event-not-checked" checked>
+                <span>Mark as not checked</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field-group" id="recurrence-group">
+            <label for="event-recurrence">Recurrence rule (RRULE)</label>
+            <input type="text" id="event-recurrence" placeholder="FREQ=WEEKLY;BYDAY=FR">
+            <small>Only used if the event repeats.</small>
+          </div>
+
+          <div class="field-grid">
+            <div class="field-group">
+              <label for="event-website">Website URL</label>
+              <input type="url" id="event-website" placeholder="https://bearracuda.com">
+            </div>
+            <div class="field-group">
+              <label for="event-website-label">Website Label</label>
+              <input type="text" id="event-website-label" placeholder="🌐 More Info">
+            </div>
+            <div class="field-group">
+              <label for="event-tickets">Tickets URL</label>
+              <input type="url" id="event-tickets" placeholder="https://tickets.example.com">
+            </div>
+            <div class="field-group">
+              <label for="event-tickets-label">Tickets Label</label>
+              <input type="text" id="event-tickets-label" placeholder="🎟 Tickets">
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field-group">
+              <label for="event-image">Promo Image URL</label>
+              <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
+            </div>
+            <div class="field-group">
+              <label for="event-cover-image">Cover Image Override</label>
+              <input type="url" id="event-cover-image" placeholder="Optional cover art">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="ghost-button" id="reset-form">Reset to defaults</button>
+            <div class="primary-actions">
+              <button type="button" class="primary-button" id="add-to-calendar">Add to calendar</button>
+              <button type="button" class="secondary-button" id="copy-link">Copy share link</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="share-section">
+          <label for="share-url">Shareable URL</label>
+          <div class="share-row">
+            <input type="text" id="share-url" readonly>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel preview-panel">
+        <div class="calendar-preview-card">
+          <div class="preview-header">
+            <h2>Calendar Preview</h2>
+            <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
+          </div>
+          <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=new-york"></iframe>
+        </div>
+
+        <div class="json-preview">
+          <div class="preview-header">
+            <h2>Event JSON</h2>
+            <button type="button" class="ghost-button" id="copy-json">Copy JSON</button>
+          </div>
+          <pre id="event-json" class="json-block">Add event details to see the generated calendar object.</pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../js/city-config.js"></script>
+  <script>
+    (() => {
+      const DEFAULT_DURATION_MINUTES = 240;
+      const CITY_TIMEZONE_GUESSES = {
+        'atlanta': 'America/New_York',
+        'berlin': 'Europe/Berlin',
+        'boston': 'America/New_York',
+        'chicago': 'America/Chicago',
+        'denver': 'America/Denver',
+        'las-vegas': 'America/Los_Angeles',
+        'london': 'Europe/London',
+        'los-angeles': 'America/Los_Angeles',
+        'new-orleans': 'America/Chicago',
+        'new-york': 'America/New_York',
+        'palm-springs': 'America/Los_Angeles',
+        'phoenix': 'America/Phoenix',
+        'portland': 'America/Los_Angeles',
+        'provincetown': 'America/New_York',
+        'san-diego': 'America/Los_Angeles',
+        'seattle': 'America/Los_Angeles',
+        'sf': 'America/Los_Angeles',
+        'sitges': 'Europe/Madrid',
+        'toronto': 'America/Toronto',
+        'vegas': 'America/Los_Angeles',
+        'philadelphia': 'America/New_York'
+      };
+
+      const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
+
+      const dom = {};
+      let state;
+      let useAutoTimeLabel = true;
+      let timezoneManuallyEdited = false;
+      let calendarReady = false;
+      let iframeLoaded = false;
+      let sendTimeoutId = null;
+      let currentCalendarCity = null;
+
+      document.addEventListener('DOMContentLoaded', init);
+
+      function init() {
+        cacheDom();
+        populateCityOptions();
+        const baseState = createDefaultState();
+        const urlState = loadStateFromUrl(baseState);
+        state = { ...baseState, ...urlState.overrides };
+        useAutoTimeLabel = !urlState.timeProvided;
+        timezoneManuallyEdited = urlState.timezoneProvided;
+        applyCityTimezoneDefaults(state.city, true);
+        if (useAutoTimeLabel) {
+          state.time = '';
+        }
+        ensureDateOrder();
+        applyStateToForm();
+        updateAutoTimeLabel();
+        bindEvents();
+        updateRecurrenceVisibility();
+        updateTimeHelper();
+        updateTimezoneHelper();
+        updateDurationBadge();
+        updateJsonPreview();
+        updateUrl();
+        updateCalendarSource(true);
+        setupMessaging();
+        scheduleEventPush();
+      }
+
+      function cacheDom() {
+        dom.form = document.getElementById('event-form');
+        dom.nameInput = document.getElementById('event-name');
+        dom.shortNameInput = document.getElementById('event-short-name');
+        dom.slugInput = document.getElementById('event-slug');
+        dom.citySelect = document.getElementById('event-city');
+        dom.venueInput = document.getElementById('event-venue');
+        dom.addressInput = document.getElementById('event-address');
+        dom.descriptionInput = document.getElementById('event-description');
+        dom.coverInput = document.getElementById('event-cover');
+        dom.sourceInput = document.getElementById('event-source');
+        dom.startInput = document.getElementById('event-start');
+        dom.endInput = document.getElementById('event-end');
+        dom.timeInput = document.getElementById('event-time');
+        dom.timeHelper = document.getElementById('time-helper');
+        dom.timezoneInput = document.getElementById('event-timezone');
+        dom.autoTimeButton = document.getElementById('auto-time-button');
+        dom.cityTimezoneButton = document.getElementById('city-timezone-button');
+        dom.durationBadge = document.getElementById('duration-badge');
+        dom.recurringCheckbox = document.getElementById('event-recurring');
+        dom.recurrenceInput = document.getElementById('event-recurrence');
+        dom.notCheckedCheckbox = document.getElementById('event-not-checked');
+        dom.websiteInput = document.getElementById('event-website');
+        dom.websiteLabelInput = document.getElementById('event-website-label');
+        dom.ticketsInput = document.getElementById('event-tickets');
+        dom.ticketsLabelInput = document.getElementById('event-tickets-label');
+        dom.imageInput = document.getElementById('event-image');
+        dom.coverImageInput = document.getElementById('event-cover-image');
+        dom.resetButton = document.getElementById('reset-form');
+        dom.addToCalendarButton = document.getElementById('add-to-calendar');
+        dom.copyShareButton = document.getElementById('copy-link');
+        dom.shareUrl = document.getElementById('share-url');
+        dom.copyJsonButton = document.getElementById('copy-json');
+        dom.calendarIframe = document.getElementById('calendar-preview');
+        dom.calendarStatus = document.getElementById('calendar-status');
+        dom.jsonPreview = document.getElementById('event-json');
+      }
+
+      function populateCityOptions() {
+        if (!dom.citySelect) return;
+        let cities = [];
+        if (typeof getAvailableCities === 'function') {
+          cities = getAvailableCities();
+        } else if (typeof CITY_CONFIG === 'object' && CITY_CONFIG) {
+          cities = Object.keys(CITY_CONFIG).map(key => ({
+            key,
+            ...CITY_CONFIG[key]
+          }));
+        } else {
+          cities = Object.keys(CITY_TIMEZONE_GUESSES).map(key => ({
+            key,
+            name: key.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
+          }));
+        }
+        cities.sort((a, b) => {
+          const nameA = (a.name || a.key || '').toLowerCase();
+          const nameB = (b.name || b.key || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+        dom.citySelect.innerHTML = '';
+        cities.forEach(city => {
+          const option = document.createElement('option');
+          option.value = city.key;
+          option.textContent = city.emoji ? `${city.emoji} ${city.name}` : city.name || city.key;
+          dom.citySelect.appendChild(option);
+        });
+      }
+
+      function createDefaultState() {
+        const defaultCity = 'new-york';
+        const start = computeDefaultStart();
+        const end = new Date(start.getTime() + DEFAULT_DURATION_MINUTES * 60000);
+        return {
+          name: 'Bearracuda Preview Night',
+          shortName: 'Bearracuda',
+          slug: '',
+          city: defaultCity,
+          venue: 'The Eagle NYC',
+          address: '554 W 28th St, New York, NY',
+          description: 'Preview your chunky.dad event before it goes live.',
+          cover: '',
+          source: 'Event Generator',
+          start: formatInputValue(start),
+          end: formatInputValue(end),
+          timezone: CITY_TIMEZONE_GUESSES[defaultCity] || browserTimezone,
+          time: '',
+          recurring: false,
+          recurrence: '',
+          notChecked: true,
+          website: '',
+          websiteLabel: '',
+          tickets: '',
+          ticketsLabel: '',
+          image: '',
+          coverImage: ''
         };
-        
-        // Additional test events
-        const additionalTestEvents = [
-            { name: "Rockstrap Party", shortName: "Rock-strap" },
-            { name: "Underwear Night", shortName: "Under-wear" },
-            { name: "Bear Weekend Festival", shortName: "Bear-Week-end" },
-            { name: "International Bear Weekend", shortName: "Inter-Bear-Week" },
-            { name: "Leather & Lace Party", shortName: "Leath-Lace" },
-            { name: "Woof!", shortName: "Woof" },
-            { name: "The Eagle NYC Bear Night", shortName: "Eagle-Bear" },
-            // Additional test cases for debugging hyphenation issues
-            { name: "Rock-strap Night", shortName: "Rock-strap" },
-            { name: "Pre-Game Party", shortName: "Pre-Game" },
-            { name: "Post-Work Drinks", shortName: "Post-Work" },
-            { name: "Mid-Week Mixer", shortName: "Mid-Week" },
-            { name: "After-Hours Event", shortName: "After-Hours" },
-            { name: "Co-Ed Sports Night", shortName: "Co-Ed" },
-            { name: "Ex-Military Meetup", shortName: "Ex-Military" },
-            { name: "Non-Stop Dancing", shortName: "Non-Stop" }
-        ];
-        
-        // Manual width control functions
-        function updateManualWidth() {
-            const slider = document.getElementById('width-slider');
-            const input = document.getElementById('width-input');
-            const modeSelect = document.getElementById('viewport-mode');
-            
-            // Sync slider and input values
-            const width = parseInt(input.value) || parseInt(slider.value);
-            slider.value = width;
-            input.value = width;
-            
-            const isFakeViewport = modeSelect.value === 'fake';
-            
-            // Clear active states from preset buttons
-            document.querySelectorAll('.iframe-controls button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Apply the width
-            setIframeWidth(width, isFakeViewport);
-        }
-        
-        function testWidth(width) {
-            const slider = document.getElementById('width-slider');
-            const input = document.getElementById('width-input');
-            
-            slider.value = width;
-            input.value = width;
-            
-            updateManualWidth();
-        }
-        
-        // Get character limit based on width (matches dynamic-calendar-loader logic)
-        function getCharLimit(width) {
-            if (typeof width === 'string') width = window.innerWidth;
-            
-            const breakpoint = getBreakpointFromWidth(width);
-            const estimatedWidth = getEstimatedWidth(breakpoint);
-            return Math.floor(estimatedWidth * charsPerPixel);
-        }
-        
-        // Process event name (matches dynamic-calendar-loader logic)
-        function getSmartEventNameForBreakpoint(event, breakpoint) {
-            const shortName = event.shortName || event.nickname || '';
-            const fullName = event.name || '';
-            
-            if (!shortName) return fullName;
-            
-            let charLimitPerLine;
-            
-            // Dynamic calculation based on pixel measurements
-            const availableWidth = getEstimatedWidth(breakpoint);
-            charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
-            
-            // Process the shortname - remove hyphens except escaped ones
-            const processedShortName = shortName.replace(/(?<!\\)-/g, '');
-            
-            // If processed name fits within limit, use it
-            if (processedShortName.length <= charLimitPerLine) {
-                return processedShortName;
-            }
-            
-            // If original hyphenated name fits, use it
-            if (shortName.length <= charLimitPerLine) {
-                return shortName;
-            }
-            
-            // Otherwise, truncate with ellipsis
-            return shortName.substring(0, charLimitPerLine - 1) + '…';
-        }
-        
+      }
 
-        
-        // Get estimated width for breakpoint
-        function getEstimatedWidth(breakpoint) {
-            const estimatedWidths = {
-                xs: 280,  // Typical phone width minus padding
-                sm: 320,  // Larger phone width minus padding
-                md: 200,  // Tablet in grid layout
-                lg: 180   // Desktop in grid layout
-            };
-            return estimatedWidths[breakpoint] || estimatedWidths.lg;
-        }
-        
-        // Update characters per pixel ratio
-        function updatePixelRatio() {
-            charsPerPixel = parseFloat(document.getElementById('chars-per-pixel').value) || 0.09;
-            
-            // Update the pixels per character display
-            updatePixelsPerCharDisplay();
-            
-            runTests();
-            
-            // Send updated ratio to iframe
-            sendPixelRatioToIframe();
-            
-            console.log('Pixel ratio updated:', charsPerPixel);
-        }
-        
-        // Set a specific pixel ratio
-        function setPixelRatio(ratio) {
-            charsPerPixel = ratio;
-            document.getElementById('chars-per-pixel').value = ratio;
-            updatePixelsPerCharDisplay();
-            updatePixelRatio();
-        }
-        
-        // Update the pixels per character display
-        function updatePixelsPerCharDisplay() {
-            const pixelsPerChar = 1 / charsPerPixel;
-            document.getElementById('pixels-per-char').value = pixelsPerChar.toFixed(2);
-        }
-        
-        // Calculate ratio from actual font metrics (similar to dynamic-calendar-loader.js)
-        function calculateFromFont() {
-            try {
-                // Create a temporary element to measure character width
-                const testElement = document.createElement('div');
-                testElement.style.cssText = `
-                    position: absolute;
-                    visibility: hidden;
-                    white-space: nowrap;
-                    font-family: 'Poppins', sans-serif;
-                    font-size: var(--event-name-font-size);
-                    font-weight: var(--event-name-font-weight);
-                    line-height: var(--event-name-line-height);
-                `;
-                
-                // Use a representative string of average characters
-                testElement.textContent = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ';
-                document.body.appendChild(testElement);
-                
-                // Get computed styles to verify what we're actually using
-                const computedStyles = window.getComputedStyle(testElement);
-                const actualFontSize = computedStyles.fontSize;
-                const actualFontWeight = computedStyles.fontWeight;
-                const actualFontFamily = computedStyles.fontFamily;
-                
-                const width = testElement.getBoundingClientRect().width;
-                const charCount = testElement.textContent.length;
-                const pixelsPerChar = width / charCount;
-                const calculatedRatio = 1 / pixelsPerChar;
-                
-                document.body.removeChild(testElement);
-                
-                console.log('Font measurement details:', {
-                    width: width.toFixed(2),
-                    charCount,
-                    pixelsPerChar: pixelsPerChar.toFixed(2),
-                    calculatedRatio: calculatedRatio.toFixed(4),
-                    actualFontSize,
-                    actualFontWeight,
-                    actualFontFamily,
-                    screenWidth: window.innerWidth
-                });
-                
-                // Show detailed info for debugging
-                const expectedCharsAt280px = Math.floor(280 * calculatedRatio);
-                alert(`Font Calculation Results:
-Screen Width: ${window.innerWidth}px
-Font: ${actualFontSize} ${actualFontWeight} ${actualFontFamily}
+      function computeDefaultStart() {
+        const now = new Date();
+        const start = new Date(now);
+        const day = start.getDay();
+        const daysUntilFriday = ((5 - day + 7) % 7) || 7;
+        start.setDate(start.getDate() + daysUntilFriday);
+        start.setHours(21, 0, 0, 0);
+        return start;
+      }
 
-Measurement Results:
-• Total Width: ${width.toFixed(2)}px for ${charCount} characters
-• Pixels per Character: ${pixelsPerChar.toFixed(2)}px
-• Characters per Pixel: ${calculatedRatio.toFixed(4)}
+      function loadStateFromUrl(baseState) {
+        const params = new URLSearchParams(window.location.search);
+        const overrides = {};
+        let timeProvided = false;
+        let timezoneProvided = false;
+        params.forEach((value, key) => {
+          if (value == null || value === '') return;
+          switch (key) {
+            case 'name':
+              overrides.name = value;
+              break;
+            case 'short':
+              overrides.shortName = value;
+              break;
+            case 'slug':
+              overrides.slug = value;
+              break;
+            case 'city':
+              overrides.city = value;
+              break;
+            case 'venue':
+              overrides.venue = value;
+              break;
+            case 'addr':
+              overrides.address = value;
+              break;
+            case 'desc':
+              overrides.description = value;
+              break;
+            case 'cover':
+              overrides.cover = value;
+              break;
+            case 'source':
+              overrides.source = value;
+              break;
+            case 'start': {
+              const sanitized = sanitizeDateTimeInput(value);
+              if (sanitized) overrides.start = sanitized;
+              break;
+            }
+            case 'end': {
+              const sanitizedEnd = sanitizeDateTimeInput(value);
+              if (sanitizedEnd) overrides.end = sanitizedEnd;
+              break;
+            }
+            case 'tz':
+              overrides.timezone = value;
+              timezoneProvided = true;
+              break;
+            case 'time':
+              overrides.time = value;
+              timeProvided = true;
+              break;
+            case 'repeat':
+              overrides.recurring = value === '1' || value.toLowerCase() === 'true';
+              break;
+            case 'rrule':
+              overrides.recurrence = value;
+              break;
+            case 'web':
+              overrides.website = value;
+              break;
+            case 'weblabel':
+              overrides.websiteLabel = value;
+              break;
+            case 'tickets':
+              overrides.tickets = value;
+              break;
+            case 'tlabel':
+              overrides.ticketsLabel = value;
+              break;
+            case 'img':
+              overrides.image = value;
+              break;
+            case 'coverimg':
+              overrides.coverImage = value;
+              break;
+            case 'checked':
+              overrides.notChecked = !(value === '0' || value.toLowerCase() === 'false');
+              break;
+            default:
+              break;
+          }
+        });
+        if (!overrides.start) overrides.start = baseState.start;
+        if (!overrides.end) overrides.end = baseState.end;
+        if (!overrides.city) overrides.city = baseState.city;
+        return { overrides, timeProvided, timezoneProvided };
+      }
 
-For 280px available width (320px screen - padding):
-• Expected Characters: ${expectedCharsAt280px} chars
-• This should fit ~${Math.floor(expectedCharsAt280px/4)}-${Math.floor(expectedCharsAt280px/5)} words of 4-5 characters each`);
-                
-                setPixelRatio(calculatedRatio);
-            } catch (error) {
-                console.warn('Could not calculate from font metrics:', error);
-                setPixelRatio(0.09); // Fallback
-            }
+      function applyCityTimezoneDefaults(city, initializing = false) {
+        if (initializing && timezoneManuallyEdited) {
+          return;
         }
-        
+        const guess = CITY_TIMEZONE_GUESSES[city] || browserTimezone;
+        if (!timezoneManuallyEdited || initializing) {
+          state.timezone = guess;
+          if (dom.timezoneInput) {
+            dom.timezoneInput.value = guess;
+          }
+          if (!initializing) {
+            timezoneManuallyEdited = false;
+          }
+        }
+      }
 
-        
-        // Update test event from inputs
-        function updateTestEvent() {
-            testEvent.name = document.getElementById('event-name').value || testEvent.name;
-            testEvent.shortName = document.getElementById('event-short-name').value || testEvent.shortName;
-            testEvent.venue = document.getElementById('event-venue').value || testEvent.venue;
-            testEvent.time = document.getElementById('event-time').value || testEvent.time;
-            
-            runTests();
-            
-            // Send test event to iframe
-            sendTestEventToIframe();
-            
-            console.log('Test event updated:', testEvent);
+        function applyStateToForm() {
+          if (dom.nameInput) dom.nameInput.value = state.name || '';
+          if (dom.shortNameInput) dom.shortNameInput.value = state.shortName || '';
+          if (dom.slugInput) dom.slugInput.value = state.slug || '';
+          if (dom.citySelect) {
+            if (![...dom.citySelect.options].some(option => option.value === state.city)) {
+              state.city = dom.citySelect.options.length ? dom.citySelect.options[0].value : 'new-york';
+            }
+            dom.citySelect.value = state.city;
+          }
+          if (dom.venueInput) dom.venueInput.value = state.venue || '';
+          if (dom.addressInput) dom.addressInput.value = state.address || '';
+          if (dom.descriptionInput) dom.descriptionInput.value = state.description || '';
+          if (dom.coverInput) dom.coverInput.value = state.cover || '';
+          if (dom.sourceInput) dom.sourceInput.value = state.source || '';
+          if (dom.startInput) dom.startInput.value = state.start || '';
+          if (dom.endInput) dom.endInput.value = state.end || '';
+          if (!useAutoTimeLabel && dom.timeInput) {
+            dom.timeInput.value = state.time || '';
+          }
+          if (dom.timezoneInput) dom.timezoneInput.value = state.timezone || browserTimezone;
+          if (dom.recurringCheckbox) dom.recurringCheckbox.checked = !!state.recurring;
+          if (dom.recurrenceInput) dom.recurrenceInput.value = state.recurrence || '';
+          if (dom.notCheckedCheckbox) dom.notCheckedCheckbox.checked = state.notChecked !== false;
+          if (dom.websiteInput) dom.websiteInput.value = state.website || '';
+          if (dom.websiteLabelInput) dom.websiteLabelInput.value = state.websiteLabel || '';
+          if (dom.ticketsInput) dom.ticketsInput.value = state.tickets || '';
+          if (dom.ticketsLabelInput) dom.ticketsLabelInput.value = state.ticketsLabel || '';
+          if (dom.imageInput) dom.imageInput.value = state.image || '';
+          if (dom.coverImageInput) dom.coverImageInput.value = state.coverImage || '';
+          updateTimeHelper();
+          updateTimezoneHelper();
         }
-        
 
-        
-        // Send pixel ratio to iframe
-        function sendPixelRatioToIframe() {
-            const iframe = document.getElementById('city-iframe');
-            if (iframe && iframe.contentWindow) {
-                try {
-                    iframe.contentWindow.postMessage({
-                        type: 'updatePixelRatio',
-                        data: charsPerPixel
-                    }, '*');
-                } catch (e) {
-                    console.log('Could not send pixel ratio to iframe (cross-origin)');
-                }
+      function bindEvents() {
+        if (dom.form) {
+          dom.form.addEventListener('submit', event => event.preventDefault());
+        }
+        if (dom.nameInput) {
+          dom.nameInput.addEventListener('input', event => {
+            state.name = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.shortNameInput) {
+          dom.shortNameInput.addEventListener('input', event => {
+            state.shortName = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.slugInput) {
+          dom.slugInput.addEventListener('input', event => {
+            state.slug = event.target.value.trim();
+            updateUrl();
+          });
+        }
+        if (dom.citySelect) {
+          dom.citySelect.addEventListener('change', event => {
+            const newCity = event.target.value;
+            state.city = newCity;
+            applyCityTimezoneDefaults(newCity);
+            updateCalendarSource();
+            refreshUi();
+          });
+        }
+        if (dom.venueInput) {
+          dom.venueInput.addEventListener('input', event => {
+            state.venue = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.addressInput) {
+          dom.addressInput.addEventListener('input', event => {
+            state.address = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.descriptionInput) {
+          dom.descriptionInput.addEventListener('input', event => {
+            state.description = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.coverInput) {
+          dom.coverInput.addEventListener('input', event => {
+            state.cover = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.sourceInput) {
+          dom.sourceInput.addEventListener('input', event => {
+            state.source = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.startInput) {
+          const handler = event => {
+            const sanitized = sanitizeDateTimeInput(event.target.value);
+            if (!sanitized) {
+              event.target.value = state.start;
+              return;
             }
+            state.start = sanitized;
+            refreshUi();
+          };
+          dom.startInput.addEventListener('change', handler);
+          dom.startInput.addEventListener('input', handler);
         }
-        
-        // Send test event to iframe
-        function sendTestEventToIframe() {
-            const iframe = document.getElementById('city-iframe');
-            if (iframe && iframe.contentWindow) {
-                try {
-                    iframe.contentWindow.postMessage({
-                        type: 'addTestEvent',
-                        data: testEvent
-                    }, '*');
-                } catch (e) {
-                    console.log('Could not send test event to iframe (cross-origin)');
-                }
+        if (dom.endInput) {
+          const handler = event => {
+            const sanitized = sanitizeDateTimeInput(event.target.value);
+            if (!sanitized) {
+              event.target.value = state.end;
+              return;
             }
+            state.end = sanitized;
+            refreshUi();
+          };
+          dom.endInput.addEventListener('change', handler);
+          dom.endInput.addEventListener('input', handler);
         }
-        
-        // Set iframe width with fake viewport option
-        function setIframeWidth(width, fakeViewport = false) {
-            const iframe = document.getElementById('city-iframe');
-            const wrapper = document.querySelector('.iframe-wrapper');
-            const fakeIndicator = document.getElementById('fake-size-indicator');
-            
-            // Update button states
-            document.querySelectorAll('.iframe-controls button').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.width == width) {
-                    btn.classList.add('active');
-                }
-            });
-            
-            if (fakeViewport) {
-                // Show fake size indicator
-                fakeIndicator.style.display = 'block';
-                fakeIndicator.textContent = `Fake Size: ${width}px`;
-                
-                // Set wrapper to the fake width but scale it down to fit
-                const maxWidth = Math.min(1200, window.innerWidth - 100);
-                const scale = Math.min(1, maxWidth / width);
-                
-                wrapper.style.width = width + 'px';
-                wrapper.style.transform = `scale(${scale})`;
-                wrapper.style.transformOrigin = 'top center';
-                wrapper.style.height = (800 / scale) + 'px'; // Adjust height to account for scale
-                
-                document.getElementById('current-size').textContent = `${width}px (Fake, ${Math.round(scale * 100)}% scale)`;
-                
-                // Send fake viewport size to iframe
-                setTimeout(() => {
-                    try {
-                        iframe.contentWindow.postMessage({
-                            type: 'setFakeViewport',
-                            data: { width: width, height: 800 }
-                        }, '*');
-                    } catch (e) {
-                        console.log('Could not send fake viewport to iframe (cross-origin)');
-                    }
-                }, 100);
-            } else {
-                // Hide fake size indicator
-                fakeIndicator.style.display = 'none';
-                
-                // Set real width
-                wrapper.style.width = width + 'px';
-                wrapper.style.transform = 'none';
-                wrapper.style.transformOrigin = 'top center';
-                wrapper.style.height = '800px';
-                
-                document.getElementById('current-size').textContent = `${width}px (Real)`;
-                
-                // Clear fake viewport
-                setTimeout(() => {
-                    try {
-                        iframe.contentWindow.postMessage({
-                            type: 'clearFakeViewport'
-                        }, '*');
-                    } catch (e) {
-                        console.log('Could not clear fake viewport from iframe (cross-origin)');
-                    }
-                }, 100);
-            }
-            
-            runTests();
+        if (dom.timeInput) {
+          dom.timeInput.addEventListener('input', event => {
+            useAutoTimeLabel = false;
+            state.time = event.target.value;
+            updateTimeHelper();
+            refreshUi({ skipAutoTime: true });
+          });
         }
-        
-        // Run tests with current settings
-        function runTests() {
-            const output = document.getElementById('test-output');
-            const currentWidth = parseInt(document.querySelector('.iframe-wrapper').style.width) || 1200;
-            const breakpoint = getBreakpointFromWidth(currentWidth);
-            
-            const estimatedWidth = getEstimatedWidth(breakpoint);
-            const charLimit = Math.floor(estimatedWidth * charsPerPixel);
-            const calculationInfo = `${estimatedWidth}px × ${charsPerPixel.toFixed(3)} chars/px = ${charLimit} chars`;
-            
-            let html = `
-                <p><strong>Testing Width:</strong> ${currentWidth}px (${breakpoint.toUpperCase()}) | 
-                <strong>Calculation:</strong> ${calculationInfo}</p>
-            `;
-            
-            // Test the custom event first
-            const testResult = getSmartEventNameForBreakpoint(testEvent, getBreakpointFromWidth(currentWidth));
-            const isUnnecessaryHyphen = checkUnnecessaryHyphenation(testEvent, testResult, charLimit);
-            
-            // Special debugging for 320px width
-            let debugInfo = '';
-            if (currentWidth === 320) {
-                const processedName = testEvent.shortName.replace(/(?<!\\)-/g, '');
-                debugInfo = `<br><small style="color: #666;">
-                    Debug 320px: Original="${testEvent.shortName}" (${testEvent.shortName.length}), 
-                    Processed="${processedName}" (${processedName.length}), 
-                    Char limit=${charLimit}, 
-                    Expected ~4-5 chars but got ${testResult.length}
-                </small>`;
-            }
-            
-            html += `
-                <div class="result-item" style="border-left: 4px solid var(--primary-color);">
-                    <div class="result-name">🎪 ${testEvent.name}</div>
-                    <div class="result-output">${testEvent.shortName} → ${testResult} ${isUnnecessaryHyphen ? '⚠️ Unnecessary hyphen?' : ''}${debugInfo}</div>
-                </div>
-            `;
-            
-            // Test additional events
-            additionalTestEvents.forEach(event => {
-                const result = getSmartEventNameForBreakpoint(event, getBreakpointFromWidth(currentWidth));
-                const isUnnecessary = checkUnnecessaryHyphenation(event, result, charLimit);
-                const warningStyle = isUnnecessary ? 'border-left: 4px solid #ff9800;' : '';
-                html += `
-                    <div class="result-item" style="${warningStyle}">
-                        <div class="result-name">${event.name}</div>
-                        <div class="result-output">${event.shortName} → ${result} ${isUnnecessary ? '⚠️ Unnecessary hyphen?' : ''}</div>
-                    </div>
-                `;
-            });
-            
-            output.innerHTML = html;
+        if (dom.autoTimeButton) {
+          dom.autoTimeButton.addEventListener('click', () => {
+            useAutoTimeLabel = true;
+            updateAutoTimeLabel();
+            updateTimeHelper();
+            refreshUi();
+          });
         }
-        
-        // Check if hyphenation might be unnecessary
-        function checkUnnecessaryHyphenation(event, result, charLimit) {
-            const shortName = event.shortName || '';
-            const processedName = shortName.replace(/(?<!\\)-/g, '');
-            
-            // If the result contains a hyphen but the processed name (without hyphens) would fit
-            if (result.includes('-') && processedName.length <= charLimit) {
-                return true;
-            }
-            
-            return false;
+        if (dom.timezoneInput) {
+          dom.timezoneInput.addEventListener('input', event => {
+            timezoneManuallyEdited = true;
+            state.timezone = event.target.value || browserTimezone;
+            updateTimezoneHelper();
+            refreshUi();
+          });
         }
-        
-        // Get breakpoint name from width
-        function getBreakpointFromWidth(width) {
-            if (width < 375) return 'xs';
-            if (width < 768) return 'sm';
-            if (width < 1024) return 'md';
-            return 'lg';
+        if (dom.cityTimezoneButton) {
+          dom.cityTimezoneButton.addEventListener('click', () => {
+            timezoneManuallyEdited = false;
+            applyCityTimezoneDefaults(state.city);
+            updateTimezoneHelper();
+            refreshUi();
+          });
         }
-        
-        // Initialize on load
-        window.addEventListener('load', () => {
-            // Initialize the pixels per character display
-            updatePixelsPerCharDisplay();
-            
-            runTests();
-            
-            // Initialize iframe after a short delay
+        if (dom.recurringCheckbox) {
+          dom.recurringCheckbox.addEventListener('change', event => {
+            state.recurring = event.target.checked;
+            updateRecurrenceVisibility();
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.recurrenceInput) {
+          dom.recurrenceInput.addEventListener('input', event => {
+            state.recurrence = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.notCheckedCheckbox) {
+          dom.notCheckedCheckbox.addEventListener('change', event => {
+            state.notChecked = event.target.checked;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.websiteInput) {
+          dom.websiteInput.addEventListener('input', event => {
+            state.website = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.websiteLabelInput) {
+          dom.websiteLabelInput.addEventListener('input', event => {
+            state.websiteLabel = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.ticketsInput) {
+          dom.ticketsInput.addEventListener('input', event => {
+            state.tickets = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.ticketsLabelInput) {
+          dom.ticketsLabelInput.addEventListener('input', event => {
+            state.ticketsLabel = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.imageInput) {
+          dom.imageInput.addEventListener('input', event => {
+            state.image = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.coverImageInput) {
+          dom.coverImageInput.addEventListener('input', event => {
+            state.coverImage = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.resetButton) {
+          dom.resetButton.addEventListener('click', resetForm);
+        }
+        if (dom.copyShareButton) {
+          dom.copyShareButton.addEventListener('click', () => {
+            copyToClipboard(dom.shareUrl ? dom.shareUrl.value : '', dom.copyShareButton);
+          });
+        }
+        if (dom.copyJsonButton) {
+          dom.copyJsonButton.addEventListener('click', () => {
+            copyToClipboard(dom.jsonPreview ? dom.jsonPreview.textContent : '', dom.copyJsonButton);
+          });
+        }
+        if (dom.addToCalendarButton) {
+          dom.addToCalendarButton.addEventListener('click', handleAddToCalendar);
+        }
+      }
+
+      function resetForm() {
+        const preservedCity = state.city;
+        const hadManualTimezone = timezoneManuallyEdited;
+        state = createDefaultState();
+        state.city = preservedCity;
+        timezoneManuallyEdited = hadManualTimezone;
+        if (!hadManualTimezone) {
+          applyCityTimezoneDefaults(state.city);
+        } else if (dom.timezoneInput) {
+          dom.timezoneInput.value = state.timezone;
+        }
+        useAutoTimeLabel = true;
+        applyStateToForm();
+        updateAutoTimeLabel();
+        refreshUi();
+        scheduleEventPush();
+      }
+
+      function updateRecurrenceVisibility() {
+        if (!dom.recurrenceInput) return;
+        const enabled = !!state.recurring;
+        dom.recurrenceInput.disabled = !enabled;
+        const container = dom.recurrenceInput.parentElement;
+        if (container) {
+          container.classList.toggle('disabled', !enabled);
+        }
+      }
+
+      function updateTimeHelper() {
+        if (dom.timeHelper) {
+          dom.timeHelper.textContent = useAutoTimeLabel
+            ? 'Auto label updates with start/end times.'
+            : 'Manual label stays exactly as you type.';
+        }
+        if (dom.autoTimeButton) {
+          dom.autoTimeButton.disabled = useAutoTimeLabel;
+        }
+        if (dom.timeInput) {
+          dom.timeInput.classList.toggle('is-auto', useAutoTimeLabel);
+        }
+      }
+
+      function updateTimezoneHelper() {
+        if (dom.cityTimezoneButton) {
+          dom.cityTimezoneButton.disabled = !timezoneManuallyEdited;
+        }
+      }
+
+      function ensureDateOrder() {
+        if (!state.start) {
+          state.start = formatInputValue(new Date());
+        }
+        if (!state.end) {
+          const startDate = parseLocalDateTime(state.start, state.timezone);
+          if (startDate) {
+            const fallback = new Date(startDate.getTime() + DEFAULT_DURATION_MINUTES * 60000);
+            state.end = formatInputValue(fallback);
+          }
+        }
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const endDate = parseLocalDateTime(state.end, state.timezone);
+        if (startDate && endDate && endDate <= startDate) {
+          const newEnd = new Date(startDate.getTime() + DEFAULT_DURATION_MINUTES * 60000);
+          state.end = formatInputValue(newEnd);
+          if (dom.endInput) {
+            dom.endInput.value = state.end;
+          }
+        }
+      }
+
+      function updateAutoTimeLabel() {
+        if (!useAutoTimeLabel || !dom.timeInput) return;
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const endDate = parseLocalDateTime(state.end, state.timezone);
+        if (!startDate || !endDate) {
+          dom.timeInput.value = '';
+          state.time = '';
+          return;
+        }
+        const label = formatTimeRange(startDate, endDate, state.timezone);
+        state.time = label;
+        dom.timeInput.value = label;
+      }
+
+      function updateDurationBadge() {
+        if (!dom.durationBadge) return;
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const endDate = parseLocalDateTime(state.end, state.timezone);
+        if (!startDate || !endDate) {
+          dom.durationBadge.textContent = 'Add start & end';
+          dom.durationBadge.dataset.state = 'missing';
+          return;
+        }
+        const minutes = Math.max(0, Math.round((endDate - startDate) / 60000));
+        if (!minutes) {
+          dom.durationBadge.textContent = 'Duration TBD';
+          dom.durationBadge.dataset.state = 'missing';
+          return;
+        }
+        const hours = Math.floor(minutes / 60);
+        const remainder = minutes % 60;
+        const parts = [];
+        if (hours) parts.push(`${hours} hr${hours === 1 ? '' : 's'}`);
+        if (remainder) parts.push(`${remainder} min`);
+        dom.durationBadge.textContent = parts.join(' ') || `${minutes} min`;
+        dom.durationBadge.dataset.state = 'ready';
+      }
+
+      function updateJsonPreview() {
+        if (!dom.jsonPreview) return;
+        const event = buildEventPayload();
+        if (!event.startDate || !event.endDate) {
+          dom.jsonPreview.textContent = 'Add start and end times to see the generated calendar object.';
+          return;
+        }
+        const preview = {
+          name: event.name,
+          shortName: event.shortName,
+          time: event.time,
+          day: event.day,
+          bar: event.bar,
+          address: event.address,
+          cover: event.cover,
+          tea: event.tea,
+          startDate: event.startDate.toISOString(),
+          endDate: event.endDate.toISOString(),
+          timezone: event.timezone,
+          links: event.links,
+          recurring: event.recurring,
+          recurrence: event.recurrence,
+          notChecked: event.notChecked,
+          source: event.source,
+          durationMinutes: event.durationMinutes
+        };
+        if (event.coverImage) preview.coverImage = event.coverImage;
+        if (event.image) preview.image = event.image;
+        if (state.slug) preview.slug = state.slug;
+        dom.jsonPreview.textContent = JSON.stringify(preview, null, 2);
+      }
+
+      function updateUrl() {
+        const params = new URLSearchParams();
+        if (state.name) params.set('name', state.name);
+        if (state.shortName) params.set('short', state.shortName);
+        if (state.slug) params set('slug', state.slug);
+        if (state.city) params.set('city', state.city);
+        if (state.venue) params.set('venue', state.venue);
+        if (state.address) params.set('addr', state.address);
+        if (state.description) params.set('desc', state.description);
+        if (state.cover) params.set('cover', state.cover);
+        if (state.source && state.source !== 'Event Generator') params.set('source', state.source);
+        if (state.start) params.set('start', state.start);
+        if (state.end) params.set('end', state.end);
+        if (state.timezone) params.set('tz', state.timezone);
+        if (!useAutoTimeLabel && state.time) params.set('time', state.time);
+        if (state.recurring) params.set('repeat', '1');
+        if (state.recurrence) params.set('rrule', state.recurrence);
+        if (state.website) params.set('web', state.website);
+        if (state.websiteLabel) params.set('weblabel', state.websiteLabel);
+        if (state.tickets) params.set('tickets', state.tickets);
+        if (state.ticketsLabel) params.set('tlabel', state.ticketsLabel);
+        if (state.image) params.set('img', state.image);
+        if (state.coverImage) params.set('coverimg', state.coverImage);
+        if (state.notChecked === false) params.set('checked', '0');
+        const sorted = new URLSearchParams();
+        [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
+        const query = sorted.toString();
+        const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+        updateShareUrl();
+      }
+
+      function updateShareUrl() {
+        if (dom.shareUrl) {
+          dom.shareUrl.value = window.location.href;
+        }
+      }
+
+      function refreshUi(options = {}) {
+        ensureDateOrder();
+        if (!options.skipAutoTime) {
+          updateAutoTimeLabel();
+        }
+        updateDurationBadge();
+        updateTimeHelper();
+        updateTimezoneHelper();
+        updateRecurrenceVisibility();
+        updateJsonPreview();
+        updateUrl();
+        scheduleEventPush();
+      }
+
+      function scheduleEventPush() {
+        if (!dom.calendarIframe) return;
+        if (sendTimeoutId) {
+          clearTimeout(sendTimeoutId);
+        }
+        sendTimeoutId = setTimeout(() => {
+          sendTimeoutId = null;
+          pushEventToCalendar();
+        }, 200);
+      }
+
+      function pushEventToCalendar() {
+        if (!dom.calendarIframe || !dom.calendarIframe.contentWindow) return;
+        const payload = buildMessagePayload();
+        if (!payload) {
+          updateCalendarStatus('Add start & end times to preview', 'warn');
+          return;
+        }
+        updateCalendarStatus('Updating preview…', 'sending');
+        try {
+          dom.calendarIframe.contentWindow.postMessage({
+            type: 'addTestEvent',
+            data: payload
+          }, '*');
+        } catch (error) {
+          console.error('Failed to send event to calendar iframe', error);
+          updateCalendarStatus('Could not reach preview', 'error');
+        }
+      }
+
+      function buildEventPayload() {
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const endDate = parseLocalDateTime(state.end, state.timezone);
+        const computedLabel = formatTimeRange(startDate, endDate, state.timezone);
+        const timeLabel = useAutoTimeLabel ? computedLabel : (state.time || computedLabel);
+        const dayLabel = startDate
+          ? startDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: state.timezone || browserTimezone })
+          : '';
+        const durationMinutes = startDate && endDate
+          ? Math.max(1, Math.round((endDate - startDate) / 60000))
+          : DEFAULT_DURATION_MINUTES;
+        const links = buildLinks();
+        return {
+          name: (state.name || '').trim(),
+          shortName: (state.shortName || '').trim(),
+          tea: (state.description || '').trim(),
+          description: (state.description || '').trim(),
+          cover: (state.cover || '').trim(),
+          bar: (state.venue || 'Venue TBA').trim(),
+          venue: (state.venue || 'Venue TBA').trim(),
+          address: (state.address || '').trim(),
+          city: state.city,
+          time: timeLabel,
+          day: dayLabel,
+          startDate,
+          endDate,
+          timezone: state.timezone || browserTimezone,
+          coverImage: (state.coverImage || '').trim() || null,
+          image: (state.image || '').trim() || null,
+          website: (state.website || '').trim() || null,
+          tickets: (state.tickets || '').trim() || null,
+          links,
+          recurring: Boolean(state.recurring),
+          recurrence: (state.recurrence || '').trim(),
+          notChecked: state.notChecked !== false,
+          source: (state.source || 'Event Generator').trim(),
+          durationMinutes,
+          websiteLabel: (state.websiteLabel || '').trim(),
+          ticketsLabel: (state.ticketsLabel || '').trim()
+        };
+      }
+
+      function buildMessagePayload() {
+        const event = buildEventPayload();
+        if (!event.startDate || !event.endDate) {
+          return null;
+        }
+        return {
+          name: event.name,
+          shortName: event.shortName,
+          nickname: event.shortName,
+          tea: event.tea,
+          description: event.description,
+          cover: event.cover,
+          bar: event.bar,
+          venue: event.venue,
+          address: event.address,
+          city: event.city,
+          time: event.time,
+          day: event.day,
+          startDate: event.startDate.toISOString(),
+          endDate: event.endDate.toISOString(),
+          timezone: event.timezone,
+          durationMinutes: event.durationMinutes,
+          coverImage: event.coverImage,
+          image: event.image,
+          website: event.website,
+          tickets: event.tickets,
+          links: event.links,
+          recurring: event.recurring,
+          recurrence: event.recurrence,
+          notChecked: event.notChecked,
+          source: event.source,
+          slug: state.slug || '',
+          websiteLabel: event.websiteLabel,
+          ticketsLabel: event.ticketsLabel
+        };
+      }
+
+      function buildLinks() {
+        const links = [];
+        const addLink = (label, url, type) => {
+          const trimmedUrl = (url || '').trim();
+          if (!trimmedUrl) return;
+          links.push({
+            label: label || type,
+            url: trimmedUrl,
+            type
+          });
+        };
+        addLink(state.websiteLabel || '🌐 More Info', state.website, 'website');
+        addLink(state.ticketsLabel || '🎟 Tickets', state.tickets, 'tickets');
+        return links;
+      }
+      function setupMessaging() {
+        if (dom.calendarIframe) {
+          dom.calendarIframe.addEventListener('load', () => {
+            iframeLoaded = true;
+            calendarReady = false;
+            updateCalendarStatus('Loading calendar…', 'loading');
             setTimeout(() => {
-                sendPixelRatioToIframe();
-                sendTestEventToIframe();
-            }, 1000);
-        });
-        
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            // Recalculate scaling for fake viewports
-            const wrapper = document.querySelector('.iframe-wrapper');
-            const currentWidth = parseInt(wrapper.style.width) || 1200;
-            const fakeIndicator = document.getElementById('fake-size-indicator');
-            
-            if (fakeIndicator.style.display === 'block') {
-                const maxWidth = Math.min(1200, window.innerWidth - 100);
-                const scale = Math.min(1, maxWidth / currentWidth);
-                wrapper.style.transform = `scale(${scale})`;
-                wrapper.style.height = (800 / scale) + 'px';
+              pushEventToCalendar();
+            }, 350);
+          });
+        }
+        window.addEventListener('message', event => {
+          const data = event.data;
+          if (!data || typeof data !== 'object') return;
+          if (data.type === 'calendarInitialized') {
+            if (!data.city || data.city === state.city) {
+              calendarReady = true;
+              updateCalendarStatus('Calendar ready', 'ready');
+              pushEventToCalendar();
             }
-        });
-        
-        // Listen for messages from iframe
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'iframeReady') {
-                console.log('Iframe is ready, sending initial data');
-                sendPixelRatioToIframe();
-                sendTestEventToIframe();
+          }
+          if (data.type === 'testEventRendered') {
+            if (!data.city || data.city === state.city) {
+              calendarReady = true;
+              updateCalendarStatus('Preview updated', 'ready');
             }
+          }
         });
-    </script>
+      }
+
+      function updateCalendarSource(force = false) {
+        if (!dom.calendarIframe) return;
+        const targetCity = state.city || 'new-york';
+        if (!force && currentCalendarCity === targetCity) {
+          return;
+        }
+        currentCalendarCity = targetCity;
+        calendarReady = false;
+        iframeLoaded = false;
+        const newSrc = `../city.html?city=${encodeURIComponent(targetCity)}`;
+        dom.calendarIframe.src = newSrc;
+        updateCalendarStatus('Loading calendar…', 'loading');
+      }
+
+      function updateCalendarStatus(message, status) {
+        if (!dom.calendarStatus) return;
+        dom.calendarStatus.textContent = message;
+        dom.calendarStatus.className = status ? `status-badge status-${status}` : 'status-badge';
+      }
+
+      function parseLocalDateTime(value, timeZone) {
+        if (!value) return null;
+        const [datePart, timePart = '00:00'] = value.split('T');
+        if (!datePart) return null;
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute] = timePart.split(':').map(Number);
+        const utcDate = new Date(Date.UTC(year, (month || 1) - 1, day || 1, hour || 0, minute || 0));
+        return new Date(utcDate.getTime() - getTimeZoneOffset(utcDate, timeZone || browserTimezone));
+      }
+
+      function getTimeZoneOffset(date, timeZone) {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).formatToParts(date);
+        const values = {};
+        parts.forEach(part => {
+          if (part.type !== 'literal') {
+            values[part.type] = part.value;
+          }
+        });
+        const asUTC = Date.UTC(
+          Number(values.year),
+          Number(values.month) - 1,
+          Number(values.day),
+          Number(values.hour),
+          Number(values.minute),
+          Number(values.second || '0')
+        );
+        return asUTC - date.getTime();
+      }
+
+      function formatTimeRange(startDate, endDate, timeZone) {
+        if (!startDate || !endDate) return '';
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: timeZone || browserTimezone,
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        const startParts = formatter.formatToParts(startDate);
+        const endParts = formatter.formatToParts(endDate);
+        const startLabel = formatTimeParts(startParts);
+        const endLabel = formatTimeParts(endParts);
+        return startLabel === endLabel ? startLabel : `${startLabel}-${endLabel}`;
+      }
+
+      function formatTimeParts(parts) {
+        const values = {};
+        parts.forEach(part => {
+          if (part.type !== 'literal') {
+            values[part.type] = part.value;
+          }
+        });
+        const hour = values.hour ? parseInt(values.hour, 10).toString() : '';
+        const minute = values.minute && values.minute !== '00' ? `:${values.minute}` : '';
+        const period = values.dayPeriod ? values.dayPeriod.toUpperCase() : '';
+        return `${hour}${minute}${period}`;
+      }
+
+      function formatInputValue(date) {
+        const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return local.toISOString().slice(0, 16);
+      }
+
+      function sanitizeDateTimeInput(value) {
+        if (typeof value !== 'string') return '';
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(trimmed)) return trimmed.slice(0, 16);
+        return '';
+      }
+
+      function copyToClipboard(text, button) {
+        if (!text) return;
+        const fallbackCopy = () => {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          try {
+            document.execCommand('copy');
+            showTemporaryState(button, 'Copied!');
+          } catch (error) {
+            console.warn('Clipboard copy failed', error);
+          }
+          document.body.removeChild(textarea);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text)
+            .then(() => showTemporaryState(button, 'Copied!'))
+            .catch(() => fallbackCopy());
+        } else {
+          fallbackCopy();
+        }
+      }
+
+      function showTemporaryState(button, message, duration = 1800) {
+        if (!button) return;
+        const original = button.textContent;
+        button.textContent = message;
+        button.disabled = true;
+        setTimeout(() => {
+          button.textContent = original;
+          button.disabled = false;
+        }, duration);
+      }
+
+      function handleAddToCalendar() {
+        const event = buildEventPayload();
+        if (!event.startDate || !event.endDate) {
+          updateCalendarStatus('Add start & end times before exporting', 'warn');
+          return;
+        }
+        const icsContent = generateICS(event);
+        const filename = `${slugify(state.slug || event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
+        const blob = new Blob([icsContent], { type: 'text/calendar' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showTemporaryState(dom.addToCalendarButton, 'ICS ready!');
+      }
+
+      function generateICS(event) {
+        const lines = [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'PRODID:-//chunky.dad//Event Builder//EN',
+          'CALSCALE:GREGORIAN',
+          'METHOD:PUBLISH',
+          'BEGIN:VEVENT',
+          `UID:${slugify(state.slug || event.name || 'chunky-dad')}-${formatICSDate(new Date())}@chunky.dad`,
+          `DTSTAMP:${formatICSDate(new Date())}`,
+          `DTSTART:${formatICSDate(event.startDate)}`,
+          `DTEND:${formatICSDate(event.endDate)}`,
+          `SUMMARY:${escapeICS(event.name)}`
+        ];
+        if (event.description) {
+          lines.push(`DESCRIPTION:${escapeICS(event.description)}`);
+        }
+        const location = [event.bar, event.address].filter(Boolean).join(', ');
+        if (location) {
+          lines.push(`LOCATION:${escapeICS(location)}`);
+        }
+        if (event.website) {
+          lines.push(`URL:${escapeICS(event.website)}`);
+        }
+        if (event.tickets) {
+          lines.push(`X-ALT-DESC:${escapeICS('Tickets: ' + event.tickets)}`);
+        }
+        lines.push('END:VEVENT', 'END:VCALENDAR');
+        return lines.join('\r\n');
+      }
+
+      function formatICSDate(date) {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      }
+
+      function escapeICS(value) {
+        return String(value || '')
+          .replace(/\\/g, '\\\\')
+          .replace(/\r?\n/g, '\\n')
+          .replace(/,/g, '\\,')
+          .replace(/;/g, '\\;');
+      }
+
+      function slugify(value) {
+        return String(value || '')
+          .toLowerCase()
+          .trim()
+          .replace(/[\s_]+/g, '-')
+          .replace(/[^\w-]+/g, '')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 60);
+      }
+    })();
+  </script>
 </body>
 </html>
