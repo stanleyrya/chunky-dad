@@ -3785,8 +3785,8 @@ class DynamicCalendarLoader extends CalendarCore {
                             this.updateCharsPerPixel(event.data.data);
                             break;
                         case 'addTestEvent':
-                            // Handle test event addition if needed
                             logger.info('CALENDAR', 'Test event received from testing interface', event.data.data);
+                            this.addTestEvent(event.data.data);
                             break;
                         default:
                             logger.debug('CALENDAR', 'Unknown message type from testing interface', event.data.type);
@@ -3892,35 +3892,169 @@ class DynamicCalendarLoader extends CalendarCore {
     addTestEvent(testEventData) {
         logger.info('CALENDAR', 'Test event added from test interface', testEventData);
         
+        if (!testEventData || typeof testEventData !== 'object') {
+            logger.warn('CALENDAR', 'Invalid test event payload received from test interface', { testEventData });
+            return;
+        }
+        
         if (!this.allEvents) {
             this.allEvents = [];
         }
         
-        // Create a test event object that matches our event structure
+        const toDate = (value) => {
+            if (!value) return null;
+            const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+            return Number.isNaN(date.getTime()) ? null : date;
+        };
+        
+        const fallbackDurationMinutes = 120;
+        const now = new Date();
+        const startDate = toDate(testEventData.startDate) || now;
+        
+        let endDate = toDate(testEventData.endDate);
+        if (!endDate || endDate <= startDate) {
+            const durationMinutes = parseInt(testEventData.durationMinutes, 10);
+            const duration = Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : fallbackDurationMinutes;
+            endDate = new Date(startDate.getTime() + duration * 60000);
+        }
+        
+        const timezone = testEventData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        const formatTimeComponent = (date) => {
+            const options = { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: timezone };
+            const formatted = date.toLocaleTimeString('en-US', options);
+            return formatted.replace(':00', '').replace(' ', '');
+        };
+        
+        const autoTime = () => {
+            const startLabel = formatTimeComponent(startDate);
+            const endLabel = formatTimeComponent(endDate);
+            if (startLabel === endLabel) {
+                return startLabel;
+            }
+            return `${startLabel}-${endLabel}`;
+        };
+        
+        const timeLabel = testEventData.time && typeof testEventData.time === 'string' && testEventData.time.trim()
+            ? testEventData.time.trim()
+            : autoTime();
+        
+        const slugifyText = (text) => {
+            if (!text) return '';
+            return String(text)
+                .toLowerCase()
+                .trim()
+                .replace(/[\s_]+/g, '-')
+                .replace(/[^\w-]+/g, '')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '')
+                .substring(0, 60);
+        };
+        
+        const slugBase = testEventData.slug || testEventData.shortName || testEventData.name || 'test-event';
+        const slugSuffix = startDate ? startDate.getTime() : Date.now();
+        const slug = `test-event-${slugifyText(slugBase) || 'preview'}-${slugSuffix}`;
+        
+        const uniqueLinks = new Map();
+        const pushLink = (link) => {
+            if (!link || !link.url) return;
+            const trimmedUrl = String(link.url).trim();
+            if (!trimmedUrl) return;
+            if (uniqueLinks.has(trimmedUrl)) return;
+            uniqueLinks.set(trimmedUrl, {
+                label: link.label || link.type || 'Link',
+                url: trimmedUrl,
+                type: link.type || 'link'
+            });
+        };
+        
+        if (Array.isArray(testEventData.links)) {
+            testEventData.links.forEach(pushLink);
+        }
+        
+        if (testEventData.website) {
+            pushLink({
+                label: testEventData.websiteLabel || '🌐 More Info',
+                url: testEventData.website,
+                type: 'website'
+            });
+        }
+        
+        if (testEventData.tickets) {
+            pushLink({
+                label: testEventData.ticketsLabel || '🎟 Tickets',
+                url: testEventData.tickets,
+                type: 'tickets'
+            });
+        }
+        
+        const normalizedLinks = Array.from(uniqueLinks.values());
+        
+        const fallbackVenue = testEventData.bar || testEventData.venue || 'Venue TBA';
+        const dayLabel = testEventData.day || startDate.toLocaleDateString('en-US', { weekday: 'long' });
+        const description = testEventData.tea || testEventData.description || '';
+        
         const testEvent = {
-            name: testEventData.name,
-            shortName: testEventData.shortName,
-            bar: testEventData.venue,
-            time: testEventData.time,
-            day: 'Today',
-            startDate: new Date(),
-            slug: 'test-event-' + Date.now(),
-            recurring: false,
-            coordinates: null,
-            cover: 'Test Event',
-            tea: 'This is a test event for character limit testing',
+            name: testEventData.name || 'Untitled Event',
+            shortName: testEventData.shortName || '',
+            nickname: testEventData.nickname || testEventData.shortName || '',
+            bar: fallbackVenue,
+            venue: fallbackVenue,
+            address: testEventData.address || '',
+            city: testEventData.city || this.currentCity,
+            time: timeLabel,
+            day: dayLabel,
+            startDate,
+            endDate,
+            startTimezone: timezone,
+            endTimezone: timezone,
+            cover: testEventData.cover || '',
+            tea: description,
+            description,
+            coverImage: testEventData.coverImage || null,
             image: testEventData.image || null,
-            links: []
+            heroImage: testEventData.heroImage || null,
+            website: testEventData.website || null,
+            tickets: testEventData.tickets || null,
+            links: normalizedLinks,
+            recurring: Boolean(testEventData.recurring),
+            recurrence: testEventData.recurrence || null,
+            coordinates: testEventData.coordinates || null,
+            eventType: testEventData.eventType || null,
+            notChecked: testEventData.notChecked !== undefined ? Boolean(testEventData.notChecked) : true,
+            source: testEventData.source || 'Event Generator',
+            slug,
+            isTestEvent: true
         };
         
         // Remove any existing test events
-        this.allEvents = this.allEvents.filter(event => !event.slug.startsWith('test-event-'));
+        this.allEvents = this.allEvents.filter(event => !(event.slug && event.slug.startsWith('test-event-')));
         
-        // Add the new test event
+        // Add the new test event at the front of the list
         this.allEvents.unshift(testEvent);
+        
+        // Jump the calendar to the event date and highlight it
+        this.currentDate = new Date(startDate);
+        this.selectedEventSlug = slug;
+        this.selectedEventDateISO = this.formatDateToISO(startDate);
         
         // Refresh the display
         this.updateCalendarDisplay();
+        
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({
+                    type: 'testEventRendered',
+                    slug,
+                    city: this.currentCity,
+                    date: this.formatDateToISO(startDate)
+                }, '*');
+            } catch (error) {
+                logger.debug('CALENDAR', 'Failed to postMessage test event render confirmation to parent window', {
+                    error: error.message
+                });
+            }
+        }
     }
 
 
@@ -3945,6 +4079,19 @@ class DynamicCalendarLoader extends CalendarCore {
             await Promise.race([initPromise, timeoutPromise]);
             this.isInitialized = true;
             logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
+            
+            if (window.parent && window.parent !== window) {
+                try {
+                    window.parent.postMessage({
+                        type: 'calendarInitialized',
+                        city: this.currentCity
+                    }, '*');
+                } catch (messageError) {
+                    logger.debug('CALENDAR', 'Failed to notify parent window about calendar initialization', {
+                        error: messageError.message
+                    });
+                }
+            }
         } catch (error) {
             logger.componentError('CALENDAR', 'Calendar initialization failed', error);
             // Only show error message if the calendar data actually failed to load

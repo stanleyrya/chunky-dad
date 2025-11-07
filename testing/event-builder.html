@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="toolbox-icon" content="🛠️">
+  <meta name="toolbox-description" content="Build chunky.dad calendar events and preview them instantly.">
+  <title>🛠️ chunky.dad Event Builder</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(180deg, #f4f7ff 0%, #ffffff 60%);
+      color: #1d2245;
+    }
+
+    .page-wrapper {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    .hero {
+      margin-bottom: 2.25rem;
+    }
+
+    .hero .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6c63ff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      margin: 0 0 0.75rem;
+      color: #181c35;
+    }
+
+    .hero-text {
+      max-width: 720px;
+      margin: 0;
+      color: #4a4f73;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 1.75rem;
+      box-shadow: 0 16px 45px rgba(19, 24, 56, 0.08);
+      border: 1px solid rgba(102, 114, 172, 0.08);
+    }
+
+    .panel h2 {
+      margin: 0 0 1.25rem;
+      font-size: 1.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #1d2245;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .field-group label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #2a2f54;
+    }
+
+    .field-group small {
+      font-size: 0.78rem;
+      color: #7076a9;
+      line-height: 1.5;
+    }
+
+    .field-group.disabled {
+      opacity: 0.55;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+      font-family: inherit;
+      font-size: 0.95rem;
+      border: 1px solid rgba(112, 125, 169, 0.35);
+      border-radius: 10px;
+      padding: 0.65rem 0.75rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background: #ffffff;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #6c63ff;
+      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+    }
+
+    .input-with-action {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .input-with-action input {
+      flex: 1 1 auto;
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-weight: 500;
+      color: #2a2f54;
+    }
+
+    .duration-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 1.1rem;
+      border-radius: 999px;
+      font-weight: 600;
+      color: #2a2f54;
+      background: rgba(108, 99, 255, 0.12);
+      border: 1px solid rgba(108, 99, 255, 0.35);
+    }
+
+    .duration-badge[data-state="missing"] {
+      background: rgba(255, 193, 7, 0.18);
+      border-color: rgba(255, 193, 7, 0.35);
+      color: #8a6200;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .primary-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 0.95rem;
+      padding: 0.65rem 1.1rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .primary-button {
+      background: linear-gradient(135deg, #6c63ff, #5145cd);
+      color: #ffffff;
+      box-shadow: 0 12px 32px rgba(81, 69, 205, 0.28);
+    }
+
+    .primary-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 15px 36px rgba(81, 69, 205, 0.32);
+    }
+
+    .secondary-button {
+      background: #edf1ff;
+      color: #3d3f68;
+      border: 1px solid rgba(108, 99, 255, 0.3);
+    }
+
+    .secondary-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .ghost-button {
+      background: rgba(108, 99, 255, 0.1);
+      color: #3f47a6;
+      border: 1px solid transparent;
+      padding-inline: 0.9rem;
+    }
+
+    .ghost-button:hover:not(:disabled) {
+      background: rgba(108, 99, 255, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .share-section {
+      margin-top: 1.75rem;
+    }
+
+    .share-section label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      color: #2a2f54;
+    }
+
+    .share-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .share-row input {
+      flex: 1 1 auto;
+      background: #f7f8ff;
+    }
+
+    .calendar-preview-card {
+      border-radius: 16px;
+      border: 1px solid rgba(111, 118, 172, 0.12);
+      background: #f7f8ff;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.1rem 1.2rem;
+      border-bottom: 1px solid rgba(111, 118, 172, 0.12);
+      background: rgba(108, 99, 255, 0.08);
+    }
+
+    .preview-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #1f2340;
+    }
+
+    #calendar-preview {
+      width: 100%;
+      height: 560px;
+      border: none;
+      background: #ffffff;
+    }
+
+    .status-badge {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+
+    .status-loading {
+      background: rgba(108, 99, 255, 0.18);
+      border-color: rgba(108, 99, 255, 0.35);
+      color: #3f47a6;
+    }
+
+    .status-sending {
+      background: rgba(255, 213, 137, 0.25);
+      border-color: rgba(255, 213, 137, 0.4);
+      color: #946300;
+    }
+
+    .status-ready {
+      background: rgba(82, 196, 132, 0.18);
+      border-color: rgba(82, 196, 132, 0.35);
+      color: #146b3a;
+    }
+
+    .status-warn {
+      background: rgba(255, 193, 7, 0.18);
+      border-color: rgba(255, 193, 7, 0.35);
+      color: #8a6200;
+    }
+
+    .status-error {
+      background: rgba(244, 67, 54, 0.18);
+      border-color: rgba(244, 67, 54, 0.35);
+      color: #a12317;
+    }
+
+    .json-preview {
+      margin-top: 1.75rem;
+      border-radius: 16px;
+      border: 1px solid rgba(111, 118, 172, 0.12);
+      background: #fcfdff;
+      overflow: hidden;
+    }
+
+    .json-block {
+      margin: 0;
+      padding: 1.25rem;
+      background: #0f1427;
+      color: #f6f8ff;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    input.is-auto {
+      background: rgba(108, 99, 255, 0.06);
+    }
+
+    @media (max-width: 1080px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .page-wrapper {
+        padding: 1.75rem 1rem 3rem;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .primary-actions {
+        width: 100%;
+      }
+
+      .primary-actions button {
+        flex: 1 1 auto;
+      }
+
+      .share-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="hero">
+      <p class="eyebrow">chunky.dad toolbox</p>
+      <h1>🛠️ Event Builder</h1>
+      <p class="hero-text">
+        Craft chunky.dad calendar events with friendly inputs, preview them instantly, and share a URL that keeps every field in sync. Export a ready-to-import ICS file when you are happy with the details.
+      </p>
+    </header>
+
+    <main class="layout">
+      <section class="panel form-panel">
+        <h2>Event Details</h2>
+        <form id="event-form">
+          <div class="field-grid">
+            <div class="field-group">
+              <label for="event-name">Event Name</label>
+              <input type="text" id="event-name" autocomplete="off" placeholder="Bearracuda Chicago">
+            </div>
+            <div class="field-group">
+              <label for="event-short-name">Card Short Name</label>
+              <input type="text" id="event-short-name" autocomplete="off" placeholder="Bearracuda">
+              <small>Used when the calendar needs a shorter label.</small>
+            </div>
+            <div class="field-group">
+              <label for="event-slug">Slug (optional)</label>
+              <input type="text" id="event-slug" autocomplete="off" placeholder="bearracuda-preview-night">
+              <small>Only if you want to test a specific slug.</small>
+            </div>
+            <div class="field-group">
+              <label for="event-city">City</label>
+              <select id="event-city"></select>
+            </div>
+            <div class="field-group">
+              <label for="event-venue">Venue</label>
+              <input type="text" id="event-venue" autocomplete="off" placeholder="The Eagle NYC">
+            </div>
+            <div class="field-group">
+              <label for="event-address">Address</label>
+              <input type="text" id="event-address" autocomplete="off" placeholder="554 W 28th St, New York, NY">
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="event-description">Tea / Description</label>
+            <textarea id="event-description" placeholder="Chunky bears takeover with DJs, go-go cubs, and midnight surprises."></textarea>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="event-start">Start (local)</label>
+              <input type="datetime-local" id="event-start">
+            </div>
+            <div class="field-group">
+              <label for="event-end">End (local)</label>
+              <input type="datetime-local" id="event-end">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="event-time">Time Label</label>
+              <div class="input-with-action">
+                <input type="text" id="event-time" placeholder="Auto: 9PM-1AM">
+                <button type="button" class="ghost-button" id="auto-time-button" title="Use automatic time label">Use automatic</button>
+              </div>
+              <small id="time-helper">Auto label updates with start/end times.</small>
+            </div>
+            <div class="field-group">
+              <label for="event-timezone">Timezone</label>
+              <div class="input-with-action">
+                <input type="text" id="event-timezone" placeholder="America/New_York">
+                <button type="button" class="ghost-button" id="city-timezone-button" title="Reset to city default">Use city default</button>
+              </div>
+            </div>
+            <div class="field-group duration-group">
+              <label>Duration</label>
+              <span id="duration-badge" class="duration-badge" data-state="missing">Add start &amp; end</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="event-cover">Cover</label>
+              <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
+            </div>
+            <div class="field-group">
+              <label for="event-source">Source</label>
+              <input type="text" id="event-source" autocomplete="off" placeholder="Eventbrite, Facebook, promoter name">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="event-recurring">
+                <span>Recurring event</span>
+              </label>
+            </div>
+            <div class="field-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="event-not-checked" checked>
+                <span>Mark as not checked</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field-group" id="recurrence-group">
+            <label for="event-recurrence">Recurrence rule (RRULE)</label>
+            <input type="text" id="event-recurrence" placeholder="FREQ=WEEKLY;BYDAY=FR">
+            <small>Only used if the event repeats.</small>
+          </div>
+
+          <div class="field-grid">
+            <div class="field-group">
+              <label for="event-website">Website URL</label>
+              <input type="url" id="event-website" placeholder="https://bearracuda.com">
+            </div>
+            <div class="field-group">
+              <label for="event-website-label">Website Label</label>
+              <input type="text" id="event-website-label" placeholder="🌐 More Info">
+            </div>
+            <div class="field-group">
+              <label for="event-tickets">Tickets URL</label>
+              <input type="url" id="event-tickets" placeholder="https://tickets.example.com">
+            </div>
+            <div class="field-group">
+              <label for="event-tickets-label">Tickets Label</label>
+              <input type="text" id="event-tickets-label" placeholder="🎟 Tickets">
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field-group">
+              <label for="event-image">Promo Image URL</label>
+              <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
+            </div>
+            <div class="field-group">
+              <label for="event-cover-image">Cover Image Override</label>
+              <input type="url" id="event-cover-image" placeholder="Optional cover art">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="ghost-button" id="reset-form">Reset to defaults</button>
+            <div class="primary-actions">
+              <button type="button" class="primary-button" id="add-to-calendar">Add to calendar</button>
+              <button type="button" class="secondary-button" id="copy-link">Copy share link</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="share-section">
+          <label for="share-url">Shareable URL</label>
+          <div class="share-row">
+            <input type="text" id="share-url" readonly>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel preview-panel">
+        <div class="calendar-preview-card">
+          <div class="preview-header">
+            <h2>Calendar Preview</h2>
+            <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
+          </div>
+          <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=new-york"></iframe>
+        </div>
+
+        <div class="json-preview">
+          <div class="preview-header">
+            <h2>Event JSON</h2>
+            <button type="button" class="ghost-button" id="copy-json">Copy JSON</button>
+          </div>
+          <pre id="event-json" class="json-block">Add event details to see the generated calendar object.</pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../js/city-config.js"></script>
+  <script>
+    (() => {
+      const DEFAULT_DURATION_MINUTES = 240;
+      const CITY_TIMEZONE_GUESSES = {
+        'atlanta': 'America/New_York',
+        'berlin': 'Europe/Berlin',
+        'boston': 'America/New_York',
+        'chicago': 'America/Chicago',
+        'denver': 'America/Denver',
+        'las-vegas': 'America/Los_Angeles',
+        'london': 'Europe/London',
+        'los-angeles': 'America/Los_Angeles',
+        'new-orleans': 'America/Chicago',
+        'new-york': 'America/New_York',
+        'palm-springs': 'America/Los_Angeles',
+        'phoenix': 'America/Phoenix',
+        'portland': 'America/Los_Angeles',
+        'provincetown': 'America/New_York',
+        'san-diego': 'America/Los_Angeles',
+        'seattle': 'America/Los_Angeles',
+        'sf': 'America/Los_Angeles',
+        'sitges': 'Europe/Madrid',
+        'toronto': 'America/Toronto',
+        'vegas': 'America/Los_Angeles',
+        'philadelphia': 'America/New_York'
+      };
+
+      const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
+
+      const dom = {};
+      let state;
+      let useAutoTimeLabel = true;
+      let timezoneManuallyEdited = false;
+      let calendarReady = false;
+      let iframeLoaded = false;
+      let sendTimeoutId = null;
+      let currentCalendarCity = null;
+
+      document.addEventListener('DOMContentLoaded', init);
+
+      function init() {
+        cacheDom();
+        populateCityOptions();
+        const baseState = createDefaultState();
+        const urlState = loadStateFromUrl(baseState);
+        state = { ...baseState, ...urlState.overrides };
+        useAutoTimeLabel = !urlState.timeProvided;
+        timezoneManuallyEdited = urlState.timezoneProvided;
+        applyCityTimezoneDefaults(state.city, true);
+        if (useAutoTimeLabel) {
+          state.time = '';
+        }
+        ensureDateOrder();
+        applyStateToForm();
+        updateAutoTimeLabel();
+        bindEvents();
+        updateRecurrenceVisibility();
+        updateTimeHelper();
+        updateTimezoneHelper();
+        updateDurationBadge();
+        updateJsonPreview();
+        updateUrl();
+        updateCalendarSource(true);
+        setupMessaging();
+        scheduleEventPush();
+      }
+
+      function cacheDom() {
+        dom.form = document.getElementById('event-form');
+        dom.nameInput = document.getElementById('event-name');
+        dom.shortNameInput = document.getElementById('event-short-name');
+        dom.slugInput = document.getElementById('event-slug');
+        dom.citySelect = document.getElementById('event-city');
+        dom.venueInput = document.getElementById('event-venue');
+        dom.addressInput = document.getElementById('event-address');
+        dom.descriptionInput = document.getElementById('event-description');
+        dom.coverInput = document.getElementById('event-cover');
+        dom.sourceInput = document.getElementById('event-source');
+        dom.startInput = document.getElementById('event-start');
+        dom.endInput = document.getElementById('event-end');
+        dom.timeInput = document.getElementById('event-time');
+        dom.timeHelper = document.getElementById('time-helper');
+        dom.timezoneInput = document.getElementById('event-timezone');
+        dom.autoTimeButton = document.getElementById('auto-time-button');
+        dom.cityTimezoneButton = document.getElementById('city-timezone-button');
+        dom.durationBadge = document.getElementById('duration-badge');
+        dom.recurringCheckbox = document.getElementById('event-recurring');
+        dom.recurrenceInput = document.getElementById('event-recurrence');
+        dom.notCheckedCheckbox = document.getElementById('event-not-checked');
+        dom.websiteInput = document.getElementById('event-website');
+        dom.websiteLabelInput = document.getElementById('event-website-label');
+        dom.ticketsInput = document.getElementById('event-tickets');
+        dom.ticketsLabelInput = document.getElementById('event-tickets-label');
+        dom.imageInput = document.getElementById('event-image');
+        dom.coverImageInput = document.getElementById('event-cover-image');
+        dom.resetButton = document.getElementById('reset-form');
+        dom.addToCalendarButton = document.getElementById('add-to-calendar');
+        dom.copyShareButton = document.getElementById('copy-link');
+        dom.shareUrl = document.getElementById('share-url');
+        dom.copyJsonButton = document.getElementById('copy-json');
+        dom.calendarIframe = document.getElementById('calendar-preview');
+        dom.calendarStatus = document.getElementById('calendar-status');
+        dom.jsonPreview = document.getElementById('event-json');
+      }
+
+      function populateCityOptions() {
+        if (!dom.citySelect) return;
+        let cities = [];
+        if (typeof getAvailableCities === 'function') {
+          cities = getAvailableCities();
+        } else if (typeof CITY_CONFIG === 'object' && CITY_CONFIG) {
+          cities = Object.keys(CITY_CONFIG).map(key => ({
+            key,
+            ...CITY_CONFIG[key]
+          }));
+        } else {
+          cities = Object.keys(CITY_TIMEZONE_GUESSES).map(key => ({
+            key,
+            name: key.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
+          }));
+        }
+        cities.sort((a, b) => {
+          const nameA = (a.name || a.key || '').toLowerCase();
+          const nameB = (b.name || b.key || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+        dom.citySelect.innerHTML = '';
+        cities.forEach(city => {
+          const option = document.createElement('option');
+          option.value = city.key;
+          option.textContent = city.emoji ? `${city.emoji} ${city.name}` : city.name || city.key;
+          dom.citySelect.appendChild(option);
+        });
+      }
+
+      function createDefaultState() {
+        const defaultCity = 'new-york';
+        const start = computeDefaultStart();
+        const end = new Date(start.getTime() + DEFAULT_DURATION_MINUTES * 60000);
+        return {
+          name: 'Bearracuda Preview Night',
+          shortName: 'Bearracuda',
+          slug: '',
+          city: defaultCity,
+          venue: 'The Eagle NYC',
+          address: '554 W 28th St, New York, NY',
+          description: 'Preview your chunky.dad event before it goes live.',
+          cover: '',
+          source: 'Event Generator',
+          start: formatInputValue(start),
+          end: formatInputValue(end),
+          timezone: CITY_TIMEZONE_GUESSES[defaultCity] || browserTimezone,
+          time: '',
+          recurring: false,
+          recurrence: '',
+          notChecked: true,
+          website: '',
+          websiteLabel: '',
+          tickets: '',
+          ticketsLabel: '',
+          image: '',
+          coverImage: ''
+        };
+      }
+
+      function computeDefaultStart() {
+        const now = new Date();
+        const start = new Date(now);
+        const day = start.getDay();
+        const daysUntilFriday = ((5 - day + 7) % 7) || 7;
+        start.setDate(start.getDate() + daysUntilFriday);
+        start.setHours(21, 0, 0, 0);
+        return start;
+      }
+
+      function loadStateFromUrl(baseState) {
+        const params = new URLSearchParams(window.location.search);
+        const overrides = {};
+        let timeProvided = false;
+        let timezoneProvided = false;
+        params.forEach((value, key) => {
+          if (value == null || value === '') return;
+          switch (key) {
+            case 'name':
+              overrides.name = value;
+              break;
+            case 'short':
+              overrides.shortName = value;
+              break;
+            case 'slug':
+              overrides.slug = value;
+              break;
+            case 'city':
+              overrides.city = value;
+              break;
+            case 'venue':
+              overrides.venue = value;
+              break;
+            case 'addr':
+              overrides.address = value;
+              break;
+            case 'desc':
+              overrides.description = value;
+              break;
+            case 'cover':
+              overrides.cover = value;
+              break;
+            case 'source':
+              overrides.source = value;
+              break;
+            case 'start': {
+              const sanitized = sanitizeDateTimeInput(value);
+              if (sanitized) overrides.start = sanitized;
+              break;
+            }
+            case 'end': {
+              const sanitizedEnd = sanitizeDateTimeInput(value);
+              if (sanitizedEnd) overrides.end = sanitizedEnd;
+              break;
+            }
+            case 'tz':
+              overrides.timezone = value;
+              timezoneProvided = true;
+              break;
+            case 'time':
+              overrides.time = value;
+              timeProvided = true;
+              break;
+            case 'repeat':
+              overrides.recurring = value === '1' || value.toLowerCase() === 'true';
+              break;
+            case 'rrule':
+              overrides.recurrence = value;
+              break;
+            case 'web':
+              overrides.website = value;
+              break;
+            case 'weblabel':
+              overrides.websiteLabel = value;
+              break;
+            case 'tickets':
+              overrides.tickets = value;
+              break;
+            case 'tlabel':
+              overrides.ticketsLabel = value;
+              break;
+            case 'img':
+              overrides.image = value;
+              break;
+            case 'coverimg':
+              overrides.coverImage = value;
+              break;
+            case 'checked':
+              overrides.notChecked = !(value === '0' || value.toLowerCase() === 'false');
+              break;
+            default:
+              break;
+          }
+        });
+        if (!overrides.start) overrides.start = baseState.start;
+        if (!overrides.end) overrides.end = baseState.end;
+        if (!overrides.city) overrides.city = baseState.city;
+        return { overrides, timeProvided, timezoneProvided };
+      }
+
+      function applyCityTimezoneDefaults(city, initializing = false) {
+        if (initializing && timezoneManuallyEdited) {
+          return;
+        }
+        const guess = CITY_TIMEZONE_GUESSES[city] || browserTimezone;
+        if (!timezoneManuallyEdited || initializing) {
+          state.timezone = guess;
+          if (dom.timezoneInput) {
+            dom.timezoneInput.value = guess;
+          }
+          if (!initializing) {
+            timezoneManuallyEdited = false;
+          }
+        }
+      }
+
+        function applyStateToForm() {
+          if (dom.nameInput) dom.nameInput.value = state.name || '';
+          if (dom.shortNameInput) dom.shortNameInput.value = state.shortName || '';
+          if (dom.slugInput) dom.slugInput.value = state.slug || '';
+          if (dom.citySelect) {
+            if (![...dom.citySelect.options].some(option => option.value === state.city)) {
+              state.city = dom.citySelect.options.length ? dom.citySelect.options[0].value : 'new-york';
+            }
+            dom.citySelect.value = state.city;
+          }
+          if (dom.venueInput) dom.venueInput.value = state.venue || '';
+          if (dom.addressInput) dom.addressInput.value = state.address || '';
+          if (dom.descriptionInput) dom.descriptionInput.value = state.description || '';
+          if (dom.coverInput) dom.coverInput.value = state.cover || '';
+          if (dom.sourceInput) dom.sourceInput.value = state.source || '';
+          if (dom.startInput) dom.startInput.value = state.start || '';
+          if (dom.endInput) dom.endInput.value = state.end || '';
+          if (!useAutoTimeLabel && dom.timeInput) {
+            dom.timeInput.value = state.time || '';
+          }
+          if (dom.timezoneInput) dom.timezoneInput.value = state.timezone || browserTimezone;
+          if (dom.recurringCheckbox) dom.recurringCheckbox.checked = !!state.recurring;
+          if (dom.recurrenceInput) dom.recurrenceInput.value = state.recurrence || '';
+          if (dom.notCheckedCheckbox) dom.notCheckedCheckbox.checked = state.notChecked !== false;
+          if (dom.websiteInput) dom.websiteInput.value = state.website || '';
+          if (dom.websiteLabelInput) dom.websiteLabelInput.value = state.websiteLabel || '';
+          if (dom.ticketsInput) dom.ticketsInput.value = state.tickets || '';
+          if (dom.ticketsLabelInput) dom.ticketsLabelInput.value = state.ticketsLabel || '';
+          if (dom.imageInput) dom.imageInput.value = state.image || '';
+          if (dom.coverImageInput) dom.coverImageInput.value = state.coverImage || '';
+          updateTimeHelper();
+          updateTimezoneHelper();
+        }
+
+      function bindEvents() {
+        if (dom.form) {
+          dom.form.addEventListener('submit', event => event.preventDefault());
+        }
+        if (dom.nameInput) {
+          dom.nameInput.addEventListener('input', event => {
+            state.name = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.shortNameInput) {
+          dom.shortNameInput.addEventListener('input', event => {
+            state.shortName = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.slugInput) {
+          dom.slugInput.addEventListener('input', event => {
+            state.slug = event.target.value.trim();
+            updateUrl();
+          });
+        }
+        if (dom.citySelect) {
+          dom.citySelect.addEventListener('change', event => {
+            const newCity = event.target.value;
+            state.city = newCity;
+            applyCityTimezoneDefaults(newCity);
+            updateCalendarSource();
+            refreshUi();
+          });
+        }
+        if (dom.venueInput) {
+          dom.venueInput.addEventListener('input', event => {
+            state.venue = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.addressInput) {
+          dom.addressInput.addEventListener('input', event => {
+            state.address = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.descriptionInput) {
+          dom.descriptionInput.addEventListener('input', event => {
+            state.description = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.coverInput) {
+          dom.coverInput.addEventListener('input', event => {
+            state.cover = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.sourceInput) {
+          dom.sourceInput.addEventListener('input', event => {
+            state.source = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.startInput) {
+          const handler = event => {
+            const sanitized = sanitizeDateTimeInput(event.target.value);
+            if (!sanitized) {
+              event.target.value = state.start;
+              return;
+            }
+            state.start = sanitized;
+            refreshUi();
+          };
+          dom.startInput.addEventListener('change', handler);
+          dom.startInput.addEventListener('input', handler);
+        }
+        if (dom.endInput) {
+          const handler = event => {
+            const sanitized = sanitizeDateTimeInput(event.target.value);
+            if (!sanitized) {
+              event.target.value = state.end;
+              return;
+            }
+            state.end = sanitized;
+            refreshUi();
+          };
+          dom.endInput.addEventListener('change', handler);
+          dom.endInput.addEventListener('input', handler);
+        }
+        if (dom.timeInput) {
+          dom.timeInput.addEventListener('input', event => {
+            useAutoTimeLabel = false;
+            state.time = event.target.value;
+            updateTimeHelper();
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.autoTimeButton) {
+          dom.autoTimeButton.addEventListener('click', () => {
+            useAutoTimeLabel = true;
+            updateAutoTimeLabel();
+            updateTimeHelper();
+            refreshUi();
+          });
+        }
+        if (dom.timezoneInput) {
+          dom.timezoneInput.addEventListener('input', event => {
+            timezoneManuallyEdited = true;
+            state.timezone = event.target.value || browserTimezone;
+            updateTimezoneHelper();
+            refreshUi();
+          });
+        }
+        if (dom.cityTimezoneButton) {
+          dom.cityTimezoneButton.addEventListener('click', () => {
+            timezoneManuallyEdited = false;
+            applyCityTimezoneDefaults(state.city);
+            updateTimezoneHelper();
+            refreshUi();
+          });
+        }
+        if (dom.recurringCheckbox) {
+          dom.recurringCheckbox.addEventListener('change', event => {
+            state.recurring = event.target.checked;
+            updateRecurrenceVisibility();
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.recurrenceInput) {
+          dom.recurrenceInput.addEventListener('input', event => {
+            state.recurrence = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.notCheckedCheckbox) {
+          dom.notCheckedCheckbox.addEventListener('change', event => {
+            state.notChecked = event.target.checked;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.websiteInput) {
+          dom.websiteInput.addEventListener('input', event => {
+            state.website = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.websiteLabelInput) {
+          dom.websiteLabelInput.addEventListener('input', event => {
+            state.websiteLabel = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.ticketsInput) {
+          dom.ticketsInput.addEventListener('input', event => {
+            state.tickets = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.ticketsLabelInput) {
+          dom.ticketsLabelInput.addEventListener('input', event => {
+            state.ticketsLabel = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.imageInput) {
+          dom.imageInput.addEventListener('input', event => {
+            state.image = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.coverImageInput) {
+          dom.coverImageInput.addEventListener('input', event => {
+            state.coverImage = event.target.value;
+            refreshUi({ skipAutoTime: true });
+          });
+        }
+        if (dom.resetButton) {
+          dom.resetButton.addEventListener('click', resetForm);
+        }
+        if (dom.copyShareButton) {
+          dom.copyShareButton.addEventListener('click', () => {
+            copyToClipboard(dom.shareUrl ? dom.shareUrl.value : '', dom.copyShareButton);
+          });
+        }
+        if (dom.copyJsonButton) {
+          dom.copyJsonButton.addEventListener('click', () => {
+            copyToClipboard(dom.jsonPreview ? dom.jsonPreview.textContent : '', dom.copyJsonButton);
+          });
+        }
+        if (dom.addToCalendarButton) {
+          dom.addToCalendarButton.addEventListener('click', handleAddToCalendar);
+        }
+      }
+
+      function resetForm() {
+        const preservedCity = state.city;
+        const hadManualTimezone = timezoneManuallyEdited;
+        state = createDefaultState();
+        state.city = preservedCity;
+        timezoneManuallyEdited = hadManualTimezone;
+        if (!hadManualTimezone) {
+          applyCityTimezoneDefaults(state.city);
+        } else if (dom.timezoneInput) {
+          dom.timezoneInput.value = state.timezone;
+        }
+        useAutoTimeLabel = true;
+        applyStateToForm();
+        updateAutoTimeLabel();
+        refreshUi();
+        scheduleEventPush();
+      }
+
+      function updateRecurrenceVisibility() {
+        if (!dom.recurrenceInput) return;
+        const enabled = !!state.recurring;
+        dom.recurrenceInput.disabled = !enabled;
+        const container = dom.recurrenceInput.parentElement;
+        if (container) {
+          container.classList.toggle('disabled', !enabled);
+        }
+      }
+
+      function updateTimeHelper() {
+        if (dom.timeHelper) {
+          dom.timeHelper.textContent = useAutoTimeLabel
+            ? 'Auto label updates with start/end times.'
+            : 'Manual label stays exactly as you type.';
+        }
+        if (dom.autoTimeButton) {
+          dom.autoTimeButton.disabled = useAutoTimeLabel;
+        }
+        if (dom.timeInput) {
+          dom.timeInput.classList.toggle('is-auto', useAutoTimeLabel);
+        }
+      }
+
+      function updateTimezoneHelper() {
+        if (dom.cityTimezoneButton) {
+          dom.cityTimezoneButton.disabled = !timezoneManuallyEdited;
+        }
+      }
+
+      function ensureDateOrder() {
+        if (!state.start) {
+          state.start = formatInputValue(new Date());
+        }
+        if (!state.end) {
+          const startDate = parseLocalDateTime(state.start, state.timezone);
+          if (startDate) {
+            const fallback = new Date(startDate.getTime() + DEFAULT_DURATION_MINUTES * 60000);
+            state.end = formatInputValue(fallback);
+          }
+        }
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const endDate = parseLocalDateTime(state.end, state.timezone);
+        if (startDate && endDate && endDate <= startDate) {
+          const newEnd = new Date(startDate.getTime() + DEFAULT_DURATION_MINUTES * 60000);
+          state.end = formatInputValue(newEnd);
+          if (dom.endInput) {
+            dom.endInput.value = state.end;
+          }
+        }
+      }
+
+      function updateAutoTimeLabel() {
+        if (!useAutoTimeLabel || !dom.timeInput) return;
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const endDate = parseLocalDateTime(state.end, state.timezone);
+        if (!startDate || !endDate) {
+          dom.timeInput.value = '';
+          state.time = '';
+          return;
+        }
+        const label = formatTimeRange(startDate, endDate, state.timezone);
+        state.time = label;
+        dom.timeInput.value = label;
+      }
+
+      function updateDurationBadge() {
+        if (!dom.durationBadge) return;
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const endDate = parseLocalDateTime(state.end, state.timezone);
+        if (!startDate || !endDate) {
+          dom.durationBadge.textContent = 'Add start & end';
+          dom.durationBadge.dataset.state = 'missing';
+          return;
+        }
+        const minutes = Math.max(0, Math.round((endDate - startDate) / 60000));
+        if (!minutes) {
+          dom.durationBadge.textContent = 'Duration TBD';
+          dom.durationBadge.dataset.state = 'missing';
+          return;
+        }
+        const hours = Math.floor(minutes / 60);
+        const remainder = minutes % 60;
+        const parts = [];
+        if (hours) parts.push(`${hours} hr${hours === 1 ? '' : 's'}`);
+        if (remainder) parts.push(`${remainder} min`);
+        dom.durationBadge.textContent = parts.join(' ') || `${minutes} min`;
+        dom.durationBadge.dataset.state = 'ready';
+      }
+
+      function updateJsonPreview() {
+        if (!dom.jsonPreview) return;
+        const event = buildEventPayload();
+        if (!event.startDate || !event.endDate) {
+          dom.jsonPreview.textContent = 'Add start and end times to see the generated calendar object.';
+          return;
+        }
+        const preview = {
+          name: event.name,
+          shortName: event.shortName,
+          time: event.time,
+          day: event.day,
+          bar: event.bar,
+          address: event.address,
+          cover: event.cover,
+          tea: event.tea,
+          startDate: event.startDate.toISOString(),
+          endDate: event.endDate.toISOString(),
+          timezone: event.timezone,
+          links: event.links,
+          recurring: event.recurring,
+          recurrence: event.recurrence,
+          notChecked: event.notChecked,
+          source: event.source,
+          durationMinutes: event.durationMinutes
+        };
+        if (event.coverImage) preview.coverImage = event.coverImage;
+        if (event.image) preview.image = event.image;
+        if (state.slug) preview.slug = state.slug;
+        dom.jsonPreview.textContent = JSON.stringify(preview, null, 2);
+      }
+
+      function updateUrl() {
+        const params = new URLSearchParams();
+        if (state.name) params.set('name', state.name);
+        if (state.shortName) params.set('short', state.shortName);
+        if (state.slug) params set('slug', state.slug);
+        if (state.city) params.set('city', state.city);
+        if (state.venue) params.set('venue', state.venue);
+        if (state.address) params.set('addr', state.address);
+        if (state.description) params.set('desc', state.description);
+        if (state.cover) params.set('cover', state.cover);
+        if (state.source && state.source !== 'Event Generator') params.set('source', state.source);
+        if (state.start) params.set('start', state.start);
+        if (state.end) params.set('end', state.end);
+        if (state.timezone) params.set('tz', state.timezone);
+        if (!useAutoTimeLabel && state.time) params.set('time', state.time);
+        if (state.recurring) params.set('repeat', '1');
+        if (state.recurrence) params.set('rrule', state.recurrence);
+        if (state.website) params.set('web', state.website);
+        if (state.websiteLabel) params.set('weblabel', state.websiteLabel);
+        if (state.tickets) params.set('tickets', state.tickets);
+        if (state.ticketsLabel) params.set('tlabel', state.ticketsLabel);
+        if (state.image) params.set('img', state.image);
+        if (state.coverImage) params.set('coverimg', state.coverImage);
+        if (state.notChecked === false) params.set('checked', '0');
+        const sorted = new URLSearchParams();
+        [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
+        const query = sorted.toString();
+        const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+        updateShareUrl();
+      }
+
+      function updateShareUrl() {
+        if (dom.shareUrl) {
+          dom.shareUrl.value = window.location.href;
+        }
+      }
+
+      function refreshUi(options = {}) {
+        ensureDateOrder();
+        if (!options.skipAutoTime) {
+          updateAutoTimeLabel();
+        }
+        updateDurationBadge();
+        updateTimeHelper();
+        updateTimezoneHelper();
+        updateRecurrenceVisibility();
+        updateJsonPreview();
+        updateUrl();
+        scheduleEventPush();
+      }
+
+      function scheduleEventPush() {
+        if (!dom.calendarIframe) return;
+        if (sendTimeoutId) {
+          clearTimeout(sendTimeoutId);
+        }
+        sendTimeoutId = setTimeout(() => {
+          sendTimeoutId = null;
+          pushEventToCalendar();
+        }, 200);
+      }
+
+      function pushEventToCalendar() {
+        if (!dom.calendarIframe || !dom.calendarIframe.contentWindow) return;
+        const payload = buildMessagePayload();
+        if (!payload) {
+          updateCalendarStatus('Add start & end times to preview', 'warn');
+          return;
+        }
+        updateCalendarStatus('Updating preview…', 'sending');
+        try {
+          dom.calendarIframe.contentWindow.postMessage({
+            type: 'addTestEvent',
+            data: payload
+          }, '*');
+        } catch (error) {
+          console.error('Failed to send event to calendar iframe', error);
+          updateCalendarStatus('Could not reach preview', 'error');
+        }
+      }
+
+      function buildEventPayload() {
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const endDate = parseLocalDateTime(state.end, state.timezone);
+        const computedLabel = formatTimeRange(startDate, endDate, state.timezone);
+        const timeLabel = useAutoTimeLabel ? computedLabel : (state.time || computedLabel);
+        const dayLabel = startDate
+          ? startDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: state.timezone || browserTimezone })
+          : '';
+        const durationMinutes = startDate && endDate
+          ? Math.max(1, Math.round((endDate - startDate) / 60000))
+          : DEFAULT_DURATION_MINUTES;
+        const links = buildLinks();
+        return {
+          name: (state.name || '').trim(),
+          shortName: (state.shortName || '').trim(),
+          tea: (state.description || '').trim(),
+          description: (state.description || '').trim(),
+          cover: (state.cover || '').trim(),
+          bar: (state.venue || 'Venue TBA').trim(),
+          venue: (state.venue || 'Venue TBA').trim(),
+          address: (state.address || '').trim(),
+          city: state.city,
+          time: timeLabel,
+          day: dayLabel,
+          startDate,
+          endDate,
+          timezone: state.timezone || browserTimezone,
+          coverImage: (state.coverImage || '').trim() || null,
+          image: (state.image || '').trim() || null,
+          website: (state.website || '').trim() || null,
+          tickets: (state.tickets || '').trim() || null,
+          links,
+          recurring: Boolean(state.recurring),
+          recurrence: (state.recurrence || '').trim(),
+          notChecked: state.notChecked !== false,
+          source: (state.source || 'Event Generator').trim(),
+          durationMinutes,
+          websiteLabel: (state.websiteLabel || '').trim(),
+          ticketsLabel: (state.ticketsLabel || '').trim()
+        };
+      }
+
+      function buildMessagePayload() {
+        const event = buildEventPayload();
+        if (!event.startDate || !event.endDate) {
+          return null;
+        }
+        return {
+          name: event.name,
+          shortName: event.shortName,
+          nickname: event.shortName,
+          tea: event.tea,
+          description: event.description,
+          cover: event.cover,
+          bar: event.bar,
+          venue: event.venue,
+          address: event.address,
+          city: event.city,
+          time: event.time,
+          day: event.day,
+          startDate: event.startDate.toISOString(),
+          endDate: event.endDate.toISOString(),
+          timezone: event.timezone,
+          durationMinutes: event.durationMinutes,
+          coverImage: event.coverImage,
+          image: event.image,
+          website: event.website,
+          tickets: event.tickets,
+          links: event.links,
+          recurring: event.recurring,
+          recurrence: event.recurrence,
+          notChecked: event.notChecked,
+          source: event.source,
+          slug: state.slug || '',
+          websiteLabel: event.websiteLabel,
+          ticketsLabel: event.ticketsLabel
+        };
+      }
+
+      function buildLinks() {
+        const links = [];
+        const addLink = (label, url, type) => {
+          const trimmedUrl = (url || '').trim();
+          if (!trimmedUrl) return;
+          links.push({
+            label: label || type,
+            url: trimmedUrl,
+            type
+          });
+        };
+        addLink(state.websiteLabel || '🌐 More Info', state.website, 'website');
+        addLink(state.ticketsLabel || '🎟 Tickets', state.tickets, 'tickets');
+        return links;
+      }
+      function setupMessaging() {
+        if (dom.calendarIframe) {
+          dom.calendarIframe.addEventListener('load', () => {
+            iframeLoaded = true;
+            calendarReady = false;
+            updateCalendarStatus('Loading calendar…', 'loading');
+            setTimeout(() => {
+              pushEventToCalendar();
+            }, 350);
+          });
+        }
+        window.addEventListener('message', event => {
+          const data = event.data;
+          if (!data || typeof data !== 'object') return;
+          if (data.type === 'calendarInitialized') {
+            if (!data.city || data.city === state.city) {
+              calendarReady = true;
+              updateCalendarStatus('Calendar ready', 'ready');
+              pushEventToCalendar();
+            }
+          }
+          if (data.type === 'testEventRendered') {
+            if (!data.city || data.city === state.city) {
+              calendarReady = true;
+              updateCalendarStatus('Preview updated', 'ready');
+            }
+          }
+        });
+      }
+
+      function updateCalendarSource(force = false) {
+        if (!dom.calendarIframe) return;
+        const targetCity = state.city || 'new-york';
+        if (!force && currentCalendarCity === targetCity) {
+          return;
+        }
+        currentCalendarCity = targetCity;
+        calendarReady = false;
+        iframeLoaded = false;
+        const newSrc = `../city.html?city=${encodeURIComponent(targetCity)}`;
+        dom.calendarIframe.src = newSrc;
+        updateCalendarStatus('Loading calendar…', 'loading');
+      }
+
+      function updateCalendarStatus(message, status) {
+        if (!dom.calendarStatus) return;
+        dom.calendarStatus.textContent = message;
+        dom.calendarStatus.className = status ? `status-badge status-${status}` : 'status-badge';
+      }
+
+      function parseLocalDateTime(value, timeZone) {
+        if (!value) return null;
+        const [datePart, timePart = '00:00'] = value.split('T');
+        if (!datePart) return null;
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute] = timePart.split(':').map(Number);
+        const utcDate = new Date(Date.UTC(year, (month || 1) - 1, day || 1, hour || 0, minute || 0));
+        return new Date(utcDate.getTime() - getTimeZoneOffset(utcDate, timeZone || browserTimezone));
+      }
+
+      function getTimeZoneOffset(date, timeZone) {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).formatToParts(date);
+        const values = {};
+        parts.forEach(part => {
+          if (part.type !== 'literal') {
+            values[part.type] = part.value;
+          }
+        });
+        const asUTC = Date.UTC(
+          Number(values.year),
+          Number(values.month) - 1,
+          Number(values.day),
+          Number(values.hour),
+          Number(values.minute),
+          Number(values.second || '0')
+        );
+        return asUTC - date.getTime();
+      }
+
+      function formatTimeRange(startDate, endDate, timeZone) {
+        if (!startDate || !endDate) return '';
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: timeZone || browserTimezone,
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        const startParts = formatter.formatToParts(startDate);
+        const endParts = formatter.formatToParts(endDate);
+        const startLabel = formatTimeParts(startParts);
+        const endLabel = formatTimeParts(endParts);
+        return startLabel === endLabel ? startLabel : `${startLabel}-${endLabel}`;
+      }
+
+      function formatTimeParts(parts) {
+        const values = {};
+        parts.forEach(part => {
+          if (part.type !== 'literal') {
+            values[part.type] = part.value;
+          }
+        });
+        const hour = values.hour ? parseInt(values.hour, 10).toString() : '';
+        const minute = values.minute && values.minute !== '00' ? `:${values.minute}` : '';
+        const period = values.dayPeriod ? values.dayPeriod.toUpperCase() : '';
+        return `${hour}${minute}${period}`;
+      }
+
+      function formatInputValue(date) {
+        const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return local.toISOString().slice(0, 16);
+      }
+
+      function sanitizeDateTimeInput(value) {
+        if (typeof value !== 'string') return '';
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(trimmed)) return trimmed.slice(0, 16);
+        return '';
+      }
+
+      function copyToClipboard(text, button) {
+        if (!text) return;
+        const fallbackCopy = () => {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          try {
+            document.execCommand('copy');
+            showTemporaryState(button, 'Copied!');
+          } catch (error) {
+            console.warn('Clipboard copy failed', error);
+          }
+          document.body.removeChild(textarea);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text)
+            .then(() => showTemporaryState(button, 'Copied!'))
+            .catch(() => fallbackCopy());
+        } else {
+          fallbackCopy();
+        }
+      }
+
+      function showTemporaryState(button, message, duration = 1800) {
+        if (!button) return;
+        const original = button.textContent;
+        button.textContent = message;
+        button.disabled = true;
+        setTimeout(() => {
+          button.textContent = original;
+          button.disabled = false;
+        }, duration);
+      }
+
+      function handleAddToCalendar() {
+        const event = buildEventPayload();
+        if (!event.startDate || !event.endDate) {
+          updateCalendarStatus('Add start & end times before exporting', 'warn');
+          return;
+        }
+        const icsContent = generateICS(event);
+        const filename = `${slugify(state.slug || event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
+        const blob = new Blob([icsContent], { type: 'text/calendar' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showTemporaryState(dom.addToCalendarButton, 'ICS ready!');
+      }
+
+      function generateICS(event) {
+        const lines = [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'PRODID:-//chunky.dad//Event Builder//EN',
+          'CALSCALE:GREGORIAN',
+          'METHOD:PUBLISH',
+          'BEGIN:VEVENT',
+          `UID:${slugify(state.slug || event.name || 'chunky-dad')}-${formatICSDate(new Date())}@chunky.dad`,
+          `DTSTAMP:${formatICSDate(new Date())}`,
+          `DTSTART:${formatICSDate(event.startDate)}`,
+          `DTEND:${formatICSDate(event.endDate)}`,
+          `SUMMARY:${escapeICS(event.name)}`
+        ];
+        if (event.description) {
+          lines.push(`DESCRIPTION:${escapeICS(event.description)}`);
+        }
+        const location = [event.bar, event.address].filter(Boolean).join(', ');
+        if (location) {
+          lines.push(`LOCATION:${escapeICS(location)}`);
+        }
+        if (event.website) {
+          lines.push(`URL:${escapeICS(event.website)}`);
+        }
+        if (event.tickets) {
+          lines.push(`X-ALT-DESC:${escapeICS('Tickets: ' + event.tickets)}`);
+        }
+        lines.push('END:VEVENT', 'END:VCALENDAR');
+        return lines.join('\r\n');
+      }
+
+      function formatICSDate(date) {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      }
+
+      function escapeICS(value) {
+        return String(value || '')
+          .replace(/\\/g, '\\\\')
+          .replace(/\r?\n/g, '\\n')
+          .replace(/,/g, '\\,')
+          .replace(/;/g, '\\;');
+      }
+
+      function slugify(value) {
+        return String(value || '')
+          .toLowerCase()
+          .trim()
+          .replace(/[\s_]+/g, '-')
+          .replace(/[^\w-]+/g, '')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 60);
+      }
+    })();
+  </script>
+</body>
+</html>
