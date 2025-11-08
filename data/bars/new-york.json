@@ -30,7 +30,12 @@
   {
     "name": "Ty's",
     "city": "new-york",
-    "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc"
+    "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
+    "address": "114 Christopher St, New York, NY 10014",
+    "coordinates": "40.7330387, -74.0052985",
+    "instagram": "https://www.instagram.com/tysbar",
+    "facebook": "https://www.facebook.com/TysNYC",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY"
   },
   {
     "name": "Nowhere Bar",
