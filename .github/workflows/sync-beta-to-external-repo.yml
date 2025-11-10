@@ -1,0 +1,89 @@
+name: Sync Beta Branch to chunky-dad-beta
+
+on:
+  push:
+    branches:
+      - '**/beta*'
+      - 'beta'
+    paths-ignore:
+      - '.github/workflows/sync-beta-to-external-repo.yml'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to sync (defaults to beta branch)'
+        required: false
+        default: 'beta'
+      force_push:
+        description: 'Force push (use with caution)'
+        required: false
+        default: 'false'
+
+jobs:
+  sync-to-external-repo:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout source branch (push event)
+      if: github.event_name == 'push'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Determine branch for workflow_dispatch
+      if: github.event_name == 'workflow_dispatch'
+      id: branch
+      run: |
+        if [ -n "${{ github.event.inputs.branch }}" ] && [ "${{ github.event.inputs.branch }}" != "" ]; then
+          SOURCE_BRANCH="${{ github.event.inputs.branch }}"
+        else
+          SOURCE_BRANCH="beta"
+        fi
+        echo "branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
+        echo "Source branch: $SOURCE_BRANCH"
+    
+    - name: Checkout source branch (workflow_dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ steps.branch.outputs.branch }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Get current branch name
+      id: current_branch
+      run: |
+        BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+        echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        echo "Current branch: $BRANCH_NAME"
+    
+    - name: Configure git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+    
+    - name: Add external repository remote
+      run: |
+        git remote add external https://${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git || true
+        git remote set-url external https://${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git
+    
+    - name: Push to external repository
+      run: |
+        SOURCE_BRANCH="${{ steps.current_branch.outputs.branch }}"
+        echo "Syncing branch: $SOURCE_BRANCH"
+        
+        # Fetch latest from external repo to check for conflicts
+        git fetch external main || echo "External repo main branch doesn't exist yet, will create it"
+        
+        if [ "${{ github.event.inputs.force_push }}" == "true" ]; then
+          echo "Force pushing $SOURCE_BRANCH to external repository main branch..."
+          git push external $SOURCE_BRANCH:main --force
+        else
+          echo "Pushing $SOURCE_BRANCH to external repository main branch..."
+          git push external $SOURCE_BRANCH:main
+        fi
+        
+        echo "✓ Successfully synced $SOURCE_BRANCH to chunky-dad-beta repository"
