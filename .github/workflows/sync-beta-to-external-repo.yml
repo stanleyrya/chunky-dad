@@ -3,7 +3,6 @@ name: Sync Beta Branch to chunky-dad-beta
 on:
   push:
     branches:
-      - '**/beta*'
       - 'beta'
     paths-ignore:
       - '.github/workflows/sync-beta-to-external-repo.yml'
@@ -13,10 +12,6 @@ on:
         description: 'Branch to sync (defaults to beta branch)'
         required: false
         default: 'beta'
-      force_push:
-        description: 'Force push (use with caution)'
-        required: false
-        default: 'false'
 
 jobs:
   sync-to-external-repo:
@@ -75,15 +70,11 @@ jobs:
         SOURCE_BRANCH="${{ steps.current_branch.outputs.branch }}"
         echo "Syncing branch: $SOURCE_BRANCH"
         
-        # Fetch latest from external repo to check for conflicts
+        # Fetch latest from external repo (for reference, but we'll overwrite)
         git fetch external main || echo "External repo main branch doesn't exist yet, will create it"
         
-        if [ "${{ github.event.inputs.force_push }}" == "true" ]; then
-          echo "Force pushing $SOURCE_BRANCH to external repository main branch..."
-          git push external $SOURCE_BRANCH:main --force
-        else
-          echo "Pushing $SOURCE_BRANCH to external repository main branch..."
-          git push external $SOURCE_BRANCH:main
-        fi
+        # Always force push to overwrite any conflicts (they would be caused by a bug)
+        echo "Force pushing $SOURCE_BRANCH to external repository main branch..."
+        git push external $SOURCE_BRANCH:main --force
         
         echo "✓ Successfully synced $SOURCE_BRANCH to chunky-dad-beta repository"
