@@ -59,11 +59,14 @@ jobs:
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        # Unset the credential helper to prevent using cached GITHUB_TOKEN
+        git config --global --unset credential.helper || true
+        git config --local --unset credential.helper || true
     
     - name: Add external repository remote
       run: |
-        git remote add external https://${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git || true
-        git remote set-url external https://${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git
+        git remote add external https://x-access-token:${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git || true
+        git remote set-url external https://x-access-token:${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git
     
     - name: Create filtered branch excluding scripts and .github directories
       id: filtered_branch
