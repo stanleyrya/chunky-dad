@@ -288,7 +288,7 @@ const scraperConfig = {
         cover: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
-        shortName: { value: "TWISTED-BEAR" },
+        shortName: { value: "TWIST-ED BEAR" },
         instagram: { value: "https://www.instagram.com/twistedbearparty" },
         facebook: { value: "https://www.facebook.com/twistedglobal/" }
       }
