@@ -65,16 +65,53 @@ jobs:
         git remote add external https://${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git || true
         git remote set-url external https://${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git
     
-    - name: Push to external repository
+    - name: Create filtered branch excluding scripts and .github directories
+      id: filtered_branch
       run: |
         SOURCE_BRANCH="${{ steps.current_branch.outputs.branch }}"
-        echo "Syncing branch: $SOURCE_BRANCH"
+        FILTERED_BRANCH="${SOURCE_BRANCH}-filtered-$(date +%s)"
+        
+        # Create a new branch from the source branch
+        git checkout -b "$FILTERED_BRANCH"
+        
+        # Remove scripts/ and .github/ directories from the index (if they exist)
+        HAS_CHANGES=false
+        
+        # Check and remove scripts/ directory
+        if git ls-files scripts/ | grep -q .; then
+          git rm -r --cached scripts/ 2>/dev/null || true
+          HAS_CHANGES=true
+        fi
+        
+        # Check and remove .github/ directory
+        if git ls-files .github/ | grep -q .; then
+          git rm -r --cached .github/ 2>/dev/null || true
+          HAS_CHANGES=true
+        fi
+        
+        # Only commit if there are staged changes
+        if [ "$HAS_CHANGES" = true ] && ! git diff --cached --quiet; then
+          git commit -m "chore: exclude scripts and .github directories for external sync"
+          echo "Removed scripts/ and .github/ directories from filtered branch"
+        else
+          echo "No changes to commit (directories already excluded or not present)"
+        fi
+        
+        echo "filtered_branch=$FILTERED_BRANCH" >> $GITHUB_OUTPUT
+        echo "Created filtered branch: $FILTERED_BRANCH"
+    
+    - name: Push filtered branch to external repository
+      run: |
+        SOURCE_BRANCH="${{ steps.current_branch.outputs.branch }}"
+        FILTERED_BRANCH="${{ steps.filtered_branch.outputs.filtered_branch }}"
+        
+        echo "Syncing filtered branch: $FILTERED_BRANCH (excluding scripts/ and .github/)"
         
         # Fetch latest from external repo (for reference, but we'll overwrite)
         git fetch external main || echo "External repo main branch doesn't exist yet, will create it"
         
         # Always force push to overwrite any conflicts (they would be caused by a bug)
-        echo "Force pushing $SOURCE_BRANCH to external repository main branch..."
-        git push external $SOURCE_BRANCH:main --force
+        echo "Force pushing filtered $SOURCE_BRANCH to external repository main branch..."
+        git push external $FILTERED_BRANCH:main --force
         
-        echo "✓ Successfully synced $SOURCE_BRANCH to chunky-dad-beta repository"
+        echo "✓ Successfully synced $SOURCE_BRANCH (excluding scripts/ and .github/) to chunky-dad-beta repository"
