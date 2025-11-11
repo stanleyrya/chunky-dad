@@ -16,8 +16,6 @@ on:
 jobs:
   sync-to-external-repo:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read  # only read for the source repo, we use PAT for the target repo
     
     steps:
     - name: Checkout source branch
@@ -25,57 +23,56 @@ jobs:
       with:
         fetch-depth: 0
         ref: ${{ github.event.inputs.branch || 'beta' }}
+        path: source-repo
     
-    - name: Configure git
+    - name: Create filtered copy excluding scripts and .github directories
       run: |
-        git config --global user.name "github-actions[bot]"
+        cd source-repo
+        
+        # Copy everything except scripts/ and .github/ to a temporary directory
+        mkdir -p ../filtered-content
+        rsync -av --exclude='scripts/' --exclude='.github/' --exclude='.git/' . ../filtered-content/
+        
+        echo "✓ Created filtered copy of source repository"
+    
+    - name: Checkout destination repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta
+        ref: main
+        token: ${{ secrets.BETA_REPO_TOKEN }}
+        path: dest-repo
+    
+    - name: Setup git config
+      run: |
+        cd dest-repo
+        git config --global user.name "GitHub Actions"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global --unset credential.helper || true
-        git config --local --unset credential.helper || true
-
-    - name: Add external repository remote
-      env:
-        BETA_REPO_TOKEN: ${{ secrets.BETA_REPO_TOKEN }}
-        BETA_REPO_OWNER: ${{ secrets.BETA_REPO_OWNER }}
+    
+    - name: Sync filtered content to destination
       run: |
-        git remote remove external 2>/dev/null || true
-        git remote add external https://x-access-token:${BETA_REPO_TOKEN}@github.com/${BETA_REPO_OWNER}/chunky-dad-beta.git
-        git remote -v
-
-    - name: Create filtered branch excluding scripts and .github directories
-      id: filtered_branch
-      run: |
-        SOURCE_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        FILTERED_BRANCH="${SOURCE_BRANCH}-filtered-$(date +%s)"
+        # Remove all files from destination (except .git)
+        cd dest-repo
+        find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
         
-        git checkout -b "$FILTERED_BRANCH"
+        # Copy filtered content
+        cp -r ../filtered-content/* .
         
-        HAS_CHANGES=false
-        if git ls-files scripts/ | grep -q .; then
-          git rm -r --cached scripts/ || true
-          HAS_CHANGES=true
-        fi
-        if git ls-files .github/ | grep -q .; then
-          git rm -r --cached .github/ || true
-          HAS_CHANGES=true
+        # Check if there are changes
+        if [[ -z $(git status -s) ]]; then
+          echo "No changes to commit"
+          exit 0
         fi
         
-        if [ "$HAS_CHANGES" = true ] && ! git diff --cached --quiet; then
-          git commit -m "chore: exclude scripts and .github directories for external sync"
-        else
-          echo "No changes to commit."
-        fi
-        
-        echo "filtered_branch=$FILTERED_BRANCH" >> $GITHUB_OUTPUT
-
-    - name: Push filtered branch to external repository
-      env:
-        BETA_REPO_TOKEN: ${{ secrets.BETA_REPO_TOKEN }}
+        echo "Changes detected, preparing commit..."
+    
+    - name: Commit and push to destination
       run: |
-        FILTERED_BRANCH="${{ steps.filtered_branch.outputs.filtered_branch }}"
-        echo "Force pushing filtered branch to external repo main..."
+        cd dest-repo
         
-        git fetch external main || echo "External main doesn't exist yet"
-        git push external "$FILTERED_BRANCH:main" --force
+        export COMMIT_MESSAGE="Sync from ${{ github.repository }}/${{ github.ref }}@${{ github.sha }}"
+        git add .
+        git commit -m "$COMMIT_MESSAGE" || echo "No changes to commit"
+        git push
         
         echo "✓ Successfully synced to chunky-dad-beta repository"
