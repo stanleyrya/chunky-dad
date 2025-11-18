@@ -10,19 +10,12 @@
   {
     "name": "The Lumber Yard Bar",
     "city": "seattle",
-    "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
-    "address": "9630 16th Ave SW, Seattle, WA 98106",
-    "coordinates": "47.5165235, -122.3548059",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0"
+    "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar"
   },
   {
     "name": "The Cuff Complex",
     "city": "seattle",
-    "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
-    "address": "1533 13th Ave, Seattle, WA 98122",
-    "coordinates": "47.6150778, -122.3157208",
-    "facebook": "https://www.facebook.com/thecuffcomplex",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY"
+    "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex"
   },
   {
     "name": "Seattle Eagle",
@@ -35,26 +28,16 @@
   {
     "name": "CC’s Seattle",
     "city": "seattle",
-    "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle",
-    "address": "1701 E Olive Wy, Seattle, WA 98102",
-    "coordinates": "47.6196626, -122.3233158",
-    "facebook": "https://www.facebook.com/ccsseattle",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I"
+    "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle"
   },
   {
     "name": "Madison Pub",
     "city": "seattle",
-    "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
-    "address": "1315 E Madison St, Seattle, WA 98122",
-    "coordinates": "47.6133619, -122.3149054",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJB_-ecc5qkFQRS1xH4lgadrg"
+    "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub"
   },
   {
     "name": "Pony",
     "city": "seattle",
-    "gayCities": "https://seattle.gaycities.com/bars/2442-pony",
-    "address": "1221 E Madison St, Seattle, WA 98122",
-    "coordinates": "47.6130663, -122.3157243",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJRUOyfc5qkFQRDZLLFj1Q264"
+    "gayCities": "https://seattle.gaycities.com/bars/2442-pony"
   }
 ]
