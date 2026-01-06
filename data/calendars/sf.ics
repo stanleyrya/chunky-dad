@@ -26,7 +26,7 @@ END:VTIMEZONE
 BEGIN:VEVENT
 DTSTART:20250927T040000Z
 DTEND:20250927T100000Z
-DTSTAMP:20260105T220344Z
+DTSTAMP:20260106T001511Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
 DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
@@ -49,25 +49,37 @@ TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20251002T170000
-DTEND;TZID=America/Los_Angeles:20251002T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260105T220344Z
-UID:dkep613fqcsi8tlh6bfsp12h50@google.com
-CREATED:20250930T210125Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nInstagram: https://www.instagra
- m.com/bearhappyhoursf\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161140Z
+DTSTART:20250928T050000Z
+DTEND:20250928T110000Z
+DTSTAMP:20260106T001511Z
+UID:9D1A1197-0811-4645-ABAE-ECF5464CC76F
+CREATED:20250901T054018Z
+DESCRIPTION:description: CHUNK SF presents BEARS IN SPACE (LA/CDMX) 5 DJS /
+ / 2 ROOMS // CAVALCADE OF GOGO BEARS DJS - DICAP (NYC) // MR PICKLES (CHUNK
+  RESIDENT) // DR TIME (Palm Springs) // FREDDY KOP (Seattle)  f8 NIGHTCLUB 
+ // 1192 FOLSOM ST // 10PM - CLOSE // 21+ // ID RQ'D\nbar: f8 NIGHTCLUB\nadd
+ ress: 1192 Folsom St\, San Francisco\ntimezone: America/Los_Angeles\nurl: h
+ ttps://www.chunk-party.com/event-details/chunk-presents-folsom-25\nticketUr
+ l: https://www.chunk-party.com/event-details/chunk-presents-folsom-25\ncove
+ r: $25.63 - $66.63\nimage: https://static.wixstatic.com/media/42b6cb_4273bb
+ d8298849f09e8b04906a809d02~mv2.jpg/v1/fill/w_3300\,h_4125\,al_c\,q_90/42b6c
+ b_4273bbd8298849f09e8b04906a809d02~mv2.jpg\nshortName: CHUNK\ninstagram: ht
+ tps://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=37.77
+ 526599999999\,-122.4100374\nkey: chunk-presents-folsom-'25|2025-09-28|f8 ni
+ ghtclub|chunk
+LAST-MODIFIED:20250913T105551Z
+LOCATION:37.77526599999999\, -122.4100374
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
+SUMMARY:CHUNK presents FOLSOM '25
 TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251019T040000Z
 DTEND:20251019T090000Z
-DTSTAMP:20260105T220344Z
+DTSTAMP:20260106T001511Z
 UID:3F9230E0-3F04-4F12-98C1-311ACA95E3D8
 CREATED:20250930T014036Z
 DESCRIPTION:description: The Occult Underwear Party returns to SF for Bearr
@@ -92,31 +104,19 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250928T050000Z
-DTEND:20250928T110000Z
-DTSTAMP:20260105T220344Z
-UID:9D1A1197-0811-4645-ABAE-ECF5464CC76F
-CREATED:20250901T054018Z
-DESCRIPTION:description: CHUNK SF presents BEARS IN SPACE (LA/CDMX) 5 DJS /
- / 2 ROOMS // CAVALCADE OF GOGO BEARS DJS - DICAP (NYC) // MR PICKLES (CHUNK
-  RESIDENT) // DR TIME (Palm Springs) // FREDDY KOP (Seattle)  f8 NIGHTCLUB 
- // 1192 FOLSOM ST // 10PM - CLOSE // 21+ // ID RQ'D\nbar: f8 NIGHTCLUB\nadd
- ress: 1192 Folsom St\, San Francisco\ntimezone: America/Los_Angeles\nurl: h
- ttps://www.chunk-party.com/event-details/chunk-presents-folsom-25\nticketUr
- l: https://www.chunk-party.com/event-details/chunk-presents-folsom-25\ncove
- r: $25.63 - $66.63\nimage: https://static.wixstatic.com/media/42b6cb_4273bb
- d8298849f09e8b04906a809d02~mv2.jpg/v1/fill/w_3300\,h_4125\,al_c\,q_90/42b6c
- b_4273bbd8298849f09e8b04906a809d02~mv2.jpg\nshortName: CHUNK\ninstagram: ht
- tps://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=37.77
- 526599999999\,-122.4100374\nkey: chunk-presents-folsom-'25|2025-09-28|f8 ni
- ghtclub|chunk
-LAST-MODIFIED:20250913T105551Z
-LOCATION:37.77526599999999\, -122.4100374
+DTSTART;TZID=America/Los_Angeles:20251002T170000
+DTEND;TZID=America/Los_Angeles:20251002T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260106T001511Z
+UID:dkep613fqcsi8tlh6bfsp12h50@google.com
+CREATED:20250930T210125Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nInstagram: https://www.instagra
+ m.com/bearhappyhoursf\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161140Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:CHUNK presents FOLSOM '25
+SUMMARY:Bear Happy Hour
 TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR
