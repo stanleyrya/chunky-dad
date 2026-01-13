@@ -24,9 +24,61 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
+DTSTART:20250927T040000Z
+DTEND:20250927T100000Z
+DTSTAMP:20260113T100408Z
+UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
+CREATED:20250817T231656Z
+DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
+ isco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningha
+ m\nbar: The Public Works SF\naddress: 161 Erie Street\, San Francisco\, CA 
+ 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/fl
+ sm-friday/\ncover: $57.79 - $99.99 (as of 9/20)\nimage: https://bearracuda.
+ com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.
+ com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearra
+ cuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagr
+ am: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/map
+ s/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nke
+ y: bearracuda-2025-09-27-sf
+LAST-MODIFIED:20250920T210918Z
+LOCATION:37.7689137\, -122.4192514
+SEQUENCE:2
+STATUS:CONFIRMED
+SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251019T040000Z
+DTEND:20251019T090000Z
+DTSTAMP:20260113T100408Z
+UID:3F9230E0-3F04-4F12-98C1-311ACA95E3D8
+CREATED:20250930T014036Z
+DESCRIPTION:description: The Occult Underwear Party returns to SF for Bearr
+ ison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ Naught
+ yBoyy.\nbar: The Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 941
+ 03\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/
+ beefwitch-tickets-1728182092159\ncover: $12.51 - $17.85 (as of 10/1)\nimage
+ : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2
+ F2198683436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=23
+ 0&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e19484
+ 3ee640607400ec97184904\ninstagram: https://www.instagram.com/coachafterdark
+ \ngmaps: https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.
+ 4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs\nkey: beefwitch|2025-10-
+ 19|the stud|eventbrite\nshortName: Coach After Dark
+LAST-MODIFIED:20251002T003902Z
+LOCATION:37.7761825\, -122.4083567
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFWITCH
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20250928T050000Z
 DTEND:20250928T110000Z
-DTSTAMP:20260113T080523Z
+DTSTAMP:20260113T100408Z
 UID:9D1A1197-0811-4645-ABAE-ECF5464CC76F
 CREATED:20250901T054018Z
 DESCRIPTION:description: CHUNK SF presents BEARS IN SPACE (LA/CDMX) 5 DJS /
@@ -55,7 +107,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20251002T170000
 DTEND;TZID=America/Los_Angeles:20251002T210000
 RRULE:FREQ=WEEKLY
-DTSTAMP:20260113T080523Z
+DTSTAMP:20260113T100408Z
 UID:dkep613fqcsi8tlh6bfsp12h50@google.com
 CREATED:20250930T210125Z
 DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
@@ -66,57 +118,5 @@ SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Bear Happy Hour
 TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20251019T040000Z
-DTEND:20251019T090000Z
-DTSTAMP:20260113T080523Z
-UID:3F9230E0-3F04-4F12-98C1-311ACA95E3D8
-CREATED:20250930T014036Z
-DESCRIPTION:description: The Occult Underwear Party returns to SF for Bearr
- ison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ Naught
- yBoyy.\nbar: The Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 941
- 03\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/
- beefwitch-tickets-1728182092159\ncover: $12.51 - $17.85 (as of 10/1)\nimage
- : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2
- F2198683436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=23
- 0&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e19484
- 3ee640607400ec97184904\ninstagram: https://www.instagram.com/coachafterdark
- \ngmaps: https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.
- 4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs\nkey: beefwitch|2025-10-
- 19|the stud|eventbrite\nshortName: Coach After Dark
-LAST-MODIFIED:20251002T003902Z
-LOCATION:37.7761825\, -122.4083567
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFWITCH
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250927T040000Z
-DTEND:20250927T100000Z
-DTSTAMP:20260113T080523Z
-UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
-CREATED:20250817T231656Z
-DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
- isco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningha
- m\nbar: The Public Works SF\naddress: 161 Erie Street\, San Francisco\, CA 
- 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/fl
- sm-friday/\ncover: $57.79 - $99.99 (as of 9/20)\nimage: https://bearracuda.
- com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.
- com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearra
- cuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagr
- am: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/map
- s/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nke
- y: bearracuda-2025-09-27-sf
-LAST-MODIFIED:20250920T210918Z
-LOCATION:37.7689137\, -122.4192514
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 END:VEVENT
 END:VCALENDAR
