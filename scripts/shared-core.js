@@ -57,10 +57,6 @@ class SharedCore {
                 parser: 'furball'
             },
             {
-                pattern: /bearssitges\.org/i,
-                parser: 'bears-sitges'
-            },
-            {
                 pattern: /linktr\.ee/i,
                 parser: 'linktree'
             },

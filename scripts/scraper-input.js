@@ -167,33 +167,6 @@ const scraperConfig = {
       }
     },
     {
-      name: "Bears Sitges Week",
-      enabled: false,
-      urls: ["https://bearssitges.org/bears-sitges-week/"],
-      alwaysBear: true,
-      urlDiscoveryDepth: 0,
-      dryRun: false,
-      maxDays: 1,  // Process 1 day to avoid memory issues
-      allowPastEvents: true,  // TEMPORARY: Allow processing past events for testing
-      fieldPriorities: {
-        title: { priority: ["bears-sitges"], merge: "clobber" },
-        instagram: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["bears-sitges"], merge: "clobber" },
-        bar: { priority: ["bears-sitges"], merge: "clobber" },
-        address: { priority: ["bears-sitges"], merge: "clobber" },
-        startDate: { priority: ["bears-sitges"], merge: "clobber" },
-        endDate: { priority: ["bears-sitges"], merge: "clobber" },
-        url: { priority: ["bears-sitges"], merge: "clobber" },
-        location: { priority: ["bears-sitges"], merge: "clobber" },
-        gmaps: { priority: ["bears-sitges"], merge: "clobber" },
-        image: { priority: ["bears-sitges"], merge: "clobber" },
-        cover: { priority: ["bears-sitges"], merge: "clobber" }
-      },
-      metadata: {
-        instagram: { value: "https://www.instagram.com/bearssitges" }
-      }
-    },
-    {
       name: "Cubhouse",
       enabled: true,
       urls: ["https://linktr.ee/cubhouse"],
