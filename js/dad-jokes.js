@@ -6,7 +6,15 @@ class DadJokesManager {
         this.setupElement = null;
         this.punchlineElement = null;
         this.isTyping = false;
-        
+        this.isIntroActive = true;
+
+        this.introLines = [
+            "Traveling? Staying local? Dad's got you covered either way.",
+            "Find where the bears are... and the cubs, otters, and chasers too!",
+            "Still looking for the bear 411? Dad's got all the info you need, and more!"
+        ];
+        this.introLine2 = "chunky.dad is your go-to guide for bear friendly events, bars, and more.";
+
         this.bearJokes = [
             {
                 setup: "Why don't bears ever get lost?",
@@ -63,9 +71,12 @@ class DadJokesManager {
         }
 
         this.setupEventListeners();
-        this.initializeWithRandomJoke();
+        this.initializeWithIntro();
         
-        logger.componentLoad('PAGE', 'Dad jokes manager initialized', { totalJokes: this.bearJokes.length });
+        logger.componentLoad('PAGE', 'Dad jokes manager initialized', { 
+            totalJokes: this.bearJokes.length,
+            introOptions: this.introLines.length
+        });
     }
 
     setupEventListeners() {
@@ -92,39 +103,39 @@ class DadJokesManager {
         logger.componentLoad('PAGE', 'Dad jokes event listeners setup');
     }
 
-    initializeWithRandomJoke() {
-        this.currentJokeIndex = Math.floor(Math.random() * this.bearJokes.length);
-        logger.debug('PAGE', 'Initializing with random joke', { jokeIndex: this.currentJokeIndex });
+    initializeWithIntro() {
+        this.isIntroActive = true;
+        logger.debug('PAGE', 'Initializing with intro message');
         // Start with empty content and show typing animation after bubble appears
         this.setupElement.textContent = '';
         this.punchlineElement.textContent = '';
         
         // Wait for bubble animation to complete, then show typing animation
         setTimeout(() => {
-            this.displayInitialJokeWithTyping();
+            this.displayIntroWithTyping();
         }, 1300); // Slightly after the bubble bounce-in completes (0.8s + 0.5s)
     }
 
-    async displayInitialJokeWithTyping() {
-        const joke = this.bearJokes[this.currentJokeIndex];
+    async displayIntroWithTyping() {
+        const introLine = this.introLines[Math.floor(Math.random() * this.introLines.length)];
         this.isTyping = true;
         
         try {
-            logger.debug('PAGE', 'Starting initial joke typing animation', { setup: joke.setup });
+            logger.debug('PAGE', 'Starting intro typing animation', { introLine });
             
-            // Type the setup first
-            await this.typeText(this.setupElement, joke.setup, 30);
+            // Type the intro opener first
+            await this.typeText(this.setupElement, introLine, 30);
             
-            // Wait a moment for comedic timing
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // Short pause for readability
+            await new Promise(resolve => setTimeout(resolve, 700));
             
-            // Type the punchline
-            await this.typeText(this.punchlineElement, joke.punchline, 40);
+            // Type the intro line two
+            await this.typeText(this.punchlineElement, this.introLine2, 35);
             
-            logger.componentLoad('PAGE', 'Initial joke typing animation completed');
+            logger.componentLoad('PAGE', 'Intro typing animation completed');
             
         } catch (error) {
-            logger.componentError('PAGE', 'Error during initial joke animation', error);
+            logger.componentError('PAGE', 'Error during intro animation', error);
         } finally {
             this.isTyping = false;
         }
@@ -159,7 +170,16 @@ class DadJokesManager {
         }
 
         this.isTyping = true;
-        this.currentJokeIndex = (this.currentJokeIndex + 1) % this.bearJokes.length;
+        let nextJokeIndex = this.currentJokeIndex;
+        if (this.isIntroActive) {
+            this.isIntroActive = false;
+            nextJokeIndex = Math.floor(Math.random() * this.bearJokes.length);
+            logger.debug('PAGE', 'Replacing intro with first joke', { jokeIndex: nextJokeIndex });
+        } else {
+            nextJokeIndex = (this.currentJokeIndex + 1) % this.bearJokes.length;
+        }
+
+        this.currentJokeIndex = nextJokeIndex;
         const joke = this.bearJokes[this.currentJokeIndex];
         const jokeContent = this.jokeBubble.querySelector('.joke-content');
         
