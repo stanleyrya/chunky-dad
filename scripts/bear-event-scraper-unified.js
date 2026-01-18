@@ -77,7 +77,6 @@ class BearEventScraperOrchestrator {
             const genericParserModule = importModule('parsers/generic-parser');
             const chunkParserModule = importModule('parsers/chunk-parser');
             const furballParserModule = importModule('parsers/furball-parser');
-            const bearsSitgesParserModule = importModule('parsers/bears-sitges-parser');
             const linktreeParserModule = importModule('parsers/linktree-parser');
             const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
             
@@ -91,7 +90,6 @@ class BearEventScraperOrchestrator {
                     generic: genericParserModule.GenericParser,
                     chunk: chunkParserModule.ChunkParser,
                     furball: furballParserModule.FurballParser,
-                    'bears-sitges': bearsSitgesParserModule.BearsSitgesParser,
                     linktree: linktreeParserModule.LinktreeParser,
                     redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser
                 }
@@ -116,7 +114,6 @@ class BearEventScraperOrchestrator {
             const genericParserModule = require('./parsers/generic-parser');
             const chunkParserModule = require('./parsers/chunk-parser');
             const furballParserModule = require('./parsers/furball-parser');
-            const bearsSitgesParserModule = require('./parsers/bears-sitges-parser');
             const linktreeParserModule = require('./parsers/linktree-parser');
             const redeyeticketsParserModule = require('./parsers/redeyetickets-parser');
             
@@ -130,7 +127,6 @@ class BearEventScraperOrchestrator {
                     generic: genericParserModule.GenericParser,
                     chunk: chunkParserModule.ChunkParser,
                     furball: furballParserModule.FurballParser,
-                    'bears-sitges': bearsSitgesParserModule.BearsSitgesParser,
                     linktree: linktreeParserModule.LinktreeParser,
                     redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser
                 }
@@ -148,7 +144,7 @@ class BearEventScraperOrchestrator {
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
                 'SharedCore', 'WebAdapter', 
-                'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser', 'BearsSitgesParser', 'LinktreeParser', 'RedEyeTicketsParser'
+                'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser', 'LinktreeParser', 'RedEyeTicketsParser'
             ];
             
             const missingModules = requiredModules.filter(module => !window[module]);
@@ -167,7 +163,6 @@ class BearEventScraperOrchestrator {
                     generic: window.GenericParser,
                     chunk: window.ChunkParser,
                     furball: window.FurballParser,
-                    'bears-sitges': window.BearsSitgesParser,
                     linktree: window.LinktreeParser,
                     redeyetickets: window.RedEyeTicketsParser
                 }
