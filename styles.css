@@ -590,6 +590,17 @@ body.index-page header.visible {
     min-height: 1.4em;
 }
 
+.dad-joke-bubble.intro-mode .joke-punchline {
+    font-style: normal;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.dad-joke-bubble .joke-content.intro-fade {
+    opacity: 0;
+    animation: introFadeIn 0.35s ease forwards;
+}
+
 /* Typewriter animation */
 .typewriter {
     border-right: 2px solid var(--joke-punchline-color);
@@ -599,6 +610,11 @@ body.index-page header.visible {
 @keyframes blink-caret {
     from, to { border-color: transparent; }
     50% { border-color: var(--joke-punchline-color); }
+}
+
+@keyframes introFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes typewriter {

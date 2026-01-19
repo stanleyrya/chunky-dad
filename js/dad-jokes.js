@@ -11,7 +11,7 @@ class DadJokesManager {
         this.introLines = [
             "Traveling? Staying local? Dad's got you covered either way.",
             "Find where the bears are... and the cubs, otters, and chasers too!",
-            "Still looking for the bear 411? Dad's got all the info you need, and more!"
+            "Still looking for the bear 411?"
         ];
         this.introLine2 = "chunky.dad is your go-to guide for bear friendly events, bars, and more.";
 
@@ -106,38 +106,31 @@ class DadJokesManager {
     initializeWithIntro() {
         this.isIntroActive = true;
         logger.debug('PAGE', 'Initializing with intro message');
-        // Start with empty content and show typing animation after bubble appears
-        this.setupElement.textContent = '';
-        this.punchlineElement.textContent = '';
-        
-        // Wait for bubble animation to complete, then show typing animation
-        setTimeout(() => {
-            this.displayIntroWithTyping();
-        }, 1300); // Slightly after the bubble bounce-in completes (0.8s + 0.5s)
+        this.displayIntroInstant();
     }
 
-    async displayIntroWithTyping() {
+    displayIntroInstant() {
         const introLine = this.introLines[Math.floor(Math.random() * this.introLines.length)];
-        this.isTyping = true;
-        
+        const jokeContent = this.jokeBubble.querySelector('.joke-content');
+
         try {
-            logger.debug('PAGE', 'Starting intro typing animation', { introLine });
-            
-            // Type the intro opener first
-            await this.typeText(this.setupElement, introLine, 30);
-            
-            // Short pause for readability
-            await new Promise(resolve => setTimeout(resolve, 700));
-            
-            // Type the intro line two
-            await this.typeText(this.punchlineElement, this.introLine2, 35);
-            
-            logger.componentLoad('PAGE', 'Intro typing animation completed');
-            
+            logger.debug('PAGE', 'Displaying intro message', { introLine });
+            this.jokeBubble.classList.add('intro-mode');
+            this.setupElement.textContent = introLine;
+            this.punchlineElement.textContent = this.introLine2;
+
+            if (jokeContent) {
+                jokeContent.classList.remove('intro-fade');
+                void jokeContent.offsetWidth;
+                jokeContent.classList.add('intro-fade');
+                jokeContent.addEventListener('animationend', () => {
+                    jokeContent.classList.remove('intro-fade');
+                }, { once: true });
+            }
+
+            logger.componentLoad('PAGE', 'Intro message displayed');
         } catch (error) {
-            logger.componentError('PAGE', 'Error during intro animation', error);
-        } finally {
-            this.isTyping = false;
+            logger.componentError('PAGE', 'Error displaying intro message', error);
         }
     }
 
@@ -173,6 +166,7 @@ class DadJokesManager {
         let nextJokeIndex = this.currentJokeIndex;
         if (this.isIntroActive) {
             this.isIntroActive = false;
+            this.jokeBubble.classList.remove('intro-mode');
             nextJokeIndex = Math.floor(Math.random() * this.bearJokes.length);
             logger.debug('PAGE', 'Replacing intro with first joke', { jokeIndex: nextJokeIndex });
         } else {
