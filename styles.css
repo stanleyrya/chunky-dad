@@ -1757,6 +1757,27 @@ body.index-page main {
     will-change: transform, opacity, background-color;
 }
 
+.calendar-grid .swipe-direction-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 44px;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+.calendar-grid .swipe-direction-indicator-left {
+    left: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0));
+}
+
+.calendar-grid .swipe-direction-indicator-right {
+    right: 0;
+    background: linear-gradient(270deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0));
+}
+
 .calendar-grid.fade-in {
     animation: calendarSlideIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
