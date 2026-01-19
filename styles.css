@@ -622,6 +622,12 @@ body.index-page header.visible {
     white-space: nowrap;
 }
 
+.new-joke-btn.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.95);
+}
+
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .new-joke-btn:hover {

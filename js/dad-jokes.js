@@ -5,13 +5,14 @@ class DadJokesManager {
         this.jokeBubble = null;
         this.setupElement = null;
         this.punchlineElement = null;
+        this.newJokeButton = null;
         this.isTyping = false;
         this.isIntroActive = true;
 
         this.introLines = [
             "Traveling? Staying local? Dad's got you covered either way.",
             "Find where the bears are... and the cubs, otters, and chasers too!",
-            "Still looking for the bear 411? Dad's got all the info you need, and more!"
+            "Still looking for the bear 411?"
         ];
         this.introLine2 = "chunky.dad is your go-to guide for bear friendly events, bars, and more.";
 
@@ -64,10 +65,18 @@ class DadJokesManager {
 
         this.setupElement = this.jokeBubble.querySelector('.joke-text');
         this.punchlineElement = this.jokeBubble.querySelector('.joke-punchline');
+        this.newJokeButton = this.jokeBubble.querySelector('.new-joke-btn');
         
         if (!this.setupElement || !this.punchlineElement) {
             logger.componentError('PAGE', 'Joke elements not found', { setupElement: !!this.setupElement, punchlineElement: !!this.punchlineElement });
             return;
+        }
+
+        if (!this.newJokeButton) {
+            logger.warn('PAGE', 'New joke button not found');
+        } else {
+            this.updateButtonLabel();
+            this.setButtonVisibility(false);
         }
 
         this.setupEventListeners();
@@ -81,9 +90,8 @@ class DadJokesManager {
 
     setupEventListeners() {
         // Button click handler
-        const newJokeBtn = this.jokeBubble.querySelector('.new-joke-btn');
-        if (newJokeBtn) {
-            newJokeBtn.addEventListener('click', (e) => {
+        if (this.newJokeButton) {
+            this.newJokeButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 logger.userInteraction('PAGE', 'New joke button clicked');
                 this.newJoke();
@@ -109,6 +117,8 @@ class DadJokesManager {
         // Start with empty content and show typing animation after bubble appears
         this.setupElement.textContent = '';
         this.punchlineElement.textContent = '';
+        this.updateButtonLabel();
+        this.setButtonVisibility(false);
         
         // Wait for bubble animation to complete, then show typing animation
         setTimeout(() => {
@@ -133,6 +143,7 @@ class DadJokesManager {
             await this.typeText(this.punchlineElement, this.introLine2, 35);
             
             logger.componentLoad('PAGE', 'Intro typing animation completed');
+            this.setButtonVisibility(true);
             
         } catch (error) {
             logger.componentError('PAGE', 'Error during intro animation', error);
@@ -163,6 +174,25 @@ class DadJokesManager {
         });
     }
 
+    updateButtonLabel() {
+        if (!this.newJokeButton) {
+            return;
+        }
+
+        const label = this.isIntroActive ? 'Tell a dad joke 🐻' : 'New Joke 🐻';
+        this.newJokeButton.textContent = label;
+    }
+
+    setButtonVisibility(isVisible) {
+        if (!this.newJokeButton) {
+            return;
+        }
+
+        this.newJokeButton.classList.toggle('is-hidden', !isVisible);
+        this.newJokeButton.setAttribute('aria-hidden', String(!isVisible));
+        this.newJokeButton.tabIndex = isVisible ? 0 : -1;
+    }
+
     async newJoke() {
         if (this.isTyping) {
             logger.debug('PAGE', 'Joke request ignored - already typing');
@@ -174,6 +204,7 @@ class DadJokesManager {
         if (this.isIntroActive) {
             this.isIntroActive = false;
             nextJokeIndex = Math.floor(Math.random() * this.bearJokes.length);
+            this.updateButtonLabel();
             logger.debug('PAGE', 'Replacing intro with first joke', { jokeIndex: nextJokeIndex });
         } else {
             nextJokeIndex = (this.currentJokeIndex + 1) % this.bearJokes.length;
