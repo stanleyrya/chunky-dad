@@ -33,6 +33,9 @@ class DynamicCalendarLoader extends CalendarCore {
         this.swipeVelocity = 0;
         this.lastTouchTime = 0;
         this.lastTouchX = 0;
+        this.swipeHintStorageKey = 'calendarSwipeHintShown';
+        this.hasShownSwipeHint = false;
+        this.isSwipeHintScheduled = false;
         
         // Set up message listener for testing interface
         this.setupMessageListener();
@@ -202,10 +205,8 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!calendarGrid) return;
         
         // Remove existing indicators
-        const existingIndicator = calendarGrid.querySelector('.swipe-direction-indicator');
-        if (existingIndicator) {
-            existingIndicator.remove();
-        }
+        const existingIndicators = calendarGrid.querySelectorAll('.swipe-direction-indicator');
+        existingIndicators.forEach((indicator) => indicator.remove());
         
         // Only show indicator if swipe is significant
         if (progress > 0.1) {
@@ -217,6 +218,71 @@ class DynamicCalendarLoader extends CalendarCore {
             
             calendarGrid.appendChild(indicator);
         }
+    }
+
+    showInitialSwipeHint() {
+        if (this.hasShownSwipeHint || this.isSwipeHintScheduled) return;
+
+        let alreadyShown = false;
+        try {
+            alreadyShown = window.localStorage.getItem(this.swipeHintStorageKey) === 'true';
+        } catch (error) {
+            logger.debug('CALENDAR', 'Swipe hint storage unavailable', { error: error?.message });
+        }
+
+        if (alreadyShown) {
+            this.hasShownSwipeHint = true;
+            return;
+        }
+
+        const calendarGrid = document.querySelector('.calendar-grid');
+        if (!calendarGrid) return;
+
+        this.isSwipeHintScheduled = true;
+        setTimeout(() => {
+            const targetGrid = document.querySelector('.calendar-grid');
+            if (!targetGrid) {
+                this.isSwipeHintScheduled = false;
+                return;
+            }
+
+            const leftIndicator = document.createElement('div');
+            leftIndicator.className = 'swipe-direction-indicator swipe-direction-indicator-left';
+            leftIndicator.setAttribute('aria-hidden', 'true');
+
+            const rightIndicator = document.createElement('div');
+            rightIndicator.className = 'swipe-direction-indicator swipe-direction-indicator-right';
+            rightIndicator.setAttribute('aria-hidden', 'true');
+
+            targetGrid.appendChild(leftIndicator);
+            targetGrid.appendChild(rightIndicator);
+
+            requestAnimationFrame(() => {
+                leftIndicator.style.opacity = '0.45';
+                rightIndicator.style.opacity = '0.45';
+            });
+
+            setTimeout(() => {
+                leftIndicator.style.opacity = '0';
+                rightIndicator.style.opacity = '0';
+            }, 700);
+
+            setTimeout(() => {
+                leftIndicator.remove();
+                rightIndicator.remove();
+            }, 900);
+
+            this.hasShownSwipeHint = true;
+            this.isSwipeHintScheduled = false;
+
+            try {
+                window.localStorage.setItem(this.swipeHintStorageKey, 'true');
+            } catch (error) {
+                logger.debug('CALENDAR', 'Failed to persist swipe hint state', { error: error?.message });
+            }
+
+            logger.debug('CALENDAR', 'Initial swipe hint displayed');
+        }, 500);
     }
 
     // Reset visual feedback
@@ -242,10 +308,8 @@ class DynamicCalendarLoader extends CalendarCore {
         }, 200);
         
         // Remove direction indicator
-        const indicator = calendarGrid.querySelector('.swipe-direction-indicator');
-        if (indicator) {
-            indicator.remove();
-        }
+        const indicators = calendarGrid.querySelectorAll('.swipe-direction-indicator');
+        indicators.forEach((indicator) => indicator.remove());
     }
 
     handleSwipe(duration) {
@@ -3019,6 +3083,10 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.warn('CALENDAR', 'Failed to update grid layout', { error: layoutError.message });
         }
         
+        if (!hideEvents) {
+            this.showInitialSwipeHint();
+        }
+
         // Update events list (show for both week and month views)
         const eventsList = document.querySelector('.events-list');
         const eventsSection = document.querySelector('.events');
