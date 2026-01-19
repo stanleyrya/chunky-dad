@@ -210,24 +210,10 @@ class DynamicCalendarLoader extends CalendarCore {
         // Only show indicator if swipe is significant
         if (progress > 0.1) {
             const indicator = document.createElement('div');
-            indicator.className = 'swipe-direction-indicator';
-            indicator.style.cssText = `
-                position: absolute;
-                top: 50%;
-                ${deltaX > 0 ? 'right' : 'left'}: 20px;
-                transform: translateY(-50%);
-                background: var(--primary-color);
-                color: white;
-                padding: 8px 12px;
-                border-radius: 20px;
-                font-size: 0.8rem;
-                font-weight: 600;
-                z-index: 1000;
-                opacity: ${progress * 0.9};
-                transition: opacity 0.1s ease;
-                pointer-events: none;
-            `;
-            indicator.textContent = deltaX > 0 ? '← Previous' : 'Next →';
+            const directionClass = deltaX > 0 ? 'swipe-direction-indicator-left' : 'swipe-direction-indicator-right';
+            indicator.className = `swipe-direction-indicator ${directionClass}`;
+            indicator.style.opacity = Math.min(progress * 0.9, 0.9);
+            indicator.setAttribute('aria-hidden', 'true');
             
             calendarGrid.appendChild(indicator);
         }
