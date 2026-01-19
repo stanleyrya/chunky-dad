@@ -590,6 +590,12 @@ body.index-page header.visible {
     min-height: 1.4em;
 }
 
+.dad-joke-bubble.intro-mode .joke-punchline {
+    font-style: normal;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
 /* Typewriter animation */
 .typewriter {
     border-right: 2px solid var(--joke-punchline-color);
