@@ -111,22 +111,11 @@ class DadJokesManager {
 
     displayIntroInstant() {
         const introLine = this.introLines[Math.floor(Math.random() * this.introLines.length)];
-        const jokeContent = this.jokeBubble.querySelector('.joke-content');
-
         try {
             logger.debug('PAGE', 'Displaying intro message', { introLine });
             this.jokeBubble.classList.add('intro-mode');
             this.setupElement.textContent = introLine;
             this.punchlineElement.textContent = this.introLine2;
-
-            if (jokeContent) {
-                jokeContent.classList.remove('intro-fade');
-                void jokeContent.offsetWidth;
-                jokeContent.classList.add('intro-fade');
-                jokeContent.addEventListener('animationend', () => {
-                    jokeContent.classList.remove('intro-fade');
-                }, { once: true });
-            }
 
             logger.componentLoad('PAGE', 'Intro message displayed');
         } catch (error) {
