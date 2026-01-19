@@ -81,6 +81,24 @@ const CITY_CONFIG = {
         mapZoom: 10,
         visible: true
     },
+    'dallas': {
+        name: 'Dallas',
+        emoji: '🤠',
+        tagline: 'Lone Star bears',
+        calendarId: 'ed9a243b491c0017e3076aee250a4a5ca7a5abe8abcd688aea8ada3bf80ed5fc@group.calendar.google.com',
+        coordinates: { lat: 32.7767, lng: -96.7970 },
+        mapZoom: 10,
+        visible: true
+    },
+    'dc': {
+        name: 'DC',
+        emoji: '🏛️',
+        tagline: 'Capital bears unite',
+        calendarId: '8ef7301344feb8234b7ea704ac66f9dc627dae5452e410206f356618cc7a81c7@group.calendar.google.com',
+        coordinates: { lat: 38.9072, lng: -77.0369 },
+        mapZoom: 10,
+        visible: true
+    },
     'vegas': {
         name: 'Las Vegas',
         emoji: '🎰',
