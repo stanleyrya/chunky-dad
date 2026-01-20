@@ -93,6 +93,23 @@ class WebAdapter {
                 delete require.cache[require.resolve(configPath)]; // Clear cache for fresh load
                 config = require(configPath);
             } else {
+                // Browser environment - load city config before main config
+                if (!window.scraperCities) {
+                    const citiesResponse = await fetch('./scraper-cities.js');
+                    
+                    if (!citiesResponse.ok) {
+                        throw new Error(`City configuration file not found: ${citiesResponse.status} ${citiesResponse.statusText}`);
+                    }
+                    
+                    const citiesText = await citiesResponse.text();
+                    
+                    if (!citiesText || citiesText.trim().length === 0) {
+                        throw new Error('City configuration file is empty');
+                    }
+                    
+                    eval(citiesText);
+                }
+                
                 // Browser environment - load JS file and evaluate
                 const response = await fetch('./scraper-input.js');
                 
