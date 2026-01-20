@@ -298,8 +298,12 @@ class SavedRunDisplay {
             // Initialize adapter and display results
             // Load configuration to get cities data for timezone lookup
             const scraperConfig = importModule('scraper-input');
+            const cityConfig = importModule('city-config');
             const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
-            this.adapter = new ScriptableAdapter(scraperConfig);
+            this.adapter = new ScriptableAdapter({
+                ...scraperConfig,
+                cities: cityConfig
+            });
             await this.adapter.displayResults(resultsLike);
         } catch (e) {
             console.log(`📱 Display: Failed to display saved run: ${e.message}`);

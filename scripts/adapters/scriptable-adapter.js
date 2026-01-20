@@ -317,6 +317,12 @@ class ScriptableAdapter {
             if (!config.parsers || !Array.isArray(config.parsers)) {
                 throw new Error('Configuration missing parsers array');
             }
+
+            const cityConfig = importModule('city-config');
+            if (!cityConfig || typeof cityConfig !== 'object') {
+                throw new Error('City configuration missing or invalid');
+            }
+            config.cities = cityConfig;
             
             return config;
             
