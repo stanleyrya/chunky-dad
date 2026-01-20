@@ -344,6 +344,11 @@ const scraperConfig = {
       timezone: "America/New_York",
       patterns: ["philadelphia", "philly"]
     },
+    "dc": {
+      calendar: "chunky-dad-dc",
+      timezone: "America/New_York",
+      patterns: ["dc", "washington, dc", "washington dc", "district of columbia"]
+    },
     "austin": {
       calendar: "chunky-dad-austin",
       timezone: "America/Chicago",
