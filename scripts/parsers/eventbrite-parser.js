@@ -543,8 +543,8 @@ class EventbriteParser {
                 if (/(atlanta)/i.test(title)) city = 'atlanta';
                 else if (/(denver)/i.test(title)) city = 'denver';
                 else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
-                else if (/(long beach)/i.test(title)) city = 'la'; // Long Beach is part of LA area
-                else if (/(new york|nyc)/i.test(title)) city = 'nyc';
+                else if (/(long beach)/i.test(title)) city = 'los-angeles'; // Long Beach is part of LA area
+                else if (/(new york|nyc)/i.test(title)) city = 'new-york';
                 else if (/(chicago)/i.test(title)) city = 'chicago';
                 else if (/(miami)/i.test(title)) city = 'miami';
                 else if (/(san francisco|sf)/i.test(title)) city = 'sf';
@@ -556,7 +556,7 @@ class EventbriteParser {
                 else if (/(phoenix)/i.test(title)) city = 'phoenix';
                 else if (/(boston)/i.test(title)) city = 'boston';
                 else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
-                else if (/(los angeles|la)/i.test(title)) city = 'la';
+                else if (/(los angeles|la)/i.test(title)) city = 'los-angeles';
                 else if (/(washington|dc)/i.test(title)) city = 'dc';
                 else if (/(orlando)/i.test(title)) city = 'orlando';
                 else if (/(tampa)/i.test(title)) city = 'tampa';
@@ -565,8 +565,8 @@ class EventbriteParser {
                 // This handles megawoof events that use this pattern but may expand to other cities later
                 // NOTE: This is only for city detection - timezone will be preserved from Eventbrite data
                 if (!city && /d>u>r>o/i.test(title)) {
-                    city = 'la';
-                    console.log(`🎫 Eventbrite: Found D>U>R>O pattern in title, mapping to LA as fallback: "${title}"`);
+                    city = 'los-angeles';
+                    console.log(`🎫 Eventbrite: Found D>U>R>O pattern in title, mapping to Los Angeles as fallback: "${title}"`);
                     console.log(`🎫 Eventbrite: Note - timezone will be preserved from Eventbrite data, not overridden by city mapping`);
                 }
                 
@@ -901,18 +901,20 @@ class EventbriteParser {
 
      // Normalize city names
      normalizeCityName(cityName) {
-         const normalizations = {
-             'new york': 'nyc',
-             'new york city': 'nyc',
-             'manhattan': 'nyc',
-             'los angeles': 'la',
-             'san francisco': 'sf',
-             'las vegas': 'vegas',
-             'boton': 'boston',
-             'bostom': 'boston',
-             'bostun': 'boston',
-             'bostan': 'boston'
-         };
+        const normalizations = {
+            'new york': 'new-york',
+            'new york city': 'new-york',
+            'nyc': 'new-york',
+            'manhattan': 'new-york',
+            'los angeles': 'los-angeles',
+            'la': 'los-angeles',
+            'san francisco': 'sf',
+            'las vegas': 'vegas',
+            'boton': 'boston',
+            'bostom': 'boston',
+            'bostun': 'boston',
+            'bostan': 'boston'
+        };
          
          const lower = cityName.toLowerCase();
          return normalizations[lower] || lower;

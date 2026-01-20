@@ -115,6 +115,38 @@ class WebAdapter {
             if (!config.parsers || !Array.isArray(config.parsers)) {
                 throw new Error('Configuration missing parsers array');
             }
+
+            let cityConfig;
+            if (typeof window === 'undefined' && typeof require !== 'undefined') {
+                const cityConfigPath = require('path').join(__dirname, '..', 'city-config.js');
+                delete require.cache[require.resolve(cityConfigPath)];
+                cityConfig = require(cityConfigPath);
+            } else {
+                if (window.scraperCityConfig) {
+                    cityConfig = window.scraperCityConfig;
+                } else {
+                    const cityResponse = await fetch('./city-config.js');
+                    
+                    if (!cityResponse.ok) {
+                        throw new Error(`City configuration file not found: ${cityResponse.status} ${cityResponse.statusText}`);
+                    }
+                    
+                    const cityConfigText = await cityResponse.text();
+                    
+                    if (!cityConfigText || cityConfigText.trim().length === 0) {
+                        throw new Error('City configuration file is empty');
+                    }
+                    
+                    eval(cityConfigText);
+                    cityConfig = window.scraperCityConfig;
+                }
+            }
+
+            if (!cityConfig || typeof cityConfig !== 'object') {
+                throw new Error('City configuration missing or invalid');
+            }
+
+            config.cities = cityConfig;
             
             return config;
             
