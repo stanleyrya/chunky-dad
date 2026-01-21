@@ -85,6 +85,7 @@ class WebAdapter {
     async loadConfiguration() {
         try {
             let config;
+            let cities;
             
             // Check if we're in Node.js environment
             if (typeof window === 'undefined' && typeof require !== 'undefined') {
@@ -92,6 +93,10 @@ class WebAdapter {
                 const configPath = require('path').join(__dirname, '..', 'scraper-input.js');
                 delete require.cache[require.resolve(configPath)]; // Clear cache for fresh load
                 config = require(configPath);
+                
+                const citiesPath = require('path').join(__dirname, '..', 'scraper-cities.js');
+                delete require.cache[require.resolve(citiesPath)]; // Clear cache for fresh load
+                cities = require(citiesPath);
             } else {
                 // Browser environment - load JS file and evaluate
                 const response = await fetch('./scraper-input.js');
@@ -109,12 +114,33 @@ class WebAdapter {
                 // Execute the JS file to get the configuration
                 eval(configText);
                 config = window.scraperConfig;
+                
+                const citiesResponse = await fetch('./scraper-cities.js');
+                
+                if (!citiesResponse.ok) {
+                    throw new Error(`City configuration file not found: ${citiesResponse.status} ${citiesResponse.statusText}`);
+                }
+                
+                const citiesText = await citiesResponse.text();
+                
+                if (!citiesText || citiesText.trim().length === 0) {
+                    throw new Error('City configuration file is empty');
+                }
+                
+                eval(citiesText);
+                cities = window.scraperCities;
             }
             
             // Validate configuration structure
             if (!config.parsers || !Array.isArray(config.parsers)) {
                 throw new Error('Configuration missing parsers array');
             }
+            
+            if (!cities || typeof cities !== 'object') {
+                throw new Error('Configuration missing cities data');
+            }
+            
+            config.cities = cities;
             
             return config;
             

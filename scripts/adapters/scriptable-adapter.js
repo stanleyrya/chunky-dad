@@ -289,33 +289,56 @@ class ScriptableAdapter {
         try {
             const fm = FileManager.iCloud();
             const scriptableDir = fm.documentsDirectory();
-            const configPath = fm.joinPath(scriptableDir, 'scraper-input.js');
             
-            if (!fm.fileExists(configPath)) {
-                console.error(`📱 Scriptable: ✗ Configuration file not found at: ${configPath}`);
-                // List files in directory for debugging
-                try {
-                    const files = fm.listContents(scriptableDir);
-                    console.log(`📱 Scriptable: Files in ${scriptableDir}: ${JSON.stringify(files)}`);
-                } catch (listError) {
-                    console.log(`📱 Scriptable: ✗ Failed to list directory contents: ${listError.message}`);
+            const loadConfigFile = (fileName, moduleName, missingMessage, emptyMessage) => {
+                const configPath = fm.joinPath(scriptableDir, fileName);
+                
+                if (!fm.fileExists(configPath)) {
+                    console.error(`📱 Scriptable: ✗ Configuration file not found at: ${configPath}`);
+                    // List files in directory for debugging
+                    try {
+                        const files = fm.listContents(scriptableDir);
+                        console.log(`📱 Scriptable: Files in ${scriptableDir}: ${JSON.stringify(files)}`);
+                    } catch (listError) {
+                        console.log(`📱 Scriptable: ✗ Failed to list directory contents: ${listError.message}`);
+                    }
+                    throw new Error(missingMessage);
                 }
-                throw new Error('Configuration file not found at iCloud Drive/Scriptable/scraper-input.js');
-            }
+                
+                const configText = fm.readString(configPath);
+                
+                if (!configText || configText.trim().length === 0) {
+                    throw new Error(emptyMessage);
+                }
+                
+                // Use importModule to load the JS configuration file
+                const configModule = importModule(moduleName);
+                return configModule || eval(configText);
+            };
             
-            const configText = fm.readString(configPath);
+            const config = loadConfigFile(
+                'scraper-input.js',
+                'scraper-input',
+                'Configuration file not found at iCloud Drive/Scriptable/scraper-input.js',
+                'Configuration file is empty'
+            );
             
-            if (!configText || configText.trim().length === 0) {
-                throw new Error('Configuration file is empty');
-            }
+            const cities = loadConfigFile(
+                'scraper-cities.js',
+                'scraper-cities',
+                'City configuration file not found at iCloud Drive/Scriptable/scraper-cities.js',
+                'City configuration file is empty'
+            );
             
-            // Use importModule to load the JS configuration file
-            const configModule = importModule('scraper-input');
-            const config = configModule || eval(configText);
+            config.cities = cities;
             
             // Validate configuration structure
             if (!config.parsers || !Array.isArray(config.parsers)) {
                 throw new Error('Configuration missing parsers array');
+            }
+            
+            if (!config.cities || typeof config.cities !== 'object') {
+                throw new Error('Configuration missing cities data');
             }
             
             return config;

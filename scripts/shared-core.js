@@ -22,7 +22,7 @@
 class SharedCore {
     constructor(cities) {
         if (!cities || typeof cities !== 'object') {
-            throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-input.js');
+            throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-cities.js');
         }
 
         this.visitedUrls = new Set();
