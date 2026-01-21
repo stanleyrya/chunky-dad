@@ -342,7 +342,7 @@ class ChunkParser {
         
         const addressLower = address.toLowerCase();
         
-        // Use centralized city configuration from scraper-input.js
+        // Use centralized city configuration from scraper-cities.js
         for (const [cityKey, cityData] of Object.entries(cityConfig)) {
             if (cityData.patterns) {
                 for (const pattern of cityData.patterns) {
