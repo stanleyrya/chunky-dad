@@ -2176,33 +2176,43 @@ class SharedCore {
             };
         }
         
-        // Check for time conflicts that can be merged
+        // Check for overlapping events - only merge when time and title/venue are similar
         const timeConflicts = existingEventsData.filter(existing => 
             this.doDatesOverlap(existing.startDate, existing.endDate, 
                                event.startDate, event.endDate || event.startDate)
         );
         
         if (timeConflicts.length > 0) {
-            // Check if these are mergeable conflicts (adding info to existing events)
-            const mergeableConflict = timeConflicts.find(existing => 
-                this.areTitlesSimilar(existing.title, event.title) || 
-                (existing.location === (event.bar || event.venue) && 
-                 this.areDatesEqual(existing.startDate, event.startDate, 60))
+            const normalizeVenue = (value) => {
+                if (!value) return '';
+                return String(value).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+            };
+            const newVenue = normalizeVenue(event.bar || event.venue || event.location);
+            const venuesSimilar = (existing) => {
+                if (!newVenue) return false;
+                const existingVenue = normalizeVenue(existing.location);
+                return existingVenue && existingVenue === newVenue;
+            };
+            
+            const timeSimilar = (existing) => this.areDatesEqual(existing.startDate, event.startDate, 60);
+            
+            const mergeableConflict = timeConflicts.find(existing =>
+                timeSimilar(existing) &&
+                (this.areTitlesSimilar(existing.title, event.title) || venuesSimilar(existing))
             );
             
             if (mergeableConflict) {
                 return {
                     action: 'merge',
-                    reason: 'Mergeable time conflict',
+                    reason: 'Mergeable overlap detected',
                     existingEvent: mergeableConflict
                 };
-            } else {
-                return {
-                    action: 'conflict',
-                    reason: 'Time conflict detected',
-                    conflicts: timeConflicts
-                };
             }
+            
+            return {
+                action: 'new',
+                reason: 'Overlapping event with different title/venue'
+            };
         }
         
         return { action: 'new', reason: 'No conflicts found' };
