@@ -5,4 +5,31 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dc
 X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20260214T020000Z
+DTEND:20260214T080000Z
+DTSTAMP:20260121T140915Z
+UID:C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC
+CREATED:20260121T135638Z
+DESCRIPTION:description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee
+ kend\nbar: Uproar Lounge & Restaurant\naddress: 639 Florida Avenue Northwes
+ t\, Washington\, DC 20001\ntimezone: America/New_York\nticketUrl: https://w
+ ww.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-19810480530
+ 55\ncover: $11.58 - $22.10 (as of 1/21)\nimage: https://img.evbuc.com/https
+ %3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.
+ 20260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress
+ &q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba\nshortN
+ ame: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl:
+  https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/sea
+ rch/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRzt
+ qpgf-qNEc\nkey: megawoof|2026-02-14|uproar lounge & restaurant|eventbrite
+LAST-MODIFIED:20260121T135638Z
+LOCATION:38.9162081\, -77.0213011
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR
