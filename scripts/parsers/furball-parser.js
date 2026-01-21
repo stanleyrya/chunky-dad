@@ -213,6 +213,7 @@ class FurballParser {
 
             // Extract images from the image component
             const images = this.extractImagesFromImageComponent(block.imageComponent);
+            const image = images.length > 0 ? images[0].src : '';
 
             // Extract ticket URL
             const ticketUrl = this.extractTicketUrl(block.textContent);
@@ -234,7 +235,7 @@ class FurballParser {
                 url: sourceUrl,
                 ticketUrl,
                 source: this.config.source,
-                images: images
+                image: image
             };
 
             return event;
