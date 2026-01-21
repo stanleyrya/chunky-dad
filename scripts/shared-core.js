@@ -2176,33 +2176,43 @@ class SharedCore {
             };
         }
         
-        // Check for time conflicts that can be merged
+        // Check for overlapping events - only merge when time and title/venue are similar
         const timeConflicts = existingEventsData.filter(existing => 
             this.doDatesOverlap(existing.startDate, existing.endDate, 
                                event.startDate, event.endDate || event.startDate)
         );
         
         if (timeConflicts.length > 0) {
-            // Check if these are mergeable conflicts (adding info to existing events)
-            const mergeableConflict = timeConflicts.find(existing => 
-                this.areTitlesSimilar(existing.title, event.title) || 
-                (existing.location === (event.bar || event.venue) && 
-                 this.areDatesEqual(existing.startDate, event.startDate, 60))
+            const normalizeVenue = (value) => {
+                if (!value) return '';
+                return String(value).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+            };
+            const newVenue = normalizeVenue(event.bar || event.venue || event.location);
+            const venuesSimilar = (existing) => {
+                if (!newVenue) return false;
+                const existingVenue = normalizeVenue(existing.location);
+                return existingVenue && existingVenue === newVenue;
+            };
+            
+            const timeSimilar = (existing) => this.areDatesEqual(existing.startDate, event.startDate, 60);
+            
+            const mergeableConflict = timeConflicts.find(existing =>
+                timeSimilar(existing) &&
+                (this.areTitlesSimilar(existing.title, event.title) || venuesSimilar(existing))
             );
             
             if (mergeableConflict) {
                 return {
                     action: 'merge',
-                    reason: 'Mergeable time conflict',
+                    reason: 'Mergeable overlap detected',
                     existingEvent: mergeableConflict
                 };
-            } else {
-                return {
-                    action: 'conflict',
-                    reason: 'Time conflict detected',
-                    conflicts: timeConflicts
-                };
             }
+            
+            return {
+                action: 'new',
+                reason: 'Overlapping event with different title/venue'
+            };
         }
         
         return { action: 'new', reason: 'No conflicts found' };
@@ -2307,10 +2317,18 @@ class SharedCore {
             return event;
         }
         
-        // Store original event data before processing
-        event._original = {
-            new: { ...event },
-            existing: event._conflicts[0] // Usually just one conflict
+        // Store original event data before processing (use canonical comparison shape)
+        const conflictEvent = event._conflicts[0] || {};
+        const scraperObject = { ...event };
+        const calendarObject = {
+            title: conflictEvent.title,
+            startDate: conflictEvent.startDate,
+            endDate: conflictEvent.endDate,
+            location: conflictEvent.location,
+            notes: conflictEvent.notes,
+            url: conflictEvent.url,
+            // Parse existing notes for metadata fields
+            ...this.parseNotesIntoFields(conflictEvent.notes || '')
         };
         
         // Get merge strategies
@@ -2394,6 +2412,20 @@ class SharedCore {
                 }
             });
         });
+        
+        // Build merged object for rich comparison (exclude internal fields/notes)
+        const mergedObject = {};
+        Object.keys(event).forEach(fieldName => {
+            if (fieldName.startsWith('_') || fieldName === 'notes') return;
+            mergedObject[fieldName] = event[fieldName];
+        });
+        
+        // Store original event data for display comparisons
+        event._original = {
+            scraper: scraperObject,
+            calendar: calendarObject,
+            merged: mergedObject
+        };
         
         return event;
     }
