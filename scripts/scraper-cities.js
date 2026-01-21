@@ -8,12 +8,12 @@
 // - Keep this file environment-agnostic (no Scriptable or DOM APIs)
 
 const scraperCities = {
-  "nyc": {
+  "new-york": {
     calendar: "chunky-dad-nyc",
     timezone: "America/New_York",
     patterns: ["new york", "nyc", "manhattan", "brooklyn", "queens", "bronx"]
   },
-  "la": {
+  "los-angeles": {
     calendar: "chunky-dad-la", 
     timezone: "America/Los_Angeles",
     patterns: ["los angeles", "hollywood", "west hollywood", "weho", "dtla", "downtown los angeles", "long beach", "santa monica"]
