@@ -2918,7 +2918,6 @@ class ScriptableAdapter {
             <!-- Show comparison for all non-new events with original data -->
             ${event._original && event._action !== 'new' ? (() => {
                 const hasDifferences = this.hasEventDifferences(event);
-                const sources = this.getComparisonSources(event);
                 const eventId = event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
                 // Decode HTML entities before creating safe ID
                 const decodedEventId = eventId.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
@@ -2948,9 +2947,9 @@ class ScriptableAdapter {
                     <!-- Simple three-object comparison -->
                     <div style="margin-bottom: 10px;">
                         <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
-                            📊 <strong>Scraper:</strong> ${Object.keys(sources.scraper).length} fields |
-                            📅 <strong>Calendar:</strong> ${Object.keys(sources.calendar).length} fields |
-                            🔀 <strong>Merged:</strong> ${Object.keys(sources.merged).length} fields
+                            📊 <strong>Scraper:</strong> ${Object.keys(event._original?.scraper || {}).length} fields |
+                            📅 <strong>Calendar:</strong> ${Object.keys(event._original?.calendar || {}).length} fields |
+                            🔀 <strong>Merged:</strong> ${Object.keys(event._original?.merged || {}).length} fields
                         </div>
                     </div>
                     
@@ -3447,25 +3446,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const city = event.city || 'default';
         return this.getCalendarName(city);
     }
-
-    // Normalize comparison sources for rich UI (supports conflict events)
-    getComparisonSources(event) {
-        const original = event && event._original ? event._original : {};
-        const scraper = (original.scraper && typeof original.scraper === 'object')
-            ? original.scraper
-            : (original.new && typeof original.new === 'object')
-                ? original.new
-                : {};
-        const calendar = (original.calendar && typeof original.calendar === 'object')
-            ? original.calendar
-            : (original.existing && typeof original.existing === 'object')
-                ? original.existing
-                : {};
-        const merged = (original.merged && typeof original.merged === 'object')
-            ? original.merged
-            : {};
-        return { scraper, calendar, merged };
-    }
     
     // Check if event has actual differences to show
     hasEventDifferences(event) {
@@ -3473,16 +3453,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         
         // Get all fields that would be included in the calendar event, using the same logic as formatEventNotes
         const fieldsToCheck = this.getFieldsForComparison(event);
-        const sources = this.getComparisonSources(event);
-        const scraper = sources.scraper;
-        const calendar = sources.calendar;
         
         for (const field of fieldsToCheck) {
             // Skip notes field as it's a computed field that combines other fields
             if (field === 'notes') continue;
             
-            let newValue = scraper[field] || '';
-            let existingValue = calendar?.[field] || '';
+            let newValue = event._original.scraper[field] || '';
+            let existingValue = event._original.calendar?.[field] || '';
             
             // Skip empty fields
             if (!newValue && !existingValue) continue;
@@ -3500,10 +3477,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     getFieldsForComparison(event) {
         // Get all fields from both new and existing events
         const allFields = new Set();
-        const sources = this.getComparisonSources(event);
-        const scraper = sources.scraper;
-        const calendar = sources.calendar;
-        const merged = sources.merged;
         
         // Use the same exclusion logic as formatEventNotes in shared-core.js
         // These are fields that are NOT saved to calendar notes and should NOT be displayed
@@ -3529,25 +3502,31 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         };
         
         // Add fields from scraper event
-        Object.keys(scraper).forEach(field => {
-            if (shouldIncludeField(scraper, field)) {
-                allFields.add(field);
-            }
-        });
+        if (event._original?.scraper) {
+            Object.keys(event._original.scraper).forEach(field => {
+                if (shouldIncludeField(event._original.scraper, field)) {
+                    allFields.add(field);
+                }
+            });
+        }
         
         // Add fields from calendar event
-        Object.keys(calendar).forEach(field => {
-            if (shouldIncludeField(calendar, field)) {
-                allFields.add(field);
-            }
-        });
+        if (event._original?.calendar) {
+            Object.keys(event._original.calendar).forEach(field => {
+                if (shouldIncludeField(event._original.calendar, field)) {
+                    allFields.add(field);
+                }
+            });
+        }
         
         // Add fields from merged event
-        Object.keys(merged).forEach(field => {
-            if (shouldIncludeField(merged, field)) {
-                allFields.add(field);
-            }
-        });
+        if (event._original?.merged) {
+            Object.keys(event._original.merged).forEach(field => {
+                if (shouldIncludeField(event._original.merged, field)) {
+                    allFields.add(field);
+                }
+            });
+        }
         
         // Add fields from final event
         Object.keys(event).forEach(field => {
@@ -3645,9 +3624,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Use the same field logic as what goes into calendar notes
         const fieldsToCompare = this.getFieldsForComparison(event);
         const rows = [];
-        const sources = this.getComparisonSources(event);
-        const scraper = sources.scraper;
-        const calendar = sources.calendar;
         
         fieldsToCompare.forEach(field => {
             // Skip notes field as it's a computed field that combines other fields
@@ -3655,8 +3631,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (field === 'notes') return;
             
             // Get the actual scraped value - don't default to empty string yet
-            let newValue = scraper[field];
-            let existingValue = calendar[field];
+            let newValue = event._original?.scraper?.[field];
+            let existingValue = event._original?.calendar?.[field];
             let finalValue = event[field];
             
             // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
@@ -3821,17 +3797,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Use the same field logic as what goes into calendar notes
         const fieldsToCompare = this.getFieldsForComparison(event);
         let html = '<div style="font-family: \'SF Mono\', Monaco, \'Courier New\', monospace; font-size: 12px; background: var(--background-primary); padding: 12px; border-radius: 8px; line-height: 1.6; color: var(--text-primary);">';
-        const sources = this.getComparisonSources(event);
-        const scraper = sources.scraper;
-        const calendar = sources.calendar;
         
         fieldsToCompare.forEach((field, index) => {
             // Skip notes field as it's a computed field that combines other fields
             // This makes the comparison confusing and it's often broken
             if (field === 'notes') return;
             
-            let newValue = scraper[field] || '';
-            let existingValue = calendar?.[field] || '';
+            let newValue = event._original.scraper[field] || '';
+            let existingValue = event._original.calendar?.[field] || '';
             let finalValue = event[field] || '';
             // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
             const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';

@@ -2307,10 +2307,18 @@ class SharedCore {
             return event;
         }
         
-        // Store original event data before processing
-        event._original = {
-            new: { ...event },
-            existing: event._conflicts[0] // Usually just one conflict
+        // Store original event data before processing (use canonical comparison shape)
+        const conflictEvent = event._conflicts[0] || {};
+        const scraperObject = { ...event };
+        const calendarObject = {
+            title: conflictEvent.title,
+            startDate: conflictEvent.startDate,
+            endDate: conflictEvent.endDate,
+            location: conflictEvent.location,
+            notes: conflictEvent.notes,
+            url: conflictEvent.url,
+            // Parse existing notes for metadata fields
+            ...this.parseNotesIntoFields(conflictEvent.notes || '')
         };
         
         // Get merge strategies
@@ -2394,6 +2402,20 @@ class SharedCore {
                 }
             });
         });
+        
+        // Build merged object for rich comparison (exclude internal fields/notes)
+        const mergedObject = {};
+        Object.keys(event).forEach(fieldName => {
+            if (fieldName.startsWith('_') || fieldName === 'notes') return;
+            mergedObject[fieldName] = event[fieldName];
+        });
+        
+        // Store original event data for display comparisons
+        event._original = {
+            scraper: scraperObject,
+            calendar: calendarObject,
+            merged: mergedObject
+        };
         
         return event;
     }
