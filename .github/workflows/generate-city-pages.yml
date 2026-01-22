@@ -8,6 +8,7 @@ on:
       - 'js/city-config.js'
       - 'tools/generate-city-pages.js'
       - 'tools/generate-sitemap.js'
+      - 'tools/generate-scraper-cities.js'
       - '.github/workflows/generate-city-pages.yml'
       - 'data/calendars/**'
       - '!testing/**'
@@ -24,6 +25,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
+      - name: Generate scraper cities
+        run: node tools/generate-scraper-cities.js
       - name: Generate city pages
         run: node tools/generate-city-pages.js
       - name: Generate sitemap
