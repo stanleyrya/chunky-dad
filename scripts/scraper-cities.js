@@ -20,6 +20,13 @@ const scraperCities = {
       "bronx"
     ]
   },
+  "seattle": {
+    "calendar": "chunky-dad-seattle",
+    "timezone": "America/Los_Angeles",
+    "patterns": [
+      "seattle"
+    ]
+  },
   "los-angeles": {
     "calendar": "chunky-dad-la",
     "timezone": "America/Los_Angeles",
@@ -33,165 +40,6 @@ const scraperCities = {
       "long beach",
       "santa monica",
       "d>u>r>o"
-    ]
-  },
-  "sf": {
-    "calendar": "chunky-dad-sf",
-    "timezone": "America/Los_Angeles",
-    "patterns": [
-      "san francisco",
-      "sf",
-      "castro",
-      "san jose",
-      "oakland"
-    ]
-  },
-  "atlanta": {
-    "calendar": "chunky-dad-atlanta",
-    "timezone": "America/New_York",
-    "patterns": [
-      "atlanta",
-      "atl"
-    ]
-  },
-  "miami": {
-    "calendar": "chunky-dad-miami",
-    "timezone": "America/New_York",
-    "patterns": [
-      "miami",
-      "south beach",
-      "miami beach",
-      "fort lauderdale",
-      "key west"
-    ]
-  },
-  "denver": {
-    "calendar": "chunky-dad-denver",
-    "timezone": "America/Denver",
-    "patterns": [
-      "denver"
-    ]
-  },
-  "vegas": {
-    "calendar": "chunky-dad-vegas",
-    "timezone": "America/Los_Angeles",
-    "patterns": [
-      "las vegas",
-      "vegas"
-    ]
-  },
-  "palm-springs": {
-    "calendar": "chunky-dad-palm-springs",
-    "timezone": "America/Los_Angeles",
-    "patterns": [
-      "palm springs"
-    ]
-  },
-  "sitges": {
-    "calendar": "chunky-dad-sitges",
-    "timezone": "Europe/Madrid",
-    "patterns": [
-      "sitges"
-    ]
-  },
-  "seattle": {
-    "calendar": "chunky-dad-seattle",
-    "timezone": "America/Los_Angeles",
-    "patterns": [
-      "seattle"
-    ]
-  },
-  "portland": {
-    "calendar": "chunky-dad-portland",
-    "timezone": "America/Los_Angeles",
-    "patterns": [
-      "portland"
-    ]
-  },
-  "chicago": {
-    "calendar": "chunky-dad-chicago",
-    "timezone": "America/Chicago",
-    "patterns": [
-      "chicago",
-      "chi"
-    ]
-  },
-  "new-orleans": {
-    "calendar": "chunky-dad-new-orleans",
-    "timezone": "America/Chicago",
-    "patterns": [
-      "new orleans"
-    ]
-  },
-  "boston": {
-    "calendar": "chunky-dad-boston",
-    "timezone": "America/New_York",
-    "patterns": [
-      "boston",
-      "boton",
-      "bostom",
-      "bostun",
-      "bostan"
-    ]
-  },
-  "philadelphia": {
-    "calendar": "chunky-dad-philadelphia",
-    "timezone": "America/New_York",
-    "patterns": [
-      "philadelphia",
-      "philly"
-    ]
-  },
-  "dc": {
-    "calendar": "chunky-dad-dc",
-    "timezone": "America/New_York",
-    "patterns": [
-      "dc",
-      "washington, dc",
-      "washington dc",
-      "district of columbia"
-    ]
-  },
-  "austin": {
-    "calendar": "chunky-dad-austin",
-    "timezone": "America/Chicago",
-    "patterns": [
-      "austin"
-    ]
-  },
-  "dallas": {
-    "calendar": "chunky-dad-dallas",
-    "timezone": "America/Chicago",
-    "patterns": [
-      "dallas"
-    ]
-  },
-  "houston": {
-    "calendar": "chunky-dad-houston",
-    "timezone": "America/Chicago",
-    "patterns": [
-      "houston"
-    ]
-  },
-  "phoenix": {
-    "calendar": "chunky-dad-phoenix",
-    "timezone": "America/Phoenix",
-    "patterns": [
-      "phoenix"
-    ]
-  },
-  "san-diego": {
-    "calendar": "chunky-dad-san-diego",
-    "timezone": "America/Los_Angeles",
-    "patterns": [
-      "san diego"
-    ]
-  },
-  "sacramento": {
-    "calendar": "chunky-dad-sacramento",
-    "timezone": "America/Los_Angeles",
-    "patterns": [
-      "sacramento"
     ]
   },
   "toronto": {
@@ -208,11 +56,163 @@ const scraperCities = {
       "london"
     ]
   },
+  "chicago": {
+    "calendar": "chunky-dad-chicago",
+    "timezone": "America/Chicago",
+    "patterns": [
+      "chicago",
+      "chi"
+    ]
+  },
   "berlin": {
     "calendar": "chunky-dad-berlin",
     "timezone": "Europe/Berlin",
     "patterns": [
       "berlin"
+    ]
+  },
+  "palm-springs": {
+    "calendar": "chunky-dad-palm-springs",
+    "timezone": "America/Los_Angeles",
+    "patterns": [
+      "palm springs"
+    ]
+  },
+  "denver": {
+    "calendar": "chunky-dad-denver",
+    "timezone": "America/Denver",
+    "patterns": [
+      "denver"
+    ]
+  },
+  "dallas": {
+    "calendar": "chunky-dad-dallas",
+    "timezone": "America/Chicago",
+    "patterns": [
+      "dallas"
+    ]
+  },
+  "dc": {
+    "calendar": "chunky-dad-dc",
+    "timezone": "America/New_York",
+    "patterns": [
+      "dc",
+      "washington, dc",
+      "washington dc",
+      "district of columbia"
+    ]
+  },
+  "vegas": {
+    "calendar": "chunky-dad-vegas",
+    "timezone": "America/Los_Angeles",
+    "patterns": [
+      "las vegas",
+      "vegas"
+    ]
+  },
+  "atlanta": {
+    "calendar": "chunky-dad-atlanta",
+    "timezone": "America/New_York",
+    "patterns": [
+      "atlanta",
+      "atl"
+    ]
+  },
+  "new-orleans": {
+    "calendar": "chunky-dad-new-orleans",
+    "timezone": "America/Chicago",
+    "patterns": [
+      "new orleans"
+    ]
+  },
+  "sf": {
+    "calendar": "chunky-dad-sf",
+    "timezone": "America/Los_Angeles",
+    "patterns": [
+      "san francisco",
+      "sf",
+      "castro",
+      "san jose",
+      "oakland"
+    ]
+  },
+  "portland": {
+    "calendar": "chunky-dad-portland",
+    "timezone": "America/Los_Angeles",
+    "patterns": [
+      "portland"
+    ]
+  },
+  "sitges": {
+    "calendar": "chunky-dad-sitges",
+    "timezone": "Europe/Madrid",
+    "patterns": [
+      "sitges"
+    ]
+  },
+  "boston": {
+    "calendar": "chunky-dad-boston",
+    "timezone": "America/New_York",
+    "patterns": [
+      "boston",
+      "boton",
+      "bostom",
+      "bostun",
+      "bostan"
+    ]
+  },
+  "phoenix": {
+    "calendar": "chunky-dad-phoenix",
+    "timezone": "America/Phoenix",
+    "patterns": [
+      "phoenix"
+    ]
+  },
+  "san-diego": {
+    "calendar": "chunky-dad-san-diego",
+    "timezone": "America/Los_Angeles",
+    "patterns": [
+      "san diego"
+    ]
+  },
+  "philadelphia": {
+    "calendar": "chunky-dad-philadelphia",
+    "timezone": "America/New_York",
+    "patterns": [
+      "philadelphia",
+      "philly"
+    ]
+  },
+  "miami": {
+    "calendar": "chunky-dad-miami",
+    "timezone": "America/New_York",
+    "patterns": [
+      "miami",
+      "south beach",
+      "miami beach",
+      "fort lauderdale",
+      "key west"
+    ]
+  },
+  "austin": {
+    "calendar": "chunky-dad-austin",
+    "timezone": "America/Chicago",
+    "patterns": [
+      "austin"
+    ]
+  },
+  "houston": {
+    "calendar": "chunky-dad-houston",
+    "timezone": "America/Chicago",
+    "patterns": [
+      "houston"
+    ]
+  },
+  "sacramento": {
+    "calendar": "chunky-dad-sacramento",
+    "timezone": "America/Los_Angeles",
+    "patterns": [
+      "sacramento"
     ]
   }
 };

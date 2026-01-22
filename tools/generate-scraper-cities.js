@@ -6,18 +6,31 @@ const path = require('path');
 // Resolve project root relative to this script
 const ROOT = path.resolve(__dirname, '..');
 
-// Load SCRAPER_CITIES via Node export
-let SCRAPER_CITIES;
+// Load CITY_CONFIG via Node export
+let CITY_CONFIG;
 try {
   const cityModule = require(path.join(ROOT, 'js', 'city-config.js'));
-  SCRAPER_CITIES = cityModule.SCRAPER_CITIES;
+  CITY_CONFIG = cityModule.CITY_CONFIG;
 } catch (e) {
-  console.error('Failed to load SCRAPER_CITIES from js/city-config.js:', e.message);
+  console.error('Failed to load CITY_CONFIG from js/city-config.js:', e.message);
   process.exit(1);
 }
 
-if (!SCRAPER_CITIES || typeof SCRAPER_CITIES !== 'object') {
-  console.error('SCRAPER_CITIES is missing or invalid in js/city-config.js');
+if (!CITY_CONFIG || typeof CITY_CONFIG !== 'object') {
+  console.error('CITY_CONFIG is missing or invalid in js/city-config.js');
+  process.exit(1);
+}
+
+// Scraper config is stored on CITY_CONFIG[cityKey].scraper
+const scraperCities = {};
+Object.entries(CITY_CONFIG).forEach(([cityKey, cityConfig]) => {
+  if (cityConfig && cityConfig.scraper) {
+    scraperCities[cityKey] = cityConfig.scraper;
+  }
+});
+
+if (Object.keys(scraperCities).length === 0) {
+  console.error('No scraper configs found in CITY_CONFIG (missing scraper fields)');
   process.exit(1);
 }
 
@@ -55,7 +68,7 @@ const exportBlock = [
   ''
 ].join('\n');
 
-const output = `${header}const scraperCities = ${JSON.stringify(SCRAPER_CITIES, null, 2)};\n\n${exportBlock}`;
+const output = `${header}const scraperCities = ${JSON.stringify(scraperCities, null, 2)};\n\n${exportBlock}`;
 
 // Write only if content changes
 function writeIfChanged(filePath, content) {
