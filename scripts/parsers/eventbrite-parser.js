@@ -534,47 +534,6 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
             }
             
-            // Extract city from event title for better event organization
-            let city = null;
-            
-            // Generic city extraction from title - useful for events that include city in their name
-            if (title) {
-                // Check if title contains a specific city
-                if (/(atlanta)/i.test(title)) city = 'atlanta';
-                else if (/(denver)/i.test(title)) city = 'denver';
-                else if (/(vegas|las vegas)/i.test(title)) city = 'vegas';
-                else if (/(long beach)/i.test(title)) city = 'los-angeles'; // Long Beach is part of LA area
-                else if (/(new york|nyc)/i.test(title)) city = 'new-york';
-                else if (/(chicago)/i.test(title)) city = 'chicago';
-                else if (/(miami)/i.test(title)) city = 'miami';
-                else if (/(san francisco|sf)/i.test(title)) city = 'sf';
-                else if (/(seattle)/i.test(title)) city = 'seattle';
-                else if (/(portland)/i.test(title)) city = 'portland';
-                else if (/(austin)/i.test(title)) city = 'austin';
-                else if (/(dallas)/i.test(title)) city = 'dallas';
-                else if (/(houston)/i.test(title)) city = 'houston';
-                else if (/(phoenix)/i.test(title)) city = 'phoenix';
-                else if (/(boston)/i.test(title)) city = 'boston';
-                else if (/(philadelphia|philly)/i.test(title)) city = 'philadelphia';
-                else if (/(los angeles|la)/i.test(title)) city = 'los-angeles';
-                else if (/(washington|dc)/i.test(title)) city = 'dc';
-                else if (/(orlando)/i.test(title)) city = 'orlando';
-                else if (/(tampa)/i.test(title)) city = 'tampa';
-                
-                // Fallback: Check for "D>U>R>O" pattern and map to LA if no other city found
-                // This handles megawoof events that use this pattern but may expand to other cities later
-                // NOTE: This is only for city detection - timezone will be preserved from Eventbrite data
-                if (!city && /d>u>r>o/i.test(title)) {
-                    city = 'los-angeles';
-                    console.log(`🎫 Eventbrite: Found D>U>R>O pattern in title, mapping to LA as fallback: "${title}"`);
-                    console.log(`🎫 Eventbrite: Note - timezone will be preserved from Eventbrite data, not overridden by city mapping`);
-                }
-                
-                if (city) {
-                    console.log(`🎫 Eventbrite: Extracted city "${city}" from title: "${title}"`);
-                }
-            }
-            
             // Don't generate Google Maps URL here - let SharedCore handle it with iOS-compatible logic
             // Just pass the place_id data to SharedCore for processing
             // Leave gmaps undefined so SharedCore will generate the URL
@@ -617,6 +576,21 @@ class EventbriteParser {
                 }
             }
             
+            // Detect city using centralized city config (scraper-cities.js).
+            // Eventbrite timezones are frequently incorrect, so we detect city here
+            // to allow timezone correction before SharedCore enrichment.
+            const city = this.detectCityFromEventData({
+                title: title,
+                description: description,
+                venue: finalVenue,
+                address: finalAddress,
+                url: url,
+                venueAddress: eventData.venue?.address || null
+            }, cityConfig);
+            if (city) {
+                console.log(`🎫 Eventbrite: Detected city "${city}" from event data for "${title}"`);
+            }
+
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
             // This fixes cases where Eventbrite has incorrect timezone but parser correctly detects city
             let eventTimezone = null;
@@ -883,42 +857,66 @@ class EventbriteParser {
          }
      }
  
-     // Extract city from event data or URL
-     extractCityFromEvent(eventData, url) {
-         // Try venue address first
-         if (eventData.venue?.address) {
-             const address = eventData.venue.address;
-             const cityFromAddress = address.city || address.localized_area_display || '';
-             if (cityFromAddress) {
-                 return this.normalizeCityName(cityFromAddress);
-             }
-         }
-         
-         // Try extracting from text
-         const searchText = `${eventData.name?.text || eventData.name || ''} ${eventData.description || ''} ${url || ''}`;
-         return this.extractCityFromText(searchText);
-     }
+    // Detect city using centralized city configuration (scraper-cities.js)
+    detectCityFromEventData(eventDetails, cityConfig) {
+        if (!eventDetails || !cityConfig || typeof cityConfig !== 'object') {
+            return null;
+        }
 
-     // Normalize city names
-     normalizeCityName(cityName) {
-         const normalizations = {
-            'new york': 'new-york',
-            'new york city': 'new-york',
-            'manhattan': 'new-york',
-            'nyc': 'new-york',
-            'los angeles': 'los-angeles',
-            'la': 'los-angeles',
-             'san francisco': 'sf',
-             'las vegas': 'vegas',
-             'boton': 'boston',
-             'bostom': 'boston',
-             'bostun': 'boston',
-             'bostan': 'boston'
-         };
-         
-         const lower = cityName.toLowerCase();
-         return normalizations[lower] || lower;
-     }
+        // Prefer the explicit venue city if Eventbrite provides it
+        const venueAddress = eventDetails.venueAddress;
+        if (venueAddress) {
+            const venueCityText = venueAddress.city || venueAddress.localized_area_display || '';
+            const cityFromVenue = this.findCityFromText(venueCityText, cityConfig);
+            if (cityFromVenue) {
+                return cityFromVenue;
+            }
+        }
+
+        // Fall back to scanning other event text fields using configured patterns
+        const searchText = [
+            eventDetails.address,
+            eventDetails.venue,
+            eventDetails.title,
+            eventDetails.description,
+            eventDetails.url
+        ].filter(Boolean).join(' ');
+
+        return this.findCityFromText(searchText, cityConfig);
+    }
+
+    // Find city key from text using centralized pattern list
+    findCityFromText(text, cityConfig) {
+        if (!text || !cityConfig || typeof cityConfig !== 'object') {
+            return null;
+        }
+
+        const haystack = String(text).toLowerCase();
+        for (const [cityKey, cityData] of Object.entries(cityConfig)) {
+            const patterns = cityData?.patterns;
+            if (!Array.isArray(patterns)) {
+                continue;
+            }
+
+            for (const pattern of patterns) {
+                const normalizedPattern = String(pattern || '').trim().toLowerCase();
+                if (!normalizedPattern) {
+                    continue;
+                }
+
+                const escapedPattern = normalizedPattern
+                    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                    .replace(/\s+/g, '\\s+');
+                const regex = new RegExp(`\\b${escapedPattern}\\b`);
+
+                if (regex.test(haystack)) {
+                    return cityKey;
+                }
+            }
+        }
+
+        return null;
+    }
  
      // Normalize URLs
      normalizeUrl(url, baseUrl) {
