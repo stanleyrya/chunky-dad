@@ -51,7 +51,14 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
             } else {
-                console.log('🎫 Eventbrite: No events found in JSON data - this may be an individual event page or empty organizer page');
+                console.log('🎫 Eventbrite: No events found in JSON data - checking JSON-LD');
+                const jsonLdEvents = this.extractEventsFromJsonLd(html, parserConfig, htmlData, cityConfig);
+                if (jsonLdEvents.length > 0) {
+                    console.log(`🎫 Eventbrite: Found ${jsonLdEvents.length} events in JSON-LD data`);
+                    events.push(...jsonLdEvents);
+                } else {
+                    console.log('🎫 Eventbrite: No events found in JSON-LD data - this may be an individual event page with unsupported data');
+                }
             }
             
             // Extract additional URLs if urlDiscoveryDepth > 0 (depth checking is handled by shared-core)
@@ -321,6 +328,146 @@ class EventbriteParser {
         }
         
         return events;
+    }
+
+    // Extract events from JSON-LD data (fallback for detail pages without __SERVER_DATA__)
+    extractEventsFromJsonLd(html, parserConfig = {}, htmlData = null, cityConfig = null) {
+        const events = [];
+        
+        try {
+            const scriptRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+            let match;
+            
+            while ((match = scriptRegex.exec(html)) !== null) {
+                const jsonText = (match[1] || '').trim();
+                if (!jsonText) {
+                    continue;
+                }
+                
+                let data;
+                try {
+                    data = JSON.parse(jsonText);
+                } catch (error) {
+                    console.warn(`🎫 Eventbrite: Failed to parse JSON-LD block: ${error}`);
+                    continue;
+                }
+                
+                const items = this.collectJsonLdItems(data);
+                items.forEach(item => {
+                    const event = this.parseJsonLdEvent(item, parserConfig, htmlData, cityConfig);
+                    if (event) {
+                        events.push(event);
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn(`🎫 Eventbrite: Error extracting JSON-LD events: ${error}`);
+        }
+        
+        return events;
+    }
+
+    // Flatten JSON-LD structures into a list of items
+    collectJsonLdItems(data) {
+        const items = [];
+        
+        if (!data) {
+            return items;
+        }
+        
+        if (Array.isArray(data)) {
+            data.forEach(item => {
+                items.push(...this.collectJsonLdItems(item));
+            });
+            return items;
+        }
+        
+        if (data['@graph']) {
+            return this.collectJsonLdItems(data['@graph']);
+        }
+        
+        items.push(data);
+        return items;
+    }
+
+    // Parse JSON-LD event data into standard format
+    parseJsonLdEvent(jsonLd, parserConfig = {}, htmlData = null, cityConfig = null) {
+        try {
+            if (!jsonLd || typeof jsonLd !== 'object') {
+                return null;
+            }
+            
+            const rawType = jsonLd['@type'];
+            const types = Array.isArray(rawType) ? rawType : [rawType].filter(Boolean);
+            const isEventType = types.some(type => String(type).toLowerCase().includes('event'));
+            
+            if (!isEventType) {
+                return null;
+            }
+            
+            const title = jsonLd.name || jsonLd.headline || '';
+            const url = jsonLd.url || (htmlData ? htmlData.url : '');
+            const startDate = jsonLd.startDate || '';
+            const endDate = jsonLd.endDate || '';
+            
+            if (!title || !url) {
+                console.log(`🎫 Eventbrite: JSON-LD event missing title or URL (title: "${title}", url: "${url}")`);
+                return null;
+            }
+            
+            const isFuture = this.isFutureEvent({ startDate: startDate });
+            if (!isFuture) {
+                console.log(`🎫 Eventbrite: Skipping JSON-LD event (not future): "${title}"`);
+                return null;
+            }
+            
+            const location = Array.isArray(jsonLd.location) ? jsonLd.location[0] : jsonLd.location;
+            const address = location && location.address ? location.address : null;
+            const geo = location && location.geo ? location.geo : null;
+            
+            let streetAddress = address ? address.streetAddress || '' : '';
+            if (streetAddress && streetAddress.includes(',')) {
+                streetAddress = streetAddress.split(',')[0].trim();
+            }
+            
+            const venueAddress = address ? {
+                address_1: streetAddress || address.streetAddress || '',
+                city: address.addressLocality || '',
+                region: address.addressRegion || '',
+                postal_code: address.postalCode || ''
+            } : null;
+            
+            const imageValue = Array.isArray(jsonLd.image) ? jsonLd.image[0] : jsonLd.image;
+            
+            const eventData = {
+                name: title,
+                description: jsonLd.description || '',
+                url: url,
+                startDate: startDate,
+                endDate: endDate,
+                venue: location ? {
+                    name: location.name || '',
+                    ...(venueAddress ? { address: venueAddress } : {})
+                } : undefined,
+                ...(imageValue ? { image: { url: imageValue } } : {})
+            };
+            
+            if (geo && geo.latitude && geo.longitude) {
+                eventData.venue = eventData.venue || { name: location ? location.name || '' : '' };
+                eventData.venue.latitude = parseFloat(geo.latitude);
+                eventData.venue.longitude = parseFloat(geo.longitude);
+            }
+            
+            const event = this.parseJsonEvent(eventData, null, parserConfig, null, cityConfig);
+            if (!event) {
+                console.log(`🎫 Eventbrite: parseJsonEvent returned null for JSON-LD event "${title}"`);
+            }
+            
+            return event;
+        } catch (error) {
+            console.warn(`🎫 Eventbrite: Failed to parse JSON-LD event: ${error}`);
+            return null;
+        }
     }
 
     // Check if an event is in the future (not past)
