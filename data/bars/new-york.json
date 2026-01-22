@@ -1,5 +1,14 @@
 [
   {
+    "name": "Animal",
+    "city": "new-york",
+    "gayCities": "https://newyork.gaycities.com/bars/312406-animal",
+    "address": "307 Meeker Ave, NY 11211",
+    "coordinates": "40.7173904, -73.9493112",
+    "instagram": "https://www.instagram.com/animal.nyc",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJdaGX6E9ZwokRrcrhq8cMM-8"
+  },
+  {
     "name": "Rockbar",
     "city": "new-york",
     "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
