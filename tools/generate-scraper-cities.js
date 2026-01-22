@@ -21,12 +21,13 @@ if (!CITY_CONFIG || typeof CITY_CONFIG !== 'object') {
   process.exit(1);
 }
 
-// Scraper config is stored on CITY_CONFIG[cityKey].scraper
+// Scraper config is stored on CITY_CONFIG[cityKey] fields
 const scraperCities = {};
 Object.entries(CITY_CONFIG).forEach(([cityKey, cityConfig]) => {
-  if (cityConfig && cityConfig.scraper) {
-    scraperCities[cityKey] = cityConfig.scraper;
-  }
+  if (!cityConfig) return;
+  const { calendar, timezone, patterns } = cityConfig;
+  if (!calendar || !timezone || !Array.isArray(patterns)) return;
+  scraperCities[cityKey] = { calendar, timezone, patterns };
 });
 
 if (Object.keys(scraperCities).length === 0) {
