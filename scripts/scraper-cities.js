@@ -16,7 +16,7 @@ const scraperCities = {
   "los-angeles": {
     calendar: "chunky-dad-la", 
     timezone: "America/Los_Angeles",
-    patterns: ["los angeles", "hollywood", "west hollywood", "weho", "dtla", "downtown los angeles", "long beach", "santa monica"]
+    patterns: ["los angeles", "hollywood", "west hollywood", "weho", "dtla", "downtown los angeles", "long beach", "santa monica", "d>u>r>o"]
   },
   "sf": {
     calendar: "chunky-dad-sf",
