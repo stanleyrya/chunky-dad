@@ -2,7 +2,7 @@
   "files": [
     {
       "name": "event-builder.html",
-      "size": 57139,
+      "size": 57085,
       "icon": "🛠️",
       "description": "Build chunky.dad calendar events and preview them instantly."
     },
@@ -56,13 +56,13 @@
     },
     {
       "name": "test-map-icons.html",
-      "size": 63188,
+      "size": 63168,
       "icon": "🗺️",
       "description": "Icon Stamper - Mark your territory with custom map icons"
     },
     {
       "name": "test-og-event-layouts-calendar.html",
-      "size": 65227,
+      "size": 65217,
       "icon": "📅",
       "description": "Old School Blueprint - Classic event layouts, tried and true"
     },
@@ -74,7 +74,7 @@
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 65677,
+      "size": 65668,
       "icon": "🔨",
       "description": "The Big Hammer - Pound your styles into perfect shape with live preview"
     }

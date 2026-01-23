@@ -3,6 +3,30 @@
 const fs = require('fs');
 const path = require('path');
 
+// Resolve project root relative to this script
+const ROOT = path.resolve(__dirname, '..');
+
+// Load CITY_CONFIG for city pattern mapping
+let CITY_CONFIG;
+try {
+    const cityModule = require(path.join(ROOT, 'js', 'city-config.js'));
+    CITY_CONFIG = cityModule.CITY_CONFIG || null;
+} catch (error) {
+    console.error(`❌ Failed to load CITY_CONFIG: ${error.message}`);
+    process.exit(1);
+}
+
+if (!CITY_CONFIG || typeof CITY_CONFIG !== 'object') {
+    console.error('❌ CITY_CONFIG is missing or invalid in js/city-config.js');
+    process.exit(1);
+}
+
+const CITY_PATTERNS = buildCityPatterns(CITY_CONFIG);
+if (CITY_PATTERNS.length === 0) {
+    console.error('❌ CITY_CONFIG has no patterns; cannot normalize bar cities.');
+    process.exit(1);
+}
+
 // Simplified bars sync script using public Google Sheets (like bear artists)
 async function syncBars() {
     console.log('🔄 Starting simplified bars sync...');
@@ -99,22 +123,23 @@ function parseGoogleSheetsData(json) {
             image: ''                          // K: twitter (not used, image field empty for now)
         };
         
-        // Only normalize city name if it's not empty and looks like a real city name
-        if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
-            bar.city = normalizeCityName(bar.city);
-        } else {
-            bar.city = 'unknown';
-        }
-        
         // Clean Instagram username - remove @ symbol and trim
         if (bar.instagram) {
             bar.instagram = bar.instagram.replace('@', '').trim();
         }
         
-        // Only add if name exists and city is valid
-        if (bar.name && bar.city && bar.city !== 'unknown') {
-            data.push(bar);
+        if (!bar.name) {
+            continue;
         }
+
+        // Only normalize city name if it's not empty and looks like a real city name
+        if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
+            bar.city = normalizeCityName(bar.city);
+        } else {
+            throw new Error(`Invalid city value "${bar.city}" for bar "${bar.name}"`);
+        }
+        
+        data.push(bar);
     }
     
     console.log(`📋 Parsed ${data.length} bars from Google Sheets`);
@@ -166,16 +191,63 @@ async function loadLocalBars() {
     return allBars;
 }
 
-// Normalize city name to kebab-case format
+// Normalize city name using CITY_CONFIG patterns (no fallbacks)
 function normalizeCityName(cityName) {
-    if (!cityName) return 'unknown';
-    
-    return cityName
-        .toLowerCase()
-        .replace(/\s+/g, '-')           // Replace spaces with hyphens
-        .replace(/[^a-z0-9\-]/g, '')    // Remove special characters except hyphens
-        .replace(/-+/g, '-')            // Replace multiple hyphens with single hyphen
-        .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+    if (!cityName) {
+        throw new Error('City name missing from bar data.');
+    }
+
+    const candidate = String(cityName).trim();
+    if (!candidate) {
+        throw new Error('City name missing from bar data.');
+    }
+
+    const keyMatch = findCityKeyByName(candidate);
+    if (keyMatch) {
+        return keyMatch;
+    }
+
+    const patternMatch = findCityKeyByPattern(candidate);
+    if (patternMatch) {
+        return patternMatch;
+    }
+
+    throw new Error(`Unknown city "${cityName}". Add a matching pattern to CITY_CONFIG.`);
+}
+
+function matchesCaseInsensitive(left, right) {
+    return String(left || '').trim().localeCompare(String(right || '').trim(), undefined, { sensitivity: 'base' }) === 0;
+}
+
+function findCityKeyByName(candidate) {
+    const keys = Object.keys(CITY_CONFIG || {});
+    for (const key of keys) {
+        if (matchesCaseInsensitive(key, candidate)) {
+            return key;
+        }
+    }
+    return null;
+}
+
+function findCityKeyByPattern(candidate) {
+    for (const entry of CITY_PATTERNS) {
+        if (matchesCaseInsensitive(entry.pattern, candidate)) {
+            return entry.cityKey;
+        }
+    }
+    return null;
+}
+
+function buildCityPatterns(cityConfig) {
+    const patterns = [];
+    Object.entries(cityConfig || {}).forEach(([cityKey, cfg]) => {
+        const list = Array.isArray(cfg?.patterns) ? cfg.patterns : [];
+        list.forEach(pattern => {
+            if (!pattern || !String(pattern).trim()) return;
+            patterns.push({ cityKey, pattern });
+        });
+    });
+    return patterns;
 }
 
 // Merge bars from sheets and local, deduplicating by name + city
@@ -189,7 +261,7 @@ function mergeBars(sheetsBars, localBars) {
         if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
             normalizedCity = normalizeCityName(bar.city);
         } else {
-            normalizedCity = 'unknown';
+            throw new Error(`Invalid city value "${bar.city}" for bar "${bar.name}"`);
         }
         
         const normalizedBar = { ...bar, city: normalizedCity };
@@ -204,7 +276,7 @@ function mergeBars(sheetsBars, localBars) {
         if (bar.city && bar.city.trim() !== '' && !bar.city.startsWith('http')) {
             normalizedCity = normalizeCityName(bar.city);
         } else {
-            normalizedCity = 'unknown';
+            throw new Error(`Invalid city value "${bar.city}" for bar "${bar.name}"`);
         }
         
         const normalizedBar = { ...bar, city: normalizedCity };

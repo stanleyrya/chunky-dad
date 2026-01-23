@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<!-- generated: chunky.dad city page -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Orleans - chunky.dad Bear Guide</title>
+    <meta name="description" content="Complete gay bear guide to New Orleans - events, bars, and the hottest bear scene">
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicons/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicons/favicon-48x48.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicons/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicons/favicon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicons/favicon-512x512.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
+    <link rel="manifest" href="/favicons/site.webmanifest">
+    <meta name="theme-color" content="#667eea">
+    
+    <script>
+      (function() {
+        try {
+          var path = window.location.pathname || '';
+          if (path.indexOf('city.html') !== -1) {
+            var url = new URL(window.location.href);
+            var params = url.searchParams;
+            var slug = params.get('city') || (window.location.hash ? window.location.hash.replace('#', '') : '');
+            if (slug) {
+              slug = String(slug).trim().toLowerCase().replace(/\s+/g, '-');
+              var newUrl = '/' + slug + '/';
+              var preserved = [];
+              params.forEach(function(value, key) {
+                if (key !== 'city' && value != null && value !== '') {
+                  preserved.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+                }
+              });
+              if (preserved.length > 0) {
+                newUrl += '?' + preserved.join('&');
+              }
+              if (url.hash && url.hash !== '#' + slug) {
+                newUrl += url.hash;
+              }
+              var currentFull = (window.location.pathname || '') + (window.location.search || '') + (window.location.hash || '');
+              if (newUrl !== currentFull) {
+                console.info('[CITY] Normalizing URL to canonical path:', newUrl);
+                window.location.replace(newUrl);
+              }
+            }
+          }
+        } catch (e) {
+          // Silently ignore normalization errors
+          if (typeof window !== 'undefined' && window.logger) {
+            window.logger.warn('SYSTEM', 'URL normalization failed', { error: e.message });
+          }
+        }
+      })();
+    </script>
+    <!-- Google Analytics 4 - Private Mode Compatible -->
+    <script>
+      // Initialize Google Analytics 4 with graceful private mode handling
+      (function() {
+        try {
+          // Test if localStorage is available (fails in private mode)
+          let clientId;
+          let storageAvailable = false;
+          
+          try {
+            localStorage.setItem('test', 'test');
+            localStorage.removeItem('test');
+            storageAvailable = true;
+          } catch (e) {
+            // Private mode or localStorage disabled
+            storageAvailable = false;
+            if (typeof window !== 'undefined' && window.logger) {
+              window.logger.debug('SYSTEM', 'localStorage not available (private mode)', { error: e.message });
+            }
+          }
+          
+          if (storageAvailable) {
+            // Normal mode - use persistent client ID
+            clientId = localStorage.getItem('ga_client_id');
+            if (!clientId) {
+              clientId = 'GA1.2.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
+              localStorage.setItem('ga_client_id', clientId);
+            }
+          } else {
+            // Private mode - use session-only client ID
+            clientId = 'GA1.2.private.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
+          }
+          
+          // Send page view
+          const pageUrl = window.location.href;
+          const pageTitle = document.title || 'City Guide - chunky.dad Bear Guide';
+          const referrer = document.referrer || '';
+          
+          // Build analytics URL
+          const analyticsUrl = 'https://www.google-analytics.com/g/collect?' + 
+            'v=2&' +
+            'tid=G-YKQBFFQR5E&' +
+            'cid=' + encodeURIComponent(clientId) + '&' +
+            't=pageview&' +
+            'dl=' + encodeURIComponent(pageUrl) + '&' +
+            'dt=' + encodeURIComponent(pageTitle) + '&' +
+            'dr=' + encodeURIComponent(referrer) + '&' +
+            'ul=en-us&' +
+            'de=UTF-8&' +
+            'sd=24-bit&' +
+            'sr=1920x1080&' +
+            'vp=1920x1080&' +
+            'je=0&' +
+            'z=' + Math.floor(Math.random() * 2147483647);
+          
+          // Send via Image request (non-blocking)
+          const img = new Image();
+          img.src = analyticsUrl;
+          
+          // Optional: Log success for debugging (only if logger is available)
+          if (typeof window !== 'undefined' && window.logger) {
+            window.logger.debug('SYSTEM', 'Analytics pageview sent', { 
+              storageMode: storageAvailable ? 'normal' : 'private',
+              clientId: clientId.substring(0, 20) + '...' // Don't log full ID
+            });
+          }
+        } catch (error) {
+          // Silently fail - don't break the page or log errors
+          // Analytics is not critical for site functionality
+          if (typeof window !== 'undefined' && window.logger) {
+            window.logger.warn('SYSTEM', 'Analytics initialization failed', { error: error.message });
+          }
+        }
+      })();
+    </script>
+    
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" 
+          onload="if(window.logger){logger.debug('SYSTEM', 'Google Fonts loaded successfully');}else{console.log('Google Fonts loaded successfully');}"
+          onerror="if(window.logger){logger.warn('SYSTEM', 'Failed to load Google Fonts');}else{console.warn('Failed to load Google Fonts');}">
+    <!-- Bootstrap Icons (for recognizable iconography) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous"
+          onload="if(window.logger){logger.debug('SYSTEM', 'Bootstrap Icons loaded successfully');}else{console.log('Bootstrap Icons loaded successfully');}"
+          onerror="if(window.logger){logger.warn('SYSTEM', 'Failed to load Bootstrap Icons');}else{console.warn('Failed to load Bootstrap Icons');}">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""
+          onload="if(window.logger){logger.debug('SYSTEM', 'Leaflet CSS loaded successfully');}else{console.log('Leaflet CSS loaded successfully');}"
+          onerror="if(window.logger){logger.warn('SYSTEM', 'Failed to load Leaflet CSS');}else{console.warn('Failed to load Leaflet CSS');}"/>
+  <link rel="canonical" href="/nola/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="New Orleans - chunky.dad Bear Guide">
+  <meta property="og:description" content="Complete gay bear guide to New Orleans - events, bars, and the hottest bear scene">
+  <meta property="og:url" content="https://chunky.dad/nola/">
+  <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png?v=ddc702de">
+</head>
+<body>
+        <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/nola</a></h1>
+                </div>
+                
+                <!-- Pure HTML/CSS city selector -->
+                <div class="city-switcher">
+                    <input type="checkbox" id="city-switcher-toggle" class="city-switcher-toggle">
+                    <label for="city-switcher-toggle" class="city-switcher-btn" aria-label="Switch city - currently New Orleans">
+                        <span class="city-emoji">🎷</span>
+                        <span class="city-name">New Orleans</span>
+                        <span class="city-carrot">▼</span>
+                    </label>
+                    <div class="city-dropdown">
+                            <a href="../nyc/" class="city-option">
+                                <span class="city-option-emoji">🗽</span>
+                                <span class="city-option-name">New York</span>
+                            </a>
+                            <a href="../seattle/" class="city-option">
+                                <span class="city-option-emoji">🌲</span>
+                                <span class="city-option-name">Seattle</span>
+                            </a>
+                            <a href="../la/" class="city-option">
+                                <span class="city-option-emoji">☀️</span>
+                                <span class="city-option-name">Los Angeles</span>
+                            </a>
+                            <a href="../toronto/" class="city-option">
+                                <span class="city-option-emoji">🍁</span>
+                                <span class="city-option-name">Toronto</span>
+                            </a>
+                            <a href="../london/" class="city-option">
+                                <span class="city-option-emoji">🇬🇧</span>
+                                <span class="city-option-name">London</span>
+                            </a>
+                            <a href="../chicago/" class="city-option">
+                                <span class="city-option-emoji">💨</span>
+                                <span class="city-option-name">Chicago</span>
+                            </a>
+                            <a href="../berlin/" class="city-option">
+                                <span class="city-option-emoji">🇩🇪</span>
+                                <span class="city-option-name">Berlin</span>
+                            </a>
+                            <a href="../palm-springs/" class="city-option">
+                                <span class="city-option-emoji">🌴</span>
+                                <span class="city-option-name">Palm Springs</span>
+                            </a>
+                            <a href="../denver/" class="city-option">
+                                <span class="city-option-emoji">🏔️</span>
+                                <span class="city-option-name">Denver</span>
+                            </a>
+                            <a href="../dallas/" class="city-option">
+                                <span class="city-option-emoji">🤠</span>
+                                <span class="city-option-name">Dallas</span>
+                            </a>
+                            <a href="../dc/" class="city-option">
+                                <span class="city-option-emoji">🏛️</span>
+                                <span class="city-option-name">DC</span>
+                            </a>
+                            <a href="../vegas/" class="city-option">
+                                <span class="city-option-emoji">🎰</span>
+                                <span class="city-option-name">Las Vegas</span>
+                            </a>
+                            <a href="../atlanta/" class="city-option">
+                                <span class="city-option-emoji">🍑</span>
+                                <span class="city-option-name">Atlanta</span>
+                            </a>
+                            <a href="../nola/" class="city-option">
+                                <span class="city-option-emoji">🎷</span>
+                                <span class="city-option-name">New Orleans</span>
+                            </a>
+                            <a href="../sf/" class="city-option">
+                                <span class="city-option-emoji">🌉</span>
+                                <span class="city-option-name">San Francisco</span>
+                            </a>
+                            <a href="../portland/" class="city-option">
+                                <span class="city-option-emoji">🌹</span>
+                                <span class="city-option-name">Portland</span>
+                            </a>
+                            <a href="../sitges/" class="city-option">
+                                <span class="city-option-emoji">🏖️</span>
+                                <span class="city-option-name">Sitges</span>
+                            </a>
+                            <a href="../boston/" class="city-option">
+                                <span class="city-option-emoji">🎓</span>
+                                <span class="city-option-name">Boston</span>
+                            </a>
+                            <a href="../phoenix/" class="city-option">
+                                <span class="city-option-emoji">🌵</span>
+                                <span class="city-option-name">Phoenix</span>
+                            </a>
+                            <a href="../ptown/" class="city-option">
+                                <span class="city-option-emoji">⚓</span>
+                                <span class="city-option-name">Provincetown</span>
+                            </a>
+                            <a href="../san-diego/" class="city-option">
+                                <span class="city-option-emoji">🌊</span>
+                                <span class="city-option-name">San Diego</span>
+                            </a>
+                            <a href="../philly/" class="city-option">
+                                <span class="city-option-emoji">🔔</span>
+                                <span class="city-option-name">Philadelphia</span>
+                            </a>
+                    </div>
+                </div>
+                
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- City not found section (hidden by default) -->
+    <main class="city-not-found" style="display: none;">
+        <section class="error-section">
+            <div class="container">
+                <div class="error-content">
+                    <h1>🏙️ City Not Found</h1>
+                    <p>Oops! We couldn't find information for that city.</p>
+                    <div class="available-cities">
+                        <h3>Available Cities:</h3>
+                        <div class="city-links" id="available-cities-list">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <a href="../index.html" class="cta-button">🏠 Back to Home</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Main city content -->
+    <main class="city-page">
+
+        <section class="weekly-calendar">
+            <div class="container">
+                <div class="calendar-header">
+                    <h2 id="calendar-title"></h2>
+                    <div class="calendar-controls">
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="week">📅 Week</button>
+                            <button class="view-btn" data-view="month">📊 Month</button>
+                        </div>
+                        <div class="date-navigation">
+                            <button class="nav-btn" id="prev-period">←</button>
+                            <span class="date-range" id="date-range"></span>
+                            <button class="nav-btn" id="next-period">→</button>
+                        </div>
+                        <button class="today-btn" id="today-btn">Today</button>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                </div>
+            </div>
+        </section>
+        
+        <!-- Floating clear selection button - moved outside of weekly-calendar to prevent positioning issues -->
+
+        <section class="events">
+            <div class="container">
+                <div class="events-list">
+                    <div class="loading-message">📅 Getting events...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="events-map-section">
+            <div class="container">
+                <div class="map-container">
+                    <div id="events-map"></div>
+                </div>
+            </div>
+        </section>
+
+
+    </main>
+
+    <footer>
+        <div class="container">
+            <!-- Footer content will be injected by components.js -->
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="../js/logger.js"></script>
+    <script src="../js/debug-overlay.js"></script>
+    <script src="../js/city-config.js"></script>
+    <script src="../js/location-manager.js"></script>
+    <script src="../js/components.js"></script>
+    <script src="../js/calendar-core.js"></script>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin="anonymous"
+            onload="if(window.logger){logger.debug('SYSTEM', 'Leaflet.js loaded successfully');}else{console.log('Leaflet.js loaded successfully');}"
+            onerror="if(window.logger){logger.error('SYSTEM', 'Failed to load Leaflet.js', {url: this.src, integrity: this.integrity});}else{console.error('Failed to load Leaflet.js from', this.src);}"></script>
+    <script src="../js/page-effects.js"></script>
+    <script src="../js/forms.js"></script>
+    <script src="../js/filename-utils.js"></script>
+    <script src="../js/dynamic-calendar-loader.js"></script>
+    <script src="../js/app.js"></script>
+</body>
+</html>

@@ -8,7 +8,7 @@
 // - Can be imported in both Scriptable and web environments
 // - Keep this file environment-agnostic (no Scriptable or DOM APIs)
 const scraperCities = {
-  "new-york": {
+  "nyc": {
     "calendar": "chunky-dad-nyc",
     "timezone": "America/New_York",
     "patterns": [
@@ -27,7 +27,7 @@ const scraperCities = {
       "seattle"
     ]
   },
-  "los-angeles": {
+  "la": {
     "calendar": "chunky-dad-la",
     "timezone": "America/Los_Angeles",
     "patterns": [
@@ -118,7 +118,7 @@ const scraperCities = {
       "atl"
     ]
   },
-  "new-orleans": {
+  "nola": {
     "calendar": "chunky-dad-new-orleans",
     "timezone": "America/Chicago",
     "patterns": [
@@ -175,7 +175,7 @@ const scraperCities = {
       "san diego"
     ]
   },
-  "philadelphia": {
+  "philly": {
     "calendar": "chunky-dad-philadelphia",
     "timezone": "America/New_York",
     "patterns": [

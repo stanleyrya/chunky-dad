@@ -1,10 +1,11 @@
 // City Configuration - Maps cities to their data and calendar IDs
 // Scraper config lives alongside city fields (calendar/timezone/patterns) and is used to generate scripts/scraper-cities.js.
 const CITY_CONFIG = {
-    'new-york': {
+    'nyc': {
         name: 'New York',
         emoji: '🗽',
         tagline: 'What\'s the bear 411?',
+        aliases: ['new-york'],
         calendarId: '128e456dab59e8db2466c6eecd151decd20315e7d6b1058f063aa1fea610eeb1@group.calendar.google.com',
         calendar: 'chunky-dad-nyc',
         timezone: 'America/New_York',
@@ -25,10 +26,11 @@ const CITY_CONFIG = {
         mapZoom: 10,
         visible: true
     },
-    'los-angeles': {
+    'la': {
         name: 'Los Angeles',
         emoji: '☀️',
         tagline: 'West Coast bear vibes',
+        aliases: ['los-angeles'],
         calendarId: '4b97d66d56b8bc0cf6a667f5b11879fbfe4a17e671055772e9849a68e905923f@group.calendar.google.com',
         calendar: 'chunky-dad-la',
         timezone: 'America/Los_Angeles',
@@ -157,10 +159,11 @@ const CITY_CONFIG = {
         mapZoom: 10,
         visible: true
     },
-    'new-orleans': {
+    'nola': {
         name: 'New Orleans',
         emoji: '🎷',
         tagline: 'Big Easy bears',
+        aliases: ['new-orleans'],
         calendarId: '8bf2d8417df78aa8b7f852e5a0a301d1ea3cef7547bd5d8b638bdfe61c8dd3e9@group.calendar.google.com',
         calendar: 'chunky-dad-new-orleans',
         timezone: 'America/Chicago',
@@ -229,10 +232,11 @@ const CITY_CONFIG = {
         mapZoom: 10,
         visible: true
     },
-    'provincetown': {
+    'ptown': {
         name: 'Provincetown',
         emoji: '⚓',
         tagline: 'Cape Cod bear paradise',
+        aliases: ['provincetown'],
         calendarId: '3b7c4ed1606370c70125e378cb3435fe8ab168161593b0f7dd3112ae56bc4db9@group.calendar.google.com',
         coordinates: { lat: 42.0526, lng: -70.1865 },
         mapZoom: 12,
@@ -250,10 +254,11 @@ const CITY_CONFIG = {
         mapZoom: 10,
         visible: true
     },
-    'philadelphia': {
+    'philly': {
         name: 'Philadelphia',
         emoji: '🔔',
         tagline: 'City of Brotherly Love bears',
+        aliases: ['philadelphia'],
         calendarId: '63b74fff1a9f872730ed4d49bbd60bba3e1faa73778636944687f5949d8a435d@group.calendar.google.com',
         calendar: 'chunky-dad-philadelphia',
         timezone: 'America/New_York',

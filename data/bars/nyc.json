@@ -1,0 +1,59 @@
+[
+  {
+    "name": "Animal",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/312406-animal",
+    "address": "307 Meeker Ave, NY 11211",
+    "coordinates": "40.7173904, -73.9493112",
+    "instagram": "https://www.instagram.com/animal.nyc",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJdaGX6E9ZwokRrcrhq8cMM-8"
+  },
+  {
+    "name": "Rockbar",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
+    "address": "185 Christopher St, New York, NY 10014",
+    "coordinates": "40.7326534, -74.0096996",
+    "instagram": "https://www.instagram.com/rockbarnyc",
+    "facebook": "https://www.facebook.com/Rockbar-NYC",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc"
+  },
+  {
+    "name": "Eagle NYC",
+    "city": "nyc",
+    "wikipedia": "https://en.wikipedia.org/wiki/Eagle_NYC",
+    "gayCities": "https://newyork.gaycities.com/bars/400-eagle-nyc",
+    "coordinates": "40.751694, -74.004306",
+    "website": "http://eagle-ny.com"
+  },
+  {
+    "name": "3 Dollar Bill",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill",
+    "address": "260 Meserole St, Brooklyn, NY 11206",
+    "coordinates": "40.7084144, -73.9380583",
+    "instagram": "https://www.instagram.com/3dollarbillbk",
+    "facebook": "https://www.facebook.com/3dollarbillbk",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc"
+  },
+  {
+    "name": "Ty's",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
+    "address": "114 Christopher St, New York, NY 10014",
+    "coordinates": "40.7330387, -74.0052985",
+    "instagram": "https://www.instagram.com/tysbar",
+    "facebook": "https://www.facebook.com/TysNYC",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY"
+  },
+  {
+    "name": "Nowhere Bar",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/415-nowhere-bar",
+    "address": "322 E 14th St, New York, NY 10003",
+    "coordinates": "40.7316977, -73.9841737",
+    "instagram": "https://www.instagram.com/nowherenyc",
+    "facebook": "https://www.facebook.com/nowherebar",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY"
+  }
+]

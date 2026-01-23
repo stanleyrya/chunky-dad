@@ -557,7 +557,7 @@
             <h2>Calendar Preview</h2>
             <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
           </div>
-          <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=new-york"></iframe>
+          <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=nyc"></iframe>
         </div>
 
         <div class="json-preview">
@@ -583,20 +583,20 @@
         'denver': 'America/Denver',
         'las-vegas': 'America/Los_Angeles',
         'london': 'Europe/London',
-        'los-angeles': 'America/Los_Angeles',
-        'new-orleans': 'America/Chicago',
-        'new-york': 'America/New_York',
+        'la': 'America/Los_Angeles',
+        'nola': 'America/Chicago',
+        'nyc': 'America/New_York',
         'palm-springs': 'America/Los_Angeles',
         'phoenix': 'America/Phoenix',
         'portland': 'America/Los_Angeles',
-        'provincetown': 'America/New_York',
+        'ptown': 'America/New_York',
         'san-diego': 'America/Los_Angeles',
         'seattle': 'America/Los_Angeles',
         'sf': 'America/Los_Angeles',
         'sitges': 'Europe/Madrid',
         'toronto': 'America/Toronto',
         'vegas': 'America/Los_Angeles',
-        'philadelphia': 'America/New_York'
+        'philly': 'America/New_York'
       };
 
       const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
@@ -708,7 +708,7 @@
       }
 
       function createDefaultState() {
-        const defaultCity = 'new-york';
+        const defaultCity = 'nyc';
         const start = computeDefaultStart();
         const end = new Date(start.getTime() + DEFAULT_DURATION_MINUTES * 60000);
         return {
@@ -859,7 +859,7 @@
           if (dom.slugInput) dom.slugInput.value = state.slug || '';
           if (dom.citySelect) {
             if (![...dom.citySelect.options].some(option => option.value === state.city)) {
-              state.city = dom.citySelect.options.length ? dom.citySelect.options[0].value : 'new-york';
+              state.city = dom.citySelect.options.length ? dom.citySelect.options[0].value : 'nyc';
             }
             dom.citySelect.value = state.city;
           }
@@ -1427,7 +1427,7 @@
 
       function updateCalendarSource(force = false) {
         if (!dom.calendarIframe) return;
-        const targetCity = state.city || 'new-york';
+        const targetCity = state.city || 'nyc';
         if (!force && currentCalendarCity === targetCity) {
           return;
         }
