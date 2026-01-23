@@ -37,11 +37,11 @@
     .page-wrapper {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 2.5rem 1.5rem 4rem;
+      padding: 2.1rem 1.25rem 3.2rem;
     }
 
     .hero {
-      margin-bottom: 2rem;
+      margin-bottom: 1.4rem;
     }
 
     .hero .eyebrow {
@@ -54,8 +54,8 @@
     }
 
     .hero h1 {
-      font-size: 2.3rem;
-      margin: 0 0 0.75rem;
+      font-size: 2rem;
+      margin: 0 0 0.6rem;
       color: #181c35;
     }
 
@@ -63,57 +63,57 @@
       max-width: 760px;
       margin: 0;
       color: var(--text-secondary);
-      font-size: 1rem;
-      line-height: 1.6;
+      font-size: 0.95rem;
+      line-height: 1.5;
     }
 
     .layout {
       display: grid;
       grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-      gap: 2rem;
+      gap: 1.5rem;
       align-items: start;
     }
 
     .panel {
       background: var(--panel-bg);
-      border-radius: 18px;
-      padding: 1.5rem;
+      border-radius: 16px;
+      padding: 1.2rem;
       border: 1px solid rgba(102, 114, 172, 0.12);
-      box-shadow: 0 16px 40px rgba(19, 24, 56, 0.06);
+      box-shadow: 0 12px 32px rgba(19, 24, 56, 0.05);
     }
 
     .panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 1rem;
+      gap: 0.8rem;
+      margin-bottom: 0.75rem;
     }
 
     .panel-header h2 {
       margin: 0;
-      font-size: 1.3rem;
+      font-size: 1.15rem;
       color: var(--text-primary);
     }
 
     .panel-subtitle {
-      margin: 0.35rem 0 0;
-      font-size: 0.85rem;
+      margin: 0.25rem 0 0;
+      font-size: 0.8rem;
       color: var(--text-muted);
     }
 
     details.form-section {
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      padding: 0.6rem 0.75rem;
       background: #fbfcff;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
       transition: box-shadow 0.2s ease, background 0.2s ease;
     }
 
     details.form-section[open] {
       background: #ffffff;
-      box-shadow: 0 10px 24px rgba(19, 24, 56, 0.05);
+      box-shadow: 0 8px 18px rgba(19, 24, 56, 0.04);
     }
 
     details.form-section summary {
@@ -123,7 +123,7 @@
       align-items: center;
       justify-content: space-between;
       font-weight: 600;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: #2a2f54;
     }
 
@@ -133,7 +133,7 @@
 
     details.form-section summary::after {
       content: '▾';
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--accent);
       transition: transform 0.2s ease;
     }
@@ -143,33 +143,33 @@
     }
 
     .section-body {
-      margin-top: 0.85rem;
+      margin-top: 0.6rem;
     }
 
     .field-grid,
     .field-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1rem;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
     }
 
     .field-group {
       display: flex;
       flex-direction: column;
-      gap: 0.4rem;
+      gap: 0.35rem;
     }
 
     .field-group label {
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #2a2f54;
     }
 
     .field-group small {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--text-muted);
-      line-height: 1.4;
+      line-height: 1.35;
     }
 
     .field-group.disabled {
@@ -179,19 +179,21 @@
     input[type="text"],
     input[type="url"],
     input[type="datetime-local"],
+    input[type="number"],
+    input[type="date"],
     select,
     textarea {
       font-family: inherit;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       border: 1px solid rgba(112, 125, 169, 0.35);
-      border-radius: 10px;
-      padding: 0.6rem 0.75rem;
+      border-radius: 9px;
+      padding: 0.5rem 0.65rem;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
       background: #ffffff;
     }
 
     textarea {
-      min-height: 110px;
+      min-height: 96px;
       resize: vertical;
     }
 
@@ -206,27 +208,35 @@
     .input-with-action {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
 
     .input-with-action input {
       flex: 1 1 auto;
     }
 
+    .input-suffix {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding: 0 0.35rem;
+      white-space: nowrap;
+    }
+
     .checkbox-label {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.4rem;
       font-weight: 500;
       color: #2a2f54;
+      font-size: 0.82rem;
     }
 
     .time-notes {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.35rem 1rem;
-      margin: 0.35rem 0 1rem;
-      font-size: 0.78rem;
+      gap: 0.25rem 0.7rem;
+      margin: 0.3rem 0 0.65rem;
+      font-size: 0.74rem;
       color: var(--text-muted);
     }
 
@@ -251,21 +261,21 @@
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 1rem;
-      margin-top: 1.2rem;
+      gap: 0.8rem;
+      margin-top: 1rem;
     }
 
     .primary-actions {
       display: flex;
-      gap: 0.7rem;
+      gap: 0.6rem;
       flex-wrap: wrap;
     }
 
     button {
       font-family: inherit;
-      font-size: 0.9rem;
-      padding: 0.6rem 1rem;
-      border-radius: 10px;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.85rem;
+      border-radius: 9px;
       border: none;
       cursor: pointer;
       transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
@@ -303,7 +313,7 @@
       background: rgba(108, 99, 255, 0.1);
       color: #3f47a6;
       border: 1px solid transparent;
-      padding-inline: 0.85rem;
+      padding-inline: 0.75rem;
     }
 
     .ghost-button:hover:not(:disabled) {
@@ -312,9 +322,9 @@
     }
 
     .share-section {
-      margin-top: 1.25rem;
-      padding: 0.9rem;
-      border-radius: 12px;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 11px;
       border: 1px solid rgba(108, 99, 255, 0.2);
       background: var(--soft);
     }
@@ -322,15 +332,15 @@
     .share-section label {
       display: block;
       font-weight: 600;
-      font-size: 0.85rem;
-      margin-bottom: 0.4rem;
+      font-size: 0.8rem;
+      margin-bottom: 0.35rem;
       color: #2a2f54;
     }
 
     .share-row {
       display: flex;
       align-items: center;
-      gap: 0.7rem;
+      gap: 0.6rem;
     }
 
     .share-row input {
@@ -343,8 +353,36 @@
       top: 1.5rem;
     }
 
+    .preview-toggle summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .preview-toggle summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .preview-toggle summary::after {
+      content: '▾';
+      font-size: 0.9rem;
+      color: var(--accent);
+      transition: transform 0.2s ease;
+    }
+
+    .preview-toggle[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .preview-toggle .preview-card {
+      margin-top: 1rem;
+    }
+
     .preview-card {
-      border-radius: 16px;
+      border-radius: 14px;
       border: 1px solid rgba(111, 118, 172, 0.12);
       background: #ffffff;
       overflow: hidden;
@@ -353,7 +391,7 @@
 
     .preview-media {
       position: relative;
-      height: 180px;
+      height: 160px;
       background: linear-gradient(120deg, #dfe3ff, #f7f8ff);
       display: flex;
       align-items: center;
@@ -377,7 +415,7 @@
     }
 
     .preview-body {
-      padding: 1rem 1.2rem 1.2rem;
+      padding: 0.85rem 1rem 1rem;
     }
 
     .preview-city {
@@ -389,33 +427,33 @@
     }
 
     .preview-title {
-      margin: 0.4rem 0 0.5rem;
-      font-size: 1.25rem;
+      margin: 0.35rem 0 0.45rem;
+      font-size: 1.1rem;
       color: #181c35;
     }
 
     .preview-time,
     .preview-venue,
     .preview-address {
-      margin: 0.2rem 0;
+      margin: 0.18rem 0;
       color: var(--text-secondary);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     .preview-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 0.85rem;
+      gap: 0.35rem;
+      margin-top: 0.7rem;
     }
 
     .chip {
       background: var(--chip);
       border: 1px solid rgba(108, 99, 255, 0.35);
       color: #3f47a6;
-      padding: 0.2rem 0.55rem;
+      padding: 0.18rem 0.5rem;
       border-radius: 999px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
     }
 
@@ -430,10 +468,10 @@
     }
 
     .preview-links {
-      margin-top: 0.75rem;
+      margin-top: 0.6rem;
       display: flex;
       flex-wrap: wrap;
-      gap: 0.6rem;
+      gap: 0.5rem;
     }
 
     .preview-links.is-hidden {
@@ -441,12 +479,12 @@
     }
 
     .preview-links a {
-      font-size: 0.82rem;
+      font-size: 0.76rem;
       font-weight: 600;
       color: #3f47a6;
       text-decoration: none;
       background: rgba(108, 99, 255, 0.12);
-      padding: 0.35rem 0.65rem;
+      padding: 0.28rem 0.55rem;
       border-radius: 999px;
       border: 1px solid rgba(108, 99, 255, 0.3);
     }
@@ -455,42 +493,23 @@
       background: rgba(108, 99, 255, 0.2);
     }
 
-    .json-preview {
-      margin-top: 1.2rem;
-      border-radius: 16px;
-      border: 1px solid rgba(111, 118, 172, 0.12);
-      background: #fcfdff;
-      overflow: hidden;
-    }
-
     .preview-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 1rem 1.2rem;
+      padding: 0.85rem 1rem;
       border-bottom: 1px solid rgba(111, 118, 172, 0.12);
       background: rgba(108, 99, 255, 0.08);
     }
 
     .preview-header h2 {
       margin: 0;
-      font-size: 1.05rem;
+      font-size: 0.95rem;
       color: #1f2340;
     }
 
-    .json-block {
-      margin: 0;
-      padding: 1.1rem 1.2rem;
-      background: #0f1427;
-      color: #f6f8ff;
-      font-size: 0.82rem;
-      line-height: 1.55;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
     .calendar-preview-card {
-      border-radius: 16px;
+      border-radius: 14px;
       border: 1px solid rgba(111, 118, 172, 0.12);
       background: #f7f8ff;
       overflow: hidden;
@@ -499,15 +518,15 @@
 
     #calendar-preview {
       width: 100%;
-      height: 480px;
+      height: 440px;
       border: none;
       background: #ffffff;
     }
 
     .status-badge {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
-      padding: 0.3rem 0.7rem;
+      padding: 0.25rem 0.6rem;
       border-radius: 999px;
       border: 1px solid transparent;
     }
@@ -543,7 +562,7 @@
     }
 
     .live-preview {
-      margin-top: 2rem;
+      margin-top: 1.5rem;
     }
 
     .live-preview details {
@@ -558,15 +577,89 @@
     }
 
     .live-preview summary {
-      font-size: 1.05rem;
+      font-size: 0.95rem;
     }
 
     .live-preview .section-body {
-      margin-top: 1rem;
+      margin-top: 0.75rem;
     }
 
-    input.is-auto {
-      background: rgba(108, 99, 255, 0.06);
+    .is-hidden {
+      display: none !important;
+    }
+
+    .recurrence-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .toggle-buttons {
+      display: inline-flex;
+      background: rgba(108, 99, 255, 0.08);
+      border-radius: 999px;
+      padding: 0.15rem;
+      gap: 0.15rem;
+    }
+
+    .toggle-button {
+      border: none;
+      background: transparent;
+      padding: 0.28rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #3f47a6;
+      cursor: pointer;
+    }
+
+    .toggle-button.is-active {
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(63, 71, 166, 0.18);
+      color: #1f2340;
+    }
+
+    .day-toggle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+
+    .day-button {
+      border: 1px solid rgba(108, 99, 255, 0.35);
+      background: rgba(108, 99, 255, 0.08);
+      color: #3f47a6;
+      padding: 0.16rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .day-button.is-active {
+      background: rgba(108, 99, 255, 0.22);
+      border-color: rgba(108, 99, 255, 0.5);
+    }
+
+    .recurrence-summary {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: -0.3rem;
+    }
+
+    .recurrence-builder .field-row:last-of-type {
+      margin-bottom: 0.5rem;
+    }
+
+    #recurrence-monthly .field-row {
+      margin-bottom: 0.4rem;
+    }
+
+    #recurrence-monthly .field-row:last-child {
+      margin-bottom: 0;
     }
 
     @media (max-width: 1080px) {
@@ -581,11 +674,11 @@
 
     @media (max-width: 768px) {
       .page-wrapper {
-        padding: 1.75rem 1rem 3rem;
+        padding: 1.6rem 1rem 2.6rem;
       }
 
       .hero h1 {
-        font-size: 2rem;
+        font-size: 1.75rem;
       }
 
       .form-actions {
@@ -604,6 +697,24 @@
       .share-row {
         flex-direction: column;
         align-items: stretch;
+      }
+
+      details.form-section {
+        padding: 0.55rem 0.7rem;
+      }
+
+      .field-grid,
+      .field-row {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+      }
+
+      .panel {
+        padding: 1.1rem;
+      }
+
+      .preview-toggle summary::after {
+        margin-left: auto;
       }
     }
   </style>
@@ -654,8 +765,17 @@
                   <input type="text" id="event-address" autocomplete="off" placeholder="554 W 28th St, New York, NY">
                 </div>
                 <div class="field-group">
+                  <label for="event-coordinates">Coordinates (lat, lng)</label>
+                  <input type="text" id="event-coordinates" autocomplete="off" placeholder="40.7497, -73.9943">
+                  <small class="field-hint" data-default="Use latitude, longitude from Google Maps.">Use latitude, longitude from Google Maps.</small>
+                </div>
+                <div class="field-group">
                   <label for="event-cover">Cover / Price</label>
                   <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
+                </div>
+                <div class="field-group">
+                  <label for="event-image">Promo Image URL</label>
+                  <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
                 </div>
               </div>
 
@@ -666,7 +786,7 @@
             </div>
           </details>
 
-          <details class="form-section" open>
+          <details class="form-section">
             <summary>Time &amp; Recurrence</summary>
             <div class="section-body">
               <div class="field-row">
@@ -685,31 +805,118 @@
                 <span class="time-note" id="timezone-note"><strong>Local timezone:</strong> </span>
               </div>
 
-              <div class="field-row">
+              <div class="recurrence-toggle">
                 <div class="field-group">
-                  <label for="event-time">Time Label</label>
-                  <div class="input-with-action">
-                    <input type="text" id="event-time" placeholder="Auto: 9PM-1AM">
-                    <button type="button" class="ghost-button" id="auto-time-button" title="Use automatic time label">Use automatic</button>
+                  <label>Recurrence</label>
+                  <small>Optional — leave as “Does not repeat”.</small>
+                </div>
+                <div class="toggle-buttons" role="group" aria-label="Recurrence input mode">
+                  <button type="button" class="toggle-button is-active" data-recurrence-mode="builder">Builder</button>
+                  <button type="button" class="toggle-button" data-recurrence-mode="raw">Raw RRULE</button>
+                </div>
+              </div>
+
+              <div class="recurrence-builder" id="recurrence-builder">
+                <div class="field-row">
+                  <div class="field-group">
+                    <label for="recurrence-frequency">Repeats</label>
+                    <select id="recurrence-frequency">
+                      <option value="none">Does not repeat</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
                   </div>
-                  <small id="time-helper">Auto label updates with start/end times.</small>
+                  <div class="field-group">
+                    <label for="recurrence-interval">Every</label>
+                    <div class="input-with-action">
+                      <input type="number" id="recurrence-interval" min="1" value="1">
+                      <span class="input-suffix" id="recurrence-interval-label">week(s)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field-row" id="recurrence-weekly">
+                  <div class="field-group">
+                    <label>Repeat on</label>
+                    <div class="day-toggle" id="recurrence-weekdays">
+                      <button type="button" class="day-button" data-day="MO">Mon</button>
+                      <button type="button" class="day-button" data-day="TU">Tue</button>
+                      <button type="button" class="day-button" data-day="WE">Wed</button>
+                      <button type="button" class="day-button" data-day="TH">Thu</button>
+                      <button type="button" class="day-button" data-day="FR">Fri</button>
+                      <button type="button" class="day-button" data-day="SA">Sat</button>
+                      <button type="button" class="day-button" data-day="SU">Sun</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field-row" id="recurrence-monthly">
+                  <div class="field-group">
+                    <label>Monthly pattern</label>
+                    <div class="field-row">
+                      <label class="checkbox-label">
+                        <input type="radio" name="recurrence-monthly-mode" value="monthday" checked>
+                        <span>On day</span>
+                      </label>
+                      <input type="number" id="recurrence-monthday" min="1" max="31" placeholder="15">
+                    </div>
+                    <div class="field-row">
+                      <label class="checkbox-label">
+                        <input type="radio" name="recurrence-monthly-mode" value="weekday">
+                        <span>On the</span>
+                      </label>
+                      <div class="input-with-action">
+                        <select id="recurrence-week-pos">
+                          <option value="1">First</option>
+                          <option value="2">Second</option>
+                          <option value="3">Third</option>
+                          <option value="4">Fourth</option>
+                          <option value="-1">Last</option>
+                        </select>
+                        <select id="recurrence-weekday">
+                          <option value="MO">Monday</option>
+                          <option value="TU">Tuesday</option>
+                          <option value="WE">Wednesday</option>
+                          <option value="TH">Thursday</option>
+                          <option value="FR">Friday</option>
+                          <option value="SA">Saturday</option>
+                          <option value="SU">Sunday</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field-row" id="recurrence-ends-row">
+                  <div class="field-group">
+                    <label for="recurrence-ends">Ends</label>
+                    <select id="recurrence-ends">
+                      <option value="never">Never</option>
+                      <option value="count">After # times</option>
+                      <option value="until">On date</option>
+                    </select>
+                  </div>
+                  <div class="field-group is-hidden" id="recurrence-count-group">
+                    <label for="recurrence-count">After</label>
+                    <input type="number" id="recurrence-count" min="1" placeholder="10">
+                  </div>
+                  <div class="field-group is-hidden" id="recurrence-until-group">
+                    <label for="recurrence-until">On date</label>
+                    <input type="date" id="recurrence-until">
+                  </div>
                 </div>
               </div>
 
-              <div class="field-row">
+              <div id="recurrence-raw" class="is-hidden">
                 <div class="field-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="event-recurring">
-                    <span>Recurring event</span>
-                  </label>
+                  <label for="event-recurrence">RRULE (raw)</label>
+                  <input type="text" id="event-recurrence" placeholder="FREQ=WEEKLY;BYDAY=FR">
+                  <small class="field-hint" data-default="Paste a full RRULE string.">Paste a full RRULE string.</small>
                 </div>
               </div>
 
-              <div class="field-group" id="recurrence-group">
-                <label for="event-recurrence">Recurrence rule (RRULE)</label>
-                <input type="text" id="event-recurrence" placeholder="FREQ=WEEKLY;BYDAY=FR">
-                <small>Only used if the event repeats.</small>
-              </div>
+              <p class="recurrence-summary" id="recurrence-summary">Does not repeat.</p>
             </div>
           </details>
 
@@ -746,18 +953,6 @@
             </div>
           </details>
 
-          <details class="form-section">
-            <summary>Images</summary>
-            <div class="section-body">
-              <div class="field-grid">
-                <div class="field-group">
-                  <label for="event-image">Promo Image URL</label>
-                  <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
-                </div>
-              </div>
-            </div>
-          </details>
-
           <div class="form-actions">
             <button type="button" class="ghost-button" id="reset-form">Reset to defaults</button>
             <div class="primary-actions">
@@ -776,41 +971,35 @@
       </section>
 
       <aside class="panel preview-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Live Preview</h2>
-            <p class="panel-subtitle">Updates instantly as you type.</p>
-          </div>
-        </div>
-
-        <div class="preview-card">
-          <div class="preview-media" id="preview-media">
-            <img id="preview-image" alt="" loading="lazy">
-            <div class="preview-fallback">Add a promo image to preview artwork.</div>
-          </div>
-          <div class="preview-body">
-            <div class="preview-city" id="preview-city">City</div>
-            <h3 class="preview-title" id="preview-title">Untitled event</h3>
-            <p class="preview-time" id="preview-time">Add start and end times to preview timing.</p>
-            <p class="preview-venue" id="preview-venue">Venue TBA</p>
-            <p class="preview-address" id="preview-address">Address TBD</p>
-            <div class="preview-chips">
-              <span class="chip" id="preview-duration">Duration TBD</span>
-              <span class="chip is-muted" id="preview-timezone">TZ</span>
-              <span class="chip is-hidden" id="preview-recurring">Recurring</span>
-              <span class="chip is-hidden" id="preview-cover">Cover</span>
+        <details class="preview-toggle" open>
+          <summary class="panel-header">
+            <div>
+              <h2>Live Preview</h2>
+              <p class="panel-subtitle">Updates instantly as you type.</p>
             </div>
-            <div class="preview-links is-hidden" id="preview-links"></div>
-          </div>
-        </div>
+          </summary>
 
-        <div class="json-preview">
-          <div class="preview-header">
-            <h2>Event JSON</h2>
-            <button type="button" class="ghost-button" id="copy-json">Copy JSON</button>
+          <div class="preview-card">
+            <div class="preview-media" id="preview-media">
+              <img id="preview-image" alt="" loading="lazy">
+              <div class="preview-fallback">Add a promo image to preview artwork.</div>
+            </div>
+            <div class="preview-body">
+              <div class="preview-city" id="preview-city">City</div>
+              <h3 class="preview-title" id="preview-title">Untitled event</h3>
+              <p class="preview-time" id="preview-time">Add start and end times to preview timing.</p>
+              <p class="preview-venue" id="preview-venue">Venue TBA</p>
+              <p class="preview-address" id="preview-address">Address TBD</p>
+              <div class="preview-chips">
+                <span class="chip" id="preview-duration">Duration TBD</span>
+                <span class="chip is-muted" id="preview-timezone">TZ</span>
+                <span class="chip is-hidden" id="preview-recurring">Recurring</span>
+                <span class="chip is-hidden" id="preview-cover">Cover</span>
+              </div>
+              <div class="preview-links is-hidden" id="preview-links"></div>
+            </div>
           </div>
-          <pre id="event-json" class="json-block">Add event details to see the generated calendar object.</pre>
-        </div>
+        </details>
       </aside>
     </main>
 
@@ -837,10 +1026,27 @@
       const URL_UPDATE_DELAY = 120;
       const EVENT_PUSH_DELAY = 200;
       const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
+      const DAY_CODE_LABELS = {
+        MO: 'Mon',
+        TU: 'Tue',
+        WE: 'Wed',
+        TH: 'Thu',
+        FR: 'Fri',
+        SA: 'Sat',
+        SU: 'Sun'
+      };
+      const WEEK_POSITION_LABELS = {
+        '1': 'First',
+        '2': 'Second',
+        '3': 'Third',
+        '4': 'Fourth',
+        '-1': 'Last'
+      };
 
       const dom = {};
       let state;
-      let useAutoTimeLabel = true;
+      let recurrenceMode = 'builder';
+      let isRecurrenceSyncing = false;
       let calendarReady = false;
       let iframeLoaded = false;
       let sendTimeoutId = null;
@@ -857,19 +1063,12 @@
         state = { ...baseState, ...urlState.overrides };
         state.timezone = browserTimezone;
         normalizeStateLinks();
-        useAutoTimeLabel = !urlState.timeProvided;
-        if (useAutoTimeLabel) {
-          state.time = '';
-        }
         ensureDateOrder();
         applyStateToForm();
-        updateAutoTimeLabel();
         bindEvents();
-        updateRecurrenceVisibility();
-        updateTimeHelper();
+        updateRecurrenceUi();
         updateTimeNotes();
         updatePreviewCard();
-        updateJsonPreview();
         updateUrl();
         updateCalendarSource(true);
         setupMessaging();
@@ -883,16 +1082,34 @@
         dom.citySelect = document.getElementById('event-city');
         dom.venueInput = document.getElementById('event-venue');
         dom.addressInput = document.getElementById('event-address');
+        dom.coordinatesInput = document.getElementById('event-coordinates');
         dom.descriptionInput = document.getElementById('event-description');
         dom.coverInput = document.getElementById('event-cover');
         dom.startInput = document.getElementById('event-start');
         dom.endInput = document.getElementById('event-end');
-        dom.timeInput = document.getElementById('event-time');
-        dom.timeHelper = document.getElementById('time-helper');
-        dom.autoTimeButton = document.getElementById('auto-time-button');
         dom.durationNote = document.getElementById('duration-note');
         dom.timezoneNote = document.getElementById('timezone-note');
-        dom.recurringCheckbox = document.getElementById('event-recurring');
+        dom.recurrenceModeButtons = document.querySelectorAll('[data-recurrence-mode]');
+        dom.recurrenceBuilder = document.getElementById('recurrence-builder');
+        dom.recurrenceRaw = document.getElementById('recurrence-raw');
+        dom.recurrenceFrequency = document.getElementById('recurrence-frequency');
+        dom.recurrenceInterval = document.getElementById('recurrence-interval');
+        dom.recurrenceIntervalLabel = document.getElementById('recurrence-interval-label');
+        dom.recurrenceWeekdays = document.getElementById('recurrence-weekdays');
+        dom.recurrenceWeekdayButtons = document.querySelectorAll('#recurrence-weekdays .day-button');
+        dom.recurrenceMonthlyMode = document.querySelectorAll('input[name="recurrence-monthly-mode"]');
+        dom.recurrenceMonthday = document.getElementById('recurrence-monthday');
+        dom.recurrenceWeekPos = document.getElementById('recurrence-week-pos');
+        dom.recurrenceWeekday = document.getElementById('recurrence-weekday');
+        dom.recurrenceWeeklyRow = document.getElementById('recurrence-weekly');
+        dom.recurrenceMonthlyRow = document.getElementById('recurrence-monthly');
+        dom.recurrenceEndsRow = document.getElementById('recurrence-ends-row');
+        dom.recurrenceEnds = document.getElementById('recurrence-ends');
+        dom.recurrenceCountGroup = document.getElementById('recurrence-count-group');
+        dom.recurrenceUntilGroup = document.getElementById('recurrence-until-group');
+        dom.recurrenceCount = document.getElementById('recurrence-count');
+        dom.recurrenceUntil = document.getElementById('recurrence-until');
+        dom.recurrenceSummary = document.getElementById('recurrence-summary');
         dom.recurrenceInput = document.getElementById('event-recurrence');
         dom.websiteInput = document.getElementById('event-website');
         dom.ticketUrlInput = document.getElementById('event-ticket-url');
@@ -904,10 +1121,8 @@
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
         dom.copyShareButton = document.getElementById('copy-link');
         dom.shareUrl = document.getElementById('share-url');
-        dom.copyJsonButton = document.getElementById('copy-json');
         dom.calendarIframe = document.getElementById('calendar-preview');
         dom.calendarStatus = document.getElementById('calendar-status');
-        dom.jsonPreview = document.getElementById('event-json');
         dom.previewMedia = document.getElementById('preview-media');
         dom.previewImage = document.getElementById('preview-image');
         dom.previewCity = document.getElementById('preview-city');
@@ -963,13 +1178,12 @@
           city: defaultCity,
           venue: 'The Eagle NYC',
           address: '554 W 28th St, New York, NY',
+          location: '',
           description: 'Preview your chunky.dad event before it goes live.',
           cover: '',
           start: formatInputValue(start),
           end: formatInputValue(end),
           timezone: browserTimezone,
-          time: '',
-          recurring: false,
           recurrence: '',
           website: '',
           ticketUrl: '',
@@ -993,7 +1207,6 @@
       function loadStateFromUrl(baseState) {
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
-        let timeProvided = false;
         params.forEach((value, key) => {
           if (value == null || value === '') return;
           switch (key) {
@@ -1012,6 +1225,11 @@
             case 'addr':
               overrides.address = value;
               break;
+            case 'coords':
+            case 'loc':
+            case 'location':
+              overrides.location = value;
+              break;
             case 'desc':
               overrides.description = value;
               break;
@@ -1028,13 +1246,6 @@
               if (sanitizedEnd) overrides.end = sanitizedEnd;
               break;
             }
-            case 'time':
-              overrides.time = value;
-              timeProvided = true;
-              break;
-            case 'repeat':
-              overrides.recurring = value === '1' || value.toLowerCase() === 'true';
-              break;
             case 'rrule':
               overrides.recurrence = value;
               break;
@@ -1067,7 +1278,7 @@
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
         if (!overrides.city) overrides.city = baseState.city;
-        return { overrides, timeProvided };
+        return { overrides };
       }
 
       function applyStateToForm() {
@@ -1081,14 +1292,11 @@
         }
         if (dom.venueInput) dom.venueInput.value = state.venue || '';
         if (dom.addressInput) dom.addressInput.value = state.address || '';
+        if (dom.coordinatesInput) dom.coordinatesInput.value = state.location || '';
         if (dom.descriptionInput) dom.descriptionInput.value = state.description || '';
         if (dom.coverInput) dom.coverInput.value = state.cover || '';
         if (dom.startInput) dom.startInput.value = state.start || '';
         if (dom.endInput) dom.endInput.value = state.end || '';
-        if (!useAutoTimeLabel && dom.timeInput) {
-          dom.timeInput.value = state.time || '';
-        }
-        if (dom.recurringCheckbox) dom.recurringCheckbox.checked = !!state.recurring;
         if (dom.recurrenceInput) dom.recurrenceInput.value = state.recurrence || '';
         if (dom.websiteInput) dom.websiteInput.value = state.website || '';
         if (dom.ticketUrlInput) dom.ticketUrlInput.value = state.ticketUrl || '';
@@ -1096,9 +1304,10 @@
         if (dom.facebookInput) dom.facebookInput.value = state.facebook || '';
         if (dom.gmapsInput) dom.gmapsInput.value = state.gmaps || '';
         if (dom.imageInput) dom.imageInput.value = state.image || '';
-        updateTimeHelper();
         updateTimeNotes();
+        applyRecurrenceStateToForm();
         syncLinkFieldStates();
+        updateCoordinatesFieldState();
       }
 
       function bindEvents() {
@@ -1108,13 +1317,13 @@
         if (dom.nameInput) {
           dom.nameInput.addEventListener('input', event => {
             state.name = event.target.value;
-            refreshUi({ skipAutoTime: true });
+            refreshUi();
           });
         }
         if (dom.shortNameInput) {
           dom.shortNameInput.addEventListener('input', event => {
             state.shortName = event.target.value;
-            refreshUi({ skipAutoTime: true });
+            refreshUi();
           });
         }
         if (dom.citySelect) {
@@ -1128,25 +1337,32 @@
         if (dom.venueInput) {
           dom.venueInput.addEventListener('input', event => {
             state.venue = event.target.value;
-            refreshUi({ skipAutoTime: true });
+            refreshUi();
           });
         }
         if (dom.addressInput) {
           dom.addressInput.addEventListener('input', event => {
             state.address = event.target.value;
-            refreshUi({ skipAutoTime: true });
+            refreshUi();
+          });
+        }
+        if (dom.coordinatesInput) {
+          dom.coordinatesInput.addEventListener('input', event => {
+            state.location = event.target.value;
+            updateCoordinatesFieldState();
+            refreshUi();
           });
         }
         if (dom.descriptionInput) {
           dom.descriptionInput.addEventListener('input', event => {
             state.description = event.target.value;
-            refreshUi({ skipAutoTime: true });
+            refreshUi();
           });
         }
         if (dom.coverInput) {
           dom.coverInput.addEventListener('input', event => {
             state.cover = event.target.value;
-            refreshUi({ skipAutoTime: true });
+            refreshUi();
           });
         }
         if (dom.startInput) {
@@ -1175,33 +1391,77 @@
           dom.endInput.addEventListener('change', handler);
           dom.endInput.addEventListener('input', handler);
         }
-        if (dom.timeInput) {
-          dom.timeInput.addEventListener('input', event => {
-            useAutoTimeLabel = false;
-            state.time = event.target.value;
-            updateTimeHelper();
-            refreshUi({ skipAutoTime: true });
-          });
-        }
-        if (dom.autoTimeButton) {
-          dom.autoTimeButton.addEventListener('click', () => {
-            useAutoTimeLabel = true;
-            updateAutoTimeLabel();
-            updateTimeHelper();
+        if (dom.recurrenceInput) {
+          dom.recurrenceInput.addEventListener('input', event => {
+            state.recurrence = event.target.value.trim();
+            updateRecurrenceSummary();
             refreshUi();
           });
         }
-        if (dom.recurringCheckbox) {
-          dom.recurringCheckbox.addEventListener('change', event => {
-            state.recurring = event.target.checked;
-            updateRecurrenceVisibility();
-            refreshUi({ skipAutoTime: true });
+        if (dom.recurrenceModeButtons && dom.recurrenceModeButtons.length) {
+          dom.recurrenceModeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              const mode = button.dataset.recurrenceMode;
+              if (mode) {
+                setRecurrenceMode(mode);
+              }
+            });
           });
         }
-        if (dom.recurrenceInput) {
-          dom.recurrenceInput.addEventListener('input', event => {
-            state.recurrence = event.target.value;
-            refreshUi({ skipAutoTime: true });
+        if (dom.recurrenceFrequency) {
+          dom.recurrenceFrequency.addEventListener('change', () => {
+            handleRecurrenceBuilderChange();
+          });
+        }
+        if (dom.recurrenceInterval) {
+          dom.recurrenceInterval.addEventListener('input', () => {
+            handleRecurrenceBuilderChange();
+          });
+        }
+        if (dom.recurrenceWeekdayButtons && dom.recurrenceWeekdayButtons.length) {
+          dom.recurrenceWeekdayButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              toggleRecurrenceDay(button);
+              handleRecurrenceBuilderChange();
+            });
+          });
+        }
+        if (dom.recurrenceMonthlyMode && dom.recurrenceMonthlyMode.length) {
+          dom.recurrenceMonthlyMode.forEach(input => {
+            input.addEventListener('change', () => {
+              handleRecurrenceBuilderChange();
+            });
+          });
+        }
+        if (dom.recurrenceMonthday) {
+          dom.recurrenceMonthday.addEventListener('input', () => {
+            handleRecurrenceBuilderChange();
+          });
+        }
+        if (dom.recurrenceWeekPos) {
+          dom.recurrenceWeekPos.addEventListener('change', () => {
+            handleRecurrenceBuilderChange();
+          });
+        }
+        if (dom.recurrenceWeekday) {
+          dom.recurrenceWeekday.addEventListener('change', () => {
+            handleRecurrenceBuilderChange();
+          });
+        }
+        if (dom.recurrenceEnds) {
+          dom.recurrenceEnds.addEventListener('change', () => {
+            updateRecurrenceUi();
+            handleRecurrenceBuilderChange();
+          });
+        }
+        if (dom.recurrenceCount) {
+          dom.recurrenceCount.addEventListener('input', () => {
+            handleRecurrenceBuilderChange();
+          });
+        }
+        if (dom.recurrenceUntil) {
+          dom.recurrenceUntil.addEventListener('input', () => {
+            handleRecurrenceBuilderChange();
           });
         }
         bindLinkField(dom.websiteInput, 'website', 'website');
@@ -1212,7 +1472,7 @@
         if (dom.imageInput) {
           dom.imageInput.addEventListener('input', event => {
             state.image = event.target.value;
-            refreshUi({ skipAutoTime: true });
+            refreshUi();
           });
         }
         if (dom.resetButton) {
@@ -1221,11 +1481,6 @@
         if (dom.copyShareButton) {
           dom.copyShareButton.addEventListener('click', () => {
             copyToClipboard(dom.shareUrl ? dom.shareUrl.value : '', dom.copyShareButton);
-          });
-        }
-        if (dom.copyJsonButton) {
-          dom.copyJsonButton.addEventListener('click', () => {
-            copyToClipboard(dom.jsonPreview ? dom.jsonPreview.textContent : '', dom.copyJsonButton);
           });
         }
         if (dom.addToCalendarButton) {
@@ -1239,7 +1494,7 @@
           const result = normalizeLinkValue(linkType, input.value);
           state[stateKey] = result.value;
           updateLinkFieldState(input, result);
-          refreshUi({ skipAutoTime: true });
+          refreshUi();
         };
         input.addEventListener('input', handleInput);
         input.addEventListener('blur', () => {
@@ -1249,7 +1504,7 @@
           if (result.value && input.value.trim() !== result.value) {
             input.value = result.value;
           }
-          refreshUi({ skipAutoTime: true });
+          refreshUi();
         });
       }
 
@@ -1385,35 +1640,399 @@
         const preservedCity = state.city;
         state = createDefaultState();
         state.city = preservedCity;
-        useAutoTimeLabel = true;
+        recurrenceMode = 'builder';
         applyStateToForm();
-        updateAutoTimeLabel();
         refreshUi();
         scheduleEventPush();
       }
 
-      function updateRecurrenceVisibility() {
-        if (!dom.recurrenceInput) return;
-        const enabled = !!state.recurring;
-        dom.recurrenceInput.disabled = !enabled;
-        const container = dom.recurrenceInput.parentElement;
-        if (container) {
-          container.classList.toggle('disabled', !enabled);
+      function updateCoordinatesFieldState() {
+        if (!dom.coordinatesInput) return;
+        const rawValue = dom.coordinatesInput.value.trim();
+        const hint = getFieldHint(dom.coordinatesInput);
+        if (!rawValue) {
+          dom.coordinatesInput.classList.remove('is-invalid');
+          dom.coordinatesInput.removeAttribute('aria-invalid');
+          setFieldHint(hint, '', false);
+          return;
+        }
+        const parsed = parseCoordinates(rawValue);
+        const hasError = !parsed;
+        dom.coordinatesInput.classList.toggle('is-invalid', hasError);
+        if (hasError) {
+          dom.coordinatesInput.setAttribute('aria-invalid', 'true');
+          setFieldHint(hint, 'Use "lat, lng" like 40.7497, -73.9943.', true);
+        } else {
+          dom.coordinatesInput.removeAttribute('aria-invalid');
+          setFieldHint(hint, '', false);
         }
       }
 
-      function updateTimeHelper() {
-        if (dom.timeHelper) {
-          dom.timeHelper.textContent = useAutoTimeLabel
-            ? 'Auto label updates with start/end times (local timezone).'
-            : 'Manual label stays exactly as you type.';
+      function applyRecurrenceStateToForm() {
+        const startDate = parseLocalDateTime(state.start, state.timezone);
+        const fallback = getDefaultRecurrenceBuilder(startDate);
+        if (state.recurrence) {
+          const parsed = parseRruleToBuilder(state.recurrence, fallback);
+          if (parsed) {
+            applyRecurrenceBuilderState(parsed);
+            recurrenceMode = 'builder';
+          } else {
+            applyRecurrenceBuilderState(fallback);
+            recurrenceMode = 'raw';
+          }
+        } else {
+          applyRecurrenceBuilderState(fallback);
+          recurrenceMode = 'builder';
         }
-        if (dom.autoTimeButton) {
-          dom.autoTimeButton.disabled = useAutoTimeLabel;
+        if (dom.recurrenceInput) {
+          dom.recurrenceInput.value = state.recurrence || '';
         }
-        if (dom.timeInput) {
-          dom.timeInput.classList.toggle('is-auto', useAutoTimeLabel);
+        setRecurrenceMode(recurrenceMode, { silent: true, force: true });
+        updateRecurrenceUi();
+        updateRecurrenceSummary();
+      }
+
+      function setRecurrenceMode(mode, options = {}) {
+        const nextMode = mode === 'raw' ? 'raw' : 'builder';
+        if (recurrenceMode === nextMode && !options.force) {
+          return;
         }
+        recurrenceMode = nextMode;
+        if (!options.silent) {
+          if (recurrenceMode === 'builder') {
+            const rawValue = dom.recurrenceInput ? dom.recurrenceInput.value.trim() : '';
+            if (rawValue) {
+              const parsed = parseRruleToBuilder(rawValue);
+              if (parsed) {
+                applyRecurrenceBuilderState(parsed);
+                state.recurrence = rawValue;
+              }
+            }
+          } else {
+            state.recurrence = buildRruleFromBuilder();
+            if (dom.recurrenceInput) {
+              dom.recurrenceInput.value = state.recurrence;
+            }
+          }
+          refreshUi();
+        }
+        if (dom.recurrenceModeButtons && dom.recurrenceModeButtons.length) {
+          dom.recurrenceModeButtons.forEach(button => {
+            button.classList.toggle('is-active', button.dataset.recurrenceMode === recurrenceMode);
+          });
+        }
+        updateRecurrenceUi();
+        updateRecurrenceSummary();
+      }
+
+      function updateRecurrenceUi() {
+        const frequency = dom.recurrenceFrequency ? dom.recurrenceFrequency.value : 'none';
+        const showWeekly = frequency === 'weekly';
+        const showMonthly = frequency === 'monthly';
+        const showEnds = frequency !== 'none';
+        if (dom.recurrenceWeeklyRow) {
+          dom.recurrenceWeeklyRow.classList.toggle('is-hidden', !showWeekly);
+        }
+        if (dom.recurrenceMonthlyRow) {
+          dom.recurrenceMonthlyRow.classList.toggle('is-hidden', !showMonthly);
+        }
+        if (dom.recurrenceBuilder) {
+          dom.recurrenceBuilder.classList.toggle('is-hidden', recurrenceMode !== 'builder');
+        }
+        if (dom.recurrenceRaw) {
+          dom.recurrenceRaw.classList.toggle('is-hidden', recurrenceMode !== 'raw');
+        }
+        if (dom.recurrenceIntervalLabel) {
+          const label = frequency === 'daily'
+            ? 'day(s)'
+            : frequency === 'monthly'
+              ? 'month(s)'
+              : 'week(s)';
+          dom.recurrenceIntervalLabel.textContent = label;
+        }
+        if (dom.recurrenceInterval) {
+          dom.recurrenceInterval.disabled = frequency === 'none';
+        }
+        if (dom.recurrenceEndsRow) {
+          dom.recurrenceEndsRow.classList.toggle('is-hidden', !showEnds);
+        }
+        if (dom.recurrenceEnds) {
+          dom.recurrenceEnds.disabled = !showEnds;
+        }
+        if (dom.recurrenceEnds) {
+          const endsValue = dom.recurrenceEnds.value || 'never';
+          if (dom.recurrenceCountGroup) {
+            dom.recurrenceCountGroup.classList.toggle('is-hidden', endsValue !== 'count');
+          }
+          if (dom.recurrenceUntilGroup) {
+            dom.recurrenceUntilGroup.classList.toggle('is-hidden', endsValue !== 'until');
+          }
+        }
+        const monthlyMode = getSelectedMonthlyMode();
+        if (dom.recurrenceMonthday) {
+          dom.recurrenceMonthday.disabled = monthlyMode !== 'monthday';
+        }
+        if (dom.recurrenceWeekPos) {
+          dom.recurrenceWeekPos.disabled = monthlyMode !== 'weekday';
+        }
+        if (dom.recurrenceWeekday) {
+          dom.recurrenceWeekday.disabled = monthlyMode !== 'weekday';
+        }
+      }
+
+      function handleRecurrenceBuilderChange() {
+        if (recurrenceMode !== 'builder' || isRecurrenceSyncing) return;
+        isRecurrenceSyncing = true;
+        const nextRule = buildRruleFromBuilder();
+        state.recurrence = nextRule;
+        if (dom.recurrenceInput) {
+          dom.recurrenceInput.value = nextRule;
+        }
+        updateRecurrenceUi();
+        updateRecurrenceSummary();
+        refreshUi();
+        isRecurrenceSyncing = false;
+      }
+
+      function toggleRecurrenceDay(button) {
+        const isActive = !button.classList.contains('is-active');
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      }
+
+      function getSelectedMonthlyMode() {
+        const selected = dom.recurrenceMonthlyMode
+          ? [...dom.recurrenceMonthlyMode].find(input => input.checked)
+          : null;
+        return selected ? selected.value : 'monthday';
+      }
+
+      function getDefaultRecurrenceBuilder(startDate) {
+        const dayCode = startDate ? getDayCode(startDate) : 'FR';
+        const monthDay = startDate ? startDate.getDate() : 15;
+        return {
+          frequency: 'none',
+          interval: 1,
+          byDay: [dayCode],
+          monthlyMode: 'monthday',
+          monthDay,
+          weekPos: 1,
+          weekDay: dayCode,
+          ends: 'never',
+          count: '',
+          until: ''
+        };
+      }
+
+      function applyRecurrenceBuilderState(builder) {
+        if (!builder) return;
+        if (dom.recurrenceFrequency) dom.recurrenceFrequency.value = builder.frequency || 'none';
+        if (dom.recurrenceInterval) dom.recurrenceInterval.value = builder.interval || 1;
+        if (dom.recurrenceWeekdayButtons && dom.recurrenceWeekdayButtons.length) {
+          dom.recurrenceWeekdayButtons.forEach(button => {
+            const day = button.dataset.day;
+            const isActive = builder.byDay && builder.byDay.includes(day);
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          });
+        }
+        if (dom.recurrenceMonthlyMode && dom.recurrenceMonthlyMode.length) {
+          dom.recurrenceMonthlyMode.forEach(input => {
+            input.checked = input.value === (builder.monthlyMode || 'monthday');
+          });
+        }
+        if (dom.recurrenceMonthday) dom.recurrenceMonthday.value = builder.monthDay || '';
+        if (dom.recurrenceWeekPos) dom.recurrenceWeekPos.value = builder.weekPos || 1;
+        if (dom.recurrenceWeekday) dom.recurrenceWeekday.value = builder.weekDay || 'MO';
+        if (dom.recurrenceEnds) dom.recurrenceEnds.value = builder.ends || 'never';
+        if (dom.recurrenceCount) dom.recurrenceCount.value = builder.count || '';
+        if (dom.recurrenceUntil) dom.recurrenceUntil.value = builder.until || '';
+      }
+
+      function buildRruleFromBuilder() {
+        if (!dom.recurrenceFrequency) return '';
+        const frequency = dom.recurrenceFrequency.value || 'none';
+        if (frequency === 'none') return '';
+        const parts = [`FREQ=${frequency.toUpperCase()}`];
+        const interval = Math.max(1, parseInt(dom.recurrenceInterval ? dom.recurrenceInterval.value : '1', 10) || 1);
+        if (interval > 1) {
+          parts.push(`INTERVAL=${interval}`);
+        }
+        if (frequency === 'weekly') {
+          let byDay = dom.recurrenceWeekdayButtons
+            ? [...dom.recurrenceWeekdayButtons]
+              .filter(button => button.classList.contains('is-active'))
+              .map(button => button.dataset.day)
+              .filter(Boolean)
+            : [];
+          if (!byDay.length) {
+            const startDate = parseLocalDateTime(state.start, state.timezone);
+            byDay = [getDayCode(startDate || new Date())];
+            if (dom.recurrenceWeekdayButtons) {
+              dom.recurrenceWeekdayButtons.forEach(button => {
+                const isActive = byDay.includes(button.dataset.day);
+                button.classList.toggle('is-active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+              });
+            }
+          }
+          parts.push(`BYDAY=${byDay.join(',')}`);
+        }
+        if (frequency === 'monthly') {
+          const monthlyMode = getSelectedMonthlyMode();
+          if (monthlyMode === 'weekday') {
+            let weekPos = dom.recurrenceWeekPos ? dom.recurrenceWeekPos.value : '1';
+            let weekDay = dom.recurrenceWeekday ? dom.recurrenceWeekday.value : 'MO';
+            if (!weekPos || !weekDay) {
+              const startDate = parseLocalDateTime(state.start, state.timezone);
+              weekDay = getDayCode(startDate || new Date());
+              weekPos = '1';
+              if (dom.recurrenceWeekPos) dom.recurrenceWeekPos.value = weekPos;
+              if (dom.recurrenceWeekday) dom.recurrenceWeekday.value = weekDay;
+            }
+            parts.push(`BYDAY=${weekDay}`);
+            parts.push(`BYSETPOS=${weekPos}`);
+          } else {
+            let monthDay = parseInt(dom.recurrenceMonthday ? dom.recurrenceMonthday.value : '', 10);
+            if (!monthDay) {
+              const startDate = parseLocalDateTime(state.start, state.timezone);
+              monthDay = startDate ? startDate.getDate() : 1;
+              if (dom.recurrenceMonthday) dom.recurrenceMonthday.value = monthDay;
+            }
+            parts.push(`BYMONTHDAY=${monthDay}`);
+          }
+        }
+        if (dom.recurrenceEnds) {
+          const ends = dom.recurrenceEnds.value;
+          if (ends === 'count') {
+            const count = parseInt(dom.recurrenceCount ? dom.recurrenceCount.value : '', 10);
+            if (count) {
+              parts.push(`COUNT=${count}`);
+            }
+          }
+          if (ends === 'until') {
+            const untilValue = dom.recurrenceUntil ? dom.recurrenceUntil.value : '';
+            const untilDate = formatUntilDate(untilValue);
+            if (untilDate) {
+              parts.push(`UNTIL=${untilDate}`);
+            }
+          }
+        }
+        return parts.join(';');
+      }
+
+      function parseRruleToBuilder(rule, fallback = null) {
+        if (!rule || typeof rule !== 'string') return null;
+        const trimmed = rule.trim();
+        if (!trimmed) return null;
+        const parts = trimmed.split(';');
+        const rules = {};
+        parts.forEach(part => {
+          const [key, value] = part.split('=');
+          if (!key || !value) return;
+          rules[key.toUpperCase()] = value;
+        });
+        const freq = rules.FREQ ? rules.FREQ.toLowerCase() : '';
+        if (!['daily', 'weekly', 'monthly'].includes(freq)) {
+          return null;
+        }
+        const builder = fallback ? { ...fallback } : getDefaultRecurrenceBuilder(null);
+        builder.frequency = freq;
+        builder.interval = Math.max(1, parseInt(rules.INTERVAL || '1', 10) || 1);
+        if (freq === 'weekly') {
+          builder.byDay = rules.BYDAY ? rules.BYDAY.split(',') : builder.byDay;
+        }
+        if (freq === 'monthly') {
+          if (rules.BYMONTHDAY) {
+            builder.monthlyMode = 'monthday';
+            builder.monthDay = parseInt(rules.BYMONTHDAY.split(',')[0], 10) || builder.monthDay;
+          } else if (rules.BYDAY && rules.BYSETPOS) {
+            builder.monthlyMode = 'weekday';
+            builder.weekDay = rules.BYDAY.split(',')[0] || builder.weekDay;
+            builder.weekPos = parseInt(rules.BYSETPOS.split(',')[0], 10) || builder.weekPos;
+          } else if (rules.BYDAY) {
+            const token = rules.BYDAY.split(',')[0];
+            const match = token.match(/^(-?\d+)?([A-Z]{2})$/);
+            if (match) {
+              builder.monthlyMode = 'weekday';
+              builder.weekDay = match[2] || builder.weekDay;
+              if (match[1]) {
+                builder.weekPos = parseInt(match[1], 10) || builder.weekPos;
+              }
+            }
+          }
+        }
+        if (rules.COUNT) {
+          builder.ends = 'count';
+          builder.count = parseInt(rules.COUNT, 10) || '';
+        } else if (rules.UNTIL) {
+          builder.ends = 'until';
+          builder.until = parseUntilDate(rules.UNTIL);
+        } else {
+          builder.ends = 'never';
+        }
+        return builder;
+      }
+
+      function updateRecurrenceSummary() {
+        if (!dom.recurrenceSummary) return;
+        if (!state.recurrence) {
+          dom.recurrenceSummary.textContent = 'Does not repeat.';
+          return;
+        }
+        if (recurrenceMode === 'builder') {
+          const builder = parseRruleToBuilder(state.recurrence, getDefaultRecurrenceBuilder(null));
+          if (builder) {
+            dom.recurrenceSummary.textContent = formatRecurrenceSummary(builder);
+            return;
+          }
+        }
+        dom.recurrenceSummary.textContent = `RRULE: ${state.recurrence}`;
+      }
+
+      function formatRecurrenceSummary(builder) {
+        if (!builder || builder.frequency === 'none') return 'Does not repeat.';
+        const interval = builder.interval || 1;
+        const intervalLabel = interval > 1 ? `Every ${interval}` : 'Every';
+        let label = '';
+        if (builder.frequency === 'daily') {
+          label = interval > 1 ? `${intervalLabel} days` : 'Daily';
+        } else if (builder.frequency === 'weekly') {
+          const days = builder.byDay && builder.byDay.length
+            ? builder.byDay.map(code => DAY_CODE_LABELS[code] || code).join(', ')
+            : 'selected days';
+          label = interval > 1 ? `${intervalLabel} weeks on ${days}` : `Weekly on ${days}`;
+        } else if (builder.frequency === 'monthly') {
+          if (builder.monthlyMode === 'weekday') {
+            const posLabel = WEEK_POSITION_LABELS[builder.weekPos] || 'First';
+            const dayLabel = DAY_CODE_LABELS[builder.weekDay] || builder.weekDay;
+            label = interval > 1
+              ? `${intervalLabel} months on the ${posLabel} ${dayLabel}`
+              : `Monthly on the ${posLabel} ${dayLabel}`;
+          } else {
+            const day = builder.monthDay || 1;
+            label = interval > 1
+              ? `${intervalLabel} months on day ${day}`
+              : `Monthly on day ${day}`;
+          }
+        }
+        if (builder.ends === 'count' && builder.count) {
+          label += ` · ${builder.count} times`;
+        }
+        if (builder.ends === 'until' && builder.until) {
+          label += ` · until ${builder.until}`;
+        }
+        return label;
+      }
+
+      function getRecurrenceChipLabel(recurrence) {
+        if (!recurrence) return '';
+        const parsed = parseRruleToBuilder(recurrence);
+        if (!parsed) return 'Recurring';
+        if (parsed.frequency === 'daily') return parsed.interval > 1 ? `Every ${parsed.interval} days` : 'Daily';
+        if (parsed.frequency === 'weekly') return parsed.interval > 1 ? `Every ${parsed.interval} weeks` : 'Weekly';
+        if (parsed.frequency === 'monthly') return parsed.interval > 1 ? `Every ${parsed.interval} months` : 'Monthly';
+        return 'Recurring';
       }
 
       function ensureDateOrder() {
@@ -1436,20 +2055,6 @@
             dom.endInput.value = state.end;
           }
         }
-      }
-
-      function updateAutoTimeLabel() {
-        if (!useAutoTimeLabel || !dom.timeInput) return;
-        const startDate = parseLocalDateTime(state.start, state.timezone);
-        const endDate = parseLocalDateTime(state.end, state.timezone);
-        if (!startDate || !endDate) {
-          dom.timeInput.value = '';
-          state.time = '';
-          return;
-        }
-        const label = formatTimeRange(startDate, endDate, state.timezone);
-        state.time = label;
-        dom.timeInput.value = label;
       }
 
       function updateTimeNotes() {
@@ -1505,7 +2110,8 @@
           : 'Duration TBD';
         setChip(dom.previewDuration, durationLabel, true);
         setChip(dom.previewTimezone, `Local TZ: ${browserTimezone}`, true, true);
-        setChip(dom.previewRecurring, 'Recurring', Boolean(state.recurring));
+        const recurrenceLabel = getRecurrenceChipLabel(event.recurrence);
+        setChip(dom.previewRecurring, recurrenceLabel, Boolean(event.recurrence));
         setChip(dom.previewCover, state.cover ? `Cover: ${state.cover}` : '', Boolean(state.cover), true);
         updatePreviewLinks(event.links);
       }
@@ -1528,39 +2134,6 @@
         });
       }
 
-      function updateJsonPreview() {
-        if (!dom.jsonPreview) return;
-        const event = buildEventPayload();
-        if (!event.startDate || !event.endDate) {
-          dom.jsonPreview.textContent = 'Add start and end times to see the generated calendar object.';
-          return;
-        }
-        const preview = {
-          name: event.name,
-          shortName: event.shortName,
-          time: event.time,
-          day: event.day,
-          bar: event.bar,
-          city: event.city,
-          address: event.address,
-          cover: event.cover,
-          tea: event.tea,
-          startDate: event.startDate.toISOString(),
-          endDate: event.endDate.toISOString(),
-          website: event.website,
-          instagram: event.instagram,
-          facebook: event.facebook,
-          gmaps: event.gmaps,
-          ticketUrl: event.ticketUrl,
-          links: event.links,
-          recurring: event.recurring,
-          recurrence: event.recurrence,
-          durationMinutes: event.durationMinutes
-        };
-        if (event.image) preview.image = event.image;
-        dom.jsonPreview.textContent = JSON.stringify(preview, null, 2);
-      }
-
       function updateUrl() {
         const params = new URLSearchParams();
         if (state.name) params.set('name', state.name);
@@ -1572,8 +2145,6 @@
         if (state.cover) params.set('cover', state.cover);
         if (state.start) params.set('start', state.start);
         if (state.end) params.set('end', state.end);
-        if (!useAutoTimeLabel && state.time) params.set('time', state.time);
-        if (state.recurring) params.set('repeat', '1');
         if (state.recurrence) params.set('rrule', state.recurrence);
         if (state.website) params.set('web', state.website);
         if (state.ticketUrl) params.set('tickets', state.ticketUrl);
@@ -1581,6 +2152,8 @@
         if (state.facebook) params.set('fb', state.facebook);
         if (state.gmaps) params.set('gmaps', state.gmaps);
         if (state.image) params.set('img', state.image);
+        const coordsValue = (state.location || '').trim();
+        if (coordsValue) params.set('coords', coordsValue);
         const sorted = new URLSearchParams();
         [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
         const query = sorted.toString();
@@ -1608,16 +2181,13 @@
         }
       }
 
-      function refreshUi(options = {}) {
+      function refreshUi() {
         ensureDateOrder();
-        if (!options.skipAutoTime) {
-          updateAutoTimeLabel();
-        }
         updateTimeNotes();
-        updateTimeHelper();
-        updateRecurrenceVisibility();
+        updateRecurrenceUi();
+        updateRecurrenceSummary();
         updatePreviewCard();
-        updateJsonPreview();
+        updateCoordinatesFieldState();
         scheduleUrlUpdate();
         scheduleEventPush();
       }
@@ -1656,7 +2226,7 @@
         const startDate = parseLocalDateTime(state.start, state.timezone);
         const endDate = parseLocalDateTime(state.end, state.timezone);
         const computedLabel = formatTimeRange(startDate, endDate, state.timezone);
-        const timeLabel = useAutoTimeLabel ? computedLabel : (state.time || computedLabel);
+        const timeLabel = computedLabel;
         const dayLabel = startDate
           ? startDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: state.timezone || browserTimezone })
           : '';
@@ -1664,15 +2234,17 @@
           ? Math.max(1, Math.round((endDate - startDate) / 60000))
           : DEFAULT_DURATION_MINUTES;
         const links = buildLinks();
+        const locationValue = (state.location || '').trim();
+        const coordinates = parseCoordinates(locationValue);
         return {
           name: (state.name || '').trim(),
           shortName: (state.shortName || '').trim(),
           tea: (state.description || '').trim(),
-          description: (state.description || '').trim(),
           cover: (state.cover || '').trim(),
           bar: (state.venue || 'Venue TBA').trim(),
-          venue: (state.venue || 'Venue TBA').trim(),
           address: (state.address || '').trim(),
+          location: locationValue,
+          coordinates,
           city: state.city,
           time: timeLabel,
           day: dayLabel,
@@ -1686,7 +2258,7 @@
           gmaps: (state.gmaps || '').trim() || null,
           ticketUrl: (state.ticketUrl || '').trim() || null,
           links,
-          recurring: Boolean(state.recurring),
+          recurring: Boolean(state.recurrence),
           recurrence: (state.recurrence || '').trim(),
           durationMinutes
         };
@@ -1702,11 +2274,13 @@
           shortName: event.shortName,
           nickname: event.shortName,
           tea: event.tea,
-          description: event.description,
+          description: event.tea,
           cover: event.cover,
           bar: event.bar,
-          venue: event.venue,
+          venue: event.bar,
           address: event.address,
+          location: event.location,
+          coordinates: event.coordinates,
           city: event.city,
           time: event.time,
           day: event.day,
@@ -1723,7 +2297,7 @@
           tickets: event.ticketUrl,
           links: event.links,
           recurring: event.recurring,
-          recurrence: event.recurrence
+          recurrence: event.recurrence || null
         };
       }
 
@@ -1900,6 +2474,36 @@
         return parts.join(' ') || `${minutes} min`;
       }
 
+      function getDayCode(date) {
+        if (!(date instanceof Date)) return 'FR';
+        const codes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+        return codes[date.getDay()] || 'FR';
+      }
+
+      function formatUntilDate(value) {
+        if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+        const compact = value.replace(/-/g, '');
+        return `${compact}T235959Z`;
+      }
+
+      function parseUntilDate(value) {
+        if (!value) return '';
+        const match = String(value).match(/^(\d{4})(\d{2})(\d{2})/);
+        if (!match) return '';
+        return `${match[1]}-${match[2]}-${match[3]}`;
+      }
+
+      function parseCoordinates(value) {
+        if (!value) return null;
+        const parts = value.split(',');
+        if (parts.length < 2) return null;
+        const lat = parseFloat(parts[0].trim());
+        const lng = parseFloat(parts[1].trim());
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+        return { lat, lng };
+      }
+
       function getCityLabel(cityKey) {
         if (dom.citySelect) {
           const option = [...dom.citySelect.options].find(option => option.value === cityKey);
@@ -1992,21 +2596,15 @@
           `DTEND:${formatICSDate(event.endDate)}`,
           `SUMMARY:${escapeICS(event.name)}`
         ];
-        const descriptionLines = [];
-        if (event.tea) descriptionLines.push(`Tea: ${event.tea}`);
-        if (event.cover) descriptionLines.push(`Cover: ${event.cover}`);
-        if (event.bar) descriptionLines.push(`Bar: ${event.bar}`);
-        if (event.website) descriptionLines.push(`Website: ${event.website}`);
-        if (event.instagram) descriptionLines.push(`Instagram: ${event.instagram}`);
-        if (event.facebook) descriptionLines.push(`Facebook: ${event.facebook}`);
-        if (event.gmaps) descriptionLines.push(`Google Maps: ${event.gmaps}`);
-        if (event.ticketUrl) descriptionLines.push(`Tickets: ${event.ticketUrl}`);
-        if (event.image) descriptionLines.push(`Image: ${event.image}`);
-        if (descriptionLines.length) {
-          lines.push(`DESCRIPTION:${escapeICS(descriptionLines.join('\n'))}`);
+        const notes = formatEventNotes(event);
+        if (notes) {
+          lines.push(`DESCRIPTION:${escapeICS(notes)}`);
         }
-        const location = [event.bar, event.address].filter(Boolean).join(', ');
-        if (location) {
+        if (event.recurrence) {
+          lines.push(`RRULE:${event.recurrence}`);
+        }
+        const location = (event.location || '').trim();
+        if (location && parseCoordinates(location)) {
           lines.push(`LOCATION:${escapeICS(location)}`);
         }
         const primaryUrl = event.website || event.ticketUrl || event.facebook || event.instagram || event.gmaps;
@@ -2015,6 +2613,52 @@
         }
         lines.push('END:VEVENT', 'END:VCALENDAR');
         return lines.join('\r\n');
+      }
+
+      function formatEventNotes(event) {
+        if (!event || typeof event !== 'object') return '';
+        const excludeFields = new Set([
+          'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
+          'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action',
+          '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
+          '_original', '_mergeInfo', '_changes', '_mergeDiff',
+          'originalTitle', 'name', 'links', 'durationMinutes'
+        ]);
+        const notes = [];
+        Object.keys(event).forEach(fieldName => {
+          if (excludeFields.has(fieldName)) return;
+          const value = event[fieldName];
+          if (value === undefined || value === null || value === '') return;
+          const valueString = String(value);
+          const valueForNotes = isUrlLikeField(fieldName, valueString)
+            ? valueString
+            : escapeText(valueString);
+          notes.push(`${fieldName}: ${valueForNotes}`);
+        });
+        return notes.join('\n');
+      }
+
+      function isUrlLikeField(fieldName, valueString) {
+        const urlFields = new Set([
+          'url', 'ticketUrl', 'gmaps', 'website', 'facebook', 'instagram', 'twitter', 'image'
+        ]);
+        if (urlFields.has(fieldName)) return true;
+        if (!valueString || typeof valueString !== 'string') return false;
+        const lower = valueString.trim().toLowerCase();
+        return lower.startsWith('http://') ||
+          lower.startsWith('https://') ||
+          lower.startsWith('mailto:') ||
+          lower.startsWith('tel:') ||
+          lower.startsWith('sms:');
+      }
+
+      function escapeText(text) {
+        if (!text || typeof text !== 'string') {
+          return text;
+        }
+        return text
+          .replace(/\\/g, '\\\\')
+          .replace(/:/g, '\\:');
       }
 
       function formatICSDate(date) {
