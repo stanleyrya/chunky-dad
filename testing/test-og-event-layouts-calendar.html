@@ -441,9 +441,9 @@
           try {
             const params = new URLSearchParams(window.location.search);
             const city = params.get('city');
-            return city && hasCityCalendar(city) ? city : 'new-york';
+            return city && hasCityCalendar(city) ? city : 'nyc';
           } catch (e) {
-            return 'new-york';
+            return 'nyc';
           }
         }
 

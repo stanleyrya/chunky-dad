@@ -344,7 +344,19 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const cityParam = urlParams.get('city');
-            if (cityParam) return cityParam;
+            const resolveAlias = (rawSlug) => {
+                if (!rawSlug) return null;
+                const slug = String(rawSlug).trim().toLowerCase();
+                const cityConfig = (typeof window !== 'undefined' && window.CITY_CONFIG) ? window.CITY_CONFIG : {};
+                if (cityConfig && cityConfig[slug]) return slug;
+                for (const [key, cfg] of Object.entries(cityConfig || {})) {
+                    if (cfg && Array.isArray(cfg.aliases)) {
+                        if (cfg.aliases.map(a => String(a).toLowerCase()).includes(slug)) return key;
+                    }
+                }
+                return null;
+            };
+            if (cityParam) return resolveAlias(cityParam) || cityParam;
 
             // Fallback: detect from first path segment (supports aliases)
             const slug = this.getCitySlugFromPath();
@@ -352,10 +364,10 @@ class DynamicCalendarLoader extends CalendarCore {
 
             // Legacy: hash or default
             const hash = window.location.hash.replace('#', '');
-            return hash || 'new-york';
+            return resolveAlias(hash) || hash || 'nyc';
         } catch (e) {
-            logger.warn('CITY', 'Failed to resolve city from URL, defaulting to new-york', { error: e?.message });
-            return 'new-york';
+            logger.warn('CITY', 'Failed to resolve city from URL, defaulting to nyc', { error: e?.message });
+            return 'nyc';
         }
     }
 
@@ -1545,7 +1557,7 @@ class DynamicCalendarLoader extends CalendarCore {
             // Test pages are served under /testing/, need to go up one level
             const isTesting = pathname.includes('/testing/');
             
-            // City subdirectories (like /new-york/, /seattle/) need to go up one level
+            // City subdirectories (like /nyc/, /seattle/) need to go up one level
             const pathSegments = pathname.split('/').filter(Boolean);
             const isInCitySubdirectory = pathSegments.length > 0 && 
                 window.CITY_CONFIG && 

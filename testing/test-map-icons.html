@@ -735,9 +735,9 @@
             setupCalendarLoader() {
                 if (typeof DynamicCalendarLoader !== 'undefined') {
                     this.calendarLoader = new DynamicCalendarLoader();
-                    this.calendarLoader.currentCity = 'new-york';
-                    this.calendarLoader.currentCityConfig = getCityConfig('new-york');
-                    this.calendarLoader.getCityFromURL = () => 'new-york';
+                    this.calendarLoader.currentCity = 'nyc';
+                    this.calendarLoader.currentCityConfig = getCityConfig('nyc');
+                    this.calendarLoader.getCityFromURL = () => 'nyc';
                     logger.componentLoad('MAP', 'Calendar loader configured');
                 } else {
                     logger.warn('MAP', 'DynamicCalendarLoader not available');
@@ -1313,7 +1313,7 @@
                 try {
                     logger.componentInit('CALENDAR', 'Loading real calendar data');
                     
-                    const events = await this.calendarLoader.loadCalendarData('new-york');
+                    const events = await this.calendarLoader.loadCalendarData('nyc');
                     
                     if (!events || !Array.isArray(events)) {
                         throw new Error('No valid events received from calendar');

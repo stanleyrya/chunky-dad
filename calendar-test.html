@@ -14,7 +14,7 @@
             try {
                 console.log('Testing calendar fetch from root level...');
                 // Same path as used in dynamic-calendar-loader.js
-                const response = await fetch('data/calendars/new-york.ics');
+                const response = await fetch('data/calendars/nyc.ics');
                 console.log('Response:', response);
                 
                 if (response.ok) {
@@ -34,7 +34,7 @@
                         <h2>❌ FETCH FAILED</h2>
                         <p>Status: ${response.status}</p>
                         <p>Status Text: ${response.statusText}</p>
-                        <p>URL: data/calendars/new-york.ics</p>
+                        <p>URL: data/calendars/nyc.ics</p>
                     `;
                 }
             } catch (error) {
@@ -43,7 +43,7 @@
                     <h2>❌ ERROR</h2>
                     <p>Error: ${error.message}</p>
                     <p>Type: ${error.name}</p>
-                    <p>URL: data/calendars/new-york.ics</p>
+                    <p>URL: data/calendars/nyc.ics</p>
                 `;
             }
         }

@@ -86,7 +86,7 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
       const pathname = window.location.pathname || '';
       const isTesting = pathname.includes('/testing/');
       
-      // City subdirectories (like /new-york/, /seattle/) need to go up one level
+      // City subdirectories (like /nyc/, /seattle/) need to go up one level
       const pathSegments = pathname.split('/').filter(Boolean);
       const isInCitySubdirectory = pathSegments.length > 0 && 
           window.CITY_CONFIG && 

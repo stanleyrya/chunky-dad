@@ -169,9 +169,24 @@ async function loadLocalBars() {
 // Normalize city name to kebab-case format
 function normalizeCityName(cityName) {
     if (!cityName) return 'unknown';
-    
-    return cityName
-        .toLowerCase()
+
+    const trimmed = cityName.trim().toLowerCase();
+    const shortSlugOverrides = {
+        'new york': 'nyc',
+        'new-york': 'nyc',
+        'los angeles': 'la',
+        'los-angeles': 'la',
+        'philadelphia': 'philly',
+        'provincetown': 'ptown',
+        'new orleans': 'nola',
+        'new-orleans': 'nola'
+    };
+
+    if (shortSlugOverrides[trimmed]) {
+        return shortSlugOverrides[trimmed];
+    }
+
+    return trimmed
         .replace(/\s+/g, '-')           // Replace spaces with hyphens
         .replace(/[^a-z0-9\-]/g, '')    // Remove special characters except hyphens
         .replace(/-+/g, '-')            // Replace multiple hyphens with single hyphen

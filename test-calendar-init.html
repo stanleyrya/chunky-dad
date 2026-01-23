@@ -53,7 +53,7 @@
                 
                 // Simulate being on a city page by setting URL parameters
                 const currentUrl = new URL(window.location);
-                currentUrl.searchParams.set('city', 'new-york');
+                currentUrl.searchParams.set('city', 'nyc');
                 window.history.replaceState({}, '', currentUrl);
                 addLog(`✅ Set URL to simulate city page: ${currentUrl}`);
                 

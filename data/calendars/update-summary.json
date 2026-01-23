@@ -1,7 +1,7 @@
 {
   "lastUpdated": "2026-01-23T12:06:30.599Z",
   "cities": {
-    "new-york": {
+    "nyc": {
       "name": "New York",
       "status": "success",
       "dataLength": 8630,
@@ -15,7 +15,7 @@
       "eventCount": 9,
       "lastUpdated": "2026-01-23T12:06:30.600Z"
     },
-    "los-angeles": {
+    "la": {
       "name": "Los Angeles",
       "status": "success",
       "dataLength": 5826,
@@ -92,7 +92,7 @@
       "eventCount": 4,
       "lastUpdated": "2026-01-23T12:06:30.600Z"
     },
-    "new-orleans": {
+    "nola": {
       "name": "New Orleans",
       "status": "success",
       "dataLength": 1324,
@@ -134,7 +134,7 @@
       "eventCount": 1,
       "lastUpdated": "2026-01-23T12:06:30.600Z"
     },
-    "provincetown": {
+    "ptown": {
       "name": "Provincetown",
       "status": "success",
       "dataLength": 202,
@@ -148,7 +148,7 @@
       "eventCount": 2,
       "lastUpdated": "2026-01-23T12:06:30.600Z"
     },
-    "philadelphia": {
+    "philly": {
       "name": "Philadelphia",
       "status": "success",
       "dataLength": 2864,

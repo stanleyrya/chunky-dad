@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Eagle LA",
+    "city": "la",
+    "instagram": "dirtybird_la",
+    "gayCities": "https://losangeles.gaycities.com/bars/357-eagle-la",
+    "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+    "coordinates": "34.0912127, -118.2840632",
+    "facebook": "https://www.facebook.com/eagle.bar.la/",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4"
+  },
+  {
+    "name": "Precinct LA",
+    "city": "la",
+    "gayCities": "https://losangeles.gaycities.com/bars/306866-precinct",
+    "address": "357 S Broadway, Los Angeles, CA 90013",
+    "coordinates": "34.0498149, -118.2493321",
+    "instagram": "https://www.instagram.com/precinctdtla",
+    "facebook": "https://www.facebook.com/precinctdtla",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI"
+  }
+]
