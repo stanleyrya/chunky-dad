@@ -25,6 +25,9 @@ if (!fs.existsSync(templatePath)) {
 }
 const templateHtml = fs.readFileSync(templatePath, 'utf8');
 
+const CITY_MARKER = '<!-- generated: chunky.dad city page -->';
+const ALIAS_MARKER = '<!-- generated: chunky.dad city alias redirect -->';
+
 // Utility: ensure directory exists
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
@@ -84,9 +87,8 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
   let html = baseHtml;
 
   // Marker for generated pages (to allow safe cleanup later)
-  const marker = '<!-- generated: chunky.dad city page -->';
-  if (!html.includes(marker)) {
-    html = html.replace('<!DOCTYPE html>', `<!DOCTYPE html>\n${marker}`);
+  if (!html.includes(CITY_MARKER)) {
+    html = html.replace('<!DOCTYPE html>', `<!DOCTYPE html>\n${CITY_MARKER}`);
   }
 
   // Generate pre-populated header with city selector
@@ -155,6 +157,39 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
   return html;
 }
 
+// Build a redirect page for alias slugs
+function buildAliasRedirectHtml(cityKey, cityConfig) {
+  const target = `../${cityKey}/`;
+  const canonicalHref = `/${cityKey}/`;
+  const title = `${cityConfig.name} - chunky.dad`;
+  return `<!DOCTYPE html>
+${ALIAS_MARKER}
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <link rel="canonical" href="${canonicalHref}">
+  <meta http-equiv="refresh" content="0; url=${target}">
+</head>
+<body>
+  <noscript><meta http-equiv="refresh" content="0; url=${target}"></noscript>
+  <script>
+    (function() {
+      try {
+        var target = ${JSON.stringify(target)};
+        var search = window.location.search || '';
+        var hash = window.location.hash || '';
+        location.replace(target + search + hash);
+      } catch (e) {
+        location.replace(${JSON.stringify(target)});
+      }
+    })();
+  </script>
+</body>
+</html>`;
+}
+
 // Write only if content changes
 function writeIfChanged(filePath, content) {
   if (fs.existsSync(filePath)) {
@@ -171,6 +206,29 @@ function writeIfChanged(filePath, content) {
 // Generate pages for visible cities
 let changes = 0;
 const visibleEntries = Object.entries(CITY_CONFIG).filter(([, cfg]) => cfg && cfg.visible !== false);
+
+const reservedKeys = new Set(Object.keys(CITY_CONFIG));
+const aliasRedirects = new Map();
+visibleEntries.forEach(([cityKey, cfg]) => {
+  if (!cfg || !Array.isArray(cfg.aliases)) return;
+  cfg.aliases.forEach(rawAlias => {
+    const alias = String(rawAlias || '').trim().toLowerCase();
+    if (!alias || alias === cityKey) return;
+    if (reservedKeys.has(alias)) {
+      console.log(`Skipping alias "${alias}" for ${cityKey} (conflicts with city key).`);
+      return;
+    }
+    if (aliasRedirects.has(alias)) {
+      const existing = aliasRedirects.get(alias);
+      console.log(`Skipping alias "${alias}" for ${cityKey} (already mapped to ${existing.cityKey}).`);
+      return;
+    }
+    aliasRedirects.set(alias, { cityKey, cfg });
+  });
+});
+
+const aliasEntries = Array.from(aliasRedirects.entries()).sort(([a], [b]) => a.localeCompare(b));
+
 visibleEntries.forEach(([cityKey, cfg]) => {
   const outDir = path.join(ROOT, cityKey);
   const outFile = path.join(outDir, 'index.html');
@@ -184,11 +242,28 @@ visibleEntries.forEach(([cityKey, cfg]) => {
   }
 });
 
-// Optional pruning of removed cities: only delete directories containing the marker
-function pruneRemovedCities() {
+aliasEntries.forEach(([alias, { cityKey, cfg }]) => {
+  const outDir = path.join(ROOT, alias);
+  const outFile = path.join(outDir, 'index.html');
+  const aliasHtml = buildAliasRedirectHtml(cityKey, cfg);
+  const wrote = writeIfChanged(outFile, aliasHtml);
+  if (wrote) {
+    changes++;
+    console.log(`Wrote alias redirect ${alias} -> ${cityKey}`);
+  } else {
+    console.log(`No change for alias redirect ${alias} -> ${cityKey}`);
+  }
+});
+
+const validDirectories = new Set([
+  ...visibleEntries.map(([key]) => key),
+  ...aliasEntries.map(([alias]) => alias)
+]);
+
+// Optional pruning of removed cities/aliases: only delete directories containing markers
+function pruneRemovedCities(valid) {
   const entries = fs.readdirSync(ROOT, { withFileTypes: true })
     .filter(d => d.isDirectory());
-  const valid = new Set(visibleEntries.map(([k]) => k));
   let removed = 0;
   entries.forEach(dirent => {
     const name = dirent.name;
@@ -196,7 +271,7 @@ function pruneRemovedCities() {
       const candidate = path.join(ROOT, name, 'index.html');
       if (fs.existsSync(candidate)) {
         const html = fs.readFileSync(candidate, 'utf8');
-        if (html.includes('generated: chunky.dad city page')) {
+        if (html.includes(CITY_MARKER) || html.includes(ALIAS_MARKER)) {
           fs.rmSync(path.join(ROOT, name), { recursive: true, force: true });
           removed++;
           console.log(`🗑️  Removed generated directory: ${name}`);
@@ -207,7 +282,7 @@ function pruneRemovedCities() {
   return removed;
 }
 
-const removedCount = pruneRemovedCities();
+const removedCount = pruneRemovedCities(validDirectories);
 if (removedCount > 0) changes += removedCount;
 
 if (changes === 0) {
