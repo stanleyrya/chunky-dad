@@ -2,15 +2,9 @@
   "files": [
     {
       "name": "event-builder.html",
-      "size": 95826,
+      "size": 97809,
       "icon": "🛠️",
       "description": "Build chunky.dad calendar events and preview them instantly."
-    },
-    {
-      "name": "hero-variations-tester.html",
-      "size": 26451,
-      "icon": "💪",
-      "description": "Flex Tester - Try different hero poses, show off those variations"
     },
     {
       "name": "index.html",
@@ -19,46 +13,16 @@
       "description": "Tool Shed Home - Browse all of dad's tools in one place"
     },
     {
-      "name": "location-test.html",
-      "size": 9334,
-      "icon": "🌍",
-      "description": "Globe Spinner - Test location displays and coordinates"
-    },
-    {
-      "name": "style-test.html",
-      "size": 33122,
-      "icon": "⚙️",
-      "description": "Heavy-Duty Power Tool - Showcases all the component variations dad's got"
-    },
-    {
       "name": "test-calendar-logging.html",
       "size": 68345,
       "icon": "🔍",
       "description": "Debug Scope - Look deep inside calendar processing (magnify those logs)"
     },
     {
-      "name": "test-display-modes.html",
-      "size": 10896,
-      "icon": "🖥️",
-      "description": "Monitor Mount - Test how things display on different screens"
-    },
-    {
-      "name": "test-eventbrite-address-fix.html",
-      "size": 7330,
-      "icon": "📍",
-      "description": "Location Finder - Pin down those Eventbrite addresses"
-    },
-    {
       "name": "test-google-sheets-loader.html",
       "size": 40754,
       "icon": "📊",
       "description": "Sheet Metal Worker - Loads and shapes Google Sheets data"
-    },
-    {
-      "name": "test-map-icons.html",
-      "size": 63168,
-      "icon": "🗺️",
-      "description": "Icon Stamper - Mark your territory with custom map icons"
     },
     {
       "name": "test-og-event-layouts-calendar.html",
