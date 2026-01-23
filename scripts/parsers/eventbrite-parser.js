@@ -1241,7 +1241,11 @@ class EventbriteParser {
         // Prefer the explicit venue city if Eventbrite provides it
         const venueAddress = eventDetails.venueAddress;
         if (venueAddress) {
-            const venueCityText = venueAddress.city || venueAddress.localized_area_display || '';
+            const venueCityText = [
+                venueAddress.city,
+                venueAddress.region,
+                venueAddress.localized_area_display
+            ].filter(Boolean).join(' ');
             const cityFromVenue = this.findCityFromText(venueCityText, cityConfig);
             if (cityFromVenue) {
                 return cityFromVenue;
@@ -1249,15 +1253,23 @@ class EventbriteParser {
         }
 
         // Fall back to scanning other event text fields using configured patterns
-        const searchText = [
+        // Prioritize address/venue/title before description to avoid unrelated city mentions.
+        const prioritizedFields = [
             eventDetails.address,
             eventDetails.venue,
             eventDetails.title,
             eventDetails.description,
             eventDetails.url
-        ].filter(Boolean).join(' ');
+        ];
 
-        return this.findCityFromText(searchText, cityConfig);
+        for (const fieldValue of prioritizedFields) {
+            const cityFromField = this.findCityFromText(fieldValue, cityConfig);
+            if (cityFromField) {
+                return cityFromField;
+            }
+        }
+
+        return null;
     }
 
     // Find city key from text using centralized pattern list
