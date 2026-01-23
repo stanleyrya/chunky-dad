@@ -221,24 +221,29 @@
       color: #2a2f54;
     }
 
-    .duration-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 38px;
-      padding: 0 1rem;
-      border-radius: 999px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      color: #2a2f54;
-      background: var(--chip);
-      border: 1px solid rgba(108, 99, 255, 0.35);
+    .time-notes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 1rem;
+      margin: 0.35rem 0 1rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
     }
 
-    .duration-badge[data-state="missing"] {
-      background: rgba(255, 193, 7, 0.18);
-      border-color: rgba(255, 193, 7, 0.35);
-      color: #8a6200;
+    .time-note strong {
+      color: #2a2f54;
+      font-weight: 600;
+    }
+
+    input.is-invalid,
+    textarea.is-invalid,
+    select.is-invalid {
+      border-color: rgba(244, 67, 54, 0.6);
+      box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.12);
+    }
+
+    .field-hint.is-error {
+      color: #a12317;
     }
 
     .form-actions {
@@ -648,6 +653,10 @@
                   <label for="event-address">Address</label>
                   <input type="text" id="event-address" autocomplete="off" placeholder="554 W 28th St, New York, NY">
                 </div>
+                <div class="field-group">
+                  <label for="event-cover">Cover / Price</label>
+                  <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
+                </div>
               </div>
 
               <div class="field-group">
@@ -662,13 +671,18 @@
             <div class="section-body">
               <div class="field-row">
                 <div class="field-group">
-                  <label for="event-start">Start (local)</label>
+                  <label for="event-start">Start</label>
                   <input type="datetime-local" id="event-start">
                 </div>
                 <div class="field-group">
-                  <label for="event-end">End (local)</label>
+                  <label for="event-end">End</label>
                   <input type="datetime-local" id="event-end">
                 </div>
+              </div>
+
+              <div class="time-notes">
+                <span class="time-note" id="duration-note"><strong>Duration:</strong> Add start &amp; end</span>
+                <span class="time-note" id="timezone-note"><strong>Local timezone:</strong> </span>
               </div>
 
               <div class="field-row">
@@ -680,17 +694,6 @@
                   </div>
                   <small id="time-helper">Auto label updates with start/end times.</small>
                 </div>
-                <div class="field-group">
-                  <label for="event-timezone">Timezone</label>
-                  <div class="input-with-action">
-                    <input type="text" id="event-timezone" placeholder="America/New_York">
-                    <button type="button" class="ghost-button" id="city-timezone-button" title="Reset to city default">Use city default</button>
-                  </div>
-                </div>
-                <div class="field-group duration-group">
-                  <label>Duration</label>
-                  <span id="duration-badge" class="duration-badge" data-state="missing">Add start &amp; end</span>
-                </div>
               </div>
 
               <div class="field-row">
@@ -698,12 +701,6 @@
                   <label class="checkbox-label">
                     <input type="checkbox" id="event-recurring">
                     <span>Recurring event</span>
-                  </label>
-                </div>
-                <div class="field-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="event-not-checked" checked>
-                    <span>Mark as not checked</span>
                   </label>
                 </div>
               </div>
@@ -721,20 +718,29 @@
             <div class="section-body">
               <div class="field-grid">
                 <div class="field-group">
-                  <label for="event-website">Website URL</label>
-                  <input type="url" id="event-website" placeholder="https://bearracuda.com">
+                  <label for="event-website">Website</label>
+                  <input type="text" id="event-website" placeholder="https://bearracuda.com">
+                  <small class="field-hint" data-default="Auto-adds https:// when missing.">Auto-adds https:// when missing.</small>
                 </div>
                 <div class="field-group">
-                  <label for="event-website-label">Website Label</label>
-                  <input type="text" id="event-website-label" placeholder="More Info">
+                  <label for="event-ticket-url">Tickets</label>
+                  <input type="text" id="event-ticket-url" placeholder="https://tickets.example.com">
+                  <small class="field-hint" data-default="Paste the ticket link.">Paste the ticket link.</small>
                 </div>
                 <div class="field-group">
-                  <label for="event-tickets">Tickets URL</label>
-                  <input type="url" id="event-tickets" placeholder="https://tickets.example.com">
+                  <label for="event-instagram">Instagram</label>
+                  <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
+                  <small class="field-hint" data-default="Handles auto-expand to full links.">Handles auto-expand to full links.</small>
                 </div>
                 <div class="field-group">
-                  <label for="event-tickets-label">Tickets Label</label>
-                  <input type="text" id="event-tickets-label" placeholder="Tickets">
+                  <label for="event-facebook">Facebook</label>
+                  <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
+                  <small class="field-hint" data-default="Paste a page or event URL.">Paste a page or event URL.</small>
+                </div>
+                <div class="field-group">
+                  <label for="event-gmaps">Google Maps</label>
+                  <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
+                  <small class="field-hint" data-default="Paste a Google Maps link.">Paste a Google Maps link.</small>
                 </div>
               </div>
             </div>
@@ -747,31 +753,6 @@
                 <div class="field-group">
                   <label for="event-image">Promo Image URL</label>
                   <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
-                </div>
-                <div class="field-group">
-                  <label for="event-cover-image">Cover Image Override</label>
-                  <input type="url" id="event-cover-image" placeholder="Optional cover art">
-                </div>
-              </div>
-            </div>
-          </details>
-
-          <details class="form-section">
-            <summary>Advanced</summary>
-            <div class="section-body">
-              <div class="field-grid">
-                <div class="field-group">
-                  <label for="event-slug">Slug (optional)</label>
-                  <input type="text" id="event-slug" autocomplete="off" placeholder="bearracuda-preview-night">
-                  <small>Only if you want to test a specific slug.</small>
-                </div>
-                <div class="field-group">
-                  <label for="event-source">Source</label>
-                  <input type="text" id="event-source" autocomplete="off" placeholder="Eventbrite, Facebook, promoter name">
-                </div>
-                <div class="field-group">
-                  <label for="event-cover">Cover</label>
-                  <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
                 </div>
               </div>
             </div>
@@ -818,7 +799,6 @@
               <span class="chip is-muted" id="preview-timezone">TZ</span>
               <span class="chip is-hidden" id="preview-recurring">Recurring</span>
               <span class="chip is-hidden" id="preview-cover">Cover</span>
-              <span class="chip is-hidden" id="preview-review">Needs review</span>
             </div>
             <div class="preview-links is-hidden" id="preview-links"></div>
           </div>
@@ -856,36 +836,11 @@
       const DEFAULT_DURATION_MINUTES = 240;
       const URL_UPDATE_DELAY = 120;
       const EVENT_PUSH_DELAY = 200;
-      const CITY_TIMEZONE_GUESSES = {
-        'atlanta': 'America/New_York',
-        'berlin': 'Europe/Berlin',
-        'boston': 'America/New_York',
-        'chicago': 'America/Chicago',
-        'denver': 'America/Denver',
-        'las-vegas': 'America/Los_Angeles',
-        'london': 'Europe/London',
-        'la': 'America/Los_Angeles',
-        'nola': 'America/Chicago',
-        'nyc': 'America/New_York',
-        'palm-springs': 'America/Los_Angeles',
-        'phoenix': 'America/Phoenix',
-        'portland': 'America/Los_Angeles',
-        'ptown': 'America/New_York',
-        'san-diego': 'America/Los_Angeles',
-        'seattle': 'America/Los_Angeles',
-        'sf': 'America/Los_Angeles',
-        'sitges': 'Europe/Madrid',
-        'toronto': 'America/Toronto',
-        'vegas': 'America/Los_Angeles',
-        'philly': 'America/New_York'
-      };
-
       const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
 
       const dom = {};
       let state;
       let useAutoTimeLabel = true;
-      let timezoneManuallyEdited = false;
       let calendarReady = false;
       let iframeLoaded = false;
       let sendTimeoutId = null;
@@ -900,9 +855,9 @@
         const baseState = createDefaultState();
         const urlState = loadStateFromUrl(baseState);
         state = { ...baseState, ...urlState.overrides };
+        state.timezone = browserTimezone;
+        normalizeStateLinks();
         useAutoTimeLabel = !urlState.timeProvided;
-        timezoneManuallyEdited = urlState.timezoneProvided;
-        applyCityTimezoneDefaults(state.city, true);
         if (useAutoTimeLabel) {
           state.time = '';
         }
@@ -912,8 +867,7 @@
         bindEvents();
         updateRecurrenceVisibility();
         updateTimeHelper();
-        updateTimezoneHelper();
-        updateDurationBadge();
+        updateTimeNotes();
         updatePreviewCard();
         updateJsonPreview();
         updateUrl();
@@ -926,30 +880,26 @@
         dom.form = document.getElementById('event-form');
         dom.nameInput = document.getElementById('event-name');
         dom.shortNameInput = document.getElementById('event-short-name');
-        dom.slugInput = document.getElementById('event-slug');
         dom.citySelect = document.getElementById('event-city');
         dom.venueInput = document.getElementById('event-venue');
         dom.addressInput = document.getElementById('event-address');
         dom.descriptionInput = document.getElementById('event-description');
         dom.coverInput = document.getElementById('event-cover');
-        dom.sourceInput = document.getElementById('event-source');
         dom.startInput = document.getElementById('event-start');
         dom.endInput = document.getElementById('event-end');
         dom.timeInput = document.getElementById('event-time');
         dom.timeHelper = document.getElementById('time-helper');
-        dom.timezoneInput = document.getElementById('event-timezone');
         dom.autoTimeButton = document.getElementById('auto-time-button');
-        dom.cityTimezoneButton = document.getElementById('city-timezone-button');
-        dom.durationBadge = document.getElementById('duration-badge');
+        dom.durationNote = document.getElementById('duration-note');
+        dom.timezoneNote = document.getElementById('timezone-note');
         dom.recurringCheckbox = document.getElementById('event-recurring');
         dom.recurrenceInput = document.getElementById('event-recurrence');
-        dom.notCheckedCheckbox = document.getElementById('event-not-checked');
         dom.websiteInput = document.getElementById('event-website');
-        dom.websiteLabelInput = document.getElementById('event-website-label');
-        dom.ticketsInput = document.getElementById('event-tickets');
-        dom.ticketsLabelInput = document.getElementById('event-tickets-label');
+        dom.ticketUrlInput = document.getElementById('event-ticket-url');
+        dom.instagramInput = document.getElementById('event-instagram');
+        dom.facebookInput = document.getElementById('event-facebook');
+        dom.gmapsInput = document.getElementById('event-gmaps');
         dom.imageInput = document.getElementById('event-image');
-        dom.coverImageInput = document.getElementById('event-cover-image');
         dom.resetButton = document.getElementById('reset-form');
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
         dom.copyShareButton = document.getElementById('copy-link');
@@ -969,7 +919,6 @@
         dom.previewTimezone = document.getElementById('preview-timezone');
         dom.previewRecurring = document.getElementById('preview-recurring');
         dom.previewCover = document.getElementById('preview-cover');
-        dom.previewReview = document.getElementById('preview-review');
         dom.previewLinks = document.getElementById('preview-links');
       }
 
@@ -984,7 +933,8 @@
             ...CITY_CONFIG[key]
           }));
         } else {
-          cities = Object.keys(CITY_TIMEZONE_GUESSES).map(key => ({
+          const fallbackCities = ['nyc'];
+          cities = fallbackCities.map(key => ({
             key,
             name: key.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
           }));
@@ -1010,26 +960,23 @@
         return {
           name: 'Bearracuda Preview Night',
           shortName: 'Bearracuda',
-          slug: '',
           city: defaultCity,
           venue: 'The Eagle NYC',
           address: '554 W 28th St, New York, NY',
           description: 'Preview your chunky.dad event before it goes live.',
           cover: '',
-          source: 'Event Generator',
           start: formatInputValue(start),
           end: formatInputValue(end),
-          timezone: CITY_TIMEZONE_GUESSES[defaultCity] || browserTimezone,
+          timezone: browserTimezone,
           time: '',
           recurring: false,
           recurrence: '',
-          notChecked: true,
           website: '',
-          websiteLabel: '',
-          tickets: '',
-          ticketsLabel: '',
-          image: '',
-          coverImage: ''
+          ticketUrl: '',
+          instagram: '',
+          facebook: '',
+          gmaps: '',
+          image: ''
         };
       }
 
@@ -1047,7 +994,6 @@
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
         let timeProvided = false;
-        let timezoneProvided = false;
         params.forEach((value, key) => {
           if (value == null || value === '') return;
           switch (key) {
@@ -1056,9 +1002,6 @@
               break;
             case 'short':
               overrides.shortName = value;
-              break;
-            case 'slug':
-              overrides.slug = value;
               break;
             case 'city':
               overrides.city = value;
@@ -1075,9 +1018,6 @@
             case 'cover':
               overrides.cover = value;
               break;
-            case 'source':
-              overrides.source = value;
-              break;
             case 'start': {
               const sanitized = sanitizeDateTimeInput(value);
               if (sanitized) overrides.start = sanitized;
@@ -1088,10 +1028,6 @@
               if (sanitizedEnd) overrides.end = sanitizedEnd;
               break;
             }
-            case 'tz':
-              overrides.timezone = value;
-              timezoneProvided = true;
-              break;
             case 'time':
               overrides.time = value;
               timeProvided = true;
@@ -1105,23 +1041,24 @@
             case 'web':
               overrides.website = value;
               break;
-            case 'weblabel':
-              overrides.websiteLabel = value;
-              break;
             case 'tickets':
-              overrides.tickets = value;
+            case 'ticket':
+              overrides.ticketUrl = value;
               break;
-            case 'tlabel':
-              overrides.ticketsLabel = value;
+            case 'insta':
+            case 'instagram':
+              overrides.instagram = value;
+              break;
+            case 'fb':
+            case 'facebook':
+              overrides.facebook = value;
+              break;
+            case 'gmaps':
+            case 'map':
+              overrides.gmaps = value;
               break;
             case 'img':
               overrides.image = value;
-              break;
-            case 'coverimg':
-              overrides.coverImage = value;
-              break;
-            case 'checked':
-              overrides.notChecked = !(value === '0' || value.toLowerCase() === 'false');
               break;
             default:
               break;
@@ -1130,29 +1067,12 @@
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
         if (!overrides.city) overrides.city = baseState.city;
-        return { overrides, timeProvided, timezoneProvided };
-      }
-
-      function applyCityTimezoneDefaults(city, initializing = false) {
-        if (initializing && timezoneManuallyEdited) {
-          return;
-        }
-        const guess = CITY_TIMEZONE_GUESSES[city] || browserTimezone;
-        if (!timezoneManuallyEdited || initializing) {
-          state.timezone = guess;
-          if (dom.timezoneInput) {
-            dom.timezoneInput.value = guess;
-          }
-          if (!initializing) {
-            timezoneManuallyEdited = false;
-          }
-        }
+        return { overrides, timeProvided };
       }
 
       function applyStateToForm() {
         if (dom.nameInput) dom.nameInput.value = state.name || '';
         if (dom.shortNameInput) dom.shortNameInput.value = state.shortName || '';
-        if (dom.slugInput) dom.slugInput.value = state.slug || '';
         if (dom.citySelect) {
           if (![...dom.citySelect.options].some(option => option.value === state.city)) {
             state.city = dom.citySelect.options.length ? dom.citySelect.options[0].value : 'nyc';
@@ -1163,24 +1083,22 @@
         if (dom.addressInput) dom.addressInput.value = state.address || '';
         if (dom.descriptionInput) dom.descriptionInput.value = state.description || '';
         if (dom.coverInput) dom.coverInput.value = state.cover || '';
-        if (dom.sourceInput) dom.sourceInput.value = state.source || '';
         if (dom.startInput) dom.startInput.value = state.start || '';
         if (dom.endInput) dom.endInput.value = state.end || '';
         if (!useAutoTimeLabel && dom.timeInput) {
           dom.timeInput.value = state.time || '';
         }
-        if (dom.timezoneInput) dom.timezoneInput.value = state.timezone || browserTimezone;
         if (dom.recurringCheckbox) dom.recurringCheckbox.checked = !!state.recurring;
         if (dom.recurrenceInput) dom.recurrenceInput.value = state.recurrence || '';
-        if (dom.notCheckedCheckbox) dom.notCheckedCheckbox.checked = state.notChecked !== false;
         if (dom.websiteInput) dom.websiteInput.value = state.website || '';
-        if (dom.websiteLabelInput) dom.websiteLabelInput.value = state.websiteLabel || '';
-        if (dom.ticketsInput) dom.ticketsInput.value = state.tickets || '';
-        if (dom.ticketsLabelInput) dom.ticketsLabelInput.value = state.ticketsLabel || '';
+        if (dom.ticketUrlInput) dom.ticketUrlInput.value = state.ticketUrl || '';
+        if (dom.instagramInput) dom.instagramInput.value = state.instagram || '';
+        if (dom.facebookInput) dom.facebookInput.value = state.facebook || '';
+        if (dom.gmapsInput) dom.gmapsInput.value = state.gmaps || '';
         if (dom.imageInput) dom.imageInput.value = state.image || '';
-        if (dom.coverImageInput) dom.coverImageInput.value = state.coverImage || '';
         updateTimeHelper();
-        updateTimezoneHelper();
+        updateTimeNotes();
+        syncLinkFieldStates();
       }
 
       function bindEvents() {
@@ -1199,17 +1117,10 @@
             refreshUi({ skipAutoTime: true });
           });
         }
-        if (dom.slugInput) {
-          dom.slugInput.addEventListener('input', event => {
-            state.slug = event.target.value.trim();
-            refreshUi({ skipAutoTime: true });
-          });
-        }
         if (dom.citySelect) {
           dom.citySelect.addEventListener('change', event => {
             const newCity = event.target.value;
             state.city = newCity;
-            applyCityTimezoneDefaults(newCity);
             updateCalendarSource();
             refreshUi();
           });
@@ -1235,12 +1146,6 @@
         if (dom.coverInput) {
           dom.coverInput.addEventListener('input', event => {
             state.cover = event.target.value;
-            refreshUi({ skipAutoTime: true });
-          });
-        }
-        if (dom.sourceInput) {
-          dom.sourceInput.addEventListener('input', event => {
-            state.source = event.target.value;
             refreshUi({ skipAutoTime: true });
           });
         }
@@ -1286,22 +1191,6 @@
             refreshUi();
           });
         }
-        if (dom.timezoneInput) {
-          dom.timezoneInput.addEventListener('input', event => {
-            timezoneManuallyEdited = true;
-            state.timezone = event.target.value || browserTimezone;
-            updateTimezoneHelper();
-            refreshUi();
-          });
-        }
-        if (dom.cityTimezoneButton) {
-          dom.cityTimezoneButton.addEventListener('click', () => {
-            timezoneManuallyEdited = false;
-            applyCityTimezoneDefaults(state.city);
-            updateTimezoneHelper();
-            refreshUi();
-          });
-        }
         if (dom.recurringCheckbox) {
           dom.recurringCheckbox.addEventListener('change', event => {
             state.recurring = event.target.checked;
@@ -1315,45 +1204,14 @@
             refreshUi({ skipAutoTime: true });
           });
         }
-        if (dom.notCheckedCheckbox) {
-          dom.notCheckedCheckbox.addEventListener('change', event => {
-            state.notChecked = event.target.checked;
-            refreshUi({ skipAutoTime: true });
-          });
-        }
-        if (dom.websiteInput) {
-          dom.websiteInput.addEventListener('input', event => {
-            state.website = event.target.value;
-            refreshUi({ skipAutoTime: true });
-          });
-        }
-        if (dom.websiteLabelInput) {
-          dom.websiteLabelInput.addEventListener('input', event => {
-            state.websiteLabel = event.target.value;
-            refreshUi({ skipAutoTime: true });
-          });
-        }
-        if (dom.ticketsInput) {
-          dom.ticketsInput.addEventListener('input', event => {
-            state.tickets = event.target.value;
-            refreshUi({ skipAutoTime: true });
-          });
-        }
-        if (dom.ticketsLabelInput) {
-          dom.ticketsLabelInput.addEventListener('input', event => {
-            state.ticketsLabel = event.target.value;
-            refreshUi({ skipAutoTime: true });
-          });
-        }
+        bindLinkField(dom.websiteInput, 'website', 'website');
+        bindLinkField(dom.ticketUrlInput, 'ticketUrl', 'tickets');
+        bindLinkField(dom.instagramInput, 'instagram', 'instagram');
+        bindLinkField(dom.facebookInput, 'facebook', 'facebook');
+        bindLinkField(dom.gmapsInput, 'gmaps', 'gmaps');
         if (dom.imageInput) {
           dom.imageInput.addEventListener('input', event => {
             state.image = event.target.value;
-            refreshUi({ skipAutoTime: true });
-          });
-        }
-        if (dom.coverImageInput) {
-          dom.coverImageInput.addEventListener('input', event => {
-            state.coverImage = event.target.value;
             refreshUi({ skipAutoTime: true });
           });
         }
@@ -1375,17 +1233,158 @@
         }
       }
 
+      function bindLinkField(input, stateKey, linkType) {
+        if (!input) return;
+        const handleInput = () => {
+          const result = normalizeLinkValue(linkType, input.value);
+          state[stateKey] = result.value;
+          updateLinkFieldState(input, result);
+          refreshUi({ skipAutoTime: true });
+        };
+        input.addEventListener('input', handleInput);
+        input.addEventListener('blur', () => {
+          const result = normalizeLinkValue(linkType, input.value);
+          state[stateKey] = result.value;
+          updateLinkFieldState(input, result);
+          if (result.value && input.value.trim() !== result.value) {
+            input.value = result.value;
+          }
+          refreshUi({ skipAutoTime: true });
+        });
+      }
+
+      function normalizeStateLinks() {
+        state.website = normalizeLinkValue('website', state.website).value;
+        state.ticketUrl = normalizeLinkValue('tickets', state.ticketUrl).value;
+        state.instagram = normalizeLinkValue('instagram', state.instagram).value;
+        state.facebook = normalizeLinkValue('facebook', state.facebook).value;
+        state.gmaps = normalizeLinkValue('gmaps', state.gmaps).value;
+      }
+
+      function normalizeLinkValue(type, rawValue) {
+        const trimmed = String(rawValue || '').trim();
+        if (!trimmed) {
+          return { value: '', error: '' };
+        }
+        switch (type) {
+          case 'instagram':
+            return normalizeInstagramLink(trimmed);
+          case 'facebook':
+            return normalizeFacebookLink(trimmed);
+          default:
+            return normalizeUrlLink(trimmed);
+        }
+      }
+
+      function normalizeUrlLink(value) {
+        const normalized = addProtocolIfMissing(value);
+        try {
+          const url = new URL(normalized);
+          if (!['http:', 'https:'].includes(url.protocol)) {
+            return { value: '', error: 'Use an http(s) link.' };
+          }
+          return { value: url.toString(), error: '' };
+        } catch (error) {
+          return { value: '', error: 'Enter a valid URL.' };
+        }
+      }
+
+      function normalizeInstagramLink(value) {
+        const hasDomain = /instagram\.com|instagr\.am/i.test(value);
+        const hasProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value);
+        if (hasDomain || hasProtocol) {
+          if (!hasDomain) {
+            return { value: '', error: 'Use an Instagram link or handle.' };
+          }
+          return normalizeUrlLink(addProtocolIfMissing(value));
+        }
+        let handle = value.replace(/^@/, '').trim();
+        handle = handle.split(/[/?#]/)[0];
+        if (!handle) {
+          return { value: '', error: 'Instagram handle is missing.' };
+        }
+        if (!/^[A-Za-z0-9._]+$/.test(handle)) {
+          return { value: '', error: 'Use letters, numbers, periods, or underscores.' };
+        }
+        return { value: `https://www.instagram.com/${handle}`, error: '' };
+      }
+
+      function normalizeFacebookLink(value) {
+        const hasDomain = /facebook\.com|fb\.com|fb\.me/i.test(value);
+        const hasProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value);
+        if (hasDomain || hasProtocol) {
+          if (!hasDomain) {
+            return { value: '', error: 'Use a Facebook link or handle.' };
+          }
+          return normalizeUrlLink(addProtocolIfMissing(value));
+        }
+        let handle = value.replace(/^@/, '').trim();
+        handle = handle.split(/[/?#]/)[0];
+        if (!handle) {
+          return { value: '', error: 'Facebook handle is missing.' };
+        }
+        if (!/^[A-Za-z0-9.-]+$/.test(handle)) {
+          return { value: '', error: 'Use letters, numbers, periods, or dashes.' };
+        }
+        return { value: `https://www.facebook.com/${handle}`, error: '' };
+      }
+
+      function addProtocolIfMissing(value) {
+        const trimmed = value.trim();
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+          return trimmed;
+        }
+        if (trimmed.startsWith('//')) {
+          return `https:${trimmed}`;
+        }
+        return `https://${trimmed}`;
+      }
+
+      function updateLinkFieldState(input, result) {
+        if (!input) return;
+        const hasError = Boolean(result.error);
+        input.classList.toggle('is-invalid', hasError);
+        if (hasError) {
+          input.setAttribute('aria-invalid', 'true');
+        } else {
+          input.removeAttribute('aria-invalid');
+        }
+        const hint = getFieldHint(input);
+        setFieldHint(hint, hasError ? result.error : '', hasError);
+      }
+
+      function getFieldHint(input) {
+        const group = input ? input.closest('.field-group') : null;
+        if (!group) return null;
+        return group.querySelector('.field-hint');
+      }
+
+      function setFieldHint(hint, message, isError) {
+        if (!hint) return;
+        if (!hint.dataset.default) {
+          hint.dataset.default = hint.textContent || '';
+        }
+        if (message) {
+          hint.textContent = message;
+          hint.classList.toggle('is-error', Boolean(isError));
+        } else {
+          hint.textContent = hint.dataset.default || '';
+          hint.classList.remove('is-error');
+        }
+      }
+
+      function syncLinkFieldStates() {
+        updateLinkFieldState(dom.websiteInput, normalizeLinkValue('website', dom.websiteInput ? dom.websiteInput.value : ''));
+        updateLinkFieldState(dom.ticketUrlInput, normalizeLinkValue('tickets', dom.ticketUrlInput ? dom.ticketUrlInput.value : ''));
+        updateLinkFieldState(dom.instagramInput, normalizeLinkValue('instagram', dom.instagramInput ? dom.instagramInput.value : ''));
+        updateLinkFieldState(dom.facebookInput, normalizeLinkValue('facebook', dom.facebookInput ? dom.facebookInput.value : ''));
+        updateLinkFieldState(dom.gmapsInput, normalizeLinkValue('gmaps', dom.gmapsInput ? dom.gmapsInput.value : ''));
+      }
+
       function resetForm() {
         const preservedCity = state.city;
-        const hadManualTimezone = timezoneManuallyEdited;
         state = createDefaultState();
         state.city = preservedCity;
-        timezoneManuallyEdited = hadManualTimezone;
-        if (!hadManualTimezone) {
-          applyCityTimezoneDefaults(state.city);
-        } else if (dom.timezoneInput) {
-          dom.timezoneInput.value = state.timezone;
-        }
         useAutoTimeLabel = true;
         applyStateToForm();
         updateAutoTimeLabel();
@@ -1406,7 +1405,7 @@
       function updateTimeHelper() {
         if (dom.timeHelper) {
           dom.timeHelper.textContent = useAutoTimeLabel
-            ? 'Auto label updates with start/end times.'
+            ? 'Auto label updates with start/end times (local timezone).'
             : 'Manual label stays exactly as you type.';
         }
         if (dom.autoTimeButton) {
@@ -1414,12 +1413,6 @@
         }
         if (dom.timeInput) {
           dom.timeInput.classList.toggle('is-auto', useAutoTimeLabel);
-        }
-      }
-
-      function updateTimezoneHelper() {
-        if (dom.cityTimezoneButton) {
-          dom.cityTimezoneButton.disabled = !timezoneManuallyEdited;
         }
       }
 
@@ -1459,23 +1452,21 @@
         dom.timeInput.value = label;
       }
 
-      function updateDurationBadge() {
-        if (!dom.durationBadge) return;
-        const startDate = parseLocalDateTime(state.start, state.timezone);
-        const endDate = parseLocalDateTime(state.end, state.timezone);
-        if (!startDate || !endDate) {
-          dom.durationBadge.textContent = 'Add start & end';
-          dom.durationBadge.dataset.state = 'missing';
-          return;
+      function updateTimeNotes() {
+        if (dom.durationNote) {
+          const startDate = parseLocalDateTime(state.start, state.timezone);
+          const endDate = parseLocalDateTime(state.end, state.timezone);
+          if (!startDate || !endDate) {
+            dom.durationNote.innerHTML = '<strong>Duration:</strong> Add start &amp; end';
+          } else {
+            const minutes = Math.max(0, Math.round((endDate - startDate) / 60000));
+            const label = minutes ? formatDurationLabel(minutes) : 'TBD';
+            dom.durationNote.innerHTML = `<strong>Duration:</strong> ${label}`;
+          }
         }
-        const minutes = Math.max(0, Math.round((endDate - startDate) / 60000));
-        if (!minutes) {
-          dom.durationBadge.textContent = 'Duration TBD';
-          dom.durationBadge.dataset.state = 'missing';
-          return;
+        if (dom.timezoneNote) {
+          dom.timezoneNote.innerHTML = `<strong>Local timezone:</strong> ${browserTimezone}`;
         }
-        dom.durationBadge.textContent = formatDurationLabel(minutes);
-        dom.durationBadge.dataset.state = 'ready';
       }
 
       function updatePreviewCard() {
@@ -1495,7 +1486,7 @@
         if (dom.previewAddress) {
           dom.previewAddress.textContent = event.address || 'Address TBD';
         }
-        const imageUrl = (state.coverImage || state.image || '').trim();
+        const imageUrl = (state.image || '').trim();
         if (dom.previewMedia) {
           dom.previewMedia.classList.toggle('has-image', Boolean(imageUrl));
         }
@@ -1513,10 +1504,9 @@
           ? formatDurationLabel(event.durationMinutes)
           : 'Duration TBD';
         setChip(dom.previewDuration, durationLabel, true);
-        setChip(dom.previewTimezone, `TZ: ${event.timezone || browserTimezone}`, true, true);
+        setChip(dom.previewTimezone, `Local TZ: ${browserTimezone}`, true, true);
         setChip(dom.previewRecurring, 'Recurring', Boolean(state.recurring));
         setChip(dom.previewCover, state.cover ? `Cover: ${state.cover}` : '', Boolean(state.cover), true);
-        setChip(dom.previewReview, 'Needs review', state.notChecked !== false, true);
         updatePreviewLinks(event.links);
       }
 
@@ -1551,22 +1541,23 @@
           time: event.time,
           day: event.day,
           bar: event.bar,
+          city: event.city,
           address: event.address,
           cover: event.cover,
           tea: event.tea,
           startDate: event.startDate.toISOString(),
           endDate: event.endDate.toISOString(),
-          timezone: event.timezone,
+          website: event.website,
+          instagram: event.instagram,
+          facebook: event.facebook,
+          gmaps: event.gmaps,
+          ticketUrl: event.ticketUrl,
           links: event.links,
           recurring: event.recurring,
           recurrence: event.recurrence,
-          notChecked: event.notChecked,
-          source: event.source,
           durationMinutes: event.durationMinutes
         };
-        if (event.coverImage) preview.coverImage = event.coverImage;
         if (event.image) preview.image = event.image;
-        if (state.slug) preview.slug = state.slug;
         dom.jsonPreview.textContent = JSON.stringify(preview, null, 2);
       }
 
@@ -1574,26 +1565,22 @@
         const params = new URLSearchParams();
         if (state.name) params.set('name', state.name);
         if (state.shortName) params.set('short', state.shortName);
-        if (state.slug) params.set('slug', state.slug);
         if (state.city) params.set('city', state.city);
         if (state.venue) params.set('venue', state.venue);
         if (state.address) params.set('addr', state.address);
         if (state.description) params.set('desc', state.description);
         if (state.cover) params.set('cover', state.cover);
-        if (state.source && state.source !== 'Event Generator') params.set('source', state.source);
         if (state.start) params.set('start', state.start);
         if (state.end) params.set('end', state.end);
-        if (state.timezone) params.set('tz', state.timezone);
         if (!useAutoTimeLabel && state.time) params.set('time', state.time);
         if (state.recurring) params.set('repeat', '1');
         if (state.recurrence) params.set('rrule', state.recurrence);
         if (state.website) params.set('web', state.website);
-        if (state.websiteLabel) params.set('weblabel', state.websiteLabel);
-        if (state.tickets) params.set('tickets', state.tickets);
-        if (state.ticketsLabel) params.set('tlabel', state.ticketsLabel);
+        if (state.ticketUrl) params.set('tickets', state.ticketUrl);
+        if (state.instagram) params.set('insta', state.instagram);
+        if (state.facebook) params.set('fb', state.facebook);
+        if (state.gmaps) params.set('gmaps', state.gmaps);
         if (state.image) params.set('img', state.image);
-        if (state.coverImage) params.set('coverimg', state.coverImage);
-        if (state.notChecked === false) params.set('checked', '0');
         const sorted = new URLSearchParams();
         [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
         const query = sorted.toString();
@@ -1626,9 +1613,8 @@
         if (!options.skipAutoTime) {
           updateAutoTimeLabel();
         }
-        updateDurationBadge();
+        updateTimeNotes();
         updateTimeHelper();
-        updateTimezoneHelper();
         updateRecurrenceVisibility();
         updatePreviewCard();
         updateJsonPreview();
@@ -1692,19 +1678,17 @@
           day: dayLabel,
           startDate,
           endDate,
-          timezone: state.timezone || browserTimezone,
-          coverImage: (state.coverImage || '').trim() || null,
+          timezone: browserTimezone,
           image: (state.image || '').trim() || null,
           website: (state.website || '').trim() || null,
-          tickets: (state.tickets || '').trim() || null,
+          instagram: (state.instagram || '').trim() || null,
+          facebook: (state.facebook || '').trim() || null,
+          gmaps: (state.gmaps || '').trim() || null,
+          ticketUrl: (state.ticketUrl || '').trim() || null,
           links,
           recurring: Boolean(state.recurring),
           recurrence: (state.recurrence || '').trim(),
-          notChecked: state.notChecked !== false,
-          source: (state.source || 'Event Generator').trim(),
-          durationMinutes,
-          websiteLabel: (state.websiteLabel || '').trim(),
-          ticketsLabel: (state.ticketsLabel || '').trim()
+          durationMinutes
         };
       }
 
@@ -1730,18 +1714,16 @@
           endDate: event.endDate.toISOString(),
           timezone: event.timezone,
           durationMinutes: event.durationMinutes,
-          coverImage: event.coverImage,
           image: event.image,
           website: event.website,
-          tickets: event.tickets,
+          instagram: event.instagram,
+          facebook: event.facebook,
+          gmaps: event.gmaps,
+          ticketUrl: event.ticketUrl,
+          tickets: event.ticketUrl,
           links: event.links,
           recurring: event.recurring,
-          recurrence: event.recurrence,
-          notChecked: event.notChecked,
-          source: event.source,
-          slug: state.slug || '',
-          websiteLabel: event.websiteLabel,
-          ticketsLabel: event.ticketsLabel
+          recurrence: event.recurrence
         };
       }
 
@@ -1756,8 +1738,11 @@
             type
           });
         };
-        addLink(state.websiteLabel || 'More Info', state.website, 'website');
-        addLink(state.ticketsLabel || 'Tickets', state.tickets, 'tickets');
+        addLink('🌐 Website', state.website, 'website');
+        addLink('🎫 Tickets', state.ticketUrl, 'tickets');
+        addLink('📷 Instagram', state.instagram, 'instagram');
+        addLink('📘 Facebook', state.facebook, 'facebook');
+        addLink('🗺️ Google Maps', state.gmaps, 'gmaps');
         return links;
       }
 
@@ -1980,7 +1965,7 @@
           return;
         }
         const icsContent = generateICS(event);
-        const filename = `${slugify(state.slug || event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
+        const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
         const blob = new Blob([icsContent], { type: 'text/calendar' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -2001,24 +1986,32 @@
           'CALSCALE:GREGORIAN',
           'METHOD:PUBLISH',
           'BEGIN:VEVENT',
-          `UID:${slugify(state.slug || event.name || 'chunky-dad')}-${formatICSDate(new Date())}@chunky.dad`,
+          `UID:${slugify(event.name || 'chunky-dad')}-${formatICSDate(new Date())}@chunky.dad`,
           `DTSTAMP:${formatICSDate(new Date())}`,
           `DTSTART:${formatICSDate(event.startDate)}`,
           `DTEND:${formatICSDate(event.endDate)}`,
           `SUMMARY:${escapeICS(event.name)}`
         ];
-        if (event.description) {
-          lines.push(`DESCRIPTION:${escapeICS(event.description)}`);
+        const descriptionLines = [];
+        if (event.tea) descriptionLines.push(`Tea: ${event.tea}`);
+        if (event.cover) descriptionLines.push(`Cover: ${event.cover}`);
+        if (event.bar) descriptionLines.push(`Bar: ${event.bar}`);
+        if (event.website) descriptionLines.push(`Website: ${event.website}`);
+        if (event.instagram) descriptionLines.push(`Instagram: ${event.instagram}`);
+        if (event.facebook) descriptionLines.push(`Facebook: ${event.facebook}`);
+        if (event.gmaps) descriptionLines.push(`Google Maps: ${event.gmaps}`);
+        if (event.ticketUrl) descriptionLines.push(`Tickets: ${event.ticketUrl}`);
+        if (event.image) descriptionLines.push(`Image: ${event.image}`);
+        if (descriptionLines.length) {
+          lines.push(`DESCRIPTION:${escapeICS(descriptionLines.join('\n'))}`);
         }
         const location = [event.bar, event.address].filter(Boolean).join(', ');
         if (location) {
           lines.push(`LOCATION:${escapeICS(location)}`);
         }
-        if (event.website) {
-          lines.push(`URL:${escapeICS(event.website)}`);
-        }
-        if (event.tickets) {
-          lines.push(`X-ALT-DESC:${escapeICS('Tickets: ' + event.tickets)}`);
+        const primaryUrl = event.website || event.ticketUrl || event.facebook || event.instagram || event.gmaps;
+        if (primaryUrl) {
+          lines.push(`URL:${escapeICS(primaryUrl)}`);
         }
         lines.push('END:VEVENT', 'END:VCALENDAR');
         return lines.join('\r\n');
