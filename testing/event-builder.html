@@ -11,102 +11,165 @@
   <style>
     :root {
       color-scheme: light;
+      --page-bg: #f4f5ff;
+      --panel-bg: #ffffff;
+      --text-primary: #1d2245;
+      --text-secondary: #4a4f73;
+      --text-muted: #7076a9;
+      --accent: #6c63ff;
+      --accent-strong: #5145cd;
+      --border: rgba(100, 114, 170, 0.2);
+      --soft: #f3f4ff;
+      --chip: rgba(108, 99, 255, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
       margin: 0;
       font-family: 'Poppins', sans-serif;
-      background: linear-gradient(180deg, #f4f7ff 0%, #ffffff 60%);
-      color: #1d2245;
+      background: var(--page-bg);
+      color: var(--text-primary);
     }
 
     .page-wrapper {
-      max-width: 1240px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 2.5rem 1.5rem 4rem;
     }
 
     .hero {
-      margin-bottom: 2.25rem;
+      margin-bottom: 2rem;
     }
 
     .hero .eyebrow {
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #6c63ff;
+      color: var(--accent);
       font-size: 0.75rem;
       font-weight: 600;
       margin-bottom: 0.4rem;
     }
 
     .hero h1 {
-      font-size: 2.5rem;
+      font-size: 2.3rem;
       margin: 0 0 0.75rem;
       color: #181c35;
     }
 
     .hero-text {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0;
-      color: #4a4f73;
+      color: var(--text-secondary);
       font-size: 1rem;
       line-height: 1.6;
     }
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
       gap: 2rem;
       align-items: start;
     }
 
     .panel {
-      background: #ffffff;
+      background: var(--panel-bg);
       border-radius: 18px;
-      padding: 1.75rem;
-      box-shadow: 0 16px 45px rgba(19, 24, 56, 0.08);
-      border: 1px solid rgba(102, 114, 172, 0.08);
+      padding: 1.5rem;
+      border: 1px solid rgba(102, 114, 172, 0.12);
+      box-shadow: 0 16px 40px rgba(19, 24, 56, 0.06);
     }
 
-    .panel h2 {
-      margin: 0 0 1.25rem;
-      font-size: 1.35rem;
+    .panel-header {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      color: #1d2245;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
     }
 
-    .field-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 1.25rem;
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+      color: var(--text-primary);
     }
 
-    .field-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 1.25rem;
+    .panel-subtitle {
+      margin: 0.35rem 0 0;
+      font-size: 0.85rem;
+      color: var(--text-muted);
     }
 
-    .field-group {
+    details.form-section {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      background: #fbfcff;
+      margin-bottom: 1rem;
+      transition: box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    details.form-section[open] {
+      background: #ffffff;
+      box-shadow: 0 10px 24px rgba(19, 24, 56, 0.05);
+    }
+
+    details.form-section summary {
+      list-style: none;
+      cursor: pointer;
       display: flex;
-      flex-direction: column;
-      gap: 0.45rem;
-    }
-
-    .field-group label {
+      align-items: center;
+      justify-content: space-between;
       font-weight: 600;
       font-size: 0.95rem;
       color: #2a2f54;
     }
 
+    details.form-section summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.form-section summary::after {
+      content: '▾';
+      font-size: 0.9rem;
+      color: var(--accent);
+      transition: transform 0.2s ease;
+    }
+
+    details.form-section[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .section-body {
+      margin-top: 0.85rem;
+    }
+
+    .field-grid,
+    .field-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .field-group label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #2a2f54;
+    }
+
     .field-group small {
-      font-size: 0.78rem;
-      color: #7076a9;
-      line-height: 1.5;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
     }
 
     .field-group.disabled {
@@ -119,16 +182,16 @@
     select,
     textarea {
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       border: 1px solid rgba(112, 125, 169, 0.35);
       border-radius: 10px;
-      padding: 0.65rem 0.75rem;
+      padding: 0.6rem 0.75rem;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
       background: #ffffff;
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 110px;
       resize: vertical;
     }
 
@@ -136,14 +199,14 @@
     textarea:focus,
     select:focus {
       outline: none;
-      border-color: #6c63ff;
-      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.12);
     }
 
     .input-with-action {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.5rem;
     }
 
     .input-with-action input {
@@ -153,7 +216,7 @@
     .checkbox-label {
       display: inline-flex;
       align-items: center;
-      gap: 0.55rem;
+      gap: 0.5rem;
       font-weight: 500;
       color: #2a2f54;
     }
@@ -162,12 +225,13 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 42px;
-      padding: 0 1.1rem;
+      min-height: 38px;
+      padding: 0 1rem;
       border-radius: 999px;
       font-weight: 600;
+      font-size: 0.85rem;
       color: #2a2f54;
-      background: rgba(108, 99, 255, 0.12);
+      background: var(--chip);
       border: 1px solid rgba(108, 99, 255, 0.35);
     }
 
@@ -183,19 +247,19 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 1rem;
-      margin-top: 1.5rem;
+      margin-top: 1.2rem;
     }
 
     .primary-actions {
       display: flex;
-      gap: 0.75rem;
+      gap: 0.7rem;
       flex-wrap: wrap;
     }
 
     button {
       font-family: inherit;
-      font-size: 0.95rem;
-      padding: 0.65rem 1.1rem;
+      font-size: 0.9rem;
+      padding: 0.6rem 1rem;
       border-radius: 10px;
       border: none;
       cursor: pointer;
@@ -210,14 +274,14 @@
     }
 
     .primary-button {
-      background: linear-gradient(135deg, #6c63ff, #5145cd);
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
       color: #ffffff;
-      box-shadow: 0 12px 32px rgba(81, 69, 205, 0.28);
+      box-shadow: 0 12px 30px rgba(81, 69, 205, 0.28);
     }
 
     .primary-button:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 15px 36px rgba(81, 69, 205, 0.32);
+      box-shadow: 0 15px 34px rgba(81, 69, 205, 0.32);
     }
 
     .secondary-button {
@@ -234,7 +298,7 @@
       background: rgba(108, 99, 255, 0.1);
       color: #3f47a6;
       border: 1px solid transparent;
-      padding-inline: 0.9rem;
+      padding-inline: 0.85rem;
     }
 
     .ghost-button:hover:not(:disabled) {
@@ -243,26 +307,181 @@
     }
 
     .share-section {
-      margin-top: 1.75rem;
+      margin-top: 1.25rem;
+      padding: 0.9rem;
+      border-radius: 12px;
+      border: 1px solid rgba(108, 99, 255, 0.2);
+      background: var(--soft);
     }
 
     .share-section label {
       display: block;
       font-weight: 600;
-      font-size: 0.9rem;
-      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
       color: #2a2f54;
     }
 
     .share-row {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.7rem;
     }
 
     .share-row input {
       flex: 1 1 auto;
       background: #f7f8ff;
+    }
+
+    .preview-panel {
+      position: sticky;
+      top: 1.5rem;
+    }
+
+    .preview-card {
+      border-radius: 16px;
+      border: 1px solid rgba(111, 118, 172, 0.12);
+      background: #ffffff;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    }
+
+    .preview-media {
+      position: relative;
+      height: 180px;
+      background: linear-gradient(120deg, #dfe3ff, #f7f8ff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .preview-media.has-image img {
+      display: block;
+    }
+
+    .preview-fallback {
+      font-size: 0.85rem;
+      color: #6b6f94;
+    }
+
+    .preview-body {
+      padding: 1rem 1.2rem 1.2rem;
+    }
+
+    .preview-city {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+
+    .preview-title {
+      margin: 0.4rem 0 0.5rem;
+      font-size: 1.25rem;
+      color: #181c35;
+    }
+
+    .preview-time,
+    .preview-venue,
+    .preview-address {
+      margin: 0.2rem 0;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .preview-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.85rem;
+    }
+
+    .chip {
+      background: var(--chip);
+      border: 1px solid rgba(108, 99, 255, 0.35);
+      color: #3f47a6;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .chip.is-muted {
+      background: rgba(112, 125, 169, 0.12);
+      border-color: rgba(112, 125, 169, 0.3);
+      color: #5a6087;
+    }
+
+    .chip.is-hidden {
+      display: none;
+    }
+
+    .preview-links {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .preview-links.is-hidden {
+      display: none;
+    }
+
+    .preview-links a {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #3f47a6;
+      text-decoration: none;
+      background: rgba(108, 99, 255, 0.12);
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid rgba(108, 99, 255, 0.3);
+    }
+
+    .preview-links a:hover {
+      background: rgba(108, 99, 255, 0.2);
+    }
+
+    .json-preview {
+      margin-top: 1.2rem;
+      border-radius: 16px;
+      border: 1px solid rgba(111, 118, 172, 0.12);
+      background: #fcfdff;
+      overflow: hidden;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid rgba(111, 118, 172, 0.12);
+      background: rgba(108, 99, 255, 0.08);
+    }
+
+    .preview-header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      color: #1f2340;
+    }
+
+    .json-block {
+      margin: 0;
+      padding: 1.1rem 1.2rem;
+      background: #0f1427;
+      color: #f6f8ff;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
 
     .calendar-preview-card {
@@ -273,24 +492,9 @@
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
     }
 
-    .preview-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.1rem 1.2rem;
-      border-bottom: 1px solid rgba(111, 118, 172, 0.12);
-      background: rgba(108, 99, 255, 0.08);
-    }
-
-    .preview-header h2 {
-      margin: 0;
-      font-size: 1.1rem;
-      color: #1f2340;
-    }
-
     #calendar-preview {
       width: 100%;
-      height: 560px;
+      height: 480px;
       border: none;
       background: #ffffff;
     }
@@ -298,7 +502,7 @@
     .status-badge {
       font-size: 0.8rem;
       font-weight: 600;
-      padding: 0.35rem 0.75rem;
+      padding: 0.3rem 0.7rem;
       border-radius: 999px;
       border: 1px solid transparent;
     }
@@ -333,23 +537,27 @@
       color: #a12317;
     }
 
-    .json-preview {
-      margin-top: 1.75rem;
-      border-radius: 16px;
-      border: 1px solid rgba(111, 118, 172, 0.12);
-      background: #fcfdff;
-      overflow: hidden;
+    .live-preview {
+      margin-top: 2rem;
     }
 
-    .json-block {
-      margin: 0;
-      padding: 1.25rem;
-      background: #0f1427;
-      color: #f6f8ff;
-      font-size: 0.85rem;
-      line-height: 1.55;
-      white-space: pre-wrap;
-      word-break: break-word;
+    .live-preview details {
+      border: none;
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .live-preview details[open] {
+      box-shadow: none;
+    }
+
+    .live-preview summary {
+      font-size: 1.05rem;
+    }
+
+    .live-preview .section-body {
+      margin-top: 1rem;
     }
 
     input.is-auto {
@@ -359,6 +567,10 @@
     @media (max-width: 1080px) {
       .layout {
         grid-template-columns: 1fr;
+      }
+
+      .preview-panel {
+        position: static;
       }
     }
 
@@ -397,142 +609,173 @@
       <p class="eyebrow">chunky.dad toolbox</p>
       <h1>🛠️ Event Builder</h1>
       <p class="hero-text">
-        Craft chunky.dad calendar events with friendly inputs, preview them instantly, and share a URL that keeps every field in sync. Export a ready-to-import ICS file when you are happy with the details.
+        Build chunky.dad calendar events with compact sections, see updates instantly, and keep every change synced to the URL for easy sharing.
       </p>
     </header>
 
     <main class="layout">
       <section class="panel form-panel">
-        <h2>Event Details</h2>
+        <div class="panel-header">
+          <div>
+            <h2>Event Details</h2>
+            <p class="panel-subtitle">Changes are saved to the URL as you type.</p>
+          </div>
+        </div>
+
         <form id="event-form">
-          <div class="field-grid">
-            <div class="field-group">
-              <label for="event-name">Event Name</label>
-              <input type="text" id="event-name" autocomplete="off" placeholder="Bearracuda Chicago">
-            </div>
-            <div class="field-group">
-              <label for="event-short-name">Card Short Name</label>
-              <input type="text" id="event-short-name" autocomplete="off" placeholder="Bearracuda">
-              <small>Used when the calendar needs a shorter label.</small>
-            </div>
-            <div class="field-group">
-              <label for="event-slug">Slug (optional)</label>
-              <input type="text" id="event-slug" autocomplete="off" placeholder="bearracuda-preview-night">
-              <small>Only if you want to test a specific slug.</small>
-            </div>
-            <div class="field-group">
-              <label for="event-city">City</label>
-              <select id="event-city"></select>
-            </div>
-            <div class="field-group">
-              <label for="event-venue">Venue</label>
-              <input type="text" id="event-venue" autocomplete="off" placeholder="The Eagle NYC">
-            </div>
-            <div class="field-group">
-              <label for="event-address">Address</label>
-              <input type="text" id="event-address" autocomplete="off" placeholder="554 W 28th St, New York, NY">
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label for="event-description">Tea / Description</label>
-            <textarea id="event-description" placeholder="Chunky bears takeover with DJs, go-go cubs, and midnight surprises."></textarea>
-          </div>
-
-          <div class="field-row">
-            <div class="field-group">
-              <label for="event-start">Start (local)</label>
-              <input type="datetime-local" id="event-start">
-            </div>
-            <div class="field-group">
-              <label for="event-end">End (local)</label>
-              <input type="datetime-local" id="event-end">
-            </div>
-          </div>
-
-          <div class="field-row">
-            <div class="field-group">
-              <label for="event-time">Time Label</label>
-              <div class="input-with-action">
-                <input type="text" id="event-time" placeholder="Auto: 9PM-1AM">
-                <button type="button" class="ghost-button" id="auto-time-button" title="Use automatic time label">Use automatic</button>
+          <details class="form-section" open>
+            <summary>Basics</summary>
+            <div class="section-body">
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="event-name">Event Name</label>
+                  <input type="text" id="event-name" autocomplete="off" placeholder="Bearracuda Chicago">
+                </div>
+                <div class="field-group">
+                  <label for="event-short-name">Card Short Name</label>
+                  <input type="text" id="event-short-name" autocomplete="off" placeholder="Bearracuda">
+                  <small>Used when the calendar needs a shorter label.</small>
+                </div>
+                <div class="field-group">
+                  <label for="event-city">City</label>
+                  <select id="event-city"></select>
+                </div>
+                <div class="field-group">
+                  <label for="event-venue">Venue</label>
+                  <input type="text" id="event-venue" autocomplete="off" placeholder="The Eagle NYC">
+                </div>
+                <div class="field-group">
+                  <label for="event-address">Address</label>
+                  <input type="text" id="event-address" autocomplete="off" placeholder="554 W 28th St, New York, NY">
+                </div>
               </div>
-              <small id="time-helper">Auto label updates with start/end times.</small>
-            </div>
-            <div class="field-group">
-              <label for="event-timezone">Timezone</label>
-              <div class="input-with-action">
-                <input type="text" id="event-timezone" placeholder="America/New_York">
-                <button type="button" class="ghost-button" id="city-timezone-button" title="Reset to city default">Use city default</button>
+
+              <div class="field-group">
+                <label for="event-description">Tea / Description</label>
+                <textarea id="event-description" placeholder="Chunky bears takeover with DJs, go-go cubs, and midnight surprises."></textarea>
               </div>
             </div>
-            <div class="field-group duration-group">
-              <label>Duration</label>
-              <span id="duration-badge" class="duration-badge" data-state="missing">Add start &amp; end</span>
-            </div>
-          </div>
+          </details>
 
-          <div class="field-row">
-            <div class="field-group">
-              <label for="event-cover">Cover</label>
-              <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
-            </div>
-            <div class="field-group">
-              <label for="event-source">Source</label>
-              <input type="text" id="event-source" autocomplete="off" placeholder="Eventbrite, Facebook, promoter name">
-            </div>
-          </div>
+          <details class="form-section" open>
+            <summary>Time &amp; Recurrence</summary>
+            <div class="section-body">
+              <div class="field-row">
+                <div class="field-group">
+                  <label for="event-start">Start (local)</label>
+                  <input type="datetime-local" id="event-start">
+                </div>
+                <div class="field-group">
+                  <label for="event-end">End (local)</label>
+                  <input type="datetime-local" id="event-end">
+                </div>
+              </div>
 
-          <div class="field-row">
-            <div class="field-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="event-recurring">
-                <span>Recurring event</span>
-              </label>
-            </div>
-            <div class="field-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="event-not-checked" checked>
-                <span>Mark as not checked</span>
-              </label>
-            </div>
-          </div>
+              <div class="field-row">
+                <div class="field-group">
+                  <label for="event-time">Time Label</label>
+                  <div class="input-with-action">
+                    <input type="text" id="event-time" placeholder="Auto: 9PM-1AM">
+                    <button type="button" class="ghost-button" id="auto-time-button" title="Use automatic time label">Use automatic</button>
+                  </div>
+                  <small id="time-helper">Auto label updates with start/end times.</small>
+                </div>
+                <div class="field-group">
+                  <label for="event-timezone">Timezone</label>
+                  <div class="input-with-action">
+                    <input type="text" id="event-timezone" placeholder="America/New_York">
+                    <button type="button" class="ghost-button" id="city-timezone-button" title="Reset to city default">Use city default</button>
+                  </div>
+                </div>
+                <div class="field-group duration-group">
+                  <label>Duration</label>
+                  <span id="duration-badge" class="duration-badge" data-state="missing">Add start &amp; end</span>
+                </div>
+              </div>
 
-          <div class="field-group" id="recurrence-group">
-            <label for="event-recurrence">Recurrence rule (RRULE)</label>
-            <input type="text" id="event-recurrence" placeholder="FREQ=WEEKLY;BYDAY=FR">
-            <small>Only used if the event repeats.</small>
-          </div>
+              <div class="field-row">
+                <div class="field-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="event-recurring">
+                    <span>Recurring event</span>
+                  </label>
+                </div>
+                <div class="field-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="event-not-checked" checked>
+                    <span>Mark as not checked</span>
+                  </label>
+                </div>
+              </div>
 
-          <div class="field-grid">
-            <div class="field-group">
-              <label for="event-website">Website URL</label>
-              <input type="url" id="event-website" placeholder="https://bearracuda.com">
+              <div class="field-group" id="recurrence-group">
+                <label for="event-recurrence">Recurrence rule (RRULE)</label>
+                <input type="text" id="event-recurrence" placeholder="FREQ=WEEKLY;BYDAY=FR">
+                <small>Only used if the event repeats.</small>
+              </div>
             </div>
-            <div class="field-group">
-              <label for="event-website-label">Website Label</label>
-              <input type="text" id="event-website-label" placeholder="🌐 More Info">
-            </div>
-            <div class="field-group">
-              <label for="event-tickets">Tickets URL</label>
-              <input type="url" id="event-tickets" placeholder="https://tickets.example.com">
-            </div>
-            <div class="field-group">
-              <label for="event-tickets-label">Tickets Label</label>
-              <input type="text" id="event-tickets-label" placeholder="🎟 Tickets">
-            </div>
-          </div>
+          </details>
 
-          <div class="field-grid">
-            <div class="field-group">
-              <label for="event-image">Promo Image URL</label>
-              <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
+          <details class="form-section">
+            <summary>Links</summary>
+            <div class="section-body">
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="event-website">Website URL</label>
+                  <input type="url" id="event-website" placeholder="https://bearracuda.com">
+                </div>
+                <div class="field-group">
+                  <label for="event-website-label">Website Label</label>
+                  <input type="text" id="event-website-label" placeholder="More Info">
+                </div>
+                <div class="field-group">
+                  <label for="event-tickets">Tickets URL</label>
+                  <input type="url" id="event-tickets" placeholder="https://tickets.example.com">
+                </div>
+                <div class="field-group">
+                  <label for="event-tickets-label">Tickets Label</label>
+                  <input type="text" id="event-tickets-label" placeholder="Tickets">
+                </div>
+              </div>
             </div>
-            <div class="field-group">
-              <label for="event-cover-image">Cover Image Override</label>
-              <input type="url" id="event-cover-image" placeholder="Optional cover art">
+          </details>
+
+          <details class="form-section">
+            <summary>Images</summary>
+            <div class="section-body">
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="event-image">Promo Image URL</label>
+                  <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
+                </div>
+                <div class="field-group">
+                  <label for="event-cover-image">Cover Image Override</label>
+                  <input type="url" id="event-cover-image" placeholder="Optional cover art">
+                </div>
+              </div>
             </div>
-          </div>
+          </details>
+
+          <details class="form-section">
+            <summary>Advanced</summary>
+            <div class="section-body">
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="event-slug">Slug (optional)</label>
+                  <input type="text" id="event-slug" autocomplete="off" placeholder="bearracuda-preview-night">
+                  <small>Only if you want to test a specific slug.</small>
+                </div>
+                <div class="field-group">
+                  <label for="event-source">Source</label>
+                  <input type="text" id="event-source" autocomplete="off" placeholder="Eventbrite, Facebook, promoter name">
+                </div>
+                <div class="field-group">
+                  <label for="event-cover">Cover</label>
+                  <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
+                </div>
+              </div>
+            </div>
+          </details>
 
           <div class="form-actions">
             <button type="button" class="ghost-button" id="reset-form">Reset to defaults</button>
@@ -551,13 +794,34 @@
         </div>
       </section>
 
-      <section class="panel preview-panel">
-        <div class="calendar-preview-card">
-          <div class="preview-header">
-            <h2>Calendar Preview</h2>
-            <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
+      <aside class="panel preview-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Live Preview</h2>
+            <p class="panel-subtitle">Updates instantly as you type.</p>
           </div>
-          <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=nyc"></iframe>
+        </div>
+
+        <div class="preview-card">
+          <div class="preview-media" id="preview-media">
+            <img id="preview-image" alt="" loading="lazy">
+            <div class="preview-fallback">Add a promo image to preview artwork.</div>
+          </div>
+          <div class="preview-body">
+            <div class="preview-city" id="preview-city">City</div>
+            <h3 class="preview-title" id="preview-title">Untitled event</h3>
+            <p class="preview-time" id="preview-time">Add start and end times to preview timing.</p>
+            <p class="preview-venue" id="preview-venue">Venue TBA</p>
+            <p class="preview-address" id="preview-address">Address TBD</p>
+            <div class="preview-chips">
+              <span class="chip" id="preview-duration">Duration TBD</span>
+              <span class="chip is-muted" id="preview-timezone">TZ</span>
+              <span class="chip is-hidden" id="preview-recurring">Recurring</span>
+              <span class="chip is-hidden" id="preview-cover">Cover</span>
+              <span class="chip is-hidden" id="preview-review">Needs review</span>
+            </div>
+            <div class="preview-links is-hidden" id="preview-links"></div>
+          </div>
         </div>
 
         <div class="json-preview">
@@ -567,14 +831,31 @@
           </div>
           <pre id="event-json" class="json-block">Add event details to see the generated calendar object.</pre>
         </div>
-      </section>
+      </aside>
     </main>
+
+    <section class="panel live-preview">
+      <details id="live-preview" class="form-section">
+        <summary>Live calendar preview (optional)</summary>
+        <div class="section-body">
+          <div class="calendar-preview-card">
+            <div class="preview-header">
+              <h2>Calendar Preview</h2>
+              <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
+            </div>
+            <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=nyc"></iframe>
+          </div>
+        </div>
+      </details>
+    </section>
   </div>
 
   <script src="../js/city-config.js"></script>
   <script>
     (() => {
       const DEFAULT_DURATION_MINUTES = 240;
+      const URL_UPDATE_DELAY = 120;
+      const EVENT_PUSH_DELAY = 200;
       const CITY_TIMEZONE_GUESSES = {
         'atlanta': 'America/New_York',
         'berlin': 'Europe/Berlin',
@@ -608,6 +889,7 @@
       let calendarReady = false;
       let iframeLoaded = false;
       let sendTimeoutId = null;
+      let urlTimeoutId = null;
       let currentCalendarCity = null;
 
       document.addEventListener('DOMContentLoaded', init);
@@ -632,6 +914,7 @@
         updateTimeHelper();
         updateTimezoneHelper();
         updateDurationBadge();
+        updatePreviewCard();
         updateJsonPreview();
         updateUrl();
         updateCalendarSource(true);
@@ -675,6 +958,19 @@
         dom.calendarIframe = document.getElementById('calendar-preview');
         dom.calendarStatus = document.getElementById('calendar-status');
         dom.jsonPreview = document.getElementById('event-json');
+        dom.previewMedia = document.getElementById('preview-media');
+        dom.previewImage = document.getElementById('preview-image');
+        dom.previewCity = document.getElementById('preview-city');
+        dom.previewTitle = document.getElementById('preview-title');
+        dom.previewTime = document.getElementById('preview-time');
+        dom.previewVenue = document.getElementById('preview-venue');
+        dom.previewAddress = document.getElementById('preview-address');
+        dom.previewDuration = document.getElementById('preview-duration');
+        dom.previewTimezone = document.getElementById('preview-timezone');
+        dom.previewRecurring = document.getElementById('preview-recurring');
+        dom.previewCover = document.getElementById('preview-cover');
+        dom.previewReview = document.getElementById('preview-review');
+        dom.previewLinks = document.getElementById('preview-links');
       }
 
       function populateCityOptions() {
@@ -853,39 +1149,39 @@
         }
       }
 
-        function applyStateToForm() {
-          if (dom.nameInput) dom.nameInput.value = state.name || '';
-          if (dom.shortNameInput) dom.shortNameInput.value = state.shortName || '';
-          if (dom.slugInput) dom.slugInput.value = state.slug || '';
-          if (dom.citySelect) {
-            if (![...dom.citySelect.options].some(option => option.value === state.city)) {
-              state.city = dom.citySelect.options.length ? dom.citySelect.options[0].value : 'nyc';
-            }
-            dom.citySelect.value = state.city;
+      function applyStateToForm() {
+        if (dom.nameInput) dom.nameInput.value = state.name || '';
+        if (dom.shortNameInput) dom.shortNameInput.value = state.shortName || '';
+        if (dom.slugInput) dom.slugInput.value = state.slug || '';
+        if (dom.citySelect) {
+          if (![...dom.citySelect.options].some(option => option.value === state.city)) {
+            state.city = dom.citySelect.options.length ? dom.citySelect.options[0].value : 'nyc';
           }
-          if (dom.venueInput) dom.venueInput.value = state.venue || '';
-          if (dom.addressInput) dom.addressInput.value = state.address || '';
-          if (dom.descriptionInput) dom.descriptionInput.value = state.description || '';
-          if (dom.coverInput) dom.coverInput.value = state.cover || '';
-          if (dom.sourceInput) dom.sourceInput.value = state.source || '';
-          if (dom.startInput) dom.startInput.value = state.start || '';
-          if (dom.endInput) dom.endInput.value = state.end || '';
-          if (!useAutoTimeLabel && dom.timeInput) {
-            dom.timeInput.value = state.time || '';
-          }
-          if (dom.timezoneInput) dom.timezoneInput.value = state.timezone || browserTimezone;
-          if (dom.recurringCheckbox) dom.recurringCheckbox.checked = !!state.recurring;
-          if (dom.recurrenceInput) dom.recurrenceInput.value = state.recurrence || '';
-          if (dom.notCheckedCheckbox) dom.notCheckedCheckbox.checked = state.notChecked !== false;
-          if (dom.websiteInput) dom.websiteInput.value = state.website || '';
-          if (dom.websiteLabelInput) dom.websiteLabelInput.value = state.websiteLabel || '';
-          if (dom.ticketsInput) dom.ticketsInput.value = state.tickets || '';
-          if (dom.ticketsLabelInput) dom.ticketsLabelInput.value = state.ticketsLabel || '';
-          if (dom.imageInput) dom.imageInput.value = state.image || '';
-          if (dom.coverImageInput) dom.coverImageInput.value = state.coverImage || '';
-          updateTimeHelper();
-          updateTimezoneHelper();
+          dom.citySelect.value = state.city;
         }
+        if (dom.venueInput) dom.venueInput.value = state.venue || '';
+        if (dom.addressInput) dom.addressInput.value = state.address || '';
+        if (dom.descriptionInput) dom.descriptionInput.value = state.description || '';
+        if (dom.coverInput) dom.coverInput.value = state.cover || '';
+        if (dom.sourceInput) dom.sourceInput.value = state.source || '';
+        if (dom.startInput) dom.startInput.value = state.start || '';
+        if (dom.endInput) dom.endInput.value = state.end || '';
+        if (!useAutoTimeLabel && dom.timeInput) {
+          dom.timeInput.value = state.time || '';
+        }
+        if (dom.timezoneInput) dom.timezoneInput.value = state.timezone || browserTimezone;
+        if (dom.recurringCheckbox) dom.recurringCheckbox.checked = !!state.recurring;
+        if (dom.recurrenceInput) dom.recurrenceInput.value = state.recurrence || '';
+        if (dom.notCheckedCheckbox) dom.notCheckedCheckbox.checked = state.notChecked !== false;
+        if (dom.websiteInput) dom.websiteInput.value = state.website || '';
+        if (dom.websiteLabelInput) dom.websiteLabelInput.value = state.websiteLabel || '';
+        if (dom.ticketsInput) dom.ticketsInput.value = state.tickets || '';
+        if (dom.ticketsLabelInput) dom.ticketsLabelInput.value = state.ticketsLabel || '';
+        if (dom.imageInput) dom.imageInput.value = state.image || '';
+        if (dom.coverImageInput) dom.coverImageInput.value = state.coverImage || '';
+        updateTimeHelper();
+        updateTimezoneHelper();
+      }
 
       function bindEvents() {
         if (dom.form) {
@@ -906,7 +1202,7 @@
         if (dom.slugInput) {
           dom.slugInput.addEventListener('input', event => {
             state.slug = event.target.value.trim();
-            updateUrl();
+            refreshUi({ skipAutoTime: true });
           });
         }
         if (dom.citySelect) {
@@ -1178,13 +1474,68 @@
           dom.durationBadge.dataset.state = 'missing';
           return;
         }
-        const hours = Math.floor(minutes / 60);
-        const remainder = minutes % 60;
-        const parts = [];
-        if (hours) parts.push(`${hours} hr${hours === 1 ? '' : 's'}`);
-        if (remainder) parts.push(`${remainder} min`);
-        dom.durationBadge.textContent = parts.join(' ') || `${minutes} min`;
+        dom.durationBadge.textContent = formatDurationLabel(minutes);
         dom.durationBadge.dataset.state = 'ready';
+      }
+
+      function updatePreviewCard() {
+        if (!dom.previewTitle) return;
+        const event = buildEventPayload();
+        const title = event.name || 'Untitled event';
+        if (dom.previewTitle) dom.previewTitle.textContent = title;
+        if (dom.previewCity) {
+          dom.previewCity.textContent = getCityLabel(state.city) || 'City';
+        }
+        if (dom.previewTime) {
+          dom.previewTime.textContent = formatPreviewDate(event.startDate, event.endDate, event.timezone);
+        }
+        if (dom.previewVenue) {
+          dom.previewVenue.textContent = event.bar || 'Venue TBA';
+        }
+        if (dom.previewAddress) {
+          dom.previewAddress.textContent = event.address || 'Address TBD';
+        }
+        const imageUrl = (state.coverImage || state.image || '').trim();
+        if (dom.previewMedia) {
+          dom.previewMedia.classList.toggle('has-image', Boolean(imageUrl));
+        }
+        if (dom.previewImage) {
+          if (imageUrl) {
+            dom.previewImage.src = imageUrl;
+            dom.previewImage.alt = title ? `${title} promo` : 'Event promo image';
+          } else {
+            dom.previewImage.removeAttribute('src');
+            dom.previewImage.alt = '';
+          }
+        }
+        const hasTimeRange = Boolean(event.startDate && event.endDate);
+        const durationLabel = hasTimeRange
+          ? formatDurationLabel(event.durationMinutes)
+          : 'Duration TBD';
+        setChip(dom.previewDuration, durationLabel, true);
+        setChip(dom.previewTimezone, `TZ: ${event.timezone || browserTimezone}`, true, true);
+        setChip(dom.previewRecurring, 'Recurring', Boolean(state.recurring));
+        setChip(dom.previewCover, state.cover ? `Cover: ${state.cover}` : '', Boolean(state.cover), true);
+        setChip(dom.previewReview, 'Needs review', state.notChecked !== false, true);
+        updatePreviewLinks(event.links);
+      }
+
+      function updatePreviewLinks(links) {
+        if (!dom.previewLinks) return;
+        dom.previewLinks.innerHTML = '';
+        if (!Array.isArray(links) || !links.length) {
+          dom.previewLinks.classList.add('is-hidden');
+          return;
+        }
+        dom.previewLinks.classList.remove('is-hidden');
+        links.forEach(link => {
+          const anchor = document.createElement('a');
+          anchor.href = link.url;
+          anchor.target = '_blank';
+          anchor.rel = 'noopener';
+          anchor.textContent = link.label || link.type || 'Link';
+          dom.previewLinks.appendChild(anchor);
+        });
       }
 
       function updateJsonPreview() {
@@ -1223,7 +1574,7 @@
         const params = new URLSearchParams();
         if (state.name) params.set('name', state.name);
         if (state.shortName) params.set('short', state.shortName);
-        if (state.slug) params set('slug', state.slug);
+        if (state.slug) params.set('slug', state.slug);
         if (state.city) params.set('city', state.city);
         if (state.venue) params.set('venue', state.venue);
         if (state.address) params.set('addr', state.address);
@@ -1247,8 +1598,21 @@
         [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
         const query = sorted.toString();
         const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
+        const current = `${window.location.pathname}${window.location.search}`;
+        if (current !== newUrl) {
+          window.history.replaceState({}, '', newUrl);
+        }
         updateShareUrl();
+      }
+
+      function scheduleUrlUpdate() {
+        if (urlTimeoutId) {
+          clearTimeout(urlTimeoutId);
+        }
+        urlTimeoutId = setTimeout(() => {
+          urlTimeoutId = null;
+          updateUrl();
+        }, URL_UPDATE_DELAY);
       }
 
       function updateShareUrl() {
@@ -1266,8 +1630,9 @@
         updateTimeHelper();
         updateTimezoneHelper();
         updateRecurrenceVisibility();
+        updatePreviewCard();
         updateJsonPreview();
-        updateUrl();
+        scheduleUrlUpdate();
         scheduleEventPush();
       }
 
@@ -1279,7 +1644,7 @@
         sendTimeoutId = setTimeout(() => {
           sendTimeoutId = null;
           pushEventToCalendar();
-        }, 200);
+        }, EVENT_PUSH_DELAY);
       }
 
       function pushEventToCalendar() {
@@ -1391,10 +1756,11 @@
             type
           });
         };
-        addLink(state.websiteLabel || '🌐 More Info', state.website, 'website');
-        addLink(state.ticketsLabel || '🎟 Tickets', state.tickets, 'tickets');
+        addLink(state.websiteLabel || 'More Info', state.website, 'website');
+        addLink(state.ticketsLabel || 'Tickets', state.tickets, 'tickets');
         return links;
       }
+
       function setupMessaging() {
         if (dom.calendarIframe) {
           dom.calendarIframe.addEventListener('load', () => {
@@ -1523,6 +1889,50 @@
         if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) return trimmed;
         if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(trimmed)) return trimmed.slice(0, 16);
         return '';
+      }
+
+      function formatPreviewDate(startDate, endDate, timeZone) {
+        if (!startDate || !endDate) {
+          return 'Add start and end times to preview timing.';
+        }
+        const dateLabel = startDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+          timeZone: timeZone || browserTimezone
+        });
+        const rangeLabel = formatTimeRange(startDate, endDate, timeZone);
+        return rangeLabel ? `${dateLabel} · ${rangeLabel}` : dateLabel;
+      }
+
+      function formatDurationLabel(minutes) {
+        if (!minutes) return 'Duration TBD';
+        const hours = Math.floor(minutes / 60);
+        const remainder = minutes % 60;
+        const parts = [];
+        if (hours) parts.push(`${hours} hr${hours === 1 ? '' : 's'}`);
+        if (remainder) parts.push(`${remainder} min`);
+        return parts.join(' ') || `${minutes} min`;
+      }
+
+      function getCityLabel(cityKey) {
+        if (dom.citySelect) {
+          const option = [...dom.citySelect.options].find(option => option.value === cityKey);
+          if (option) return option.textContent;
+        }
+        if (typeof CITY_CONFIG === 'object' && CITY_CONFIG && CITY_CONFIG[cityKey]) {
+          const city = CITY_CONFIG[cityKey];
+          return city.emoji ? `${city.emoji} ${city.name}` : city.name || cityKey;
+        }
+        if (!cityKey) return '';
+        return cityKey.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+      }
+
+      function setChip(element, text, show, muted = false) {
+        if (!element) return;
+        element.textContent = text || '';
+        element.classList.toggle('is-hidden', !show);
+        element.classList.toggle('is-muted', muted && show);
       }
 
       function copyToClipboard(text, button) {
