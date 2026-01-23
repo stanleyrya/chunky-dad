@@ -51,13 +51,20 @@ class EventbriteParser {
                 console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
             } else {
-                console.log('🎫 Eventbrite: No events found in JSON data - checking JSON-LD');
-                const jsonLdEvents = this.extractEventsFromJsonLd(html, parserConfig, htmlData, cityConfig);
-                if (jsonLdEvents.length > 0) {
-                    console.log(`🎫 Eventbrite: Found ${jsonLdEvents.length} events in JSON-LD data`);
-                    events.push(...jsonLdEvents);
+                console.log('🎫 Eventbrite: No events found in JSON data - checking __NEXT_DATA__');
+                const nextDataEvents = this.extractEventsFromNextData(html, parserConfig, htmlData, cityConfig);
+                if (nextDataEvents.length > 0) {
+                    console.log(`🎫 Eventbrite: Found ${nextDataEvents.length} events in __NEXT_DATA__ payload`);
+                    events.push(...nextDataEvents);
                 } else {
-                    console.log('🎫 Eventbrite: No events found in JSON-LD data - this may be an individual event page with unsupported data');
+                    console.log('🎫 Eventbrite: No events found in __NEXT_DATA__ - checking JSON-LD');
+                    const jsonLdEvents = this.extractEventsFromJsonLd(html, parserConfig, htmlData, cityConfig);
+                    if (jsonLdEvents.length > 0) {
+                        console.log(`🎫 Eventbrite: Found ${jsonLdEvents.length} events in JSON-LD data`);
+                        events.push(...jsonLdEvents);
+                    } else {
+                        console.log('🎫 Eventbrite: No events found in JSON-LD data - this may be an individual event page with unsupported data');
+                    }
                 }
             }
             
@@ -330,11 +337,219 @@ class EventbriteParser {
         return events;
     }
 
+    // Extract events from Next.js __NEXT_DATA__ payload (detail pages)
+    extractEventsFromNextData(html, parserConfig = {}, htmlData = null, cityConfig = null) {
+        const events = [];
+        
+        try {
+            const scriptMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+            if (!scriptMatch) {
+                return events;
+            }
+            
+            const jsonText = (scriptMatch[1] || '').trim();
+            if (!jsonText) {
+                return events;
+            }
+            
+            let nextData;
+            try {
+                nextData = JSON.parse(jsonText);
+            } catch (error) {
+                console.warn(`🎫 Eventbrite: Failed to parse __NEXT_DATA__ payload: ${error}`);
+                return events;
+            }
+            
+            const context = nextData?.props?.pageProps?.context;
+            const basicInfo = context?.basicInfo;
+            if (!basicInfo || !basicInfo.name) {
+                return events;
+            }
+            
+            const description = this.extractNextDataDescription(context) || basicInfo.summary || '';
+            const venueAddress = this.buildNextDataVenueAddress(basicInfo.venue?.address);
+            const imageUrl = this.extractNextDataImage(context);
+            
+            const eventData = {
+                name: basicInfo.name || '',
+                description: description,
+                url: basicInfo.url || (htmlData ? htmlData.url : ''),
+                start: basicInfo.startDate || null,
+                end: basicInfo.endDate || null,
+                venue: basicInfo.venue ? {
+                    name: basicInfo.venue.name || '',
+                    ...(venueAddress ? { address: venueAddress } : {})
+                } : undefined,
+                ...(imageUrl ? { image: { url: imageUrl } } : {})
+            };
+            
+            const event = this.parseJsonEvent(eventData, null, parserConfig, null, cityConfig);
+            if (event) {
+                events.push(event);
+                console.log(`🎫 Eventbrite: Parsed event from __NEXT_DATA__ payload: ${event.title}`);
+            } else {
+                console.log('🎫 Eventbrite: parseJsonEvent returned null for __NEXT_DATA__ event');
+            }
+        } catch (error) {
+            console.warn(`🎫 Eventbrite: Error extracting __NEXT_DATA__ events: ${error}`);
+        }
+        
+        return events;
+    }
+
+    extractNextDataDescription(context) {
+        if (!context || typeof context !== 'object') {
+            return '';
+        }
+        
+        const modules = context.structuredContent?.modules;
+        if (!Array.isArray(modules)) {
+            return '';
+        }
+        
+        const textBlocks = modules
+            .filter(module => module && module.type === 'text' && module.text)
+            .map(module => this.stripHtml(module.text))
+            .filter(text => text);
+        
+        return textBlocks.join('\n\n').trim();
+    }
+
+    extractNextDataImage(context) {
+        if (!context || typeof context !== 'object') {
+            return '';
+        }
+        
+        const images = context.gallery?.images;
+        if (!Array.isArray(images) || images.length === 0) {
+            return '';
+        }
+        
+        const image = images[0] || {};
+        return image.croppedLogoUrl600 || image.croppedLogoUrl480 || image.url || '';
+    }
+
+    buildNextDataVenueAddress(venueAddress) {
+        if (!venueAddress || typeof venueAddress !== 'object') {
+            return null;
+        }
+        
+        const lines = Array.isArray(venueAddress.localizedMultiLineAddressDisplay) ?
+            venueAddress.localizedMultiLineAddressDisplay.filter(Boolean) : [];
+        
+        const address = {
+            address_1: lines[0] || '',
+            city: venueAddress.city || '',
+            region: venueAddress.region || '',
+            postal_code: '',
+            localized_address_display: lines.length > 0 ? lines.join(', ') : ''
+        };
+        
+        if (lines[1]) {
+            const parsedLine = this.parseCityRegionLine(lines[1]);
+            if (parsedLine.city && !address.city) {
+                address.city = parsedLine.city;
+            }
+            if (parsedLine.region && !address.region) {
+                address.region = parsedLine.region;
+            }
+            if (parsedLine.postalCode && !address.postal_code) {
+                address.postal_code = parsedLine.postalCode;
+            }
+        }
+        
+        if (venueAddress.latitude && venueAddress.longitude) {
+            address.latitude = parseFloat(venueAddress.latitude);
+            address.longitude = parseFloat(venueAddress.longitude);
+        }
+        
+        return address;
+    }
+
+    parseCityRegionLine(line) {
+        const result = { city: '', region: '', postalCode: '' };
+        if (!line || typeof line !== 'string') {
+            return result;
+        }
+        
+        const match = line.match(/^(.+?),\s*([A-Za-z]{2})\s*(\d{5})?/);
+        if (match) {
+            result.city = match[1].trim();
+            result.region = match[2].trim();
+            if (match[3]) {
+                result.postalCode = match[3].trim();
+            }
+        }
+        
+        return result;
+    }
+
+    extractMetaDescription(html) {
+        if (!html || typeof html !== 'string') {
+            return '';
+        }
+        
+        const ogDescription = this.extractMetaTagContent(html, 'property', 'og:description');
+        if (ogDescription) {
+            return ogDescription;
+        }
+        
+        return this.extractMetaTagContent(html, 'name', 'description');
+    }
+
+    extractMetaTagContent(html, attribute, value) {
+        const metaRegex = new RegExp(`<meta[^>]*${attribute}=["']${value}["'][^>]*>`, 'i');
+        const metaMatch = html.match(metaRegex);
+        if (!metaMatch) {
+            return '';
+        }
+        
+        const tag = metaMatch[0];
+        const contentMatch = tag.match(/content=["']([^"']+)["']/i);
+        if (!contentMatch) {
+            return '';
+        }
+        
+        return this.decodeHtmlEntities(contentMatch[1]).trim();
+    }
+
+    stripHtml(html) {
+        if (!html || typeof html !== 'string') {
+            return '';
+        }
+        
+        let text = html
+            .replace(/<\s*br\s*\/?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n')
+            .replace(/<\/div>/gi, '\n')
+            .replace(/<[^>]+>/g, '');
+        
+        text = this.decodeHtmlEntities(text);
+        text = text.replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+        
+        return text.trim();
+    }
+
+    decodeHtmlEntities(text) {
+        if (!text || typeof text !== 'string') {
+            return '';
+        }
+        
+        return text
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/&amp;/gi, '&')
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/&quot;/gi, '"')
+            .replace(/&#39;/gi, "'");
+    }
+
     // Extract events from JSON-LD data (fallback for detail pages without __SERVER_DATA__)
     extractEventsFromJsonLd(html, parserConfig = {}, htmlData = null, cityConfig = null) {
         const events = [];
         
         try {
+            const metaDescription = this.extractMetaDescription(html);
             const scriptRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
             let match;
             
@@ -354,7 +569,7 @@ class EventbriteParser {
                 
                 const items = this.collectJsonLdItems(data);
                 items.forEach(item => {
-                    const event = this.parseJsonLdEvent(item, parserConfig, htmlData, cityConfig);
+                    const event = this.parseJsonLdEvent(item, parserConfig, htmlData, cityConfig, metaDescription);
                     if (event) {
                         events.push(event);
                     }
@@ -391,7 +606,7 @@ class EventbriteParser {
     }
 
     // Parse JSON-LD event data into standard format
-    parseJsonLdEvent(jsonLd, parserConfig = {}, htmlData = null, cityConfig = null) {
+    parseJsonLdEvent(jsonLd, parserConfig = {}, htmlData = null, cityConfig = null, metaDescription = '') {
         try {
             if (!jsonLd || typeof jsonLd !== 'object') {
                 return null;
@@ -409,6 +624,9 @@ class EventbriteParser {
             const url = jsonLd.url || (htmlData ? htmlData.url : '');
             const startDate = jsonLd.startDate || '';
             const endDate = jsonLd.endDate || '';
+            const jsonLdDescription = this.normalizeText(jsonLd.description || '');
+            const fallbackDescription = this.normalizeText(metaDescription);
+            const description = jsonLdDescription.length > 60 ? jsonLdDescription : (fallbackDescription || jsonLdDescription);
             
             if (!title || !url) {
                 console.log(`🎫 Eventbrite: JSON-LD event missing title or URL (title: "${title}", url: "${url}")`);
@@ -441,7 +659,7 @@ class EventbriteParser {
             
             const eventData = {
                 name: title,
-                description: jsonLd.description || '',
+                description: description,
                 url: url,
                 startDate: startDate,
                 endDate: endDate,
@@ -468,6 +686,16 @@ class EventbriteParser {
             console.warn(`🎫 Eventbrite: Failed to parse JSON-LD event: ${error}`);
             return null;
         }
+    }
+
+    normalizeText(text) {
+        if (!text || typeof text !== 'string') {
+            return '';
+        }
+        
+        return this.decodeHtmlEntities(text)
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 
     // Check if an event is in the future (not past)
