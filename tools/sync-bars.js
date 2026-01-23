@@ -3,6 +3,20 @@
 const fs = require('fs');
 const path = require('path');
 
+// Resolve project root relative to this script
+const ROOT = path.resolve(__dirname, '..');
+
+// Load CITY_CONFIG for city pattern mapping
+let CITY_CONFIG = {};
+try {
+    const cityModule = require(path.join(ROOT, 'js', 'city-config.js'));
+    CITY_CONFIG = cityModule.CITY_CONFIG || {};
+} catch (error) {
+    console.warn('⚠️  CITY_CONFIG not available; falling back to slugified city names.', error.message);
+}
+
+const CITY_PATTERN_MAP = buildCityPatternMap(CITY_CONFIG);
+
 // Simplified bars sync script using public Google Sheets (like bear artists)
 async function syncBars() {
     console.log('🔄 Starting simplified bars sync...');
@@ -166,31 +180,47 @@ async function loadLocalBars() {
     return allBars;
 }
 
-// Normalize city name to kebab-case format
+// Normalize city name using CITY_CONFIG patterns when available
 function normalizeCityName(cityName) {
     if (!cityName) return 'unknown';
 
-    const trimmed = cityName.trim().toLowerCase();
-    const shortSlugOverrides = {
-        'new york': 'nyc',
-        'new-york': 'nyc',
-        'los angeles': 'la',
-        'los-angeles': 'la',
-        'philadelphia': 'philly',
-        'provincetown': 'ptown',
-        'new orleans': 'nola',
-        'new-orleans': 'nola'
-    };
-
-    if (shortSlugOverrides[trimmed]) {
-        return shortSlugOverrides[trimmed];
+    const normalizedPattern = normalizeCityPattern(cityName);
+    if (normalizedPattern && CITY_PATTERN_MAP[normalizedPattern]) {
+        return CITY_PATTERN_MAP[normalizedPattern];
     }
 
-    return trimmed
+    return String(cityName)
+        .toLowerCase()
         .replace(/\s+/g, '-')           // Replace spaces with hyphens
         .replace(/[^a-z0-9\-]/g, '')    // Remove special characters except hyphens
         .replace(/-+/g, '-')            // Replace multiple hyphens with single hyphen
         .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+}
+
+function normalizeCityPattern(value) {
+    if (!value) return '';
+    return String(value)
+        .toLowerCase()
+        .trim()
+        .replace(/[_-]+/g, ' ')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function buildCityPatternMap(cityConfig) {
+    const map = {};
+    Object.entries(cityConfig || {}).forEach(([cityKey, cfg]) => {
+        const patterns = Array.isArray(cfg?.patterns) ? cfg.patterns : [];
+        const candidates = [...patterns, cityKey, cfg?.name].filter(Boolean);
+        candidates.forEach(pattern => {
+            const normalized = normalizeCityPattern(pattern);
+            if (normalized && !map[normalized]) {
+                map[normalized] = cityKey;
+            }
+        });
+    });
+    return map;
 }
 
 // Merge bars from sheets and local, deduplicating by name + city
