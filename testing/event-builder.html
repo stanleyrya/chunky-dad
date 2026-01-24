@@ -160,7 +160,9 @@
     #event-form {
       display: flex;
       flex-direction: column;
+      align-items: stretch;
       gap: 0.85rem;
+      width: 100%;
     }
 
     details.form-section {
@@ -754,6 +756,8 @@
     }
 
     .live-preview details[open] {
+      background: transparent;
+      border: none;
       box-shadow: none;
     }
 
@@ -1846,7 +1850,9 @@
         }
         if (dom.pasteButtons && dom.pasteButtons.length) {
           dom.pasteButtons.forEach(button => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', event => {
+              event.preventDefault();
+              event.stopPropagation();
               handlePasteAction(button);
             });
           });
@@ -2236,12 +2242,8 @@
         if (!targetId) return;
         const input = document.getElementById(targetId);
         if (!input) return;
-        const focusInput = () => {
-          input.focus();
-        };
         if (!navigator.clipboard || !navigator.clipboard.readText) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
-          focusInput();
           return;
         }
         try {
@@ -2249,14 +2251,12 @@
           const trimmed = String(text || '').trim();
           if (!trimmed) {
             showToast('Clipboard empty.', 'warn');
-            focusInput();
             return;
           }
           applyPasteValue(input, trimmed);
           showTemporaryState(button, 'Pasted');
         } catch (error) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
-          focusInput();
         }
       }
 
@@ -3336,10 +3336,6 @@
         const location = (event.location || '').trim();
         if (location && parseCoordinates(location)) {
           lines.push(`LOCATION:${escapeICS(location)}`);
-        }
-        const primaryUrl = event.website || event.ticketUrl || event.facebook || event.instagram || event.gmaps;
-        if (primaryUrl) {
-          lines.push(`URL:${escapeICS(primaryUrl)}`);
         }
         lines.push('END:VEVENT', 'END:VCALENDAR');
         return lines.join('\r\n');
