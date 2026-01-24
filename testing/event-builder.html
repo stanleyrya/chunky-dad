@@ -8,6 +8,7 @@
   <title>🛠️ chunky.dad Event Builder</title>
   <link rel="stylesheet" href="../styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <style>
     :root {
       color-scheme: dark;
@@ -22,6 +23,7 @@
       --border: rgba(255, 255, 255, 0.08);
       --soft: rgba(255, 162, 74, 0.12);
       --chip: rgba(255, 162, 74, 0.18);
+      --sticky-header-offset: 5.5rem;
     }
 
     * {
@@ -50,12 +52,15 @@
       align-items: center;
       justify-content: space-between;
       gap: 1.6rem;
-      padding: 1.6rem 1.75rem;
+      padding: 1.2rem 1.6rem;
       border-radius: 20px;
       background: linear-gradient(135deg, rgba(255, 162, 74, 0.15), rgba(20, 24, 38, 0.96));
       border: 1px solid rgba(255, 162, 74, 0.2);
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
-      position: relative;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(18px);
       overflow: hidden;
     }
 
@@ -115,6 +120,11 @@
       grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
       gap: 1.5rem;
       align-items: start;
+    }
+
+    .hero-intro {
+      background: var(--panel-raised);
+      border: 1px solid rgba(255, 162, 74, 0.18);
     }
 
     .panel {
@@ -214,6 +224,15 @@
       font-size: 0.72rem;
       color: var(--text-muted);
       line-height: 1.35;
+    }
+
+    .field-group small code {
+      font-family: 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 0.72rem;
+      padding: 0 0.25rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-secondary);
     }
 
     .field-group.disabled {
@@ -331,6 +350,34 @@
       transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
     }
 
+    .action-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      line-height: 1;
+    }
+
+    .action-button i {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .field-action {
+      background: rgba(255, 162, 74, 0.12);
+      color: var(--text-secondary);
+      border: 1px solid rgba(255, 162, 74, 0.25);
+      padding: 0.35rem 0.6rem;
+      font-size: 0.72rem;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    .field-action:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     button:disabled {
       cursor: not-allowed;
       opacity: 0.65;
@@ -371,36 +418,9 @@
       transform: translateY(-1px);
     }
 
-    .share-section {
-      margin-top: 1rem;
-      padding: 0.75rem;
-      border-radius: 11px;
-      border: 1px solid rgba(255, 162, 74, 0.18);
-      background: rgba(10, 13, 22, 0.7);
-    }
-
-    .share-section label {
-      display: block;
-      font-weight: 600;
-      font-size: 0.8rem;
-      margin-bottom: 0.35rem;
-      color: var(--text-primary);
-    }
-
-    .share-row {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-
-    .share-row input {
-      flex: 1 1 auto;
-      background: #0d111a;
-    }
-
     .preview-panel {
       position: sticky;
-      top: 1.5rem;
+      top: calc(1.5rem + var(--sticky-header-offset));
     }
 
     .preview-toggle summary {
@@ -738,6 +758,13 @@
         flex: 1 1 auto;
       }
 
+      .action-button {
+        justify-content: center;
+        min-height: 46px;
+        padding: 0.65rem 1rem;
+        font-size: 0.9rem;
+      }
+
       .page-wrapper {
         padding: 1.6rem 1rem 2.6rem;
       }
@@ -757,11 +784,6 @@
 
       .primary-actions button {
         flex: 1 1 auto;
-      }
-
-      .share-row {
-        flex-direction: column;
-        align-items: stretch;
       }
 
       details.form-section {
@@ -795,9 +817,18 @@
         </p>
       </div>
       <div class="hero-actions">
-        <button type="button" class="ghost-button" id="reset-form">Reset to defaults</button>
-        <button type="button" class="secondary-button" id="copy-link">Copy link</button>
-        <button type="button" class="primary-button" id="add-to-calendar">Add to calendar</button>
+        <button type="button" class="ghost-button action-button" id="reset-form">
+          <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+          <span>Reset to defaults</span>
+        </button>
+        <button type="button" class="secondary-button action-button" id="copy-link">
+          <i class="bi bi-clipboard" aria-hidden="true"></i>
+          <span>Copy link</span>
+        </button>
+        <button type="button" class="primary-button action-button" id="add-to-calendar">
+          <i class="bi bi-calendar-plus" aria-hidden="true"></i>
+          <span>Add to calendar</span>
+        </button>
       </div>
     </header>
 
@@ -822,11 +853,37 @@
                 <div class="field-group">
                   <label for="event-short-name">Card Short Name</label>
                   <input type="text" id="event-short-name" autocomplete="off" placeholder="Bearracuda">
-                  <small>Used when the calendar needs a shorter label.</small>
+                  <small>Used when the calendar needs a shorter label. Use <code>-</code> for a soft break and <code>\-</code> to keep a visible hyphen.</small>
                 </div>
                 <div class="field-group">
                   <label for="event-city">City</label>
                   <select id="event-city"></select>
+                </div>
+                <div class="field-group">
+                  <label for="event-cover">Cover / Price</label>
+                  <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
+                </div>
+                <div class="field-group">
+                  <label for="event-image">Promo Image URL</label>
+                  <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label for="event-description">Tea / Description</label>
+                <textarea id="event-description" placeholder="Chunky bears takeover with DJs, go-go cubs, and midnight surprises."></textarea>
+              </div>
+            </div>
+          </details>
+
+          <details class="form-section" open>
+            <summary>Venue</summary>
+            <div class="section-body">
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="event-venue-select">Saved Bars</label>
+                  <select id="event-venue-select"></select>
+                  <small class="field-hint" id="event-venue-select-hint" data-default="Choose a saved bar to auto-fill venue + map details.">Choose a saved bar to auto-fill venue + map details.</small>
                 </div>
                 <div class="field-group">
                   <label for="event-venue">Venue</label>
@@ -842,18 +899,10 @@
                   <small class="field-hint" data-default="Use latitude, longitude from Google Maps.">Use latitude, longitude from Google Maps.</small>
                 </div>
                 <div class="field-group">
-                  <label for="event-cover">Cover / Price</label>
-                  <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
+                  <label for="event-gmaps">Google Maps</label>
+                  <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
+                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
-                <div class="field-group">
-                  <label for="event-image">Promo Image URL</label>
-                  <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
-                </div>
-              </div>
-
-              <div class="field-group">
-                <label for="event-description">Tea / Description</label>
-                <textarea id="event-description" placeholder="Chunky bears takeover with DJs, go-go cubs, and midnight surprises."></textarea>
               </div>
             </div>
           </details>
@@ -997,7 +1046,10 @@
               <div class="field-grid">
                 <div class="field-group">
                   <label for="event-website">Website</label>
-                  <input type="text" id="event-website" placeholder="https://bearracuda.com">
+                  <div class="input-with-action">
+                    <input type="text" id="event-website" placeholder="https://bearracuda.com">
+                    <button type="button" class="field-action" data-venue-link="website">Copy from venue</button>
+                  </div>
                   <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
                 <div class="field-group">
@@ -1007,17 +1059,18 @@
                 </div>
                 <div class="field-group">
                   <label for="event-instagram">Instagram</label>
-                  <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
+                  <div class="input-with-action">
+                    <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
+                    <button type="button" class="field-action" data-venue-link="instagram">Copy from venue</button>
+                  </div>
                   <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
                 <div class="field-group">
                   <label for="event-facebook">Facebook</label>
-                  <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
-                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
-                </div>
-                <div class="field-group">
-                  <label for="event-gmaps">Google Maps</label>
-                  <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
+                  <div class="input-with-action">
+                    <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
+                    <button type="button" class="field-action" data-venue-link="facebook">Copy from venue</button>
+                  </div>
                   <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
               </div>
@@ -1026,12 +1079,6 @@
 
         </form>
 
-        <div class="share-section">
-          <label for="share-url">Shareable URL</label>
-          <div class="share-row">
-            <input type="text" id="share-url" readonly>
-          </div>
-        </div>
       </section>
 
       <aside class="panel preview-panel">
@@ -1106,6 +1153,7 @@
         '4': 'Fourth',
         '-1': 'Last'
       };
+      const BAR_DATA_PATH = '../data/bars';
 
       const dom = {};
       let state;
@@ -1116,6 +1164,10 @@
       let sendTimeoutId = null;
       let urlTimeoutId = null;
       let currentCalendarCity = null;
+      let barRequestId = 0;
+      let currentBars = [];
+      let selectedBar = null;
+      const barCache = {};
 
       document.addEventListener('DOMContentLoaded', init);
 
@@ -1130,6 +1182,7 @@
         ensureDateOrder();
         applyStateToForm();
         bindEvents();
+        populateVenueOptions(state.city);
         updateRecurrenceUi();
         updateTimeNotes();
         updatePreviewCard();
@@ -1144,6 +1197,9 @@
         dom.nameInput = document.getElementById('event-name');
         dom.shortNameInput = document.getElementById('event-short-name');
         dom.citySelect = document.getElementById('event-city');
+        dom.venueSelect = document.getElementById('event-venue-select');
+        dom.venueSelectHint = document.getElementById('event-venue-select-hint');
+        dom.venueLinkButtons = document.querySelectorAll('[data-venue-link]');
         dom.venueInput = document.getElementById('event-venue');
         dom.addressInput = document.getElementById('event-address');
         dom.coordinatesInput = document.getElementById('event-coordinates');
@@ -1185,7 +1241,6 @@
         dom.resetButton = document.getElementById('reset-form');
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
         dom.copyShareButton = document.getElementById('copy-link');
-        dom.shareUrl = document.getElementById('share-url');
         dom.calendarIframe = document.getElementById('calendar-preview');
         dom.calendarStatus = document.getElementById('calendar-status');
         dom.previewMedia = document.getElementById('preview-media');
@@ -1231,6 +1286,69 @@
           option.textContent = city.emoji ? `${city.emoji} ${city.name}` : city.name || city.key;
           dom.citySelect.appendChild(option);
         });
+      }
+
+      async function populateVenueOptions(cityKey) {
+        if (!dom.venueSelect) return;
+        const requestId = ++barRequestId;
+        dom.venueSelect.disabled = true;
+        dom.venueSelect.innerHTML = '';
+        dom.venueSelect.appendChild(new Option('Loading saved bars...', ''));
+        setVenueSelectHint('Loading saved bars for this city...');
+        const bars = await fetchBarsForCity(cityKey);
+        if (requestId !== barRequestId) return;
+        currentBars = bars;
+        selectedBar = null;
+        dom.venueSelect.innerHTML = '';
+        if (!bars.length) {
+          dom.venueSelect.appendChild(new Option('No saved bars for this city', ''));
+          dom.venueSelect.disabled = true;
+          setVenueSelectHint('No saved bars yet. Enter venue details manually.');
+          updateVenueLinkButtons();
+          return;
+        }
+        dom.venueSelect.appendChild(new Option('Choose a saved bar (optional)', ''));
+        bars.forEach((bar, index) => {
+          const option = new Option(bar.name, String(index));
+          dom.venueSelect.appendChild(option);
+        });
+        dom.venueSelect.value = '';
+        dom.venueSelect.disabled = false;
+        setVenueSelectHint('Selecting a bar will fill venue, address, coordinates, and Google Maps.');
+        updateVenueLinkButtons();
+      }
+
+      async function fetchBarsForCity(cityKey) {
+        if (!cityKey) return [];
+        if (Object.prototype.hasOwnProperty.call(barCache, cityKey)) {
+          return barCache[cityKey];
+        }
+        try {
+          const response = await fetch(`${BAR_DATA_PATH}/${cityKey}.json`, { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`Missing bars for ${cityKey}`);
+          }
+          const data = await response.json();
+          const bars = Array.isArray(data)
+            ? data
+              .filter(item => item && typeof item === 'object')
+              .map(item => ({
+                ...item,
+                name: String(item.name || '').trim()
+              }))
+              .filter(item => item.name)
+              .sort((a, b) => a.name.localeCompare(b.name))
+            : [];
+          barCache[cityKey] = bars;
+        } catch (error) {
+          barCache[cityKey] = [];
+        }
+        return barCache[cityKey];
+      }
+
+      function setVenueSelectHint(message) {
+        if (!dom.venueSelectHint) return;
+        setFieldHint(dom.venueSelectHint, message, false);
       }
 
       function createDefaultState() {
@@ -1395,8 +1513,29 @@
           dom.citySelect.addEventListener('change', event => {
             const newCity = event.target.value;
             state.city = newCity;
+            populateVenueOptions(newCity);
             updateCalendarSource();
             refreshUi();
+          });
+        }
+        if (dom.venueSelect) {
+          dom.venueSelect.addEventListener('change', event => {
+            const selectedIndex = parseInt(event.target.value, 10);
+            if (!Number.isFinite(selectedIndex) || !currentBars[selectedIndex]) {
+              selectedBar = null;
+              updateVenueLinkButtons();
+              return;
+            }
+            selectedBar = currentBars[selectedIndex];
+            applyBarDetails(selectedBar);
+            updateVenueLinkButtons();
+          });
+        }
+        if (dom.venueLinkButtons && dom.venueLinkButtons.length) {
+          dom.venueLinkButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              handleVenueLinkCopy(button.dataset.venueLink, button);
+            });
           });
         }
         if (dom.venueInput) {
@@ -1545,7 +1684,7 @@
         }
         if (dom.copyShareButton) {
           dom.copyShareButton.addEventListener('click', () => {
-            copyToClipboard(dom.shareUrl ? dom.shareUrl.value : '', dom.copyShareButton);
+            copyToClipboard(getShareUrl(), dom.copyShareButton);
           });
         }
         if (dom.addToCalendarButton) {
@@ -1701,12 +1840,116 @@
         updateLinkFieldState(dom.gmapsInput, normalizeLinkValue('gmaps', dom.gmapsInput ? dom.gmapsInput.value : ''));
       }
 
+      function applyBarDetails(bar) {
+        if (!bar || typeof bar !== 'object') return;
+        const venueName = normalizeText(bar.name);
+        if (venueName) {
+          state.venue = venueName;
+          if (dom.venueInput) dom.venueInput.value = venueName;
+        }
+        const address = normalizeText(bar.address);
+        if (address) {
+          state.address = address;
+          if (dom.addressInput) dom.addressInput.value = address;
+        }
+        const coordinates = normalizeCoordinatesValue(bar.coordinates || bar.location);
+        if (coordinates) {
+          state.location = coordinates;
+          if (dom.coordinatesInput) dom.coordinatesInput.value = coordinates;
+        }
+        applyBarLink(dom.gmapsInput, 'gmaps', 'gmaps', bar.googleMaps || bar.gmaps);
+        updateCoordinatesFieldState();
+        refreshUi();
+      }
+
+      function updateVenueLinkButtons() {
+        if (!dom.venueLinkButtons || !dom.venueLinkButtons.length) return;
+        dom.venueLinkButtons.forEach(button => {
+          const linkType = button.dataset.venueLink;
+          const value = selectedBar ? normalizeText(getBarLinkValue(linkType, selectedBar)) : '';
+          const hasValue = Boolean(value);
+          button.disabled = !hasValue;
+          button.setAttribute('aria-disabled', hasValue ? 'false' : 'true');
+        });
+      }
+
+      function handleVenueLinkCopy(linkType, button) {
+        if (!linkType) return;
+        if (!selectedBar) {
+          showTemporaryState(button, 'Pick a bar first');
+          return;
+        }
+        const barValue = normalizeText(getBarLinkValue(linkType, selectedBar));
+        if (!barValue) {
+          showTemporaryState(button, 'No venue link');
+          return;
+        }
+        const target = getVenueLinkTarget(linkType);
+        if (!target) return;
+        applyBarLink(target.input, target.stateKey, target.linkType, barValue);
+        refreshUi();
+        showTemporaryState(button, 'Copied');
+      }
+
+      function getVenueLinkTarget(linkType) {
+        switch (linkType) {
+          case 'website':
+            return { input: dom.websiteInput, stateKey: 'website', linkType: 'website' };
+          case 'instagram':
+            return { input: dom.instagramInput, stateKey: 'instagram', linkType: 'instagram' };
+          case 'facebook':
+            return { input: dom.facebookInput, stateKey: 'facebook', linkType: 'facebook' };
+          default:
+            return null;
+        }
+      }
+
+      function getBarLinkValue(linkType, bar) {
+        if (!bar || !linkType) return '';
+        switch (linkType) {
+          case 'website':
+            return bar.website || bar.url || bar.site;
+          case 'instagram':
+            return bar.instagram;
+          case 'facebook':
+            return bar.facebook;
+          default:
+            return '';
+        }
+      }
+
+      function applyBarLink(input, stateKey, linkType, value) {
+        if (!input) return;
+        const normalizedValue = normalizeText(value);
+        if (!normalizedValue) return;
+        const result = normalizeLinkValue(linkType, normalizedValue);
+        state[stateKey] = result.value;
+        input.value = result.value || normalizedValue;
+        updateLinkFieldState(input, result);
+      }
+
+      function normalizeCoordinatesValue(value) {
+        if (!value) return '';
+        if (typeof value === 'string') return value.trim();
+        if (typeof value === 'object' && Number.isFinite(value.lat) && Number.isFinite(value.lng)) {
+          return `${value.lat}, ${value.lng}`;
+        }
+        return '';
+      }
+
+      function normalizeText(value) {
+        if (typeof value === 'string') return value.trim();
+        if (value === null || value === undefined) return '';
+        return String(value).trim();
+      }
+
       function resetForm() {
         const preservedCity = state.city;
         state = createDefaultState();
         state.city = preservedCity;
         recurrenceMode = 'builder';
         applyStateToForm();
+        populateVenueOptions(state.city);
         refreshUi();
         scheduleEventPush();
       }
@@ -2202,7 +2445,7 @@
         });
       }
 
-      function updateUrl() {
+      function buildShareUrl() {
         const params = new URLSearchParams();
         if (state.name) params.set('name', state.name);
         if (state.shortName) params.set('short', state.shortName);
@@ -2225,12 +2468,16 @@
         const sorted = new URLSearchParams();
         [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
         const query = sorted.toString();
-        const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+        return query ? `${window.location.pathname}?${query}` : window.location.pathname;
+      }
+
+      function updateUrl() {
+        const newUrl = buildShareUrl();
         const current = `${window.location.pathname}${window.location.search}`;
         if (current !== newUrl) {
           window.history.replaceState({}, '', newUrl);
         }
-        updateShareUrl();
+        return newUrl;
       }
 
       function scheduleUrlUpdate() {
@@ -2243,9 +2490,12 @@
         }, URL_UPDATE_DELAY);
       }
 
-      function updateShareUrl() {
-        if (dom.shareUrl) {
-          dom.shareUrl.value = window.location.href;
+      function getShareUrl() {
+        const newUrl = updateUrl();
+        try {
+          return new URL(newUrl, window.location.href).href;
+        } catch (error) {
+          return window.location.href;
         }
       }
 
