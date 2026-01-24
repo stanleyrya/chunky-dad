@@ -79,8 +79,8 @@
     .tool-brand-text {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      flex-wrap: wrap;
+      gap: 0.5rem;
+      flex-wrap: nowrap;
     }
 
     .tool-actions {
@@ -95,12 +95,17 @@
     }
 
     .tool-page-label {
-      font-size: 0.78rem;
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.7rem;
       font-weight: 600;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.85);
       white-space: nowrap;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
     }
 
     .tool-buttons {
@@ -222,12 +227,27 @@
 
     .field-row.time-row {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+
+    .field-row.time-row .field-group {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .field-row.time-row .field-group label {
+      margin: 0;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      min-width: 2.7rem;
     }
 
     .field-row.time-row input[type="datetime-local"] {
-      padding: 0.45rem 0.55rem;
-      font-size: 0.82rem;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.78rem;
       min-width: 0;
+      flex: 1 1 auto;
     }
 
     .field-group {
@@ -741,12 +761,8 @@
       font-size: 0.95rem;
     }
 
-    .live-preview .section-body {
-      margin-top: 0.75rem;
-    }
-
     .live-preview .calendar-preview-card {
-      margin: 0 -1.2rem;
+      margin: 0.75rem -1.2rem 0;
       border-left: none;
       border-right: none;
       border-radius: 0 0 14px 14px;
@@ -758,10 +774,13 @@
 
     .toast-container {
       position: fixed;
-      right: 1.5rem;
+      left: 50%;
       bottom: 1.5rem;
+      transform: translateX(-50%);
+      width: min(420px, calc(100% - 2rem));
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 0.5rem;
       z-index: 999;
       pointer-events: none;
@@ -775,6 +794,7 @@
       border-radius: 10px;
       font-size: 0.8rem;
       box-shadow: 0 12px 22px rgba(0, 0, 0, 0.35);
+      width: 100%;
       opacity: 0;
       transform: translateY(8px);
       animation: toast-in 0.2s ease forwards;
@@ -901,6 +921,30 @@
       .preview-panel {
         position: static;
       }
+
+      .page-wrapper {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .panel {
+        margin-left: -1rem;
+        margin-right: -1rem;
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+      }
+
+      .panel.form-panel {
+        padding: 0;
+      }
+
+      .form-panel details.form-section {
+        padding: 0.6rem 1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+      }
     }
 
     @media (max-width: 768px) {
@@ -929,6 +973,10 @@
         font-size: 1.2rem;
       }
 
+      .tool-brand-text {
+        flex-wrap: wrap;
+      }
+
       .tool-actions {
         width: 100%;
         display: grid;
@@ -937,8 +985,7 @@
       }
 
       .tool-page-label {
-        justify-self: end;
-        font-size: 0.75rem;
+        font-size: 0.68rem;
       }
 
       .tool-buttons {
@@ -958,10 +1005,6 @@
 
       .page-wrapper {
         padding: calc(1.6rem + var(--sticky-header-offset)) 1rem 2.6rem;
-      }
-
-      .panel.form-panel {
-        padding: 0;
       }
 
       .form-panel .panel-header {
@@ -985,13 +1028,6 @@
         flex: 1 1 auto;
       }
 
-      .form-panel details.form-section {
-        padding: 0.6rem 1rem;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-      }
-
       .field-grid,
       .field-row {
         grid-template-columns: 1fr;
@@ -1002,27 +1038,8 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .panel {
-        padding: 1.1rem;
-        margin-left: -1rem;
-        margin-right: -1rem;
-        border-left: none;
-        border-right: none;
-        border-radius: 0;
-      }
-
       .live-preview .calendar-preview-card {
-        margin: 0 -1.1rem;
-      }
-
-      .toast-container {
-        left: 1rem;
-        right: 1rem;
-        bottom: 1rem;
-      }
-
-      .toast {
-        width: 100%;
+        margin: 0.65rem -1.1rem 0;
       }
 
       .preview-toggle summary::after {
@@ -1049,12 +1066,12 @@
                    alt="chunky.dad logo" class="logo-img">
               <span class="tool-brand-text">
                 <span class="tool-brand-name">chunky.dad</span>
+                <span class="tool-page-label">Event Builder</span>
               </span>
             </a>
           </h1>
         </div>
         <div class="tool-actions">
-          <span class="tool-page-label">Event Builder</span>
           <div class="tool-buttons">
             <button type="button" class="ghost-button action-button" id="reset-form" aria-label="Reset form">
               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
@@ -1396,14 +1413,12 @@
     <section class="panel live-preview">
       <details id="live-preview" class="form-section">
         <summary>Live calendar preview (optional)</summary>
-        <div class="section-body">
-          <div class="calendar-preview-card">
-            <div class="preview-header">
-              <h2>Calendar Preview</h2>
-              <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
-            </div>
-            <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=nyc"></iframe>
+        <div class="calendar-preview-card">
+          <div class="preview-header">
+            <h2>Calendar Preview</h2>
+            <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
           </div>
+          <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=nyc"></iframe>
         </div>
       </details>
     </section>
@@ -2216,23 +2231,15 @@
         if (!targetId) return;
         const input = document.getElementById(targetId);
         if (!input) return;
-        const promptForPaste = () => {
-          const manual = window.prompt('Paste the link:', '');
-          if (manual === null) {
-            showToast('Paste cancelled.', 'warn');
-            return;
+        const focusInput = () => {
+          input.focus();
+          if (typeof input.select === 'function') {
+            input.select();
           }
-          const trimmedManual = String(manual || '').trim();
-          if (!trimmedManual) {
-            showToast('Nothing to paste yet.', 'warn');
-            return;
-          }
-          applyPasteValue(input, trimmedManual);
-          showTemporaryState(button, 'Pasted');
         };
         if (!navigator.clipboard || !navigator.clipboard.readText) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
-          promptForPaste();
+          focusInput();
           return;
         }
         try {
@@ -2240,13 +2247,14 @@
           const trimmed = String(text || '').trim();
           if (!trimmed) {
             showToast('Clipboard empty.', 'warn');
+            focusInput();
             return;
           }
           applyPasteValue(input, trimmed);
           showTemporaryState(button, 'Pasted');
         } catch (error) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
-          promptForPaste();
+          focusInput();
         }
       }
 
