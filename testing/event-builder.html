@@ -362,6 +362,22 @@
       line-height: 1;
     }
 
+    .field-action {
+      background: rgba(255, 162, 74, 0.12);
+      color: var(--text-secondary);
+      border: 1px solid rgba(255, 162, 74, 0.25);
+      padding: 0.35rem 0.6rem;
+      font-size: 0.72rem;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    .field-action:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     button:disabled {
       cursor: not-allowed;
       opacity: 0.65;
@@ -1025,7 +1041,10 @@
               <div class="field-grid">
                 <div class="field-group">
                   <label for="event-website">Website</label>
-                  <input type="text" id="event-website" placeholder="https://bearracuda.com">
+                  <div class="input-with-action">
+                    <input type="text" id="event-website" placeholder="https://bearracuda.com">
+                    <button type="button" class="field-action" data-venue-link="website">Copy from venue</button>
+                  </div>
                   <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
                 <div class="field-group">
@@ -1035,17 +1054,26 @@
                 </div>
                 <div class="field-group">
                   <label for="event-instagram">Instagram</label>
-                  <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
+                  <div class="input-with-action">
+                    <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
+                    <button type="button" class="field-action" data-venue-link="instagram">Copy from venue</button>
+                  </div>
                   <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
                 <div class="field-group">
                   <label for="event-facebook">Facebook</label>
-                  <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
+                  <div class="input-with-action">
+                    <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
+                    <button type="button" class="field-action" data-venue-link="facebook">Copy from venue</button>
+                  </div>
                   <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
                 <div class="field-group">
                   <label for="event-gmaps">Google Maps</label>
-                  <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
+                  <div class="input-with-action">
+                    <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
+                    <button type="button" class="field-action" data-venue-link="gmaps">Copy from venue</button>
+                  </div>
                   <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
               </div>
@@ -1141,6 +1169,7 @@
       let currentCalendarCity = null;
       let barRequestId = 0;
       let currentBars = [];
+      let selectedBar = null;
       const barCache = {};
 
       document.addEventListener('DOMContentLoaded', init);
@@ -1173,6 +1202,7 @@
         dom.citySelect = document.getElementById('event-city');
         dom.venueSelect = document.getElementById('event-venue-select');
         dom.venueSelectHint = document.getElementById('event-venue-select-hint');
+        dom.venueLinkButtons = document.querySelectorAll('[data-venue-link]');
         dom.venueInput = document.getElementById('event-venue');
         dom.addressInput = document.getElementById('event-address');
         dom.coordinatesInput = document.getElementById('event-coordinates');
@@ -1271,11 +1301,13 @@
         const bars = await fetchBarsForCity(cityKey);
         if (requestId !== barRequestId) return;
         currentBars = bars;
+        selectedBar = null;
         dom.venueSelect.innerHTML = '';
         if (!bars.length) {
           dom.venueSelect.appendChild(new Option('No saved bars for this city', ''));
           dom.venueSelect.disabled = true;
           setVenueSelectHint('No saved bars yet. Enter venue details manually.');
+          updateVenueLinkButtons();
           return;
         }
         dom.venueSelect.appendChild(new Option('Choose a saved bar (optional)', ''));
@@ -1286,6 +1318,7 @@
         dom.venueSelect.value = '';
         dom.venueSelect.disabled = false;
         setVenueSelectHint('Selecting a bar will fill venue, address, coordinates, and Google Maps.');
+        updateVenueLinkButtons();
       }
 
       async function fetchBarsForCity(cityKey) {
@@ -1492,9 +1525,20 @@
           dom.venueSelect.addEventListener('change', event => {
             const selectedIndex = parseInt(event.target.value, 10);
             if (!Number.isFinite(selectedIndex) || !currentBars[selectedIndex]) {
+              selectedBar = null;
+              updateVenueLinkButtons();
               return;
             }
-            applyBarDetails(currentBars[selectedIndex]);
+            selectedBar = currentBars[selectedIndex];
+            applyBarDetails(selectedBar);
+            updateVenueLinkButtons();
+          });
+        }
+        if (dom.venueLinkButtons && dom.venueLinkButtons.length) {
+          dom.venueLinkButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              handleVenueLinkCopy(button.dataset.venueLink, button);
+            });
           });
         }
         if (dom.venueInput) {
@@ -1819,6 +1863,66 @@
         applyBarLink(dom.gmapsInput, 'gmaps', 'gmaps', bar.googleMaps || bar.gmaps);
         updateCoordinatesFieldState();
         refreshUi();
+      }
+
+      function updateVenueLinkButtons() {
+        if (!dom.venueLinkButtons || !dom.venueLinkButtons.length) return;
+        dom.venueLinkButtons.forEach(button => {
+          const linkType = button.dataset.venueLink;
+          const value = selectedBar ? normalizeText(getBarLinkValue(linkType, selectedBar)) : '';
+          const hasValue = Boolean(value);
+          button.disabled = !hasValue;
+          button.setAttribute('aria-disabled', hasValue ? 'false' : 'true');
+        });
+      }
+
+      function handleVenueLinkCopy(linkType, button) {
+        if (!linkType) return;
+        if (!selectedBar) {
+          showTemporaryState(button, 'Pick a bar first');
+          return;
+        }
+        const barValue = normalizeText(getBarLinkValue(linkType, selectedBar));
+        if (!barValue) {
+          showTemporaryState(button, 'No venue link');
+          return;
+        }
+        const target = getVenueLinkTarget(linkType);
+        if (!target) return;
+        applyBarLink(target.input, target.stateKey, target.linkType, barValue);
+        refreshUi();
+        showTemporaryState(button, 'Copied');
+      }
+
+      function getVenueLinkTarget(linkType) {
+        switch (linkType) {
+          case 'website':
+            return { input: dom.websiteInput, stateKey: 'website', linkType: 'website' };
+          case 'instagram':
+            return { input: dom.instagramInput, stateKey: 'instagram', linkType: 'instagram' };
+          case 'facebook':
+            return { input: dom.facebookInput, stateKey: 'facebook', linkType: 'facebook' };
+          case 'gmaps':
+            return { input: dom.gmapsInput, stateKey: 'gmaps', linkType: 'gmaps' };
+          default:
+            return null;
+        }
+      }
+
+      function getBarLinkValue(linkType, bar) {
+        if (!bar || !linkType) return '';
+        switch (linkType) {
+          case 'website':
+            return bar.website || bar.url || bar.site;
+          case 'instagram':
+            return bar.instagram;
+          case 'facebook':
+            return bar.facebook;
+          case 'gmaps':
+            return bar.googleMaps || bar.gmaps;
+          default:
+            return '';
+        }
       }
 
       function applyBarLink(input, stateKey, linkType, value) {
