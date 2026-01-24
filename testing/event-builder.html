@@ -23,7 +23,7 @@
       --border: rgba(255, 255, 255, 0.08);
       --soft: rgba(255, 162, 74, 0.12);
       --chip: rgba(255, 162, 74, 0.18);
-      --sticky-header-offset: 5.5rem;
+      --sticky-header-offset: 4.5rem;
     }
 
     * {
@@ -47,7 +47,7 @@
       gap: 1.5rem;
     }
 
-    .hero {
+    .tool-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -64,7 +64,7 @@
       overflow: hidden;
     }
 
-    .hero::after {
+    .tool-header::after {
       content: '';
       position: absolute;
       inset: 0;
@@ -72,13 +72,40 @@
       pointer-events: none;
     }
 
-    .hero-content {
+    .tool-header-content {
       position: relative;
-      max-width: 640px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
       z-index: 1;
     }
 
-    .hero-actions {
+    .tool-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+    }
+
+    .tool-logo img {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 162, 74, 0.2);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+    }
+
+    .tool-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .tool-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.6rem;
@@ -87,7 +114,7 @@
       z-index: 1;
     }
 
-    .hero .eyebrow {
+    .tool-eyebrow {
       text-transform: uppercase;
       letter-spacing: 0.12em;
       color: var(--accent);
@@ -101,9 +128,9 @@
       border: 1px solid rgba(255, 162, 74, 0.2);
     }
 
-    .hero h1 {
-      font-size: 2.1rem;
-      margin: 0 0 0.6rem;
+    .tool-title {
+      font-size: 1.65rem;
+      margin: 0;
       color: var(--text-primary);
     }
 
@@ -284,6 +311,13 @@
       flex: 1 1 auto;
     }
 
+    .field-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.6rem;
+    }
+
     .input-suffix {
       font-size: 0.75rem;
       color: var(--text-muted);
@@ -325,6 +359,10 @@
       color: #a12317;
     }
 
+    .field-hint:empty {
+      display: none;
+    }
+
     .form-actions {
       display: flex;
       justify-content: space-between;
@@ -363,6 +401,9 @@
     }
 
     .field-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
       background: rgba(255, 162, 74, 0.12);
       color: var(--text-secondary);
       border: 1px solid rgba(255, 162, 74, 0.25);
@@ -370,6 +411,40 @@
       font-size: 0.72rem;
       border-radius: 8px;
       white-space: nowrap;
+    }
+
+    .field-action i {
+      font-size: 0.85rem;
+    }
+
+    .field-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      padding: 0.3rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(255, 162, 74, 0.08);
+      border: 1px solid rgba(255, 162, 74, 0.2);
+      flex-wrap: wrap;
+      max-width: 100%;
+    }
+
+    .field-toggle span {
+      white-space: normal;
+    }
+
+    .field-toggle input {
+      accent-color: var(--accent);
+    }
+
+    .field-toggle input:disabled {
+      cursor: not-allowed;
+    }
+
+    .field-toggle input:disabled + span {
+      opacity: 0.6;
     }
 
     .field-action:disabled {
@@ -477,6 +552,10 @@
 
     .preview-media.has-image img {
       display: block;
+    }
+
+    .preview-media.has-image .preview-fallback {
+      display: none;
     }
 
     .preview-fallback {
@@ -744,34 +823,43 @@
     }
 
     @media (max-width: 768px) {
-      .hero {
-        flex-direction: column;
-        align-items: flex-start;
+      .tool-header {
+        flex-wrap: wrap;
+        padding: 0.9rem 1rem;
       }
 
-      .hero-actions {
-        width: 100%;
-        justify-content: flex-start;
+      .tool-header-content {
+        gap: 0.75rem;
       }
 
-      .hero-actions button {
-        flex: 1 1 auto;
+      .tool-logo img {
+        width: 32px;
+        height: 32px;
+      }
+
+      .tool-title {
+        font-size: 1.3rem;
+      }
+
+      .tool-actions {
+        gap: 0.4rem;
+      }
+
+      .tool-actions .action-button span {
+        display: none;
       }
 
       .action-button {
         justify-content: center;
-        min-height: 46px;
-        padding: 0.65rem 1rem;
-        font-size: 0.9rem;
+        min-height: 40px;
+        padding: 0.5rem 0.7rem;
+        font-size: 0.85rem;
       }
 
       .page-wrapper {
         padding: 1.6rem 1rem 2.6rem;
       }
 
-      .hero h1 {
-        font-size: 1.75rem;
-      }
 
       .form-actions {
         flex-direction: column;
@@ -808,29 +896,40 @@
 </head>
 <body>
   <div class="page-wrapper">
-    <header class="hero">
-      <div class="hero-content">
-        <p class="eyebrow">chunky.dad toolbox</p>
-        <h1>Event Builder</h1>
-        <p class="hero-text">
-          Build chunky.dad calendar events with compact sections, see updates instantly, and keep every change synced to the URL for easy sharing.
-        </p>
+    <header class="tool-header">
+      <div class="tool-header-content">
+        <a class="tool-logo" href="../index.html" aria-label="chunky.dad home">
+          <img src="../favicons/favicon-96x96.png"
+               srcset="../favicons/favicon-96x96.png 1x, ../favicons/favicon-192x192.png 2x, ../favicons/favicon-256x256.png 3x"
+               alt="chunky.dad logo">
+          <span>chunky.dad</span>
+        </a>
+        <div class="tool-title-group">
+          <p class="tool-eyebrow">chunky.dad toolbox</p>
+          <h1 class="tool-title">Event Builder</h1>
+        </div>
       </div>
-      <div class="hero-actions">
-        <button type="button" class="ghost-button action-button" id="reset-form">
+      <div class="tool-actions">
+        <button type="button" class="ghost-button action-button" id="reset-form" aria-label="Reset to defaults">
           <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-          <span>Reset to defaults</span>
+          <span>Reset</span>
         </button>
-        <button type="button" class="secondary-button action-button" id="copy-link">
+        <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Copy shareable link">
           <i class="bi bi-clipboard" aria-hidden="true"></i>
           <span>Copy link</span>
         </button>
-        <button type="button" class="primary-button action-button" id="add-to-calendar">
+        <button type="button" class="primary-button action-button" id="add-to-calendar" aria-label="Add to calendar">
           <i class="bi bi-calendar-plus" aria-hidden="true"></i>
           <span>Add to calendar</span>
         </button>
       </div>
     </header>
+
+    <section class="panel hero-intro">
+      <p class="hero-text">
+        Build chunky.dad calendar events with compact sections, see updates instantly, and keep every change synced to the URL for easy sharing.
+      </p>
+    </section>
 
     <main class="layout">
       <section class="panel form-panel">
@@ -876,7 +975,7 @@
             </div>
           </details>
 
-          <details class="form-section" open>
+          <details class="form-section">
             <summary>Venue</summary>
             <div class="section-body">
               <div class="field-grid">
@@ -901,7 +1000,13 @@
                 <div class="field-group">
                   <label for="event-gmaps">Google Maps</label>
                   <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
-                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
+                  <div class="field-actions">
+                    <button type="button" class="field-action" data-paste-target="event-gmaps" aria-label="Paste Google Maps link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                  </div>
+                  <small class="field-hint" data-default=""></small>
                 </div>
               </div>
             </div>
@@ -923,7 +1028,6 @@
 
               <div class="time-notes">
                 <span class="time-note" id="duration-note"><strong>Duration:</strong> Add start &amp; end</span>
-                <span class="time-note" id="timezone-note"><strong>Local timezone:</strong> </span>
               </div>
 
               <div class="recurrence-toggle">
@@ -1046,32 +1150,59 @@
               <div class="field-grid">
                 <div class="field-group">
                   <label for="event-website">Website</label>
-                  <div class="input-with-action">
-                    <input type="text" id="event-website" placeholder="https://bearracuda.com">
-                    <button type="button" class="field-action" data-venue-link="website">Copy from venue</button>
+                  <input type="text" id="event-website" placeholder="https://bearracuda.com">
+                  <div class="field-actions">
+                    <button type="button" class="field-action" data-paste-target="event-website" aria-label="Paste website link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                    <label class="field-toggle" for="venue-toggle-website">
+                      <input type="checkbox" id="venue-toggle-website" data-venue-toggle="website">
+                      <span>Use venue's website</span>
+                    </label>
                   </div>
-                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
+                  <small class="field-hint" data-default=""></small>
                 </div>
                 <div class="field-group">
                   <label for="event-ticket-url">Tickets</label>
                   <input type="text" id="event-ticket-url" placeholder="https://tickets.example.com">
-                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
+                  <div class="field-actions">
+                    <button type="button" class="field-action" data-paste-target="event-ticket-url" aria-label="Paste ticket link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                  </div>
+                  <small class="field-hint" data-default=""></small>
                 </div>
                 <div class="field-group">
                   <label for="event-instagram">Instagram</label>
-                  <div class="input-with-action">
-                    <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
-                    <button type="button" class="field-action" data-venue-link="instagram">Copy from venue</button>
+                  <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
+                  <div class="field-actions">
+                    <button type="button" class="field-action" data-paste-target="event-instagram" aria-label="Paste Instagram link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                    <label class="field-toggle" for="venue-toggle-instagram">
+                      <input type="checkbox" id="venue-toggle-instagram" data-venue-toggle="instagram">
+                      <span>Use venue's Instagram</span>
+                    </label>
                   </div>
-                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
+                  <small class="field-hint" data-default=""></small>
                 </div>
                 <div class="field-group">
                   <label for="event-facebook">Facebook</label>
-                  <div class="input-with-action">
-                    <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
-                    <button type="button" class="field-action" data-venue-link="facebook">Copy from venue</button>
+                  <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
+                  <div class="field-actions">
+                    <button type="button" class="field-action" data-paste-target="event-facebook" aria-label="Paste Facebook link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                    <label class="field-toggle" for="venue-toggle-facebook">
+                      <input type="checkbox" id="venue-toggle-facebook" data-venue-toggle="facebook">
+                      <span>Use venue's Facebook</span>
+                    </label>
                   </div>
-                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
+                  <small class="field-hint" data-default=""></small>
                 </div>
               </div>
             </div>
@@ -1102,8 +1233,6 @@
               <p class="preview-venue" id="preview-venue">Venue TBA</p>
               <p class="preview-address" id="preview-address">Address TBD</p>
               <div class="preview-chips">
-                <span class="chip" id="preview-duration">Duration TBD</span>
-                <span class="chip is-muted" id="preview-timezone">TZ</span>
                 <span class="chip is-hidden" id="preview-recurring">Recurring</span>
                 <span class="chip is-hidden" id="preview-cover">Cover</span>
               </div>
@@ -1199,7 +1328,8 @@
         dom.citySelect = document.getElementById('event-city');
         dom.venueSelect = document.getElementById('event-venue-select');
         dom.venueSelectHint = document.getElementById('event-venue-select-hint');
-        dom.venueLinkButtons = document.querySelectorAll('[data-venue-link]');
+        dom.venueLinkToggles = document.querySelectorAll('[data-venue-toggle]');
+        dom.pasteButtons = document.querySelectorAll('[data-paste-target]');
         dom.venueInput = document.getElementById('event-venue');
         dom.addressInput = document.getElementById('event-address');
         dom.coordinatesInput = document.getElementById('event-coordinates');
@@ -1208,7 +1338,6 @@
         dom.startInput = document.getElementById('event-start');
         dom.endInput = document.getElementById('event-end');
         dom.durationNote = document.getElementById('duration-note');
-        dom.timezoneNote = document.getElementById('timezone-note');
         dom.recurrenceModeButtons = document.querySelectorAll('[data-recurrence-mode]');
         dom.recurrenceBuilder = document.getElementById('recurrence-builder');
         dom.recurrenceRaw = document.getElementById('recurrence-raw');
@@ -1250,8 +1379,6 @@
         dom.previewTime = document.getElementById('preview-time');
         dom.previewVenue = document.getElementById('preview-venue');
         dom.previewAddress = document.getElementById('preview-address');
-        dom.previewDuration = document.getElementById('preview-duration');
-        dom.previewTimezone = document.getElementById('preview-timezone');
         dom.previewRecurring = document.getElementById('preview-recurring');
         dom.previewCover = document.getElementById('preview-cover');
         dom.previewLinks = document.getElementById('preview-links');
@@ -1304,7 +1431,7 @@
           dom.venueSelect.appendChild(new Option('No saved bars for this city', ''));
           dom.venueSelect.disabled = true;
           setVenueSelectHint('No saved bars yet. Enter venue details manually.');
-          updateVenueLinkButtons();
+          updateVenueLinkToggles({ applyValues: false });
           return;
         }
         dom.venueSelect.appendChild(new Option('Choose a saved bar (optional)', ''));
@@ -1315,7 +1442,7 @@
         dom.venueSelect.value = '';
         dom.venueSelect.disabled = false;
         setVenueSelectHint('Selecting a bar will fill venue, address, coordinates, and Google Maps.');
-        updateVenueLinkButtons();
+        updateVenueLinkToggles({ applyValues: false });
       }
 
       async function fetchBarsForCity(cityKey) {
@@ -1373,6 +1500,9 @@
           instagram: '',
           facebook: '',
           gmaps: '',
+          useVenueWebsite: false,
+          useVenueInstagram: false,
+          useVenueFacebook: false,
           image: ''
         };
       }
@@ -1491,6 +1621,7 @@
         applyRecurrenceStateToForm();
         syncLinkFieldStates();
         updateCoordinatesFieldState();
+        updateVenueLinkToggles({ applyValues: false });
       }
 
       function bindEvents() {
@@ -1523,18 +1654,26 @@
             const selectedIndex = parseInt(event.target.value, 10);
             if (!Number.isFinite(selectedIndex) || !currentBars[selectedIndex]) {
               selectedBar = null;
-              updateVenueLinkButtons();
+              updateVenueLinkToggles({ applyValues: false });
               return;
             }
             selectedBar = currentBars[selectedIndex];
             applyBarDetails(selectedBar);
-            updateVenueLinkButtons();
+            updateVenueLinkToggles({ applyValues: true });
+            refreshUi();
           });
         }
-        if (dom.venueLinkButtons && dom.venueLinkButtons.length) {
-          dom.venueLinkButtons.forEach(button => {
+        if (dom.venueLinkToggles && dom.venueLinkToggles.length) {
+          dom.venueLinkToggles.forEach(toggle => {
+            toggle.addEventListener('change', () => {
+              handleVenueToggleChange(toggle);
+            });
+          });
+        }
+        if (dom.pasteButtons && dom.pasteButtons.length) {
+          dom.pasteButtons.forEach(button => {
             button.addEventListener('click', () => {
-              handleVenueLinkCopy(button.dataset.venueLink, button);
+              handlePasteAction(button);
             });
           });
         }
@@ -1820,7 +1959,7 @@
 
       function setFieldHint(hint, message, isError) {
         if (!hint) return;
-        if (!hint.dataset.default) {
+        if (!Object.prototype.hasOwnProperty.call(hint.dataset, 'default')) {
           hint.dataset.default = hint.textContent || '';
         }
         if (message) {
@@ -1859,36 +1998,84 @@
         }
         applyBarLink(dom.gmapsInput, 'gmaps', 'gmaps', bar.googleMaps || bar.gmaps);
         updateCoordinatesFieldState();
-        refreshUi();
       }
 
-      function updateVenueLinkButtons() {
-        if (!dom.venueLinkButtons || !dom.venueLinkButtons.length) return;
-        dom.venueLinkButtons.forEach(button => {
-          const linkType = button.dataset.venueLink;
-          const value = selectedBar ? normalizeText(getBarLinkValue(linkType, selectedBar)) : '';
-          const hasValue = Boolean(value);
-          button.disabled = !hasValue;
-          button.setAttribute('aria-disabled', hasValue ? 'false' : 'true');
+      function updateVenueLinkToggles(options = {}) {
+        const { applyValues = false } = options;
+        if (!dom.venueLinkToggles || !dom.venueLinkToggles.length) return;
+        dom.venueLinkToggles.forEach(toggle => {
+          const linkType = toggle.dataset.venueToggle;
+          const stateKey = getVenueToggleStateKey(linkType);
+          if (!stateKey) return;
+          const barValue = selectedBar ? normalizeText(getBarLinkValue(linkType, selectedBar)) : '';
+          const hasValue = Boolean(barValue);
+          if (!hasValue) {
+            state[stateKey] = false;
+          }
+          const isActive = Boolean(state[stateKey]) && hasValue;
+          toggle.checked = isActive;
+          toggle.disabled = !hasValue;
+          toggle.setAttribute('aria-disabled', hasValue ? 'false' : 'true');
+          if (applyValues && isActive) {
+            const target = getVenueLinkTarget(linkType);
+            if (target) {
+              applyBarLink(target.input, target.stateKey, target.linkType, barValue);
+            }
+          }
         });
       }
 
-      function handleVenueLinkCopy(linkType, button) {
-        if (!linkType) return;
-        if (!selectedBar) {
-          showTemporaryState(button, 'Pick a bar first');
+      function handleVenueToggleChange(toggle) {
+        if (!toggle) return;
+        const linkType = toggle.dataset.venueToggle;
+        const stateKey = getVenueToggleStateKey(linkType);
+        if (!stateKey) return;
+        state[stateKey] = toggle.checked;
+        if (!toggle.checked) {
+          updateVenueLinkToggles({ applyValues: false });
           return;
         }
-        const barValue = normalizeText(getBarLinkValue(linkType, selectedBar));
-        if (!barValue) {
-          showTemporaryState(button, 'No venue link');
-          return;
-        }
-        const target = getVenueLinkTarget(linkType);
-        if (!target) return;
-        applyBarLink(target.input, target.stateKey, target.linkType, barValue);
+        updateVenueLinkToggles({ applyValues: true });
         refreshUi();
-        showTemporaryState(button, 'Copied');
+      }
+
+      function getVenueToggleStateKey(linkType) {
+        switch (linkType) {
+          case 'website':
+            return 'useVenueWebsite';
+          case 'instagram':
+            return 'useVenueInstagram';
+          case 'facebook':
+            return 'useVenueFacebook';
+          default:
+            return '';
+        }
+      }
+
+      async function handlePasteAction(button) {
+        if (!button) return;
+        const targetId = button.dataset.pasteTarget;
+        if (!targetId) return;
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          showTemporaryState(button, 'Clipboard blocked');
+          return;
+        }
+        try {
+          const text = await navigator.clipboard.readText();
+          const trimmed = String(text || '').trim();
+          if (!trimmed) {
+            showTemporaryState(button, 'Clipboard empty');
+            return;
+          }
+          input.value = trimmed;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('blur', { bubbles: true }));
+          showTemporaryState(button, 'Pasted');
+        } catch (error) {
+          showTemporaryState(button, 'Clipboard blocked');
+        }
       }
 
       function getVenueLinkTarget(linkType) {
@@ -2380,9 +2567,6 @@
             dom.durationNote.innerHTML = `<strong>Duration:</strong> ${label}`;
           }
         }
-        if (dom.timezoneNote) {
-          dom.timezoneNote.innerHTML = `<strong>Local timezone:</strong> ${browserTimezone}`;
-        }
       }
 
       function updatePreviewCard() {
@@ -2415,12 +2599,6 @@
             dom.previewImage.alt = '';
           }
         }
-        const hasTimeRange = Boolean(event.startDate && event.endDate);
-        const durationLabel = hasTimeRange
-          ? formatDurationLabel(event.durationMinutes)
-          : 'Duration TBD';
-        setChip(dom.previewDuration, durationLabel, true);
-        setChip(dom.previewTimezone, `Local TZ: ${browserTimezone}`, true, true);
         const recurrenceLabel = getRecurrenceChipLabel(event.recurrence);
         setChip(dom.previewRecurring, recurrenceLabel, Boolean(event.recurrence));
         setChip(dom.previewCover, state.cover ? `Cover: ${state.cover}` : '', Boolean(state.cover), true);
@@ -2871,11 +3049,14 @@
 
       function showTemporaryState(button, message, duration = 1800) {
         if (!button) return;
-        const original = button.textContent;
+        const originalHtml = button.dataset.originalHtml || button.innerHTML;
+        if (!button.dataset.originalHtml) {
+          button.dataset.originalHtml = originalHtml;
+        }
         button.textContent = message;
         button.disabled = true;
         setTimeout(() => {
-          button.textContent = original;
+          button.innerHTML = button.dataset.originalHtml || originalHtml;
           button.disabled = false;
         }, duration);
       }
