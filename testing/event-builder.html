@@ -23,7 +23,7 @@
       --border: rgba(255, 255, 255, 0.08);
       --soft: rgba(255, 162, 74, 0.12);
       --chip: rgba(255, 162, 74, 0.18);
-      --sticky-header-offset: 4.5rem;
+      --sticky-header-offset: 6rem;
     }
 
     * {
@@ -41,51 +41,38 @@
     .page-wrapper {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 2.1rem 1.25rem 3.2rem;
+      padding: calc(2.1rem + var(--sticky-header-offset)) 1.25rem 3.2rem;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
 
     .tool-header {
-      position: sticky;
+      position: fixed;
       top: 0;
-      z-index: 20;
-      width: 100%;
-      background: linear-gradient(135deg, rgba(255, 162, 74, 0.12), rgba(20, 24, 38, 0.96));
-      border-bottom: 1px solid rgba(255, 162, 74, 0.2);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
-      backdrop-filter: blur(18px);
-      overflow: hidden;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      background: rgba(12, 16, 26, 0.96);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(16px);
     }
 
     .tool-header-inner {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1.6rem;
+      flex-direction: column;
+      gap: 0.55rem;
       max-width: 1200px;
       margin: 0 auto;
-      padding: 1.1rem 1.25rem;
-      position: relative;
-      z-index: 1;
+      padding: 0.65rem 1.25rem 0.75rem;
       width: 100%;
     }
 
-    .tool-header::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at top right, rgba(255, 162, 74, 0.18), transparent 55%);
-      pointer-events: none;
-    }
-
-    .tool-header-content {
-      position: relative;
+    .tool-header-top {
       display: flex;
       align-items: center;
-      gap: 1rem;
-      z-index: 1;
+      gap: 0.75rem;
     }
 
     .tool-logo {
@@ -100,44 +87,35 @@
     }
 
     .tool-logo img {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       border-radius: 10px;
       border: 1px solid rgba(255, 162, 74, 0.2);
       box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
     }
 
-    .tool-title-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
+    .tool-logo span {
+      display: inline-flex;
+      align-items: center;
     }
 
     .tool-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.6rem;
+      gap: 0.5rem;
       align-items: center;
-      justify-content: flex-end;
-      z-index: 1;
+      justify-content: flex-start;
     }
 
-    .tool-eyebrow {
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-      font-size: 0.7rem;
-      font-weight: 600;
-      margin: 0 0 0.5rem;
-      display: inline-flex;
-      padding: 0.2rem 0.65rem;
-      border-radius: 999px;
-      background: rgba(255, 162, 74, 0.12);
-      border: 1px solid rgba(255, 162, 74, 0.2);
+    .tool-actions .action-button {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.6rem;
+      min-height: 30px;
     }
 
     .tool-title {
-      font-size: 1.65rem;
+      font-size: 1.45rem;
+      line-height: 1.15;
       margin: 0;
       color: var(--text-primary);
     }
@@ -311,6 +289,7 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 0.4rem 0.6rem;
+      margin-top: 0.35rem;
     }
 
     .input-suffix {
@@ -410,6 +389,16 @@
 
     .field-action i {
       font-size: 0.85rem;
+    }
+
+    .field-action-inline {
+      align-self: stretch;
+      padding: 0 0.65rem;
+      border-radius: 9px;
+    }
+
+    .field-action-inline span {
+      display: none;
     }
 
     .field-toggle {
@@ -818,22 +807,22 @@
     }
 
     @media (max-width: 768px) {
-      .tool-header-inner {
-        flex-wrap: wrap;
-        padding: 0.9rem 1rem;
+      :root {
+        --sticky-header-offset: 5.1rem;
       }
 
-      .tool-header-content {
-        gap: 0.75rem;
+      .tool-header-inner {
+        padding: 0.55rem 1rem 0.65rem;
+        gap: 0.45rem;
       }
 
       .tool-logo img {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
       }
 
       .tool-title {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
       }
 
       .tool-actions {
@@ -844,15 +833,15 @@
         display: none;
       }
 
-      .action-button {
+      .tool-actions .action-button {
         justify-content: center;
-        min-height: 40px;
-        padding: 0.5rem 0.7rem;
-        font-size: 0.85rem;
+        min-height: 28px;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.75rem;
       }
 
       .page-wrapper {
-        padding: 1.6rem 1rem 2.6rem;
+        padding: calc(1.6rem + var(--sticky-header-offset)) 1rem 2.6rem;
       }
 
 
@@ -892,17 +881,14 @@
 <body>
   <header class="tool-header">
     <div class="tool-header-inner">
-      <div class="tool-header-content">
+      <div class="tool-header-top">
         <a class="tool-logo" href="../index.html" aria-label="chunky.dad home">
           <img src="../favicons/favicon-96x96.png"
                srcset="../favicons/favicon-96x96.png 1x, ../favicons/favicon-192x192.png 2x, ../favicons/favicon-256x256.png 3x"
                alt="chunky.dad logo">
           <span>chunky.dad</span>
         </a>
-        <div class="tool-title-group">
-          <p class="tool-eyebrow">chunky.dad toolbox</p>
-          <h1 class="tool-title">Event Builder</h1>
-        </div>
+        <h1 class="tool-title">Event Builder</h1>
       </div>
       <div class="tool-actions">
         <button type="button" class="ghost-button action-button" id="reset-form" aria-label="Reset to defaults">
@@ -943,7 +929,7 @@
                 <div class="field-group">
                   <label for="event-short-name">Card Short Name</label>
                   <input type="text" id="event-short-name" autocomplete="off" placeholder="Bearracuda">
-                  <small>Use <code>\-</code> to show a hyphen. Use <code>-</code> to let long words wrap; it will not show otherwise.</small>
+                  <small>For long words, add <code>-</code> to help break them up (MEGA-WOOF). It will not show unless we need two lines. If you want a hyphen all the time, add <code>\-</code> instead. The <code>\</code> will not show.</small>
                 </div>
                 <div class="field-group">
                   <label for="event-city">City</label>
@@ -990,9 +976,9 @@
                 </div>
                 <div class="field-group">
                   <label for="event-gmaps">Google Maps</label>
-                  <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
-                  <div class="field-actions">
-                    <button type="button" class="field-action" data-paste-target="event-gmaps" aria-label="Paste Google Maps link">
+                  <div class="input-with-action">
+                    <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-gmaps" aria-label="Paste Google Maps link">
                       <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
                       <span>Paste</span>
                     </button>
@@ -1141,12 +1127,14 @@
               <div class="field-grid">
                 <div class="field-group">
                   <label for="event-website">Website</label>
-                  <input type="text" id="event-website" placeholder="https://bearracuda.com">
-                  <div class="field-actions">
-                    <button type="button" class="field-action" data-paste-target="event-website" aria-label="Paste website link">
+                  <div class="input-with-action">
+                    <input type="text" id="event-website" placeholder="https://bearracuda.com">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-website" aria-label="Paste website link">
                       <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
                       <span>Paste</span>
                     </button>
+                  </div>
+                  <div class="field-actions">
                     <label class="field-toggle" for="venue-toggle-website">
                       <input type="checkbox" id="venue-toggle-website" data-venue-toggle="website">
                       <span>Use venue's website</span>
@@ -1156,9 +1144,9 @@
                 </div>
                 <div class="field-group">
                   <label for="event-ticket-url">Tickets</label>
-                  <input type="text" id="event-ticket-url" placeholder="https://tickets.example.com">
-                  <div class="field-actions">
-                    <button type="button" class="field-action" data-paste-target="event-ticket-url" aria-label="Paste ticket link">
+                  <div class="input-with-action">
+                    <input type="text" id="event-ticket-url" placeholder="https://tickets.example.com">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-ticket-url" aria-label="Paste ticket link">
                       <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
                       <span>Paste</span>
                     </button>
@@ -1167,12 +1155,14 @@
                 </div>
                 <div class="field-group">
                   <label for="event-instagram">Instagram</label>
-                  <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
-                  <div class="field-actions">
-                    <button type="button" class="field-action" data-paste-target="event-instagram" aria-label="Paste Instagram link">
+                  <div class="input-with-action">
+                    <input type="text" id="event-instagram" placeholder="@bearracuda or instagram.com/bearracuda">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-instagram" aria-label="Paste Instagram link">
                       <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
                       <span>Paste</span>
                     </button>
+                  </div>
+                  <div class="field-actions">
                     <label class="field-toggle" for="venue-toggle-instagram">
                       <input type="checkbox" id="venue-toggle-instagram" data-venue-toggle="instagram">
                       <span>Use venue's Instagram</span>
@@ -1182,12 +1172,14 @@
                 </div>
                 <div class="field-group">
                   <label for="event-facebook">Facebook</label>
-                  <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
-                  <div class="field-actions">
-                    <button type="button" class="field-action" data-paste-target="event-facebook" aria-label="Paste Facebook link">
+                  <div class="input-with-action">
+                    <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-facebook" aria-label="Paste Facebook link">
                       <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
                       <span>Paste</span>
                     </button>
+                  </div>
+                  <div class="field-actions">
                     <label class="field-toggle" for="venue-toggle-facebook">
                       <input type="checkbox" id="venue-toggle-facebook" data-venue-toggle="facebook">
                       <span>Use venue's Facebook</span>
