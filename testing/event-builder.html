@@ -174,6 +174,8 @@
       align-self: stretch;
       min-width: 100%;
       width: 100%;
+      max-width: 100%;
+      flex: 1 1 100%;
       margin-bottom: 0;
       transition: box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     }
@@ -194,6 +196,10 @@
       font-size: 0.9rem;
       color: var(--text-primary);
       width: 100%;
+    }
+
+    .live-preview > details.form-section summary {
+      font-size: 1.15rem;
     }
 
     details.form-section summary::-webkit-details-marker {
@@ -1473,6 +1479,7 @@
       let iframeLoaded = false;
       let sendTimeoutId = null;
       let urlTimeoutId = null;
+      let lastPasteActionAt = 0;
       let currentCalendarCity = null;
       let barRequestId = 0;
       let currentBars = [];
@@ -1609,11 +1616,18 @@
         currentBars = bars;
         selectedBar = null;
         dom.venueSelect.innerHTML = '';
+        const previousSavedBar = state ? state.savedBar : '';
         if (!bars.length) {
           dom.venueSelect.appendChild(new Option('No saved bars for this city', ''));
           dom.venueSelect.disabled = true;
           setVenueSelectHint('No saved bars yet. Enter venue details manually.');
+          if (state) {
+            state.savedBar = '';
+          }
           updateVenueLinkToggles({ applyValues: false });
+          if (previousSavedBar) {
+            refreshUi();
+          }
           return;
         }
         dom.venueSelect.appendChild(new Option('Choose a saved bar (optional)', ''));
@@ -1624,7 +1638,54 @@
         dom.venueSelect.value = '';
         dom.venueSelect.disabled = false;
         setVenueSelectHint('Selecting a bar will fill venue, address, coordinates, and Google Maps.');
-        updateVenueLinkToggles({ applyValues: false });
+        const selectionApplied = applySavedBarSelection(bars);
+        const savedBarChanged = previousSavedBar !== (state ? state.savedBar : '');
+        if (selectionApplied || savedBarChanged) {
+          refreshUi();
+        } else {
+          updateVenueLinkToggles({ applyValues: false, preserveState: true });
+        }
+      }
+
+      function findSavedBarIndex(bars, savedBarValue) {
+        if (!savedBarValue || !Array.isArray(bars)) return -1;
+        const rawValue = String(savedBarValue || '').trim();
+        const numeric = parseInt(rawValue, 10);
+        if (Number.isFinite(numeric) && String(numeric) === rawValue && bars[numeric]) {
+          return numeric;
+        }
+        const normalizedTarget = normalizeText(rawValue).toLowerCase();
+        if (!normalizedTarget) return -1;
+        return bars.findIndex(bar => normalizeText(bar.name).toLowerCase() === normalizedTarget);
+      }
+
+      function applySavedBarSelection(bars) {
+        if (!dom.venueSelect) return false;
+        const savedBarValue = state ? state.savedBar : '';
+        if (!savedBarValue) {
+          selectedBar = null;
+          dom.venueSelect.value = '';
+          updateVenueLinkToggles({ applyValues: false, preserveState: true });
+          return false;
+        }
+        const index = findSavedBarIndex(bars, savedBarValue);
+        if (index < 0 || !bars[index]) {
+          if (state) {
+            state.savedBar = '';
+          }
+          selectedBar = null;
+          dom.venueSelect.value = '';
+          updateVenueLinkToggles({ applyValues: false });
+          return false;
+        }
+        selectedBar = bars[index];
+        dom.venueSelect.value = String(index);
+        if (state) {
+          state.savedBar = normalizeText(selectedBar.name);
+        }
+        applyBarDetails(selectedBar, { preserveExisting: true });
+        updateVenueLinkToggles({ applyValues: true });
+        return true;
       }
 
       async function fetchBarsForCity(cityKey) {
@@ -1668,6 +1729,7 @@
           name: 'Bearracuda Preview Night',
           shortName: 'Bearracuda',
           city: defaultCity,
+          savedBar: '',
           venue: 'The Eagle NYC',
           address: '554 W 28th St, New York, NY',
           location: '',
@@ -1677,6 +1739,7 @@
           end: formatInputValue(end),
           timezone: browserTimezone,
           recurrence: '',
+          recurrenceMode: 'builder',
           website: '',
           ticketUrl: '',
           instagram: '',
@@ -1699,6 +1762,12 @@
         return start;
       }
 
+      function parseBooleanParam(value) {
+        if (value == null) return false;
+        const normalized = String(value).trim().toLowerCase();
+        return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+      }
+
       function loadStateFromUrl(baseState) {
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
@@ -1713,6 +1782,10 @@
               break;
             case 'city':
               overrides.city = value;
+              break;
+            case 'bar':
+            case 'savedbar':
+              overrides.savedBar = value;
               break;
             case 'venue':
               overrides.venue = value;
@@ -1763,8 +1836,24 @@
             case 'map':
               overrides.gmaps = value;
               break;
+            case 'vweb':
+            case 'usevenuewebsite':
+              overrides.useVenueWebsite = parseBooleanParam(value);
+              break;
+            case 'vinsta':
+            case 'usevenueinstagram':
+              overrides.useVenueInstagram = parseBooleanParam(value);
+              break;
+            case 'vfb':
+            case 'usevenuefacebook':
+              overrides.useVenueFacebook = parseBooleanParam(value);
+              break;
             case 'img':
               overrides.image = value;
+              break;
+            case 'rmode':
+            case 'recurrencemode':
+              overrides.recurrenceMode = value === 'raw' ? 'raw' : 'builder';
               break;
             default:
               break;
@@ -1773,6 +1862,7 @@
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
         if (!overrides.city) overrides.city = baseState.city;
+        if (!overrides.recurrenceMode) overrides.recurrenceMode = baseState.recurrenceMode;
         return { overrides };
       }
 
@@ -1803,7 +1893,7 @@
         applyRecurrenceStateToForm();
         syncLinkFieldStates();
         updateCoordinatesFieldState();
-        updateVenueLinkToggles({ applyValues: false });
+        updateVenueLinkToggles({ applyValues: false, preserveState: true });
       }
 
       function bindEvents() {
@@ -1826,6 +1916,8 @@
           dom.citySelect.addEventListener('change', event => {
             const newCity = event.target.value;
             state.city = newCity;
+            state.savedBar = '';
+            selectedBar = null;
             populateVenueOptions(newCity);
             updateCalendarSource();
             refreshUi();
@@ -1836,10 +1928,13 @@
             const selectedIndex = parseInt(event.target.value, 10);
             if (!Number.isFinite(selectedIndex) || !currentBars[selectedIndex]) {
               selectedBar = null;
+              state.savedBar = '';
               updateVenueLinkToggles({ applyValues: false });
+              refreshUi();
               return;
             }
             selectedBar = currentBars[selectedIndex];
+            state.savedBar = normalizeText(selectedBar.name);
             applyBarDetails(selectedBar);
             updateVenueLinkToggles({ applyValues: true });
             refreshUi();
@@ -1854,11 +1949,15 @@
         }
         if (dom.pasteButtons && dom.pasteButtons.length) {
           dom.pasteButtons.forEach(button => {
-            button.addEventListener('click', event => {
+            const triggerPaste = event => {
               event.preventDefault();
               event.stopPropagation();
-              handlePasteAction(button);
-            });
+              triggerPasteAction(button);
+            };
+            button.addEventListener('pointerdown', triggerPaste);
+            button.addEventListener('mousedown', triggerPaste);
+            button.addEventListener('touchstart', triggerPaste, { passive: false });
+            button.addEventListener('click', triggerPaste);
             button.addEventListener('contextmenu', event => {
               event.preventDefault();
             });
@@ -2166,29 +2265,32 @@
         updateLinkFieldState(dom.gmapsInput, normalizeLinkValue('gmaps', dom.gmapsInput ? dom.gmapsInput.value : ''));
       }
 
-      function applyBarDetails(bar) {
+      function applyBarDetails(bar, options = {}) {
         if (!bar || typeof bar !== 'object') return;
+        const { preserveExisting = false } = options;
         const venueName = normalizeText(bar.name);
-        if (venueName) {
+        if (venueName && (!preserveExisting || !state.venue)) {
           state.venue = venueName;
           if (dom.venueInput) dom.venueInput.value = venueName;
         }
         const address = normalizeText(bar.address);
-        if (address) {
+        if (address && (!preserveExisting || !state.address)) {
           state.address = address;
           if (dom.addressInput) dom.addressInput.value = address;
         }
         const coordinates = normalizeCoordinatesValue(bar.coordinates || bar.location);
-        if (coordinates) {
+        if (coordinates && (!preserveExisting || !state.location)) {
           state.location = coordinates;
           if (dom.coordinatesInput) dom.coordinatesInput.value = coordinates;
         }
-        applyBarLink(dom.gmapsInput, 'gmaps', 'gmaps', bar.googleMaps || bar.gmaps);
+        if (!preserveExisting || !state.gmaps) {
+          applyBarLink(dom.gmapsInput, 'gmaps', 'gmaps', bar.googleMaps || bar.gmaps);
+        }
         updateCoordinatesFieldState();
       }
 
       function updateVenueLinkToggles(options = {}) {
-        const { applyValues = false } = options;
+        const { applyValues = false, preserveState = false } = options;
         if (!dom.venueLinkToggles || !dom.venueLinkToggles.length) return;
         dom.venueLinkToggles.forEach(toggle => {
           const linkType = toggle.dataset.venueToggle;
@@ -2196,7 +2298,7 @@
           if (!stateKey) return;
           const barValue = selectedBar ? normalizeText(getBarLinkValue(linkType, selectedBar)) : '';
           const hasValue = Boolean(barValue);
-          if (!hasValue) {
+          if (!hasValue && !preserveState) {
             state[stateKey] = false;
           }
           const toggleLabel = toggle.closest('.field-toggle');
@@ -2222,11 +2324,7 @@
         const stateKey = getVenueToggleStateKey(linkType);
         if (!stateKey) return;
         state[stateKey] = toggle.checked;
-        if (!toggle.checked) {
-          updateVenueLinkToggles({ applyValues: false });
-          return;
-        }
-        updateVenueLinkToggles({ applyValues: true });
+        updateVenueLinkToggles({ applyValues: toggle.checked });
         refreshUi();
       }
 
@@ -2243,17 +2341,25 @@
         }
       }
 
+      function triggerPasteAction(button) {
+        const now = Date.now();
+        if (now - lastPasteActionAt < 350) return;
+        lastPasteActionAt = now;
+        handlePasteAction(button);
+      }
+
       async function handlePasteAction(button) {
         if (!button) return;
         const targetId = button.dataset.pasteTarget;
         if (!targetId) return;
         const input = document.getElementById(targetId);
         if (!input) return;
-        const wasFocused = document.activeElement === input;
-        if (wasFocused) {
-          input.blur();
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement !== button && typeof activeElement.blur === 'function') {
+          activeElement.blur();
         }
-        if (!navigator.clipboard || !navigator.clipboard.readText) {
+        const isSecure = typeof window.isSecureContext === 'boolean' ? window.isSecureContext : true;
+        if (!isSecure || !navigator.clipboard || !navigator.clipboard.readText) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
           return;
         }
@@ -2366,19 +2472,21 @@
       function applyRecurrenceStateToForm() {
         const startDate = parseLocalDateTime(state.start, state.timezone);
         const fallback = getDefaultRecurrenceBuilder(startDate);
+        const preferredMode = state.recurrenceMode === 'raw' ? 'raw' : 'builder';
         if (state.recurrence) {
           const parsed = parseRruleToBuilder(state.recurrence, fallback);
           if (parsed) {
             applyRecurrenceBuilderState(parsed);
-            recurrenceMode = 'builder';
+            recurrenceMode = preferredMode;
           } else {
             applyRecurrenceBuilderState(fallback);
             recurrenceMode = 'raw';
           }
         } else {
           applyRecurrenceBuilderState(fallback);
-          recurrenceMode = 'builder';
+          recurrenceMode = preferredMode;
         }
+        state.recurrenceMode = recurrenceMode;
         if (dom.recurrenceInput) {
           dom.recurrenceInput.value = state.recurrence || '';
         }
@@ -2393,6 +2501,7 @@
           return;
         }
         recurrenceMode = nextMode;
+        state.recurrenceMode = recurrenceMode;
         if (!options.silent) {
           if (recurrenceMode === 'builder') {
             const rawValue = dom.recurrenceInput ? dom.recurrenceInput.value.trim() : '';
@@ -2828,6 +2937,8 @@
         if (state.name) params.set('name', state.name);
         if (state.shortName) params.set('short', state.shortName);
         if (state.city) params.set('city', state.city);
+        const savedBarName = normalizeText(state.savedBar);
+        if (savedBarName) params.set('bar', savedBarName);
         if (state.venue) params.set('venue', state.venue);
         if (state.address) params.set('addr', state.address);
         if (state.description) params.set('desc', state.description);
@@ -2835,11 +2946,15 @@
         if (state.start) params.set('start', state.start);
         if (state.end) params.set('end', state.end);
         if (state.recurrence) params.set('rrule', state.recurrence);
+        if (state.recurrenceMode === 'raw') params.set('rmode', 'raw');
         if (state.website) params.set('web', state.website);
         if (state.ticketUrl) params.set('tickets', state.ticketUrl);
         if (state.instagram) params.set('insta', state.instagram);
         if (state.facebook) params.set('fb', state.facebook);
         if (state.gmaps) params.set('gmaps', state.gmaps);
+        if (state.useVenueWebsite) params.set('vweb', '1');
+        if (state.useVenueInstagram) params.set('vinsta', '1');
+        if (state.useVenueFacebook) params.set('vfb', '1');
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
         if (coordsValue) params.set('coords', coordsValue);
@@ -2877,7 +2992,7 @@
         }
       }
 
-      function buildTellDadMailto() {
+      function buildTellDadMessage() {
         const shareUrl = getShareUrl();
         const eventName = (state.name || '').trim();
         const cityLabel = getCityDisplayName(state.city);
@@ -2889,14 +3004,40 @@
           'Hey Dad, here is the event link:',
           shareUrl
         ];
-        return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+        return {
+          shareUrl,
+          subject,
+          body: bodyLines.join('\n')
+        };
       }
 
-      function openTellDadEmail(button) {
-        const mailtoUrl = buildTellDadMailto();
-        if (!mailtoUrl) return;
-        window.location.href = mailtoUrl;
-        showTemporaryState(button, 'Email ready!');
+      function buildTellDadMailto(message = buildTellDadMessage()) {
+        if (!message || !message.shareUrl) return '';
+        return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(message.body)}`;
+      }
+
+      async function openTellDadEmail(button) {
+        const message = buildTellDadMessage();
+        if (!message.shareUrl) return;
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: message.subject,
+              text: message.body,
+              url: message.shareUrl
+            });
+            showTemporaryState(button, 'Shared!');
+            return;
+          } catch (error) {
+            // Fall back to email/clipboard below.
+          }
+        }
+        copyToClipboard(message.shareUrl, button);
+        showToast('Share link copied. Paste it into your email.', 'info');
+        const mailtoUrl = buildTellDadMailto(message);
+        if (mailtoUrl) {
+          window.location.href = mailtoUrl;
+        }
       }
 
       function refreshUi() {
