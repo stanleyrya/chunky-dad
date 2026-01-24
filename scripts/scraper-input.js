@@ -205,9 +205,9 @@ const scraperConfig = {
     {
       name: "Goldiloxx",
       enabled: true,
-      urls: ["https://www.redeyetickets.com/goldiloxx/"],
+      urls: ["https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25"],
       alwaysBear: true,        // Goldiloxx is a bear party
-      urlDiscoveryDepth: 0,    // No additional URL discovery needed for single event page
+      urlDiscoveryDepth: 1,    // Follow API search results to event detail endpoints
       dryRun: false,           // Override global dryRun if needed
       
       // Field priorities for merging data from different sources
