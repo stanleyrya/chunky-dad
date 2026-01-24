@@ -66,7 +66,7 @@
 
     .tool-nav {
       gap: 0.6rem 1rem;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       height: auto;
       padding: 0.7rem 1rem 0.8rem;
     }
@@ -89,7 +89,9 @@
       gap: 0.6rem 0.85rem;
       align-items: center;
       justify-content: flex-end;
-      margin-left: auto;
+      flex: 1 1 auto;
+      min-width: 0;
+      margin-left: 0;
     }
 
     .tool-page-label {
@@ -161,6 +163,7 @@
       border-radius: 12px;
       padding: 0.6rem 0.75rem;
       background: rgba(10, 13, 22, 0.7);
+      width: 100%;
       margin-bottom: 0;
       transition: box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     }
@@ -180,6 +183,7 @@
       font-weight: 600;
       font-size: 0.9rem;
       color: var(--text-primary);
+      width: 100%;
     }
 
     details.form-section summary::-webkit-details-marker {
@@ -218,6 +222,12 @@
 
     .field-row.time-row {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field-row.time-row input[type="datetime-local"] {
+      padding: 0.45rem 0.55rem;
+      font-size: 0.82rem;
+      min-width: 0;
     }
 
     .field-group {
@@ -266,6 +276,11 @@
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
       background: #0d111a;
       color: var(--text-primary);
+    }
+
+    input[type="datetime-local"] {
+      width: 100%;
+      min-width: 0;
     }
 
     input::placeholder,
@@ -730,8 +745,72 @@
       margin-top: 0.75rem;
     }
 
+    .live-preview .calendar-preview-card {
+      margin: 0 -1.2rem;
+      border-left: none;
+      border-right: none;
+      border-radius: 0 0 14px 14px;
+    }
+
     .is-hidden {
       display: none !important;
+    }
+
+    .toast-container {
+      position: fixed;
+      right: 1.5rem;
+      bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--panel-raised);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 0.55rem 0.75rem;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      box-shadow: 0 12px 22px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      transform: translateY(8px);
+      animation: toast-in 0.2s ease forwards;
+    }
+
+    .toast.is-success {
+      border-color: rgba(82, 196, 132, 0.4);
+      color: #b9f1d2;
+    }
+
+    .toast.is-warn {
+      border-color: rgba(255, 193, 7, 0.35);
+      color: #ffe3a3;
+    }
+
+    .toast.is-error {
+      border-color: rgba(244, 67, 54, 0.4);
+      color: #ffb3aa;
+    }
+
+    .toast.is-hiding {
+      animation: toast-out 0.2s ease forwards;
+    }
+
+    @keyframes toast-in {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes toast-out {
+      to {
+        opacity: 0;
+        transform: translateY(8px);
+      }
     }
 
     .recurrence-toggle {
@@ -881,6 +960,18 @@
         padding: calc(1.6rem + var(--sticky-header-offset)) 1rem 2.6rem;
       }
 
+      .panel.form-panel {
+        padding: 0;
+      }
+
+      .form-panel .panel-header {
+        padding: 1rem 1rem 0.4rem;
+      }
+
+      #event-form {
+        padding: 0 0 1rem;
+      }
+
       .form-actions {
         flex-direction: column;
         align-items: stretch;
@@ -894,8 +985,11 @@
         flex: 1 1 auto;
       }
 
-      details.form-section {
-        padding: 0.55rem 0.7rem;
+      .form-panel details.form-section {
+        padding: 0.6rem 1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
       }
 
       .field-grid,
@@ -917,8 +1011,28 @@
         border-radius: 0;
       }
 
+      .live-preview .calendar-preview-card {
+        margin: 0 -1.1rem;
+      }
+
+      .toast-container {
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+      }
+
+      .toast {
+        width: 100%;
+      }
+
       .preview-toggle summary::after {
         margin-left: auto;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .field-row.time-row {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -980,7 +1094,7 @@
                   <input type="text" id="event-name" autocomplete="off" placeholder="Bearracuda Chicago">
                 </div>
                 <div class="field-group">
-                  <label for="event-short-name">Shorter event name (for display on the calendar, etc.)</label>
+                  <label for="event-short-name">Shorter event name (for the calendar, etc.)</label>
                   <input type="text" id="event-short-name" autocomplete="off" placeholder="Bearracuda">
                   <small>For long words, add <code>-</code> to help break them up (MEGA-WOOF). It will not show unless we need two lines. If you want a hyphen all the time, add <code>\-</code> instead. The <code>\</code> will not show.</small>
                 </div>
@@ -1295,6 +1409,8 @@
     </section>
   </div>
 
+  <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
   <script src="../js/city-config.js"></script>
   <script>
     (() => {
@@ -1419,6 +1535,7 @@
         dom.previewRecurring = document.getElementById('preview-recurring');
         dom.previewCover = document.getElementById('preview-cover');
         dom.previewLinks = document.getElementById('preview-links');
+        dom.toastContainer = document.getElementById('toast-container');
       }
 
       function populateCityOptions() {
@@ -2099,24 +2216,45 @@
         if (!targetId) return;
         const input = document.getElementById(targetId);
         if (!input) return;
+        const promptForPaste = () => {
+          const manual = window.prompt('Paste the link:', '');
+          if (manual === null) {
+            showToast('Paste cancelled.', 'warn');
+            return;
+          }
+          const trimmedManual = String(manual || '').trim();
+          if (!trimmedManual) {
+            showToast('Nothing to paste yet.', 'warn');
+            return;
+          }
+          applyPasteValue(input, trimmedManual);
+          showTemporaryState(button, 'Pasted');
+        };
         if (!navigator.clipboard || !navigator.clipboard.readText) {
-          showTemporaryState(button, 'Clipboard blocked');
+          showToast('Clipboard blocked. Paste manually.', 'warn');
+          promptForPaste();
           return;
         }
         try {
           const text = await navigator.clipboard.readText();
           const trimmed = String(text || '').trim();
           if (!trimmed) {
-            showTemporaryState(button, 'Clipboard empty');
+            showToast('Clipboard empty.', 'warn');
             return;
           }
-          input.value = trimmed;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('blur', { bubbles: true }));
+          applyPasteValue(input, trimmed);
           showTemporaryState(button, 'Pasted');
         } catch (error) {
-          showTemporaryState(button, 'Clipboard blocked');
+          showToast('Clipboard blocked. Paste manually.', 'warn');
+          promptForPaste();
         }
+      }
+
+      function applyPasteValue(input, value) {
+        if (!input) return;
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
       }
 
       function getVenueLinkTarget(linkType) {
@@ -3108,6 +3246,26 @@
         } else {
           fallbackCopy();
         }
+      }
+
+      function showToast(message, variant = 'info', duration = 2400) {
+        if (!message) return;
+        const container = dom.toastContainer || document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast${variant ? ` is-${variant}` : ''}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        while (container.children.length > 4) {
+          container.removeChild(container.firstChild);
+        }
+        const hideDelay = Math.max(0, duration - 200);
+        setTimeout(() => {
+          toast.classList.add('is-hiding');
+        }, hideDelay);
+        setTimeout(() => {
+          toast.remove();
+        }, duration);
       }
 
       function showTemporaryState(button, message, duration = 1800) {
