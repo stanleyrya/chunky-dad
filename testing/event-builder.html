@@ -867,7 +867,7 @@
                 <div class="field-group">
                   <label for="event-venue-select">Saved Bars</label>
                   <select id="event-venue-select"></select>
-                  <small class="field-hint" id="event-venue-select-hint" data-default="Choose a saved bar to auto-fill venue details.">Choose a saved bar to auto-fill venue details.</small>
+                  <small class="field-hint" id="event-venue-select-hint" data-default="Choose a saved bar to auto-fill venue + map details.">Choose a saved bar to auto-fill venue + map details.</small>
                 </div>
                 <div class="field-group">
                   <label for="event-venue">Venue</label>
@@ -1285,7 +1285,7 @@
         });
         dom.venueSelect.value = '';
         dom.venueSelect.disabled = false;
-        setVenueSelectHint('Selecting a bar will fill venue, address, coordinates, and links.');
+        setVenueSelectHint('Selecting a bar will fill venue, address, coordinates, and Google Maps.');
       }
 
       async function fetchBarsForCity(cityKey) {
@@ -1816,9 +1816,6 @@
           state.location = coordinates;
           if (dom.coordinatesInput) dom.coordinatesInput.value = coordinates;
         }
-        applyBarLink(dom.websiteInput, 'website', 'website', bar.website);
-        applyBarLink(dom.instagramInput, 'instagram', 'instagram', bar.instagram);
-        applyBarLink(dom.facebookInput, 'facebook', 'facebook', bar.facebook);
         applyBarLink(dom.gmapsInput, 'gmaps', 'gmaps', bar.googleMaps || bar.gmaps);
         updateCoordinatesFieldState();
         refreshUi();
