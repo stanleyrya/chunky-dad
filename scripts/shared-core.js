@@ -531,7 +531,7 @@ class SharedCore {
     }
 
     // Generate key from format string using event data
-    generateKeyFromFormat(event, format) {
+    generateKeyFromFormat(event, format, options = {}) {
         if (!format) {
             throw new Error('Format is required for generateKeyFromFormat');
         }
@@ -564,11 +564,16 @@ class SharedCore {
         // Initialize key from format template
         let key = format;
         
+        const useLocalDate = options.useLocalDate === true;
+        const dateValue = useLocalDate
+            ? this.normalizeEventDateLocal(event.startDate, event.timezone)
+            : this.normalizeEventDate(event.startDate);
+        
         // Replace template variables
         key = key.replace(/\$\{title\}/g, String(event.title || '').toLowerCase().trim());
         key = key.replace(/\$\{normalizedTitle\}/g, normalizedTitle);
-        key = key.replace(/\$\{startDate\}/g, this.normalizeEventDate(event.startDate));
-        key = key.replace(/\$\{date\}/g, this.normalizeEventDate(event.startDate));
+        key = key.replace(/\$\{startDate\}/g, dateValue);
+        key = key.replace(/\$\{date\}/g, dateValue);
         key = key.replace(/\$\{venue\}/g, String(event.bar || '').toLowerCase().trim());
         key = key.replace(/\$\{source\}/g, String(event.source || '').toLowerCase().trim());
         key = key.replace(/\$\{city\}/g, city.toLowerCase().trim());
@@ -1289,6 +1294,45 @@ class SharedCore {
             return `${year}-${month}-${day}`;
         } catch (error) {
             console.warn(`⚠️ SharedCore: Failed to normalize date: ${dateInput}`);
+            return '';
+        }
+    }
+    
+    // Normalize event date using local or specified timezone
+    normalizeEventDateLocal(dateInput, timezone = null) {
+        if (!dateInput) return '';
+        
+        try {
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+            
+            if (timezone && typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
+                try {
+                    const formatter = new Intl.DateTimeFormat('en-CA', {
+                        timeZone: timezone,
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                    const parts = formatter.formatToParts(date);
+                    const year = parts.find(part => part.type === 'year')?.value;
+                    const month = parts.find(part => part.type === 'month')?.value;
+                    const day = parts.find(part => part.type === 'day')?.value;
+                    if (year && month && day) {
+                        return `${year}-${month}-${day}`;
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ SharedCore: Failed to format date for timezone "${timezone}": ${error.message}`);
+                }
+            }
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}`;
+        } catch (error) {
+            console.warn(`⚠️ SharedCore: Failed to normalize local date: ${dateInput}`);
             return '';
         }
     }
@@ -2248,7 +2292,11 @@ class SharedCore {
             return value;
         }
         
-        const date = this.normalizeEventDate(event?.startDate);
+        const fallbackDate = this.normalizeEventDate(event?.startDate);
+        const timezone = event?.timezone || (event?.city && this.cities[event.city]?.timezone) || null;
+        const localDate = this.normalizeEventDateLocal(event?.startDate, timezone);
+        const date = localDate || fallbackDate;
+        
         if (!date) {
             return value;
         }
@@ -2290,8 +2338,28 @@ class SharedCore {
         return `${normalizedTitle}|${date}|${venue}`.toLowerCase().trim();
     }
     
+    // Build a key using local date components (timezone-aware when available)
+    buildDefaultEventKeyLocal(event) {
+        if (!event) return null;
+        
+        let normalizedTitle = String(event.originalTitle || event.title || '').toLowerCase().trim();
+        
+        // Apply the same normalization as generateKeyFromFormat for ${normalizedTitle}
+        normalizedTitle = normalizedTitle
+            .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
+            .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
+            .replace(/[\s\-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        
+        const date = this.normalizeEventDateLocal(event.startDate, event.timezone);
+        const venue = String(event.bar || '').toLowerCase().trim();
+        if (!normalizedTitle || !date) return null;
+        
+        return `${normalizedTitle}|${date}|${venue}`.toLowerCase().trim();
+    }
+    
     // Build a best-effort key for existing calendar events using their fields
-    buildComputedKeyForExistingEvent(existingEvent, fields, targetSource = '', keyFormat = null) {
+    buildComputedKeyForExistingEvent(existingEvent, fields, targetSource = '', keyFormat = null, options = {}) {
         if (!existingEvent || !existingEvent.title || !existingEvent.startDate) {
             return null;
         }
@@ -2313,6 +2381,7 @@ class SharedCore {
         const bar = fields.bar || fields.venue || fields.location || existingEvent.location || '';
         const address = fields.address || '';
         const city = fields.city || existingEvent.city || '';
+        const timezone = fields.timezone || existingEvent.timezone || existingEvent.timeZone || '';
         
         const computedEvent = {
             title: existingEvent.title,
@@ -2321,11 +2390,17 @@ class SharedCore {
             bar: bar,
             address: address,
             city: city,
-            source: source
+            source: source,
+            timezone: timezone
         };
         
+        const useLocalDate = options.useLocalDate === true;
         if (keyFormat) {
-            return this.generateKeyFromFormat(computedEvent, keyFormat);
+            return this.generateKeyFromFormat(computedEvent, keyFormat, { useLocalDate });
+        }
+        
+        if (useLocalDate) {
+            return this.buildDefaultEventKeyLocal(computedEvent);
         }
         
         return this.buildDefaultEventKey(computedEvent);
@@ -2357,10 +2432,15 @@ class SharedCore {
         
         if (!targetKey && !targetMatchKey) return null;
         
+        const wantsWildcardMatch = Boolean(targetMatchKey && targetMatchKey.includes('*'));
+        
         const parsedEvents = existingEvents.map(event => {
             const fields = this.parseNotesIntoFields(event.notes || '');
             const computedKey = this.buildComputedKeyForExistingEvent(event, fields, targetSource, targetKeyFormat);
-            return { event, fields, computedKey };
+            const localComputedKey = wantsWildcardMatch
+                ? this.buildComputedKeyForExistingEvent(event, fields, targetSource, targetKeyFormat, { useLocalDate: true })
+                : null;
+            return { event, fields, computedKey, localComputedKey };
         });
         
         // First pass: exact match on key or matchKey (from notes)
@@ -2409,10 +2489,13 @@ class SharedCore {
         
         // Fifth pass: wildcard matching using target matchKey against existing keys or computed key
         if (targetMatchKey && targetMatchKey.includes('*')) {
-            for (const { event, fields, computedKey } of parsedEvents) {
+            for (const { event, fields, computedKey, localComputedKey } of parsedEvents) {
                 const eventKey = fields.key || null;
                 const matchKey = fields.matchKey || null;
-                const candidates = [eventKey, matchKey, computedKey].filter(Boolean);
+                const hasDateShift = localComputedKey && computedKey && localComputedKey !== computedKey;
+                const candidates = hasDateShift
+                    ? [localComputedKey]
+                    : [localComputedKey, eventKey, matchKey, computedKey].filter(Boolean);
                 if (candidates.some(candidate => this.matchesKeyPattern(targetMatchKey, candidate))) {
                     const matchedKey = candidates.find(candidate => this.matchesKeyPattern(targetMatchKey, candidate));
                     return { event, matchedKey: matchedKey, matchType: 'wildcard' };
