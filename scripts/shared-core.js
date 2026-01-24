@@ -1885,15 +1885,17 @@ class SharedCore {
                     // Check if "static" has priority for this field
                     if (priorityConfig && priorityConfig.priority && priorityConfig.priority.includes('static')) {
                         // Apply static value since it's in the priority list
-                        event[key] = metaValue.value;
+                        const resolvedValue = this.applyMetadataTemplate(metaValue.value, event);
+                        event[key] = resolvedValue;
                         // Mark this field as coming from static source
                         if (!event._staticFields) event._staticFields = {};
-                        event._staticFields[key] = metaValue.value;
+                        event._staticFields[key] = resolvedValue;
                     } else {
                         // Fallback: if no priority config, apply static value (backward compatibility)
-                        event[key] = metaValue.value;
+                        const resolvedValue = this.applyMetadataTemplate(metaValue.value, event);
+                        event[key] = resolvedValue;
                         if (!event._staticFields) event._staticFields = {};
-                        event._staticFields[key] = metaValue.value;
+                        event._staticFields[key] = resolvedValue;
                     }
                 }
             });
@@ -2237,6 +2239,34 @@ class SharedCore {
             // If pattern is not valid regex, fall back to exact match
             return pattern === key;
         }
+    }
+    
+    // Apply simple template tokens in metadata values using event date
+    // Supported tokens: ${year}, ${month}, ${day}, ${date} (YYYY-MM-DD)
+    applyMetadataTemplate(value, event) {
+        if (typeof value !== 'string' || !value.includes('${')) {
+            return value;
+        }
+        
+        const date = this.normalizeEventDate(event?.startDate);
+        if (!date) {
+            return value;
+        }
+        
+        const [year, month, day] = date.split('-');
+        const replacements = {
+            '${year}': year,
+            '${month}': month,
+            '${day}': day,
+            '${date}': date
+        };
+        
+        let result = value;
+        Object.keys(replacements).forEach(token => {
+            result = result.split(token).join(replacements[token]);
+        });
+        
+        return result;
     }
     
     // Build a key for existing events using their fields (no notes required)

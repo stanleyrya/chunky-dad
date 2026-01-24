@@ -236,7 +236,7 @@ const scraperConfig = {
         shortName: { value: "GOLDI-LOXX" },
         shorterName: { value: "GLX" },
         instagram: { value: "https://www.instagram.com/goldiloxx__" },
-        matchKey: { value: "goldiloxx*|*-*-*|*" }
+        matchKey: { value: "goldiloxx*|${year}-${month}-*|*" }
       }
     },
     {
