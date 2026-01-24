@@ -888,7 +888,7 @@
             <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
             <span>Reset</span>
           </button>
-          <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Tell dad (copy link)">
+          <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Tell dad">
             <i class="bi bi-send" aria-hidden="true"></i>
             <span>Tell Dad</span>
           </button>
@@ -1260,6 +1260,7 @@
         '-1': 'Last'
       };
       const BAR_DATA_PATH = '../data/bars';
+      const DAD_EMAIL = 'info@chunky.dad';
 
       const dom = {};
       let state;
@@ -1800,7 +1801,7 @@
         }
         if (dom.copyShareButton) {
           dom.copyShareButton.addEventListener('click', () => {
-            copyToClipboard(getShareUrl(), dom.copyShareButton);
+            openTellDadEmail(dom.copyShareButton);
           });
         }
         if (dom.addToCalendarButton) {
@@ -2656,6 +2657,28 @@
         } catch (error) {
           return window.location.href;
         }
+      }
+
+      function buildTellDadMailto() {
+        const shareUrl = getShareUrl();
+        const eventName = (state.name || '').trim();
+        const cityLabel = getCityDisplayName(state.city);
+        const subjectParts = ['Event Builder'];
+        if (eventName) subjectParts.push(eventName);
+        if (cityLabel) subjectParts.push(cityLabel);
+        const subject = subjectParts.join(' - ');
+        const bodyLines = [
+          'Hey Dad, here is the event link:',
+          shareUrl
+        ];
+        return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+      }
+
+      function openTellDadEmail(button) {
+        const mailtoUrl = buildTellDadMailto();
+        if (!mailtoUrl) return;
+        window.location.href = mailtoUrl;
+        showTemporaryState(button, 'Email ready!');
       }
 
       function refreshUi() {
