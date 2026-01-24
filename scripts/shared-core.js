@@ -2361,7 +2361,7 @@ class SharedCore {
             const fields = this.parseNotesIntoFields(event.notes || '');
             const computedKey = this.buildComputedKeyForExistingEvent(event, fields, targetSource, targetKeyFormat);
             return { event, fields, computedKey };
-        }));
+        });
         
         // First pass: exact match on key or matchKey (from notes)
         for (const { event, fields } of parsedEvents) {
