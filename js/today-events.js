@@ -192,7 +192,7 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
     const meta = document.createElement('div');
     meta.className = 'event-meta';
 
-    // Use inherited CalendarCore methods for consistent three-badge system
+    // Use inherited CalendarCore methods for consistent event badges
     const timeDisplay = document.createElement('div');
     timeDisplay.className = 'event-day';
     timeDisplay.textContent = this.getEnhancedDayTimeDisplay(ev);

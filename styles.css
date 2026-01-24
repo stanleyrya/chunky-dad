@@ -2164,18 +2164,6 @@ body.index-page main {
     display: inline-block;
 }
 
-.not-checked-badge {
-    background: var(--solid-warning, #ff9800);
-    color: var(--text-inverse);
-    padding: 0.3rem 0.8rem;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    display: inline-block;
-    margin-left: 0.5rem;
-    cursor: help;
-}
-
 .distance-badge {
     background: var(--primary-color, #4285f4);
     color: var(--text-inverse);

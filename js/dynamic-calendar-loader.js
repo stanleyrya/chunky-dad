@@ -1856,7 +1856,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Get current calendar period bounds for contextual date display
         const periodBounds = this.getCurrentPeriodBounds();
         
-        // New three-badge system
+        // Event badges
         const formatDayTime = (event) => {
             return this.getEnhancedDayTimeDisplay(event, this.currentView, periodBounds);
         };
@@ -1869,9 +1869,6 @@ class DynamicCalendarLoader extends CalendarCore {
         const dateBadge = dateBadgeContent ? 
             `<span class="date-badge">${dateBadgeContent}</span>` : '';
         
-        const notCheckedBadge = event.notChecked ? 
-            `<span class="not-checked-badge" title="This event has not been verified yet">⚠️ Unverified</span>` : '';
-
         // Add distance badge if location features are enabled and distance is available
         const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ? 
             `<span class="distance-badge" title="Distance from your location"><i class="bi bi-geo-alt"></i> ${event.distanceFromUser} mi</span>` : '';
@@ -1884,7 +1881,6 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="event-day">${formatDayTime(event)}</div>
                         ${recurringBadge}
                         ${dateBadge}
-                        ${notCheckedBadge}
                         ${distanceBadge}
                     </div>
                 </div>
@@ -2060,12 +2056,6 @@ class DynamicCalendarLoader extends CalendarCore {
             
             if (!event.startDate) {
                 logger.debug('CALENDAR', `🔍 FILTER: Event has no startDate: ${event.name}`);
-                return false;
-            }
-            
-            // Filter out events marked as notChecked if configured to hide them
-            if (event.notChecked && this.config?.hideUncheckedEvents) {
-                logger.debug('CALENDAR', `Filtering out unchecked event: ${event.name}`);
                 return false;
             }
             
@@ -3989,7 +3979,6 @@ class DynamicCalendarLoader extends CalendarCore {
             recurrence: testEventData.recurrence || null,
             coordinates: testEventData.coordinates || null,
             eventType: testEventData.eventType || null,
-            notChecked: testEventData.notChecked !== undefined ? Boolean(testEventData.notChecked) : true,
             source: testEventData.source || 'Event Generator',
             slug,
             isTestEvent: true
