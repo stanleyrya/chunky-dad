@@ -30,12 +30,18 @@
       box-sizing: border-box;
     }
 
+    html {
+      overflow-x: hidden;
+    }
+
     body {
       margin: 0;
+      padding: 0;
       font-family: 'Poppins', sans-serif;
       background: radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%);
       color: var(--text-primary);
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
     .page-wrapper {
@@ -48,76 +54,48 @@
     }
 
     .tool-header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 30;
-      background: rgba(12, 16, 26, 0.96);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
-      backdrop-filter: blur(16px);
+      background: var(--solid-primary);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
     }
 
-    .tool-header-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 0.55rem;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0.65rem 1.25rem 0.75rem;
+    .tool-header nav {
       width: 100%;
     }
 
-    .tool-header-top {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+    .tool-nav {
+      gap: 0.6rem 1rem;
+      flex-wrap: wrap;
+      height: auto;
+      padding: 0.7rem 1rem 0.8rem;
     }
 
-    .tool-logo {
+    .tool-nav .logo h1 {
+      font-size: 1.45rem;
+      line-height: 1.15;
+    }
+
+    .tool-brand-text {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      text-decoration: none;
-      color: var(--text-primary);
-      font-weight: 600;
-      font-size: 0.95rem;
-      letter-spacing: 0.02em;
-    }
-
-    .tool-logo img {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 162, 74, 0.2);
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
-    }
-
-    .tool-logo span {
-      display: inline-flex;
-      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
     }
 
     .tool-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 0.6rem;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: flex-end;
+      margin-left: auto;
     }
 
     .tool-actions .action-button {
-      font-size: 0.75rem;
-      padding: 0.35rem 0.6rem;
-      min-height: 30px;
-    }
-
-    .tool-title {
-      font-size: 1.45rem;
-      line-height: 1.15;
-      margin: 0;
-      color: var(--text-primary);
+      font-size: 0.8rem;
+      padding: 0.45rem 0.75rem;
+      min-height: 34px;
+      white-space: nowrap;
     }
 
     .layout {
@@ -155,12 +133,18 @@
       color: var(--text-muted);
     }
 
+    #event-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
     details.form-section {
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 0.6rem 0.75rem;
       background: rgba(10, 13, 22, 0.7);
-      margin-bottom: 0.75rem;
+      margin-bottom: 0;
       transition: box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     }
 
@@ -197,7 +181,14 @@
     }
 
     .section-body {
-      margin-top: 0.6rem;
+      display: grid;
+      gap: 0.85rem;
+      margin-top: 0.55rem;
+    }
+
+    .section-body .field-grid,
+    .section-body .field-row {
+      margin-bottom: 0;
     }
 
     .field-grid,
@@ -282,6 +273,7 @@
 
     .input-with-action input {
       flex: 1 1 auto;
+      min-width: 0;
     }
 
     .field-actions {
@@ -312,7 +304,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.25rem 0.7rem;
-      margin: 0.3rem 0 0.65rem;
+      margin: 0;
       font-size: 0.74rem;
       color: var(--text-muted);
     }
@@ -726,8 +718,13 @@
       align-items: center;
       justify-content: space-between;
       gap: 0.6rem;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0;
       flex-wrap: wrap;
+    }
+
+    .recurrence-builder {
+      display: grid;
+      gap: 0.65rem;
     }
 
     .toggle-buttons {
@@ -785,7 +782,7 @@
     }
 
     .recurrence-builder .field-row:last-of-type {
-      margin-bottom: 0.5rem;
+      margin-bottom: 0;
     }
 
     #recurrence-monthly .field-row {
@@ -808,40 +805,61 @@
 
     @media (max-width: 768px) {
       :root {
-        --sticky-header-offset: 5.1rem;
+        --sticky-header-offset: 6.2rem;
       }
 
-      .tool-header-inner {
-        padding: 0.55rem 1rem 0.65rem;
-        gap: 0.45rem;
+      input[type="text"],
+      input[type="url"],
+      input[type="datetime-local"],
+      input[type="number"],
+      input[type="date"],
+      select,
+      textarea {
+        font-size: 16px;
       }
 
-      .tool-logo img {
-        width: 30px;
-        height: 30px;
+      .tool-nav {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.55rem;
+        padding: 0.6rem 1rem 0.7rem;
       }
 
-      .tool-title {
+      .tool-nav .logo h1 {
         font-size: 1.2rem;
       }
 
       .tool-actions {
-        gap: 0.4rem;
-      }
-
-      .tool-actions .action-button span {
-        display: none;
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
       }
 
       .tool-actions .action-button {
         justify-content: center;
-        min-height: 28px;
-        padding: 0.35rem 0.5rem;
+        width: 100%;
+        min-height: 36px;
+        padding: 0.45rem 0.5rem;
         font-size: 0.75rem;
       }
 
       .page-wrapper {
         padding: calc(1.6rem + var(--sticky-header-offset)) 1rem 2.6rem;
+      }
+
+      .live-preview {
+        margin-left: -1rem;
+        margin-right: -1rem;
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+      }
+
+      .live-preview .calendar-preview-card {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
       }
 
 
@@ -880,31 +898,37 @@
 </head>
 <body>
   <header class="tool-header">
-    <div class="tool-header-inner">
-      <div class="tool-header-top">
-        <a class="tool-logo" href="../index.html" aria-label="chunky.dad home">
-          <img src="../favicons/favicon-96x96.png"
-               srcset="../favicons/favicon-96x96.png 1x, ../favicons/favicon-192x192.png 2x, ../favicons/favicon-256x256.png 3x"
-               alt="chunky.dad logo">
-          <span>chunky.dad</span>
-        </a>
-        <h1 class="tool-title">Event Builder</h1>
+    <nav>
+      <div class="nav-container tool-nav">
+        <div class="logo">
+          <h1>
+            <a href="../index.html" aria-label="chunky.dad home">
+              <img src="../favicons/favicon-96x96.png"
+                   srcset="../favicons/favicon-96x96.png 1x, ../favicons/favicon-192x192.png 2x, ../favicons/favicon-256x256.png 3x"
+                   alt="chunky.dad logo" class="logo-img">
+              <span class="tool-brand-text">
+                <span class="tool-brand-name">chunky.dad</span>
+                <span class="tool-brand-page">/ Event Builder</span>
+              </span>
+            </a>
+          </h1>
+        </div>
+        <div class="tool-actions">
+          <button type="button" class="ghost-button action-button" id="reset-form" aria-label="Reset form">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+            <span>Reset</span>
+          </button>
+          <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Tell dad">
+            <i class="bi bi-send" aria-hidden="true"></i>
+            <span>Tell Dad</span>
+          </button>
+          <button type="button" class="primary-button action-button" id="add-to-calendar" aria-label="Add to calendar">
+            <i class="bi bi-calendar-plus" aria-hidden="true"></i>
+            <span>Add</span>
+          </button>
+        </div>
       </div>
-      <div class="tool-actions">
-        <button type="button" class="ghost-button action-button" id="reset-form" aria-label="Reset to defaults">
-          <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-          <span>Reset</span>
-        </button>
-        <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Copy shareable link">
-          <i class="bi bi-clipboard" aria-hidden="true"></i>
-          <span>Copy link</span>
-        </button>
-        <button type="button" class="primary-button action-button" id="add-to-calendar" aria-label="Add to calendar">
-          <i class="bi bi-calendar-plus" aria-hidden="true"></i>
-          <span>Add to calendar</span>
-        </button>
-      </div>
-    </div>
+    </nav>
   </header>
 
   <div class="page-wrapper">
@@ -1266,6 +1290,7 @@
         '-1': 'Last'
       };
       const BAR_DATA_PATH = '../data/bars';
+      const DAD_EMAIL = 'info@chunky.dad';
 
       const dom = {};
       let state;
@@ -1806,7 +1831,7 @@
         }
         if (dom.copyShareButton) {
           dom.copyShareButton.addEventListener('click', () => {
-            copyToClipboard(getShareUrl(), dom.copyShareButton);
+            openTellDadEmail(dom.copyShareButton);
           });
         }
         if (dom.addToCalendarButton) {
@@ -2662,6 +2687,28 @@
         } catch (error) {
           return window.location.href;
         }
+      }
+
+      function buildTellDadMailto() {
+        const shareUrl = getShareUrl();
+        const eventName = (state.name || '').trim();
+        const cityLabel = getCityDisplayName(state.city);
+        const subjectParts = ['Event Builder'];
+        if (eventName) subjectParts.push(eventName);
+        if (cityLabel) subjectParts.push(cityLabel);
+        const subject = subjectParts.join(' - ');
+        const bodyLines = [
+          'Hey Dad, here is the event link:',
+          shareUrl
+        ];
+        return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+      }
+
+      function openTellDadEmail(button) {
+        const mailtoUrl = buildTellDadMailto();
+        if (!mailtoUrl) return;
+        window.location.href = mailtoUrl;
+        showTemporaryState(button, 'Email ready!');
       }
 
       function refreshUi() {
