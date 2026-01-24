@@ -2139,25 +2139,28 @@ class SharedCore {
             return { action: 'new', reason: 'No existing events found' };
         }
         
-        // Check for key-based merging first
-        const keyBasedMatch = this.findEventByKey(existingEventsData, event.key);
+        // Check for key-based merging first (exact or wildcard)
+        const keyMatch = this.findEventByKey(existingEventsData, event.key);
         
-        if (keyBasedMatch) {
-            const existingFields = this.parseNotesIntoFields(keyBasedMatch.notes || '');
-            const existingKey = existingFields.key || null;
-            if (existingKey === event.key) {
+        if (keyMatch) {
+            const existingEvent = keyMatch.event;
+            const matchedKey = keyMatch.matchedKey || null;
+            
+            if (keyMatch.matchType === 'exact') {
                 return {
                     action: 'merge',
                     reason: 'Key match found',
-                    existingEvent: keyBasedMatch,
-                    existingKey: existingKey
+                    existingEvent: existingEvent,
+                    existingKey: matchedKey
                 };
-            } else if (existingKey && existingKey !== event.key) {
+            }
+            
+            if (keyMatch.matchType === 'wildcard') {
                 return {
-                    action: 'conflict',
-                    reason: 'Key conflict detected',
-                    existingEvent: keyBasedMatch,
-                    existingKey: existingKey
+                    action: 'merge',
+                    reason: 'Wildcard key match found',
+                    existingEvent: existingEvent,
+                    existingKey: matchedKey
                 };
             }
         }
@@ -2237,29 +2240,38 @@ class SharedCore {
     }
     
     // Find event by key in existing events (pure logic, no calendar APIs)
-    // First tries exact match, then tries wildcard pattern matching
+    // First tries exact match (key or matchKey), then wildcard pattern matching
     findEventByKey(existingEvents, targetKey) {
         if (!targetKey) return null;
         
-        // First pass: exact match
-        for (const event of existingEvents) {
-            const fields = this.parseNotesIntoFields(event.notes || '');
+        const parsedEvents = existingEvents.map(event => ({
+            event,
+            fields: this.parseNotesIntoFields(event.notes || '')
+        }));
+        
+        // First pass: exact match on key or matchKey
+        for (const { event, fields } of parsedEvents) {
             const eventKey = fields.key || null;
+            const matchKey = fields.matchKey || null;
             if (eventKey === targetKey) {
-                return event;
+                return { event, matchedKey: eventKey, matchType: 'exact' };
+            }
+            if (matchKey === targetKey) {
+                return { event, matchedKey: matchKey, matchType: 'exact' };
             }
         }
         
-        // Second pass: wildcard pattern matching
-        // Look for existing events that have wildcard patterns that match the target key
-        for (const event of existingEvents) {
-            const fields = this.parseNotesIntoFields(event.notes || '');
+        // Second pass: wildcard pattern matching on key or matchKey
+        for (const { event, fields } of parsedEvents) {
             const eventKey = fields.key || null;
-            if (eventKey && eventKey.includes('*')) {
-                // This existing event has a wildcard pattern, check if it matches our target
-                if (this.matchesKeyPattern(eventKey, targetKey)) {
-                    return event;
-                }
+            const matchKey = fields.matchKey || null;
+            
+            if (eventKey && eventKey.includes('*') && this.matchesKeyPattern(eventKey, targetKey)) {
+                return { event, matchedKey: eventKey, matchType: 'wildcard' };
+            }
+            
+            if (matchKey && matchKey.includes('*') && this.matchesKeyPattern(matchKey, targetKey)) {
+                return { event, matchedKey: matchKey, matchType: 'wildcard' };
             }
         }
         

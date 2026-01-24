@@ -362,10 +362,16 @@ class ScriptableAdapter {
             const endDate = event.endDate;
             
             // Expand search range for conflict detection
+            const searchRangeDays = Number(event._parserConfig?.calendarSearchRangeDays || 0);
             const searchStart = new Date(startDate);
             searchStart.setHours(0, 0, 0, 0);
             const searchEnd = new Date(endDate);
             searchEnd.setHours(23, 59, 59, 999);
+            
+            if (Number.isFinite(searchRangeDays) && searchRangeDays > 0) {
+                searchStart.setDate(searchStart.getDate() - searchRangeDays);
+                searchEnd.setDate(searchEnd.getDate() + searchRangeDays);
+            }
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
             return existingEvents;

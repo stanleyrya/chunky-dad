@@ -209,6 +209,7 @@ const scraperConfig = {
       alwaysBear: true,        // Goldiloxx is a bear party
       urlDiscoveryDepth: 1,    // Follow API search results to event detail endpoints
       dryRun: false,           // Override global dryRun if needed
+      calendarSearchRangeDays: 40, // Look +/- days for wildcard key matches
       
       // Field priorities for merging data from different sources
       fieldPriorities: {
@@ -226,14 +227,16 @@ const scraperConfig = {
         gmaps: { priority: ["redeyetickets"], merge: "clobber" },
         image: { priority: ["redeyetickets"], merge: "clobber" },
         cover: { priority: ["redeyetickets"], merge: "clobber" },
-        ticketUrl: { priority: ["redeyetickets"], merge: "clobber" }
+        ticketUrl: { priority: ["redeyetickets"], merge: "clobber" },
+        matchKey: { priority: ["static"], merge: "upsert" }
       },
       
       // Static metadata to add to all Goldiloxx events
       metadata: {
         shortName: { value: "GOLDI-LOXX" },
         shorterName: { value: "GLX" },
-        instagram: { value: "https://www.instagram.com/goldiloxx__" }
+        instagram: { value: "https://www.instagram.com/goldiloxx__" },
+        matchKey: { value: "goldiloxx*|*-*-*|*|redeyetickets" }
       }
     },
     {
