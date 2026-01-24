@@ -898,6 +898,11 @@
                   <input type="text" id="event-coordinates" autocomplete="off" placeholder="40.7497, -73.9943">
                   <small class="field-hint" data-default="Use latitude, longitude from Google Maps.">Use latitude, longitude from Google Maps.</small>
                 </div>
+                <div class="field-group">
+                  <label for="event-gmaps">Google Maps</label>
+                  <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
+                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
+                </div>
               </div>
             </div>
           </details>
@@ -1065,14 +1070,6 @@
                   <div class="input-with-action">
                     <input type="text" id="event-facebook" placeholder="facebook.com/bearracuda">
                     <button type="button" class="field-action" data-venue-link="facebook">Copy from venue</button>
-                  </div>
-                  <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
-                </div>
-                <div class="field-group">
-                  <label for="event-gmaps">Google Maps</label>
-                  <div class="input-with-action">
-                    <input type="text" id="event-gmaps" placeholder="https://maps.app.goo.gl/...">
-                    <button type="button" class="field-action" data-venue-link="gmaps">Copy from venue</button>
                   </div>
                   <small class="field-hint" data-default="Paste a link.">Paste a link.</small>
                 </div>
@@ -1902,8 +1899,6 @@
             return { input: dom.instagramInput, stateKey: 'instagram', linkType: 'instagram' };
           case 'facebook':
             return { input: dom.facebookInput, stateKey: 'facebook', linkType: 'facebook' };
-          case 'gmaps':
-            return { input: dom.gmapsInput, stateKey: 'gmaps', linkType: 'gmaps' };
           default:
             return null;
         }
@@ -1918,8 +1913,6 @@
             return bar.instagram;
           case 'facebook':
             return bar.facebook;
-          case 'gmaps':
-            return bar.googleMaps || bar.gmaps;
           default:
             return '';
         }
