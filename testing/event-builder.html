@@ -170,6 +170,9 @@
       border-radius: 12px;
       padding: 0.6rem 0.75rem;
       background: rgba(10, 13, 22, 0.7);
+      display: block;
+      align-self: stretch;
+      min-width: 100%;
       width: 100%;
       margin-bottom: 0;
       transition: box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
@@ -746,6 +749,7 @@
 
     .live-preview {
       margin-top: 0;
+      overflow-anchor: none;
     }
 
     .live-preview details {
@@ -762,7 +766,7 @@
     }
 
     .live-preview summary {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
     }
 
     .live-preview .calendar-preview-card {
@@ -1421,10 +1425,10 @@
 
     <section class="panel live-preview">
       <details id="live-preview" class="form-section">
-        <summary>Live calendar preview (optional)</summary>
+        <summary>Live Website Preview</summary>
         <div class="calendar-preview-card">
           <div class="preview-header">
-            <h2>Calendar Preview</h2>
+            <h2>Website Preview</h2>
             <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
           </div>
           <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=nyc"></iframe>
@@ -1855,6 +1859,9 @@
               event.stopPropagation();
               handlePasteAction(button);
             });
+            button.addEventListener('contextmenu', event => {
+              event.preventDefault();
+            });
           });
         }
         if (dom.venueInput) {
@@ -2242,6 +2249,10 @@
         if (!targetId) return;
         const input = document.getElementById(targetId);
         if (!input) return;
+        const wasFocused = document.activeElement === input;
+        if (wasFocused) {
+          input.blur();
+        }
         if (!navigator.clipboard || !navigator.clipboard.readText) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
           return;
