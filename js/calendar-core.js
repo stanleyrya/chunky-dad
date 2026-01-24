@@ -829,7 +829,7 @@ class CalendarCore {
         return baseDisplay;
     }
 
-    // Get recurring badge content for the new three-badge system
+    // Get recurring badge content for the event badge system
     getRecurringBadgeContent(event) {
         const { recurring, eventType, recurrence, startDate } = event;
         
@@ -848,7 +848,7 @@ class CalendarCore {
         return recurrenceDesc;
     }
 
-    // Get date badge content for the new three-badge system
+    // Get date badge content for the event badge system
     getDateBadgeContent(event, calendarPeriod = null) {
         const { recurring, startDate } = event;
         
