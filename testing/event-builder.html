@@ -30,6 +30,10 @@
       box-sizing: border-box;
     }
 
+    html {
+      overflow-x: hidden;
+    }
+
     body {
       margin: 0;
       padding: 0;
@@ -37,6 +41,7 @@
       background: radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%);
       color: var(--text-primary);
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
     .page-wrapper {
@@ -268,6 +273,7 @@
 
     .input-with-action input {
       flex: 1 1 auto;
+      min-width: 0;
     }
 
     .field-actions {
@@ -800,6 +806,16 @@
     @media (max-width: 768px) {
       :root {
         --sticky-header-offset: 6.2rem;
+      }
+
+      input[type="text"],
+      input[type="url"],
+      input[type="datetime-local"],
+      input[type="number"],
+      input[type="date"],
+      select,
+      textarea {
+        font-size: 16px;
       }
 
       .tool-nav {
