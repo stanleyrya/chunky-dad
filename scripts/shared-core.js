@@ -520,9 +520,9 @@ class SharedCore {
             keyFormat = event._parserConfig.keyTemplate;
         }
         
-        // Default format is the traditional pipe-separated format
+        // Default format is the pipe-separated format (no source segment)
         if (!keyFormat) {
-            keyFormat = '${normalizedTitle}|${date}|${venue}|${source}';
+            keyFormat = '${normalizedTitle}|${date}|${venue}';
         }
         
         const key = this.generateKeyFromFormat(event, keyFormat);
@@ -2240,7 +2240,7 @@ class SharedCore {
     }
     
     // Build a key for existing events using their fields (no notes required)
-    // Uses the default key format: normalizedTitle|date|venue|source
+    // Uses the default key format: normalizedTitle|date|venue
     buildDefaultEventKey(event) {
         if (!event) return null;
         
@@ -2255,15 +2255,13 @@ class SharedCore {
         
         const date = this.normalizeEventDate(event.startDate);
         const venue = String(event.bar || '').toLowerCase().trim();
-        const source = String(event.source || '').toLowerCase().trim();
-        
         if (!normalizedTitle || !date) return null;
         
-        return `${normalizedTitle}|${date}|${venue}|${source}`.toLowerCase().trim();
+        return `${normalizedTitle}|${date}|${venue}`.toLowerCase().trim();
     }
     
     // Build a best-effort key for existing calendar events using their fields
-    buildComputedKeyForExistingEvent(existingEvent, fields, targetSource = '') {
+    buildComputedKeyForExistingEvent(existingEvent, fields, targetSource = '', keyFormat = null) {
         if (!existingEvent || !existingEvent.title || !existingEvent.startDate) {
             return null;
         }
@@ -2283,14 +2281,22 @@ class SharedCore {
         }
         
         const bar = fields.bar || fields.venue || fields.location || existingEvent.location || '';
+        const address = fields.address || '';
+        const city = fields.city || existingEvent.city || '';
         
         const computedEvent = {
             title: existingEvent.title,
             originalTitle: existingEvent.originalTitle || existingEvent.title,
             startDate: existingEvent.startDate,
             bar: bar,
+            address: address,
+            city: city,
             source: source
         };
+        
+        if (keyFormat) {
+            return this.generateKeyFromFormat(computedEvent, keyFormat);
+        }
         
         return this.buildDefaultEventKey(computedEvent);
     }
@@ -2301,6 +2307,7 @@ class SharedCore {
         let targetKey = null;
         let targetMatchKey = null;
         let targetSource = '';
+        let targetKeyFormat = null;
         
         if (typeof targetEventOrKey === 'string') {
             targetKey = targetEventOrKey;
@@ -2308,6 +2315,7 @@ class SharedCore {
             targetKey = targetEventOrKey.key || null;
             targetMatchKey = targetEventOrKey.matchKey || null;
             targetSource = targetEventOrKey.source || '';
+            targetKeyFormat = targetEventOrKey._parserConfig?.keyTemplate || null;
             
             if (!targetSource && targetEventOrKey.url) {
                 const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
@@ -2321,7 +2329,7 @@ class SharedCore {
         
         const parsedEvents = existingEvents.map(event => {
             const fields = this.parseNotesIntoFields(event.notes || '');
-            const computedKey = this.buildComputedKeyForExistingEvent(event, fields, targetSource);
+            const computedKey = this.buildComputedKeyForExistingEvent(event, fields, targetSource, targetKeyFormat);
             return { event, fields, computedKey };
         }));
         
