@@ -691,10 +691,10 @@
 
     .calendar-preview-card {
       border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: #101525;
       overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      background: transparent;
+      border: none;
+      box-shadow: none;
     }
 
     #calendar-preview {
@@ -1004,7 +1004,12 @@
       }
 
       .page-wrapper {
-        padding: calc(1.6rem + var(--sticky-header-offset)) 1rem 2.6rem;
+        padding: calc(1.6rem + var(--sticky-header-offset)) 0 2.6rem;
+      }
+
+      .panel {
+        margin-left: 0;
+        margin-right: 0;
       }
 
       .form-panel .panel-header {
@@ -2233,9 +2238,6 @@
         if (!input) return;
         const focusInput = () => {
           input.focus();
-          if (typeof input.select === 'function') {
-            input.select();
-          }
         };
         if (!navigator.clipboard || !navigator.clipboard.readText) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
@@ -3350,7 +3352,8 @@
           'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action',
           '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
           '_original', '_mergeInfo', '_changes', '_mergeDiff',
-          'originalTitle', 'name', 'links', 'durationMinutes'
+          'originalTitle', 'name', 'links', 'durationMinutes',
+          'time', 'day', 'recurring', 'recurrence', 'url'
         ]);
         const notes = [];
         Object.keys(event).forEach(fieldName => {
