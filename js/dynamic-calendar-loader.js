@@ -2059,12 +2059,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 return false;
             }
             
-            // Filter out events marked as notChecked if configured to hide them
-            if (event.notChecked && this.config?.hideUncheckedEvents) {
-                logger.debug('CALENDAR', `Filtering out unchecked event: ${event.name}`);
-                return false;
-            }
-            
             // For all events (including expanded recurring events), check if they fall within the period
             const isInPeriod = this.isEventInPeriod(event.startDate, start, end);
             logger.debug('CALENDAR', `🔍 FILTER: Event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
@@ -3985,7 +3979,6 @@ class DynamicCalendarLoader extends CalendarCore {
             recurrence: testEventData.recurrence || null,
             coordinates: testEventData.coordinates || null,
             eventType: testEventData.eventType || null,
-            notChecked: testEventData.notChecked !== undefined ? Boolean(testEventData.notChecked) : true,
             source: testEventData.source || 'Event Generator',
             slug,
             isTestEvent: true

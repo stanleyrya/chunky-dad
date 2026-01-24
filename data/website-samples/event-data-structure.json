@@ -18,7 +18,6 @@
       "links",
       "eventType",
       "recurring",
-      "notChecked",
       "source",
       "address"
     ]
@@ -45,7 +44,6 @@
     ],
     "eventType": "special",
     "recurring": false,
-    "notChecked": true,
     "city": "nyc",
     "source": "Furball",
     "address": "554 W 28th St, New York, NY"
@@ -131,8 +129,7 @@
       "dateFormat": "ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ)",
       "timeFormat": "12-hour format with AM/PM (e.g., '9PM', '2:30AM')",
       "cityCode": "Lowercase, no spaces (e.g., 'nyc', 'la', 'sf')",
-      "coordinates": "Decimal degrees format with lat/lng properties",
-      "notChecked": "Always true for newly parsed events"
+      "coordinates": "Decimal degrees format with lat/lng properties"
     }
   }
 }
