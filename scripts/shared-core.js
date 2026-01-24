@@ -2140,7 +2140,7 @@ class SharedCore {
         }
         
         // Check for key-based merging first (exact or wildcard)
-        const keyMatch = this.findEventByKey(existingEventsData, event.key);
+        const keyMatch = this.findEventByKey(existingEventsData, event);
         
         if (keyMatch) {
             const existingEvent = keyMatch.event;
@@ -2239,39 +2239,146 @@ class SharedCore {
         }
     }
     
-    // Find event by key in existing events (pure logic, no calendar APIs)
-    // First tries exact match (key or matchKey), then wildcard pattern matching
-    findEventByKey(existingEvents, targetKey) {
-        if (!targetKey) return null;
+    // Build a key for existing events using their fields (no notes required)
+    // Uses the default key format: normalizedTitle|date|venue|source
+    buildDefaultEventKey(event) {
+        if (!event) return null;
         
-        const parsedEvents = existingEvents.map(event => ({
-            event,
-            fields: this.parseNotesIntoFields(event.notes || '')
+        let normalizedTitle = String(event.originalTitle || event.title || '').toLowerCase().trim();
+        
+        // Apply the same normalization as generateKeyFromFormat for ${normalizedTitle}
+        normalizedTitle = normalizedTitle
+            .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
+            .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
+            .replace(/[\s\-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        
+        const date = this.normalizeEventDate(event.startDate);
+        const venue = String(event.bar || '').toLowerCase().trim();
+        const source = String(event.source || '').toLowerCase().trim();
+        
+        if (!normalizedTitle || !date) return null;
+        
+        return `${normalizedTitle}|${date}|${venue}|${source}`.toLowerCase().trim();
+    }
+    
+    // Build a best-effort key for existing calendar events using their fields
+    buildComputedKeyForExistingEvent(existingEvent, fields, targetSource = '') {
+        if (!existingEvent || !existingEvent.title || !existingEvent.startDate) {
+            return null;
+        }
+        
+        const urlCandidate = fields.url || fields.ticketUrl || existingEvent.url || '';
+        let source = fields.source || existingEvent.source || '';
+        
+        if (!source && urlCandidate) {
+            const detectedSource = this.detectParserFromUrl(urlCandidate);
+            if (detectedSource && detectedSource !== 'generic') {
+                source = detectedSource;
+            }
+        }
+        
+        if (!source && targetSource) {
+            source = targetSource;
+        }
+        
+        const bar = fields.bar || fields.venue || fields.location || existingEvent.location || '';
+        
+        const computedEvent = {
+            title: existingEvent.title,
+            originalTitle: existingEvent.originalTitle || existingEvent.title,
+            startDate: existingEvent.startDate,
+            bar: bar,
+            source: source
+        };
+        
+        return this.buildDefaultEventKey(computedEvent);
+    }
+    
+    // Find event by key in existing events (pure logic, no calendar APIs)
+    // First tries exact match (key/matchKey), then computed keys, then wildcard matching
+    findEventByKey(existingEvents, targetEventOrKey) {
+        let targetKey = null;
+        let targetMatchKey = null;
+        let targetSource = '';
+        
+        if (typeof targetEventOrKey === 'string') {
+            targetKey = targetEventOrKey;
+        } else if (targetEventOrKey && typeof targetEventOrKey === 'object') {
+            targetKey = targetEventOrKey.key || null;
+            targetMatchKey = targetEventOrKey.matchKey || null;
+            targetSource = targetEventOrKey.source || '';
+            
+            if (!targetSource && targetEventOrKey.url) {
+                const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
+                if (detectedSource && detectedSource !== 'generic') {
+                    targetSource = detectedSource;
+                }
+            }
+        }
+        
+        if (!targetKey && !targetMatchKey) return null;
+        
+        const parsedEvents = existingEvents.map(event => {
+            const fields = this.parseNotesIntoFields(event.notes || '');
+            const computedKey = this.buildComputedKeyForExistingEvent(event, fields, targetSource);
+            return { event, fields, computedKey };
         }));
         
-        // First pass: exact match on key or matchKey
+        // First pass: exact match on key or matchKey (from notes)
         for (const { event, fields } of parsedEvents) {
             const eventKey = fields.key || null;
             const matchKey = fields.matchKey || null;
-            if (eventKey === targetKey) {
+            if (targetKey && eventKey === targetKey) {
                 return { event, matchedKey: eventKey, matchType: 'exact' };
             }
-            if (matchKey === targetKey) {
+            if (targetKey && matchKey === targetKey) {
                 return { event, matchedKey: matchKey, matchType: 'exact' };
             }
         }
         
-        // Second pass: wildcard pattern matching on key or matchKey
+        // Second pass: exact match using computed key
+        for (const { event, computedKey } of parsedEvents) {
+            if (targetKey && computedKey && computedKey === targetKey) {
+                return { event, matchedKey: computedKey, matchType: 'exact' };
+            }
+        }
+        
+        // Third pass: exact match using target matchKey when it's not a wildcard
+        if (targetMatchKey && !targetMatchKey.includes('*')) {
+            for (const { event, fields, computedKey } of parsedEvents) {
+                const eventKey = fields.key || null;
+                const matchKey = fields.matchKey || null;
+                if (eventKey === targetMatchKey || matchKey === targetMatchKey || computedKey === targetMatchKey) {
+                    return { event, matchedKey: eventKey || matchKey || computedKey, matchType: 'exact' };
+                }
+            }
+        }
+        
+        // Fourth pass: wildcard pattern matching on existing key or matchKey
         for (const { event, fields } of parsedEvents) {
             const eventKey = fields.key || null;
             const matchKey = fields.matchKey || null;
             
-            if (eventKey && eventKey.includes('*') && this.matchesKeyPattern(eventKey, targetKey)) {
+            if (targetKey && eventKey && eventKey.includes('*') && this.matchesKeyPattern(eventKey, targetKey)) {
                 return { event, matchedKey: eventKey, matchType: 'wildcard' };
             }
             
-            if (matchKey && matchKey.includes('*') && this.matchesKeyPattern(matchKey, targetKey)) {
+            if (targetKey && matchKey && matchKey.includes('*') && this.matchesKeyPattern(matchKey, targetKey)) {
                 return { event, matchedKey: matchKey, matchType: 'wildcard' };
+            }
+        }
+        
+        // Fifth pass: wildcard matching using target matchKey against existing keys or computed key
+        if (targetMatchKey && targetMatchKey.includes('*')) {
+            for (const { event, fields, computedKey } of parsedEvents) {
+                const eventKey = fields.key || null;
+                const matchKey = fields.matchKey || null;
+                const candidates = [eventKey, matchKey, computedKey].filter(Boolean);
+                if (candidates.some(candidate => this.matchesKeyPattern(targetMatchKey, candidate))) {
+                    const matchedKey = candidates.find(candidate => this.matchesKeyPattern(targetMatchKey, candidate));
+                    return { event, matchedKey: matchedKey, matchType: 'wildcard' };
+                }
             }
         }
         
