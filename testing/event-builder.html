@@ -57,6 +57,7 @@
       background: var(--solid-primary);
       border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+      height: auto;
     }
 
     .tool-header nav {
@@ -85,10 +86,26 @@
     .tool-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.6rem;
+      gap: 0.6rem 0.85rem;
       align-items: center;
       justify-content: flex-end;
       margin-left: auto;
+    }
+
+    .tool-page-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.85);
+      white-space: nowrap;
+    }
+
+    .tool-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
     }
 
     .tool-actions .action-button {
@@ -197,6 +214,10 @@
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 0.75rem;
       margin-bottom: 0.75rem;
+    }
+
+    .field-row.time-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .field-group {
@@ -687,7 +708,7 @@
     }
 
     .live-preview {
-      margin-top: 1.5rem;
+      margin-top: 0;
     }
 
     .live-preview details {
@@ -832,11 +853,23 @@
       .tool-actions {
         width: 100%;
         display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+      }
+
+      .tool-page-label {
+        justify-self: end;
+        font-size: 0.75rem;
+      }
+
+      .tool-buttons {
+        width: 100%;
+        display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.5rem;
       }
 
-      .tool-actions .action-button {
+      .tool-buttons .action-button {
         justify-content: center;
         width: 100%;
         min-height: 36px;
@@ -847,21 +880,6 @@
       .page-wrapper {
         padding: calc(1.6rem + var(--sticky-header-offset)) 1rem 2.6rem;
       }
-
-      .live-preview {
-        margin-left: -1rem;
-        margin-right: -1rem;
-        border-left: none;
-        border-right: none;
-        border-radius: 0;
-      }
-
-      .live-preview .calendar-preview-card {
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-      }
-
 
       .form-actions {
         flex-direction: column;
@@ -886,8 +904,17 @@
         gap: 0.65rem;
       }
 
+      .field-row.time-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .panel {
         padding: 1.1rem;
+        margin-left: -1rem;
+        margin-right: -1rem;
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
       }
 
       .preview-toggle summary::after {
@@ -908,24 +935,26 @@
                    alt="chunky.dad logo" class="logo-img">
               <span class="tool-brand-text">
                 <span class="tool-brand-name">chunky.dad</span>
-                <span class="tool-brand-page">/ Event Builder</span>
               </span>
             </a>
           </h1>
         </div>
         <div class="tool-actions">
-          <button type="button" class="ghost-button action-button" id="reset-form" aria-label="Reset form">
-            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-            <span>Reset</span>
-          </button>
-          <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Tell dad">
-            <i class="bi bi-send" aria-hidden="true"></i>
-            <span>Tell Dad</span>
-          </button>
-          <button type="button" class="primary-button action-button" id="add-to-calendar" aria-label="Add to calendar">
-            <i class="bi bi-calendar-plus" aria-hidden="true"></i>
-            <span>Add</span>
-          </button>
+          <span class="tool-page-label">Event Builder</span>
+          <div class="tool-buttons">
+            <button type="button" class="ghost-button action-button" id="reset-form" aria-label="Reset form">
+              <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Tell dad">
+              <i class="bi bi-send" aria-hidden="true"></i>
+              <span>Tell Dad</span>
+            </button>
+            <button type="button" class="primary-button action-button" id="add-to-calendar" aria-label="Add to calendar">
+              <i class="bi bi-calendar-plus" aria-hidden="true"></i>
+              <span>Add</span>
+            </button>
+          </div>
         </div>
       </div>
     </nav>
@@ -951,7 +980,7 @@
                   <input type="text" id="event-name" autocomplete="off" placeholder="Bearracuda Chicago">
                 </div>
                 <div class="field-group">
-                  <label for="event-short-name">Card Short Name</label>
+                  <label for="event-short-name">Shorter event name (for display on the calendar, etc.)</label>
                   <input type="text" id="event-short-name" autocomplete="off" placeholder="Bearracuda">
                   <small>For long words, add <code>-</code> to help break them up (MEGA-WOOF). It will not show unless we need two lines. If you want a hyphen all the time, add <code>\-</code> instead. The <code>\</code> will not show.</small>
                 </div>
@@ -1016,7 +1045,7 @@
           <details class="form-section">
             <summary>Time &amp; Recurrence</summary>
             <div class="section-body">
-              <div class="field-row">
+              <div class="field-row time-row">
                 <div class="field-group">
                   <label for="event-start">Start</label>
                   <input type="datetime-local" id="event-start">
