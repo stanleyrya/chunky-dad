@@ -3016,28 +3016,20 @@
         return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(message.body)}`;
       }
 
-      async function openTellDadEmail(button) {
+      function openTellDadEmail(button) {
         const message = buildTellDadMessage();
         if (!message.shareUrl) return;
-        if (navigator.share) {
-          try {
-            await navigator.share({
-              title: message.subject,
-              text: message.body,
-              url: message.shareUrl
-            });
-            showTemporaryState(button, 'Shared!');
-            return;
-          } catch (error) {
-            // Fall back to email/clipboard below.
-          }
-        }
-        copyToClipboard(message.shareUrl, button);
-        showToast('Share link copied. Paste it into your email.', 'info');
+        const fallbackText = `To: ${DAD_EMAIL}\nSubject: ${message.subject}\n\n${message.body}`;
         const mailtoUrl = buildTellDadMailto(message);
         if (mailtoUrl) {
           window.location.href = mailtoUrl;
+          showTemporaryState(button, 'Email ready!');
+          copyToClipboard(fallbackText);
+          showToast('If your mail app stays closed, the email details are copied.', 'info');
+          return;
         }
+        copyToClipboard(fallbackText, button);
+        showToast('Email details copied. Paste into your mail app.', 'warn');
       }
 
       function refreshUi() {
