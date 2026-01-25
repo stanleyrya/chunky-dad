@@ -194,8 +194,8 @@ const scraperCities = {
       "key west"
     ]
   },
-  "puerto-vallarta": {
-    "calendar": "chunky-dad-puerto-vallarta",
+  "pv": {
+    "calendar": "chunky-dad-pv",
     "timezone": "America/Mexico_City",
     "patterns": [
       "puerto vallarta",

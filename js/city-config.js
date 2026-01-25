@@ -279,13 +279,13 @@ const CITY_CONFIG = {
         mapZoom: 10,
         visible: false
     },
-    'puerto-vallarta': {
+    'pv': {
         name: 'Puerto Vallarta',
         emoji: '🏝️',
         tagline: 'Pacific coast bear getaway',
         aliases: ['puerto-vallarta'],
         calendarId: null,
-        calendar: 'chunky-dad-puerto-vallarta',
+        calendar: 'chunky-dad-pv',
         timezone: 'America/Mexico_City',
         patterns: ['puerto vallarta', 'vallarta'],
         coordinates: { lat: 20.6534, lng: -105.2253 },
