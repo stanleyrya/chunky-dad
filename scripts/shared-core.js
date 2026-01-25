@@ -524,14 +524,15 @@ class SharedCore {
             keyFormat = event._parserConfig.keyTemplate;
         }
         
-        // Default format is the pipe-separated format (no source segment)
+        // Default format is pipe-separated with optional source segment
         if (!keyFormat) {
-            keyFormat = '${normalizedTitle}|${date}|${venue}';
+            const baseFormat = '${normalizedTitle}|${date}|${venue}';
+            const baseKey = this.generateKeyFromFormat(event, baseFormat);
+            const sourceValue = String(event.source || '').toLowerCase().trim();
+            return sourceValue ? `${baseKey}|${sourceValue}` : baseKey;
         }
         
-        const key = this.generateKeyFromFormat(event, keyFormat);
-        
-        return key;
+        return this.generateKeyFromFormat(event, keyFormat);
     }
 
     // Generate key from format string using event data
@@ -975,7 +976,6 @@ class SharedCore {
             
             // Keep metadata for display and comparison tables
             city: newEvent.city,
-            key: newEvent.key || mergedObject.key,
             source: newEvent.source,
             _parserConfig: newEvent._parserConfig,
             _fieldPriorities: newEvent._fieldPriorities
@@ -2322,7 +2322,7 @@ class SharedCore {
     }
     
     // Build a key for existing events using their fields (no notes required)
-    // Uses the default key format: normalizedTitle|date|venue
+    // Uses the default key format: normalizedTitle|date|venue(|source)
     buildDefaultEventKey(event) {
         if (!event) return null;
         
@@ -2339,7 +2339,9 @@ class SharedCore {
         const venue = String(event.bar || '').toLowerCase().trim();
         if (!normalizedTitle || !date) return null;
         
-        return `${normalizedTitle}|${date}|${venue}`.toLowerCase().trim();
+        const baseKey = `${normalizedTitle}|${date}|${venue}`.toLowerCase().trim();
+        const sourceValue = String(event.source || '').toLowerCase().trim();
+        return sourceValue ? `${baseKey}|${sourceValue}` : baseKey;
     }
     
     // Build a key using local date components (timezone-aware when available)
@@ -2359,7 +2361,9 @@ class SharedCore {
         const venue = String(event.bar || '').toLowerCase().trim();
         if (!normalizedTitle || !date) return null;
         
-        return `${normalizedTitle}|${date}|${venue}`.toLowerCase().trim();
+        const baseKey = `${normalizedTitle}|${date}|${venue}`.toLowerCase().trim();
+        const sourceValue = String(event.source || '').toLowerCase().trim();
+        return sourceValue ? `${baseKey}|${sourceValue}` : baseKey;
     }
     
     // Build a best-effort key for existing calendar events using their fields
