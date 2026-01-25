@@ -14,7 +14,7 @@ class DadJokesManager {
             "Find where the bears are... and the cubs, otters, and chasers too!",
             "Still looking for the bear 411?"
         ];
-        this.introLine2 = "chunky.dad is your go-to guide for bear friendly events, bars, and more.";
+        this.introLine2 = "chunky.dad is your go-to guide for bear friendly events, bars, and more. No accounts, no apps, and less reliance on big tech.";
 
         this.bearJokes = [
             {
