@@ -32,6 +32,11 @@ class GenericParser {
             'daddy', 'cub', 'otter', 'leather', 'muscle bear', 'bearracuda',
             'furball', 'leather bears', 'bear night', 'bear party'
         ];
+
+        this.urlPatterns = [
+            { regex: 'href="([^"]*(?:event|events|calendar|party|show|listing)[^"]*)"', maxMatches: 25 },
+            { regex: "href='([^']*(?:event|events|calendar|party|show|listing)[^']*)'", maxMatches: 25 }
+        ];
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
@@ -310,7 +315,14 @@ class GenericParser {
             console.log(`🔧 Generic: Extracting additional event URLs`);
             
             // Use configured URL patterns or defaults
-            const patterns = parserConfig.urlPatterns || this.urlPatterns;
+            const patterns = Array.isArray(parserConfig.urlPatterns)
+                ? parserConfig.urlPatterns
+                : this.urlPatterns;
+
+            if (!Array.isArray(patterns) || patterns.length === 0) {
+                console.warn('🔧 Generic: No URL patterns configured for additional URL extraction');
+                return [];
+            }
             
             for (const pattern of patterns) {
                 const regex = new RegExp(pattern.regex, 'gi');

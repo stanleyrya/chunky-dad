@@ -141,13 +141,12 @@ const scraperConfig = {
       name: "Furball",
       enabled: true,
       urls: [
-        "https://www.furball.nyc",
-        "https://www.furball.nyc/upcoming-schedule",
-        "https://linktr.ee/furballnyc"
+        "https://www.furball.nyc"
       ],
       alwaysBear: true,
-      urlDiscoveryDepth: 1,
-      maxAdditionalUrls: 15,
+      urlDiscoveryDepth: 0,
+      maxAdditionalUrls: 0,
+      defaultCity: "nyc",
       dryRun: false,
       fieldPriorities: {
         title: { priority: ["eventbrite", "ticketleap", "furball"], merge: "clobber" },
