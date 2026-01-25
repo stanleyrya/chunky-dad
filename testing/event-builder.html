@@ -1456,7 +1456,6 @@
       const URL_UPDATE_DELAY = 120;
       const EVENT_PUSH_DELAY = 200;
       const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
-      const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
       const DAY_CODE_LABELS = {
         MO: 'Mon',
         TU: 'Tue',
@@ -1485,7 +1484,6 @@
       let sendTimeoutId = null;
       let urlTimeoutId = null;
       let lastPasteActionAt = 0;
-      let hasShownPastePrompt = false;
       let currentCalendarCity = null;
       let barRequestId = 0;
       let currentBars = [];
@@ -2377,10 +2375,6 @@
         if (!navigator.clipboard || !navigator.clipboard.readText) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
           return;
-        }
-        if (IS_IOS && !hasShownPastePrompt) {
-          showToast('iOS will ask to paste. Tap Paste to continue.', 'info', 3000);
-          hasShownPastePrompt = true;
         }
         try {
           const text = await navigator.clipboard.readText();
