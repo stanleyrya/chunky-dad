@@ -79,6 +79,7 @@ class BearEventScraperOrchestrator {
             const furballParserModule = importModule('parsers/furball-parser');
             const linktreeParserModule = importModule('parsers/linktree-parser');
             const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
+            const ticketleapParserModule = importModule('parsers/ticketleap-parser');
             
             // Store modules
             this.modules = {
@@ -91,7 +92,8 @@ class BearEventScraperOrchestrator {
                     chunk: chunkParserModule.ChunkParser,
                     furball: furballParserModule.FurballParser,
                     linktree: linktreeParserModule.LinktreeParser,
-                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser
+                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
+                    ticketleap: ticketleapParserModule.TicketleapParser
                 }
             };
         } catch (error) {
@@ -116,6 +118,7 @@ class BearEventScraperOrchestrator {
             const furballParserModule = require('./parsers/furball-parser');
             const linktreeParserModule = require('./parsers/linktree-parser');
             const redeyeticketsParserModule = require('./parsers/redeyetickets-parser');
+            const ticketleapParserModule = require('./parsers/ticketleap-parser');
             
             // Store modules
             this.modules = {
@@ -128,7 +131,8 @@ class BearEventScraperOrchestrator {
                     chunk: chunkParserModule.ChunkParser,
                     furball: furballParserModule.FurballParser,
                     linktree: linktreeParserModule.LinktreeParser,
-                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser
+                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
+                    ticketleap: ticketleapParserModule.TicketleapParser
                 }
             };
         } catch (error) {
@@ -144,7 +148,7 @@ class BearEventScraperOrchestrator {
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
                 'SharedCore', 'WebAdapter', 
-                'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser', 'LinktreeParser', 'RedEyeTicketsParser'
+                'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser', 'LinktreeParser', 'RedEyeTicketsParser', 'TicketleapParser'
             ];
             
             const missingModules = requiredModules.filter(module => !window[module]);
@@ -164,7 +168,8 @@ class BearEventScraperOrchestrator {
                     chunk: window.ChunkParser,
                     furball: window.FurballParser,
                     linktree: window.LinktreeParser,
-                    redeyetickets: window.RedEyeTicketsParser
+                    redeyetickets: window.RedEyeTicketsParser,
+                    ticketleap: window.TicketleapParser
                 }
             };
         } catch (error) {

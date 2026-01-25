@@ -80,22 +80,11 @@ class LinktreeParser {
         try {
             console.log(`🔗 Linktree: Extracting ticket links from Linktree page`);
             
-            // Look for links with data-testid="LinkClickTriggerLink" that contain ticket-related text
-            const linkPattern = /<a[^>]*href="([^"]+)"[^>]*data-testid="LinkClickTriggerLink"[^>]*>[\s\S]*?<\/a>/g;
-            let match;
-            let matchCount = 0;
-            
-            while ((match = linkPattern.exec(html)) !== null) {
-                const fullLinkHtml = match[0];
-                const url = this.normalizeUrl(match[1], sourceUrl);
-                
-                if (url && this.isTicketLink(fullLinkHtml, url)) {
-                    ticketLinks.push({
-                        url: url,
-                        html: fullLinkHtml,
-                        title: this.extractLinkTitle(fullLinkHtml)
-                    });
-                    console.log(`🔗 Linktree: Found ticket link: ${url} (${this.extractLinkTitle(fullLinkHtml)})`);
+            const links = this.getLinkCandidates(html, sourceUrl);
+            for (const link of links) {
+                if (link.url && this.isTicketLink(link)) {
+                    ticketLinks.push(link);
+                    console.log(`🔗 Linktree: Found ticket link: ${link.url} (${link.title})`);
                 }
             }
             
@@ -106,11 +95,84 @@ class LinktreeParser {
         return ticketLinks;
     }
 
-    // Check if a link is a ticket link - super simple: just look for "ticket" in the text
-    isTicketLink(linkHtml, url) {
+    // Get link candidates from __NEXT_DATA__ or HTML fallback
+    getLinkCandidates(html, sourceUrl) {
+        const nextLinks = this.extractLinksFromNextData(html, sourceUrl);
+        if (nextLinks.length > 0) {
+            return nextLinks;
+        }
+        return this.extractLinksFromHtml(html, sourceUrl);
+    }
+
+    extractLinksFromNextData(html, sourceUrl) {
+        const links = [];
         try {
-            const linkText = this.extractLinkTitle(linkHtml).toLowerCase();
-            return linkText.includes('ticket');
+            const nextDataMatch = html.match(/<script[^>]+id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+            if (!nextDataMatch) {
+                return links;
+            }
+
+            const data = this.safeJsonParse(nextDataMatch[1]);
+            const props = data && data.props ? data.props : {};
+            const pageProps = props.pageProps || {};
+            const linkData = pageProps.links || [];
+            linkData.forEach(link => {
+                const url = this.normalizeUrl(link.url, sourceUrl);
+                if (!url) return;
+                links.push({
+                    url,
+                    title: this.decodeHtml(link.title || 'Untitled Link'),
+                    type: link.type || ''
+                });
+            });
+        } catch (error) {
+            console.warn(`🔗 Linktree: Error parsing __NEXT_DATA__: ${error}`);
+        }
+        return links;
+    }
+
+    extractLinksFromHtml(html, sourceUrl) {
+        const links = [];
+        try {
+            const linkPattern = /<a[^>]*href="([^"]+)"[^>]*data-testid="LinkClickTriggerLink"[^>]*>[\s\S]*?<\/a>/g;
+            let match;
+            while ((match = linkPattern.exec(html)) !== null) {
+                const fullLinkHtml = match[0];
+                const url = this.normalizeUrl(match[1], sourceUrl);
+                if (!url) continue;
+                links.push({
+                    url,
+                    html: fullLinkHtml,
+                    title: this.extractLinkTitle(fullLinkHtml)
+                });
+            }
+        } catch (error) {
+            console.warn(`🔗 Linktree: Error extracting links from HTML: ${error}`);
+        }
+        return links;
+    }
+
+    // Check if a link is a ticket link
+    isTicketLink(link) {
+        try {
+            const url = link.url || '';
+            const linkText = (link.title || '').toLowerCase();
+            const urlLower = url.toLowerCase();
+
+            if (this.isTicketDomain(url)) {
+                return true;
+            }
+
+            if (this.isNonEventDomain(url)) {
+                return false;
+            }
+
+            const ticketKeywords = ['ticket', 'tickets', 'buy', 'purchase', 'checkout', 'rsvp'];
+            if (ticketKeywords.some(keyword => linkText.includes(keyword))) {
+                return true;
+            }
+
+            return urlLower.includes('ticket') || urlLower.includes('event');
         } catch (error) {
             console.warn(`🔗 Linktree: Error checking if link is ticket link: ${error}`);
             return false;
@@ -140,7 +202,7 @@ class LinktreeParser {
                 if (match && match[1]) {
                     const title = match[1].trim();
                     if (title && title.length > 0) {
-                        return title;
+                        return this.decodeHtml(title);
                     }
                 }
             }
@@ -196,19 +258,12 @@ class LinktreeParser {
             console.log(`🔗 Linktree: Extracting additional URLs`);
             
             // Extract all ticket links as additional URLs for processing
-            const ticketLinks = this.extractTicketLinks(html, sourceUrl);
-            ticketLinks.forEach(link => urls.add(link.url));
-            
-            // Also look for other potential event-related links
-            const linkPattern = /<a[^>]*data-testid="LinkClickTriggerLink"[^>]*href="([^"]+)"[^>]*>/gi;
-            let match;
-            
-            while ((match = linkPattern.exec(html)) !== null) {
-                const url = this.normalizeUrl(match[1], sourceUrl);
-                if (url && this.isValidAdditionalUrl(url)) {
-                    urls.add(url);
+            const links = this.getLinkCandidates(html, sourceUrl);
+            links.forEach(link => {
+                if (link.url && this.isValidAdditionalUrl(link.url)) {
+                    urls.add(link.url);
                 }
-            }
+            });
             
             console.log(`🔗 Linktree: Extracted ${urls.size} additional URLs`);
             
@@ -236,7 +291,8 @@ class LinktreeParser {
             const skipDomains = [
                 'instagram.com', 'facebook.com', 'twitter.com', 'tiktok.com',
                 'youtube.com', 'bsky.app', 'pixieset.com', 'linktr.ee',
-                'snapchat.com', 'linkedin.com', 'pinterest.com'
+                'snapchat.com', 'linkedin.com', 'pinterest.com', 'mixcloud.com',
+                'soundcloud.com', 'paypal.me', 'pinktickettravel.com'
             ];
             
             if (skipDomains.some(domain => hostname.includes(domain))) return false;
@@ -283,6 +339,54 @@ class LinktreeParser {
         }
         
         return url;
+    }
+
+    decodeHtml(text) {
+        return String(text || '')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .trim();
+    }
+
+    safeJsonParse(text) {
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    getHostname(url) {
+        if (!url || typeof url !== 'string') return '';
+        const match = url.match(/^(https?:)\/\/([^\/]+)/i);
+        return match ? match[2].toLowerCase() : '';
+    }
+
+    isTicketDomain(url) {
+        const hostname = this.getHostname(url);
+        const ticketDomains = [
+            'eventbrite.com',
+            'ticketleap.events',
+            'ticketweb.com',
+            'tixr.com',
+            'dice.fm',
+            'universe.com'
+        ];
+        return ticketDomains.some(domain => hostname.includes(domain));
+    }
+
+    isNonEventDomain(url) {
+        const hostname = this.getHostname(url);
+        const nonEventDomains = [
+            'instagram.com', 'facebook.com', 'twitter.com', 'tiktok.com',
+            'youtube.com', 'bsky.app', 'pixieset.com', 'linktr.ee',
+            'snapchat.com', 'linkedin.com', 'pinterest.com', 'mixcloud.com',
+            'soundcloud.com', 'paypal.me', 'pinktickettravel.com'
+        ];
+        return nonEventDomains.some(domain => hostname.includes(domain));
     }
 }
 
