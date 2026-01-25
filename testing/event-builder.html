@@ -1456,6 +1456,7 @@
       const URL_UPDATE_DELAY = 120;
       const EVENT_PUSH_DELAY = 200;
       const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
+      const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
       const DAY_CODE_LABELS = {
         MO: 'Mon',
         TU: 'Tue',
@@ -1484,6 +1485,7 @@
       let sendTimeoutId = null;
       let urlTimeoutId = null;
       let lastPasteActionAt = 0;
+      let hasShownPastePrompt = false;
       let currentCalendarCity = null;
       let barRequestId = 0;
       let currentBars = [];
@@ -1955,6 +1957,7 @@
           dom.pasteButtons.forEach(button => {
             const triggerPaste = event => {
               if (event) {
+                event.preventDefault();
                 event.stopPropagation();
               }
               triggerPasteAction(button);
@@ -2374,6 +2377,10 @@
         if (!navigator.clipboard || !navigator.clipboard.readText) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
           return;
+        }
+        if (IS_IOS && !hasShownPastePrompt) {
+          showToast('iOS will ask to paste. Tap Paste to continue.', 'info', 3000);
+          hasShownPastePrompt = true;
         }
         try {
           const text = await navigator.clipboard.readText();
@@ -3365,6 +3372,25 @@
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
         return { lat, lng };
+      }
+
+      function getCityDisplayName(cityKey) {
+        if (!cityKey) return '';
+        if (typeof getCityConfig === 'function') {
+          const config = getCityConfig(cityKey);
+          if (config && config.name) return config.name;
+        }
+        if (typeof CITY_CONFIG === 'object' && CITY_CONFIG && CITY_CONFIG[cityKey]) {
+          const city = CITY_CONFIG[cityKey];
+          if (city.name) return city.name;
+        }
+        if (dom.citySelect) {
+          const option = [...dom.citySelect.options].find(option => option.value === cityKey);
+          if (option && option.textContent) {
+            return option.textContent.replace(/^[^A-Za-z0-9]+\s*/, '');
+          }
+        }
+        return cityKey.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
       }
 
       function getCityLabel(cityKey) {
