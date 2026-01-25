@@ -2,15 +2,15 @@
   "files": [
     {
       "name": "event-builder.html",
-      "size": 124964,
+      "size": 125235,
       "icon": "🛠️",
       "description": "Build chunky.dad calendar events and preview them instantly."
     },
     {
       "name": "index.html",
-      "size": 27681,
-      "icon": "🪣",
-      "description": "Tool Shed Home - Browse all of dad's tools in one place"
+      "size": 19843,
+      "icon": "📄",
+      "description": "Test file"
     },
     {
       "name": "test-calendar-logging.html",
