@@ -20,7 +20,7 @@
 // ============================================================================
 
 class SharedCore {
-    constructor(cities) {
+    constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
             throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-cities.js');
         }
@@ -34,6 +34,14 @@ class SharedCore {
         
         // Store cities config for timezone assignment
         this.cities = cities;
+
+        // Debug logging (off by default)
+        this.debug = Boolean(
+            options?.debug === true ||
+            options?.verbose === true ||
+            options?.logLevel === 'debug'
+        );
+        SharedCore.debug = this.debug;
         
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
@@ -72,6 +80,18 @@ class SharedCore {
         ];
     }
 
+    logDebug(message) {
+        if (this.debug) {
+            console.log(message);
+        }
+    }
+
+    static logDebug(message) {
+        if (SharedCore.debug) {
+            console.log(message);
+        }
+    }
+
     // Convert cities config format to internal cityMappings format
     convertCitiesConfigToCityMappings(cities) {
         const cityMappings = {};
@@ -84,7 +104,7 @@ class SharedCore {
             }
         }
         
-        console.log(`🗺️ SharedCore: Created city mappings: ${JSON.stringify(cityMappings)}`);
+        this.logDebug(`🗺️ SharedCore: Created city mappings: ${JSON.stringify(cityMappings)}`);
         return cityMappings;
     }
 
@@ -593,7 +613,7 @@ class SharedCore {
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
         
         // Log the merge operation
-        console.log(`🔄 PARSER MERGE: Merging "${existingEvent.title}" (${existingEvent.source}) with "${newEvent.title}" (${newEvent.source})`);
+        this.logDebug(`🔄 PARSER MERGE: Merging "${existingEvent.title}" (${existingEvent.source}) with "${newEvent.title}" (${newEvent.source})`);
         
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
@@ -610,9 +630,9 @@ class SharedCore {
             ...Object.keys(newEvent)
         ]);
         
-        console.log(`🔄 MERGE DEBUG: All fields to process: ${Array.from(allFields).join(', ')}`);
-        console.log(`🔄 MERGE DEBUG: existingEvent fields: ${JSON.stringify(Object.keys(existingEvent))}`);
-        console.log(`🔄 MERGE DEBUG: newEvent fields: ${JSON.stringify(Object.keys(newEvent))}`);
+        this.logDebug(`🔄 MERGE DEBUG: All fields to process: ${Array.from(allFields).join(', ')}`);
+        this.logDebug(`🔄 MERGE DEBUG: existingEvent fields: ${JSON.stringify(Object.keys(existingEvent))}`);
+        this.logDebug(`🔄 MERGE DEBUG: newEvent fields: ${JSON.stringify(Object.keys(newEvent))}`);
         
         // Track merge decisions for important fields
         const mergeDecisions = [];
@@ -627,13 +647,13 @@ class SharedCore {
             const existingSource = existingEvent.source;
             const newSource = newEvent.source;
             
-            console.log(`🔄 MERGE DEBUG: Processing field '${fieldName}'`);
-            console.log(`🔄 MERGE DEBUG:   existingValue: "${existingValue}" (${existingSource})`);
-            console.log(`🔄 MERGE DEBUG:   newValue: "${newValue}" (${newSource})`);
-            console.log(`🔄 MERGE DEBUG:   priorityConfig: ${priorityConfig ? JSON.stringify(priorityConfig) : 'NONE'}`);
+            this.logDebug(`🔄 MERGE DEBUG: Processing field '${fieldName}'`);
+            this.logDebug(`🔄 MERGE DEBUG:   existingValue: "${existingValue}" (${existingSource})`);
+            this.logDebug(`🔄 MERGE DEBUG:   newValue: "${newValue}" (${newSource})`);
+            this.logDebug(`🔄 MERGE DEBUG:   priorityConfig: ${priorityConfig ? JSON.stringify(priorityConfig) : 'NONE'}`);
             
             if (!priorityConfig || !priorityConfig.priority) {
-                console.log(`🔄 MERGE DEBUG:   NO PRIORITY CONFIG - skipping field`);
+                this.logDebug(`🔄 MERGE DEBUG:   NO PRIORITY CONFIG - skipping field`);
                 return; // No priority config, keep newEvent value
             }
             
@@ -641,7 +661,7 @@ class SharedCore {
             const existingIndex = priorityConfig.priority.indexOf(existingSource);
             const newIndex = priorityConfig.priority.indexOf(newSource);
             
-            console.log(`🔄 MERGE DEBUG:   existingIndex: ${existingIndex}, newIndex: ${newIndex}`);
+            this.logDebug(`🔄 MERGE DEBUG:   existingIndex: ${existingIndex}, newIndex: ${newIndex}`);
             
             let chosenValue = newValue; // Default
             let reason = 'default';
@@ -683,7 +703,7 @@ class SharedCore {
                 reason = `only ${newSource} in priority list`;
             }
             
-            console.log(`🔄 MERGE DEBUG:   CHOSEN: "${chosenValue}" (reason: ${reason})`);
+            this.logDebug(`🔄 MERGE DEBUG:   CHOSEN: "${chosenValue}" (reason: ${reason})`);
             
             mergedEvent[fieldName] = chosenValue;
             
@@ -701,7 +721,7 @@ class SharedCore {
         
         // Log merge decisions
         if (mergeDecisions.length > 0) {
-            console.log(`🔄 PARSER MERGE DECISIONS for "${mergedEvent.title}":`);
+            this.logDebug(`🔄 PARSER MERGE DECISIONS for "${mergedEvent.title}":`);
             mergeDecisions.forEach(decision => {
                 const existingStr = decision.existingValue === undefined ? 'undefined' : 
                                    decision.existingValue === null ? 'null' :
@@ -715,12 +735,12 @@ class SharedCore {
                                   decision.chosenValue === null ? 'null' :
                                   decision.chosenValue === '' ? 'empty' : 
                                   `"${decision.chosenValue}"`;
-                console.log(`🔄   ${decision.field}: ${existingStr} vs ${newStr} → ${chosenStr} (${decision.reason})`);
+                this.logDebug(`🔄   ${decision.field}: ${existingStr} vs ${newStr} → ${chosenStr} (${decision.reason})`);
             });
         }
         
-        console.log(`🔄 MERGE DEBUG: Final merged event fields: ${JSON.stringify(Object.keys(mergedEvent))}`);
-        console.log(`🔄 MERGE DEBUG: Final merged event 'url': "${mergedEvent.url}"`);
+        this.logDebug(`🔄 MERGE DEBUG: Final merged event fields: ${JSON.stringify(Object.keys(mergedEvent))}`);
+        this.logDebug(`🔄 MERGE DEBUG: Final merged event 'url': "${mergedEvent.url}"`);
         
         return mergedEvent;
     }
@@ -808,7 +828,7 @@ class SharedCore {
         
         // Log summary of clobbered fields
         if (clobberedFields.length > 0) {
-            console.log(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedEvent.title || 'event'}": ${clobberedFields.join(', ')}`);
+            this.logDebug(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedEvent.title || 'event'}": ${clobberedFields.join(', ')}`);
         }
         
         // Log coordinate handling specifically
@@ -935,7 +955,7 @@ class SharedCore {
         
         // Log summary of clobbered fields
         if (clobberedFields.length > 0) {
-            console.log(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedObject.title || 'event'}": ${clobberedFields.join(', ')}`);
+            this.logDebug(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedObject.title || 'event'}": ${clobberedFields.join(', ')}`);
         }
         
         // Log coordinate handling specifically
@@ -1477,26 +1497,26 @@ class SharedCore {
     // Static method to generate iOS-compatible Google Maps URLs
     // Works on Android, iOS (including iOS 11+), and web without API tokens
     static generateGoogleMapsUrl({ coordinates, placeId, address }) {
-        console.log(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}"`);
+        SharedCore.logDebug(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}"`);
         
         if (placeId && coordinates) {
             // Best case: use coordinates with place_id for maximum compatibility
-            console.log(`🗺️ SharedCore: Using place_id + coordinates method`);
+            SharedCore.logDebug(`🗺️ SharedCore: Using place_id + coordinates method`);
             return `https://www.google.com/maps/search/?api=1&query=${coordinates.lat}%2C${coordinates.lng}&query_place_id=${placeId}`;
         } else if (placeId && address) {
             // Fallback: use address with place_id (graceful degradation if place_id doesn't exist)
-            console.log(`🗺️ SharedCore: Using place_id + address method`);
+            SharedCore.logDebug(`🗺️ SharedCore: Using place_id + address method`);
             return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}&query_place_id=${placeId}`;
         } else if (coordinates) {
             // Fallback: coordinates only
-            console.log(`🗺️ SharedCore: Using coordinates only method`);
+            SharedCore.logDebug(`🗺️ SharedCore: Using coordinates only method`);
             return `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
         } else if (address) {
             // Final fallback: address only
-            console.log(`🗺️ SharedCore: Using address only method`);
+            SharedCore.logDebug(`🗺️ SharedCore: Using address only method`);
             return `https://maps.google.com/?q=${encodeURIComponent(address)}`;
         }
-        console.log(`🗺️ SharedCore: No valid data for URL generation, returning null`);
+        SharedCore.logDebug(`🗺️ SharedCore: No valid data for URL generation, returning null`);
         return null;
     }
     
@@ -1522,7 +1542,7 @@ class SharedCore {
         // This is needed for parsers like chunk that pass timezone: null
         if (!event.timezone && event.city && this.cities[event.city]) {
             event.timezone = this.cities[event.city].timezone;
-            console.log(`🗺️ SharedCore: Applied timezone ${event.timezone} for city ${event.city}`);
+            this.logDebug(`🗺️ SharedCore: Applied timezone ${event.timezone} for city ${event.city}`);
         } else if (!event.timezone && event.city && !this.cities[event.city]) {
             console.log(`🚨 ERROR: No timezone configuration found for city: ${event.city}`);
             console.log(`🚨 EVENT DETAILS:`);
@@ -1533,7 +1553,7 @@ class SharedCore {
             console.log(`   Source: "${event.source}"`);
             console.log(`   City extracted from: ${event.city ? 'event.city field' : 'address parsing'}`);
             console.log(`🚨 Available cities: ${JSON.stringify(Object.keys(this.cities || {}))}`);
-            console.log(`🚨 This error is coming from SharedCore`);
+            this.logDebug(`🚨 This error is coming from SharedCore`);
         }
         
         // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
@@ -1542,7 +1562,7 @@ class SharedCore {
                           event.bar.toLowerCase().includes('to be announced'));
         
         if (isTBAVenue) {
-            console.log(`🗺️ SharedCore: TBA venue "${event.bar}" detected - removing fake location data`);
+            this.logDebug(`🗺️ SharedCore: TBA venue "${event.bar}" detected - removing fake location data`);
             // Remove all location data for TBA venues (coordinates are usually fake city center)
             event.location = null;
             event.address = null;
@@ -1755,12 +1775,12 @@ class SharedCore {
         
         // Try to extract city name from address components
         const addressParts = address.split(',').map(part => part.trim());
-        console.log(`🗺️ SharedCore: Address parts for "${address}": ${JSON.stringify(addressParts)}`);
+        this.logDebug(`🗺️ SharedCore: Address parts for "${address}": ${JSON.stringify(addressParts)}`);
         
         // Check each address part for city matches
         for (const part of addressParts) {
             const cityName = part.toLowerCase();
-            console.log(`🗺️ SharedCore: Checking address part: "${cityName}"`);
+            this.logDebug(`🗺️ SharedCore: Checking address part: "${cityName}"`);
             
             // Check if the city matches our mappings (includes misspellings in patterns)
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
@@ -1768,13 +1788,13 @@ class SharedCore {
                 for (const pattern of patternList) {
                     // Try exact match first (simpler and more reliable)
                     if (cityName === pattern) {
-                        console.log(`🗺️ SharedCore: Found exact city pattern match "${pattern}" in address part "${cityName}", returning: "${city}"`);
+                        this.logDebug(`🗺️ SharedCore: Found exact city pattern match "${pattern}" in address part "${cityName}", returning: "${city}"`);
                         return city;
                     }
                     // Then use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(cityName)) {
-                        console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in address part "${cityName}", returning: "${city}"`);
+                        this.logDebug(`🗺️ SharedCore: Found city pattern "${pattern}" in address part "${cityName}", returning: "${city}"`);
                         return city;
                     }
                 }
@@ -1784,7 +1804,7 @@ class SharedCore {
         // If no city found in any part, try normalizing the first part
         if (addressParts.length > 0) {
             const firstPart = addressParts[0].toLowerCase();
-            console.log(`🗺️ SharedCore: No pattern matched for any address part, normalizing first part "${firstPart}"`);
+            this.logDebug(`🗺️ SharedCore: No pattern matched for any address part, normalizing first part "${firstPart}"`);
             const normalizedCity = this.normalizeCityName(firstPart);
             if (normalizedCity && !this.cities[normalizedCity]) {
                 console.log(`⚠️  WARNING: Extracted city "${normalizedCity}" from address "${address}" has no timezone configuration`);
@@ -1820,23 +1840,23 @@ class SharedCore {
     extractCityFromEvent(event) {
         // Try city field first
         if (event.city) {
-            console.log(`🗺️ SharedCore: Using city from event.city: "${event.city}" for event: "${event.title}"`);
+            this.logDebug(`🗺️ SharedCore: Using city from event.city: "${event.city}" for event: "${event.title}"`);
             // Normalize the city name to handle misspellings like "boton" -> "boston"
             const normalizedCity = this.normalizeCityName(String(event.city));
-            console.log(`🗺️ SharedCore: Normalized city "${event.city}" to "${normalizedCity}"`);
+            this.logDebug(`🗺️ SharedCore: Normalized city "${event.city}" to "${normalizedCity}"`);
             return normalizedCity;
         }
         
         // Try to extract from title
         const title = String(event.title || '').toLowerCase();
-        console.log(`🗺️ SharedCore: Extracting city from title: "${title}"`);
+        this.logDebug(`🗺️ SharedCore: Extracting city from title: "${title}"`);
         
         // Check for city names in title
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const cityPatterns = patterns.split('|');
             for (const pattern of cityPatterns) {
                 if (title.includes(pattern)) {
-                    console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in title, returning city: "${city}"`);
+                    this.logDebug(`🗺️ SharedCore: Found city pattern "${pattern}" in title, returning city: "${city}"`);
                     return city;
                 }
             }
@@ -1885,19 +1905,19 @@ class SharedCore {
         if (!cityName || typeof cityName !== 'string') return null;
         
         const normalized = cityName.toLowerCase().trim();
-        console.log(`🗺️ SharedCore: Normalizing city name "${cityName}" to "${normalized}"`);
+        this.logDebug(`🗺️ SharedCore: Normalizing city name "${cityName}" to "${normalized}"`);
         
         // Check if normalized name matches any of our mappings
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const patternList = patterns.split('|');
             if (patternList.includes(normalized)) {
-                console.log(`🗺️ SharedCore: Found mapping for "${normalized}" -> "${city}"`);
+                this.logDebug(`🗺️ SharedCore: Found mapping for "${normalized}" -> "${city}"`);
                 return city;
             }
         }
         
         // Return as-is if no mapping found
-        console.log(`🗺️ SharedCore: No mapping found for "${normalized}", returning as-is`);
+        this.logDebug(`🗺️ SharedCore: No mapping found for "${normalized}", returning as-is`);
         return normalized;
     }
     

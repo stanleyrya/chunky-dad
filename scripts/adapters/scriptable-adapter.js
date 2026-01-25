@@ -654,8 +654,13 @@ class ScriptableAdapter {
             // Show summary and recommended actions
             await this.displaySummaryAndActions(results);
             
-            // Display full event objects at the end (for debugging)
-            await this.displayFullEventObjects(results);
+            // Display full event objects at the end (debug only)
+            const debugMode = results?.config?.config?.debug === true ||
+                results?.config?.config?.verbose === true ||
+                results?.config?.config?.logLevel === 'debug';
+            if (debugMode) {
+                await this.displayFullEventObjects(results);
+            }
             
             console.log('\n' + '='.repeat(60));
             
