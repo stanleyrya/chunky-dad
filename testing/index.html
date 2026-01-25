@@ -1,722 +1,344 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="toolbox-icon" content="🪣">
-    <meta name="toolbox-description" content="Tool Shed Home - Browse all of dad's tools in one place">
-    <title>🪣 chunky.dad's Toolbox</title>
-    <link rel="icon" type="image/png" href="../favicons/favicon-32x32.png">
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Permanent+Marker&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Roboto Condensed', sans-serif;
-            background: 
-                repeating-linear-gradient(
-                    90deg,
-                    #3e2723 0px,
-                    #4a2c24 3px,
-                    #3e2723 6px,
-                    #5d4037 9px,
-                    #4a2c24 12px
-                ),
-                linear-gradient(180deg, #2c1810 0%, #4a2c24 50%, #2c1810 100%);
-            background-size: 100% 10px, 100% 100%;
-            color: #ffd54f;
-            min-height: 100vh;
-            padding: 40px 20px;
-            position: relative;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(255, 193, 7, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 80% 70%, rgba(255, 87, 34, 0.06) 0%, transparent 40%);
-            pointer-events: none;
-            z-index: 0;
-            opacity: 0.7;
-        }
-
-        body::after {
-            content: '🔨🔧⚒️🪛🔩⚙️🪚🛠️';
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            font-size: 2rem;
-            opacity: 0.15;
-            letter-spacing: 20px;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
-
-        .header {
-            margin-bottom: 50px;
-            position: relative;
-            padding: 40px 20px;
-            background: 
-                linear-gradient(135deg, rgba(109, 76, 65, 0.4) 0%, rgba(78, 52, 46, 0.4) 100%),
-                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%234e342e" width="100" height="100"/><path d="M0 0 L50 50 L0 100 L100 100 L50 50 L100 0 Z" fill="%235d4037" opacity="0.3"/><text x="50" y="50" font-size="20" fill="%23ffd54f" opacity="0.1" text-anchor="middle" dominant-baseline="middle">🪣</text></svg>');
-            background-size: cover;
-            border: 4px solid #8d6e63;
-            border-radius: 15px;
-            box-shadow: 
-                0 10px 30px rgba(0, 0, 0, 0.6),
-                inset 0 2px 0 rgba(255, 255, 255, 0.1),
-                inset 0 -2px 8px rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 200px;
-        }
-
-        .header-content {
-            text-align: center;
-            position: relative;
-            z-index: 2;
-        }
-
-        .header-logo-left {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%) rotate(-15deg);
-            width: 80px;
-            height: 80px;
-            background: url('../favicons/favicon-192x192.png') center/contain no-repeat;
-            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
-            z-index: 1;
-            opacity: 0.8;
-        }
-
-        .header-toolbox-right {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%) rotate(15deg);
-            font-size: 4rem;
-            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
-            z-index: 1;
-            opacity: 0.8;
-        }
-
-
-        .header h1 {
-            font-family: 'Bebas Neue', cursive;
-            font-size: 4rem;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #ffd54f;
-            text-shadow: 
-                3px 3px 0 #d84315,
-                6px 6px 0 rgba(0, 0, 0, 0.4),
-                0 0 30px rgba(255, 193, 7, 0.5);
-            letter-spacing: 4px;
-            position: relative;
-        }
-
-        .toolbox-subtitle {
-            font-family: 'Permanent Marker', cursive;
-            font-size: 1.5rem;
-            color: #ff6f00;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
-            transform: rotate(-2deg);
-            display: inline-block;
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            color: #ffab91;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-top: 15px;
-        }
-
-        .speech-bubble {
-            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
-            color: #4e342e;
-            padding: 18px 28px;
-            border-radius: 25px;
-            position: absolute;
-            top: 60%;
-            right: 20px;
-            transform: translateY(-50%) rotate(-3deg);
-            font-weight: 700;
-            font-size: 1.1rem;
-            box-shadow: 
-                0 6px 20px rgba(0, 0, 0, 0.3),
-                0 2px 8px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            border: 2px solid rgba(255, 193, 7, 0.3);
-            animation: bubble-bounce 2.5s ease-in-out infinite;
-            max-width: 280px;
-            z-index: 10;
-        }
-
-        .speech-bubble::after {
-            content: '';
-            position: absolute;
-            bottom: -12px;
-            right: 35px;
-            width: 0;
-            height: 0;
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-top: 12px solid #fff;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-        }
-
-        @keyframes bubble-bounce {
-            0%, 100% { transform: rotate(-3deg) translateY(0px); }
-            50% { transform: rotate(-3deg) translateY(-3px); }
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-bottom: 30px;
-            color: #ffd54f;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-            border: 3px solid #8d6e63;
-            padding: 12px 24px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, rgba(109, 76, 65, 0.6) 0%, rgba(78, 52, 46, 0.6) 100%);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        }
-
-        .back-link:hover {
-            color: #ff6f00;
-            transform: translateX(-5px) scale(1.05);
-            border-color: #ff6f00;
-            background: linear-gradient(135deg, rgba(255, 111, 0, 0.3) 0%, rgba(213, 67, 21, 0.3) 100%);
-            box-shadow: 0 6px 20px rgba(255, 111, 0, 0.5);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 50px;
-            font-size: 1.3rem;
-            color: #ffab91;
-            font-weight: 700;
-        }
-
-        .loading::before {
-            content: '🔧';
-            display: block;
-            font-size: 3rem;
-            margin-bottom: 15px;
-            animation: spin 2s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .test-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 25px;
-            margin-bottom: 50px;
-        }
-
-        .test-card {
-            background: 
-                linear-gradient(135deg, rgba(109, 76, 65, 0.5) 0%, rgba(78, 52, 46, 0.5) 100%),
-                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%234e342e" width="100" height="100"/><path d="M0 0 L50 50 L0 100 L100 100 L50 50 L100 0 Z" fill="%235d4037" opacity="0.2"/></svg>');
-            background-size: cover;
-            border-radius: 15px;
-            padding: 25px;
-            border: 3px solid #8d6e63;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-decoration: none;
-            color: #ffd54f;
-            display: block;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 
-                0 6px 16px rgba(0, 0, 0, 0.5),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        .test-card::before {
-            content: '🔧';
-            position: absolute;
-            bottom: -20px;
-            right: -20px;
-            font-size: 6rem;
-            opacity: 0.1;
-            transition: all 0.4s ease;
-        }
-
-        .test-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.15), transparent);
-            transition: left 0.6s ease;
-        }
-
-        .test-card:hover::after {
-            left: 100%;
-        }
-
-        .test-card:hover::before {
-            transform: rotate(15deg) scale(1.2);
-            opacity: 0.2;
-        }
-
-        .test-card:hover {
-            background: 
-                linear-gradient(135deg, rgba(255, 111, 0, 0.4) 0%, rgba(213, 67, 21, 0.4) 100%),
-                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%234e342e" width="100" height="100"/><path d="M0 0 L50 50 L0 100 L100 100 L50 50 L100 0 Z" fill="%235d4037" opacity="0.2"/></svg>');
-            border-color: #ff6f00;
-            transform: translateY(-8px) rotate(-1deg);
-            box-shadow: 
-                0 12px 28px rgba(255, 111, 0, 0.6),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        .test-card h3 {
-            font-family: 'Bebas Neue', cursive;
-            font-size: 1.3rem;
-            margin-bottom: 12px;
-            color: #ffd54f;
-            word-break: break-word;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-        }
-
-        .test-card .file-info {
-            font-size: 0.85rem;
-            opacity: 0.7;
-            margin-bottom: 12px;
-            color: #ffab91;
-            font-weight: 600;
-        }
-
-        .test-card .description {
-            font-size: 0.95rem;
-            opacity: 0.9;
-            line-height: 1.5;
-            color: #ffe0b2;
-            font-weight: 400;
-        }
-
-        .test-card .file-size {
-            font-size: 0.75rem;
-            opacity: 0.6;
-            margin-top: 10px;
-            color: #bcaaa4;
-            font-weight: 600;
-        }
-
-        .category-icon {
-            font-size: 2.5rem;
-            margin-bottom: 12px;
-            display: block;
-            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
-        }
-
-        .error {
-            background: rgba(211, 47, 47, 0.2);
-            border: 3px solid #d32f2f;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            margin: 50px 0;
-            color: #ffcdd2;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
-        }
-
-        .stats {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 1.1rem;
-            color: #ffab91;
-            font-weight: 700;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 60px;
-            padding: 30px 20px;
-            background: 
-                linear-gradient(135deg, rgba(109, 76, 65, 0.3) 0%, rgba(78, 52, 46, 0.3) 100%);
-            border: 3px solid #8d6e63;
-            border-radius: 15px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
-        }
-
-        .footer-tools {
-            font-size: 2rem;
-            margin-bottom: 15px;
-            letter-spacing: 15px;
-            opacity: 0.6;
-        }
-
-        .footer-text {
-            color: #ffab91;
-            font-size: 1rem;
-            font-weight: 600;
-            line-height: 1.6;
-        }
-
-        .footer-tagline {
-            font-family: 'Permanent Marker', cursive;
-            color: #ff6f00;
-            font-size: 1.3rem;
-            margin-top: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 30px 15px;
-                flex-direction: column;
-                text-align: center;
-                min-height: 180px;
-            }
-            
-            .header-content {
-                padding-right: 0;
-                margin-bottom: 20px;
-            }
-            
-            .header-logo-left {
-                width: 60px;
-                height: 60px;
-                left: 10px;
-                top: 20px;
-                transform: rotate(-15deg);
-            }
-            
-            .header-toolbox-right {
-                font-size: 3rem;
-                right: 10px;
-                top: 20px;
-                transform: rotate(15deg);
-            }
-            
-            .header h1 {
-                font-size: 2.5rem;
-            }
-            
-            .toolbox-subtitle {
-                font-size: 1.2rem;
-            }
-            
-            .header p {
-                font-size: 1rem;
-            }
-            
-            .speech-bubble {
-                position: relative;
-                top: auto;
-                right: auto;
-                transform: rotate(-3deg);
-                margin: 20px auto 0;
-                max-width: 90%;
-                display: block;
-            }
-            
-            .speech-bubble::after {
-                right: 50%;
-                transform: translateX(50%);
-            }
-            
-            .test-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toolbox | chunky.dad</title>
+  <meta name="description" content="Toolbox for chunky.dad test pages and utilities.">
+  <link rel="icon" type="image/x-icon" href="/favicons/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicons/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicons/favicon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
+  <link rel="manifest" href="/favicons/site.webmanifest">
+  <meta name="theme-color" content="#667eea">
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="toolbox-page">
+  <header>
+    <nav>
+      <div class="nav-container">
+        <div class="logo">
+          <h1>
+            <a href="../index.html">
+              <img src="../favicons/favicon-192x192.png" alt="chunky.dad logo" class="logo-img">
+              chunky.dad/tools
+            </a>
+          </h1>
+        </div>
+        <div class="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="toolbox-main">
+    <section class="toolbox-hero">
+      <div class="container">
+        <div class="toolbox-hero-card">
+          <div class="toolbox-hero-text">
+            <span class="toolbox-kicker">Tool Shed</span>
+            <h1>chunky.dad Toolbox</h1>
+            <p>Cute toolbox, subversive gay vibes, big dad energy. Grab a tool and get weird.</p>
+            <div class="toolbox-actions">
+              <a class="toolbox-button" href="../index.html">Back to main site</a>
+              <a class="toolbox-button secondary" href="../bear-directory.html">Bear directory</a>
+            </div>
+          </div>
+          <div class="toolbox-hero-aside">
+            <div class="toolbox-badges">
+              <span class="toolbox-badge">Cute</span>
+              <span class="toolbox-badge">Subversive</span>
+              <span class="toolbox-badge">Dad Energy</span>
+            </div>
+            <div class="toolbox-hero-note">
+              <span class="toolbox-note-title">Small page, big tools</span>
+              <p>Two-column layout so you can scan the whole kit fast.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="toolbox-content">
+      <div class="container">
+        <div class="toolbox-toolbar">
+          <div class="toolbox-toolbar-text">
+            <span class="toolbox-toolbar-label">Choose a tool</span>
+            <p>Open any test page to tinker, debug, or stress a layout.</p>
+          </div>
+          <div class="toolbox-stats" id="toolbox-stats">Loading tools...</div>
+        </div>
+
+        <details class="toolbox-debug" id="debug-info" hidden>
+          <summary>Load details</summary>
+          <div id="debug-content" class="toolbox-debug-list"></div>
+        </details>
+
+        <div id="file-grid" class="toolbox-grid">
+          <div class="toolbox-loading">Loading tools...</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="toolbox-footer">
     <div class="container">
-        <a href="../index.html" class="back-link">🏠 Back to Main Site</a>
-        
-        <div class="header">
-            <div class="header-logo-left"></div>
-            <div class="header-content">
-                <div class="toolbox-subtitle">Your Thicc, Handy Helper 🛠️</div>
-                <h1>🔧 chunky.dad's Toolbox</h1>
-                <p>Quality Tools • Expert Handling • Always Ready to Help</p>
-            </div>
-            <div class="header-toolbox-right">🪣</div>
-            <div class="speech-bubble">
-                "Time to get my hands dirty with some quality tools! 🪣"
-            </div>
-        </div>
-
-        <div id="debug-info" style="background: linear-gradient(135deg, rgba(109, 76, 65, 0.8) 0%, rgba(78, 52, 46, 0.8) 100%); padding: 20px; margin: 20px 0; border-radius: 10px; font-family: 'Roboto Condensed', sans-serif; font-size: 0.95em; display: none; border: 2px solid #8d6e63; color: #ffd54f; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);">
-            <strong style="color: #ff6f00; font-size: 1.1em; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);">🔧 Debug Info:</strong>
-            <div id="debug-content" style="margin-top: 10px; line-height: 1.6;"></div>
-        </div>
-        
-        <div id="file-grid" class="file-grid">
-            <div class="loading">Dad's grabbing his tools from the shed...</div>
-        </div>
-
-        <div class="footer">
-            <div class="footer-tools">🔨 🔧 ⚙️ 🪛 🔩 ⚒️ 🪚</div>
-            <div class="footer-text">
-                Built with big tools and even bigger attention to detail.<br>
-                All equipment maintained by your friendly neighborhood chunky.dad.
-            </div>
-            <div class="footer-tagline">
-                "I've got the right tool for every job 😏"
-            </div>
-        </div>
+      <div class="toolbox-footer-inner">
+        <span class="toolbox-footer-icons">🧰 🔧 ⚒️</span>
+        <p>Built for cute chaos, subversive joy, and steady dad hands.</p>
+      </div>
     </div>
+  </footer>
 
-    <script>
-        // Function to get file info from manifest data
-        function getFileInfo(file) {
-            const baseName = file.name.replace('.html', '');
-            
-            return {
-                icon: file.icon || '📄',
-                desc: file.description || 'Test file',
-                displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-            };
+  <script>
+    function getFileInfo(file) {
+      const baseName = file.name.replace('.html', '');
+
+      return {
+        icon: file.icon || '🧰',
+        desc: file.description || 'Test file',
+        displayName: baseName.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+      };
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function setupDebugPanel() {
+      const debugInfo = document.getElementById('debug-info');
+      const debugContent = document.getElementById('debug-content');
+      const debugEnabled = new URLSearchParams(window.location.search).has('debug');
+
+      if (!debugInfo || !debugContent) {
+        return {
+          addEntry: () => {},
+          reveal: () => {}
+        };
+      }
+
+      debugInfo.hidden = !debugEnabled;
+      if (debugEnabled) {
+        debugInfo.open = true;
+      }
+
+      const reveal = (open = false) => {
+        if (debugInfo.hidden) {
+          debugInfo.hidden = false;
+        }
+        if (open) {
+          debugInfo.open = true;
+        }
+      };
+
+      const addEntry = (type, message) => {
+        const shouldReveal = debugEnabled || type === 'warn' || type === 'error';
+        if (shouldReveal) {
+          reveal(type === 'error' || type === 'warn');
         }
 
-        // Format file size
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        const entry = document.createElement('div');
+        entry.className = `toolbox-debug-item ${type}`;
+        entry.textContent = message;
+        debugContent.appendChild(entry);
+      };
+
+      return { addEntry, reveal };
+    }
+
+    async function parseDirectoryListing() {
+      try {
+        const response = await fetch('./');
+        const text = await response.text();
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+
+        const files = [];
+        const links = doc.querySelectorAll('a');
+        for (const link of links) {
+          const href = link.getAttribute('href');
+          if (href && href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
+            files.push({
+              name: href,
+              displayText: link.textContent.trim(),
+              exists: true
+            });
+          }
         }
 
-        // Try to parse directory listing from the server
-        async function parseDirectoryListing() {
-            try {
-                // First, try to fetch the directory itself
-                const response = await fetch('./');
-                const text = await response.text();
-                
-                // Parse HTML directory listing (common format for Apache/nginx)
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                
-                const files = [];
-                
-                // Try to find links in common directory listing formats
-                const links = doc.querySelectorAll('a');
-                for (const link of links) {
-                    const href = link.getAttribute('href');
-                    if (href && href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
-                        files.push({
-                            name: href,
-                            displayText: link.textContent.trim(),
-                            exists: true
-                        });
-                    }
+        if (files.length === 0) {
+          const rows = doc.querySelectorAll('tr');
+          for (const row of rows) {
+            const link = row.querySelector('a');
+            if (link) {
+              const href = link.getAttribute('href');
+              if (href && href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
+                files.push({
+                  name: href,
+                  exists: true
+                });
+              }
+            }
+          }
+        }
+
+        return files;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    async function loadTestFiles() {
+      const debugPanel = setupDebugPanel();
+      const fileGrid = document.getElementById('file-grid');
+
+      try {
+        let testFiles = [];
+
+        try {
+          const manifestResponse = await fetch('./manifest.json', { cache: 'no-cache' });
+          debugPanel.addEntry('info', `Manifest fetch: ${manifestResponse.status} ${manifestResponse.statusText}`);
+
+          if (manifestResponse.ok) {
+            const manifest = await manifestResponse.json();
+            testFiles = manifest.files.filter((file) => file.name !== 'index.html');
+            debugPanel.addEntry('success', `Loaded ${testFiles.length} files from manifest.json`);
+          } else {
+            debugPanel.addEntry('warn', 'Manifest fetch failed, trying directory listing.');
+          }
+        } catch (error) {
+          debugPanel.addEntry('error', `Error loading manifest: ${error.message}`);
+        }
+
+        if (testFiles.length === 0) {
+          const parsedFiles = await parseDirectoryListing();
+
+          if (parsedFiles && parsedFiles.length > 0) {
+            testFiles = parsedFiles;
+            debugPanel.addEntry('success', `Loaded ${testFiles.length} files from directory listing`);
+          } else {
+            debugPanel.addEntry('warn', 'Directory listing empty, probing known files.');
+            const allKnownFiles = [
+              'ultimate-style-tester.html',
+              'style-test.html',
+              'event-test-index.html',
+              'event-test-1-carousel.html',
+              'event-test-2-timeline.html',
+              'event-test-3-map.html',
+              'event-test-4-masonry.html',
+              'event-test-5-heatmap.html',
+              'event-test-6-ticker.html',
+              'event-test-7-circular.html',
+              'event-test-8-kanban.html',
+              'event-test-9-bubbles.html',
+              'event-test-10-flipcards.html',
+              'event-test-11-weekview.html',
+              'event-test-12-swipe-tiles.html',
+              'test-calendar-logging.html',
+              'test-google-sheets-loader.html',
+              'test-display-modes.html',
+              'event-builder.html',
+              'css-breakpoint-test.html',
+              'multiline-breakpoint-test.html',
+              'hyphenation-test.html',
+              'simplified-hyphenation-test.html',
+              'test-event-abbreviation.html'
+            ];
+
+            const fileChecks = allKnownFiles.map(async (filename) => {
+              try {
+                const response = await fetch(filename, { method: 'HEAD' });
+                if (response.ok) {
+                  const contentLength = response.headers.get('content-length');
+                  return {
+                    name: filename,
+                    exists: true,
+                    size: contentLength ? parseInt(contentLength, 10) : null
+                  };
                 }
-                
-                // If no files found from links, try table format
-                if (files.length === 0) {
-                    const rows = doc.querySelectorAll('tr');
-                    for (const row of rows) {
-                        const link = row.querySelector('a');
-                        if (link) {
-                            const href = link.getAttribute('href');
-                            if (href && href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
-                                files.push({
-                                    name: href,
-                                    exists: true
-                                });
-                            }
-                        }
-                    }
-                }
-                
-                return files;
-            } catch (error) {
-                console.log('Could not parse directory listing:', error);
+              } catch (error) {
                 return null;
-            }
-        }
-
-        // Load test files dynamically
-        async function loadTestFiles() {
-            const debugInfo = document.getElementById('debug-info');
-            const debugContent = document.getElementById('debug-content');
-            debugInfo.style.display = 'block';
-            
-            try {
-                let testFiles = [];
-                
-                // First try to load manifest.json
-                try {
-                    // Try with explicit relative path first
-                    const manifestResponse = await fetch('./manifest.json', { cache: 'no-cache' });
-                    console.log('Manifest fetch response:', manifestResponse.status, manifestResponse.statusText);
-                    debugContent.innerHTML += `<div style="margin-bottom: 8px; padding: 5px 10px; background: rgba(0,0,0,0.2); border-radius: 5px;">Manifest fetch: ${manifestResponse.status} ${manifestResponse.statusText}</div>`;
-                    
-                    if (manifestResponse.ok) {
-                        const manifest = await manifestResponse.json();
-                        testFiles = manifest.files.filter(f => f.name !== 'index.html');
-                        console.log('Loaded', testFiles.length, 'files from manifest.json');
-                        debugContent.innerHTML += `<div style="color: #4caf50; font-weight: 700; margin-bottom: 8px; padding: 5px 10px; background: rgba(76,175,80,0.1); border-radius: 5px; border-left: 3px solid #4caf50;">✓ Loaded ${testFiles.length} files from manifest.json</div>`;
-                    } else {
-                        console.warn('Manifest fetch failed:', manifestResponse.status, manifestResponse.statusText);
-                        debugContent.innerHTML += `<div style="color: #ff9800; font-weight: 700; margin-bottom: 8px; padding: 5px 10px; background: rgba(255,152,0,0.1); border-radius: 5px; border-left: 3px solid #ff9800;">⚠ Manifest fetch failed</div>`;
-                    }
-                } catch (e) {
-                    console.warn('Could not load manifest.json:', e.message);
-                    debugContent.innerHTML += `<div style="color: #f44336; font-weight: 700; margin-bottom: 8px; padding: 5px 10px; background: rgba(244,67,54,0.1); border-radius: 5px; border-left: 3px solid #f44336;">✗ Error loading manifest: ${e.message}</div>`;
-                }
-                
-                // If no manifest, try to parse directory listing
-                if (testFiles.length === 0) {
-                    const parsedFiles = await parseDirectoryListing();
-                    
-                    if (parsedFiles && parsedFiles.length > 0) {
-                        testFiles = parsedFiles;
-                        console.log('Loaded', testFiles.length, 'files from directory listing');
-                        debugContent.innerHTML += `<div style="color: #4caf50; font-weight: 700; margin-bottom: 8px; padding: 5px 10px; background: rgba(76,175,80,0.1); border-radius: 5px; border-left: 3px solid #4caf50;">✓ Loaded ${testFiles.length} files from directory listing</div>`;
-                    } else {
-                        // Fallback: probe for all files we know exist
-                        const allKnownFiles = [
-                            'ultimate-style-tester.html',
-                            'style-test.html',
-                            'event-test-index.html',
-                            'event-test-1-carousel.html',
-                            'event-test-2-timeline.html',
-                            'event-test-3-map.html',
-                            'event-test-4-masonry.html',
-                            'event-test-5-heatmap.html',
-                            'event-test-6-ticker.html',
-                            'event-test-7-circular.html',
-                            'event-test-8-kanban.html',
-                            'event-test-9-bubbles.html',
-                            'event-test-10-flipcards.html',
-                            'event-test-11-weekview.html',
-                            'event-test-12-swipe-tiles.html',
-                            'test-calendar-logging.html',
-                            'test-google-sheets-loader.html',
-                            'test-display-modes.html',
-                            'event-builder.html',
-                            'css-breakpoint-test.html',
-                            'multiline-breakpoint-test.html',
-                            'hyphenation-test.html',
-                            'simplified-hyphenation-test.html',
-                            'test-event-abbreviation.html'
-                        ];
-                        
-                        // Check all files in parallel for better performance
-                        const fileChecks = allKnownFiles.map(async (filename) => {
-                            try {
-                                const response = await fetch(filename, { method: 'HEAD' });
-                                if (response.ok) {
-                                    const contentLength = response.headers.get('content-length');
-                                    return {
-                                        name: filename,
-                                        exists: true,
-                                        size: contentLength ? parseInt(contentLength) : null
-                                    };
-                                }
-                            } catch (e) {
-                                // File doesn't exist
-                            }
-                            return null;
-                        });
-                        
-                        const results = await Promise.all(fileChecks);
-                        testFiles = results.filter(f => f !== null);
-                        debugContent.innerHTML += `<div style="color: #4caf50; font-weight: 700; margin-bottom: 8px; padding: 5px 10px; background: rgba(76,175,80,0.1); border-radius: 5px; border-left: 3px solid #4caf50;">✓ Loaded ${testFiles.length} files from probe</div>`;
-                    }
-                }
-
-                // Sort files alphabetically
-                testFiles.sort((a, b) => a.name.localeCompare(b.name));
-                
-                displayFiles(testFiles);
-            } catch (error) {
-                document.getElementById('file-grid').innerHTML = `
-                    <div class="error">
-                        <h3>🔧 Oops! Tool Shed Malfunction</h3>
-                        <p>Dad dropped his tools: ${error.message}</p>
-                    </div>
-                `;
-            }
-        }
-
-        // Display the files in a grid
-        function displayFiles(files) {
-            const existingFiles = files.filter(f => f.exists !== false);
-            
-            if (existingFiles.length === 0) {
-                document.getElementById('file-grid').innerHTML = `
-                    <div class="error">
-                        <h3>🪛 Empty Tool Shed!</h3>
-                        <p>Dad's tools are missing! Make sure test files are in the testing directory.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const container = document.getElementById('file-grid');
-            container.innerHTML = '';
-            
-            const stats = document.createElement('div');
-            stats.className = 'stats';
-            stats.textContent = `🛠️ ${existingFiles.length} Tool${existingFiles.length !== 1 ? 's' : ''} in the Shed • Ready to Work`;
-            container.appendChild(stats);
-
-            const grid = document.createElement('div');
-            grid.className = 'test-grid';
-
-            existingFiles.forEach(file => {
-                const fileInfo = getFileInfo(file);
-                const card = document.createElement('a');
-                card.href = file.name;
-                card.className = 'test-card';
-                card.innerHTML = `
-                    <span class="category-icon">${fileInfo.icon}</span>
-                    <h3>${fileInfo.displayName}</h3>
-                    <div class="file-info">${file.name}</div>
-                    <div class="description">${fileInfo.desc}</div>
-                    ${file.size ? `<div class="file-size">${formatFileSize(file.size)}</div>` : ''}
-                `;
-                grid.appendChild(card);
+              }
+              return null;
             });
 
-            container.appendChild(grid);
+            const results = await Promise.all(fileChecks);
+            testFiles = results.filter((file) => file !== null);
+            debugPanel.addEntry('success', `Loaded ${testFiles.length} files from probe`);
+          }
         }
 
-        // Load files when page loads
-        loadTestFiles();
-    </script>
+        testFiles.sort((a, b) => a.name.localeCompare(b.name));
+        displayFiles(testFiles);
+      } catch (error) {
+        if (fileGrid) {
+          fileGrid.innerHTML = `
+            <div class="toolbox-error">
+              <h3>Toolbox misfire</h3>
+              <p>Dad dropped the wrench: ${error.message}</p>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function displayFiles(files) {
+      const existingFiles = files.filter((file) => file.exists !== false);
+      const statsEl = document.getElementById('toolbox-stats');
+      const container = document.getElementById('file-grid');
+
+      if (statsEl) {
+        statsEl.textContent = `${existingFiles.length} tool${existingFiles.length !== 1 ? 's' : ''} ready`;
+      }
+
+      if (!container) {
+        return;
+      }
+
+      container.innerHTML = '';
+
+      if (existingFiles.length === 0) {
+        container.innerHTML = `
+          <div class="toolbox-empty">
+            <h3>Empty tool shed</h3>
+            <p>No test files found in the testing directory.</p>
+          </div>
+        `;
+        return;
+      }
+
+      existingFiles.forEach((file) => {
+        const fileInfo = getFileInfo(file);
+        const card = document.createElement('a');
+        card.href = file.name;
+        card.className = 'toolbox-card';
+        card.innerHTML = `
+          <span class="toolbox-card-icon">${fileInfo.icon}</span>
+          <div class="toolbox-card-body">
+            <div class="toolbox-card-title">
+              <h3>${fileInfo.displayName}</h3>
+              <span class="toolbox-card-arrow">→</span>
+            </div>
+            <div class="toolbox-card-meta">
+              <span class="toolbox-card-file">${file.name}</span>
+              ${file.size ? `<span class="toolbox-card-size">${formatFileSize(file.size)}</span>` : ''}
+            </div>
+            <p class="toolbox-card-desc">${fileInfo.desc}</p>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    loadTestFiles();
+  </script>
 </body>
 </html>
