@@ -26,6 +26,11 @@ class EventbriteParser {
             maxAdditionalUrls: 20,
             ...config
         };
+        this.debug = Boolean(
+            this.config.debug === true ||
+            this.config.verbose === true ||
+            this.config.logLevel === 'debug'
+        );
         
         this.bearKeywords = [
             'megawoof', 'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
@@ -34,9 +39,27 @@ class EventbriteParser {
         ];
     }
 
+    setDebugFromConfig(parserConfig = {}) {
+        this.debug = Boolean(
+            parserConfig?.debug === true ||
+            parserConfig?.verbose === true ||
+            parserConfig?.logLevel === 'debug' ||
+            this.config.debug === true ||
+            this.config.verbose === true ||
+            this.config.logLevel === 'debug'
+        );
+    }
+
+    logDebug(message) {
+        if (this.debug) {
+            console.log(message);
+        }
+    }
+
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
+            this.setDebugFromConfig(parserConfig);
             const events = [];
             const html = htmlData.html;
             
@@ -48,22 +71,22 @@ class EventbriteParser {
             // Extract events from embedded JSON data (modern Eventbrite approach - JSON only)
             const jsonEvents = this.extractEventsFromJson(html, parserConfig, htmlData, cityConfig);
             if (jsonEvents.length > 0) {
-                console.log(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
+                this.logDebug(`🎫 Eventbrite: Found ${jsonEvents.length} events in embedded JSON data`);
                 events.push(...jsonEvents);
             } else {
-                console.log('🎫 Eventbrite: No events found in JSON data - checking __NEXT_DATA__');
+                this.logDebug('🎫 Eventbrite: No events found in JSON data - checking __NEXT_DATA__');
                 const nextDataEvents = this.extractEventsFromNextData(html, parserConfig, htmlData, cityConfig);
                 if (nextDataEvents.length > 0) {
-                    console.log(`🎫 Eventbrite: Found ${nextDataEvents.length} events in __NEXT_DATA__ payload`);
+                    this.logDebug(`🎫 Eventbrite: Found ${nextDataEvents.length} events in __NEXT_DATA__ payload`);
                     events.push(...nextDataEvents);
                 } else {
-                    console.log('🎫 Eventbrite: No events found in __NEXT_DATA__ - checking JSON-LD');
+                    this.logDebug('🎫 Eventbrite: No events found in __NEXT_DATA__ - checking JSON-LD');
                     const jsonLdEvents = this.extractEventsFromJsonLd(html, parserConfig, htmlData, cityConfig);
                     if (jsonLdEvents.length > 0) {
-                        console.log(`🎫 Eventbrite: Found ${jsonLdEvents.length} events in JSON-LD data`);
+                        this.logDebug(`🎫 Eventbrite: Found ${jsonLdEvents.length} events in JSON-LD data`);
                         events.push(...jsonLdEvents);
                     } else {
-                        console.log('🎫 Eventbrite: No events found in JSON-LD data - this may be an individual event page with unsupported data');
+                        this.logDebug('🎫 Eventbrite: No events found in JSON-LD data - this may be an individual event page with unsupported data');
                     }
                 }
             }
@@ -74,7 +97,7 @@ class EventbriteParser {
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
             }
             
-            console.log(`🎫 Eventbrite: Found ${events.length} events, ${additionalLinks.length} additional links`);
+            this.logDebug(`🎫 Eventbrite: Found ${events.length} events, ${additionalLinks.length} additional links`);
             
             return {
                 events: events,
@@ -220,12 +243,12 @@ class EventbriteParser {
                 if (jsonString) {
                     try {
                         const serverData = JSON.parse(jsonString);
-                        console.log('🎫 Eventbrite: Found window.__SERVER_DATA__');
+                        this.logDebug('🎫 Eventbrite: Found window.__SERVER_DATA__');
                     
                     // Check for events in view_data.events.future_events (organizer pages)
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
                         const futureEvents = serverData.view_data.events.future_events;
-                        console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data (organizer page)`);
+                        this.logDebug(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data (organizer page)`);
                         
                         futureEvents.forEach(eventData => {
                             if (eventData.url && eventData.name && (eventData.name.text || typeof eventData.name === 'string')) {
@@ -234,27 +257,27 @@ class EventbriteParser {
                                     const event = this.parseJsonEvent(eventData, null, parserConfig, serverData, cityConfig);
                                     if (event) {
                                         events.push(event);
-                                        console.log(`🎫 Eventbrite: Parsed future event: ${event.title} (${event.startDate || event.date})`);
+                                        this.logDebug(`🎫 Eventbrite: Parsed future event: ${event.title} (${event.startDate || event.date})`);
                                     }
                                 } else {
                                     const eventName = eventData.name?.text || eventData.name || 'Unknown';
-                                    console.log(`🎫 Eventbrite: Skipping non-future event from future_events: ${eventName}`);
+                                    this.logDebug(`🎫 Eventbrite: Skipping non-future event from future_events: ${eventName}`);
                                 }
                             }
                         });
                         
                         // If we found future events, return them and skip other patterns
                         if (events.length > 0) {
-                            console.log(`🎫 Eventbrite: Successfully extracted ${events.length} future events from JSON data`);
+                            this.logDebug(`🎫 Eventbrite: Successfully extracted ${events.length} future events from JSON data`);
                             return events;
                         }
                     }
                     
                     // Check for individual event data (individual event pages)
-                    console.log('🎫 Eventbrite: Debug - serverData top-level keys:', Object.keys(serverData));
+                    this.logDebug(`🎫 Eventbrite: Debug - serverData top-level keys: ${Object.keys(serverData).join(', ')}`);
                     
                     if (serverData.event) {
-                        console.log('🎫 Eventbrite: Found individual event data in JSON');
+                        this.logDebug('🎫 Eventbrite: Found individual event data in JSON');
                         const eventData = serverData.event;
                         
                         // Detail pages have different field structure - adapt the event data
@@ -272,54 +295,54 @@ class EventbriteParser {
                         const hasRequiredFields = adaptedEventData.name && (adaptedEventData.url || htmlData.url);
                         const isFuture = this.isFutureEvent(adaptedEventData);
                         
-                        console.log(`🎫 Eventbrite: Detail page validation - hasFields: ${hasRequiredFields}, isFuture: ${isFuture}, name: "${adaptedEventData.name}"`);
+                        this.logDebug(`🎫 Eventbrite: Detail page validation - hasFields: ${hasRequiredFields}, isFuture: ${isFuture}, name: "${adaptedEventData.name}"`);
                         
                         if (hasRequiredFields && isFuture) {
                             const event = this.parseJsonEvent(adaptedEventData, null, parserConfig, serverData, cityConfig);
                             if (event) {
                                 events.push(event);
-                                console.log(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
+                                this.logDebug(`🎫 Eventbrite: Parsed individual event: ${event.title} (${event.startDate || event.date})`);
                             } else {
-                                console.log('🎫 Eventbrite: parseJsonEvent returned null for detail page event');
+                                this.logDebug('🎫 Eventbrite: parseJsonEvent returned null for detail page event');
                             }
                         } else {
                             const reasons = [];
                             if (!hasRequiredFields) reasons.push('missing required fields');
                             if (!isFuture) reasons.push('not a future event');
-                            console.log(`🎫 Eventbrite: Skipping individual event: ${reasons.join(', ')}`);
+                            this.logDebug(`🎫 Eventbrite: Skipping individual event: ${reasons.join(', ')}`);
                         }
                         
                         if (events.length > 0) {
-                            console.log(`🎫 Eventbrite: Successfully extracted individual event from JSON data`);
+                            this.logDebug(`🎫 Eventbrite: Successfully extracted individual event from JSON data`);
                             return events;
                         }
                     } else {
-                        console.log('🎫 Eventbrite: No serverData.event found in detail page');
+                        this.logDebug('🎫 Eventbrite: No serverData.event found in detail page');
                         
                         // Check for alternative event data locations in detail pages
                         if (serverData.event_listing_response) {
-                            console.log('🎫 Eventbrite: Found event_listing_response, keys:', Object.keys(serverData.event_listing_response));
+                            this.logDebug(`🎫 Eventbrite: Found event_listing_response, keys: ${Object.keys(serverData.event_listing_response).join(', ')}`);
                         }
                         
                         // Check if event data is nested elsewhere
                         if (serverData.components && serverData.components.eventDetails) {
-                            console.log('🎫 Eventbrite: Found components.eventDetails, keys:', Object.keys(serverData.components.eventDetails));
+                            this.logDebug(`🎫 Eventbrite: Found components.eventDetails, keys: ${Object.keys(serverData.components.eventDetails).join(', ')}`);
                         }
                         
                         // Log a sample of available data for debugging
-                        console.log('🎫 Eventbrite: Available serverData structure for debugging:');
-                        console.log('🎫 Eventbrite: - event:', !!serverData.event);
-                        console.log('🎫 Eventbrite: - event_listing_response:', !!serverData.event_listing_response);
-                        console.log('🎫 Eventbrite: - components:', !!serverData.components);
+                        this.logDebug('🎫 Eventbrite: Available serverData structure for debugging:');
+                        this.logDebug(`🎫 Eventbrite: - event: ${!!serverData.event}`);
+                        this.logDebug(`🎫 Eventbrite: - event_listing_response: ${!!serverData.event_listing_response}`);
+                        this.logDebug(`🎫 Eventbrite: - components: ${!!serverData.components}`);
                         if (serverData.components) {
-                            console.log('🎫 Eventbrite: - components keys:', Object.keys(serverData.components));
+                            this.logDebug(`🎫 Eventbrite: - components keys: ${Object.keys(serverData.components).join(', ')}`);
                         }
                     }
                     
                     // Also check for past events if needed for debugging (but don't include them)
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.past_events) {
                         const pastEvents = serverData.view_data.events.past_events;
-                        console.log(`🎫 Eventbrite: Found ${pastEvents.length} past events in JSON data (not included)`);
+                        this.logDebug(`🎫 Eventbrite: Found ${pastEvents.length} past events in JSON data (not included)`);
                     }
                     
                     } catch (parseError) {
@@ -386,9 +409,9 @@ class EventbriteParser {
             const event = this.parseJsonEvent(eventData, null, parserConfig, null, cityConfig);
             if (event) {
                 events.push(event);
-                console.log(`🎫 Eventbrite: Parsed event from __NEXT_DATA__ payload: ${event.title}`);
+                this.logDebug(`🎫 Eventbrite: Parsed event from __NEXT_DATA__ payload: ${event.title}`);
             } else {
-                console.log('🎫 Eventbrite: parseJsonEvent returned null for __NEXT_DATA__ event');
+                this.logDebug('🎫 Eventbrite: parseJsonEvent returned null for __NEXT_DATA__ event');
             }
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting __NEXT_DATA__ events: ${error}`);
@@ -629,13 +652,13 @@ class EventbriteParser {
             const description = jsonLdDescription.length > 60 ? jsonLdDescription : (fallbackDescription || jsonLdDescription);
             
             if (!title || !url) {
-                console.log(`🎫 Eventbrite: JSON-LD event missing title or URL (title: "${title}", url: "${url}")`);
+                this.logDebug(`🎫 Eventbrite: JSON-LD event missing title or URL (title: "${title}", url: "${url}")`);
                 return null;
             }
             
             const isFuture = this.isFutureEvent({ startDate: startDate });
             if (!isFuture) {
-                console.log(`🎫 Eventbrite: Skipping JSON-LD event (not future): "${title}"`);
+                this.logDebug(`🎫 Eventbrite: Skipping JSON-LD event (not future): "${title}"`);
                 return null;
             }
             
@@ -678,7 +701,7 @@ class EventbriteParser {
             
             const event = this.parseJsonEvent(eventData, null, parserConfig, null, cityConfig);
             if (!event) {
-                console.log(`🎫 Eventbrite: parseJsonEvent returned null for JSON-LD event "${title}"`);
+                this.logDebug(`🎫 Eventbrite: parseJsonEvent returned null for JSON-LD event "${title}"`);
             }
             
             return event;
@@ -717,7 +740,7 @@ class EventbriteParser {
         try {
             const eventDate = new Date(startDate);
             const isFuture = eventDate > now;
-            console.log(`🎫 Eventbrite: Date check - event: ${eventDate.toISOString()}, now: ${now.toISOString()}, isFuture: ${isFuture}`);
+            this.logDebug(`🎫 Eventbrite: Date check - event: ${eventDate.toISOString()}, now: ${now.toISOString()}, isFuture: ${isFuture}`);
             return isFuture;
         } catch (error) {
             console.warn(`🎫 Eventbrite: Invalid date format: ${startDate}, error: ${error}`);
@@ -746,10 +769,10 @@ class EventbriteParser {
             let originalTimezone = null;
             if (eventData.start?.timezone) {
                 originalTimezone = eventData.start.timezone;
-                console.log(`🎫 Eventbrite: Found original timezone in event data: ${originalTimezone}`);
+                this.logDebug(`🎫 Eventbrite: Found original timezone in event data: ${originalTimezone}`);
             } else if (eventData.end?.timezone) {
                 originalTimezone = eventData.end.timezone;
-                console.log(`🎫 Eventbrite: Found original timezone in end data: ${originalTimezone}`);
+                this.logDebug(`🎫 Eventbrite: Found original timezone in end data: ${originalTimezone}`);
             }
             
             // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
@@ -760,7 +783,7 @@ class EventbriteParser {
                 endDate = endDate.utc;
             }
             
-            console.log(`🎫 Eventbrite: Date processing for "${title}": start="${startDate}", end="${endDate}"`);
+            this.logDebug(`🎫 Eventbrite: Date processing for "${title}": start="${startDate}", end="${endDate}"`);
             const url = eventData.url || eventData.vanity_url || '';
             
             // Enhanced venue processing - get both name and address from multiple sources
@@ -780,11 +803,11 @@ class EventbriteParser {
                         lat: eventMap.location.latitude,
                         lng: eventMap.location.longitude
                     };
-                    console.log(`🎫 Eventbrite: Found coordinates in detail page eventMap for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
+                    this.logDebug(`🎫 Eventbrite: Found coordinates in detail page eventMap for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
                 }
                 
                 if (venue || address) {
-                    console.log(`🎫 Eventbrite: Detail page venue data for "${title}": venue="${venue}", address="${address}"`);
+                    this.logDebug(`🎫 Eventbrite: Detail page venue data for "${title}": venue="${venue}", address="${address}"`);
                 }
             }
             
@@ -800,7 +823,7 @@ class EventbriteParser {
                     } else {
                         address = addr.localized_address_display || null;
                     }
-                    console.log(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
+                    this.logDebug(`🎫 Eventbrite: Venue details for "${title}": venue="${venue}", address="${address}"`);
                     
                     // Extract coordinates if available and not already found; shared-core will later suppress for placeholders
                     if (!coordinates && eventData.venue.address.latitude && eventData.venue.address.longitude) {
@@ -808,7 +831,7 @@ class EventbriteParser {
                             lat: eventData.venue.address.latitude,
                             lng: eventData.venue.address.longitude
                         };
-                        console.log(`🎫 Eventbrite: Found coordinates in venue.address for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
+                        this.logDebug(`🎫 Eventbrite: Found coordinates in venue.address for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
                     }
                     
                     // Also check venue-level coordinates (sometimes more accurate)
@@ -817,7 +840,7 @@ class EventbriteParser {
                             lat: parseFloat(eventData.venue.latitude),
                             lng: parseFloat(eventData.venue.longitude)
                         };
-                        console.log(`🎫 Eventbrite: Found coordinates in venue root for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
+                        this.logDebug(`🎫 Eventbrite: Found coordinates in venue root for "${title}": ${coordinates.lat}, ${coordinates.lng}`);
                     }
                 }
             }
@@ -826,23 +849,23 @@ class EventbriteParser {
             let price = '';
             
             // DEBUG: Log the pricing condition checks
-            console.log(`🎫 Eventbrite: Price extraction debug for "${title}":`);
-            console.log(`🎫 Eventbrite:   - eventData.is_free: ${eventData.is_free}`);
-            console.log(`🎫 Eventbrite:   - eventData.price_range: ${eventData.price_range}`);
-            console.log(`🎫 Eventbrite:   - serverData exists: ${!!serverData}`);
-            console.log(`🎫 Eventbrite:   - event_listing_response exists: ${!!(serverData && serverData.event_listing_response)}`);
-            console.log(`🎫 Eventbrite:   - tickets exists: ${!!(serverData && serverData.event_listing_response && serverData.event_listing_response.tickets)}`);
-            console.log(`🎫 Eventbrite:   - ticketClasses exists: ${!!(serverData && serverData.event_listing_response && serverData.event_listing_response.tickets && serverData.event_listing_response.tickets.ticketClasses)}`);
+            this.logDebug(`🎫 Eventbrite: Price extraction debug for "${title}":`);
+            this.logDebug(`🎫 Eventbrite:   - eventData.is_free: ${eventData.is_free}`);
+            this.logDebug(`🎫 Eventbrite:   - eventData.price_range: ${eventData.price_range}`);
+            this.logDebug(`🎫 Eventbrite:   - serverData exists: ${!!serverData}`);
+            this.logDebug(`🎫 Eventbrite:   - event_listing_response exists: ${!!(serverData && serverData.event_listing_response)}`);
+            this.logDebug(`🎫 Eventbrite:   - tickets exists: ${!!(serverData && serverData.event_listing_response && serverData.event_listing_response.tickets)}`);
+            this.logDebug(`🎫 Eventbrite:   - ticketClasses exists: ${!!(serverData && serverData.event_listing_response && serverData.event_listing_response.tickets && serverData.event_listing_response.tickets.ticketClasses)}`);
             if (serverData && serverData.event_listing_response && serverData.event_listing_response.tickets && serverData.event_listing_response.tickets.ticketClasses) {
-                console.log(`🎫 Eventbrite:   - ticketClasses length: ${serverData.event_listing_response.tickets.ticketClasses.length}`);
+                this.logDebug(`🎫 Eventbrite:   - ticketClasses length: ${serverData.event_listing_response.tickets.ticketClasses.length}`);
             }
             
             if (eventData.is_free) {
                 price = 'Free';
-                console.log(`🎫 Eventbrite: Taking is_free path for "${title}"`);
+                this.logDebug(`🎫 Eventbrite: Taking is_free path for "${title}"`);
             } else if (eventData.price_range) {
                 price = eventData.price_range;
-                console.log(`🎫 Eventbrite: Taking price_range path for "${title}": ${price}`);
+                this.logDebug(`🎫 Eventbrite: Taking price_range path for "${title}": ${price}`);
                 
                 // Add availability hint based on inventory type (applies to all ticket tiers)
                 if (eventData.inventory_type === 'limited') {
@@ -852,7 +875,7 @@ class EventbriteParser {
                     price += ` (as of ${month}/${day})`;
                 }
             } else if (serverData && serverData.event_listing_response && serverData.event_listing_response.tickets && serverData.event_listing_response.tickets.ticketClasses) {
-                console.log(`🎫 Eventbrite: Taking ticketClasses path for "${title}"`);
+                this.logDebug(`🎫 Eventbrite: Taking ticketClasses path for "${title}"`);
                 // Detail pages have pricing in tickets.ticketClasses - extract price range
                 const ticketClasses = serverData.event_listing_response.tickets.ticketClasses;
                 const prices = ticketClasses
@@ -878,42 +901,42 @@ class EventbriteParser {
                     const day = now.getDate();
                     price += ` (as of ${month}/${day})`;
                     
-                    console.log(`🎫 Eventbrite: Extracted price range from detail page for "${title}": ${price}`);
+                    this.logDebug(`🎫 Eventbrite: Extracted price range from detail page for "${title}": ${price}`);
                 } else {
-                    console.log(`🎫 Eventbrite: Detail page ticketClasses found but no valid prices extracted for "${title}"`);
+                    this.logDebug(`🎫 Eventbrite: Detail page ticketClasses found but no valid prices extracted for "${title}"`);
                 }
             } else {
-                console.log(`🎫 Eventbrite: Taking else path (no pricing conditions met) for "${title}"`);
+                this.logDebug(`🎫 Eventbrite: Taking else path (no pricing conditions met) for "${title}"`);
                 
                 // Try alternative pricing sources in detail pages
                 let foundAlternativePrice = false;
                 
                 // Check if pricing info is in components.eventDetails or other locations
                 if (serverData?.components?.eventDetails) {
-                    console.log(`🎫 Eventbrite: Checking components.eventDetails for pricing info for "${title}"`);
+                    this.logDebug(`🎫 Eventbrite: Checking components.eventDetails for pricing info for "${title}"`);
                     // This is where we might find alternative pricing data in the future
                 }
                 
                 if (!foundAlternativePrice) {
-                    console.log(`🎫 Eventbrite: No pricing information found in detail page for "${title}" - returning empty price`);
+                    this.logDebug(`🎫 Eventbrite: No pricing information found in detail page for "${title}" - returning empty price`);
                 }
             }
             
-            console.log(`🎫 Eventbrite: Final price result for "${title}": "${price}"`);
+            this.logDebug(`🎫 Eventbrite: Final price result for "${title}": "${price}"`);
             let image = eventData.logo?.url || eventData.image?.url;
             
             // NEW: Try to get image from eventHero if not found in eventData
             if (!image && serverData && serverData.event_listing_response && serverData.event_listing_response.eventHero && serverData.event_listing_response.eventHero.items && serverData.event_listing_response.eventHero.items[0]) {
                 const heroItem = serverData.event_listing_response.eventHero.items[0];
                 image = heroItem.croppedLogoUrl600 || heroItem.croppedLogoUrl480 || heroItem.croppedLogoUrl940;
-                console.log(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
+                this.logDebug(`🎫 Eventbrite: Found image in eventHero for "${title}": ${image}`);
             }
             
             // Don't generate Google Maps URL here - let SharedCore handle it with iOS-compatible logic
             // Just pass the place_id data to SharedCore for processing
             // Leave gmaps undefined so SharedCore will generate the URL
             if (eventData.venue?.google_place_id) {
-                console.log(`🎫 Eventbrite: Passing place_id "${eventData.venue.google_place_id}" to SharedCore for iOS-compatible URL generation for "${title}"`);
+                this.logDebug(`🎫 Eventbrite: Passing place_id "${eventData.venue.google_place_id}" to SharedCore for iOS-compatible URL generation for "${title}"`);
             }
             
             // NEW: Try to get venue data from components if not found in eventData
@@ -927,18 +950,18 @@ class EventbriteParser {
                 const mapData = serverData.components.eventMap;
                 if (!finalVenue && mapData.venueName) {
                     finalVenue = mapData.venueName;
-                    console.log(`🎫 Eventbrite: Found venue name in components.eventMap: "${finalVenue}"`);
+                    this.logDebug(`🎫 Eventbrite: Found venue name in components.eventMap: "${finalVenue}"`);
                 }
                 if (!finalAddress && mapData.venueAddress) {
                     finalAddress = mapData.venueAddress;
-                    console.log(`🎫 Eventbrite: Found venue address in components.eventMap: "${finalAddress}"`);
+                    this.logDebug(`🎫 Eventbrite: Found venue address in components.eventMap: "${finalAddress}"`);
                 }
                 if (!finalCoordinates && mapData.location) {
                     finalCoordinates = {
                         lat: mapData.location.latitude,
                         lng: mapData.location.longitude
                     };
-                    console.log(`🎫 Eventbrite: Found coordinates in components.eventMap for "${title}": ${finalCoordinates.lat}, ${finalCoordinates.lng}`);
+                    this.logDebug(`🎫 Eventbrite: Found coordinates in components.eventMap for "${title}": ${finalCoordinates.lat}, ${finalCoordinates.lng}`);
                 }
             }
             
@@ -947,7 +970,7 @@ class EventbriteParser {
                 const detailsLocation = serverData.components.eventDetails.location;
                 if (detailsLocation.localityPlaceId && !finalPlaceId) {
                     finalPlaceId = detailsLocation.localityPlaceId;
-                    console.log(`🎫 Eventbrite: Found place_id in components.eventDetails.location: "${finalPlaceId}"`);
+                    this.logDebug(`🎫 Eventbrite: Found place_id in components.eventDetails.location: "${finalPlaceId}"`);
                 }
             }
             
@@ -963,7 +986,7 @@ class EventbriteParser {
                 venueAddress: eventData.venue?.address || null
             }, cityConfig);
             if (city) {
-                console.log(`🎫 Eventbrite: Detected city "${city}" from event data for "${title}"`);
+                this.logDebug(`🎫 Eventbrite: Detected city "${city}" from event data for "${title}"`);
             }
 
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
@@ -974,9 +997,9 @@ class EventbriteParser {
             if (city) {
                 eventTimezone = this.getTimezoneForCity(city, cityConfig);
                 if (eventTimezone) {
-                    console.log(`🎫 Eventbrite: Using city-based timezone for "${title}": ${eventTimezone}`);
+                    this.logDebug(`🎫 Eventbrite: Using city-based timezone for "${title}": ${eventTimezone}`);
                     if (originalTimezone && originalTimezone !== eventTimezone) {
-                        console.log(`🎫 Eventbrite: Overriding Eventbrite timezone "${originalTimezone}" with city-based timezone "${eventTimezone}" for "${title}"`);
+                        this.logDebug(`🎫 Eventbrite: Overriding Eventbrite timezone "${originalTimezone}" with city-based timezone "${eventTimezone}" for "${title}"`);
                         needsTimeConversion = true;
                     }
                 }
@@ -985,8 +1008,8 @@ class EventbriteParser {
             // When timezone is overridden, convert time assuming the original local time should be preserved
             if (needsTimeConversion && startDate && originalTimezone && eventTimezone) {
                 try {
-                    console.log(`🎫 Eventbrite: Converting time from ${originalTimezone} to ${eventTimezone} for "${title}"`);
-                    console.log(`🎫 Eventbrite: Original UTC times - start: ${startDate}, end: ${endDate}`);
+                    this.logDebug(`🎫 Eventbrite: Converting time from ${originalTimezone} to ${eventTimezone} for "${title}"`);
+                    this.logDebug(`🎫 Eventbrite: Original UTC times - start: ${startDate}, end: ${endDate}`);
                     
                     // Parse the original UTC time
                     const originalStartUTC = new Date(startDate);
@@ -1004,7 +1027,7 @@ class EventbriteParser {
                         hour12: false
                     }).format(originalStartUTC);
                     
-                    console.log(`🎫 Eventbrite: Original would be ${originalLocalFormatted} in ${originalTimezone}`);
+                    this.logDebug(`🎫 Eventbrite: Original would be ${originalLocalFormatted} in ${originalTimezone}`);
                     
                     // Create a new date with the same local time but in the target timezone
                     // Parse the local time components (handle comma separator)
@@ -1056,11 +1079,11 @@ class EventbriteParser {
                     }
                     
                     if (iterations >= maxIterations) {
-                        console.log(`🎫 Eventbrite: Could not converge on timezone conversion after ${maxIterations} iterations`);
+                        this.logDebug(`🎫 Eventbrite: Could not converge on timezone conversion after ${maxIterations} iterations`);
                         // Fallback to original time
                         correctedStartUTC = originalStartUTC;
                     } else {
-                        console.log(`🎫 Eventbrite: Converged after ${iterations} iterations`);
+                        this.logDebug(`🎫 Eventbrite: Converged after ${iterations} iterations`);
                     }
                     
                     startDate = correctedStartUTC.toISOString();
@@ -1072,22 +1095,22 @@ class EventbriteParser {
                         endDate = correctedEnd.toISOString();
                     }
                     
-                    console.log(`🎫 Eventbrite: Time converted - start: ${startDate}, end: ${endDate}`);
-                    console.log(`🎫 Eventbrite: Local time ${originalLocalFormatted} now properly in ${eventTimezone}`);
+                    this.logDebug(`🎫 Eventbrite: Time converted - start: ${startDate}, end: ${endDate}`);
+                    this.logDebug(`🎫 Eventbrite: Local time ${originalLocalFormatted} now properly in ${eventTimezone}`);
                     
                 } catch (error) {
-                    console.log(`🎫 Eventbrite: Error during time conversion: ${error.message}`);
+                    this.logDebug(`🎫 Eventbrite: Error during time conversion: ${error.message}`);
                 }
             }
             
             // Fallback to original Eventbrite timezone if no city-based timezone found
             if (!eventTimezone && originalTimezone) {
                 eventTimezone = originalTimezone;
-                console.log(`🎫 Eventbrite: Using original Eventbrite timezone for "${title}": ${eventTimezone}`);
+                this.logDebug(`🎫 Eventbrite: Using original Eventbrite timezone for "${title}": ${eventTimezone}`);
             }
             
             if (!eventTimezone) {
-                console.log(`🎫 Eventbrite: No timezone found for "${title}"`);
+                this.logDebug(`🎫 Eventbrite: No timezone found for "${title}"`);
             }
             
             const event = {
@@ -1130,7 +1153,7 @@ class EventbriteParser {
             }
             
             // Log event creation with URL for verification
-            console.log(`🎫 Eventbrite: Created event "${title}" with ticketUrl: ${url}`);
+            this.logDebug(`🎫 Eventbrite: Created event "${title}" with ticketUrl: ${url}`);
             
             return event;
             
@@ -1145,7 +1168,7 @@ class EventbriteParser {
         const urls = new Set();
         
         try {
-            console.log(`🎫 Eventbrite: Extracting additional event URLs from JSON data`);
+            this.logDebug(`🎫 Eventbrite: Extracting additional event URLs from JSON data`);
             
             // Look for window.__SERVER_DATA__ which contains the event information
             // Use the same robust JSON extraction approach
@@ -1163,7 +1186,7 @@ class EventbriteParser {
                     // Extract URLs from future_events
                     if (serverData.view_data && serverData.view_data.events && serverData.view_data.events.future_events) {
                         const futureEvents = serverData.view_data.events.future_events;
-                        console.log(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data for URL extraction`);
+                        this.logDebug(`🎫 Eventbrite: Found ${futureEvents.length} future events in JSON data for URL extraction`);
                         
                         futureEvents.forEach(eventData => {
                             if (eventData.url) {
@@ -1177,7 +1200,7 @@ class EventbriteParser {
                                 // Only add if it's actually an event URL and passes validation
                                 if (eventUrl.includes('/e/') && this.isValidEventUrl(eventUrl, parserConfig)) {
                                     urls.add(eventUrl);
-                                    console.log(`🎫 Eventbrite: Found event detail URL: ${eventUrl}`);
+                                    this.logDebug(`🎫 Eventbrite: Found event detail URL: ${eventUrl}`);
                                 }
                             }
                         });
@@ -1187,14 +1210,14 @@ class EventbriteParser {
                     // Past events are not relevant for detail page processing
                     
                     } catch (error) {
-                        console.warn('🎫 Eventbrite: Failed to parse window.__SERVER_DATA__ for URL extraction:', error);
+                        console.warn(`🎫 Eventbrite: Failed to parse window.__SERVER_DATA__ for URL extraction: ${error}`);
                     }
                 } else {
                     console.warn('🎫 Eventbrite: Could not extract valid JSON from window.__SERVER_DATA__ for URL extraction');
                 }
             }
             
-            console.log(`🎫 Eventbrite: Extracted ${urls.size} additional event links from JSON data`);
+            this.logDebug(`🎫 Eventbrite: Extracted ${urls.size} additional event links from JSON data`);
             
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting additional URLs: ${error}`);
@@ -1362,9 +1385,8 @@ class EventbriteParser {
     getTimezoneForCity(city, cityConfig = null) {
         // City config must be provided - no fallbacks
         if (!cityConfig || !cityConfig[city]) {
-            console.log(`🎫 Eventbrite: No timezone configuration found for city: ${city}`);
-            console.log(`🎫 Eventbrite: Available cities in config:`, Object.keys(cityConfig || {}));
-            console.log(`🎫 Eventbrite: This error is coming from Eventbrite parser`);
+            console.warn(`🎫 Eventbrite: No timezone configuration found for city: ${city}`);
+            this.logDebug(`🎫 Eventbrite: Available cities in config: ${Object.keys(cityConfig || {}).join(', ')}`);
             return null;
         }
         

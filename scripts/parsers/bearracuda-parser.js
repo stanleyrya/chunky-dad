@@ -26,6 +26,11 @@ class BearraccudaParser {
             maxAdditionalUrls: 20,
             ...config
         };
+        this.debug = Boolean(
+            this.config.debug === true ||
+            this.config.verbose === true ||
+            this.config.logLevel === 'debug'
+        );
         
         this.bearKeywords = [
             'bear', 'bears', 'woof', 'grr', 'furry', 'hairy',
@@ -34,9 +39,27 @@ class BearraccudaParser {
         ];
     }
 
+    setDebugFromConfig(parserConfig = {}) {
+        this.debug = Boolean(
+            parserConfig?.debug === true ||
+            parserConfig?.verbose === true ||
+            parserConfig?.logLevel === 'debug' ||
+            this.config.debug === true ||
+            this.config.verbose === true ||
+            this.config.logLevel === 'debug'
+        );
+    }
+
+    logDebug(message) {
+        if (this.debug) {
+            console.log(message);
+        }
+    }
+
     // Main parsing method - receives HTML data and returns events + additional links
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
+            this.setDebugFromConfig(parserConfig);
             const events = [];
             const html = htmlData.html;
             
@@ -82,7 +105,7 @@ class BearraccudaParser {
 
             }
             
-            console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
+            this.logDebug(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
             
             return {
                 events: events,
@@ -100,7 +123,7 @@ class BearraccudaParser {
     // Parse an individual event detail page
     parseEventDetailPage(html, sourceUrl, parserConfig = {}, cityConfig = null) {
         try {
-            console.log(`🐻 Bearracuda: Parsing individual event page: ${sourceUrl}`);
+            this.logDebug(`🐻 Bearracuda: Parsing individual event page: ${sourceUrl}`);
             
             // Extract title (usually the city name)
             let title = this.extractTitle(html);
@@ -116,26 +139,26 @@ class BearraccudaParser {
             let venueInfo = { name: '', address: '' };
             if (structuredSections.location.venue) {
                 venueInfo.name = structuredSections.location.venue;
-                console.log(`🐻 Bearracuda: Using structured venue: "${venueInfo.name}"`);
+                this.logDebug(`🐻 Bearracuda: Using structured venue: "${venueInfo.name}"`);
             } else {
                 venueInfo = this.extractVenue(html);
-                console.log(`🐻 Bearracuda: Using fallback venue extraction`);
+                this.logDebug(`🐻 Bearracuda: Using fallback venue extraction`);
             }
             
             // Extract address - prefer structured data
             let address = '';
             if (structuredSections.location.address) {
                 address = structuredSections.location.address;
-                console.log(`🐻 Bearracuda: Using structured address: "${address}"`);
+                this.logDebug(`🐻 Bearracuda: Using structured address: "${address}"`);
             } else {
                 address = this.extractAddress(html);
-                console.log(`🐻 Bearracuda: Using fallback address extraction: "${address}"`);
+                this.logDebug(`🐻 Bearracuda: Using fallback address extraction: "${address}"`);
             }
             
             // DEBUG: Log address extraction results
-            console.log(`🐻 Bearracuda: Final address for "${title}": "${address}" (length: ${address.length})`);
+            this.logDebug(`🐻 Bearracuda: Final address for "${title}": "${address}" (length: ${address.length})`);
             if (!address) {
-                console.log(`🐻 Bearracuda: WARNING - No address found for "${title}", gmaps URL generation may fail`);
+                console.warn(`🐻 Bearracuda: WARNING - No address found for "${title}", gmaps URL generation may fail`);
             }
             
             // Extract entertainment/performers
@@ -147,12 +170,12 @@ class BearraccudaParser {
                 links.facebook = structuredSections.links.facebook;
                 links.eventbrite = structuredSections.links.eventbrite;
                 links.tickets = structuredSections.links.tickets;
-                console.log(`🐻 Bearracuda: Using structured links - FB: ${!!links.facebook}, EB: ${!!links.eventbrite}, Tickets: ${!!links.tickets}`);
-                console.log(`🐻 Bearracuda: Structured link values - FB: "${links.facebook}", EB: "${links.eventbrite}", Tickets: "${links.tickets}"`);
+                this.logDebug(`🐻 Bearracuda: Using structured links - FB: ${!!links.facebook}, EB: ${!!links.eventbrite}, Tickets: ${!!links.tickets}`);
+                this.logDebug(`🐻 Bearracuda: Structured link values - FB: "${links.facebook}", EB: "${links.eventbrite}", Tickets: "${links.tickets}"`);
             } else {
                 links = this.extractExternalLinks(html);
-                console.log(`🐻 Bearracuda: Using fallback link extraction`);
-                console.log(`🐻 Bearracuda: Fallback link values - FB: "${links.facebook}", EB: "${links.eventbrite}"`);
+                this.logDebug(`🐻 Bearracuda: Using fallback link extraction`);
+                this.logDebug(`🐻 Bearracuda: Fallback link values - FB: "${links.facebook}", EB: "${links.eventbrite}"`);
             }
             
             // Extract special info (like anniversary details)
@@ -169,11 +192,11 @@ class BearraccudaParser {
             if (structuredDescription && structuredDescription.length > 50) {
                 // Use structured description if it contains substantial content
                 description = structuredDescription;
-                console.log(`🐻 Bearracuda: Using structured description (${description.length} chars)`);
+                this.logDebug(`🐻 Bearracuda: Using structured description (${description.length} chars)`);
             } else if (fullDescription) {
                 // Fallback to full description extraction
                 description += fullDescription + '\n';
-                console.log(`🐻 Bearracuda: Using fallback description (${description.length} chars)`);
+                this.logDebug(`🐻 Bearracuda: Using fallback description (${description.length} chars)`);
             } else {
                 // Final fallback to old logic
                 if (specialInfo) description += specialInfo + '\n';
@@ -188,7 +211,7 @@ class BearraccudaParser {
                     }
                     description += timingText + '\n';
                 }
-                console.log(`🐻 Bearracuda: Using legacy description logic`);
+                this.logDebug(`🐻 Bearracuda: Using legacy description logic`);
             }
             description = description.trim();
             
@@ -212,29 +235,29 @@ class BearraccudaParser {
             }
             
             // Log parsing results for debugging
-            console.log(`🐻 Bearracuda: Parsing results for ${sourceUrl}:`);
-            console.log(`🐻 Bearracuda: - Title: "${title}"`);
-            console.log(`🐻 Bearracuda: - Date: ${dateInfo ? dateInfo.toISOString() : 'null'}`);
-            console.log(`🐻 Bearracuda: - Start time: ${structuredSections.timing.start ? `${structuredSections.timing.start.hours}:${structuredSections.timing.start.minutes}` : 'null'}`);
-            console.log(`🐻 Bearracuda: - End time: ${structuredSections.timing.end ? `${structuredSections.timing.end.hours}:${structuredSections.timing.end.minutes}` : 'null'}`);
-            console.log(`🐻 Bearracuda: - Venue: "${venueInfo.name}"`);
-            console.log(`🐻 Bearracuda: - Address: "${address}"`);
-            console.log(`🐻 Bearracuda: - City: "${city}"`);
-            console.log(`🐻 Bearracuda: - Start Date: ${startDate ? startDate.toISOString() : 'null'}`);
-            console.log(`🐻 Bearracuda: - End Date: ${endDate ? endDate.toISOString() : 'null'}`);
+            this.logDebug(`🐻 Bearracuda: Parsing results for ${sourceUrl}:`);
+            this.logDebug(`🐻 Bearracuda: - Title: "${title}"`);
+            this.logDebug(`🐻 Bearracuda: - Date: ${dateInfo ? dateInfo.toISOString() : 'null'}`);
+            this.logDebug(`🐻 Bearracuda: - Start time: ${structuredSections.timing.start ? `${structuredSections.timing.start.hours}:${structuredSections.timing.start.minutes}` : 'null'}`);
+            this.logDebug(`🐻 Bearracuda: - End time: ${structuredSections.timing.end ? `${structuredSections.timing.end.hours}:${structuredSections.timing.end.minutes}` : 'null'}`);
+            this.logDebug(`🐻 Bearracuda: - Venue: "${venueInfo.name}"`);
+            this.logDebug(`🐻 Bearracuda: - Address: "${address}"`);
+            this.logDebug(`🐻 Bearracuda: - City: "${city}"`);
+            this.logDebug(`🐻 Bearracuda: - Start Date: ${startDate ? startDate.toISOString() : 'null'}`);
+            this.logDebug(`🐻 Bearracuda: - End Date: ${endDate ? endDate.toISOString() : 'null'}`);
             
             // Validate that we have minimum required information
             if (!title || title === 'Bearracuda Event') {
-                console.warn(`🐻 Bearracuda: Warning - No specific title found, using generic title`);
+                this.logDebug(`🐻 Bearracuda: Warning - No specific title found, using generic title`);
             }
             if (!dateInfo) {
-                console.warn(`🐻 Bearracuda: Warning - No date information found`);
+                this.logDebug(`🐻 Bearracuda: Warning - No date information found`);
             }
             if (!venueInfo.name) {
-                console.warn(`🐻 Bearracuda: Warning - No venue information found`);
+                this.logDebug(`🐻 Bearracuda: Warning - No venue information found`);
             }
             if (!city) {
-                console.warn(`🐻 Bearracuda: Warning - No city information found`);
+                this.logDebug(`🐻 Bearracuda: Warning - No city information found`);
             }
             
             const event = {
@@ -260,7 +283,7 @@ class BearraccudaParser {
             };
             
             // Debug: Log final social media links in event object
-            console.log(`🐻 Bearracuda: Final event object links - facebook: "${event.facebook}", ticketUrl: "${event.ticketUrl}"`);
+            this.logDebug(`🐻 Bearracuda: Final event object links - facebook: "${event.facebook}", ticketUrl: "${event.ticketUrl}"`);
             
             // Apply source-specific metadata values from config
             if (parserConfig.metadata) {
@@ -288,20 +311,20 @@ class BearraccudaParser {
                 return null;
             }
             
-            console.log(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate || dateInfo}`);
+            this.logDebug(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate || dateInfo}`);
             return event;
             
         } catch (error) {
             console.warn(`🐻 Bearracuda: Failed to parse event detail page ${sourceUrl}: ${error}`);
-            console.warn(`🐻 Bearracuda: Error details: ${error.stack || error.message || error}`);
+            this.logDebug(`🐻 Bearracuda: Error details: ${error.stack || error.message || error}`);
             
             // Provide debugging information
-            console.warn(`🐻 Bearracuda: HTML length: ${html ? html.length : 'undefined'} characters`);
+            this.logDebug(`🐻 Bearracuda: HTML length: ${html ? html.length : 'undefined'} characters`);
             if (html) {
-                console.warn(`🐻 Bearracuda: HTML sample: ${html.substring(0, 200)}...`);
-                console.warn(`🐻 Bearracuda: Contains title tag: ${html.includes('<title>')}`);
-                console.warn(`🐻 Bearracuda: Contains elementor: ${html.includes('elementor')}`);
-                console.warn(`🐻 Bearracuda: Contains bearracuda: ${html.toLowerCase().includes('bearracuda')}`);
+                this.logDebug(`🐻 Bearracuda: HTML sample: ${html.substring(0, 200)}...`);
+                this.logDebug(`🐻 Bearracuda: Contains title tag: ${html.includes('<title>')}`);
+                this.logDebug(`🐻 Bearracuda: Contains elementor: ${html.includes('elementor')}`);
+                this.logDebug(`🐻 Bearracuda: Contains bearracuda: ${html.toLowerCase().includes('bearracuda')}`);
             }
             
             return null;
@@ -313,7 +336,7 @@ class BearraccudaParser {
         const events = [];
         
         try {
-            console.log(`🐻 Bearracuda: Parsing listing page: ${sourceUrl}`);
+            this.logDebug(`🐻 Bearracuda: Parsing listing page: ${sourceUrl}`);
             
             // Look for event links on main page or other listing pages
             const eventLinkPattern = /href="(https:\/\/bearracuda\.com\/events\/[^"]+)"/gi;
@@ -324,11 +347,11 @@ class BearraccudaParser {
                 eventUrls.add(match[1]);
             }
             
-            console.log(`🐻 Bearracuda: Found ${eventUrls.size} event links on listing page`);
+            this.logDebug(`🐻 Bearracuda: Found ${eventUrls.size} event links on listing page`);
             
             // For listing pages, we return empty events but provide additional links
             // The actual parsing happens when the detail pages are processed
-            console.log(`🐻 Bearracuda: Listing page parsing complete - returning 0 events (detail pages will be processed separately)`);
+            this.logDebug(`🐻 Bearracuda: Listing page parsing complete - returning 0 events (detail pages will be processed separately)`);
             
         } catch (error) {
             console.warn(`🐻 Bearracuda: Error parsing listing page: ${error}`);
@@ -339,7 +362,7 @@ class BearraccudaParser {
 
     // Extract title from page
     extractTitle(html) {
-        console.log(`🐻 Bearracuda: Extracting title from HTML`);
+        this.logDebug(`🐻 Bearracuda: Extracting title from HTML`);
         
         // Look for the main heading in Elementor structure and other patterns
         const patterns = [
@@ -360,7 +383,7 @@ class BearraccudaParser {
                 title = title.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
                 
                 if (title && title !== 'Page not found' && title.length > 0) {
-                    console.log(`🐻 Bearracuda: Found title using ${name}: "${title}"`);
+                    this.logDebug(`🐻 Bearracuda: Found title using ${name}: "${title}"`);
                     return title;
                 }
             }
@@ -370,17 +393,17 @@ class BearraccudaParser {
         const urlMatch = html.match(/bearracuda\.com\/events\/([^\/]+)/);
         if (urlMatch && urlMatch[1]) {
             const citySlug = urlMatch[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            console.log(`🐻 Bearracuda: Using city slug as title fallback: "${citySlug}"`);
+            this.logDebug(`🐻 Bearracuda: Using city slug as title fallback: "${citySlug}"`);
             return `Bearracuda ${citySlug}`;
         }
         
-        console.log(`🐻 Bearracuda: No title found, using default`);
+        this.logDebug(`🐻 Bearracuda: No title found, using default`);
         return 'Bearracuda Event';
     }
 
     // Extract date from page
     extractDate(html) {
-        console.log(`🐻 Bearracuda: Extracting date from HTML`);
+        this.logDebug(`🐻 Bearracuda: Extracting date from HTML`);
         
         // Look for date with emoji pattern: 📅  August 23, 2025
         const emojiDatePattern = /📅\s*([^<\n]+)/;
@@ -388,12 +411,12 @@ class BearraccudaParser {
         
         if (emojiMatch && emojiMatch[1]) {
             const dateString = emojiMatch[1].trim();
-            console.log(`🐻 Bearracuda: Found emoji date string: "${dateString}"`);
+            this.logDebug(`🐻 Bearracuda: Found emoji date string: "${dateString}"`);
             
             // Parse various date formats
             const parsedDate = this.parseDate(dateString);
             if (parsedDate) {
-                console.log(`🐻 Bearracuda: Successfully parsed emoji date: ${parsedDate}`);
+                this.logDebug(`🐻 Bearracuda: Successfully parsed emoji date: ${parsedDate}`);
                 return parsedDate;
             }
         }
@@ -408,10 +431,10 @@ class BearraccudaParser {
         for (const pattern of structuredDatePatterns) {
             const match = html.match(pattern);
             if (match && match[1]) {
-                console.log(`🐻 Bearracuda: Found structured date: "${match[1]}"`);
+                this.logDebug(`🐻 Bearracuda: Found structured date: "${match[1]}"`);
                 const parsedDate = this.parseDate(match[1]);
                 if (parsedDate) {
-                    console.log(`🐻 Bearracuda: Successfully parsed structured date: ${parsedDate}`);
+                    this.logDebug(`🐻 Bearracuda: Successfully parsed structured date: ${parsedDate}`);
                     return parsedDate;
                 }
             }
@@ -428,16 +451,16 @@ class BearraccudaParser {
         for (const { name, pattern } of fallbackPatterns) {
             const match = html.match(pattern);
             if (match && match[1]) {
-                console.log(`🐻 Bearracuda: Found ${name} date pattern: "${match[1]}"`);
+                this.logDebug(`🐻 Bearracuda: Found ${name} date pattern: "${match[1]}"`);
                 const parsedDate = this.parseDate(match[1]);
                 if (parsedDate) {
-                    console.log(`🐻 Bearracuda: Successfully parsed ${name} date: ${parsedDate}`);
+                    this.logDebug(`🐻 Bearracuda: Successfully parsed ${name} date: ${parsedDate}`);
                     return parsedDate;
                 }
             }
         }
         
-        console.log(`🐻 Bearracuda: No date found in HTML`);
+        this.logDebug(`🐻 Bearracuda: No date found in HTML`);
         return null;
     }
 
@@ -525,13 +548,13 @@ class BearraccudaParser {
                     address.includes('%') ||
                     address.includes('javascript') ||
                     address.length > 100) {
-                    console.log(`🐻 Bearracuda: Skipping suspicious address content: ${address.substring(0, 50)}...`);
+                    this.logDebug(`🐻 Bearracuda: Skipping suspicious address content: ${address.substring(0, 50)}...`);
                     continue;
                 }
                 
                 // Final validation - should look like a real address
                 if (/^\d+\s+[A-Za-z\s\.,]+[A-Z]{2}$/.test(address.replace(/[,\s]+/g, ' ').trim())) {
-                    console.log(`🐻 Bearracuda: Extracted valid address: ${address}`);
+                    this.logDebug(`🐻 Bearracuda: Extracted valid address: ${address}`);
                     return address;
                 }
             }
@@ -564,7 +587,7 @@ class BearraccudaParser {
                     address.includes('%') ||
                     address.includes('javascript') ||
                     address.length > 100) {
-                    console.log(`🐻 Bearracuda: Skipping suspicious address content: ${address.substring(0, 50)}...`);
+                    this.logDebug(`🐻 Bearracuda: Skipping suspicious address content: ${address.substring(0, 50)}...`);
                     continue;
                 }
                 
@@ -579,13 +602,13 @@ class BearraccudaParser {
                 
                 // Final validation - should look like a real address
                 if (/^\d+\s+[A-Za-z\s\.,]+[A-Z]{2}$/.test(address.replace(/[,\s]+/g, ' ').trim())) {
-                    console.log(`🐻 Bearracuda: Extracted valid address: ${address}`);
+                    this.logDebug(`🐻 Bearracuda: Extracted valid address: ${address}`);
                     return address;
                 }
             }
         }
         
-        console.log(`🐻 Bearracuda: No valid address found`);
+        this.logDebug(`🐻 Bearracuda: No valid address found`);
         return '';
     }
 
@@ -792,7 +815,7 @@ class BearraccudaParser {
             }
 
         } catch (error) {
-            console.log(`🐻 Bearracuda: Error extracting structured description: ${error.message}`);
+            this.logDebug(`🐻 Bearracuda: Error extracting structured description: ${error.message}`);
         }
 
         return sections;
@@ -809,22 +832,22 @@ class BearraccudaParser {
             const text = match[2].trim().toLowerCase();
             
             // Categorize based on button text (flexible for future providers)
-            console.log(`🐻 Bearracuda: Processing button - Text: "${text}", URL: "${url}"`);
+            this.logDebug(`🐻 Bearracuda: Processing button - Text: "${text}", URL: "${url}"`);
             if (text.includes('rsvp')) {
                 sections.links.facebook = url;
-                console.log(`🐻 Bearracuda: Set Facebook URL: ${url}`);
+                this.logDebug(`🐻 Bearracuda: Set Facebook URL: ${url}`);
             } else if (text.includes('ticket') || text.includes('buy') || text.includes('purchase')) {
                 sections.links.tickets = url;
-                console.log(`🐻 Bearracuda: Set ticket URL: ${url}`);
+                this.logDebug(`🐻 Bearracuda: Set ticket URL: ${url}`);
                 
                 // Also categorize by URL domain for specific tracking
                 if (url.includes('eventbrite.com')) {
                     sections.links.eventbrite = url;
-                    console.log(`🐻 Bearracuda: Set Eventbrite URL: ${url}`);
+                    this.logDebug(`🐻 Bearracuda: Set Eventbrite URL: ${url}`);
                 }
                 // Future: could add ticketmaster.com, stubhub.com, etc.
             } else {
-                console.log(`🐻 Bearracuda: Button text "${text}" didn't match any category`);
+                this.logDebug(`🐻 Bearracuda: Button text "${text}" didn't match any category`);
             }
         }
         
@@ -836,7 +859,7 @@ class BearraccudaParser {
             buttonTexts.push(debugMatch[1].trim());
         }
         if (buttonTexts.length > 0) {
-            console.log(`🐻 Bearracuda: Found buttons: ${buttonTexts.join(', ')}`);
+            this.logDebug(`🐻 Bearracuda: Found buttons: ${buttonTexts.join(', ')}`);
         }
     }
 
@@ -923,7 +946,7 @@ class BearraccudaParser {
     // Extract city from URL using only city config patterns
     extractCityFromUrl(url, cityConfig = null) {
         if (!cityConfig) {
-            console.log(`🐻 Bearracuda: No city config provided - cannot extract city from URL`);
+            console.warn(`🐻 Bearracuda: No city config provided - cannot extract city from URL`);
             return null;
         }
         
@@ -932,14 +955,14 @@ class BearraccudaParser {
             if (cityData.patterns) {
                 for (const pattern of cityData.patterns) {
                     if (url.toLowerCase().includes(pattern.toLowerCase())) {
-                        console.log(`🐻 Bearracuda: Extracted city "${cityKey}" from URL using config pattern "${pattern}": ${url}`);
+                        this.logDebug(`🐻 Bearracuda: Extracted city "${cityKey}" from URL using config pattern "${pattern}": ${url}`);
                         return cityKey;
                     }
                 }
             }
         }
         
-        console.log(`🐻 Bearracuda: No city patterns matched URL: ${url}`);
+        this.logDebug(`🐻 Bearracuda: No city patterns matched URL: ${url}`);
         return null;
     }
 
@@ -948,8 +971,8 @@ class BearraccudaParser {
         const urls = [];
         
         try {
-            console.log(`🐻 Bearracuda: Extracting additional event URLs from HTML`);
-            console.log(`🐻 Bearracuda: HTML length: ${html.length} characters`);
+            this.logDebug(`🐻 Bearracuda: Extracting additional event URLs from HTML`);
+            this.logDebug(`🐻 Bearracuda: HTML length: ${html.length} characters`);
             
             // Look for bearracuda event URLs with multiple patterns
             const urlPatterns = [
@@ -961,7 +984,7 @@ class BearraccudaParser {
                 /<a[^>]+href="([^"]*\/events\/[^"]*)"[^>]*>/gi
             ];
             
-            console.log(`🐻 Bearracuda: Extracting URLs using ${urlPatterns.length} patterns...`);
+            this.logDebug(`🐻 Bearracuda: Extracting URLs using ${urlPatterns.length} patterns...`);
             
             const foundUrls = new Set(); // Track unique URLs found
             
@@ -996,40 +1019,40 @@ class BearraccudaParser {
                     if (this.isValidEventUrl(url, parserConfig)) {
                         urls.push(url);
                         patternCount++;
-                        console.log(`🐻 Bearracuda: Found event link in listing: ${url}`);
+                        this.logDebug(`🐻 Bearracuda: Found event link in listing: ${url}`);
                     }
                     
                     // Limit to prevent infinite loops (shared-core will also limit)
                     const maxUrls = parserConfig.maxAdditionalUrls || this.config.maxAdditionalUrls || 20;
                     if (urls.length >= maxUrls) {
-                        console.log(`🐻 Bearracuda: Reached maximum URL limit (${maxUrls})`);
+                        this.logDebug(`🐻 Bearracuda: Reached maximum URL limit (${maxUrls})`);
                         break;
                     }
                 }
                 
                 if (patternCount > 0) {
-                    console.log(`🐻 Bearracuda: Pattern ${i + 1} found ${patternCount} new URLs`);
+                    this.logDebug(`🐻 Bearracuda: Pattern ${i + 1} found ${patternCount} new URLs`);
                 }
             }
             
-            console.log(`🐻 Bearracuda: Extracted ${urls.length} additional event links`);
+            this.logDebug(`🐻 Bearracuda: Extracted ${urls.length} additional event links`);
             
             // Log all unique URLs found for complete visibility
             if (urls.length > 0) {
                 const uniqueUrls = [...new Set(urls)];
-                console.log(`🐻 Bearracuda: Found ${uniqueUrls.length} unique event URLs:`);
+                this.logDebug(`🐻 Bearracuda: Found ${uniqueUrls.length} unique event URLs:`);
                 uniqueUrls.forEach((url, index) => {
-                    console.log(`🐻 Bearracuda: ${index + 1}. ${url}`);
+                    this.logDebug(`🐻 Bearracuda: ${index + 1}. ${url}`);
                 });
             } else {
-                console.log(`🐻 Bearracuda: No valid URLs found. Debugging info:`);
-                console.log(`🐻 Bearracuda: - HTML contains 'bearracuda.com': ${html.includes('bearracuda.com')}`);
-                console.log(`🐻 Bearracuda: - HTML contains '/events/': ${html.includes('/events/')}`);
-                console.log(`🐻 Bearracuda: - HTML contains 'atlantabearpride': ${html.includes('atlantabearpride')}`);
+                this.logDebug(`🐻 Bearracuda: No valid URLs found. Debugging info:`);
+                this.logDebug(`🐻 Bearracuda: - HTML contains 'bearracuda.com': ${html.includes('bearracuda.com')}`);
+                this.logDebug(`🐻 Bearracuda: - HTML contains '/events/': ${html.includes('/events/')}`);
+                this.logDebug(`🐻 Bearracuda: - HTML contains 'atlantabearpride': ${html.includes('atlantabearpride')}`);
                 
                 // Show a sample of the HTML to see what we're working with
                 const htmlSample = html.substring(0, 1000);
-                console.log(`🐻 Bearracuda: HTML sample (first 1000 chars): ${htmlSample}`);
+                this.logDebug(`🐻 Bearracuda: HTML sample (first 1000 chars): ${htmlSample}`);
             }
             
         } catch (error) {
@@ -1042,7 +1065,7 @@ class BearraccudaParser {
     // Validate if URL is a valid event URL
     isValidEventUrl(url, parserConfig) {
         if (!url || typeof url !== 'string') {
-            console.log(`🐻 Bearracuda: URL validation failed - invalid URL: ${url}`);
+            this.logDebug(`🐻 Bearracuda: URL validation failed - invalid URL: ${url}`);
             return false;
         }
         
@@ -1052,7 +1075,7 @@ class BearraccudaParser {
             const match = url.match(urlPattern);
             
             if (!match) {
-                console.log(`🐻 Bearracuda: URL validation failed - invalid URL format: ${url}`);
+                this.logDebug(`🐻 Bearracuda: URL validation failed - invalid URL format: ${url}`);
                 return false;
             }
             
@@ -1079,7 +1102,7 @@ class BearraccudaParser {
             return true;
             
         } catch (error) {
-            console.log(`🐻 Bearracuda: URL validation failed - error parsing URL: ${error}`);
+            this.logDebug(`🐻 Bearracuda: URL validation failed - error parsing URL: ${error}`);
             return false;
         }
     }
@@ -1171,7 +1194,7 @@ class BearraccudaParser {
     getTimezoneForCity(city, cityConfig = null) {
         // City config must be provided - no fallbacks
         if (!cityConfig || !cityConfig[city]) {
-            console.log(`🐻 Bearracuda: No timezone configuration found for city: ${city}`);
+            console.warn(`🐻 Bearracuda: No timezone configuration found for city: ${city}`);
             return null;
         }
         
@@ -1187,7 +1210,7 @@ class BearraccudaParser {
         
         // If no timezone configuration is available, return null
         if (!timezone) {
-            console.log(`🐻 Bearracuda: Cannot convert time for ${city} - no timezone config, returning null`);
+            this.logDebug(`🐻 Bearracuda: Cannot convert time for ${city} - no timezone config, returning null`);
             return null;
         }
         
@@ -1229,18 +1252,18 @@ class BearraccudaParser {
                     const localTimeAsUTC = new Date(Date.UTC(year, month, day, time.hours, time.minutes, 0, 0));
                     const utcTime = new Date(localTimeAsUTC.getTime() - (totalOffsetMinutes * 60 * 1000));
                     
-                    console.log(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} (${timezone}) to UTC: ${utcTime.toISOString()}`);
+            this.logDebug(`🐻 Bearracuda: Converting ${city} time ${time.hours}:${time.minutes} (${timezone}) to UTC: ${utcTime.toISOString()}`);
                     
                     return utcTime;
                 }
             }
             
             // If timezone conversion fails, return null instead of using complex fallbacks
-            console.log(`🐻 Bearracuda: Could not determine timezone for ${city}, returning null`);
+            this.logDebug(`🐻 Bearracuda: Could not determine timezone for ${city}, returning null`);
             return null;
             
         } catch (error) {
-            console.log(`🐻 Bearracuda: Error in timezone conversion: ${error.message}, returning null`);
+            this.logDebug(`🐻 Bearracuda: Error in timezone conversion: ${error.message}, returning null`);
             return null;
         }
     }
@@ -1249,7 +1272,7 @@ class BearraccudaParser {
     extractCityFromText(text, cityConfig = null) {
         if (!text) return null;
         if (!cityConfig) {
-            console.log(`🐻 Bearracuda: No city config provided - cannot extract city from text`);
+            console.warn(`🐻 Bearracuda: No city config provided - cannot extract city from text`);
             return null;
         }
         
@@ -1257,7 +1280,7 @@ class BearraccudaParser {
             if (cityData.patterns) {
                 for (const pattern of cityData.patterns) {
                     if (text.toLowerCase().includes(pattern.toLowerCase())) {
-                        console.log(`🐻 Bearracuda: Extracted city "${cityKey}" from text using config pattern "${pattern}": "${text.substring(0, 100)}..."`);
+                        this.logDebug(`🐻 Bearracuda: Extracted city "${cityKey}" from text using config pattern "${pattern}": "${text.substring(0, 100)}..."`);
                         return cityKey;
                     }
                 }

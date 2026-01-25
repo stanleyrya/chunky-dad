@@ -193,7 +193,7 @@ class BearEventScraperOrchestrator {
             const config = await adapter.loadConfiguration();
             
             // Create shared core instance with cities configuration
-            const sharedCore = new this.modules.SharedCore(config.cities);
+            const sharedCore = new this.modules.SharedCore(config.cities, config.config || {});
             
             // Create adapter with cities configuration
             let finalAdapter = adapter;
@@ -205,10 +205,15 @@ class BearEventScraperOrchestrator {
             }
 
             // Create parser instances
+            const globalLogConfig = config.config || {};
             const parsers = {};
             for (const [name, ParserClass] of Object.entries(this.modules.parsers)) {
                 try {
-                    parsers[name] = new ParserClass();
+                    parsers[name] = new ParserClass({
+                        debug: globalLogConfig.debug === true,
+                        verbose: globalLogConfig.verbose === true,
+                        logLevel: globalLogConfig.logLevel
+                    });
                 } catch (error) {
                     console.error(`🐻 Orchestrator: ✗ Failed to create ${name} parser: ${error}`);
                     throw new Error(`Failed to create ${name} parser: ${error.message}`);
