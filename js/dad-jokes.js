@@ -114,42 +114,23 @@ class DadJokesManager {
     initializeWithIntro() {
         this.isIntroActive = true;
         logger.debug('PAGE', 'Initializing with intro message');
-        // Start with empty content and show typing animation after bubble appears
-        this.setupElement.textContent = '';
-        this.punchlineElement.textContent = '';
+        this.applyIntroStyles(true);
+
+        const introLine = this.introLines[Math.floor(Math.random() * this.introLines.length)];
+        this.setupElement.textContent = introLine;
+        this.punchlineElement.textContent = this.introLine2;
+        this.setupElement.classList.remove('typewriter');
+        this.punchlineElement.classList.remove('typewriter');
         this.updateButtonLabel();
-        this.setButtonVisibility(false);
-        
-        // Wait for bubble animation to complete, then show typing animation
-        setTimeout(() => {
-            this.displayIntroWithTyping();
-        }, 1300); // Slightly after the bubble bounce-in completes (0.8s + 0.5s)
+        this.setButtonVisibility(true);
     }
 
-    async displayIntroWithTyping() {
-        const introLine = this.introLines[Math.floor(Math.random() * this.introLines.length)];
-        this.isTyping = true;
-        
-        try {
-            logger.debug('PAGE', 'Starting intro typing animation', { introLine });
-            
-            // Type the intro opener first
-            await this.typeText(this.setupElement, introLine, 30);
-            
-            // Short pause for readability
-            await new Promise(resolve => setTimeout(resolve, 700));
-            
-            // Type the intro line two
-            await this.typeText(this.punchlineElement, this.introLine2, 35);
-            
-            logger.componentLoad('PAGE', 'Intro typing animation completed');
-            this.setButtonVisibility(true);
-            
-        } catch (error) {
-            logger.componentError('PAGE', 'Error during intro animation', error);
-        } finally {
-            this.isTyping = false;
+    applyIntroStyles(isIntro) {
+        if (!this.jokeBubble) {
+            return;
         }
+
+        this.jokeBubble.classList.toggle('is-intro', isIntro);
     }
 
     typeText(element, text, speed = 50) {
@@ -203,6 +184,7 @@ class DadJokesManager {
         let nextJokeIndex = this.currentJokeIndex;
         if (this.isIntroActive) {
             this.isIntroActive = false;
+            this.applyIntroStyles(false);
             nextJokeIndex = Math.floor(Math.random() * this.bearJokes.length);
             this.updateButtonLabel();
             logger.debug('PAGE', 'Replacing intro with first joke', { jokeIndex: nextJokeIndex });
