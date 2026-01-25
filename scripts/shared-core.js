@@ -975,7 +975,6 @@ class SharedCore {
             
             // Keep metadata for display and comparison tables
             city: newEvent.city,
-            key: newEvent.key || mergedObject.key,
             source: newEvent.source,
             _parserConfig: newEvent._parserConfig,
             _fieldPriorities: newEvent._fieldPriorities
@@ -1922,6 +1921,11 @@ class SharedCore {
         Object.keys(fieldPriorities).forEach(fieldName => {
             event._fieldPriorities[fieldName] = fieldPriorities[fieldName];
         });
+
+        // Ensure key updates reflect current key format unless explicitly configured
+        if (!event._fieldPriorities.key) {
+            event._fieldPriorities.key = { merge: 'clobber' };
+        }
         
         // Apply static metadata values based on priority system
         if (parserConfig?.metadata) {
@@ -2322,7 +2326,7 @@ class SharedCore {
     }
     
     // Build a key for existing events using their fields (no notes required)
-    // Uses the default key format: normalizedTitle|date|venue
+    // Uses the default key format: normalizedTitle|date|venue(|source)
     buildDefaultEventKey(event) {
         if (!event) return null;
         
