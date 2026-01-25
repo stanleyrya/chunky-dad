@@ -45,6 +45,10 @@ class SharedCore {
                 parser: 'eventbrite'
             },
             {
+                pattern: /ticketleap\.events/i,
+                parser: 'ticketleap'
+            },
+            {
                 pattern: /bearracuda\.com/i,
                 parser: 'bearracuda'
             },
