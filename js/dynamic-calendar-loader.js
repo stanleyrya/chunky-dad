@@ -2101,6 +2101,20 @@ class DynamicCalendarLoader extends CalendarCore {
     // Expand recurring events into separate instances for each occurrence
     expandRecurringEvents(events, start, end) {
         const expandedEvents = [];
+
+        const overrideRecurrenceIdsByUid = new Map();
+        for (const event of events) {
+            if (!event?.recurrenceId) continue;
+            const uid = event.uid || event.slug || event.name;
+            if (!uid) continue;
+            const recurrenceDate = event.recurrenceId instanceof Date ? event.recurrenceId : new Date(event.recurrenceId);
+            if (Number.isNaN(recurrenceDate.getTime())) continue;
+            const recurrenceKey = this.getLocalDateKey(recurrenceDate);
+            if (!overrideRecurrenceIdsByUid.has(uid)) {
+                overrideRecurrenceIdsByUid.set(uid, new Set());
+            }
+            overrideRecurrenceIdsByUid.get(uid).add(recurrenceKey);
+        }
         
         for (const event of events) {
             // Always include non-recurring events
@@ -2108,11 +2122,17 @@ class DynamicCalendarLoader extends CalendarCore {
                 expandedEvents.push(event);
                 continue;
             }
+
+            const uid = event.uid || event.slug || event.name;
+            const overrideRecurrenceIds = uid ? overrideRecurrenceIdsByUid.get(uid) : null;
             
             // For recurring events, create separate instances for each occurrence
             const occurrences = this.getRecurringEventOccurrences(event, start, end);
             
             for (const occurrence of occurrences) {
+                if (overrideRecurrenceIds && overrideRecurrenceIds.has(this.getLocalDateKey(occurrence))) {
+                    continue;
+                }
                 // Create a new event instance for this occurrence
                 const expandedEvent = {
                     ...event,
