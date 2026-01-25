@@ -105,7 +105,7 @@ class BearraccudaParser {
 
             }
             
-            console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
+            this.logDebug(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);
             
             return {
                 events: events,
@@ -311,7 +311,7 @@ class BearraccudaParser {
                 return null;
             }
             
-            console.log(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate || dateInfo}`);
+            this.logDebug(`🐻 Bearracuda: Created event "${title}" for ${city} on ${startDate || dateInfo}`);
             return event;
             
         } catch (error) {

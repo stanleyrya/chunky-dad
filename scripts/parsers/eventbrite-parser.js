@@ -97,7 +97,7 @@ class EventbriteParser {
                 additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
             }
             
-            console.log(`🎫 Eventbrite: Found ${events.length} events, ${additionalLinks.length} additional links`);
+            this.logDebug(`🎫 Eventbrite: Found ${events.length} events, ${additionalLinks.length} additional links`);
             
             return {
                 events: events,

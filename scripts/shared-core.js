@@ -127,8 +127,8 @@ class SharedCore {
 
     // Pure business logic for processing events
     async processEvents(config, httpAdapter, displayAdapter, parsers) {
-        await displayAdapter.logInfo('SYSTEM: Starting event processing...');
-        await displayAdapter.logInfo(`SYSTEM: Processing ${config.parsers?.length || 0} parser configurations`);
+        const parserCount = config.parsers?.length || 0;
+        await displayAdapter.logInfo(`SYSTEM: Starting event processing (${parserCount} parser configurations)`);
         
         const results = {
             totalEvents: 0,
@@ -176,8 +176,6 @@ class SharedCore {
                     results.allProcessedEvents.push(...parserResult.events);
                 }
                 
-                await displayAdapter.logSuccess(`SYSTEM: Completed parser ${parserConfig.name}: ${parserResult.bearEvents} bear events found`);
-                
             } catch (error) {
                 const errorMsg = `SYSTEM: Failed to process ${parserConfig.name}: ${error.message || 'Unknown error'}`;
                 results.errors.push(errorMsg);
@@ -198,17 +196,23 @@ class SharedCore {
     }
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers, globalProcessedUrls = new Set()) {
+        const logDebug = async (message) => {
+            if (this.debug) {
+                await displayAdapter.logInfo(message);
+            }
+        };
+
         // Automatically detect parser from the first URL
         let parserName = null;
         if (parserConfig.urls && parserConfig.urls.length > 0) {
             parserName = this.detectParserFromUrl(parserConfig.urls[0]);
-            await displayAdapter.logInfo(`SYSTEM: Detected '${parserName}' parser from URL: ${parserConfig.urls[0]}`);
+            await logDebug(`SYSTEM: Detected '${parserName}' parser from URL: ${parserConfig.urls[0]}`);
         }
         
         // Fallback to generic parser if still no parser found
         if (!parserName) {
             parserName = 'generic';
-            await displayAdapter.logInfo('SYSTEM: No parser specified and no URLs provided, using generic parser');
+            await logDebug('SYSTEM: No parser specified and no URLs provided, using generic parser');
         }
         
         const parser = parsers[parserName];
@@ -218,15 +222,17 @@ class SharedCore {
             throw new Error(`Parser '${parserName}' not found`);
         }
 
-        await displayAdapter.logInfo(`SYSTEM: Processing: ${parserConfig.name} using ${parserName} parser`);
-        await displayAdapter.logInfo(`SYSTEM: URLs to process: ${parserConfig.urls?.length || 0}`);
-        if (parserConfig.urls && parserConfig.urls.length <= 3) {
-            // Only log individual URLs if there are 3 or fewer
-            parserConfig.urls.forEach((url, i) => {
-                displayAdapter.logInfo(`SYSTEM:   URL ${i + 1}: ${url}`);
-            });
-        } else if (parserConfig.urls && parserConfig.urls.length > 3) {
-            await displayAdapter.logInfo(`SYSTEM:   First URL: ${parserConfig.urls[0]} (and ${parserConfig.urls.length - 1} more)`);
+        const urlCount = parserConfig.urls?.length || 0;
+        await displayAdapter.logInfo(`SYSTEM: ${parserConfig.name} → ${parserName} (${urlCount} URL${urlCount === 1 ? '' : 's'})`);
+        if (parserConfig.urls && parserConfig.urls.length) {
+            if (parserConfig.urls.length <= 2) {
+                // Only log individual URLs in debug
+                for (const [i, url] of parserConfig.urls.entries()) {
+                    await logDebug(`SYSTEM:   URL ${i + 1}: ${url}`);
+                }
+            } else {
+                await logDebug(`SYSTEM:   First URL: ${parserConfig.urls[0]} (and ${parserConfig.urls.length - 1} more)`);
+            }
         }
         
         const allEvents = [];
@@ -236,13 +242,13 @@ class SharedCore {
         for (let i = 0; i < (parserConfig.urls || []).length; i++) {
             const url = parserConfig.urls[i];
             if (globalProcessedUrls.has(url)) {
-                await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
+                await logDebug(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
                 continue;
             }
             globalProcessedUrls.add(url);
 
             try {
-                await displayAdapter.logInfo(`SYSTEM: Fetching URL ${i + 1}/${parserConfig.urls.length}: ${url}`);
+                await logDebug(`SYSTEM: Fetching URL ${i + 1}/${parserConfig.urls.length}: ${url}`);
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
@@ -250,7 +256,7 @@ class SharedCore {
                 const urlParser = parsers[urlParserName];
                 
                 if (urlParserName !== parserName) {
-                    await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
+                    await logDebug(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
                 }
                 
                 // Parse events (consolidated logging)
@@ -258,7 +264,7 @@ class SharedCore {
                 
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
-                await displayAdapter.logInfo(`SYSTEM: Parsed ${htmlData?.html?.length || 0} chars → ${eventCount} events, ${linkCount} additional links`);
+                await logDebug(`SYSTEM: Parsed ${htmlData?.html?.length || 0} chars → ${eventCount} events, ${linkCount} additional links`);
                 
                 if (parseResult.events) {
                     // Apply field priorities to determine which parser data to trust
@@ -272,14 +278,14 @@ class SharedCore {
                     );
                     
                     allEvents.push(...enrichedEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
+                    await logDebug(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
                 // Process additional URLs if we have them (for enriching existing events, not creating new ones)
                 if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
                     // Deduplicate additional URLs before processing
                     const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, globalProcessedUrls);
-                    await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
+                    await logDebug(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
                     
                     await this.enrichEventsWithDetailPages(
                         allEvents,
@@ -293,7 +299,7 @@ class SharedCore {
                         mainConfig,
                         parserName
                     );
-                    await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
+                    await displayAdapter.logInfo(`SYSTEM: Detail pages enriched → ${allEvents.length} events total`);
                 }
             } catch (error) {
                 await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${error.message || 'Unknown error'}`);
@@ -304,12 +310,12 @@ class SharedCore {
             }
         }
 
-        await displayAdapter.logInfo(`SYSTEM: Total events collected: ${allEvents.length}`);
+        await logDebug(`SYSTEM: Total events collected: ${allEvents.length}`);
 
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events
-        await displayAdapter.logInfo(`SYSTEM: Filtering events: ${allEvents.length} total → processing...`);
+        await logDebug(`SYSTEM: Filtering events: ${allEvents.length} total → processing...`);
         const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead, parserConfig.allowPastEvents);
         const bearEvents = this.filterBearEvents(futureEvents, parserConfig);
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
@@ -337,7 +343,9 @@ class SharedCore {
         const urlsToProcess = additionalLinks.slice(0, maxUrls);
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
 
-        await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
+        if (this.debug) {
+            await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
+        }
 
         for (const url of urlsToProcess) {
             if (processedUrls.has(url)) {
@@ -364,7 +372,9 @@ class SharedCore {
                 if (shouldProcessUrls) {
                         // Deduplicate URLs before recursive processing
                         const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
-                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
+                        if (this.debug) {
+                            await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
+                        }
                         
                         // Recursively process additional URLs if we haven't reached max depth
                         if (deduplicatedUrls.length > 0) {
@@ -382,7 +392,9 @@ class SharedCore {
                             );
                         }
                 } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
-                    await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
+                    if (this.debug) {
+                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
+                    }
                 }
                 
                 // Process detail page events - either enrich existing or add new events
@@ -395,7 +407,9 @@ class SharedCore {
                     
                     // Add these events to the existing events collection for potential merging
                     existingEvents.push(...enrichedDetailEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
+                    if (this.debug) {
+                        await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
+                    }
                 }
                 
             } catch (error) {

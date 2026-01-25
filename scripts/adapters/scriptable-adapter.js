@@ -579,12 +579,17 @@ class ScriptableAdapter {
         try {
             // Store results for use in other methods
             this.lastResults = results;
+            const debugMode = results?.config?.config?.debug === true ||
+                results?.config?.config?.verbose === true ||
+                results?.config?.config?.logLevel === 'debug';
             
             // First show the enhanced display features in console for debugging
-            await this.displayCalendarProperties(results);
-            await this.compareWithExistingCalendars(results);
-            await this.displayAvailableCalendars(results);
-            await this.displayEnrichedEvents(results);
+            if (debugMode) {
+                await this.displayCalendarProperties(results);
+                await this.compareWithExistingCalendars(results);
+                await this.displayAvailableCalendars(results);
+                await this.displayEnrichedEvents(results);
+            }
             
             // Show console summary
             console.log('\n' + '='.repeat(60));
@@ -601,8 +606,8 @@ class ScriptableAdapter {
             }
             console.log(`📅 Added to Calendar: ${results.calendarEvents}${results.calendarEvents === 0 ? ' (dry run/preview mode - no events written)' : ''}`);
             
-            // Explain the math breakdown
-            if (results.totalEvents > results.bearEvents) {
+            // Explain the math breakdown (debug only)
+            if (debugMode && results.totalEvents > results.bearEvents) {
                 const pastEvents = results.totalEvents - (results.rawBearEvents || results.bearEvents);
                 if (pastEvents > 0) {
                     console.log(`💡 Math Breakdown: ${results.totalEvents} total → ${pastEvents} past events filtered out → ${results.rawBearEvents || results.bearEvents} future bear events${results.duplicatesRemoved > 0 ? ` → ${results.duplicatesRemoved} duplicates removed → ${results.bearEvents} final` : ''}`);
@@ -627,7 +632,12 @@ class ScriptableAdapter {
                     }
                 });
                 
-                if (hasActions) {
+                if (hasActions && !debugMode) {
+                    const actionSummary = Object.entries(actionsCount)
+                        .filter(([, count]) => count > 0)
+                        .map(([action, count]) => `${action}=${count}`);
+                    console.log(`\n🎯 Actions: ${actionSummary.join(', ')}`);
+                } else if (hasActions) {
                     console.log('\n🎯 Event Actions:');
                     Object.entries(actionsCount).forEach(([action, count]) => {
                         if (count > 0) {
@@ -646,18 +656,17 @@ class ScriptableAdapter {
                 results.errors.forEach(error => console.log(`   • ${error}`));
             }
             
-            console.log('\n📋 Parser Results:');
-            results.parserResults.forEach(result => {
-                console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
-            });
+            if (debugMode) {
+                console.log('\n📋 Parser Results:');
+                results.parserResults.forEach(result => {
+                    console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
+                });
+            }
             
             // Show summary and recommended actions
-            await this.displaySummaryAndActions(results);
+            await this.displaySummaryAndActions(results, { verbose: debugMode });
             
             // Display full event objects at the end (debug only)
-            const debugMode = results?.config?.config?.debug === true ||
-                results?.config?.config?.verbose === true ||
-                results?.config?.config?.logLevel === 'debug';
             if (debugMode) {
                 await this.displayFullEventObjects(results);
             }
@@ -1011,9 +1020,10 @@ class ScriptableAdapter {
         console.log('\n' + '='.repeat(60));
     }
 
-    async displaySummaryAndActions(results) {
+    async displaySummaryAndActions(results, options = {}) {
+        const verbose = options?.verbose === true;
         console.log('\n' + '='.repeat(60));
-        console.log('📊 SUMMARY & RECOMMENDED ACTIONS');
+        console.log(verbose ? '📊 SUMMARY & RECOMMENDED ACTIONS' : '📊 SUMMARY');
         console.log('='.repeat(60));
         
         // Get all events from all parser results
@@ -1033,24 +1043,28 @@ class ScriptableAdapter {
         console.log(`📊 Events: ${summary.totalEvents} total`);
         
         if (summary.cities.length > 0) {
-            console.log(`\n🌍 Cities: ${summary.cities.join(', ')}`);
+            console.log(`${verbose ? '\n' : ''}🌍 Cities: ${summary.cities.join(', ')}`);
         }
         
         console.log(`📅 Calendars needed: ${summary.calendarsNeeded.length}`);
-        try {
-            const availableCalendars = await Calendar.forEvents();
-            summary.calendarsNeeded.forEach(cal => {
-                const exists = availableCalendars.find(c => c.title === cal);
-                console.log(`   - "${cal}" ${exists ? '(exists)' : '(will create)'}`);
-            });
-        } catch (error) {
-            summary.calendarsNeeded.forEach(cal => {
-                console.log(`   - "${cal}" (status unknown)`);
-            });
+        if (verbose) {
+            try {
+                const availableCalendars = await Calendar.forEvents();
+                summary.calendarsNeeded.forEach(cal => {
+                    const exists = availableCalendars.find(c => c.title === cal);
+                    console.log(`   - "${cal}" ${exists ? '(exists)' : '(will create)'}`);
+                });
+            } catch (error) {
+                summary.calendarsNeeded.forEach(cal => {
+                    console.log(`   - "${cal}" (status unknown)`);
+                });
+            }
+        } else if (summary.calendarsNeeded.length > 0) {
+            console.log(`   ${summary.calendarsNeeded.join(', ')}`);
         }
         
         if (summary.timezones.length > 0) {
-            console.log(`\n🕐 Timezones: ${summary.timezones.join(', ')}`);
+            console.log(`${verbose ? '\n' : ''}🕐 Timezones: ${summary.timezones.join(', ')}`);
         }
         
         // Show action breakdown if events have been analyzed
@@ -1078,26 +1092,33 @@ class ScriptableAdapter {
         });
         
         if (hasActions) {
-            console.log(`\n🎯 Event Actions Analysis:`);
-            Object.entries(actionsCount).forEach(([action, count]) => {
-                if (count > 0) {
-                    const actionIcon = {
-                        'new': '➕',
-                        'add': '➕',
-                        'merge': '🔄',
-                        'update': '📝',
-                        'conflict': '⚠️',
-                        'enriched': '✨',
-                        'unknown': '❓'
-                    }[action] || '❓';
-                    
-                    console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count} events`);
-                }
-            });
+            if (verbose) {
+                console.log(`\n🎯 Event Actions Analysis:`);
+                Object.entries(actionsCount).forEach(([action, count]) => {
+                    if (count > 0) {
+                        const actionIcon = {
+                            'new': '➕',
+                            'add': '➕',
+                            'merge': '🔄',
+                            'update': '📝',
+                            'conflict': '⚠️',
+                            'enriched': '✨',
+                            'unknown': '❓'
+                        }[action] || '❓';
+                        
+                        console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count} events`);
+                    }
+                });
+            } else {
+                const actionSummary = Object.entries(actionsCount)
+                    .filter(([, count]) => count > 0)
+                    .map(([action, count]) => `${action}=${count}`);
+                console.log(`🎯 Actions: ${actionSummary.join(', ')}`);
+            }
         }
 
         // Add explanation about deduplication if relevant
-        if (results.duplicatesRemoved > 0) {
+        if (verbose && results.duplicatesRemoved > 0) {
             console.log(`\n💡 About Deduplication:`);
             console.log(`   Some venues (like Bearracuda) have events listed on multiple platforms`);
             console.log(`   (e.g., both Bearracuda.com and Eventbrite). The scraper finds both`);
@@ -1105,11 +1126,13 @@ class ScriptableAdapter {
             console.log(`   This is working correctly - ${results.duplicatesRemoved} duplicates were removed.`);
         }
 
-        console.log(`\n🎯 Recommended Actions:`);
-        console.log(`   1. Review calendar properties above`);
-        console.log(`   2. Check for conflicts in comparison section`);
-        console.log(`   3. Verify calendar permissions and settings`);
-        console.log(`   4. Set dryRun: false in config to actually add events`);
+        if (verbose) {
+            console.log(`\n🎯 Recommended Actions:`);
+            console.log(`   1. Review calendar properties above`);
+            console.log(`   2. Check for conflicts in comparison section`);
+            console.log(`   3. Verify calendar permissions and settings`);
+            console.log(`   4. Set dryRun: false in config to actually add events`);
+        }
         
         console.log('\n' + '='.repeat(60));
     }
@@ -1184,7 +1207,12 @@ class ScriptableAdapter {
     // Rich UI presentation using WebView with HTML
     async presentRichResults(results) {
         try {
-            console.log('📱 Scriptable: Preparing rich HTML UI display...');
+            const debugMode = results?.config?.config?.debug === true ||
+                results?.config?.config?.verbose === true ||
+                results?.config?.config?.logLevel === 'debug';
+            if (debugMode) {
+                console.log('📱 Scriptable: Preparing rich HTML UI display...');
+            }
             
             // Generate HTML for rich display
             const html = await this.generateRichHTML(results);
@@ -1205,23 +1233,31 @@ class ScriptableAdapter {
                 const globalDryRun = results.config?.config?.dryRun;
                 const hasActiveEvents = eventsFromActiveParsers.length > 0;
                 
-                console.log(`📱 Scriptable: - globalDryRun: ${globalDryRun}`);
-                console.log(`📱 Scriptable: - eventsFromActiveParsers: ${eventsFromActiveParsers.length}`);
-                console.log(`📱 Scriptable: - hasActiveEvents: ${hasActiveEvents}`);
+                if (debugMode) {
+                    console.log(`📱 Scriptable: - globalDryRun: ${globalDryRun}`);
+                    console.log(`📱 Scriptable: - eventsFromActiveParsers: ${eventsFromActiveParsers.length}`);
+                    console.log(`📱 Scriptable: - hasActiveEvents: ${hasActiveEvents}`);
+                }
                 
                 if (!globalDryRun && hasActiveEvents) {
-                    console.log('📱 Scriptable: Prompting for calendar execution...');
+                    if (debugMode) {
+                        console.log('📱 Scriptable: Prompting for calendar execution...');
+                    }
                     const executedCount = await this.promptForCalendarExecution(eventsFromActiveParsers, results.config);
                     results.calendarEvents = executedCount;
                 } else {
-                    if (globalDryRun) {
-                        console.log('📱 Scriptable: Skipping prompt due to global dry run mode');
-                    } else if (!hasActiveEvents) {
-                        console.log('📱 Scriptable: Skipping prompt - all events are from dry run parsers');
+                    if (debugMode) {
+                        if (globalDryRun) {
+                            console.log('📱 Scriptable: Skipping prompt due to global dry run mode');
+                        } else if (!hasActiveEvents) {
+                            console.log('📱 Scriptable: Skipping prompt - all events are from dry run parsers');
+                        }
                     }
                 }
             } else {
-                console.log('📱 Scriptable: Skipping prompt due to conditions not met');
+                if (debugMode) {
+                    console.log('📱 Scriptable: Skipping prompt due to conditions not met');
+                }
             }
             
         } catch (error) {
@@ -1252,7 +1288,12 @@ class ScriptableAdapter {
         
         // Detect dark mode for better bar/low-light readability
         const isDarkMode = Device.isUsingDarkAppearance();
-        console.log(`📱 Scriptable: Dark mode detected: ${isDarkMode}`);
+        const debugMode = results?.config?.config?.debug === true ||
+            results?.config?.config?.verbose === true ||
+            results?.config?.config?.logLevel === 'debug';
+        if (debugMode) {
+            console.log(`📱 Scriptable: Dark mode detected: ${isDarkMode}`);
+        }
         
         // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];
