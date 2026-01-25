@@ -141,6 +141,7 @@ const scraperConfig = {
       name: "Furball",
       enabled: true,
       urls: [
+        "https://www.furball.nyc",
         "https://www.furball.nyc/upcoming-schedule",
         "https://linktr.ee/furballnyc"
       ],
