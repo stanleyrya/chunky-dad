@@ -443,6 +443,10 @@
       padding: 0.35rem 0.6rem;
       font-size: 0.72rem;
       border-radius: 8px;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
       white-space: nowrap;
     }
 
@@ -1950,14 +1954,18 @@
         if (dom.pasteButtons && dom.pasteButtons.length) {
           dom.pasteButtons.forEach(button => {
             const triggerPaste = event => {
-              event.preventDefault();
-              event.stopPropagation();
+              if (event) {
+                event.stopPropagation();
+              }
               triggerPasteAction(button);
             };
-            button.addEventListener('pointerdown', triggerPaste);
-            button.addEventListener('mousedown', triggerPaste);
-            button.addEventListener('touchstart', triggerPaste, { passive: false });
             button.addEventListener('click', triggerPaste);
+            button.addEventListener('keydown', event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                triggerPaste(event);
+              }
+            });
             button.addEventListener('contextmenu', event => {
               event.preventDefault();
             });
@@ -2359,7 +2367,11 @@
           activeElement.blur();
         }
         const isSecure = typeof window.isSecureContext === 'boolean' ? window.isSecureContext : true;
-        if (!isSecure || !navigator.clipboard || !navigator.clipboard.readText) {
+        if (!isSecure) {
+          showToast('Clipboard needs HTTPS/localhost. Paste manually.', 'warn');
+          return;
+        }
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
           showToast('Clipboard blocked. Paste manually.', 'warn');
           return;
         }
