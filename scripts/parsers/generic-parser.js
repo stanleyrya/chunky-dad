@@ -66,7 +66,7 @@ class GenericParser {
             
         } catch (error) {
             console.error(`🔧 Generic: Error parsing events: ${error}`);
-            return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
+            throw error;
         }
     }
 
@@ -310,7 +310,10 @@ class GenericParser {
             console.log(`🔧 Generic: Extracting additional event URLs`);
             
             // Use configured URL patterns or defaults
-            const patterns = parserConfig.urlPatterns || this.urlPatterns;
+            const patterns = parserConfig.urlPatterns;
+            if (!Array.isArray(patterns) || patterns.length === 0) {
+                throw new Error('Generic parser requires urlPatterns when urlDiscoveryDepth > 0');
+            }
             
             for (const pattern of patterns) {
                 const regex = new RegExp(pattern.regex, 'gi');
