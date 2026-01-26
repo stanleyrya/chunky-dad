@@ -1476,16 +1476,31 @@ class SharedCore {
     
     // Static method to generate iOS-compatible Google Maps URLs
     // Works on Android, iOS (including iOS 11+), and web without API tokens
-    static generateGoogleMapsUrl({ coordinates, placeId, address }) {
-        console.log(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}"`);
+    static generateGoogleMapsUrl({ coordinates, placeId, address, venueName, cityName }) {
+        console.log(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}", venue: "${venueName}", city: "${cityName}"`);
 
         const lat = coordinates ? parseFloat(coordinates.lat) : null;
         const lng = coordinates ? parseFloat(coordinates.lng) : null;
         const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
         const normalizedAddress = typeof address === 'string' ? address.trim() : '';
         const hasAddress = normalizedAddress.length > 0;
+        const normalizedVenue = typeof venueName === 'string' ? venueName.trim() : '';
+        const hasVenue = normalizedVenue.length > 0;
+        const normalizedCity = typeof cityName === 'string' ? cityName.trim() : '';
+        const hasCity = normalizedCity.length > 0;
+        const shouldCombineVenue = hasAddress &&
+            hasVenue &&
+            !normalizedAddress.toLowerCase().includes(normalizedVenue.toLowerCase());
+        const addressQuery = shouldCombineVenue ? `${normalizedVenue}, ${normalizedAddress}` : normalizedAddress;
+        const shouldCombineCity = hasVenue &&
+            hasCity &&
+            !normalizedVenue.toLowerCase().includes(normalizedCity.toLowerCase());
+        const fallbackQuery = shouldCombineCity ? `${normalizedVenue}, ${normalizedCity}` :
+            (hasVenue ? normalizedVenue : normalizedCity);
+        const hasFallbackQuery = (hasVenue || hasCity) && fallbackQuery.length > 0;
         const encodedCoordinates = hasCoordinates ? encodeURIComponent(`${lat},${lng}`) : null;
-        const encodedAddress = hasAddress ? encodeURIComponent(normalizedAddress) : null;
+        const encodedAddress = hasAddress ? encodeURIComponent(addressQuery) : null;
+        const encodedFallbackQuery = hasFallbackQuery ? encodeURIComponent(fallbackQuery) : null;
 
         if (placeId && hasCoordinates) {
             // Best case: use coordinates with place_id for maximum compatibility
@@ -1503,6 +1518,11 @@ class SharedCore {
             // Final fallback: coordinates only
             console.log(`🗺️ SharedCore: Using coordinates only method`);
             return `https://www.google.com/maps/search/?api=1&query=${encodedCoordinates}`;
+        } else if (encodedFallbackQuery) {
+            // Final fallback: venue/city only (useful when no address or coordinates)
+            console.log(`🗺️ SharedCore: Using venue/city fallback method`);
+            const placeIdParam = placeId ? `&query_place_id=${placeId}` : '';
+            return `https://www.google.com/maps/search/?api=1&query=${encodedFallbackQuery}${placeIdParam}`;
         }
         console.log(`🗺️ SharedCore: No valid data for URL generation, returning null`);
         return null;
@@ -1582,12 +1602,16 @@ class SharedCore {
             const shouldPreferAddress = hasFullAddress && !event.placeId;
             const addressForMaps = (hasFullAddress || !coordinates) ? event.address : null;
             const coordinatesForMaps = shouldPreferAddress ? null : coordinates;
+            const venueNameForMaps = typeof event.bar === 'string' ? event.bar.trim() : null;
+            const cityNameForMaps = this.getPrimaryCityName(event.city);
 
             // Use available data to generate iOS-compatible URL
             const urlData = {
                 coordinates: coordinatesForMaps,
                 placeId: event.placeId || null,
-                address: addressForMaps
+                address: addressForMaps,
+                venueName: venueNameForMaps,
+                cityName: cityNameForMaps
             };
             
             event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
@@ -1746,6 +1770,30 @@ class SharedCore {
         }
 
         return address;
+    }
+
+    // Resolve a primary city name for map queries from a city key
+    getPrimaryCityName(cityKey) {
+        if (!cityKey || !this.cityMappings) {
+            return '';
+        }
+
+        const normalizedKey = String(cityKey).trim();
+        if (!normalizedKey || normalizedKey === 'unknown') {
+            return '';
+        }
+
+        for (const [patterns, mappedCity] of Object.entries(this.cityMappings)) {
+            if (mappedCity === normalizedKey) {
+                const patternList = patterns.split('|').map(pattern => pattern.trim()).filter(Boolean);
+                if (patternList.length > 0) {
+                    return patternList[0];
+                }
+                break;
+            }
+        }
+
+        return normalizedKey;
     }
     
     // Extract city from address string
