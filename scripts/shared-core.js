@@ -1478,23 +1478,31 @@ class SharedCore {
     // Works on Android, iOS (including iOS 11+), and web without API tokens
     static generateGoogleMapsUrl({ coordinates, placeId, address }) {
         console.log(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}"`);
-        
-        if (placeId && coordinates) {
+
+        const lat = coordinates ? parseFloat(coordinates.lat) : null;
+        const lng = coordinates ? parseFloat(coordinates.lng) : null;
+        const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+        const normalizedAddress = typeof address === 'string' ? address.trim() : '';
+        const hasAddress = normalizedAddress.length > 0;
+        const encodedCoordinates = hasCoordinates ? encodeURIComponent(`${lat},${lng}`) : null;
+        const encodedAddress = hasAddress ? encodeURIComponent(normalizedAddress) : null;
+
+        if (placeId && hasCoordinates) {
             // Best case: use coordinates with place_id for maximum compatibility
             console.log(`🗺️ SharedCore: Using place_id + coordinates method`);
-            return `https://www.google.com/maps/search/?api=1&query=${coordinates.lat}%2C${coordinates.lng}&query_place_id=${placeId}`;
-        } else if (placeId && address) {
+            return `https://www.google.com/maps/search/?api=1&query=${encodedCoordinates}&query_place_id=${placeId}`;
+        } else if (placeId && hasAddress) {
             // Fallback: use address with place_id (graceful degradation if place_id doesn't exist)
             console.log(`🗺️ SharedCore: Using place_id + address method`);
-            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}&query_place_id=${placeId}`;
-        } else if (coordinates) {
-            // Fallback: coordinates only
-            console.log(`🗺️ SharedCore: Using coordinates only method`);
-            return `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`;
-        } else if (address) {
-            // Final fallback: address only
+            return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}&query_place_id=${placeId}`;
+        } else if (hasAddress) {
+            // Fallback: address only
             console.log(`🗺️ SharedCore: Using address only method`);
-            return `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+            return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+        } else if (hasCoordinates) {
+            // Final fallback: coordinates only
+            console.log(`🗺️ SharedCore: Using coordinates only method`);
+            return `https://www.google.com/maps/search/?api=1&query=${encodedCoordinates}`;
         }
         console.log(`🗺️ SharedCore: No valid data for URL generation, returning null`);
         return null;
@@ -1570,11 +1578,16 @@ class SharedCore {
                 }
             }
             
+            const hasFullAddress = event.address && this.isFullAddress(event.address);
+            const shouldPreferAddress = hasFullAddress && !event.placeId;
+            const addressForMaps = (hasFullAddress || !coordinates) ? event.address : null;
+            const coordinatesForMaps = shouldPreferAddress ? null : coordinates;
+
             // Use available data to generate iOS-compatible URL
             const urlData = {
-                coordinates: coordinates,
+                coordinates: coordinatesForMaps,
                 placeId: event.placeId || null,
-                address: event.address || null
+                address: addressForMaps
             };
             
             event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
