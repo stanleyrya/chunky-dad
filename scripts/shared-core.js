@@ -1476,16 +1476,22 @@ class SharedCore {
     
     // Static method to generate iOS-compatible Google Maps URLs
     // Works on Android, iOS (including iOS 11+), and web without API tokens
-    static generateGoogleMapsUrl({ coordinates, placeId, address }) {
-        console.log(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}"`);
+    static generateGoogleMapsUrl({ coordinates, placeId, address, venueName }) {
+        console.log(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}", venue: "${venueName}"`);
 
         const lat = coordinates ? parseFloat(coordinates.lat) : null;
         const lng = coordinates ? parseFloat(coordinates.lng) : null;
         const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
         const normalizedAddress = typeof address === 'string' ? address.trim() : '';
         const hasAddress = normalizedAddress.length > 0;
+        const normalizedVenue = typeof venueName === 'string' ? venueName.trim() : '';
+        const hasVenue = normalizedVenue.length > 0;
+        const shouldCombineVenue = hasAddress &&
+            hasVenue &&
+            !normalizedAddress.toLowerCase().includes(normalizedVenue.toLowerCase());
+        const addressQuery = shouldCombineVenue ? `${normalizedVenue}, ${normalizedAddress}` : normalizedAddress;
         const encodedCoordinates = hasCoordinates ? encodeURIComponent(`${lat},${lng}`) : null;
-        const encodedAddress = hasAddress ? encodeURIComponent(normalizedAddress) : null;
+        const encodedAddress = hasAddress ? encodeURIComponent(addressQuery) : null;
 
         if (placeId && hasCoordinates) {
             // Best case: use coordinates with place_id for maximum compatibility
@@ -1582,12 +1588,14 @@ class SharedCore {
             const shouldPreferAddress = hasFullAddress && !event.placeId;
             const addressForMaps = (hasFullAddress || !coordinates) ? event.address : null;
             const coordinatesForMaps = shouldPreferAddress ? null : coordinates;
+            const venueNameForMaps = typeof event.bar === 'string' ? event.bar.trim() : null;
 
             // Use available data to generate iOS-compatible URL
             const urlData = {
                 coordinates: coordinatesForMaps,
                 placeId: event.placeId || null,
-                address: addressForMaps
+                address: addressForMaps,
+                venueName: venueNameForMaps
             };
             
             event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
