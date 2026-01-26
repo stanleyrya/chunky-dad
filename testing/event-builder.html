@@ -415,6 +415,50 @@
       margin-top: 0.2rem;
     }
 
+    .existing-modal {
+      margin: auto;
+      width: min(760px, 92vw);
+      border: none;
+      border-radius: 16px;
+      padding: 0;
+      background: var(--panel-bg);
+      color: var(--text-primary);
+      box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
+      max-height: 85vh;
+    }
+
+    .existing-modal::backdrop {
+      background: rgba(8, 10, 16, 0.75);
+      backdrop-filter: blur(4px);
+    }
+
+    .existing-modal__content {
+      display: grid;
+      gap: 1rem;
+      padding: 1.2rem;
+      max-height: 85vh;
+      overflow: auto;
+    }
+
+    .existing-modal__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .existing-modal__header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--text-primary);
+    }
+
+    .existing-modal__close {
+      padding: 0.35rem 0.55rem;
+      min-width: 36px;
+      justify-content: center;
+    }
+
     .existing-selection-summary {
       display: flex;
       flex-wrap: wrap;
@@ -1060,6 +1104,15 @@
         font-size: 0.75rem;
       }
 
+      .existing-modal {
+        width: min(94vw, 560px);
+      }
+
+      .existing-modal__content {
+        padding: 1rem;
+        max-height: 90vh;
+      }
+
       .page-wrapper {
         padding: calc(1.6rem + var(--sticky-header-offset)) 0 2.6rem;
       }
@@ -1139,7 +1192,7 @@
               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
               <span>Reset</span>
             </button>
-            <button type="button" class="ghost-button action-button" id="edit-existing" aria-label="Edit existing event" aria-expanded="false">
+            <button type="button" class="ghost-button action-button" id="edit-existing" aria-label="Edit existing event" aria-expanded="false" aria-controls="existing-event-panel" aria-haspopup="dialog">
               <i class="bi bi-pencil-square" aria-hidden="true"></i>
               <span>Edit Existing</span>
             </button>
@@ -1163,11 +1216,10 @@
         <div class="panel-header">
           <div>
             <h2>Event Details</h2>
-            <p class="panel-subtitle">Changes are saved to the URL as you type.</p>
             <div class="existing-selection-summary is-hidden" id="existing-selection-summary">
               <div id="existing-selection-text"></div>
               <div class="existing-selection-actions">
-                <button type="button" class="ghost-button action-button is-compact" id="existing-change">
+                <button type="button" class="ghost-button action-button is-compact" id="existing-change" aria-controls="existing-event-panel" aria-haspopup="dialog">
                   <i class="bi bi-search" aria-hidden="true"></i>
                   <span>Change</span>
                 </button>
@@ -1181,56 +1233,6 @@
         </div>
 
         <form id="event-form">
-          <details class="form-section" id="existing-event-panel">
-            <summary>Edit Existing Event</summary>
-            <div class="section-body existing-event-panel">
-              <p class="panel-subtitle">Choose a calendar, then search by date or text.</p>
-
-              <div class="field-grid">
-                <div class="field-group">
-                  <label for="existing-city">Calendar / City</label>
-                  <select id="existing-city"></select>
-                </div>
-                <div class="field-group">
-                  <label for="existing-search">Search text</label>
-                  <input type="text" id="existing-search" autocomplete="off" placeholder="Goldiloxx, Rockbar, Leather Nite">
-                  <small>Match event name, venue, or notes.</small>
-                </div>
-                <div class="field-group">
-                  <label for="existing-date">Search date</label>
-                  <input type="date" id="existing-date">
-                  <small>Optional. Picks the occurrence for that day.</small>
-                </div>
-              </div>
-
-              <div class="field-group">
-                <label for="existing-results">Matching events</label>
-                <select id="existing-results"></select>
-                <small class="field-hint" id="existing-results-hint" data-default="Pick a match to load into the form.">Pick a match to load into the form.</small>
-              </div>
-
-              <div class="field-group is-hidden" id="existing-mode-group">
-                <label>Edit as</label>
-                <div class="toggle-buttons" role="group" aria-label="Edit occurrence or series">
-                  <button type="button" class="toggle-button is-active" data-edit-mode="occurrence">Occurrence</button>
-                  <button type="button" class="toggle-button" data-edit-mode="series">Series</button>
-                </div>
-                <small class="field-hint" id="existing-mode-hint" data-default=""></small>
-              </div>
-
-              <div class="field-actions">
-                <button type="button" class="primary-button action-button" id="existing-load">
-                  <i class="bi bi-download" aria-hidden="true"></i>
-                  <span>Load event</span>
-                </button>
-                <button type="button" class="ghost-button action-button" id="existing-clear">
-                  <i class="bi bi-x-circle" aria-hidden="true"></i>
-                  <span>Clear</span>
-                </button>
-              </div>
-            </div>
-          </details>
-
           <details class="form-section" open>
             <summary>Basics</summary>
             <div class="section-body">
@@ -1553,6 +1555,65 @@
     </section>
   </div>
 
+  <dialog class="existing-modal" id="existing-event-panel" aria-labelledby="existing-modal-title">
+    <div class="existing-modal__content">
+      <div class="existing-modal__header">
+        <div>
+          <h2 id="existing-modal-title">Edit Existing Event</h2>
+          <p class="panel-subtitle">Choose a calendar, then search by date or text.</p>
+        </div>
+        <button type="button" class="ghost-button action-button existing-modal__close" id="existing-modal-close" aria-label="Close edit existing dialog">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="section-body existing-event-panel">
+        <div class="field-grid">
+          <div class="field-group">
+            <label for="existing-city">Calendar / City</label>
+            <select id="existing-city"></select>
+          </div>
+          <div class="field-group">
+            <label for="existing-search">Search text</label>
+            <input type="text" id="existing-search" autocomplete="off" placeholder="Goldiloxx, Rockbar, Leather Nite">
+            <small>Match event name, venue, or notes.</small>
+          </div>
+          <div class="field-group">
+            <label for="existing-date">Search date</label>
+            <input type="date" id="existing-date">
+            <small>Optional. Picks the occurrence for that day.</small>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="existing-results">Matching events</label>
+          <select id="existing-results"></select>
+          <small class="field-hint" id="existing-results-hint" data-default="Pick a match to load into the form.">Pick a match to load into the form.</small>
+        </div>
+
+        <div class="field-group is-hidden" id="existing-mode-group">
+          <label>Edit as</label>
+          <div class="toggle-buttons" role="group" aria-label="Edit occurrence or series">
+            <button type="button" class="toggle-button is-active" data-edit-mode="occurrence">Occurrence</button>
+            <button type="button" class="toggle-button" data-edit-mode="series">Series</button>
+          </div>
+          <small class="field-hint" id="existing-mode-hint" data-default=""></small>
+        </div>
+
+        <div class="field-actions">
+          <button type="button" class="primary-button action-button" id="existing-load">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Load event</span>
+          </button>
+          <button type="button" class="ghost-button action-button" id="existing-clear">
+            <i class="bi bi-x-circle" aria-hidden="true"></i>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="../js/logger.js"></script>
@@ -1609,6 +1670,7 @@
 
       function init() {
         cacheDom();
+        setupStickyHeaderOffset();
         populateCityOptions();
         const baseState = createDefaultState();
         const urlState = loadStateFromUrl(baseState);
@@ -1632,6 +1694,7 @@
 
       function cacheDom() {
         dom.form = document.getElementById('event-form');
+        dom.toolHeader = document.querySelector('.tool-header');
         dom.nameInput = document.getElementById('event-name');
         dom.shortNameInput = document.getElementById('event-short-name');
         dom.citySelect = document.getElementById('event-city');
@@ -1681,6 +1744,7 @@
         dom.copyShareButton = document.getElementById('copy-link');
         dom.editExistingButton = document.getElementById('edit-existing');
         dom.existingPanel = document.getElementById('existing-event-panel');
+        dom.existingModalClose = document.getElementById('existing-modal-close');
         dom.existingCitySelect = document.getElementById('existing-city');
         dom.existingSearchInput = document.getElementById('existing-search');
         dom.existingDateInput = document.getElementById('existing-date');
@@ -1708,6 +1772,25 @@
         dom.previewCover = document.getElementById('preview-cover');
         dom.previewLinks = document.getElementById('preview-links');
         dom.toastContainer = document.getElementById('toast-container');
+      }
+
+      function setupStickyHeaderOffset() {
+        updateStickyHeaderOffset();
+        if (!dom.toolHeader) return;
+        if ('ResizeObserver' in window) {
+          dom.headerObserver = new ResizeObserver(() => {
+            updateStickyHeaderOffset();
+          });
+          dom.headerObserver.observe(dom.toolHeader);
+        } else {
+          window.addEventListener('resize', updateStickyHeaderOffset);
+        }
+      }
+
+      function updateStickyHeaderOffset() {
+        if (!dom.toolHeader) return;
+        const height = Math.ceil(dom.toolHeader.getBoundingClientRect().height);
+        document.documentElement.style.setProperty('--sticky-header-offset', `${height}px`);
       }
 
       function populateCityOptions() {
@@ -2577,19 +2660,37 @@
         dom.existingSelectionText.textContent = text;
       }
 
+      function setExistingPanelExpanded(isOpen) {
+        if (!dom.editExistingButton) return;
+        dom.editExistingButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      }
+
       function openExistingPanel(options = {}) {
         if (!dom.existingPanel) return;
-        dom.existingPanel.open = true;
-        if (dom.editExistingButton) {
-          dom.editExistingButton.setAttribute('aria-expanded', 'true');
+        if (!dom.existingPanel.open) {
+          if (typeof dom.existingPanel.showModal === 'function') {
+            dom.existingPanel.showModal();
+          } else {
+            dom.existingPanel.setAttribute('open', '');
+          }
         }
-        if (options.scroll !== false) {
-          dom.existingPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        setExistingPanelExpanded(true);
         if (options.focusSearch && dom.existingSearchInput) {
-          dom.existingSearchInput.focus();
+          requestAnimationFrame(() => {
+            dom.existingSearchInput.focus();
+          });
         }
         scheduleExistingResultsUpdate();
+      }
+
+      function closeExistingPanel() {
+        if (!dom.existingPanel || !dom.existingPanel.open) return;
+        if (typeof dom.existingPanel.close === 'function') {
+          dom.existingPanel.close();
+        } else {
+          dom.existingPanel.removeAttribute('open');
+        }
+        setExistingPanelExpanded(false);
       }
 
       function clearExistingSelection(options = {}) {
@@ -3010,26 +3111,27 @@
         if (dom.addToCalendarButton) {
           dom.addToCalendarButton.addEventListener('click', handleAddToCalendar);
         }
-        if (dom.editExistingButton && dom.existingPanel) {
+        if (dom.editExistingButton) {
           dom.editExistingButton.addEventListener('click', () => {
-            const nextOpen = !dom.existingPanel.open;
-            dom.existingPanel.open = nextOpen;
-            dom.editExistingButton.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
-            if (nextOpen) {
-              openExistingPanel({ focusSearch: true, scroll: true });
+            if (dom.existingPanel && dom.existingPanel.open) {
+              closeExistingPanel();
+              return;
             }
+            openExistingPanel({ focusSearch: true });
           });
         }
         if (dom.existingPanel) {
-          dom.existingPanel.addEventListener('toggle', () => {
-            const isOpen = dom.existingPanel.open;
-            if (dom.editExistingButton) {
-              dom.editExistingButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-            }
-            if (isOpen) {
-              scheduleExistingResultsUpdate();
+          dom.existingPanel.addEventListener('close', () => {
+            setExistingPanelExpanded(false);
+          });
+          dom.existingPanel.addEventListener('click', event => {
+            if (event.target === dom.existingPanel) {
+              closeExistingPanel();
             }
           });
+        }
+        if (dom.existingModalClose) {
+          dom.existingModalClose.addEventListener('click', closeExistingPanel);
         }
         if (dom.existingCitySelect) {
           dom.existingCitySelect.addEventListener('change', () => {
@@ -3064,7 +3166,7 @@
         }
         if (dom.existingChangeButton) {
           dom.existingChangeButton.addEventListener('click', () => {
-            openExistingPanel({ focusSearch: true, scroll: true });
+            openExistingPanel({ focusSearch: true });
           });
         }
         if (dom.existingClearSummaryButton) {
