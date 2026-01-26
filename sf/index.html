@@ -56,80 +56,14 @@
         }
       })();
     </script>
-    <!-- Google Analytics 4 - Private Mode Compatible -->
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YKQBFFQR5E"></script>
     <script>
-      // Initialize Google Analytics 4 with graceful private mode handling
-      (function() {
-        try {
-          // Test if localStorage is available (fails in private mode)
-          let clientId;
-          let storageAvailable = false;
-          
-          try {
-            localStorage.setItem('test', 'test');
-            localStorage.removeItem('test');
-            storageAvailable = true;
-          } catch (e) {
-            // Private mode or localStorage disabled
-            storageAvailable = false;
-            if (typeof window !== 'undefined' && window.logger) {
-              window.logger.debug('SYSTEM', 'localStorage not available (private mode)', { error: e.message });
-            }
-          }
-          
-          if (storageAvailable) {
-            // Normal mode - use persistent client ID
-            clientId = localStorage.getItem('ga_client_id');
-            if (!clientId) {
-              clientId = 'GA1.2.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
-              localStorage.setItem('ga_client_id', clientId);
-            }
-          } else {
-            // Private mode - use session-only client ID
-            clientId = 'GA1.2.private.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
-          }
-          
-          // Send page view
-          const pageUrl = window.location.href;
-          const pageTitle = document.title || 'City Guide - chunky.dad Bear Guide';
-          const referrer = document.referrer || '';
-          
-          // Build analytics URL
-          const analyticsUrl = 'https://www.google-analytics.com/g/collect?' + 
-            'v=2&' +
-            'tid=G-YKQBFFQR5E&' +
-            'cid=' + encodeURIComponent(clientId) + '&' +
-            'en=page_view&' +
-            'dl=' + encodeURIComponent(pageUrl) + '&' +
-            'dt=' + encodeURIComponent(pageTitle) + '&' +
-            'dr=' + encodeURIComponent(referrer) + '&' +
-            'ul=en-us&' +
-            'de=UTF-8&' +
-            'sd=24-bit&' +
-            'sr=1920x1080&' +
-            'vp=1920x1080&' +
-            'je=0&' +
-            'z=' + Math.floor(Math.random() * 2147483647);
-          
-          // Send via Image request (non-blocking)
-          const img = new Image();
-          img.src = analyticsUrl;
-          
-          // Optional: Log success for debugging (only if logger is available)
-          if (typeof window !== 'undefined' && window.logger) {
-            window.logger.debug('SYSTEM', 'Analytics pageview sent', { 
-              storageMode: storageAvailable ? 'normal' : 'private',
-              clientId: clientId.substring(0, 20) + '...' // Don't log full ID
-            });
-          }
-        } catch (error) {
-          // Silently fail - don't break the page or log errors
-          // Analytics is not critical for site functionality
-          if (typeof window !== 'undefined' && window.logger) {
-            window.logger.warn('SYSTEM', 'Analytics initialization failed', { error: error.message });
-          }
-        }
-      })();
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-YKQBFFQR5E');
     </script>
     
     <link rel="stylesheet" href="../styles.css">
