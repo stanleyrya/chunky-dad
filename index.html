@@ -59,7 +59,7 @@
             'v=2&' +
             'tid=G-YKQBFFQR5E&' +
             'cid=' + encodeURIComponent(clientId) + '&' +
-            't=pageview&' +
+            'en=page_view&' +
             'dl=' + encodeURIComponent(pageUrl) + '&' +
             'dt=' + encodeURIComponent(pageTitle) + '&' +
             'dr=' + encodeURIComponent(referrer) + '&' +
@@ -69,8 +69,6 @@
             'sr=1920x1080&' +
             'vp=1920x1080&' +
             'je=0&' +
-            'uip=' + encodeURIComponent(window.location.hostname) + '&' +
-            'uua=' + encodeURIComponent(navigator.userAgent) + '&' +
             'z=' + Math.floor(Math.random() * 2147483647);
           
           // Send via Image request
