@@ -426,7 +426,8 @@
 
     .existing-modal {
       margin: auto;
-      width: min(760px, 92vw);
+      width: min(760px, calc(100vw - 2rem));
+      max-width: calc(100vw - 2rem);
       border: none;
       border-radius: 16px;
       padding: 0;
@@ -1114,7 +1115,8 @@
       }
 
       .existing-modal {
-        width: min(94vw, 560px);
+        width: min(560px, calc(100vw - 2rem));
+        max-width: calc(100vw - 2rem);
       }
 
       .existing-modal__content {
@@ -1256,10 +1258,6 @@
                   <small>For long words, add <code>-</code> to help break them up (MEGA-WOOF). It will not show unless we need two lines. If you want a hyphen all the time, add <code>\-</code> instead. The <code>\</code> will not show.</small>
                 </div>
                 <div class="field-group">
-                  <label for="event-city">City</label>
-                  <select id="event-city"></select>
-                </div>
-                <div class="field-group">
                   <label for="event-cover">Cover / Price</label>
                   <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
                 </div>
@@ -1280,6 +1278,10 @@
             <summary>Venue</summary>
             <div class="section-body">
               <div class="field-grid">
+                <div class="field-group">
+                  <label for="event-city">City</label>
+                  <select id="event-city"></select>
+                </div>
                 <div class="field-group">
                   <label for="event-venue-select">Saved Bars</label>
                   <select id="event-venue-select"></select>
@@ -1688,6 +1690,7 @@
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
+        syncExistingSelectionSummaryFromState();
         syncExistingCitySelection();
         resetExistingResults('Choose a calendar to load events.');
         bindEvents();
@@ -1928,6 +1931,7 @@
           state.savedBar = normalizeText(selectedBar.name);
         }
         applyBarDetails(selectedBar, { preserveExisting: true });
+        assumeVenueLinkTogglesFromState(selectedBar);
         updateVenueLinkToggles({ applyValues: true });
         return true;
       }
@@ -2486,7 +2490,8 @@
           useVenueWebsite: false,
           useVenueInstagram: false,
           useVenueFacebook: false,
-          image: normalizeText(eventData.image || '')
+          image: normalizeText(eventData.image || ''),
+          isEditingExisting: true
         };
       }
 
@@ -2669,6 +2674,16 @@
         dom.existingSelectionText.textContent = text;
       }
 
+      function syncExistingSelectionSummaryFromState() {
+        if (!state || !state.isEditingExisting) {
+          updateExistingSelectionSummary('');
+          return;
+        }
+        const name = normalizeText(state.name || '');
+        const summary = name ? `Editing: ${name}` : 'Editing existing event';
+        updateExistingSelectionSummary(summary);
+      }
+
       function setExistingPanelExpanded(isOpen) {
         if (!dom.editExistingButton) return;
         dom.editExistingButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
@@ -2707,6 +2722,10 @@
         selectedExistingResult = null;
         updateExistingModeUi(null);
         updateExistingSelectionSummary('');
+        if (state) {
+          state.isEditingExisting = false;
+          scheduleUrlUpdate();
+        }
         if (resetInputs) {
           if (dom.existingSearchInput) dom.existingSearchInput.value = '';
           if (dom.existingDateInput) dom.existingDateInput.value = '';
@@ -2747,7 +2766,8 @@
           useVenueWebsite: false,
           useVenueInstagram: false,
           useVenueFacebook: false,
-          image: ''
+          image: '',
+          isEditingExisting: false
         };
       }
 
@@ -2849,6 +2869,10 @@
               break;
             case 'img':
               overrides.image = value;
+              break;
+            case 'edit':
+            case 'editing':
+              overrides.isEditingExisting = parseBooleanParam(value);
               break;
             case 'rmode':
             case 'recurrencemode':
@@ -3384,6 +3408,35 @@
             }
           }
         });
+      }
+
+      function assumeVenueLinkTogglesFromState(bar) {
+        if (!state || !bar) return;
+        ['website', 'instagram', 'facebook'].forEach(linkType => {
+          const toggleStateKey = getVenueToggleStateKey(linkType);
+          const target = getVenueLinkTarget(linkType);
+          if (!toggleStateKey || !target) return;
+          if (state[toggleStateKey]) return;
+          const stateValue = normalizeLinkValue(linkType, state[target.stateKey]).value;
+          const barValue = normalizeLinkValue(linkType, getBarLinkValue(linkType, bar)).value;
+          if (!stateValue || !barValue) return;
+          if (normalizeComparableUrl(stateValue) === normalizeComparableUrl(barValue)) {
+            state[toggleStateKey] = true;
+          }
+        });
+      }
+
+      function normalizeComparableUrl(value) {
+        if (!value) return '';
+        try {
+          const url = new URL(value);
+          const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+          const path = url.pathname.replace(/\/+$/, '').toLowerCase();
+          const query = url.search ? `?${url.searchParams.toString()}` : '';
+          return `${host}${path}${query}`;
+        } catch (error) {
+          return value.trim().toLowerCase();
+        }
       }
 
       function handleVenueToggleChange(toggle) {
@@ -4029,6 +4082,7 @@
         if (state.useVenueWebsite) params.set('vweb', '1');
         if (state.useVenueInstagram) params.set('vinsta', '1');
         if (state.useVenueFacebook) params.set('vfb', '1');
+        if (state.isEditingExisting) params.set('edit', '1');
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
         if (coordsValue) params.set('coords', coordsValue);
