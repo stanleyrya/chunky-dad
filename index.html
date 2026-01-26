@@ -26,58 +26,14 @@
     <meta name="twitter:image" content="https://chunky.dad/favicons/android-chrome-512x512.png">
     <meta name="theme-color" content="#667eea">
     
-    <!-- Google Analytics 4 - Image-based tracking -->
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YKQBFFQR5E"></script>
     <script>
-      // Initialize Google Analytics 4 with private mode support
-      (function() {
-        try {
-          // Test localStorage availability
-          let clientId, storageAvailable = false;
-          try {
-            localStorage.setItem('test', 'test');
-            localStorage.removeItem('test');
-            storageAvailable = true;
-          } catch (e) { storageAvailable = false; }
-          
-          if (storageAvailable) {
-            clientId = localStorage.getItem('ga_client_id');
-            if (!clientId) {
-              clientId = 'GA1.2.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
-              localStorage.setItem('ga_client_id', clientId);
-            }
-          } else {
-            clientId = 'GA1.2.private.' + Math.random().toString(36).substr(2, 9) + '.' + Math.floor(Date.now() / 1000);
-          }
-          
-          // Send page view
-          const pageUrl = window.location.href;
-          const pageTitle = document.title || 'chunky.dad - Gay Bear Travel Guide';
-          const referrer = document.referrer || '';
-          
-          // Build analytics URL
-          const analyticsUrl = 'https://www.google-analytics.com/g/collect?' + 
-            'v=2&' +
-            'tid=G-YKQBFFQR5E&' +
-            'cid=' + encodeURIComponent(clientId) + '&' +
-            'en=page_view&' +
-            'dl=' + encodeURIComponent(pageUrl) + '&' +
-            'dt=' + encodeURIComponent(pageTitle) + '&' +
-            'dr=' + encodeURIComponent(referrer) + '&' +
-            'ul=en-us&' +
-            'de=UTF-8&' +
-            'sd=24-bit&' +
-            'sr=1920x1080&' +
-            'vp=1920x1080&' +
-            'je=0&' +
-            'z=' + Math.floor(Math.random() * 2147483647);
-          
-          // Send via Image request
-          new Image().src = analyticsUrl;
-          
-        } catch (error) {
-          // Silently fail - analytics not critical
-        }
-      })();
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-YKQBFFQR5E');
     </script>
     
     <link rel="stylesheet" href="styles.css">
