@@ -406,6 +406,44 @@
       margin-top: 1rem;
     }
 
+    .existing-event-panel {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .existing-event-panel .field-actions {
+      margin-top: 0.2rem;
+    }
+
+    .existing-selection-summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 162, 74, 0.25);
+      background: rgba(255, 162, 74, 0.08);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .existing-selection-summary strong {
+      color: var(--text-primary);
+    }
+
+    .existing-selection-actions {
+      display: inline-flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .action-button.is-compact {
+      font-size: 0.72rem;
+      padding: 0.35rem 0.6rem;
+    }
+
     .primary-actions {
       display: flex;
       gap: 0.6rem;
@@ -1101,6 +1139,10 @@
               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
               <span>Reset</span>
             </button>
+            <button type="button" class="ghost-button action-button" id="edit-existing" aria-label="Edit existing event" aria-expanded="false">
+              <i class="bi bi-pencil-square" aria-hidden="true"></i>
+              <span>Edit Existing</span>
+            </button>
             <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Tell dad">
               <i class="bi bi-send" aria-hidden="true"></i>
               <span>Tell Dad</span>
@@ -1122,10 +1164,73 @@
           <div>
             <h2>Event Details</h2>
             <p class="panel-subtitle">Changes are saved to the URL as you type.</p>
+            <div class="existing-selection-summary is-hidden" id="existing-selection-summary">
+              <div id="existing-selection-text"></div>
+              <div class="existing-selection-actions">
+                <button type="button" class="ghost-button action-button is-compact" id="existing-change">
+                  <i class="bi bi-search" aria-hidden="true"></i>
+                  <span>Change</span>
+                </button>
+                <button type="button" class="ghost-button action-button is-compact" id="existing-clear-summary">
+                  <i class="bi bi-x-circle" aria-hidden="true"></i>
+                  <span>Clear</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <form id="event-form">
+          <details class="form-section" id="existing-event-panel">
+            <summary>Edit Existing Event</summary>
+            <div class="section-body existing-event-panel">
+              <p class="panel-subtitle">Choose a calendar, then search by date or text.</p>
+
+              <div class="field-grid">
+                <div class="field-group">
+                  <label for="existing-city">Calendar / City</label>
+                  <select id="existing-city"></select>
+                </div>
+                <div class="field-group">
+                  <label for="existing-search">Search text</label>
+                  <input type="text" id="existing-search" autocomplete="off" placeholder="Goldiloxx, Rockbar, Leather Nite">
+                  <small>Match event name, venue, or notes.</small>
+                </div>
+                <div class="field-group">
+                  <label for="existing-date">Search date</label>
+                  <input type="date" id="existing-date">
+                  <small>Optional. Picks the occurrence for that day.</small>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label for="existing-results">Matching events</label>
+                <select id="existing-results"></select>
+                <small class="field-hint" id="existing-results-hint" data-default="Pick a match to load into the form.">Pick a match to load into the form.</small>
+              </div>
+
+              <div class="field-group is-hidden" id="existing-mode-group">
+                <label>Edit as</label>
+                <div class="toggle-buttons" role="group" aria-label="Edit occurrence or series">
+                  <button type="button" class="toggle-button is-active" data-edit-mode="occurrence">Occurrence</button>
+                  <button type="button" class="toggle-button" data-edit-mode="series">Series</button>
+                </div>
+                <small class="field-hint" id="existing-mode-hint" data-default=""></small>
+              </div>
+
+              <div class="field-actions">
+                <button type="button" class="primary-button action-button" id="existing-load">
+                  <i class="bi bi-download" aria-hidden="true"></i>
+                  <span>Load event</span>
+                </button>
+                <button type="button" class="ghost-button action-button" id="existing-clear">
+                  <i class="bi bi-x-circle" aria-hidden="true"></i>
+                  <span>Clear</span>
+                </button>
+              </div>
+            </div>
+          </details>
+
           <details class="form-section" open>
             <summary>Basics</summary>
             <div class="section-body">
@@ -1450,6 +1555,8 @@
 
   <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+  <script src="../js/logger.js"></script>
+  <script src="../js/calendar-core.js"></script>
   <script src="../js/city-config.js"></script>
   <script>
     (() => {
@@ -1474,6 +1581,7 @@
         '-1': 'Last'
       };
       const BAR_DATA_PATH = '../data/bars';
+      const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'info@chunky.dad';
 
       const dom = {};
@@ -1490,6 +1598,12 @@
       let currentBars = [];
       let selectedBar = null;
       const barCache = {};
+      const calendarCache = {};
+      const calendarCore = typeof CalendarCore === 'function' ? new CalendarCore() : null;
+      let existingResults = [];
+      let selectedExistingResult = null;
+      let selectedExistingMode = 'occurrence';
+      let existingSearchTimeoutId = null;
 
       document.addEventListener('DOMContentLoaded', init);
 
@@ -1503,6 +1617,8 @@
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
+        syncExistingCitySelection();
+        resetExistingResults('Choose a calendar to load events.');
         bindEvents();
         populateVenueOptions(state.city);
         updateRecurrenceUi();
@@ -1563,6 +1679,22 @@
         dom.resetButton = document.getElementById('reset-form');
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
         dom.copyShareButton = document.getElementById('copy-link');
+        dom.editExistingButton = document.getElementById('edit-existing');
+        dom.existingPanel = document.getElementById('existing-event-panel');
+        dom.existingCitySelect = document.getElementById('existing-city');
+        dom.existingSearchInput = document.getElementById('existing-search');
+        dom.existingDateInput = document.getElementById('existing-date');
+        dom.existingResultsSelect = document.getElementById('existing-results');
+        dom.existingResultsHint = document.getElementById('existing-results-hint');
+        dom.existingModeGroup = document.getElementById('existing-mode-group');
+        dom.existingModeButtons = document.querySelectorAll('[data-edit-mode]');
+        dom.existingModeHint = document.getElementById('existing-mode-hint');
+        dom.existingLoadButton = document.getElementById('existing-load');
+        dom.existingClearButton = document.getElementById('existing-clear');
+        dom.existingSelectionSummary = document.getElementById('existing-selection-summary');
+        dom.existingSelectionText = document.getElementById('existing-selection-text');
+        dom.existingChangeButton = document.getElementById('existing-change');
+        dom.existingClearSummaryButton = document.getElementById('existing-clear-summary');
         dom.calendarIframe = document.getElementById('calendar-preview');
         dom.calendarStatus = document.getElementById('calendar-status');
         dom.previewMedia = document.getElementById('preview-media');
@@ -1579,7 +1711,6 @@
       }
 
       function populateCityOptions() {
-        if (!dom.citySelect) return;
         let cities = [];
         if (typeof getAvailableCities === 'function') {
           cities = getAvailableCities();
@@ -1600,13 +1731,29 @@
           const nameB = (b.name || b.key || '').toLowerCase();
           return nameA.localeCompare(nameB);
         });
-        dom.citySelect.innerHTML = '';
+        fillCitySelect(dom.citySelect, cities);
+        fillCitySelect(dom.existingCitySelect, cities);
+      }
+
+      function fillCitySelect(select, cities) {
+        if (!select) return;
+        select.innerHTML = '';
         cities.forEach(city => {
           const option = document.createElement('option');
           option.value = city.key;
           option.textContent = city.emoji ? `${city.emoji} ${city.name}` : city.name || city.key;
-          dom.citySelect.appendChild(option);
+          select.appendChild(option);
         });
+      }
+
+      function syncExistingCitySelection(options = {}) {
+        if (!dom.existingCitySelect || !state || !state.city) return;
+        if (dom.existingCitySelect.value !== state.city) {
+          dom.existingCitySelect.value = state.city;
+          if (options.refresh) {
+            scheduleExistingResultsUpdate();
+          }
+        }
       }
 
       async function populateVenueOptions(cityKey) {
@@ -1719,6 +1866,743 @@
           barCache[cityKey] = [];
         }
         return barCache[cityKey];
+      }
+
+      function resetExistingResults(message) {
+        if (!dom.existingResultsSelect) return;
+        const fallback = message || 'Choose a calendar to load events.';
+        dom.existingResultsSelect.innerHTML = '';
+        dom.existingResultsSelect.appendChild(new Option(fallback, ''));
+        dom.existingResultsSelect.disabled = true;
+        setExistingResultsHint(fallback, false);
+        existingResults = [];
+        selectedExistingResult = null;
+        updateExistingModeUi(null);
+      }
+
+      function setExistingResultsHint(message, isError) {
+        if (!dom.existingResultsHint) return;
+        setFieldHint(dom.existingResultsHint, message || '', Boolean(isError));
+      }
+
+      function scheduleExistingResultsUpdate() {
+        if (existingSearchTimeoutId) {
+          clearTimeout(existingSearchTimeoutId);
+        }
+        existingSearchTimeoutId = setTimeout(() => {
+          existingSearchTimeoutId = null;
+          updateExistingResults();
+        }, 150);
+      }
+
+      async function updateExistingResults() {
+        if (!dom.existingResultsSelect || !dom.existingCitySelect) return;
+        const cityKey = dom.existingCitySelect.value || '';
+        if (!cityKey) {
+          resetExistingResults('Choose a calendar to load events.');
+          return;
+        }
+        if (!calendarCore) {
+          resetExistingResults('Calendar tools are unavailable here.');
+          return;
+        }
+        setExistingResultsHint('Loading calendar events...', false);
+        dom.existingResultsSelect.disabled = true;
+        try {
+          const index = await fetchCalendarIndex(cityKey);
+          const textFilter = normalizeText(dom.existingSearchInput ? dom.existingSearchInput.value : '').toLowerCase();
+          const dateValue = dom.existingDateInput ? dom.existingDateInput.value : '';
+          const results = buildExistingResults(index, { textFilter, dateValue });
+          existingResults = results;
+          renderExistingResults(results);
+        } catch (error) {
+          resetExistingResults('Unable to load that calendar.');
+          showToast('Calendar data could not be loaded.', 'warn');
+        }
+      }
+
+      function renderExistingResults(results) {
+        if (!dom.existingResultsSelect) return;
+        const previousId = selectedExistingResult ? selectedExistingResult.id : '';
+        dom.existingResultsSelect.innerHTML = '';
+        if (!results.length) {
+          dom.existingResultsSelect.appendChild(new Option('No matches found', ''));
+          dom.existingResultsSelect.disabled = true;
+          setExistingResultsHint('No matches found.', false);
+          selectedExistingResult = null;
+          updateExistingModeUi(null);
+          return;
+        }
+        dom.existingResultsSelect.appendChild(new Option('Select an event...', ''));
+        results.forEach((result, index) => {
+          const option = new Option(result.label, String(index));
+          dom.existingResultsSelect.appendChild(option);
+        });
+        dom.existingResultsSelect.disabled = false;
+        setExistingResultsHint(`${results.length} match${results.length === 1 ? '' : 'es'} found.`, false);
+        if (previousId) {
+          const matchIndex = results.findIndex(result => result.id === previousId);
+          if (matchIndex >= 0) {
+            dom.existingResultsSelect.value = String(matchIndex);
+            selectedExistingResult = results[matchIndex];
+            selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+            updateExistingModeUi(selectedExistingResult);
+            return;
+          }
+        }
+        selectedExistingResult = null;
+        updateExistingModeUi(null);
+      }
+
+      async function fetchCalendarIndex(cityKey) {
+        if (!cityKey) {
+          return buildCalendarIndex([], cityKey);
+        }
+        if (Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) {
+          return calendarCache[cityKey];
+        }
+        const response = await fetch(`${CALENDAR_DATA_PATH}/${cityKey}.ics`, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Missing calendar for ${cityKey}`);
+        }
+        const text = await response.text();
+        const events = calendarCore.parseICalData(text) || [];
+        const index = buildCalendarIndex(events, cityKey);
+        calendarCache[cityKey] = index;
+        return index;
+      }
+
+      function buildCalendarIndex(events, cityKey) {
+        const normalized = Array.isArray(events)
+          ? events.map(event => normalizeExistingEvent(event, cityKey)).filter(Boolean)
+          : [];
+        const baseEvents = [];
+        const singleEvents = [];
+        const overrides = [];
+        const baseByUid = new Map();
+        normalized.forEach(event => {
+          if (event.recurrenceId) {
+            overrides.push(event);
+            return;
+          }
+          if (event.recurring && event.recurrence) {
+            baseEvents.push(event);
+            if (event.uid && !baseByUid.has(event.uid)) {
+              baseByUid.set(event.uid, event);
+            }
+            return;
+          }
+          singleEvents.push(event);
+        });
+        const overridesByUidDateKey = new Map();
+        overrides.forEach(override => {
+          if (!override.uid) return;
+          const dateKey = override.recurrenceDateKey || override.dateKey;
+          if (!dateKey) return;
+          overridesByUidDateKey.set(`${override.uid}::${dateKey}`, override);
+        });
+        return {
+          cityKey,
+          events: normalized,
+          baseEvents,
+          singleEvents,
+          overrides,
+          baseByUid,
+          overridesByUidDateKey
+        };
+      }
+
+      function normalizeExistingEvent(event, cityKey) {
+        if (!event || typeof event !== 'object') return null;
+        const description = event.unprocessedDescription || '';
+        const address = extractDescriptionValue(description, ['address', 'addr']);
+        const timezoneFromDescription = extractDescriptionValue(description, ['timezone', 'tz']);
+        const timeZone = event.startTimezone || timezoneFromDescription || event.calendarTimezone || browserTimezone;
+        const startDate = event.startDate instanceof Date ? new Date(event.startDate) : (event.startDate ? new Date(event.startDate) : null);
+        const endDate = event.endDate instanceof Date ? new Date(event.endDate) : (event.endDate ? new Date(event.endDate) : null);
+        const recurrenceId = event.recurrenceId instanceof Date ? new Date(event.recurrenceId) : (event.recurrenceId ? new Date(event.recurrenceId) : null);
+        const coordinates = event.coordinates && typeof event.coordinates === 'object'
+          ? event.coordinates
+          : parseCoordinates(event.location || '');
+        const location = normalizeCoordinatesValue(coordinates || event.location);
+        const normalized = {
+          uid: event.uid || '',
+          name: normalizeText(event.name || ''),
+          shortName: normalizeText(event.shortName || ''),
+          shorterName: normalizeText(event.shorterName || ''),
+          bar: normalizeText(event.bar || event.venue || ''),
+          address: normalizeText(address || ''),
+          location,
+          coordinates,
+          tea: normalizeText(event.tea || event.description || ''),
+          description: normalizeText(event.description || ''),
+          cover: normalizeText(event.cover || ''),
+          website: normalizeText(event.website || ''),
+          instagram: normalizeText(event.instagram || ''),
+          facebook: normalizeText(event.facebook || ''),
+          gmaps: normalizeText(event.gmaps || ''),
+          ticketUrl: normalizeText(event.ticketUrl || event.tickets || ''),
+          image: normalizeText(event.image || ''),
+          recurrence: normalizeText(event.recurrence || ''),
+          recurring: Boolean(event.recurrence),
+          recurrenceId,
+          startDate,
+          endDate,
+          timeZone,
+          city: cityKey || '',
+          dateKey: startDate ? formatDateKey(startDate) : '',
+          recurrenceDateKey: recurrenceId ? formatDateKey(recurrenceId) : ''
+        };
+        normalized.searchBlob = buildSearchBlob(normalized, null);
+        return normalized;
+      }
+
+      function extractDescriptionValue(description, keys) {
+        if (!description) return '';
+        const normalizedKeys = keys.map(key => key.toLowerCase().replace(/\s+/g, ''));
+        const lines = String(description).replace(/\r/g, '').split('\n');
+        for (const line of lines) {
+          const separatorIndex = line.indexOf(':');
+          if (separatorIndex === -1) continue;
+          const rawKey = line.slice(0, separatorIndex).trim();
+          const normalizedKey = rawKey.toLowerCase().replace(/\s+/g, '');
+          if (!normalizedKeys.includes(normalizedKey)) continue;
+          const value = line.slice(separatorIndex + 1).trim();
+          return normalizeText(decodeHtmlEntities(value));
+        }
+        return '';
+      }
+
+      function decodeHtmlEntities(value) {
+        if (!value || typeof value !== 'string' || !value.includes('&')) return value;
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = value;
+        return textarea.value;
+      }
+
+      function buildSearchBlob(event, baseEvent) {
+        const parts = [
+          event.name,
+          event.shortName,
+          event.shorterName,
+          event.bar,
+          event.address,
+          event.tea,
+          event.description,
+          event.website,
+          event.instagram,
+          event.ticketUrl
+        ];
+        if (baseEvent) {
+          parts.push(baseEvent.name, baseEvent.shortName, baseEvent.shorterName, baseEvent.bar);
+        }
+        return parts.filter(Boolean).join(' ').toLowerCase();
+      }
+
+      function buildExistingResults(index, filters = {}) {
+        if (!index) return [];
+        const results = [];
+        const added = new Set();
+        const dateValue = filters.dateValue || '';
+        const textFilter = filters.textFilter || '';
+        const targetDate = dateValue ? parseDateValue(dateValue) : null;
+
+        if (targetDate && dateValue) {
+          index.overrides.forEach(override => {
+            const dateKey = override.recurrenceDateKey || override.dateKey;
+            if (dateKey !== dateValue) return;
+            const baseEvent = override.uid ? index.baseByUid.get(override.uid) : null;
+            addExistingResult(results, buildResultEntry({
+              event: override,
+              baseEvent,
+              type: 'override',
+              occurrenceDate: targetDate,
+              startDate: override.startDate,
+              endDate: override.endDate
+            }), added);
+          });
+
+          index.baseEvents.forEach(baseEvent => {
+            if (!baseEvent.recurrence) return;
+            if (!doesRecurringEventMatchDate(baseEvent, targetDate)) return;
+            const overrideKey = baseEvent.uid ? `${baseEvent.uid}::${dateValue}` : '';
+            const override = overrideKey ? index.overridesByUidDateKey.get(overrideKey) : null;
+            if (override) {
+              addExistingResult(results, buildResultEntry({
+                event: override,
+                baseEvent,
+                type: 'override',
+                occurrenceDate: targetDate,
+                startDate: override.startDate,
+                endDate: override.endDate
+              }), added);
+              return;
+            }
+            const occurrenceDates = buildOccurrenceDates(baseEvent, targetDate);
+            addExistingResult(results, buildResultEntry({
+              event: baseEvent,
+              baseEvent,
+              type: 'occurrence',
+              occurrenceDate: targetDate,
+              startDate: occurrenceDates.start,
+              endDate: occurrenceDates.end
+            }), added);
+          });
+
+          index.singleEvents.forEach(singleEvent => {
+            if (singleEvent.dateKey !== dateValue) return;
+            addExistingResult(results, buildResultEntry({
+              event: singleEvent,
+              baseEvent: null,
+              type: 'single',
+              occurrenceDate: targetDate,
+              startDate: singleEvent.startDate,
+              endDate: singleEvent.endDate
+            }), added);
+          });
+        } else {
+          index.baseEvents.forEach(baseEvent => {
+            addExistingResult(results, buildResultEntry({
+              event: baseEvent,
+              baseEvent,
+              type: 'series'
+            }), added);
+          });
+
+          index.singleEvents.forEach(singleEvent => {
+            addExistingResult(results, buildResultEntry({
+              event: singleEvent,
+              baseEvent: null,
+              type: 'single'
+            }), added);
+          });
+
+          index.overrides.forEach(override => {
+            const baseEvent = override.uid ? index.baseByUid.get(override.uid) : null;
+            addExistingResult(results, buildResultEntry({
+              event: override,
+              baseEvent,
+              type: 'override',
+              occurrenceDate: override.recurrenceId || override.startDate,
+              startDate: override.startDate,
+              endDate: override.endDate
+            }), added);
+          });
+        }
+
+        let filtered = results;
+        if (textFilter) {
+          filtered = results.filter(result => result.searchBlob.includes(textFilter));
+        }
+
+        filtered.sort((a, b) => {
+          const dateSort = (a.startDate && b.startDate) ? a.startDate - b.startDate : 0;
+          if (dateSort !== 0) return dateSort;
+          const nameA = (a.event.name || '').toLowerCase();
+          const nameB = (b.event.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+
+        return filtered;
+      }
+
+      function addExistingResult(results, result, added) {
+        if (!result || !result.id) return;
+        if (added.has(result.id)) return;
+        added.add(result.id);
+        results.push(result);
+      }
+
+      function buildResultEntry(options) {
+        if (!options || !options.event) return null;
+        const event = options.event;
+        const baseEvent = options.baseEvent || null;
+        const occurrenceDate = options.occurrenceDate || null;
+        const type = options.type || 'single';
+        const id = buildResultId(event, type, occurrenceDate);
+        const result = {
+          id,
+          event,
+          baseEvent,
+          type,
+          occurrenceDate,
+          startDate: options.startDate || event.startDate || null,
+          endDate: options.endDate || event.endDate || null,
+          canEditSeries: Boolean(baseEvent && baseEvent.recurrence),
+          canEditOccurrence: Boolean(baseEvent && occurrenceDate),
+          searchBlob: buildSearchBlob(event, baseEvent)
+        };
+        result.label = buildExistingResultLabel(result);
+        return result;
+      }
+
+      function buildResultId(event, type, occurrenceDate) {
+        const uid = event.uid || event.name || 'event';
+        const dateKey = occurrenceDate ? formatDateKey(occurrenceDate) : (event.recurrenceDateKey || event.dateKey || '');
+        return `${uid}::${type}::${dateKey}`;
+      }
+
+      function buildExistingResultLabel(result) {
+        const name = result.event.name || 'Untitled event';
+        if (result.type === 'series') {
+          const recurrenceLabel = formatRecurrenceLabel(result.event);
+          return recurrenceLabel ? `${name} — Series · ${recurrenceLabel}` : `${name} — Series`;
+        }
+        const dateLabel = result.startDate ? formatDateLabel(result.startDate, result.event.timeZone) : '';
+        const timeLabel = (result.startDate && result.endDate)
+          ? formatTimeRange(result.startDate, result.endDate, result.event.timeZone)
+          : '';
+        const detailParts = [dateLabel, timeLabel];
+        if (result.type === 'override') {
+          detailParts.push('Override');
+        }
+        const detail = detailParts.filter(Boolean).join(' · ');
+        return detail ? `${name} — ${detail}` : name;
+      }
+
+      function handleExistingResultChange() {
+        if (!dom.existingResultsSelect) return;
+        const selectedIndex = parseInt(dom.existingResultsSelect.value, 10);
+        if (!Number.isFinite(selectedIndex) || !existingResults[selectedIndex]) {
+          selectedExistingResult = null;
+          updateExistingModeUi(null);
+          return;
+        }
+        selectedExistingResult = existingResults[selectedIndex];
+        selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+        updateExistingModeUi(selectedExistingResult);
+      }
+
+      function getDefaultExistingMode(result) {
+        if (!result || !result.canEditSeries) return 'occurrence';
+        if (result.type === 'series') return 'series';
+        if (result.occurrenceDate) return 'occurrence';
+        return 'series';
+      }
+
+      function setExistingMode(mode) {
+        selectedExistingMode = mode === 'series' ? 'series' : 'occurrence';
+        updateExistingModeUi(selectedExistingResult);
+      }
+
+      function updateExistingModeUi(result) {
+        if (!dom.existingModeGroup || !dom.existingModeButtons) return;
+        const shouldShow = Boolean(result && result.canEditSeries);
+        dom.existingModeGroup.classList.toggle('is-hidden', !shouldShow);
+        if (!shouldShow) {
+          return;
+        }
+        dom.existingModeButtons.forEach(button => {
+          button.classList.toggle('is-active', button.dataset.editMode === selectedExistingMode);
+        });
+        if (dom.existingModeHint) {
+          let hint = '';
+          if (selectedExistingMode === 'series') {
+            hint = 'Series keeps the RRULE and original start/end.';
+          } else if (result.type === 'override') {
+            hint = 'Occurrence uses the override details and clears the RRULE.';
+          } else {
+            hint = 'Occurrence uses this date and clears the RRULE.';
+          }
+          setFieldHint(dom.existingModeHint, hint, false);
+        }
+      }
+
+      function applyExistingSelection() {
+        if (!selectedExistingResult) {
+          showToast('Pick a matching event first.', 'warn');
+          return;
+        }
+        const mode = selectedExistingMode === 'series' && selectedExistingResult.canEditSeries
+          ? 'series'
+          : 'occurrence';
+        const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
+        let eventData = selectedExistingResult.event;
+        let startDate = selectedExistingResult.startDate || selectedExistingResult.event.startDate;
+        let endDate = selectedExistingResult.endDate || selectedExistingResult.event.endDate;
+        let recurrence = '';
+
+        if (mode === 'series' && baseEvent && baseEvent.recurrence) {
+          eventData = baseEvent;
+          startDate = baseEvent.startDate;
+          endDate = baseEvent.endDate;
+          recurrence = baseEvent.recurrence;
+        } else if (selectedExistingResult.occurrenceDate && baseEvent) {
+          if (selectedExistingResult.type === 'override') {
+            eventData = selectedExistingResult.event;
+          } else {
+            const occurrenceDates = buildOccurrenceDates(baseEvent, selectedExistingResult.occurrenceDate);
+            startDate = occurrenceDates.start;
+            endDate = occurrenceDates.end;
+            eventData = baseEvent;
+          }
+        } else {
+          recurrence = eventData.recurrence || '';
+        }
+
+        if (!startDate || !endDate || !(startDate instanceof Date) || !(endDate instanceof Date)
+          || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+          showToast('Selected event is missing timing info.', 'warn');
+          return;
+        }
+
+        selectedBar = null;
+        state = buildExistingState(eventData, {
+          cityKey: eventData.city || state.city,
+          startDate,
+          endDate,
+          recurrence
+        });
+
+        applyStateToForm();
+        populateVenueOptions(state.city);
+        updateCalendarSource();
+        refreshUi();
+        scheduleEventPush();
+        syncExistingCitySelection();
+
+        const summaryText = buildExistingSelectionText(selectedExistingResult, mode, startDate, endDate);
+        updateExistingSelectionSummary(summaryText);
+        showToast('Event loaded. Edit the form as usual.', 'info');
+      }
+
+      function buildExistingState(eventData, options = {}) {
+        const timezone = eventData.timeZone || browserTimezone;
+        const startDate = options.startDate || eventData.startDate || new Date();
+        const endDate = options.endDate || eventData.endDate || new Date(startDate.getTime() + DEFAULT_DURATION_MINUTES * 60000);
+        return {
+          ...state,
+          name: normalizeText(eventData.name || ''),
+          shortName: normalizeText(eventData.shortName || eventData.shorterName || ''),
+          city: options.cityKey || eventData.city || state.city,
+          savedBar: normalizeText(eventData.bar || ''),
+          venue: normalizeText(eventData.bar || eventData.venue || ''),
+          address: normalizeText(eventData.address || ''),
+          location: normalizeCoordinatesValue(eventData.coordinates || eventData.location),
+          description: normalizeText(eventData.tea || eventData.description || ''),
+          cover: normalizeText(eventData.cover || ''),
+          start: formatInputValue(startDate),
+          end: formatInputValue(endDate),
+          timezone,
+          recurrence: normalizeText(options.recurrence || ''),
+          recurrenceMode: 'builder',
+          website: normalizeText(eventData.website || ''),
+          ticketUrl: normalizeText(eventData.ticketUrl || ''),
+          instagram: normalizeText(eventData.instagram || ''),
+          facebook: normalizeText(eventData.facebook || ''),
+          gmaps: normalizeText(eventData.gmaps || ''),
+          useVenueWebsite: false,
+          useVenueInstagram: false,
+          useVenueFacebook: false,
+          image: normalizeText(eventData.image || '')
+        };
+      }
+
+      function buildExistingSelectionText(result, mode, startDate, endDate) {
+        const name = (result.event.name || result.baseEvent?.name || 'Event').trim();
+        const pieces = [`Editing: ${name}`];
+        if (mode === 'series') {
+          const recurrenceLabel = formatRecurrenceLabel(result.baseEvent || result.event);
+          const detail = recurrenceLabel ? `Series · ${recurrenceLabel}` : 'Series';
+          pieces.push(`(${detail})`);
+          return pieces.join(' ');
+        }
+        const dateLabel = startDate ? formatDateLabel(startDate, result.event.timeZone) : '';
+        const timeLabel = (startDate && endDate)
+          ? formatTimeRange(startDate, endDate, result.event.timeZone)
+          : '';
+        const detailParts = ['Occurrence', dateLabel, timeLabel];
+        if (result.type === 'override') {
+          detailParts.push('Override');
+        }
+        const detail = detailParts.filter(Boolean).join(' · ');
+        pieces.push(`(${detail})`);
+        return pieces.join(' ');
+      }
+
+      function buildOccurrenceDates(baseEvent, targetDate) {
+        const startBase = baseEvent.startDate instanceof Date ? baseEvent.startDate : new Date(baseEvent.startDate);
+        const endBase = baseEvent.endDate instanceof Date ? baseEvent.endDate : new Date(baseEvent.endDate);
+        const durationMs = startBase && endBase
+          ? Math.max(1, endBase.getTime() - startBase.getTime())
+          : DEFAULT_DURATION_MINUTES * 60000;
+        const start = new Date(startBase);
+        start.setFullYear(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+        const end = new Date(start.getTime() + durationMs);
+        return { start, end };
+      }
+
+      function doesRecurringEventMatchDate(baseEvent, targetDate) {
+        if (!baseEvent || !baseEvent.recurrence || !targetDate) return false;
+        const pattern = parseRecurrencePattern(baseEvent.recurrence);
+        if (!pattern || !baseEvent.startDate) return false;
+        if (!(baseEvent.startDate instanceof Date) || Number.isNaN(baseEvent.startDate.getTime())) return false;
+        const eventStart = parseDateValue(formatDateKey(baseEvent.startDate));
+        if (!eventStart || targetDate < eventStart) return false;
+        const interval = pattern.interval || 1;
+        switch (pattern.frequency) {
+          case 'DAILY': {
+            const diffDays = Math.floor((targetDate - eventStart) / 86400000);
+            return diffDays % interval === 0;
+          }
+          case 'WEEKLY': {
+            const diffDays = Math.floor((targetDate - eventStart) / 86400000);
+            const diffWeeks = Math.floor(diffDays / 7);
+            if (diffWeeks % interval !== 0) return false;
+            const dayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+            const byDay = (pattern.byDay && pattern.byDay.length)
+              ? pattern.byDay
+              : [dayCodes[baseEvent.startDate.getDay()]];
+            return byDay.some(code => getDayIndexFromCode(code) === targetDate.getDay());
+          }
+          case 'MONTHLY': {
+            const monthDiff = (targetDate.getFullYear() - eventStart.getFullYear()) * 12
+              + (targetDate.getMonth() - eventStart.getMonth());
+            if (monthDiff % interval !== 0) return false;
+            if (pattern.byMonthDay && pattern.byMonthDay.length) {
+              return pattern.byMonthDay.includes(targetDate.getDate());
+            }
+            if (pattern.byDay && pattern.byDay.length) {
+              return pattern.byDay.some(code => matchesMonthlyByDay(code, targetDate));
+            }
+            return targetDate.getDate() === eventStart.getDate();
+          }
+          default:
+            return false;
+        }
+      }
+
+      function parseDateValue(value) {
+        if (!value) return null;
+        const parts = value.split('-').map(Number);
+        if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return null;
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+
+      function parseRecurrencePattern(recurrence) {
+        if (!recurrence) return null;
+        if (calendarCore && typeof calendarCore.parseRecurrencePattern === 'function') {
+          return calendarCore.parseRecurrencePattern(recurrence);
+        }
+        const rules = {};
+        recurrence.split(';').forEach(rule => {
+          const [key, value] = rule.split('=');
+          rules[key] = value;
+        });
+        return {
+          frequency: rules.FREQ || null,
+          interval: parseInt(rules.INTERVAL, 10) || 1,
+          byDay: rules.BYDAY ? rules.BYDAY.split(',') : null,
+          byMonthDay: rules.BYMONTHDAY ? rules.BYMONTHDAY.split(',').map(day => parseInt(day, 10)) : null
+        };
+      }
+
+      function getDayIndexFromCode(code) {
+        if (calendarCore && typeof calendarCore.getDayIndexFromCode === 'function') {
+          return calendarCore.getDayIndexFromCode(code);
+        }
+        const dayMap = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+        const dayPart = String(code || '').replace(/^-?\d+/, '');
+        return dayMap[dayPart] ?? -1;
+      }
+
+      function getOccurrenceFromDayCode(code) {
+        if (calendarCore && typeof calendarCore.getOccurrenceFromDayCode === 'function') {
+          return calendarCore.getOccurrenceFromDayCode(code);
+        }
+        const match = String(code || '').match(/^(-?\d+)([A-Z]{2})$/);
+        return match ? parseInt(match[1], 10) : 0;
+      }
+
+      function matchesMonthlyByDay(code, date) {
+        const dayIndex = getDayIndexFromCode(code);
+        if (dayIndex !== date.getDay()) return false;
+        const occurrence = getOccurrenceFromDayCode(code);
+        if (!occurrence) return true;
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        if (occurrence > 0) {
+          const firstOfMonth = new Date(year, month, 1);
+          const firstDayIndex = firstOfMonth.getDay();
+          const offset = (dayIndex - firstDayIndex + 7) % 7;
+          const targetDate = 1 + offset + (occurrence - 1) * 7;
+          return date.getDate() === targetDate;
+        }
+        const lastOfMonth = new Date(year, month + 1, 0);
+        const lastDayIndex = lastOfMonth.getDay();
+        const offset = (lastDayIndex - dayIndex + 7) % 7;
+        const lastOccurrence = lastOfMonth.getDate() - offset;
+        const targetDate = lastOccurrence + (occurrence + 1) * 7;
+        return date.getDate() === targetDate;
+      }
+
+      function formatDateKey(date) {
+        if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      function formatDateLabel(date, timeZone) {
+        if (!date || !(date instanceof Date)) return '';
+        try {
+          return new Intl.DateTimeFormat('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: timeZone || browserTimezone
+          }).format(date);
+        } catch (error) {
+          return date.toLocaleDateString('en-US');
+        }
+      }
+
+      function formatRecurrenceLabel(eventData) {
+        if (!eventData || !eventData.recurrence) return '';
+        if (calendarCore && typeof calendarCore.getRecurrenceDescription === 'function') {
+          return calendarCore.getRecurrenceDescription(eventData.recurrence, eventData.startDate);
+        }
+        return eventData.recurrence;
+      }
+
+      function updateExistingSelectionSummary(text) {
+        if (!dom.existingSelectionSummary || !dom.existingSelectionText) return;
+        if (!text) {
+          dom.existingSelectionSummary.classList.add('is-hidden');
+          dom.existingSelectionText.textContent = '';
+          return;
+        }
+        dom.existingSelectionSummary.classList.remove('is-hidden');
+        dom.existingSelectionText.textContent = text;
+      }
+
+      function openExistingPanel(options = {}) {
+        if (!dom.existingPanel) return;
+        dom.existingPanel.open = true;
+        if (dom.editExistingButton) {
+          dom.editExistingButton.setAttribute('aria-expanded', 'true');
+        }
+        if (options.scroll !== false) {
+          dom.existingPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (options.focusSearch && dom.existingSearchInput) {
+          dom.existingSearchInput.focus();
+        }
+        scheduleExistingResultsUpdate();
+      }
+
+      function clearExistingSelection(options = {}) {
+        const { resetInputs = false } = options;
+        selectedExistingResult = null;
+        updateExistingModeUi(null);
+        updateExistingSelectionSummary('');
+        if (resetInputs) {
+          if (dom.existingSearchInput) dom.existingSearchInput.value = '';
+          if (dom.existingDateInput) dom.existingDateInput.value = '';
+          if (dom.existingResultsSelect) dom.existingResultsSelect.value = '';
+          scheduleExistingResultsUpdate();
+        }
       }
 
       function setVenueSelectHint(message) {
@@ -1925,6 +2809,7 @@
             selectedBar = null;
             populateVenueOptions(newCity);
             updateCalendarSource();
+            syncExistingCitySelection({ refresh: dom.existingPanel && dom.existingPanel.open });
             refreshUi();
           });
         }
@@ -2124,6 +3009,68 @@
         }
         if (dom.addToCalendarButton) {
           dom.addToCalendarButton.addEventListener('click', handleAddToCalendar);
+        }
+        if (dom.editExistingButton && dom.existingPanel) {
+          dom.editExistingButton.addEventListener('click', () => {
+            const nextOpen = !dom.existingPanel.open;
+            dom.existingPanel.open = nextOpen;
+            dom.editExistingButton.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+            if (nextOpen) {
+              openExistingPanel({ focusSearch: true, scroll: true });
+            }
+          });
+        }
+        if (dom.existingPanel) {
+          dom.existingPanel.addEventListener('toggle', () => {
+            const isOpen = dom.existingPanel.open;
+            if (dom.editExistingButton) {
+              dom.editExistingButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+            if (isOpen) {
+              scheduleExistingResultsUpdate();
+            }
+          });
+        }
+        if (dom.existingCitySelect) {
+          dom.existingCitySelect.addEventListener('change', () => {
+            scheduleExistingResultsUpdate();
+          });
+        }
+        if (dom.existingSearchInput) {
+          dom.existingSearchInput.addEventListener('input', scheduleExistingResultsUpdate);
+        }
+        if (dom.existingDateInput) {
+          dom.existingDateInput.addEventListener('input', scheduleExistingResultsUpdate);
+          dom.existingDateInput.addEventListener('change', scheduleExistingResultsUpdate);
+        }
+        if (dom.existingResultsSelect) {
+          dom.existingResultsSelect.addEventListener('change', handleExistingResultChange);
+        }
+        if (dom.existingModeButtons && dom.existingModeButtons.length) {
+          dom.existingModeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              const mode = button.dataset.editMode || 'occurrence';
+              setExistingMode(mode);
+            });
+          });
+        }
+        if (dom.existingLoadButton) {
+          dom.existingLoadButton.addEventListener('click', applyExistingSelection);
+        }
+        if (dom.existingClearButton) {
+          dom.existingClearButton.addEventListener('click', () => {
+            clearExistingSelection({ resetInputs: true });
+          });
+        }
+        if (dom.existingChangeButton) {
+          dom.existingChangeButton.addEventListener('click', () => {
+            openExistingPanel({ focusSearch: true, scroll: true });
+          });
+        }
+        if (dom.existingClearSummaryButton) {
+          dom.existingClearSummaryButton.addEventListener('click', () => {
+            clearExistingSelection({ resetInputs: false });
+          });
         }
       }
 
@@ -2456,6 +3403,8 @@
         state.city = preservedCity;
         recurrenceMode = 'builder';
         applyStateToForm();
+        clearExistingSelection({ resetInputs: false });
+        syncExistingCitySelection();
         populateVenueOptions(state.city);
         refreshUi();
         scheduleEventPush();
