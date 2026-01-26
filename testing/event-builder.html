@@ -2449,6 +2449,9 @@
           endDate,
           recurrence
         });
+        state.isEditingExisting = true;
+        state.editingExistingId = selectedExistingResult.id;
+        state.editingExistingMode = mode;
 
         applyStateToForm();
         populateVenueOptions(state.city);
@@ -2680,7 +2683,11 @@
           return;
         }
         const name = normalizeText(state.name || '');
-        const summary = name ? `Editing: ${name}` : 'Editing existing event';
+        const modeLabel = state.editingExistingMode === 'series'
+          ? 'Series'
+          : (state.editingExistingMode === 'occurrence' ? 'Occurrence' : '');
+        const suffix = modeLabel ? ` (${modeLabel})` : '';
+        const summary = name ? `Editing: ${name}${suffix}` : `Editing existing event${suffix}`;
         updateExistingSelectionSummary(summary);
       }
 
@@ -2724,6 +2731,8 @@
         updateExistingSelectionSummary('');
         if (state) {
           state.isEditingExisting = false;
+          state.editingExistingId = '';
+          state.editingExistingMode = 'occurrence';
           scheduleUrlUpdate();
         }
         if (resetInputs) {
@@ -2767,7 +2776,9 @@
           useVenueInstagram: false,
           useVenueFacebook: false,
           image: '',
-          isEditingExisting: false
+          isEditingExisting: false,
+          editingExistingId: '',
+          editingExistingMode: 'occurrence'
         };
       }
 
@@ -2790,6 +2801,7 @@
       function loadStateFromUrl(baseState) {
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
+        let sawEditFlag = false;
         params.forEach((value, key) => {
           if (value == null || value === '') return;
           switch (key) {
@@ -2873,6 +2885,15 @@
             case 'edit':
             case 'editing':
               overrides.isEditingExisting = parseBooleanParam(value);
+              sawEditFlag = true;
+              break;
+            case 'editid':
+            case 'eid':
+              overrides.editingExistingId = value;
+              break;
+            case 'editmode':
+            case 'emode':
+              overrides.editingExistingMode = value === 'series' ? 'series' : 'occurrence';
               break;
             case 'rmode':
             case 'recurrencemode':
@@ -2882,6 +2903,17 @@
               break;
           }
         });
+        if (!sawEditFlag && (overrides.editingExistingId || overrides.editingExistingMode)) {
+          overrides.isEditingExisting = true;
+        }
+        if (overrides.isEditingExisting) {
+          if (!overrides.editingExistingMode) {
+            overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
+          }
+        } else if (overrides.isEditingExisting === false) {
+          overrides.editingExistingId = '';
+          overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
+        }
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
         if (!overrides.city) overrides.city = baseState.city;
@@ -4082,7 +4114,11 @@
         if (state.useVenueWebsite) params.set('vweb', '1');
         if (state.useVenueInstagram) params.set('vinsta', '1');
         if (state.useVenueFacebook) params.set('vfb', '1');
-        if (state.isEditingExisting) params.set('edit', '1');
+        if (state.isEditingExisting) {
+          params.set('edit', '1');
+          if (state.editingExistingId) params.set('editid', state.editingExistingId);
+          if (state.editingExistingMode) params.set('emode', state.editingExistingMode);
+        }
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
         if (coordsValue) params.set('coords', coordsValue);
