@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20251101T010000Z
 DTEND:20251101T060000Z
-DTSTAMP:20260126T200435Z
+DTSTAMP:20260127T001637Z
 UID:3D97C917-CD83-44B2-A03C-0F6095F987D2
 CREATED:20250930T142205Z
 DESCRIPTION:description: CUBHOUSE returns on October 31st for a HALLOWEEN D
@@ -35,22 +35,24 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260214T020000Z
 DTEND:20260214T070000Z
-DTSTAMP:20260126T200435Z
+DTSTAMP:20260127T001637Z
 UID:C9791D00-2BAB-4EB3-8347-4823E6C75F4A
 CREATED:20260117T204747Z
-DESCRIPTION:description: CUBHOUSE returns on February 13th for a Valentines
-  Dance with your sweet hearts!\nbar: 254\naddress: 254 South 12th Street\, 
- Philadelphia\, PA 19107\ntimezone: America/New_York\nticketUrl: https://www
- .eventbrite.com/e/cubhouse-philly-valentines-dance-party-tickets-1936787556
- 719\ncover: $12.55 - $23.61 (as of 1/17)\nimage: https://img.evbuc.com/http
- s%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1167639013%2F2544065821071%2F1%2Forigina
- l.20251031-205615?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=7
- 5&sharp=10&fp-x=0.5&fp-y=0.5&s=1d9da9d1c175b79fa1fc9ec4afcac0c2\nshortName:
-  CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nurl: http
- s://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?api=1&qu
- ery=39.9470542%2C-75.161054&query_place_id=101718083\nkey: cubhouse-philly-
- valentine-s-dance-party|2026-02-14|254|eventbrite
-LAST-MODIFIED:20260117T204747Z
+DESCRIPTION:description: CUBHOUSE returns for dancing with your VALENTINE'S
+  sweet hearts at 254!\nCome paired or single and ready to mingle.   Keep a 
+ close eye on our Instagram for info regarding specials\, guests\, and speci
+ al treats for all your hearts desires.\n Advance tickets are on sale now!\n
+ bar: 254\naddress: 254 South 12th Street\, Philadelphia\, PA 19107\ntimezon
+ e: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-phill
+ y-valentines-dance-party-tickets-1936787556719\nimage: https://img.evbuc.co
+ m/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1167639013%2F2544065821071%2F1%2Fo
+ riginal.20251031-205615?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompre
+ ss&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1d9da9d1c175b79fa1fc9ec4afcac0c2\nshor
+ tName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nurl
+ : https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107\nke
+ y: cubhouse-philly-valentine-s-dance-party|2026-02-14|254
+LAST-MODIFIED:20260126T234656Z
 LOCATION:39.9470542\, -75.161054
 SEQUENCE:0
 STATUS:CONFIRMED
