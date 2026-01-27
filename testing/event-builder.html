@@ -431,6 +431,10 @@
       min-width: 0;
     }
 
+    .existing-event-panel .field-grid {
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    }
+
 
     .existing-event-panel input[type="text"],
     .existing-event-panel input[type="date"],
@@ -439,6 +443,8 @@
       max-width: 100%;
       min-width: 0;
       min-inline-size: 0;
+      inline-size: 100%;
+      max-inline-size: 100%;
     }
 
     .existing-event-panel .field-actions {
