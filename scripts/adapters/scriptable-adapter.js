@@ -850,17 +850,13 @@ class ScriptableAdapter {
                     await this.ensureRelativeStorageDirs();
                     const metricsRecord = this.buildMetricsRecord(results);
                     if (metricsRecord) {
-                        await this.appendMetricsRecord(metricsRecord);
+                        await this.appendMetricsRecord(metricsRecord, retentionDays);
                         await this.updateMetricsSummary(metricsRecord);
                     } else {
                         console.log('📱 Scriptable: Skipping metrics write (missing runId)');
                     }
-                    await this.cleanupOldFiles('chunky-dad-scraper/metrics', {
-                        maxAgeDays: retentionDays,
-                        keep: (name) => name === 'metrics-summary.json'
-                    });
                 } catch (metricsErr) {
-                    console.log(`📱 Scriptable: Metrics write/cleanup failed: ${metricsErr.message}`);
+                    console.log(`📱 Scriptable: Metrics write failed: ${metricsErr.message}`);
                 }
             }
             
@@ -4431,11 +4427,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     // Metrics helpers
-    getMetricsFilePath(date = new Date()) {
-        const pad = n => String(n).padStart(2, '0');
-        const year = date.getFullYear();
-        const month = pad(date.getMonth() + 1);
-        return this.fm.joinPath(this.metricsDir, `metrics-${year}-${month}.ndjson`);
+    getMetricsFilePath() {
+        return this.fm.joinPath(this.metricsDir, 'metrics.ndjson');
     }
 
     getMetricsSummaryPath() {
@@ -4561,7 +4554,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             config_files: ['scraper-input.js', 'scraper-cities.js'],
             run_file_path: this.getRunFilePath(runId),
             log_file_path: this.getLogFilePath(runId),
-            metrics_file_path: this.getMetricsFilePath(finishedAt),
+            metrics_file_path: this.getMetricsFilePath(),
             summary_file_path: this.getMetricsSummaryPath(),
             errors_count: errorsCount,
             warnings_count: warningsCount,
@@ -4572,10 +4565,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         };
     }
 
-    async appendMetricsRecord(record) {
+    async appendMetricsRecord(record, retentionDays) {
         const fm = this.fm || FileManager.iCloud();
-        const recordDate = record?.finished_at ? new Date(record.finished_at) : new Date();
-        const path = this.getMetricsFilePath(recordDate);
+        const path = this.getMetricsFilePath();
         let existing = '';
 
         if (fm.fileExists(path)) {
@@ -4583,11 +4575,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             existing = fm.readString(path) || '';
         }
 
+        const retentionMs = (retentionDays || 0) * 24 * 60 * 60 * 1000;
+        const cutoffMs = retentionMs > 0 ? Date.now() - retentionMs : null;
+        const lines = existing.split('\n').filter(line => line.trim().length > 0);
+        const keptLines = [];
+
+        lines.forEach(line => {
+            const parsed = JSON.parse(line);
+            const finishedAtMs = parsed?.finished_at ? new Date(parsed.finished_at).getTime() : null;
+            if (!finishedAtMs || !Number.isFinite(finishedAtMs)) return;
+            if (!cutoffMs || finishedAtMs >= cutoffMs) {
+                keptLines.push(line);
+            }
+        });
+
         const line = JSON.stringify(record);
-        const needsNewline = existing && !existing.endsWith('\n');
-        const newContent = existing
-            ? `${existing}${needsNewline ? '\n' : ''}${line}\n`
-            : `${line}\n`;
+        keptLines.push(line);
+        const newContent = `${keptLines.join('\n')}\n`;
 
         fm.writeString(path, newContent);
         console.log(`📱 Scriptable: ✓ Appended metrics to ${path}`);
