@@ -22,7 +22,7 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
-console.log('🐻 Bear Event Scraper - Unified Version Starting...');
+console.log('🐻 Bear Event Scraper: Starting...');
 
 class BearEventScraperOrchestrator {
     constructor() {
@@ -182,7 +182,6 @@ class BearEventScraperOrchestrator {
         try {
             // Initialize if not already done
             if (!this.isInitialized) {
-                console.log('🐻 Orchestrator: Not initialized, initializing now...');
                 await this.initialize();
             }
 
@@ -217,11 +216,10 @@ class BearEventScraperOrchestrator {
 
             // Process events using shared core
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
-            console.log('🐻 Orchestrator: ✓ Event processing completed');
             
             // Add to calendar if not dry run and we have events
             if (results.allProcessedEvents && results.allProcessedEvents.length > 0) {
-                console.log(`🐻 Orchestrator: Processing ${results.allProcessedEvents.length} events for calendar...`);
+                console.log(`🐻 Orchestrator: Preparing ${results.allProcessedEvents.length} events for calendar...`);
                 
                 let calendarEvents = 0;
                 
@@ -229,15 +227,11 @@ class BearEventScraperOrchestrator {
                 const isDryRun = config.config.dryRun;
                 
                 // Always prepare events for analysis (even in dry run mode) to show action types
-                console.log('🐻 Orchestrator: Analyzing events for calendar actions...');
-                
                 // Perform cross-parser deduplication to merge events from different parsers
-                console.log(`🐻 Orchestrator: Performing cross-parser deduplication on ${results.allProcessedEvents.length} events...`);
                 const deduplicatedEvents = sharedCore.deduplicateEvents(results.allProcessedEvents);
-                console.log(`🐻 Orchestrator: ✓ After cross-parser deduplication: ${deduplicatedEvents.length} unique events`);
                 
                 const analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config);
-                console.log(`🐻 Orchestrator: ✓ Analyzed ${analyzedEvents.length} events for calendar actions`);
+                console.log(`🐻 Orchestrator: Calendar analysis complete (${deduplicatedEvents.length} unique)`);
                 
                 // Store analyzed events back into results for display
                 results.analyzedEvents = analyzedEvents;
@@ -252,11 +246,11 @@ class BearEventScraperOrchestrator {
                 if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function' && analyzedEvents) {
                     if (hasDisplay && !isWidget) {
                         // If we have a display (not widget), show results first and let user decide
-                        console.log('🐻 Orchestrator: Display mode - showing results before execution');
+                        console.log('🐻 Orchestrator: Display mode - review results before execution');
                         // The display will handle the execution decision
                     } else {
                         // No display (widget mode) or explicit execution requested
-                        console.log('🐻 Orchestrator: Auto-execution mode - processing calendar actions');
+                        console.log(`🐻 Orchestrator: Executing calendar actions (${analyzedEvents.length} events)`);
                         try {
                             calendarEvents = await finalAdapter.executeCalendarActions(analyzedEvents, config);
                             console.log(`🐻 Orchestrator: ✓ Processed ${calendarEvents} events to calendar`);
@@ -266,7 +260,7 @@ class BearEventScraperOrchestrator {
                         }
                     }
                 } else {
-                    console.log('🐻 Orchestrator: Dry run mode or calendar not supported - skipping calendar integration');
+                    console.log('🐻 Orchestrator: Skipping calendar execution (dry run or unsupported)');
                 }
                 
             // Add calendar count and config to results
@@ -275,10 +269,8 @@ class BearEventScraperOrchestrator {
             }
 
             // Display results
-            console.log('🐻 Orchestrator: Displaying results...');
             await finalAdapter.displayResults(results);
 
-            console.log('🐻 Orchestrator: ✓ Event scraping completed successfully');
             return results;
 
         } catch (error) {
@@ -321,7 +313,6 @@ class BearEventScraperOrchestrator {
 // Auto-execute when loaded
 (async () => {
     try {
-        console.log('🐻 Bear Event Scraper: Auto-executing...');
         const results = await BearEventScraperOrchestrator.execute();
         console.log('🐻 Bear Event Scraper: Execution completed successfully');
     } catch (error) {

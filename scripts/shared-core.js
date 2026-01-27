@@ -37,6 +37,7 @@ class SharedCore {
         
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
+        this.loggedWarnings = new Set();
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -84,8 +85,23 @@ class SharedCore {
             }
         }
         
-        console.log(`🗺️ SharedCore: Created city mappings: ${JSON.stringify(cityMappings)}`);
+        const cityCount = Object.keys(cities).length;
+        const patternCount = Object.values(cities).reduce((count, cityConfig) => {
+            return count + (Array.isArray(cityConfig.patterns) ? cityConfig.patterns.length : 0);
+        }, 0);
+        console.log(`🗺️ SharedCore: Loaded ${cityCount} cities (${patternCount} patterns)`);
         return cityMappings;
+    }
+
+    warnOnce(key, message) {
+        if (!this.loggedWarnings) {
+            this.loggedWarnings = new Set();
+        }
+        if (this.loggedWarnings.has(key)) {
+            return;
+        }
+        this.loggedWarnings.add(key);
+        console.warn(message);
     }
 
     // Detect parser type from URL - allows automatic parser selection based on URL patterns
@@ -107,8 +123,8 @@ class SharedCore {
 
     // Pure business logic for processing events
     async processEvents(config, httpAdapter, displayAdapter, parsers) {
-        await displayAdapter.logInfo('SYSTEM: Starting event processing...');
-        await displayAdapter.logInfo(`SYSTEM: Processing ${config.parsers?.length || 0} parser configurations`);
+        const parserCount = config.parsers?.length || 0;
+        await displayAdapter.logInfo(`SYSTEM: Starting event processing (${parserCount} parsers)`);
         
         const results = {
             totalEvents: 0,
@@ -119,6 +135,7 @@ class SharedCore {
             parserResults: [],
             allProcessedEvents: [] // All events ready for calendar
         };
+        const disabledParsers = [];
 
         if (!config.parsers || config.parsers.length === 0) {
             await displayAdapter.logWarn('SYSTEM: No parser configurations found in config');
@@ -133,12 +150,12 @@ class SharedCore {
             
             // Check if parser is enabled (default to true if not specified)
             if (parserConfig.enabled === false) {
-                await displayAdapter.logInfo(`SYSTEM: Skipping disabled parser: ${parserConfig.name}`);
+                disabledParsers.push(parserConfig.name);
                 continue;
             }
             
             try {
-                await displayAdapter.logInfo(`SYSTEM: Processing parser ${i + 1}/${config.parsers.length}: ${parserConfig.name}`);
+                await displayAdapter.logInfo(`SYSTEM: Parser ${i + 1}/${parserCount}: ${parserConfig.name}`);
                 
                 const parserResult = await this.processParser(parserConfig, config, httpAdapter, displayAdapter, parsers, globalProcessedUrls);
                 results.parserResults.push(parserResult);
@@ -156,7 +173,7 @@ class SharedCore {
                     results.allProcessedEvents.push(...parserResult.events);
                 }
                 
-                await displayAdapter.logSuccess(`SYSTEM: Completed parser ${parserConfig.name}: ${parserResult.bearEvents} bear events found`);
+                await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${parserResult.bearEvents} bear events`);
                 
             } catch (error) {
                 const errorMsg = `SYSTEM: Failed to process ${parserConfig.name}: ${error.message || 'Unknown error'}`;
@@ -169,11 +186,14 @@ class SharedCore {
             }
         }
 
-        if (results.duplicatesRemoved > 0) {
-            await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents} (all sources), Raw bear: ${results.rawBearEvents} (after bear filtering), Duplicates removed: ${results.duplicatesRemoved}, Final bear: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved})`);
-        } else {
-            await displayAdapter.logInfo(`SYSTEM: Event processing complete. Total: ${results.totalEvents} (all sources), Final bear: ${results.bearEvents} (no duplicates)`);
+        if (disabledParsers.length > 0) {
+            await displayAdapter.logInfo(`SYSTEM: Skipped disabled parsers: ${disabledParsers.join(', ')}`);
         }
+
+        const duplicateSummary = results.duplicatesRemoved > 0
+            ? ` (removed ${results.duplicatesRemoved} dupes)`
+            : ' (no duplicates)';
+        await displayAdapter.logInfo(`SYSTEM: Processing complete. Total ${results.totalEvents}; bear ${results.bearEvents}${duplicateSummary}`);
         return results;
     }
 
@@ -182,7 +202,6 @@ class SharedCore {
         let parserName = null;
         if (parserConfig.urls && parserConfig.urls.length > 0) {
             parserName = this.detectParserFromUrl(parserConfig.urls[0]);
-            await displayAdapter.logInfo(`SYSTEM: Detected '${parserName}' parser from URL: ${parserConfig.urls[0]}`);
         }
         
         // Fallback to generic parser if still no parser found
@@ -198,16 +217,9 @@ class SharedCore {
             throw new Error(`Parser '${parserName}' not found`);
         }
 
-        await displayAdapter.logInfo(`SYSTEM: Processing: ${parserConfig.name} using ${parserName} parser`);
-        await displayAdapter.logInfo(`SYSTEM: URLs to process: ${parserConfig.urls?.length || 0}`);
-        if (parserConfig.urls && parserConfig.urls.length <= 3) {
-            // Only log individual URLs if there are 3 or fewer
-            parserConfig.urls.forEach((url, i) => {
-                displayAdapter.logInfo(`SYSTEM:   URL ${i + 1}: ${url}`);
-            });
-        } else if (parserConfig.urls && parserConfig.urls.length > 3) {
-            await displayAdapter.logInfo(`SYSTEM:   First URL: ${parserConfig.urls[0]} (and ${parserConfig.urls.length - 1} more)`);
-        }
+        const urlCount = parserConfig.urls?.length || 0;
+        const urlSuffix = urlCount === 1 ? `: ${parserConfig.urls[0]}` : '';
+        await displayAdapter.logInfo(`SYSTEM: ${parserConfig.name} → ${parserName} (${urlCount} URL${urlCount === 1 ? '' : 's'})${urlSuffix}`);
         
         const allEvents = [];
         // Use global processedUrls to prevent duplicate processing across all parsers
@@ -222,7 +234,6 @@ class SharedCore {
             globalProcessedUrls.add(url);
 
             try {
-                await displayAdapter.logInfo(`SYSTEM: Fetching URL ${i + 1}/${parserConfig.urls.length}: ${url}`);
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
@@ -238,7 +249,8 @@ class SharedCore {
                 
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
-                await displayAdapter.logInfo(`SYSTEM: Parsed ${htmlData?.html?.length || 0} chars → ${eventCount} events, ${linkCount} additional links`);
+                const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
+                await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
                 
                 if (parseResult.events) {
                     // Apply field priorities to determine which parser data to trust
@@ -252,7 +264,6 @@ class SharedCore {
                     );
                     
                     allEvents.push(...enrichedEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${enrichedEvents.length} enriched events from ${url}`);
                 }
 
                 // Process additional URLs if we have them (for enriching existing events, not creating new ones)
@@ -284,12 +295,9 @@ class SharedCore {
             }
         }
 
-        await displayAdapter.logInfo(`SYSTEM: Total events collected: ${allEvents.length}`);
-
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events
-        await displayAdapter.logInfo(`SYSTEM: Filtering events: ${allEvents.length} total → processing...`);
         const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead, parserConfig.allowPastEvents);
         const bearEvents = this.filterBearEvents(futureEvents, parserConfig);
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
@@ -298,8 +306,6 @@ class SharedCore {
         const duplicatesRemoved = bearEvents.length - deduplicatedEvents.length;
         
         await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${deduplicatedEvents.length} final`);
-
-        await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${deduplicatedEvents.length} bear events found`);
 
         return {
             name: parserConfig.name,
@@ -471,9 +477,6 @@ class SharedCore {
         
         // Log progress for large batches
         const logProgress = events.length > 10;
-        if (logProgress) {
-            console.log(`🔄 SharedCore: Deduplicating ${events.length} events...`);
-        }
 
         for (const event of events) {
             const key = this.createEventKey(event);
@@ -502,11 +505,8 @@ class SharedCore {
         // Log results for large batches
         if (logProgress) {
             const duplicatesFound = events.length - deduplicated.length;
-            if (duplicatesFound > 0) {
-                console.log(`🔄 SharedCore: Removed ${duplicatesFound} duplicates, ${deduplicated.length} unique events remaining`);
-            } else {
-                console.log(`🔄 SharedCore: No duplicates found, all ${deduplicated.length} events are unique`);
-            }
+            const duplicateSummary = duplicatesFound > 0 ? ` (removed ${duplicatesFound})` : '';
+            console.log(`🔄 SharedCore: Deduplicated ${events.length} → ${deduplicated.length}${duplicateSummary}`);
         }
 
         return deduplicated;
@@ -592,9 +592,6 @@ class SharedCore {
     mergeParsedEvents(existingEvent, newEvent) {
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
         
-        // Log the merge operation
-        console.log(`🔄 PARSER MERGE: Merging "${existingEvent.title}" (${existingEvent.source}) with "${newEvent.title}" (${newEvent.source})`);
-        
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
         
@@ -610,10 +607,6 @@ class SharedCore {
             ...Object.keys(newEvent)
         ]);
         
-        console.log(`🔄 MERGE DEBUG: All fields to process: ${Array.from(allFields).join(', ')}`);
-        console.log(`🔄 MERGE DEBUG: existingEvent fields: ${JSON.stringify(Object.keys(existingEvent))}`);
-        console.log(`🔄 MERGE DEBUG: newEvent fields: ${JSON.stringify(Object.keys(newEvent))}`);
-        
         // Track merge decisions for important fields
         const mergeDecisions = [];
         
@@ -627,21 +620,13 @@ class SharedCore {
             const existingSource = existingEvent.source;
             const newSource = newEvent.source;
             
-            console.log(`🔄 MERGE DEBUG: Processing field '${fieldName}'`);
-            console.log(`🔄 MERGE DEBUG:   existingValue: "${existingValue}" (${existingSource})`);
-            console.log(`🔄 MERGE DEBUG:   newValue: "${newValue}" (${newSource})`);
-            console.log(`🔄 MERGE DEBUG:   priorityConfig: ${priorityConfig ? JSON.stringify(priorityConfig) : 'NONE'}`);
-            
             if (!priorityConfig || !priorityConfig.priority) {
-                console.log(`🔄 MERGE DEBUG:   NO PRIORITY CONFIG - skipping field`);
                 return; // No priority config, keep newEvent value
             }
             
             // Find which source has higher priority
             const existingIndex = priorityConfig.priority.indexOf(existingSource);
             const newIndex = priorityConfig.priority.indexOf(newSource);
-            
-            console.log(`🔄 MERGE DEBUG:   existingIndex: ${existingIndex}, newIndex: ${newIndex}`);
             
             let chosenValue = newValue; // Default
             let reason = 'default';
@@ -683,8 +668,6 @@ class SharedCore {
                 reason = `only ${newSource} in priority list`;
             }
             
-            console.log(`🔄 MERGE DEBUG:   CHOSEN: "${chosenValue}" (reason: ${reason})`);
-            
             mergedEvent[fieldName] = chosenValue;
             
             // Log decisions when values differ
@@ -699,28 +682,17 @@ class SharedCore {
             }
         });
         
-        // Log merge decisions
         if (mergeDecisions.length > 0) {
-            console.log(`🔄 PARSER MERGE DECISIONS for "${mergedEvent.title}":`);
-            mergeDecisions.forEach(decision => {
-                const existingStr = decision.existingValue === undefined ? 'undefined' : 
-                                   decision.existingValue === null ? 'null' :
-                                   decision.existingValue === '' ? 'empty' : 
-                                   `"${decision.existingValue}"`;
-                const newStr = decision.newValue === undefined ? 'undefined' : 
-                               decision.newValue === null ? 'null' :
-                               decision.newValue === '' ? 'empty' : 
-                               `"${decision.newValue}"`;
-                const chosenStr = decision.chosenValue === undefined ? 'undefined' : 
-                                  decision.chosenValue === null ? 'null' :
-                                  decision.chosenValue === '' ? 'empty' : 
-                                  `"${decision.chosenValue}"`;
-                console.log(`🔄   ${decision.field}: ${existingStr} vs ${newStr} → ${chosenStr} (${decision.reason})`);
-            });
+            const changedFields = Array.from(new Set(mergeDecisions.map(decision => decision.field)));
+            const previewFields = changedFields.slice(0, 6);
+            const extraCount = changedFields.length - previewFields.length;
+            const previewText = extraCount > 0
+                ? `${previewFields.join(', ')}, +${extraCount} more`
+                : previewFields.join(', ');
+            const existingTitle = existingEvent.title || 'event';
+            const newTitle = newEvent.title || 'event';
+            console.log(`🔄 PARSER MERGE: "${existingTitle}" (${existingEvent.source}) + "${newTitle}" (${newEvent.source}) → ${changedFields.length} field${changedFields.length === 1 ? '' : 's'} updated (${previewText})`);
         }
-        
-        console.log(`🔄 MERGE DEBUG: Final merged event fields: ${JSON.stringify(Object.keys(mergedEvent))}`);
-        console.log(`🔄 MERGE DEBUG: Final merged event 'url': "${mergedEvent.url}"`);
         
         return mergedEvent;
     }
@@ -808,14 +780,12 @@ class SharedCore {
         
         // Log summary of clobbered fields
         if (clobberedFields.length > 0) {
-            console.log(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedEvent.title || 'event'}": ${clobberedFields.join(', ')}`);
-        }
-        
-        // Log coordinate handling specifically
-        if (mergedEvent.location) {
-            console.log(`🗺️ MERGE: Coordinates preserved for "${mergedEvent.title || 'event'}": ${mergedEvent.location}`);
-        } else if (newEvent.location) {
-            console.log(`🗺️ MERGE: Coordinates missing in merged event for "${mergedEvent.title || 'event'}" (original had: ${newEvent.location})`);
+            const previewFields = clobberedFields.slice(0, 6);
+            const extraCount = clobberedFields.length - previewFields.length;
+            const previewText = extraCount > 0
+                ? `${previewFields.join(', ')}, +${extraCount} more`
+                : previewFields.join(', ');
+            console.log(`🔄 MERGE: "${mergedEvent.title || 'event'}" clobbered ${clobberedFields.length} field${clobberedFields.length === 1 ? '' : 's'} (${previewText})`);
         }
         
         // Add any existing fields that weren't in scraped data
@@ -935,16 +905,12 @@ class SharedCore {
         
         // Log summary of clobbered fields
         if (clobberedFields.length > 0) {
-            console.log(`🔄 CLOBBER: Updated ${clobberedFields.length} fields for "${mergedObject.title || 'event'}": ${clobberedFields.join(', ')}`);
-        }
-        
-        // Log coordinate handling specifically
-        if (mergedObject.location) {
-            console.log(`🗺️ FINAL: Coordinates in final event for "${mergedObject.title || 'event'}": ${mergedObject.location}`);
-        } else if (newEvent.location) {
-            console.log(`🗺️ FINAL: Coordinates missing in final event for "${mergedObject.title || 'event'}" (scraper had: ${newEvent.location})`);
-        } else if (calendarObject.location) {
-            console.log(`🗺️ FINAL: Coordinates missing in final event for "${mergedObject.title || 'event'}" (calendar had: ${calendarObject.location})`);
+            const previewFields = clobberedFields.slice(0, 6);
+            const extraCount = clobberedFields.length - previewFields.length;
+            const previewText = extraCount > 0
+                ? `${previewFields.join(', ')}, +${extraCount} more`
+                : previewFields.join(', ');
+            console.log(`🔄 MERGE: "${mergedObject.title || 'event'}" clobbered ${clobberedFields.length} field${clobberedFields.length === 1 ? '' : 's'} (${previewText})`);
         }
         
         // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
@@ -1477,8 +1443,6 @@ class SharedCore {
     // Static method to generate iOS-compatible Google Maps URLs
     // Works on Android, iOS (including iOS 11+), and web without API tokens
     static generateGoogleMapsUrl({ coordinates, placeId, address, venueName, cityName }) {
-        console.log(`🗺️ SharedCore: generateGoogleMapsUrl called with coordinates: ${coordinates}, placeId: "${placeId}", address: "${address}", venue: "${venueName}", city: "${cityName}"`);
-
         const lat = coordinates ? parseFloat(coordinates.lat) : null;
         const lng = coordinates ? parseFloat(coordinates.lng) : null;
         const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
@@ -1504,27 +1468,21 @@ class SharedCore {
 
         if (placeId && hasCoordinates) {
             // Best case: use coordinates with place_id for maximum compatibility
-            console.log(`🗺️ SharedCore: Using place_id + coordinates method`);
             return `https://www.google.com/maps/search/?api=1&query=${encodedCoordinates}&query_place_id=${placeId}`;
         } else if (placeId && hasAddress) {
             // Fallback: use address with place_id (graceful degradation if place_id doesn't exist)
-            console.log(`🗺️ SharedCore: Using place_id + address method`);
             return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}&query_place_id=${placeId}`;
         } else if (hasAddress) {
             // Fallback: address only
-            console.log(`🗺️ SharedCore: Using address only method`);
             return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
         } else if (hasCoordinates) {
             // Final fallback: coordinates only
-            console.log(`🗺️ SharedCore: Using coordinates only method`);
             return `https://www.google.com/maps/search/?api=1&query=${encodedCoordinates}`;
         } else if (encodedFallbackQuery) {
             // Final fallback: venue/city only (useful when no address or coordinates)
-            console.log(`🗺️ SharedCore: Using venue/city fallback method`);
             const placeIdParam = placeId ? `&query_place_id=${placeId}` : '';
             return `https://www.google.com/maps/search/?api=1&query=${encodedFallbackQuery}${placeIdParam}`;
         }
-        console.log(`🗺️ SharedCore: No valid data for URL generation, returning null`);
         return null;
     }
     
@@ -1550,18 +1508,12 @@ class SharedCore {
         // This is needed for parsers like chunk that pass timezone: null
         if (!event.timezone && event.city && this.cities[event.city]) {
             event.timezone = this.cities[event.city].timezone;
-            console.log(`🗺️ SharedCore: Applied timezone ${event.timezone} for city ${event.city}`);
         } else if (!event.timezone && event.city && !this.cities[event.city]) {
-            console.log(`🚨 ERROR: No timezone configuration found for city: ${event.city}`);
-            console.log(`🚨 EVENT DETAILS:`);
-            console.log(`   Title: "${event.title}"`);
-            console.log(`   Address: "${event.address}"`);
-            console.log(`   Venue: "${event.bar}"`);
-            console.log(`   URL: "${event.url}"`);
-            console.log(`   Source: "${event.source}"`);
-            console.log(`   City extracted from: ${event.city ? 'event.city field' : 'address parsing'}`);
-            console.log(`🚨 Available cities: ${JSON.stringify(Object.keys(this.cities || {}))}`);
-            console.log(`🚨 This error is coming from SharedCore`);
+            const title = event.title || 'unknown';
+            this.warnOnce(
+                `timezone:${event.city}`,
+                `🚨 SharedCore: No timezone config for city "${event.city}" (event: "${title}")`
+            );
         }
         
         // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
@@ -1816,12 +1768,10 @@ class SharedCore {
         
         // Try to extract city name from address components
         const addressParts = address.split(',').map(part => part.trim());
-        console.log(`🗺️ SharedCore: Address parts for "${address}": ${JSON.stringify(addressParts)}`);
         
         // Check each address part for city matches
         for (const part of addressParts) {
             const cityName = part.toLowerCase();
-            console.log(`🗺️ SharedCore: Checking address part: "${cityName}"`);
             
             // Check if the city matches our mappings (includes misspellings in patterns)
             for (const [patterns, city] of Object.entries(this.cityMappings)) {
@@ -1829,13 +1779,11 @@ class SharedCore {
                 for (const pattern of patternList) {
                     // Try exact match first (simpler and more reliable)
                     if (cityName === pattern) {
-                        console.log(`🗺️ SharedCore: Found exact city pattern match "${pattern}" in address part "${cityName}", returning: "${city}"`);
                         return city;
                     }
                     // Then use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(cityName)) {
-                        console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in address part "${cityName}", returning: "${city}"`);
                         return city;
                     }
                 }
@@ -1845,11 +1793,7 @@ class SharedCore {
         // If no city found in any part, try normalizing the first part
         if (addressParts.length > 0) {
             const firstPart = addressParts[0].toLowerCase();
-            console.log(`🗺️ SharedCore: No pattern matched for any address part, normalizing first part "${firstPart}"`);
             const normalizedCity = this.normalizeCityName(firstPart);
-            if (normalizedCity && !this.cities[normalizedCity]) {
-                console.log(`⚠️  WARNING: Extracted city "${normalizedCity}" from address "${address}" has no timezone configuration`);
-            }
             return normalizedCity;
         }
         
@@ -1881,23 +1825,19 @@ class SharedCore {
     extractCityFromEvent(event) {
         // Try city field first
         if (event.city) {
-            console.log(`🗺️ SharedCore: Using city from event.city: "${event.city}" for event: "${event.title}"`);
             // Normalize the city name to handle misspellings like "boton" -> "boston"
             const normalizedCity = this.normalizeCityName(String(event.city));
-            console.log(`🗺️ SharedCore: Normalized city "${event.city}" to "${normalizedCity}"`);
             return normalizedCity;
         }
         
         // Try to extract from title
         const title = String(event.title || '').toLowerCase();
-        console.log(`🗺️ SharedCore: Extracting city from title: "${title}"`);
         
         // Check for city names in title
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const cityPatterns = patterns.split('|');
             for (const pattern of cityPatterns) {
                 if (title.includes(pattern)) {
-                    console.log(`🗺️ SharedCore: Found city pattern "${pattern}" in title, returning city: "${city}"`);
                     return city;
                 }
             }
@@ -1946,19 +1886,19 @@ class SharedCore {
         if (!cityName || typeof cityName !== 'string') return null;
         
         const normalized = cityName.toLowerCase().trim();
-        console.log(`🗺️ SharedCore: Normalizing city name "${cityName}" to "${normalized}"`);
         
         // Check if normalized name matches any of our mappings
         for (const [patterns, city] of Object.entries(this.cityMappings)) {
             const patternList = patterns.split('|');
             if (patternList.includes(normalized)) {
-                console.log(`🗺️ SharedCore: Found mapping for "${normalized}" -> "${city}"`);
                 return city;
             }
         }
         
         // Return as-is if no mapping found
-        console.log(`🗺️ SharedCore: No mapping found for "${normalized}", returning as-is`);
+        if (normalized && this.cities && !this.cities[normalized]) {
+            this.warnOnce(`city:${normalized}`, `⚠️ SharedCore: Unknown city "${normalized}" (no mapping or timezone)`);
+        }
         return normalized;
     }
     

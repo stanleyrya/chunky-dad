@@ -41,14 +41,12 @@ class LinktreeParser {
             
             // Extract ticket links from the Linktree page
             const ticketLinks = this.extractTicketLinks(html, htmlData.url);
-            console.log(`🔗 Linktree: Found ${ticketLinks.length} ticket links`);
             
             // For each ticket link, create an event placeholder
             for (const ticketLink of ticketLinks) {
                 const event = this.createEventFromLink(ticketLink, htmlData.url, parserConfig);
                 if (event) {
                     events.push(event);
-                    console.log(`🔗 Linktree: Created event placeholder for: ${event.title}`);
                 }
             }
             
@@ -78,13 +76,10 @@ class LinktreeParser {
         const ticketLinks = [];
         
         try {
-            console.log(`🔗 Linktree: Extracting ticket links from Linktree page`);
-            
             const links = this.getLinkCandidates(html, sourceUrl);
             for (const link of links) {
                 if (link.url && this.isTicketLink(link)) {
                     ticketLinks.push(link);
-                    console.log(`🔗 Linktree: Found ticket link: ${link.url} (${link.title})`);
                 }
             }
             
@@ -255,8 +250,6 @@ class LinktreeParser {
         const urls = new Set();
         
         try {
-            console.log(`🔗 Linktree: Extracting additional URLs`);
-            
             // Extract all ticket links as additional URLs for processing
             const links = this.getLinkCandidates(html, sourceUrl);
             links.forEach(link => {
@@ -264,8 +257,6 @@ class LinktreeParser {
                     urls.add(link.url);
                 }
             });
-            
-            console.log(`🔗 Linktree: Extracted ${urls.size} additional URLs`);
             
         } catch (error) {
             console.warn(`🔗 Linktree: Error extracting additional URLs: ${error}`);

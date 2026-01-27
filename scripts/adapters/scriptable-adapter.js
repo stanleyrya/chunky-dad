@@ -415,13 +415,6 @@ class ScriptableAdapter {
                             targetEvent.notes = event.notes;
                             targetEvent.url = event.url;
                             
-                            // Log coordinate handling
-                            if (event.location) {
-                                console.log(`📱 Scriptable: Setting coordinates for merge event "${event.title}": ${event.location}`);
-                            } else {
-                                console.log(`📱 Scriptable: No coordinates to set for merge event "${event.title}"`);
-                            }
-                            
                             await targetEvent.save();
                             processedCount++;
                             break;
@@ -467,13 +460,6 @@ class ScriptableAdapter {
                         case 'new':
                             actionCounts.create.push(event.title);
                             
-                            // Log coordinate handling
-                            if (event.location) {
-                                console.log(`📱 Scriptable: Setting coordinates for new event "${event.title}": ${event.location}`);
-                            } else {
-                                console.log(`📱 Scriptable: No coordinates to set for new event "${event.title}"`);
-                            }
-                            
                             await this.createCalendarEvent(event, calendar);
                             processedCount++;
                             break;
@@ -512,11 +498,6 @@ class ScriptableAdapter {
 
     // Helper method to create and save a calendar event
     async createCalendarEvent(event, calendar) {
-        console.log(`📱 Scriptable: Creating new calendar event "${event.title}"`);
-        console.log(`   Date: ${event.startDate.toISOString()}`);
-        console.log(`   Location: ${event.location || 'None'}`);
-        console.log(`   Calendar: ${calendar.title}`);
-        
         const calendarEvent = new CalendarEvent();
         calendarEvent.title = event.title;
         calendarEvent.startDate = event.startDate;
@@ -526,13 +507,14 @@ class ScriptableAdapter {
         calendarEvent.url = event.url;
         calendarEvent.calendar = calendar;
         
-        if (this.isAllDayEvent(event)) {
+        const isAllDay = this.isAllDayEvent(event);
+        if (isAllDay) {
             calendarEvent.isAllDay = true;
-            console.log(`   All-day event: Yes`);
         }
         
         await calendarEvent.save();
-        console.log(`📱 Scriptable: Successfully created calendar event with ID: ${calendarEvent.identifier}`);
+        const allDayNote = isAllDay ? ' (all-day)' : '';
+        console.log(`📱 Scriptable: Created event "${event.title}" in ${calendar.title}${allDayNote}`);
         return calendarEvent;
     }
 
@@ -583,7 +565,6 @@ class ScriptableAdapter {
             // First show the enhanced display features in console for debugging
             await this.displayCalendarProperties(results);
             await this.compareWithExistingCalendars(results);
-            await this.displayAvailableCalendars(results);
             await this.displayEnrichedEvents(results);
             
             // Show console summary
@@ -600,14 +581,6 @@ class ScriptableAdapter {
                 console.log(`🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`);
             }
             console.log(`📅 Added to Calendar: ${results.calendarEvents}${results.calendarEvents === 0 ? ' (dry run/preview mode - no events written)' : ''}`);
-            
-            // Explain the math breakdown
-            if (results.totalEvents > results.bearEvents) {
-                const pastEvents = results.totalEvents - (results.rawBearEvents || results.bearEvents);
-                if (pastEvents > 0) {
-                    console.log(`💡 Math Breakdown: ${results.totalEvents} total → ${pastEvents} past events filtered out → ${results.rawBearEvents || results.bearEvents} future bear events${results.duplicatesRemoved > 0 ? ` → ${results.duplicatesRemoved} duplicates removed → ${results.bearEvents} final` : ''}`);
-                }
-            }
             
             // Show event actions summary if available
             const allEvents = this.getAllEventsFromResults(results);
@@ -650,12 +623,6 @@ class ScriptableAdapter {
             results.parserResults.forEach(result => {
                 console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
             });
-            
-            // Show summary and recommended actions
-            await this.displaySummaryAndActions(results);
-            
-            // Display full event objects at the end (for debugging)
-            await this.displayFullEventObjects(results);
             
             console.log('\n' + '='.repeat(60));
             
@@ -712,7 +679,7 @@ class ScriptableAdapter {
     // Enhanced Display Methods
     async displayCalendarProperties(results) {
         console.log('\n' + '='.repeat(60));
-        console.log('📅 CALENDAR PROPERTIES & STORAGE PREVIEW');
+        console.log('📅 CALENDAR SUMMARY');
         console.log('='.repeat(60));
         
         // Get all events from all parser results
@@ -742,33 +709,14 @@ class ScriptableAdapter {
         });
 
         // Show calendar summary
-        console.log(`\n📊 Summary:`);
-        console.log(`   Total events: ${allEvents.length}`);
-        console.log(`   Calendars needed: ${calendarsNeeded.size}`);
-        
-        console.log(`\n📅 Calendar Status:`);
+        console.log(`\n📊 Events: ${allEvents.length}`);
+        console.log(`📅 Calendars needed: ${calendarsNeeded.size}`);
         for (const [name, info] of calendarsNeeded) {
             if (info.exists) {
                 console.log(`   ✅ ${name} (${info.eventCount} events)`);
             } else {
-                console.log(`   ❌ ${name} (${info.eventCount} events) - must be created manually`);
+                console.log(`   ❌ ${name} (${info.eventCount} events) - create manually`);
             }
-        }
-        
-        // Show sample event structure (just first one)
-        if (allEvents.length > 0) {
-            const sampleEvent = allEvents[0];
-            console.log(`\n📋 Sample Event Structure:`);
-            console.log(`   Title: "${sampleEvent.title || sampleEvent.name}"`);
-            const sampleEventDate = new Date(sampleEvent.startDate);
-            // Get timezone from city configuration instead of expecting it on the event
-            const timezone = this.getTimezoneForCity(sampleEvent.city);
-            const localTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: timezone });
-            const utcTimeStr = sampleEventDate.toLocaleString('en-US', { timeZone: 'UTC' });
-            console.log(`   Date: ${localTimeStr} (UTC: ${utcTimeStr})`);
-            console.log(`   Location: "${sampleEvent.venue || sampleEvent.bar || 'TBD'}"`);
-            console.log(`   City: ${sampleEvent.city || 'unknown'}`);
-            console.log(`   Notes: ${(sampleEvent.notes || '').length} characters`);
         }
         
         console.log('\n' + '='.repeat(60));
@@ -776,7 +724,7 @@ class ScriptableAdapter {
 
     async compareWithExistingCalendars(results) {
         console.log('\n' + '='.repeat(60));
-        console.log('🔍 CALENDAR COMPARISON & CONFLICT DETECTION');
+        console.log('🔍 CALENDAR COMPARISON & CONFLICT CHECK');
         console.log('='.repeat(60));
         
         // Get all events from all parser results
@@ -787,16 +735,17 @@ class ScriptableAdapter {
         }
 
         const availableCalendars = await Calendar.forEvents();
+        const summary = { checked: 0, missing: 0, duplicates: 0, conflicts: 0 };
+        const missingCalendars = new Map();
         
         for (const event of allEvents) {
+            summary.checked++;
             const calendarName = this.getCalendarNameForDisplay(event);
             const calendar = availableCalendars.find(cal => cal.title === calendarName);
             
-            console.log(`\n🐻 Checking: ${event.title || event.name}`);
-            console.log(`📅 Target Calendar: ${calendarName}`);
-            
             if (!calendar) {
-                console.log(`❌ Calendar "${calendarName}" doesn't exist - must be created manually first`);
+                summary.missing++;
+                missingCalendars.set(calendarName, (missingCalendars.get(calendarName) || 0) + 1);
                 // Mark event as missing calendar for display
                 event._action = 'missing_calendar';
                 event._analysis = {
@@ -821,8 +770,6 @@ class ScriptableAdapter {
                 
                 const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                 
-                console.log(`📊 Found ${existingEvents.length} existing events in calendar`);
-                
                 // Check for exact duplicates
                 const duplicates = existingEvents.filter(existing => {
                     const titleMatch = existing.title === (event.title || event.name);
@@ -831,16 +778,13 @@ class ScriptableAdapter {
                 });
                 
                 if (duplicates.length > 0) {
-                    console.log(`⚠️  Found ${duplicates.length} potential duplicate(s):`);
-                    duplicates.forEach(dup => {
-                        // Get timezone from city configuration instead of expecting it on the event
-                        const timezone = this.getTimezoneForCity(event.city);
-                        const dupLocalTime = dup.startDate.toLocaleString('en-US', { timeZone: timezone });
-                        const dupUtcTime = dup.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
-                        console.log(`   - "${dup.title}" at ${dupLocalTime} (UTC: ${dupUtcTime})`);
-                    });
-                } else {
-                    console.log(`✅ No duplicates found - safe to add`);
+                    summary.duplicates += duplicates.length;
+                    const timezone = this.getTimezoneForCity(event.city);
+                    const sampleDup = duplicates[0];
+                    const dupLocalTime = sampleDup.startDate.toLocaleString('en-US', { timeZone: timezone });
+                    const dupUtcTime = sampleDup.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
+                    console.log(`⚠️  ${event.title || event.name} → ${duplicates.length} duplicate(s) in ${calendarName}`);
+                    console.log(`   Example: "${sampleDup.title}" at ${dupLocalTime} (UTC: ${dupUtcTime})`);
                 }
                 
                 // Check for time conflicts (overlapping events)
@@ -855,26 +799,22 @@ class ScriptableAdapter {
                 });
                 
                 if (conflicts.length > 0) {
-                    console.log(`⏰ Found ${conflicts.length} time conflict(s):`);
-                    conflicts.forEach(conflict => {
-                        // Get timezone from city configuration instead of expecting it on the event
-                        const timezone = this.getTimezoneForCity(event.city);
+                    summary.conflicts += conflicts.length;
+                    console.log(`⏰ ${event.title || event.name} → ${conflicts.length} time conflict(s) in ${calendarName}`);
+                    const timezone = this.getTimezoneForCity(event.city);
+                    const shownConflicts = conflicts.slice(0, 2);
+                    shownConflicts.forEach(conflict => {
                         const conflictLocalStart = conflict.startDate.toLocaleString('en-US', { timeZone: timezone });
                         const conflictLocalEnd = conflict.endDate.toLocaleString('en-US', { timeZone: timezone });
                         const conflictUtcStart = conflict.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
                         const conflictUtcEnd = conflict.endDate.toLocaleString('en-US', { timeZone: 'UTC' });
-                        console.log(`   - "${conflict.title}": ${conflictLocalStart} - ${conflictLocalEnd} (UTC: ${conflictUtcStart} - ${conflictUtcEnd})`);
-                        
-                        // Check if this conflict should be merged
                         const shouldMerge = this.shouldMergeTimeConflict(conflict, event);
-                        if (shouldMerge) {
-                            console.log(`     🔄 This conflict SHOULD BE MERGED based on merge rules`);
-                        } else {
-                            console.log(`     ⚠️  This conflict will NOT be merged - different events`);
-                        }
+                        const mergeNote = shouldMerge ? 'merge' : 'no merge';
+                        console.log(`   - "${conflict.title}": ${conflictLocalStart} - ${conflictLocalEnd} (UTC: ${conflictUtcStart} - ${conflictUtcEnd}) (${mergeNote})`);
                     });
-                } else {
-                    console.log(`✅ No time conflicts found`);
+                    if (conflicts.length > shownConflicts.length) {
+                        console.log(`   ...and ${conflicts.length - shownConflicts.length} more`);
+                    }
                 }
                 
             } catch (error) {
@@ -882,6 +822,14 @@ class ScriptableAdapter {
             }
         }
         
+        if (missingCalendars.size > 0) {
+            const missingList = Array.from(missingCalendars.entries())
+                .map(([name, count]) => `${name} (${count})`)
+                .join(', ');
+            console.log(`❌ Missing calendars: ${missingList}`);
+        }
+        
+        console.log(`✅ Calendar check complete: ${summary.checked} events, ${summary.missing} missing, ${summary.duplicates} duplicates, ${summary.conflicts} conflicts`);
         console.log('\n' + '='.repeat(60));
     }
 
@@ -978,29 +926,34 @@ class ScriptableAdapter {
             console.log(`   ❓ Other: ${eventsByAction.other.length} events`);
         }
         
-        // Show sample events for each action type (max 2 per type)
-        Object.entries(eventsByAction).forEach(([action, events]) => {
-            if (events.length === 0) return;
+        const detailedActions = ['merge', 'update', 'conflict'];
+        const actionsToShow = detailedActions.filter(action => eventsByAction[action].length > 0);
+        if (actionsToShow.length === 0 && eventsByAction.new.length > 0) {
+            actionsToShow.push('new');
+        }
+        
+        actionsToShow.forEach(action => {
+            const events = eventsByAction[action];
+            if (!events || events.length === 0) return;
             
-            console.log(`\n${action.toUpperCase()} Events (showing ${Math.min(2, events.length)} of ${events.length}):`);
+            console.log(`\n${action.toUpperCase()} Events (showing 1 of ${events.length}):`);
             console.log('─'.repeat(50));
             
-            events.slice(0, 2).forEach(event => {
-                console.log(`• ${event.title || event.name}`);
-                console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
-                const eventDateForDisplay = new Date(event.startDate);
-                // Get timezone from city configuration instead of expecting it on the event
-                const timezone = this.getTimezoneForCity(event.city);
-                const localDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: timezone });
-                const utcDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: 'UTC' });
-                console.log(`  📅 ${localDateTime} (UTC: ${utcDateTime})`);
-                
-                if (action === 'merge' && event._mergeDiff) {
-                    console.log(`  🔀 Merge: ${event._mergeDiff.preserved.length} preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
-                } else if (action === 'conflict' && event._analysis?.reason) {
-                    console.log(`  ⚠️  Reason: ${event._analysis.reason}`);
-                }
-            });
+            const event = events[0];
+            console.log(`• ${event.title || event.name}`);
+            console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
+            const eventDateForDisplay = new Date(event.startDate);
+            // Get timezone from city configuration instead of expecting it on the event
+            const timezone = this.getTimezoneForCity(event.city);
+            const localDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: timezone });
+            const utcDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: 'UTC' });
+            console.log(`  📅 ${localDateTime} (UTC: ${utcDateTime})`);
+            
+            if (action === 'merge' && event._mergeDiff) {
+                console.log(`  🔀 Merge: ${event._mergeDiff.preserved.length} preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
+            } else if (action === 'conflict' && event._analysis?.reason) {
+                console.log(`  ⚠️  Reason: ${event._analysis.reason}`);
+            }
         });
         
         console.log('\n' + '='.repeat(60));
@@ -1179,7 +1132,7 @@ class ScriptableAdapter {
     // Rich UI presentation using WebView with HTML
     async presentRichResults(results) {
         try {
-            console.log('📱 Scriptable: Preparing rich HTML UI display...');
+            console.log('📱 Scriptable: Presenting results UI...');
             
             // Generate HTML for rich display
             const html = await this.generateRichHTML(results);
@@ -1200,23 +1153,16 @@ class ScriptableAdapter {
                 const globalDryRun = results.config?.config?.dryRun;
                 const hasActiveEvents = eventsFromActiveParsers.length > 0;
                 
-                console.log(`📱 Scriptable: - globalDryRun: ${globalDryRun}`);
-                console.log(`📱 Scriptable: - eventsFromActiveParsers: ${eventsFromActiveParsers.length}`);
-                console.log(`📱 Scriptable: - hasActiveEvents: ${hasActiveEvents}`);
-                
                 if (!globalDryRun && hasActiveEvents) {
-                    console.log('📱 Scriptable: Prompting for calendar execution...');
+                    console.log(`📱 Scriptable: Prompting for calendar execution (${eventsFromActiveParsers.length} events)`);
                     const executedCount = await this.promptForCalendarExecution(eventsFromActiveParsers, results.config);
                     results.calendarEvents = executedCount;
                 } else {
-                    if (globalDryRun) {
-                        console.log('📱 Scriptable: Skipping prompt due to global dry run mode');
-                    } else if (!hasActiveEvents) {
-                        console.log('📱 Scriptable: Skipping prompt - all events are from dry run parsers');
-                    }
+                    const reason = globalDryRun ? 'global dry run' : 'no active events';
+                    console.log(`📱 Scriptable: Skipping execution prompt (${reason})`);
                 }
             } else {
-                console.log('📱 Scriptable: Skipping prompt due to conditions not met');
+                console.log('📱 Scriptable: Skipping execution prompt (conditions not met)');
             }
             
         } catch (error) {
@@ -1247,7 +1193,6 @@ class ScriptableAdapter {
         
         // Detect dark mode for better bar/low-light readability
         const isDarkMode = Device.isUsingDarkAppearance();
-        console.log(`📱 Scriptable: Dark mode detected: ${isDarkMode}`);
         
         // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];

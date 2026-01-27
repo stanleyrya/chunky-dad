@@ -217,7 +217,6 @@ class RedEyeTicketsParser {
             const month = nextDay.getMonth();
             const day = nextDay.getDate();
             resolvedEndDate = this.convertLocalTimeToUTC(year, month, day, 4, 0, 0, timezone);
-            console.log(`🎫 RedEyeTickets: Set default end date for Red Eye event: ${resolvedEndDate.toISOString()} (4am ${timezone})`);
         }
         
         return resolvedEndDate;
@@ -339,14 +338,11 @@ class RedEyeTicketsParser {
             if (cityData.patterns && Array.isArray(cityData.patterns)) {
                 for (const pattern of cityData.patterns) {
                     if (searchText.includes(pattern.toLowerCase())) {
-                        console.log(`🎫 RedEyeTickets: Detected city "${cityKey}" from pattern "${pattern}" in "${searchText}"`);
                         return cityKey;
                     }
                 }
             }
         }
-        
-        console.log(`🎫 RedEyeTickets: No city detected from venue info: "${searchText}"`);
         return null;
     }
 
@@ -370,8 +366,6 @@ class RedEyeTicketsParser {
                     const offsetHours = parseInt(offsetMatch[2]);
                     const offsetMinutes = parseInt(offsetMatch[3]);
                     const totalOffsetMinutes = sign * (offsetHours * 60 + offsetMinutes);
-                    
-                    console.log(`🎫 RedEyeTickets: Got timezone offset for ${timezone}: ${totalOffsetMinutes} minutes`);
                     return totalOffsetMinutes;
                 }
             }
@@ -400,8 +394,6 @@ class RedEyeTicketsParser {
             // The offset represents how many minutes the timezone is behind UTC
             // So to convert local time to UTC, we SUBTRACT the offset (since local time is behind UTC)
             const utcDate = new Date(localDate.getTime() - (offsetMinutes * 60 * 1000));
-            
-            console.log(`🎫 RedEyeTickets: Converted ${year}-${month+1}-${day} ${hour}:${minute} ${timezone} to UTC: ${utcDate.toISOString()}`);
             return utcDate;
         } catch (error) {
             console.warn(`🎫 RedEyeTickets: Error converting local time to UTC: ${error.message}`);

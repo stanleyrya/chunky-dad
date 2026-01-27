@@ -106,7 +106,6 @@ class GenericParser {
                 }
                 
                 if (events.length > 0) {
-                    console.log(`🔧 Generic: Found ${events.length} events using HTML pattern`);
                     break;
                 }
             }
@@ -307,8 +306,6 @@ class GenericParser {
         const urls = new Set();
         
         try {
-            console.log(`🔧 Generic: Extracting additional event URLs`);
-            
             // Use configured URL patterns or defaults
             const patterns = parserConfig.urlPatterns;
             if (!Array.isArray(patterns) || patterns.length === 0) {
@@ -328,8 +325,6 @@ class GenericParser {
                     }
                 }
             }
-            
-            console.log(`🔧 Generic: Extracted ${urls.size} additional URLs`);
             
         } catch (error) {
             console.warn(`🔧 Generic: Error extracting additional URLs: ${error}`);
