@@ -431,15 +431,6 @@
       min-width: 0;
     }
 
-    .existing-event-panel .field-grid {
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    }
-
-    .existing-event-panel .field-group--date-filter {
-      width: 100%;
-      max-width: 200px;
-      justify-self: start;
-    }
 
     .existing-event-panel input[type="text"],
     .existing-event-panel input[type="date"],
@@ -1624,7 +1615,7 @@
             <input type="text" id="existing-search" autocomplete="off" placeholder="Goldiloxx, Rockbar, Leather Nite">
             <small>Optional. Match event name, venue, or notes.</small>
           </div>
-          <div class="field-group field-group--date-filter">
+          <div class="field-group">
             <label for="existing-date">Search date</label>
             <input type="date" id="existing-date">
             <small>Optional. Filters events and occurrences on that day.</small>
