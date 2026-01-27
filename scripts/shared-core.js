@@ -221,6 +221,7 @@ class SharedCore {
         const urlSuffix = urlCount === 1 ? `: ${parserConfig.urls[0]}` : '';
         await displayAdapter.logInfo(`SYSTEM: ${parserConfig.name} → ${parserName} (${urlCount} URL${urlCount === 1 ? '' : 's'})${urlSuffix}`);
         
+        const parserStartedAt = Date.now();
         const allEvents = [];
         // Use global processedUrls to prevent duplicate processing across all parsers
 
@@ -309,10 +310,13 @@ class SharedCore {
 
         return {
             name: parserConfig.name,
+            parserType: parserName,
+            urlCount,
             totalEvents: allEvents.length,
             rawBearEvents: bearEvents.length,
             bearEvents: deduplicatedEvents.length,
             duplicatesRemoved: duplicatesRemoved,
+            durationMs: Date.now() - parserStartedAt,
             events: deduplicatedEvents,
             config: parserConfig // Include config for orchestrator to use
         };

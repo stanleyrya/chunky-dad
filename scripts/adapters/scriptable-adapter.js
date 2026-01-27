@@ -199,8 +199,11 @@ class ScriptableAdapter {
         this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
         this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
+        this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
         
         this.runtimeContext = this.getScriptableRuntimeContext();
+        this.runStartedAt = new Date();
+        this.warnCount = 0;
     }
 
     getScriptableRuntimeContext() {
@@ -712,6 +715,7 @@ class ScriptableAdapter {
     }
 
     async logWarn(message) {
+        this.warnCount += 1;
         console.warn(message);
     }
 
@@ -803,6 +807,7 @@ class ScriptableAdapter {
             const enabledParsers = (results?.config?.parsers || []).filter(parser => parser.enabled !== false);
             const hasEnabledParsers = enabledParsers.length > 0;
             const shouldSaveRun = !results?._isDisplayingSavedRun && hasAnalyzedEvents && hasEnabledParsers;
+            const retentionDays = 30;
             if (shouldSaveRun) {
                 await this.ensureRelativeStorageDirs();
                 const runId = await this.saveRun(results);
@@ -812,7 +817,7 @@ class ScriptableAdapter {
                 }
                 // Cleanup old JSON runs
                 await this.cleanupOldFiles('chunky-dad-scraper/runs', {
-                    maxAgeDays: 30,
+                    maxAgeDays: retentionDays,
                     keep: (name) => !name.endsWith('.json')
                 });
             } else {
@@ -829,7 +834,7 @@ class ScriptableAdapter {
                 await this.ensureRelativeStorageDirs();
                 await this.appendLogSummary(results);
                 await this.cleanupOldFiles('chunky-dad-scraper/logs', {
-                    maxAgeDays: 30,
+                    maxAgeDays: retentionDays,
                     keep: (name) => {
                         const lower = name.toLowerCase();
                         return lower.includes('performance') || lower.endsWith('.csv');
@@ -837,6 +842,26 @@ class ScriptableAdapter {
                 });
             } catch (logErr) {
                 console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
+            }
+
+            if (!results?._isDisplayingSavedRun) {
+                // Append metrics record and update summary
+                try {
+                    await this.ensureRelativeStorageDirs();
+                    const metricsRecord = this.buildMetricsRecord(results);
+                    if (metricsRecord) {
+                        await this.appendMetricsRecord(metricsRecord);
+                        await this.updateMetricsSummary(metricsRecord);
+                    } else {
+                        console.log('📱 Scriptable: Skipping metrics write (missing runId)');
+                    }
+                    await this.cleanupOldFiles('chunky-dad-scraper/metrics', {
+                        maxAgeDays: retentionDays,
+                        keep: (name) => name === 'metrics-summary.json'
+                    });
+                } catch (metricsErr) {
+                    console.log(`📱 Scriptable: Metrics write/cleanup failed: ${metricsErr.message}`);
+                }
             }
             
         } catch (error) {
@@ -4148,6 +4173,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (!fm.fileExists(this.baseDir)) fm.createDirectory(this.baseDir, true);
             if (!fm.fileExists(this.runsDir)) fm.createDirectory(this.runsDir, true);
             if (!fm.fileExists(this.logsDir)) fm.createDirectory(this.logsDir, true);
+            if (!fm.fileExists(this.metricsDir)) fm.createDirectory(this.metricsDir, true);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`);
         }
@@ -4402,6 +4428,316 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         if (typeof afterCleanup === 'function') {
             await afterCleanup();
         }
+    }
+
+    // Metrics helpers
+    getMetricsFilePath(date = new Date()) {
+        const pad = n => String(n).padStart(2, '0');
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        return this.fm.joinPath(this.metricsDir, `metrics-${year}-${month}.ndjson`);
+    }
+
+    getMetricsSummaryPath() {
+        return this.fm.joinPath(this.metricsDir, 'metrics-summary.json');
+    }
+
+    createMetricsActionCounts() {
+        return {
+            new: 0,
+            merge: 0,
+            update: 0,
+            conflict: 0,
+            missing_calendar: 0,
+            other: 0
+        };
+    }
+
+    countMetricsActions(events) {
+        const counts = this.createMetricsActionCounts();
+        if (!Array.isArray(events)) return counts;
+        events.forEach(event => {
+            const action = (event?._action || '').toLowerCase();
+            if (!action) return;
+            if (Object.prototype.hasOwnProperty.call(counts, action)) {
+                counts[action] += 1;
+            } else {
+                counts.other += 1;
+            }
+        });
+        return counts;
+    }
+
+    countMetricsActionsByParser(events) {
+        const countsByParser = {};
+        if (!Array.isArray(events)) return countsByParser;
+        events.forEach(event => {
+            const parserName = event?._parserConfig?.name || null;
+            if (!parserName) return;
+            if (!countsByParser[parserName]) {
+                countsByParser[parserName] = this.createMetricsActionCounts();
+            }
+            const action = (event?._action || '').toLowerCase();
+            if (!action) return;
+            if (Object.prototype.hasOwnProperty.call(countsByParser[parserName], action)) {
+                countsByParser[parserName][action] += 1;
+            } else {
+                countsByParser[parserName].other += 1;
+            }
+        });
+        return countsByParser;
+    }
+
+    getMetricsStatus(results, errorsCount) {
+        if (errorsCount > 0) {
+            const hasParsers = (results?.parserResults || []).length > 0;
+            const hasEvents = (results?.totalEvents || 0) > 0;
+            return (hasParsers || hasEvents) ? 'partial' : 'failed';
+        }
+        return 'success';
+    }
+
+    buildMetricsRecord(results) {
+        const runId = results?.savedRunId || results?.sourceRunId || results?.runId || results?.summary?.runId || null;
+        if (!runId) {
+            return null;
+        }
+
+        const finishedAt = new Date();
+        const startedAt = this.runStartedAt instanceof Date ? this.runStartedAt : null;
+        const durationMs = startedAt ? finishedAt.getTime() - startedAt.getTime() : null;
+        const errorsCount = (results?.errors || []).length;
+        const warningsCount = this.warnCount || 0;
+        const analyzedEvents = Array.isArray(results?.analyzedEvents) ? results.analyzedEvents : [];
+        const parserResults = Array.isArray(results?.parserResults) ? results.parserResults : [];
+        const runContext = results?.runContext || null;
+        const triggerType = (runContext?.type === 'manual' || runContext?.type === 'automated') ? runContext.type : 'unknown';
+        const actions = this.countMetricsActions(analyzedEvents);
+        const actionsByParser = this.countMetricsActionsByParser(analyzedEvents);
+
+        const mergeDiffFieldsUpdated = analyzedEvents.reduce((sum, event) => {
+            const updatedCount = event?._mergeDiff?.updated?.length || 0;
+            return sum + updatedCount;
+        }, 0);
+
+        const totals = {
+            total_events: results?.totalEvents || 0,
+            raw_bear_events: results?.rawBearEvents || 0,
+            final_bear_events: results?.bearEvents || 0,
+            duplicates_removed: results?.duplicatesRemoved || 0,
+            deduplicated_events: results?.deduplicatedEvents || 0,
+            calendar_events: results?.calendarEvents || 0
+        };
+
+        const parsers = parserResults.map(result => {
+            const parserName = result?.name || null;
+            const parserType = result?.parserType || result?.config?.parser || null;
+            const parserActions = parserName && actionsByParser[parserName]
+                ? actionsByParser[parserName]
+                : this.createMetricsActionCounts();
+            return {
+                parser_name: parserName,
+                parser_type: parserType,
+                url_count: Number.isFinite(result?.urlCount) ? result.urlCount : 0,
+                total_events: result?.totalEvents || 0,
+                raw_bear_events: result?.rawBearEvents || 0,
+                final_bear_events: result?.bearEvents || 0,
+                duplicates_removed: result?.duplicatesRemoved || 0,
+                duration_ms: Number.isFinite(result?.durationMs) ? result.durationMs : null,
+                actions: parserActions
+            };
+        });
+
+        return {
+            schema_version: 1,
+            run_id: runId,
+            started_at: startedAt ? startedAt.toISOString() : null,
+            finished_at: finishedAt.toISOString(),
+            duration_ms: durationMs,
+            trigger_type: triggerType,
+            status: this.getMetricsStatus(results, errorsCount),
+            environment: runContext?.environment || this.runtimeContext?.environment || 'unknown',
+            run_context: runContext,
+            config_files: ['scraper-input.js', 'scraper-cities.js'],
+            run_file_path: this.getRunFilePath(runId),
+            log_file_path: this.getLogFilePath(runId),
+            metrics_file_path: this.getMetricsFilePath(finishedAt),
+            summary_file_path: this.getMetricsSummaryPath(),
+            errors_count: errorsCount,
+            warnings_count: warningsCount,
+            totals,
+            actions,
+            merge_diff_fields_updated: mergeDiffFieldsUpdated,
+            parsers
+        };
+    }
+
+    async appendMetricsRecord(record) {
+        const fm = this.fm || FileManager.iCloud();
+        const recordDate = record?.finished_at ? new Date(record.finished_at) : new Date();
+        const path = this.getMetricsFilePath(recordDate);
+        let existing = '';
+
+        if (fm.fileExists(path)) {
+            fm.downloadFileFromiCloud(path);
+            existing = fm.readString(path) || '';
+        }
+
+        const line = JSON.stringify(record);
+        const needsNewline = existing && !existing.endsWith('\n');
+        const newContent = existing
+            ? `${existing}${needsNewline ? '\n' : ''}${line}\n`
+            : `${line}\n`;
+
+        fm.writeString(path, newContent);
+        console.log(`📱 Scriptable: ✓ Appended metrics to ${path}`);
+    }
+
+    createMetricsSummaryBucket() {
+        return {
+            runs: 0,
+            statuses: { success: 0, partial: 0, failed: 0 },
+            errors_count: 0,
+            warnings_count: 0,
+            duration_ms_total: 0,
+            totals: {
+                total_events: 0,
+                raw_bear_events: 0,
+                final_bear_events: 0,
+                duplicates_removed: 0,
+                deduplicated_events: 0,
+                calendar_events: 0
+            },
+            actions: this.createMetricsActionCounts(),
+            merge_diff_fields_updated: 0
+        };
+    }
+
+    createParserSummaryBucket() {
+        return {
+            runs: 0,
+            duration_ms_total: 0,
+            totals: {
+                total_events: 0,
+                raw_bear_events: 0,
+                final_bear_events: 0,
+                duplicates_removed: 0
+            },
+            actions: this.createMetricsActionCounts()
+        };
+    }
+
+    createParserSummaryGroup() {
+        return {
+            totals: this.createParserSummaryBucket(),
+            by_day: {},
+            by_month: {}
+        };
+    }
+
+    applyMetricsRecordToBucket(bucket, record) {
+        bucket.runs += 1;
+        if (bucket.statuses && record.status) {
+            bucket.statuses[record.status] = (bucket.statuses[record.status] || 0) + 1;
+        }
+        bucket.errors_count += record.errors_count || 0;
+        bucket.warnings_count += record.warnings_count || 0;
+        bucket.duration_ms_total += record.duration_ms || 0;
+
+        Object.keys(bucket.totals).forEach(key => {
+            bucket.totals[key] += record.totals?.[key] || 0;
+        });
+
+        Object.keys(bucket.actions).forEach(key => {
+            bucket.actions[key] += record.actions?.[key] || 0;
+        });
+
+        bucket.merge_diff_fields_updated += record.merge_diff_fields_updated || 0;
+    }
+
+    applyParserRecordToBucket(bucket, parserRecord) {
+        bucket.runs += 1;
+        bucket.duration_ms_total += parserRecord.duration_ms || 0;
+
+        Object.keys(bucket.totals).forEach(key => {
+            bucket.totals[key] += parserRecord?.[key] || 0;
+        });
+
+        Object.keys(bucket.actions).forEach(key => {
+            bucket.actions[key] += parserRecord.actions?.[key] || 0;
+        });
+    }
+
+    async updateMetricsSummary(record) {
+        const fm = this.fm || FileManager.iCloud();
+        const summaryPath = this.getMetricsSummaryPath();
+        let summary = null;
+
+        if (fm.fileExists(summaryPath)) {
+            fm.downloadFileFromiCloud(summaryPath);
+            const summaryText = fm.readString(summaryPath);
+            summary = JSON.parse(summaryText);
+            if (!summary || typeof summary !== 'object') {
+                throw new Error('Metrics summary is invalid');
+            }
+        } else {
+            summary = {
+                version: 1,
+                updated_at: null,
+                totals: this.createMetricsSummaryBucket(),
+                by_day: {},
+                by_month: {},
+                by_parser_name: {},
+                by_parser_type: {}
+            };
+        }
+
+        const dayKey = record.finished_at.slice(0, 10);
+        const monthKey = record.finished_at.slice(0, 7);
+
+        summary.updated_at = new Date().toISOString();
+        if (!summary.totals) summary.totals = this.createMetricsSummaryBucket();
+        this.applyMetricsRecordToBucket(summary.totals, record);
+
+        summary.by_day = summary.by_day || {};
+        if (!summary.by_day[dayKey]) summary.by_day[dayKey] = this.createMetricsSummaryBucket();
+        this.applyMetricsRecordToBucket(summary.by_day[dayKey], record);
+
+        summary.by_month = summary.by_month || {};
+        if (!summary.by_month[monthKey]) summary.by_month[monthKey] = this.createMetricsSummaryBucket();
+        this.applyMetricsRecordToBucket(summary.by_month[monthKey], record);
+
+        summary.by_parser_name = summary.by_parser_name || {};
+        summary.by_parser_type = summary.by_parser_type || {};
+
+        record.parsers.forEach(parserRecord => {
+            if (parserRecord.parser_name) {
+                if (!summary.by_parser_name[parserRecord.parser_name]) {
+                    summary.by_parser_name[parserRecord.parser_name] = this.createParserSummaryGroup();
+                }
+                const parserGroup = summary.by_parser_name[parserRecord.parser_name];
+                this.applyParserRecordToBucket(parserGroup.totals, parserRecord);
+                if (!parserGroup.by_day[dayKey]) parserGroup.by_day[dayKey] = this.createParserSummaryBucket();
+                this.applyParserRecordToBucket(parserGroup.by_day[dayKey], parserRecord);
+                if (!parserGroup.by_month[monthKey]) parserGroup.by_month[monthKey] = this.createParserSummaryBucket();
+                this.applyParserRecordToBucket(parserGroup.by_month[monthKey], parserRecord);
+            }
+
+            if (parserRecord.parser_type) {
+                if (!summary.by_parser_type[parserRecord.parser_type]) {
+                    summary.by_parser_type[parserRecord.parser_type] = this.createParserSummaryGroup();
+                }
+                const parserTypeGroup = summary.by_parser_type[parserRecord.parser_type];
+                this.applyParserRecordToBucket(parserTypeGroup.totals, parserRecord);
+                if (!parserTypeGroup.by_day[dayKey]) parserTypeGroup.by_day[dayKey] = this.createParserSummaryBucket();
+                this.applyParserRecordToBucket(parserTypeGroup.by_day[dayKey], parserRecord);
+                if (!parserTypeGroup.by_month[monthKey]) parserTypeGroup.by_month[monthKey] = this.createParserSummaryBucket();
+                this.applyParserRecordToBucket(parserTypeGroup.by_month[monthKey], parserRecord);
+            }
+        });
+
+        fm.writeString(summaryPath, JSON.stringify(summary));
+        console.log(`📱 Scriptable: ✓ Updated metrics summary at ${summaryPath}`);
     }
 
     // Log helpers (prefer user's file logger)
