@@ -216,6 +216,10 @@ class BearEventScraperOrchestrator {
 
             // Process events using shared core
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
+            results.config = config;
+            if (!Array.isArray(results.analyzedEvents)) {
+                results.analyzedEvents = [];
+            }
             
             // Add to calendar if not dry run and we have events
             if (results.allProcessedEvents && results.allProcessedEvents.length > 0) {

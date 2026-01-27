@@ -27,6 +27,16 @@ class WebAdapter {
         // Store cities configuration for calendar mapping
         this.cities = config.cities || {};
     }
+    
+    getRunContext() {
+        const isNode = typeof window === 'undefined';
+        const environment = isNode ? 'node' : 'web';
+        return {
+            type: 'manual',
+            environment,
+            trigger: environment
+        };
+    }
 
     // Get calendar name for a city (matching scriptable-adapter pattern)
     getCalendarName(city) {
@@ -272,6 +282,8 @@ class WebAdapter {
         try {
             // Store results for use in other methods
             this.lastResults = results;
+            results.runContext = results.runContext || this.getRunContext();
+            console.log(`Run Type: ${results.runContext.type} (${results.runContext.trigger})`);
             
             // Show enhanced display features in console for debugging
             await this.displayEventAnalysis(results);

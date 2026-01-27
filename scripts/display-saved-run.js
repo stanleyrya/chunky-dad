@@ -284,14 +284,23 @@ class SavedRunDisplay {
                 }));
             }
             
+            const savedRunContext = saved?.runContext || saved?.summary?.runContext || null;
             const resultsLike = {
                 totalEvents: saved?.summary?.totals?.totalEvents || 0,
                 bearEvents: saved?.summary?.totals?.bearEvents || 0,
                 calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
-                analyzedEvents: saved?.analyzedEvents || null,
+                analyzedEvents: Array.isArray(saved?.analyzedEvents) ? saved.analyzedEvents : [],
                 config: config,
+                sourceRunId: saved?.summary?.runId || null,
+                runContext: {
+                    type: 'display',
+                    environment: 'scriptable',
+                    trigger: 'saved-run',
+                    original: savedRunContext
+                },
+                _savedRunContext: savedRunContext,
                 _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
             };
 
