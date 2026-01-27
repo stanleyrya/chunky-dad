@@ -6,9 +6,32 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-denver
 X-WR-TIMEZONE:America/Denver
 BEGIN:VEVENT
+DTSTART:20260315T030000Z
+DTEND:20260315T080000Z
+DTSTAMP:20260127T180722Z
+UID:CEB40CFA-CC09-4975-8972-54CF6AC84812
+CREATED:20260126T235320Z
+DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
+ am\nbar: Ophelia's\naddress: 1215 20th Street\, Denver\, CO\ntimezone: Amer
+ ica/Denver\nurl: https://bearracuda.com/events/denvermarch/\nimage: https:/
+ /bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg\nfacebook: https:
+ //www.facebook.com/events/1959773034896673\nticketUrl: https://www.ticketma
+ ster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B\nshor
+ tName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps
+ : https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020t
+ h%20Street%2C%20Denver%2C%20CO\nkey: bearracuda-2026-03-15-denver
+LAST-MODIFIED:20260126T235321Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:DENVER
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260628T030000Z
 DTEND:20260628T080000Z
-DTSTAMP:20260127T160627Z
+DTSTAMP:20260127T180722Z
 UID:945D4169-D1D1-494F-AABB-A7A87C364566
 CREATED:20260123T030751Z
 DESCRIPTION:description: Music & Entertainment\n• DJ Kristian Nairn (Game o
@@ -32,7 +55,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251109T040000Z
 DTEND:20251109T090000Z
-DTSTAMP:20260127T160627Z
+DTSTAMP:20260127T180722Z
 UID:C7EE5AFD-D875-467B-903D-095E6C0F0F61
 CREATED:20250913T110034Z
 DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
@@ -54,7 +77,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250907T030000Z
 DTEND:20250907T080000Z
-DTSTAMP:20260127T160627Z
+DTSTAMP:20260127T180722Z
 UID:2EADF29C-DD45-4A7C-938D-D57E62DB56F7
 CREATED:20250825T034002Z
 DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 9\\:00 pm - Par
@@ -77,7 +100,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250824T030000Z
 DTEND:20250824T103000Z
-DTSTAMP:20260127T160627Z
+DTSTAMP:20260127T180722Z
 UID:FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF
 CREATED:20250822T215307Z
 DESCRIPTION:url: https://www.eventbrite.com/e/megawoof-america-denver-massi
@@ -97,29 +120,6 @@ LOCATION:39.7239346\, -104.9987819
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260315T030000Z
-DTEND:20260315T080000Z
-DTSTAMP:20260127T160627Z
-UID:CEB40CFA-CC09-4975-8972-54CF6AC84812
-CREATED:20260126T235320Z
-DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
- am\nbar: Ophelia's\naddress: 1215 20th Street\, Denver\, CO\ntimezone: Amer
- ica/Denver\nurl: https://bearracuda.com/events/denvermarch/\nimage: https:/
- /bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg\nfacebook: https:
- //www.facebook.com/events/1959773034896673\nticketUrl: https://www.ticketma
- ster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B\nshor
- tName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps
- : https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020t
- h%20Street%2C%20Denver%2C%20CO\nkey: bearracuda-2026-03-15-denver
-LAST-MODIFIED:20260126T235321Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:DENVER
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
