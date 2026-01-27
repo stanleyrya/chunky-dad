@@ -42,8 +42,6 @@ class TicketleapParser {
             const jsonLdEvents = this.extractEventsFromJsonLd(html, htmlData.url);
             if (jsonLdEvents.length > 0) {
                 events.push(...jsonLdEvents);
-            } else {
-                console.log('Ticketleap: No events found in JSON-LD data');
             }
 
             let additionalLinks = [];

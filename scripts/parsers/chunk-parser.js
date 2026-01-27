@@ -43,8 +43,6 @@ class ChunkParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: url };
             }
             
-            console.log(`🎉 Chunk: Parsing URL: ${url}`);
-            
             // ONLY TWO PATHS: Detail page with JSON-LD, or main page for URL extraction
             const isDetailPage = url.includes('/event-details/');
             
@@ -53,7 +51,6 @@ class ChunkParser {
                 const event = this.parseDetailPageJsonLD(html, url, parserConfig, cityConfig);
                 if (event) {
                     events.push(event);
-                    console.log(`🎉 Chunk: Parsed event from JSON-LD: ${event.title}`);
                 }
             }
             
@@ -61,10 +58,12 @@ class ChunkParser {
             let additionalLinks = [];
             if (parserConfig.urlDiscoveryDepth > 0) {
                 additionalLinks = this.extractEventDetailUrls(html);
-                if (additionalLinks.length > 0) {
-                    console.log(`🎉 Chunk: Found ${additionalLinks.length} event detail URLs`);
-                }
             }
+
+            const linkSuffix = additionalLinks.length > 0
+                ? `, ${additionalLinks.length} link${additionalLinks.length === 1 ? '' : 's'}`
+                : '';
+            console.log(`🎉 Chunk: Parsed ${events.length} event${events.length === 1 ? '' : 's'}${linkSuffix}`);
             
             return {
                 events: events,
@@ -148,7 +147,6 @@ class ChunkParser {
                 if (!jsonData) {
                     jsonData = testJsonData;
                     selectedJsonString = testJsonString;
-                    console.log(`🎉 Chunk: Selected JSON-LD: ${testJsonData.startDate}`);
                 }
             }
             
@@ -176,16 +174,12 @@ class ChunkParser {
             let endDate = null;
             
             if (jsonData.startDate) {
-                console.log(`🎉 Chunk: Parsing start date from JSON-LD: ${jsonData.startDate}`);
-                
                 // Detect city from address to determine correct timezone
                 const detectedCity = this.detectCityFromAddress(address, cityConfig);
                 const correctedStartDate = this.correctTimezoneIfNeeded(jsonData.startDate, detectedCity, cityConfig);
                 
                 try {
                     startDate = new Date(correctedStartDate);
-                    console.log(`🎉 Chunk: Created timezone-aware date object: ${startDate.toISOString()}`);
-                    console.log(`🎉 Chunk: Local display time: ${startDate.toString()}`);
                 } catch (error) {
                     console.warn(`🎉 Chunk: Could not parse date format: ${correctedStartDate}, error: ${error}`);
                     startDate = null;
@@ -199,7 +193,6 @@ class ChunkParser {
                 
                 try {
                     endDate = new Date(correctedEndDate);
-                    console.log(`🎉 Chunk: Created timezone-aware end date object: ${endDate.toISOString()}`);
                 } catch (error) {
                     console.warn(`🎉 Chunk: Could not parse end date format: ${correctedEndDate}, error: ${error}`);
                     endDate = null;
@@ -290,8 +283,6 @@ class ChunkParser {
                 });
             }
             
-            console.log(`🎉 Chunk: Successfully parsed event: ${title} on ${startDate ? startDate.toString() : 'no date'}`);
-            
             return event;
             
         } catch (error) {
@@ -349,7 +340,6 @@ class ChunkParser {
                     // Use word boundaries to avoid substring matches
                     const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(addressLower)) {
-                        console.log(`🎉 Chunk: Detected city '${cityKey}' from address: ${address}`);
                         return cityKey;
                     }
                 }
@@ -369,14 +359,12 @@ class ChunkParser {
         // Get timezone from centralized city configuration
         const cityData = cityConfig[detectedCity];
         if (!cityData || !cityData.timezone) {
-            console.log(`🎉 Chunk: No timezone configuration found for city: ${detectedCity}`);
             return dateString; // No correction for unknown cities
         }
         
         // Extract the current timezone offset from the date string
         const timezoneMatch = dateString.match(/([+-]\d{2}:\d{2})$/);
         if (!timezoneMatch) {
-            console.log(`🎉 Chunk: No timezone offset found in date string: ${dateString}`);
             return dateString; // No timezone offset to correct
         }
         
@@ -401,16 +389,11 @@ class ChunkParser {
                 const expectedOffset = offsetPart.value.replace('GMT', '');
                 
                 if (currentOffset === expectedOffset) {
-                    console.log(`🎉 Chunk: Timezone offset is correct for ${detectedCity}: ${currentOffset}`);
                     return dateString; // Already correct
                 }
                 
                 // Apply timezone correction
                 const correctedDateString = dateString.replace(currentOffset, expectedOffset);
-                console.log(`🎉 Chunk: Corrected timezone for ${detectedCity}: ${currentOffset} → ${expectedOffset}`);
-                console.log(`🎉 Chunk: Original: ${dateString}`);
-                console.log(`🎉 Chunk: Corrected: ${correctedDateString}`);
-                
                 return correctedDateString;
             }
         } catch (error) {
@@ -418,7 +401,6 @@ class ChunkParser {
         }
         
         // Fallback: return original if we can't determine the correct offset
-        console.log(`🎉 Chunk: Could not correct timezone for ${detectedCity}, using original: ${dateString}`);
         return dateString;
     }
 }
