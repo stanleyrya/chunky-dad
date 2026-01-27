@@ -426,7 +426,8 @@
 
     .existing-modal {
       margin: auto;
-      width: min(760px, 92vw);
+      width: min(760px, calc(100vw - 2rem));
+      max-width: calc(100vw - 2rem);
       border: none;
       border-radius: 16px;
       padding: 0;
@@ -1114,7 +1115,8 @@
       }
 
       .existing-modal {
-        width: min(94vw, 560px);
+        width: min(560px, calc(100vw - 2rem));
+        max-width: calc(100vw - 2rem);
       }
 
       .existing-modal__content {
@@ -1256,10 +1258,6 @@
                   <small>For long words, add <code>-</code> to help break them up (MEGA-WOOF). It will not show unless we need two lines. If you want a hyphen all the time, add <code>\-</code> instead. The <code>\</code> will not show.</small>
                 </div>
                 <div class="field-group">
-                  <label for="event-city">City</label>
-                  <select id="event-city"></select>
-                </div>
-                <div class="field-group">
                   <label for="event-cover">Cover / Price</label>
                   <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
                 </div>
@@ -1280,6 +1278,10 @@
             <summary>Venue</summary>
             <div class="section-body">
               <div class="field-grid">
+                <div class="field-group">
+                  <label for="event-city">City</label>
+                  <select id="event-city"></select>
+                </div>
                 <div class="field-group">
                   <label for="event-venue-select">Saved Bars</label>
                   <select id="event-venue-select"></select>
@@ -1673,6 +1675,7 @@
       let existingResults = [];
       let selectedExistingResult = null;
       let selectedExistingMode = 'occurrence';
+      let pendingExistingSelectionId = '';
       let existingSearchTimeoutId = null;
 
       document.addEventListener('DOMContentLoaded', init);
@@ -1688,8 +1691,10 @@
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
+        syncExistingSelectionSummaryFromState();
         syncExistingCitySelection();
         resetExistingResults('Choose a calendar to load events.');
+        queueExistingSelectionFromState();
         bindEvents();
         populateVenueOptions(state.city);
         updateRecurrenceUi();
@@ -1928,6 +1933,7 @@
           state.savedBar = normalizeText(selectedBar.name);
         }
         applyBarDetails(selectedBar, { preserveExisting: true });
+        assumeVenueLinkTogglesFromState(selectedBar);
         updateVenueLinkToggles({ applyValues: true });
         return true;
       }
@@ -1977,6 +1983,20 @@
         setFieldHint(dom.existingResultsHint, message || '', Boolean(isError));
       }
 
+      function queueExistingSelectionFromState(options = {}) {
+        if (!state || !state.isEditingExisting || !state.editingExistingId) return;
+        const { force = false } = options;
+        if (!force && selectedExistingResult && selectedExistingResult.id === state.editingExistingId) {
+          return;
+        }
+        pendingExistingSelectionId = state.editingExistingId;
+        selectedExistingMode = state.editingExistingMode === 'series' ? 'series' : 'occurrence';
+        if (dom.existingCitySelect && state.city && dom.existingCitySelect.value !== state.city) {
+          dom.existingCitySelect.value = state.city;
+        }
+        scheduleExistingResultsUpdate();
+      }
+
       function scheduleExistingResultsUpdate() {
         if (existingSearchTimeoutId) {
           clearTimeout(existingSearchTimeoutId);
@@ -2015,7 +2035,7 @@
 
       function renderExistingResults(results) {
         if (!dom.existingResultsSelect) return;
-        const previousId = selectedExistingResult ? selectedExistingResult.id : '';
+        const previousId = pendingExistingSelectionId || (selectedExistingResult ? selectedExistingResult.id : '');
         dom.existingResultsSelect.innerHTML = '';
         if (!results.length) {
           dom.existingResultsSelect.appendChild(new Option('No matches found', ''));
@@ -2037,11 +2057,32 @@
           if (matchIndex >= 0) {
             dom.existingResultsSelect.value = String(matchIndex);
             selectedExistingResult = results[matchIndex];
-            selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+            if (pendingExistingSelectionId && state && state.isEditingExisting
+              && selectedExistingResult.id === state.editingExistingId) {
+              const requestedMode = state.editingExistingMode === 'series' ? 'series' : 'occurrence';
+              if (requestedMode === 'series' && !selectedExistingResult.canEditSeries) {
+                selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+              } else {
+                selectedExistingMode = requestedMode;
+              }
+              if (state.editingExistingMode !== selectedExistingMode) {
+                state.editingExistingMode = selectedExistingMode;
+                scheduleUrlUpdate();
+              }
+              const summaryStart = selectedExistingResult.startDate || selectedExistingResult.event.startDate;
+              const summaryEnd = selectedExistingResult.endDate || selectedExistingResult.event.endDate;
+              updateExistingSelectionSummary(
+                buildExistingSelectionText(selectedExistingResult, selectedExistingMode, summaryStart, summaryEnd)
+              );
+            } else {
+              selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+            }
             updateExistingModeUi(selectedExistingResult);
+            pendingExistingSelectionId = '';
             return;
           }
         }
+        pendingExistingSelectionId = '';
         selectedExistingResult = null;
         updateExistingModeUi(null);
       }
@@ -2445,6 +2486,9 @@
           endDate,
           recurrence
         });
+        state.isEditingExisting = true;
+        state.editingExistingId = selectedExistingResult.id;
+        state.editingExistingMode = mode;
 
         applyStateToForm();
         populateVenueOptions(state.city);
@@ -2486,7 +2530,8 @@
           useVenueWebsite: false,
           useVenueInstagram: false,
           useVenueFacebook: false,
-          image: normalizeText(eventData.image || '')
+          image: normalizeText(eventData.image || ''),
+          isEditingExisting: true
         };
       }
 
@@ -2669,6 +2714,20 @@
         dom.existingSelectionText.textContent = text;
       }
 
+      function syncExistingSelectionSummaryFromState() {
+        if (!state || !state.isEditingExisting) {
+          updateExistingSelectionSummary('');
+          return;
+        }
+        const name = normalizeText(state.name || '');
+        const modeLabel = state.editingExistingMode === 'series'
+          ? 'Series'
+          : (state.editingExistingMode === 'occurrence' ? 'Occurrence' : '');
+        const suffix = modeLabel ? ` (${modeLabel})` : '';
+        const summary = name ? `Editing: ${name}${suffix}` : `Editing existing event${suffix}`;
+        updateExistingSelectionSummary(summary);
+      }
+
       function setExistingPanelExpanded(isOpen) {
         if (!dom.editExistingButton) return;
         dom.editExistingButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
@@ -2689,7 +2748,11 @@
             dom.existingSearchInput.focus();
           });
         }
-        scheduleExistingResultsUpdate();
+        if (state && state.isEditingExisting && state.editingExistingId) {
+          queueExistingSelectionFromState({ force: true });
+        } else {
+          scheduleExistingResultsUpdate();
+        }
       }
 
       function closeExistingPanel() {
@@ -2707,6 +2770,12 @@
         selectedExistingResult = null;
         updateExistingModeUi(null);
         updateExistingSelectionSummary('');
+        if (state) {
+          state.isEditingExisting = false;
+          state.editingExistingId = '';
+          state.editingExistingMode = 'occurrence';
+          scheduleUrlUpdate();
+        }
         if (resetInputs) {
           if (dom.existingSearchInput) dom.existingSearchInput.value = '';
           if (dom.existingDateInput) dom.existingDateInput.value = '';
@@ -2747,7 +2816,10 @@
           useVenueWebsite: false,
           useVenueInstagram: false,
           useVenueFacebook: false,
-          image: ''
+          image: '',
+          isEditingExisting: false,
+          editingExistingId: '',
+          editingExistingMode: 'occurrence'
         };
       }
 
@@ -2770,6 +2842,7 @@
       function loadStateFromUrl(baseState) {
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
+        let sawEditFlag = false;
         params.forEach((value, key) => {
           if (value == null || value === '') return;
           switch (key) {
@@ -2850,6 +2923,19 @@
             case 'img':
               overrides.image = value;
               break;
+            case 'edit':
+            case 'editing':
+              overrides.isEditingExisting = parseBooleanParam(value);
+              sawEditFlag = true;
+              break;
+            case 'editid':
+            case 'eid':
+              overrides.editingExistingId = value;
+              break;
+            case 'editmode':
+            case 'emode':
+              overrides.editingExistingMode = value === 'series' ? 'series' : 'occurrence';
+              break;
             case 'rmode':
             case 'recurrencemode':
               overrides.recurrenceMode = value === 'raw' ? 'raw' : 'builder';
@@ -2858,6 +2944,17 @@
               break;
           }
         });
+        if (!sawEditFlag && (overrides.editingExistingId || overrides.editingExistingMode)) {
+          overrides.isEditingExisting = true;
+        }
+        if (overrides.isEditingExisting) {
+          if (!overrides.editingExistingMode) {
+            overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
+          }
+        } else if (overrides.isEditingExisting === false) {
+          overrides.editingExistingId = '';
+          overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
+        }
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
         if (!overrides.city) overrides.city = baseState.city;
@@ -3384,6 +3481,35 @@
             }
           }
         });
+      }
+
+      function assumeVenueLinkTogglesFromState(bar) {
+        if (!state || !bar) return;
+        ['website', 'instagram', 'facebook'].forEach(linkType => {
+          const toggleStateKey = getVenueToggleStateKey(linkType);
+          const target = getVenueLinkTarget(linkType);
+          if (!toggleStateKey || !target) return;
+          if (state[toggleStateKey]) return;
+          const stateValue = normalizeLinkValue(linkType, state[target.stateKey]).value;
+          const barValue = normalizeLinkValue(linkType, getBarLinkValue(linkType, bar)).value;
+          if (!stateValue || !barValue) return;
+          if (normalizeComparableUrl(stateValue) === normalizeComparableUrl(barValue)) {
+            state[toggleStateKey] = true;
+          }
+        });
+      }
+
+      function normalizeComparableUrl(value) {
+        if (!value) return '';
+        try {
+          const url = new URL(value);
+          const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+          const path = url.pathname.replace(/\/+$/, '').toLowerCase();
+          const query = url.search ? `?${url.searchParams.toString()}` : '';
+          return `${host}${path}${query}`;
+        } catch (error) {
+          return value.trim().toLowerCase();
+        }
       }
 
       function handleVenueToggleChange(toggle) {
@@ -4029,6 +4155,11 @@
         if (state.useVenueWebsite) params.set('vweb', '1');
         if (state.useVenueInstagram) params.set('vinsta', '1');
         if (state.useVenueFacebook) params.set('vfb', '1');
+        if (state.isEditingExisting) {
+          params.set('edit', '1');
+          if (state.editingExistingId) params.set('editid', state.editingExistingId);
+          if (state.editingExistingMode) params.set('emode', state.editingExistingMode);
+        }
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
         if (coordsValue) params.set('coords', coordsValue);
