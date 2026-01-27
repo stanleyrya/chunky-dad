@@ -199,6 +199,169 @@ class ScriptableAdapter {
         this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
         this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
+        
+        this.runtimeContext = this.getScriptableRuntimeContext();
+    }
+
+    getScriptableRuntimeContext() {
+        const runtime = {
+            environment: 'scriptable',
+            type: 'manual',
+            trigger: 'app',
+            runsInWidget: false,
+            runsInApp: false,
+            runsInActionExtension: false,
+            runsWithSiri: false,
+            widgetFamily: null,
+            widgetParameter: null
+        };
+        
+        try {
+            if (typeof config !== 'undefined') {
+                runtime.runsInWidget = !!config.runsInWidget;
+                runtime.runsInApp = !!config.runsInApp;
+                runtime.runsInActionExtension = !!config.runsInActionExtension;
+                runtime.runsWithSiri = !!config.runsWithSiri;
+                runtime.widgetFamily = config.widgetFamily || null;
+            }
+            if (typeof args !== 'undefined') {
+                runtime.widgetParameter = args.widgetParameter || null;
+            }
+        } catch (error) {
+            console.log(`📱 Scriptable: Run context detection failed: ${error.message}`);
+        }
+        
+        if (runtime.runsInWidget) {
+            runtime.trigger = 'widget';
+        } else if (runtime.runsInActionExtension) {
+            runtime.trigger = 'action-extension';
+        } else if (runtime.runsWithSiri) {
+            runtime.trigger = 'siri';
+        } else {
+            runtime.trigger = runtime.runsInApp ? 'app' : 'unknown';
+        }
+        
+        runtime.type = (runtime.runsInWidget || runtime.runsInActionExtension || runtime.runsWithSiri)
+            ? 'automated'
+            : 'manual';
+        
+        return runtime;
+    }
+
+    resolveRunContext(results) {
+        const runtimeContext = this.runtimeContext || this.getScriptableRuntimeContext();
+        const providedContext = results?.runContext || null;
+        
+        if (results?._isDisplayingSavedRun) {
+            if (providedContext && providedContext.type === 'display') {
+                return providedContext;
+            }
+            return {
+                type: 'display',
+                environment: runtimeContext.environment,
+                trigger: 'saved-run',
+                original: results?._savedRunContext || providedContext || null
+            };
+        }
+        
+        return providedContext || runtimeContext;
+    }
+
+    formatRunContext(runContext) {
+        if (!runContext) return 'Unknown';
+        
+        const typeValue = String(runContext.type || 'manual');
+        const label = typeValue.charAt(0).toUpperCase() + typeValue.slice(1);
+        
+        if (typeValue === 'display') {
+            if (runContext.original && runContext.original.type) {
+                const originalType = runContext.original.type;
+                const originalTrigger = runContext.original.trigger ? `/${runContext.original.trigger}` : '';
+                return `${label} (original: ${originalType}${originalTrigger})`;
+            }
+            if (runContext.trigger) {
+                return `${label} (${runContext.trigger})`;
+            }
+            return label;
+        }
+        
+        if (runContext.trigger) {
+            return `${label} (${runContext.trigger})`;
+        }
+        
+        return label;
+    }
+
+    sanitizeEventForRunSave(event) {
+        if (!event || typeof event !== 'object') return event;
+        const seen = new WeakSet();
+        
+        try {
+            return JSON.parse(JSON.stringify(event, (key, value) => {
+                if (key === '_parserConfig' && value) {
+                    return {
+                        name: value.name,
+                        parser: value.parser,
+                        dryRun: value.dryRun,
+                        city: value.city,
+                        calendarSearchRangeDays: value.calendarSearchRangeDays
+                    };
+                }
+                if (key === '_existingEvent' && value) {
+                    return {
+                        title: value.title,
+                        identifier: value.identifier,
+                        startDate: value.startDate,
+                        endDate: value.endDate,
+                        location: value.location,
+                        url: value.url
+                    };
+                }
+                if (key === '_conflicts' && value && Array.isArray(value)) {
+                    return value.map(conflict => ({
+                        title: conflict.title,
+                        startDate: conflict.startDate,
+                        endDate: conflict.endDate,
+                        identifier: conflict.identifier
+                    }));
+                }
+                if (key === 'calendar' && value && value.title && value.identifier) {
+                    return {
+                        title: value.title,
+                        identifier: value.identifier
+                    };
+                }
+                if (typeof value === 'function') {
+                    return undefined;
+                }
+                if (value && typeof value === 'object') {
+                    if (seen.has(value)) {
+                        return undefined;
+                    }
+                    seen.add(value);
+                }
+                return value;
+            }));
+        } catch (error) {
+            console.log(`📱 Scriptable: Failed to serialize event "${event.title || event.name || 'unknown'}": ${error.message}`);
+            return {
+                title: event.title || event.name || '',
+                startDate: event.startDate || null,
+                endDate: event.endDate || null,
+                location: event.location || event.venue || '',
+                url: event.url || '',
+                city: event.city || '',
+                _action: event._action || null,
+                _analysis: event._analysis || null,
+                _mergeDiff: event._mergeDiff || null,
+                _original: event._original || null
+            };
+        }
+    }
+
+    sanitizeEventsForRunSave(events) {
+        if (!Array.isArray(events)) return [];
+        return events.map(event => this.sanitizeEventForRunSave(event)).filter(Boolean);
     }
 
     // Detect all-day events at save-time based on DateTime patterns
@@ -562,6 +725,11 @@ class ScriptableAdapter {
             // Store results for use in other methods
             this.lastResults = results;
             
+            const resolvedRunContext = this.resolveRunContext(results);
+            results.runContext = resolvedRunContext;
+            const runContextLabel = this.formatRunContext(resolvedRunContext);
+            console.log(`📱 Scriptable: Run type: ${runContextLabel}`);
+            
             // First show the enhanced display features in console for debugging
             await this.displayCalendarProperties(results);
             await this.compareWithExistingCalendars(results);
@@ -571,6 +739,7 @@ class ScriptableAdapter {
             console.log('\n' + '='.repeat(60));
             console.log('🐻 BEAR EVENT SCRAPER RESULTS');
             console.log('='.repeat(60));
+            console.log(`Run Type: ${runContextLabel}`);
             
             console.log(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
             console.log(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
@@ -629,18 +798,30 @@ class ScriptableAdapter {
             // Present rich UI display (may update results.calendarEvents if user executes)
             await this.presentRichResults(results);
 
-            // Persist this run ONLY if we actually wrote to calendar
-            const wroteToCalendar = typeof results?.calendarEvents === 'number' && results.calendarEvents > 0;
-            if (wroteToCalendar) {
+            // Persist this run for later display (skip when showing saved runs)
+            const hasAnalyzedEvents = Array.isArray(results?.analyzedEvents);
+            const enabledParsers = (results?.config?.parsers || []).filter(parser => parser.enabled !== false);
+            const hasEnabledParsers = enabledParsers.length > 0;
+            const shouldSaveRun = !results?._isDisplayingSavedRun && hasAnalyzedEvents && hasEnabledParsers;
+            if (shouldSaveRun) {
                 await this.ensureRelativeStorageDirs();
-                await this.saveRun(results);
+                const runId = await this.saveRun(results);
+                if (runId) {
+                    results.savedRunId = runId;
+                    results.savedRunPath = this.getRunFilePath(runId);
+                }
                 // Cleanup old JSON runs
                 await this.cleanupOldFiles('chunky-dad-scraper/runs', {
                     maxAgeDays: 30,
                     keep: (name) => !name.endsWith('.json')
                 });
             } else {
-                console.log('📱 Scriptable: Skipping run save (no calendar writes)');
+                const reason = results?._isDisplayingSavedRun
+                    ? 'display mode'
+                    : !hasEnabledParsers
+                        ? 'no enabled parsers'
+                        : 'missing analyzed events';
+                console.log(`📱 Scriptable: Skipping run save (${reason})`);
             }
 
             // Append a simple log file entry and cleanup logs (regardless of calendar writes)
@@ -1193,6 +1374,11 @@ class ScriptableAdapter {
         
         // Detect dark mode for better bar/low-light readability
         const isDarkMode = Device.isUsingDarkAppearance();
+        const runContextLabel = this.formatRunContext(results.runContext || this.resolveRunContext(results));
+        const runIdLabel = results.savedRunId || results.sourceRunId || null;
+        const runMetaLabel = runIdLabel
+            ? `Run: ${runContextLabel} | ID: ${runIdLabel}`
+            : `Run: ${runContextLabel}`;
         
         // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];
@@ -1418,6 +1604,13 @@ class ScriptableAdapter {
             font-size: 18px;
             font-weight: 400;
             opacity: 0.9;
+        }
+        
+        .header-run-context {
+            font-size: 12px;
+            font-weight: 500;
+            opacity: 0.85;
+            margin-top: 6px;
         }
         
         .disclaimer {
@@ -2115,6 +2308,7 @@ class ScriptableAdapter {
             <h1>
                 <div class="header-title">chunky.dad</div>
                 <div class="header-subtitle">Bear Event Scraper Results</div>
+                <div class="header-run-context">${runMetaLabel}</div>
             </h1>
         </div>
         <div class="header-controls">
@@ -3099,9 +3293,11 @@ class ScriptableAdapter {
             const summaryRow = new UITableRow();
             summaryRow.height = 80;
             
+            const runContextLabel = this.formatRunContext(results.runContext || this.resolveRunContext(results));
             const deduplicationInfo = results.duplicatesRemoved > 0 ? 
                 `\n🔄 Duplicates removed: ${results.duplicatesRemoved}` : '';
-            const summaryText = `📊 Total Events: ${results.totalEvents}${deduplicationInfo}
+            const summaryText = `Run Type: ${runContextLabel}
+📊 Total Events: ${results.totalEvents}${deduplicationInfo}
 🐻 Bear Events: ${results.bearEvents}
 📅 Added to Calendar: ${results.calendarEvents}
 ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No errors'}`;
@@ -3235,8 +3431,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     // Helper method to create a text summary for QuickLook
     createResultsSummary(results) {
         const lines = [];
+        const runContextLabel = this.formatRunContext(results.runContext || this.resolveRunContext(results));
         lines.push('🐻 BEAR EVENT SCRAPER RESULTS');
         lines.push('='.repeat(40));
+        lines.push('');
+        lines.push(`Run Type: ${runContextLabel}`);
         lines.push('');
         lines.push(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
         lines.push(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
@@ -3979,10 +4178,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const ts = new Date();
             const runId = this.getRunId(ts);
             const runFilePath = this.getRunFilePath(runId);
+            const runContext = results.runContext || null;
+            const analyzedEvents = this.sanitizeEventsForRunSave(results.analyzedEvents || []);
             
             const summary = {
                 runId,
                 timestamp: ts.toISOString(),
+                runContext,
                 totals: {
                     totalEvents: results.totalEvents || 0,
                     bearEvents: results.bearEvents || 0,
@@ -3993,10 +4195,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             };
             
             const payload = {
-                version: 1,
+                version: 2,
                 summary,
+                runContext,
                 config: results.config || null,
-                analyzedEvents: results.analyzedEvents || null,
+                analyzedEvents,
                 parserResults: results.parserResults || [],
                 errors: results.errors || []
             };
@@ -4151,14 +4354,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
             // Normalize to the same shape expected by display/present methods
             // Set calendarEvents to 0 to prevent saving a new run when viewing saved runs
+            const savedRunContext = saved?.runContext || saved?.summary?.runContext || null;
             const resultsLike = {
                 totalEvents: saved?.summary?.totals?.totalEvents || 0,
                 bearEvents: saved?.summary?.totals?.bearEvents || 0,
                 calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
-                analyzedEvents: saved?.analyzedEvents || null,
+                analyzedEvents: Array.isArray(saved?.analyzedEvents) ? saved.analyzedEvents : [],
                 config: saved?.config || null,
+                sourceRunId: saved?.summary?.runId || null,
+                runContext: {
+                    type: 'display',
+                    environment: 'scriptable',
+                    trigger: 'saved-run',
+                    original: savedRunContext
+                },
+                _savedRunContext: savedRunContext,
                 _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
             };
 
@@ -4193,19 +4405,26 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     // Log helpers (prefer user's file logger)
-    getLogFilePath() {
-        const date = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        const y = date.getFullYear();
-        const m = pad(date.getMonth() + 1);
-        const d = pad(date.getDate());
-        return this.fm.joinPath(this.logsDir, `${y}-${m}-${d}.log`);
+    getLogFilePath(runId) {
+        if (!runId) {
+            return null;
+        }
+        return this.fm.joinPath(this.logsDir, `${runId}.log`);
     }
 
     async appendLogSummary(results) {
         try {
+            const runId = results?.savedRunId || results?.sourceRunId || results?.runId || results?.summary?.runId || null;
+            const runContext = results?.runContext || null;
+            const logPath = this.getLogFilePath(runId);
+            if (!logPath) {
+                console.log('📱 Scriptable: Skipping log write (missing runId)');
+                return;
+            }
             const summary = {
                 timestamp: new Date().toISOString(),
+                runId,
+                runContext,
                 totals: {
                     totalEvents: results.totalEvents || 0,
                     bearEvents: results.bearEvents || 0,
@@ -4220,7 +4439,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 try {
                     logger.log(line);
                     // Use direct file writing instead of FileLogger to avoid path issues
-                    const logPath = this.getLogFilePath();
                     
                     // Ensure directory exists
                     if (!this.fm.fileExists(this.logsDir)) {
@@ -4238,7 +4456,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
             // Fallback: plain append
             const fm = this.fm || FileManager.iCloud();
-            const path = this.getLogFilePath();
+            const path = logPath;
             console.log(`📱 Scriptable: Fallback write to path: ${path}`);
             
             // Ensure the directory exists before writing
