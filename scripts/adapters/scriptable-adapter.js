@@ -4398,19 +4398,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     // Log helpers (prefer user's file logger)
-    getLogFilePath() {
-        const date = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        const y = date.getFullYear();
-        const m = pad(date.getMonth() + 1);
-        const d = pad(date.getDate());
-        return this.fm.joinPath(this.logsDir, `${y}-${m}-${d}.log`);
+    getLogFilePath(runId) {
+        if (!runId) {
+            return null;
+        }
+        return this.fm.joinPath(this.logsDir, `${runId}.log`);
     }
 
     async appendLogSummary(results) {
         try {
             const runId = results?.savedRunId || results?.sourceRunId || results?.runId || results?.summary?.runId || null;
             const runContext = results?.runContext || null;
+            const logPath = this.getLogFilePath(runId);
+            if (!logPath) {
+                console.log('📱 Scriptable: Skipping log write (missing runId)');
+                return;
+            }
             const summary = {
                 timestamp: new Date().toISOString(),
                 runId,
@@ -4429,7 +4432,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 try {
                     logger.log(line);
                     // Use direct file writing instead of FileLogger to avoid path issues
-                    const logPath = this.getLogFilePath();
                     
                     // Ensure directory exists
                     if (!this.fm.fileExists(this.logsDir)) {
@@ -4447,7 +4449,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
             // Fallback: plain append
             const fm = this.fm || FileManager.iCloud();
-            const path = this.getLogFilePath();
+            const path = logPath;
             console.log(`📱 Scriptable: Fallback write to path: ${path}`);
             
             // Ensure the directory exists before writing
