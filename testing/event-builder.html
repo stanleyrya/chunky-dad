@@ -1675,6 +1675,7 @@
       let existingResults = [];
       let selectedExistingResult = null;
       let selectedExistingMode = 'occurrence';
+      let pendingExistingSelectionId = '';
       let existingSearchTimeoutId = null;
 
       document.addEventListener('DOMContentLoaded', init);
@@ -1693,6 +1694,7 @@
         syncExistingSelectionSummaryFromState();
         syncExistingCitySelection();
         resetExistingResults('Choose a calendar to load events.');
+        queueExistingSelectionFromState();
         bindEvents();
         populateVenueOptions(state.city);
         updateRecurrenceUi();
@@ -1981,6 +1983,20 @@
         setFieldHint(dom.existingResultsHint, message || '', Boolean(isError));
       }
 
+      function queueExistingSelectionFromState(options = {}) {
+        if (!state || !state.isEditingExisting || !state.editingExistingId) return;
+        const { force = false } = options;
+        if (!force && selectedExistingResult && selectedExistingResult.id === state.editingExistingId) {
+          return;
+        }
+        pendingExistingSelectionId = state.editingExistingId;
+        selectedExistingMode = state.editingExistingMode === 'series' ? 'series' : 'occurrence';
+        if (dom.existingCitySelect && state.city && dom.existingCitySelect.value !== state.city) {
+          dom.existingCitySelect.value = state.city;
+        }
+        scheduleExistingResultsUpdate();
+      }
+
       function scheduleExistingResultsUpdate() {
         if (existingSearchTimeoutId) {
           clearTimeout(existingSearchTimeoutId);
@@ -2019,7 +2035,7 @@
 
       function renderExistingResults(results) {
         if (!dom.existingResultsSelect) return;
-        const previousId = selectedExistingResult ? selectedExistingResult.id : '';
+        const previousId = pendingExistingSelectionId || (selectedExistingResult ? selectedExistingResult.id : '');
         dom.existingResultsSelect.innerHTML = '';
         if (!results.length) {
           dom.existingResultsSelect.appendChild(new Option('No matches found', ''));
@@ -2041,11 +2057,32 @@
           if (matchIndex >= 0) {
             dom.existingResultsSelect.value = String(matchIndex);
             selectedExistingResult = results[matchIndex];
-            selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+            if (pendingExistingSelectionId && state && state.isEditingExisting
+              && selectedExistingResult.id === state.editingExistingId) {
+              const requestedMode = state.editingExistingMode === 'series' ? 'series' : 'occurrence';
+              if (requestedMode === 'series' && !selectedExistingResult.canEditSeries) {
+                selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+              } else {
+                selectedExistingMode = requestedMode;
+              }
+              if (state.editingExistingMode !== selectedExistingMode) {
+                state.editingExistingMode = selectedExistingMode;
+                scheduleUrlUpdate();
+              }
+              const summaryStart = selectedExistingResult.startDate || selectedExistingResult.event.startDate;
+              const summaryEnd = selectedExistingResult.endDate || selectedExistingResult.event.endDate;
+              updateExistingSelectionSummary(
+                buildExistingSelectionText(selectedExistingResult, selectedExistingMode, summaryStart, summaryEnd)
+              );
+            } else {
+              selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+            }
             updateExistingModeUi(selectedExistingResult);
+            pendingExistingSelectionId = '';
             return;
           }
         }
+        pendingExistingSelectionId = '';
         selectedExistingResult = null;
         updateExistingModeUi(null);
       }
@@ -2711,7 +2748,11 @@
             dom.existingSearchInput.focus();
           });
         }
-        scheduleExistingResultsUpdate();
+        if (state && state.isEditingExisting && state.editingExistingId) {
+          queueExistingSelectionFromState({ force: true });
+        } else {
+          scheduleExistingResultsUpdate();
+        }
       }
 
       function closeExistingPanel() {
