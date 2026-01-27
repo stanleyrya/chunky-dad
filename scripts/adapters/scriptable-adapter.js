@@ -800,7 +800,9 @@ class ScriptableAdapter {
 
             // Persist this run for later display (skip when showing saved runs)
             const hasAnalyzedEvents = Array.isArray(results?.analyzedEvents);
-            const shouldSaveRun = !results?._isDisplayingSavedRun && hasAnalyzedEvents;
+            const enabledParsers = (results?.config?.parsers || []).filter(parser => parser.enabled !== false);
+            const hasEnabledParsers = enabledParsers.length > 0;
+            const shouldSaveRun = !results?._isDisplayingSavedRun && hasAnalyzedEvents && hasEnabledParsers;
             if (shouldSaveRun) {
                 await this.ensureRelativeStorageDirs();
                 const runId = await this.saveRun(results);
@@ -814,7 +816,12 @@ class ScriptableAdapter {
                     keep: (name) => !name.endsWith('.json')
                 });
             } else {
-                console.log('📱 Scriptable: Skipping run save (display mode or missing analyzed events)');
+                const reason = results?._isDisplayingSavedRun
+                    ? 'display mode'
+                    : !hasEnabledParsers
+                        ? 'no enabled parsers'
+                        : 'missing analyzed events';
+                console.log(`📱 Scriptable: Skipping run save (${reason})`);
             }
 
             // Append a simple log file entry and cleanup logs (regardless of calendar writes)
