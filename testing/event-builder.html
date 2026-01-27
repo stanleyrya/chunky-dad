@@ -421,6 +421,20 @@
       min-width: 0;
     }
 
+    .existing-event-panel .field-grid,
+    .existing-event-panel .field-group,
+    .existing-event-panel .field-actions {
+      min-width: 0;
+    }
+
+    .existing-event-panel input[type="text"],
+    .existing-event-panel input[type="date"],
+    .existing-event-panel select {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
     .existing-event-panel .field-actions {
       margin-top: 0.2rem;
     }
@@ -436,6 +450,7 @@
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
       max-height: 85vh;
+      overflow-x: hidden;
     }
 
     .existing-modal::backdrop {
@@ -1573,7 +1588,7 @@
       <div class="existing-modal__header">
         <div>
           <h2 id="existing-modal-title">Edit Existing Event</h2>
-          <p class="panel-subtitle">Choose a calendar, then search by date or text.</p>
+          <p class="panel-subtitle">Choose a calendar, then optionally filter by text or date.</p>
         </div>
         <button type="button" class="ghost-button action-button existing-modal__close" id="existing-modal-close" aria-label="Close edit existing dialog">
           <i class="bi bi-x-lg" aria-hidden="true"></i>
@@ -1589,12 +1604,12 @@
           <div class="field-group">
             <label for="existing-search">Search text</label>
             <input type="text" id="existing-search" autocomplete="off" placeholder="Goldiloxx, Rockbar, Leather Nite">
-            <small>Match event name, venue, or notes.</small>
+            <small>Optional. Match event name, venue, or notes.</small>
           </div>
           <div class="field-group">
             <label for="existing-date">Search date</label>
             <input type="date" id="existing-date">
-            <small>Optional. Filters to events and occurrences on that day.</small>
+            <small>Optional. Filters events and occurrences on that day.</small>
           </div>
         </div>
 
