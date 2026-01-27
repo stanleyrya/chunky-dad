@@ -255,6 +255,7 @@
       flex-direction: row;
       align-items: center;
       gap: 0.5rem;
+      min-width: 0;
     }
 
     .field-row.time-row .field-group label {
@@ -268,13 +269,16 @@
       padding: 0.35rem 0.5rem;
       font-size: 0.78rem;
       min-width: 0;
-      flex: 1 1 auto;
+      flex: 1 1 0;
+      width: auto;
+      max-width: 100%;
     }
 
     .field-group {
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
+      min-width: 0;
     }
 
     .field-group label {
