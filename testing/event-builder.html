@@ -432,7 +432,7 @@
     }
 
     .existing-event-panel .field-grid {
-      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
 
 
@@ -1730,6 +1730,15 @@
       let pendingExistingSelectionId = '';
       let pendingExistingOccurrenceId = '';
       let existingSearchTimeoutId = null;
+      const existingPanelState = {
+        city: '',
+        searchText: '',
+        dateValue: '',
+        resultId: '',
+        occurrenceId: '',
+        mode: 'occurrence',
+        hasState: false
+      };
 
       document.addEventListener('DOMContentLoaded', init);
 
@@ -2062,6 +2071,38 @@
         setFieldHint(dom.existingOccurrenceHint, message || '', Boolean(isError));
       }
 
+      function storeExistingPanelState() {
+        if (!dom.existingCitySelect) return;
+        const panelIsOpen = Boolean(dom.existingPanel && dom.existingPanel.open);
+        if (!panelIsOpen) return;
+        existingPanelState.city = dom.existingCitySelect.value || '';
+        existingPanelState.searchText = dom.existingSearchInput ? dom.existingSearchInput.value : '';
+        existingPanelState.dateValue = dom.existingDateInput ? dom.existingDateInput.value : '';
+        existingPanelState.resultId = selectedExistingResult ? selectedExistingResult.id : '';
+        existingPanelState.occurrenceId = selectedExistingOccurrence ? selectedExistingOccurrence.id : '';
+        existingPanelState.mode = selectedExistingMode === 'series' ? 'series' : 'occurrence';
+        existingPanelState.hasState = true;
+      }
+
+      function restoreExistingPanelState() {
+        if (!dom.existingCitySelect || !existingPanelState.hasState) return false;
+        if (existingPanelState.city
+          && [...dom.existingCitySelect.options].some(option => option.value === existingPanelState.city)) {
+          dom.existingCitySelect.value = existingPanelState.city;
+        }
+        if (dom.existingSearchInput) {
+          dom.existingSearchInput.value = existingPanelState.searchText || '';
+        }
+        if (dom.existingDateInput) {
+          dom.existingDateInput.value = existingPanelState.dateValue || '';
+        }
+        selectedExistingMode = existingPanelState.mode === 'series' ? 'series' : 'occurrence';
+        pendingExistingSelectionId = existingPanelState.resultId || '';
+        pendingExistingOccurrenceId = existingPanelState.occurrenceId || '';
+        scheduleExistingResultsUpdate();
+        return true;
+      }
+
       function queueExistingSelectionFromState(options = {}) {
         if (!state || !state.isEditingExisting) return;
         const { force = false } = options;
@@ -2170,6 +2211,13 @@
             if (state.editingExistingMode !== selectedExistingMode) {
               state.editingExistingMode = selectedExistingMode;
               scheduleUrlUpdate();
+            }
+          } else if (pendingExistingSelectionId || pendingExistingOccurrenceId) {
+            const requestedMode = selectedExistingMode === 'series' ? 'series' : 'occurrence';
+            if (requestedMode === 'series' && !selectedExistingResult.canEditSeries) {
+              selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
+            } else {
+              selectedExistingMode = requestedMode;
             }
           } else {
             selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
@@ -2606,6 +2654,7 @@
         }
         selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
         updateExistingModeUi(selectedExistingResult);
+        storeExistingPanelState();
       }
 
       function getDefaultExistingMode(result) {
@@ -2618,6 +2667,7 @@
       function setExistingMode(mode) {
         selectedExistingMode = mode === 'series' ? 'series' : 'occurrence';
         updateExistingModeUi(selectedExistingResult);
+        storeExistingPanelState();
       }
 
       function updateExistingModeUi(result) {
@@ -2658,6 +2708,7 @@
         }
         selectedExistingOccurrence = existingOccurrenceResults[selectedIndex];
         updateExistingActionButtons();
+        storeExistingPanelState();
       }
 
       function refreshExistingOccurrenceOptions() {
@@ -2886,10 +2937,8 @@
 
       function copyExistingSelectionFromSummary() {
         if (!state) return;
-        const summaryText = toCopySummaryText(state.existingSelectionSummary, state.name);
         clearEditingState();
-        setExistingSelectionSummary(summaryText, 'copy');
-        scheduleUrlUpdate();
+        setExistingSelectionSummary('', '');
         showToast('Event copied into a new draft.', 'info');
       }
 
@@ -2899,6 +2948,7 @@
           showToast(selection.error, 'warn');
           return;
         }
+        storeExistingPanelState();
 
         const {
           mode,
@@ -2958,14 +3008,13 @@
           showToast(selection.error, 'warn');
           return;
         }
+        storeExistingPanelState();
 
         const {
-          mode,
           eventData,
           startDate,
           endDate,
-          recurrence,
-          summaryResult
+          recurrence
         } = selection;
 
         selectedBar = null;
@@ -2976,6 +3025,7 @@
           recurrence
         });
         clearEditingState();
+        setExistingSelectionSummary('', '');
 
         applyStateToForm();
         populateVenueOptions(state.city);
@@ -2984,8 +3034,6 @@
         scheduleEventPush();
         syncExistingCitySelection();
 
-        const summaryText = buildExistingSelectionText(summaryResult, mode, startDate, endDate, 'copy');
-        setExistingSelectionSummary(summaryText, 'copy');
         showToast('Event copied into a new draft.', 'info');
         closeExistingPanel();
       }
@@ -3261,7 +3309,7 @@
         }
         if (state && state.isEditingExisting) {
           queueExistingSelectionFromState({ force: true });
-        } else {
+        } else if (!restoreExistingPanelState()) {
           scheduleExistingResultsUpdate();
         }
       }
@@ -3301,6 +3349,7 @@
           if (dom.existingResultsSelect) dom.existingResultsSelect.value = '';
           scheduleExistingResultsUpdate();
         }
+        storeExistingPanelState();
       }
 
       function setVenueSelectHint(message) {
@@ -3789,15 +3838,25 @@
         }
         if (dom.existingCitySelect) {
           dom.existingCitySelect.addEventListener('change', () => {
+            storeExistingPanelState();
             scheduleExistingResultsUpdate();
           });
         }
         if (dom.existingSearchInput) {
-          dom.existingSearchInput.addEventListener('input', scheduleExistingResultsUpdate);
+          dom.existingSearchInput.addEventListener('input', () => {
+            storeExistingPanelState();
+            scheduleExistingResultsUpdate();
+          });
         }
         if (dom.existingDateInput) {
-          dom.existingDateInput.addEventListener('input', scheduleExistingResultsUpdate);
-          dom.existingDateInput.addEventListener('change', scheduleExistingResultsUpdate);
+          dom.existingDateInput.addEventListener('input', () => {
+            storeExistingPanelState();
+            scheduleExistingResultsUpdate();
+          });
+          dom.existingDateInput.addEventListener('change', () => {
+            storeExistingPanelState();
+            scheduleExistingResultsUpdate();
+          });
         }
         if (dom.existingResultsSelect) {
           dom.existingResultsSelect.addEventListener('change', handleExistingResultChange);
