@@ -3210,6 +3210,9 @@
           state.existingSelectionAction = action || '';
         }
         updateExistingSelectionSummary(text);
+        if (state) {
+          scheduleUrlUpdate();
+        }
       }
 
       function syncExistingSelectionSummaryFromState() {
@@ -3442,6 +3445,17 @@
             case 'img':
               overrides.image = value;
               break;
+            case 'esummary':
+            case 'esum':
+              overrides.existingSelectionSummary = value;
+              break;
+            case 'eaction': {
+              const normalized = String(value).trim().toLowerCase();
+              overrides.existingSelectionAction = normalized === 'copy'
+                ? 'copy'
+                : (normalized === 'edit' ? 'edit' : '');
+              break;
+            }
             case 'edit':
             case 'editing':
               overrides.isEditingExisting = parseBooleanParam(value);
@@ -3470,6 +3484,12 @@
         });
         if (!sawEditFlag && (overrides.editingExistingId || overrides.editingExistingMode || overrides.editingExistingOccurrenceId)) {
           overrides.isEditingExisting = true;
+        }
+        if (overrides.existingSelectionAction === 'copy') {
+          overrides.isEditingExisting = false;
+          overrides.editingExistingId = '';
+          overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
+          overrides.editingExistingOccurrenceId = '';
         }
         if (overrides.isEditingExisting) {
           if (!overrides.editingExistingMode) {
@@ -4692,6 +4712,9 @@
         if (state.useVenueWebsite) params.set('vweb', '1');
         if (state.useVenueInstagram) params.set('vinsta', '1');
         if (state.useVenueFacebook) params.set('vfb', '1');
+        const summaryText = String(state.existingSelectionSummary || '').trim();
+        if (summaryText) params.set('esummary', summaryText);
+        if (state.existingSelectionAction) params.set('eaction', state.existingSelectionAction);
         if (state.isEditingExisting) {
           params.set('edit', '1');
           if (state.editingExistingId) params.set('editid', state.editingExistingId);
