@@ -254,6 +254,8 @@ const scraperConfig = {
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        facebook: { priority: ["static"], merge: "clobber" },
         description: { priority: ["eventbrite"], merge: "clobber" },
         bar: { priority: ["eventbrite"], merge: "clobber" },
         address: { priority: ["eventbrite"], merge: "clobber" },
