@@ -272,6 +272,38 @@ const scraperConfig = {
         instagram: { value: "https://www.instagram.com/twistedbearparty" },
         facebook: { value: "https://www.facebook.com/twistedglobal/" }
       }
+    },
+    {
+      name: "Dallas Eagle",
+      enabled: false,
+      urls: ["https://www.eventbrite.com/o/77139864473"],
+      alwaysBear: false,
+      urlDiscoveryDepth: 0,
+      maxAdditionalUrls: null,
+      dryRun: false,
+      fieldPriorities: {
+        title: { priority: ["eventbrite"], merge: "clobber" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        facebook: { priority: ["static"], merge: "clobber" },
+        website: { priority: ["static"], merge: "clobber" },
+        mastodon: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["eventbrite"], merge: "clobber" },
+        bar: { priority: ["eventbrite"], merge: "clobber" },
+        address: { priority: ["eventbrite"], merge: "clobber" },
+        startDate: { priority: ["eventbrite"], merge: "clobber" },
+        endDate: { priority: ["eventbrite"], merge: "clobber" },
+        url: { priority: ["eventbrite"], merge: "clobber" },
+        location: { priority: ["eventbrite"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite"], merge: "clobber" },
+        image: { priority: ["eventbrite"], merge: "clobber" },
+        cover: { priority: ["eventbrite"], merge: "clobber" }
+      },
+      metadata: {
+        website: { value: "https://www.thedallaseagle.com" },
+        facebook: { value: "https://www.facebook.com/lonestareagle" },
+        instagram: { value: "https://www.instagram.com/thedallaseagle/" },
+        mastodon: { value: "https://mastodon.social/@dallaseagle" }
+      }
     }
   ]
 };
