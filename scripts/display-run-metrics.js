@@ -39,7 +39,23 @@ const FONT_SIZES = {
   }
 };
 
+const STATUS_ICONS = {
+  healthy: 'checkmark.circle.fill',
+  warning: 'exclamationmark.triangle.fill',
+  failed: 'xmark.octagon.fill',
+  'no-events': 'minus.circle.fill',
+  'not-run': 'circle.dashed'
+};
+
+const PARSER_ICON_RULES = [
+  { match: ['eventbrite'], symbol: 'ticket.fill' },
+  { match: ['bearracuda'], symbol: 'music.note.list' },
+  { match: ['ticketleap'], symbol: 'ticket' },
+  { match: ['linktree', 'linktr.ee'], symbol: 'link' }
+];
+
 const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
+const DISPLAY_METRICS_SCRIPT = 'display-run-metrics';
 const DISPLAY_SAVED_RUN_SCRIPT = 'display-saved-run';
 
 class LineChart {
@@ -177,7 +193,8 @@ class MetricsDisplay {
     const runtime = {
       runsInWidget: false,
       widgetFamily: null,
-      widgetParameter: null
+      widgetParameter: null,
+      queryParameters: {}
     };
 
     try {
@@ -187,6 +204,7 @@ class MetricsDisplay {
       }
       if (typeof args !== 'undefined') {
         runtime.widgetParameter = args.widgetParameter || null;
+        runtime.queryParameters = args.queryParameters || {};
       }
     } catch (error) {
       console.log(`Metrics: Runtime detection failed: ${error.message}`);
@@ -299,6 +317,22 @@ class MetricsDisplay {
     }
   }
 
+  async loadRunDetails(record) {
+    const runPath = record?.run_file_path || null;
+    if (!runPath) return null;
+    if (!this.fm.fileExists(runPath)) {
+      return null;
+    }
+    try {
+      await this.fm.downloadFileFromiCloud(runPath);
+      const content = this.fm.readString(runPath);
+      return JSON.parse(content);
+    } catch (error) {
+      console.log(`Metrics: Failed to load run details: ${error.message}`);
+      return null;
+    }
+  }
+
   getConfiguredParsers() {
     try {
       const scraperConfig = importModule('scraper-input');
@@ -328,41 +362,83 @@ class MetricsDisplay {
     return Object.keys(actions).reduce((sum, key) => sum + (actions[key] || 0), 0);
   }
 
-  buildParserHealth(latestRecord, configuredParsers) {
-    const parserRecords = Array.isArray(latestRecord?.parsers) ? latestRecord.parsers : [];
-    const byName = {};
-    parserRecords.forEach(record => {
+  getParserLastRuns(records) {
+    const lastRuns = {};
+    if (!Array.isArray(records)) return lastRuns;
+    records.forEach(record => {
+      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
+      parserRecords.forEach(parserRecord => {
+        if (parserRecord?.parser_name) {
+          lastRuns[parserRecord.parser_name] = {
+            record,
+            parser: parserRecord
+          };
+        }
+      });
+    });
+    return lastRuns;
+  }
+
+  buildParserErrorCounts(runData, parserNames) {
+    const counts = {};
+    const errors = Array.isArray(runData?.errors) ? runData.errors : [];
+    if (!errors.length) return counts;
+    const names = Array.isArray(parserNames) ? parserNames.filter(Boolean) : [];
+    if (!names.length) return counts;
+    const normalizedErrors = errors.map(error => String(error).toLowerCase());
+    names.forEach(name => {
+      const needle = String(name).toLowerCase();
+      if (!needle) return;
+      let matched = 0;
+      normalizedErrors.forEach(error => {
+        if (error.includes(needle)) matched += 1;
+      });
+      if (matched > 0) {
+        counts[name] = matched;
+      }
+    });
+    return counts;
+  }
+
+  buildParserHealth(records, latestRecord, configuredParsers, latestErrorCounts = {}) {
+    const lastRuns = this.getParserLastRuns(records);
+    const latestParserRecords = Array.isArray(latestRecord?.parsers) ? latestRecord.parsers : [];
+    const latestParserMap = {};
+    latestParserRecords.forEach(record => {
       if (record?.parser_name) {
-        byName[record.parser_name] = record;
+        latestParserMap[record.parser_name] = record;
       }
     });
 
     const hasConfig = configuredParsers.length > 0;
-    const parserNames = hasConfig ? configuredParsers : Object.keys(byName);
+    const parserNames = hasConfig ? configuredParsers : Object.keys(lastRuns);
 
     const items = parserNames.map(name => {
-      const record = byName[name] || null;
+      const lastRun = lastRuns[name] || null;
+      const record = lastRun?.parser || null;
       const actions = record?.actions ? record.actions : this.createActionCounts();
       const totalEvents = record?.total_events || 0;
       const ran = !!record;
-      const status = ran
-        ? (totalEvents > 0 || this.sumActions(actions) > 0 ? 'ran' : 'ran-empty')
-        : 'not-run';
       return {
         name,
+        parserType: record?.parser_type || null,
+        urlCount: record?.url_count || 0,
         ran,
-        status,
+        ranInLatest: !!latestParserMap[name],
         totalEvents,
         finalBearEvents: record?.final_bear_events || 0,
         durationMs: record?.duration_ms || null,
-        actions
+        actions,
+        lastRunAt: lastRun?.record?.finished_at || null,
+        lastRunId: lastRun?.record?.run_id || null,
+        latestErrorCount: latestErrorCounts?.[name] || 0
       };
     });
 
     return {
       hasConfig,
       configuredCount: configuredParsers.length,
-      ranCount: parserRecords.length,
+      ranCount: latestParserRecords.length,
       items
     };
   }
@@ -405,8 +481,45 @@ class MetricsDisplay {
     if (actions.update) parts.push(`update ${actions.update}`);
     if (actions.conflict) parts.push(`conflict ${actions.conflict}`);
     if (actions.missing_calendar) parts.push(`missing cal ${actions.missing_calendar}`);
+    if (actions.other) parts.push(`other ${actions.other}`);
     if (parts.length === 0) return 'none';
     return parts.join(', ');
+  }
+
+  formatActionsCompact(actions) {
+    if (!actions) return 'N0 M0 U0';
+    const newCount = actions.new || 0;
+    const mergeCount = actions.merge || 0;
+    const updateCount = actions.update || 0;
+    return `N${newCount} M${mergeCount} U${updateCount}`;
+  }
+
+  formatActionsIssues(actions) {
+    if (!actions) return 'C0 Miss0';
+    const conflictCount = actions.conflict || 0;
+    const missingCount = actions.missing_calendar || 0;
+    const otherCount = actions.other || 0;
+    return `C${conflictCount} Miss${missingCount} O${otherCount}`;
+  }
+
+  formatLastRunLabel(isoString) {
+    if (!isoString) return 'Never';
+    return this.formatRelativeTime(isoString);
+  }
+
+  formatEventSummary(item) {
+    if (!item?.ran) return 'No run data';
+    const finalEvents = this.formatNumber(item?.finalBearEvents || 0);
+    const totalEvents = this.formatNumber(item?.totalEvents || 0);
+    return `Final ${finalEvents} • Total ${totalEvents}`;
+  }
+
+  truncateText(value, maxLength) {
+    const raw = String(value || '');
+    if (!Number.isFinite(maxLength) || maxLength <= 0) return raw;
+    if (raw.length <= maxLength) return raw;
+    const head = Math.max(1, maxLength - 3);
+    return `${raw.slice(0, head)}...`;
   }
 
   formatStatusLabel(status) {
@@ -429,14 +542,43 @@ class MetricsDisplay {
     return { label: this.formatStatusLabel(status), color: new Color(BRAND.textMuted) };
   }
 
+  getParserStatusKey(item) {
+    if (!item) return 'unknown';
+    if ((item.latestErrorCount || 0) > 0) return 'failed';
+    if (!item.ran) return 'not-run';
+    const actionTotal = this.sumActions(item.actions);
+    const totalEvents = item.totalEvents || 0;
+    const hasEvents = totalEvents > 0 || (item.finalBearEvents || 0) > 0 || actionTotal > 0;
+    if (!hasEvents) return 'no-events';
+    const warningActions = (item.actions?.conflict || 0)
+      + (item.actions?.missing_calendar || 0)
+      + (item.actions?.other || 0);
+    if (warningActions > 0) return 'warning';
+    return 'healthy';
+  }
+
   getParserStatusMeta(item) {
-    if (!item || !item.ran) {
-      return { label: 'Not run', color: new Color(BRAND.textMuted) };
+    const key = this.getParserStatusKey(item);
+    if (key === 'healthy') {
+      return { key, label: 'Healthy', color: new Color(BRAND.success), icon: STATUS_ICONS.healthy, rank: 1 };
     }
-    if (item.totalEvents > 0 || this.sumActions(item.actions) > 0) {
-      return { label: 'Ran', color: new Color(BRAND.success) };
+    if (key === 'warning') {
+      return { key, label: 'Warning', color: new Color(BRAND.warning), icon: STATUS_ICONS.warning, rank: 3 };
     }
-    return { label: 'Ran (0)', color: new Color(BRAND.warning) };
+    if (key === 'failed') {
+      return { key, label: 'Failed', color: new Color(BRAND.danger), icon: STATUS_ICONS.failed, rank: 4 };
+    }
+    if (key === 'no-events') {
+      return { key, label: 'No events', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['no-events'], rank: 2 };
+    }
+    if (key === 'not-run') {
+      return { key, label: 'Not run', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 0 };
+    }
+    return { key, label: 'Unknown', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 0 };
+  }
+
+  getParserStatusRank(item) {
+    return this.getParserStatusMeta(item).rank || 0;
   }
 
   getWidgetChartSize() {
@@ -496,6 +638,46 @@ class MetricsDisplay {
     return Math.round(ms / 60000);
   }
 
+  getTimeValue(isoString) {
+    if (!isoString) return 0;
+    const time = new Date(isoString).getTime();
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  sortParserItems(items, sortState) {
+    if (!Array.isArray(items)) return [];
+    const sortKey = sortState?.key || 'status';
+    const direction = sortState?.direction === 'asc' ? 1 : -1;
+    const sorted = [...items];
+    sorted.sort((a, b) => {
+      let diff = 0;
+      if (sortKey === 'name') {
+        diff = String(a?.name || '').localeCompare(String(b?.name || ''));
+      } else if (sortKey === 'events') {
+        diff = (a?.finalBearEvents || 0) - (b?.finalBearEvents || 0);
+      } else if (sortKey === 'actions') {
+        diff = this.sumActions(a?.actions) - this.sumActions(b?.actions);
+      } else if (sortKey === 'new') {
+        diff = (a?.actions?.new || 0) - (b?.actions?.new || 0);
+      } else if (sortKey === 'merge') {
+        diff = (a?.actions?.merge || 0) - (b?.actions?.merge || 0);
+      } else if (sortKey === 'update') {
+        diff = (a?.actions?.update || 0) - (b?.actions?.update || 0);
+      } else if (sortKey === 'last-run') {
+        diff = this.getTimeValue(a?.lastRunAt) - this.getTimeValue(b?.lastRunAt);
+      } else if (sortKey === 'duration') {
+        diff = (a?.durationMs || 0) - (b?.durationMs || 0);
+      } else if (sortKey === 'status') {
+        diff = this.getParserStatusRank(a) - this.getParserStatusRank(b);
+      }
+      if (diff === 0) {
+        diff = String(a?.name || '').localeCompare(String(b?.name || ''));
+      }
+      return diff * direction;
+    });
+    return sorted;
+  }
+
   buildLineChartImage(values, size, style = {}) {
     const safeValues = Array.isArray(values) && values.length ? values : [0];
     const chart = new LineChart(size.width, size.height, safeValues, {
@@ -528,6 +710,40 @@ class MetricsDisplay {
     return ctx.getImage();
   }
 
+  buildSymbolImage(symbolName, size = 12, color = null) {
+    if (!symbolName) return null;
+    try {
+      const symbol = SFSymbol.named(symbolName);
+      if (!symbol) return null;
+      symbol.applyFont(Font.systemFont(size));
+      if (color) {
+        symbol.tintColor = color;
+      }
+      return symbol.image;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  buildStatusIcon(statusMeta, size = 12) {
+    const color = statusMeta?.color || new Color(BRAND.textMuted);
+    const iconName = statusMeta?.icon || null;
+    const image = iconName ? this.buildSymbolImage(iconName, size, color) : null;
+    return image || this.buildStatusDot(color, size);
+  }
+
+  getParserIconSymbol(item) {
+    const parserType = String(item?.parserType || '').toLowerCase();
+    const parserName = String(item?.name || '').toLowerCase();
+    const haystack = `${parserType} ${parserName}`;
+    for (const rule of PARSER_ICON_RULES) {
+      if (rule.match.some(match => haystack.includes(match))) {
+        return rule.symbol;
+      }
+    }
+    return 'calendar';
+  }
+
   buildScriptableUrl(scriptName, params = {}) {
     const base = `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}`;
     const query = Object.keys(params)
@@ -537,22 +753,148 @@ class MetricsDisplay {
     return query ? `${base}&${query}` : base;
   }
 
-  parseViewParam(param) {
-    if (!param) return null;
-    const raw = String(param).trim();
+  getQueryParams() {
+    return this.runtime.queryParameters || {};
+  }
+
+  normalizeViewToken(value) {
+    if (!value) return null;
+    const raw = String(value).trim().toLowerCase();
     if (!raw) return null;
-    const lower = raw.toLowerCase();
-    if (lower.startsWith('parser:')) {
-      const parserName = raw.slice('parser:'.length).trim();
-      return parserName ? { mode: 'parser', parserName } : { mode: 'parsers' };
+    if (['parsers', 'parser-health', 'parserhealth', 'health'].includes(raw)) return 'parsers';
+    if (['aggregate', 'summary', 'totals', 'all-time'].includes(raw)) return 'aggregate';
+    if (['dashboard', 'overview', 'last-run'].includes(raw)) return 'dashboard';
+    return null;
+  }
+
+  parseWidgetParams(param) {
+    const payload = { view: null, parserName: null, sortKey: null, sortDirection: null };
+    if (!param) return payload;
+    const raw = String(param).trim();
+    if (!raw) return payload;
+    const tokens = raw.split(/[|;,&?]+/).map(token => token.trim()).filter(Boolean);
+    if (tokens.length === 0) {
+      tokens.push(raw);
     }
-    if (lower === 'parsers' || lower === 'parser-health') return { mode: 'parsers' };
-    if (lower === 'aggregate' || lower === 'summary' || lower === 'totals') return { mode: 'aggregate' };
-    if (lower === 'dashboard' || lower === 'overview' || lower === 'last-run') return { mode: 'dashboard' };
-    return { mode: 'dashboard' };
+    tokens.forEach(token => {
+      const lower = token.toLowerCase();
+      if (lower.startsWith('parser:')) {
+        const parserName = token.slice(token.indexOf(':') + 1).trim();
+        payload.view = 'parser';
+        payload.parserName = parserName || null;
+        return;
+      }
+      if (lower.startsWith('view=')) {
+        const viewValue = token.split('=').slice(1).join('=');
+        const view = this.normalizeViewToken(viewValue);
+        if (view) payload.view = view;
+        return;
+      }
+      if (lower.startsWith('sort=')) {
+        payload.sortKey = token.split('=').slice(1).join('=').trim();
+        return;
+      }
+      if (lower.startsWith('dir=') || lower.startsWith('direction=')) {
+        payload.sortDirection = token.split('=').slice(1).join('=').trim();
+        return;
+      }
+      if (lower === 'asc' || lower === 'desc') {
+        payload.sortDirection = lower;
+        return;
+      }
+      const viewToken = this.normalizeViewToken(token);
+      if (viewToken) {
+        payload.view = viewToken;
+      }
+    });
+    if (!payload.view) {
+      payload.view = this.normalizeViewToken(raw);
+    }
+    return payload;
+  }
+
+  parseViewParam(param) {
+    const parsed = this.parseWidgetParams(param);
+    if (!parsed.view) return null;
+    if (parsed.view === 'parser') {
+      return parsed.parserName ? { mode: 'parser', parserName: parsed.parserName } : { mode: 'parsers' };
+    }
+    return { mode: parsed.view };
+  }
+
+  parseViewFromQuery(query) {
+    if (!query) return null;
+    const parserName = query.parser || query.parserName || null;
+    if (parserName) {
+      return { mode: 'parser', parserName: String(parserName) };
+    }
+    const viewValue = query.view || query.mode || query.dashboard || query.tab || null;
+    const viewToken = this.normalizeViewToken(viewValue);
+    return viewToken ? { mode: viewToken } : null;
+  }
+
+  normalizeSortKey(value) {
+    if (!value) return null;
+    const normalized = String(value).toLowerCase().replace(/[^a-z]/g, '');
+    if (['name', 'parser'].includes(normalized)) return 'name';
+    if (['events', 'finalevents', 'final', 'bear'].includes(normalized)) return 'events';
+    if (['actions', 'action', 'activity'].includes(normalized)) return 'actions';
+    if (['status', 'health', 'state'].includes(normalized)) return 'status';
+    if (['lastrun', 'last', 'run'].includes(normalized)) return 'last-run';
+    if (['duration', 'time', 'runtime'].includes(normalized)) return 'duration';
+    if (['new', 'added', 'adds'].includes(normalized)) return 'new';
+    if (['merge', 'merged'].includes(normalized)) return 'merge';
+    if (['update', 'updated', 'updates'].includes(normalized)) return 'update';
+    return null;
+  }
+
+  normalizeSortDirection(value) {
+    if (!value) return null;
+    const normalized = String(value).toLowerCase();
+    if (['asc', 'ascending', 'up'].includes(normalized)) return 'asc';
+    if (['desc', 'descending', 'down'].includes(normalized)) return 'desc';
+    return null;
+  }
+
+  getDefaultSortDirection(sortKey) {
+    return sortKey === 'name' ? 'asc' : 'desc';
+  }
+
+  getDefaultSortForView(view) {
+    if (view?.mode === 'parsers') {
+      return { key: 'status', direction: 'desc' };
+    }
+    return null;
+  }
+
+  getSortFromQuery(query) {
+    if (!query) return null;
+    const key = this.normalizeSortKey(query.sort || query.order || query.sortBy || null);
+    if (!key) return null;
+    const direction = this.normalizeSortDirection(query.dir || query.direction || null);
+    return { key, direction: direction || this.getDefaultSortDirection(key) };
+  }
+
+  getSortFromParam(param) {
+    const parsed = this.parseWidgetParams(param);
+    const key = this.normalizeSortKey(parsed.sortKey);
+    if (!key) return null;
+    const direction = this.normalizeSortDirection(parsed.sortDirection);
+    return { key, direction: direction || this.getDefaultSortDirection(key) };
+  }
+
+  resolveSort(view) {
+    if (!view || view.mode !== 'parsers') return null;
+    const fromQuery = this.getSortFromQuery(this.getQueryParams());
+    if (fromQuery) return fromQuery;
+    const fromParam = this.getSortFromParam(this.runtime.widgetParameter);
+    if (fromParam) return fromParam;
+    return this.getDefaultSortForView(view);
   }
 
   async resolveView() {
+    const queryView = this.parseViewFromQuery(this.getQueryParams());
+    if (queryView) return queryView;
     const paramView = this.parseViewParam(this.runtime.widgetParameter);
     if (paramView) return paramView;
     if (this.runtime.runsInWidget) return { mode: 'dashboard' };
@@ -676,8 +1018,7 @@ class MetricsDisplay {
 
   renderWidgetParserHealth(widget, context) {
     const parserHealth = context.parserHealth;
-    const recentRecords = context.recentRecords;
-    const chartSize = context.chartSize;
+    const sortState = context.sortState;
     const family = this.runtime.widgetFamily || 'medium';
 
     const title = widget.addText('Parser health');
@@ -685,33 +1026,77 @@ class MetricsDisplay {
     title.textColor = new Color(BRAND.text);
     widget.addSpacer(4);
 
-    if (family !== 'small') {
-      const series = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
-      const chartImage = this.buildLineChartImage(series, { width: chartSize.width, height: Math.round(chartSize.height * 0.7) }, {
-        lineColor: new Color(CHART_STYLE.lineSecondary),
-        fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-      });
-      const chart = widget.addImage(chartImage);
-      chart.imageSize = new Size(chartSize.width, Math.round(chartSize.height * 0.7));
-      widget.addSpacer(4);
-    }
-
     const parserLine = parserHealth.hasConfig
-      ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
-      : `Parsers run: ${parserHealth.ranCount}`;
+      ? `Run ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
+      : `Run ${parserHealth.ranCount}`;
     const parserText = widget.addText(parserLine);
     parserText.font = Font.systemFont(FONT_SIZES.widget.label);
     parserText.textColor = new Color(BRAND.text);
+    if (sortState && family !== 'small') {
+      const sortLabel = widget.addText(`Sort ${this.getSortLabel(sortState)}`);
+      sortLabel.font = Font.systemFont(FONT_SIZES.widget.small);
+      sortLabel.textColor = new Color(BRAND.textMuted);
+    }
+    widget.addSpacer(4);
 
     const maxRows = this.getWidgetMaxRows();
-    const listLimit = Math.max(1, maxRows - (family === 'small' ? 1 : 2));
-    const items = parserHealth.items.slice(0, listLimit);
-    items.forEach(item => {
+    const sortedItems = this.sortParserItems(parserHealth.items, sortState);
+    const items = sortedItems.slice(0, maxRows);
+    const nameLimit = family === 'small' ? 14 : (family === 'large' ? 22 : 18);
+    const showActions = family !== 'small';
+    const showEvents = family === 'large';
+    const showLastRun = family !== 'small';
+
+    items.forEach((item, index) => {
+      if (index > 0) widget.addSpacer(4);
       const statusMeta = this.getParserStatusMeta(item);
-      const line = `${item.name}: ${statusMeta.label} • ${this.formatNumber(item.finalBearEvents)}`;
-      const row = widget.addText(line);
-      row.font = Font.systemFont(FONT_SIZES.widget.small);
-      row.textColor = new Color(BRAND.text);
+      const row = widget.addStack();
+      row.layoutHorizontally();
+      row.centerAlignContent();
+      row.spacing = 6;
+
+      const iconSymbol = this.getParserIconSymbol(item);
+      const iconImage = this.buildSymbolImage(iconSymbol, 12, new Color(BRAND.textSoft));
+      if (iconImage) {
+        const icon = row.addImage(iconImage);
+        icon.imageSize = new Size(12, 12);
+      }
+
+      const left = row.addStack();
+      left.layoutVertically();
+
+      const name = left.addText(this.truncateText(item.name, nameLimit));
+      name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+      name.textColor = new Color(BRAND.text);
+
+      if (showActions) {
+        const actions = left.addText(this.formatActionsCompact(item.actions));
+        actions.font = Font.systemFont(FONT_SIZES.widget.small);
+        actions.textColor = new Color(BRAND.textMuted);
+      }
+
+      if (showEvents) {
+        const events = left.addText(this.formatEventSummary(item));
+        events.font = Font.systemFont(FONT_SIZES.widget.small);
+        events.textColor = new Color(BRAND.textMuted);
+      }
+
+      row.addSpacer();
+
+      const right = row.addStack();
+      right.layoutVertically();
+      right.rightAlignContent();
+
+      const statusIcon = this.buildStatusIcon(statusMeta, 12);
+      const statusImage = right.addImage(statusIcon);
+      statusImage.imageSize = new Size(12, 12);
+
+      const infoLabel = showLastRun
+        ? this.formatLastRunLabel(item.lastRunAt)
+        : this.formatNumber(item.finalBearEvents || 0);
+      const infoText = right.addText(infoLabel);
+      infoText.font = Font.systemFont(FONT_SIZES.widget.small);
+      infoText.textColor = new Color(BRAND.textMuted);
     });
 
     if (parserHealth.items.length > items.length) {
@@ -806,6 +1191,7 @@ class MetricsDisplay {
     const summary = data.summary;
     const parserHealth = data.parserHealth;
     const records = Array.isArray(data.records) ? data.records : [];
+    const sortState = data.sortState || null;
     const recentRecords = this.getRecentRecords(records, this.getWidgetHistoryLimit());
     const chartSize = this.getWidgetChartSize();
 
@@ -822,7 +1208,8 @@ class MetricsDisplay {
       parserHealth,
       records,
       recentRecords,
-      chartSize
+      chartSize,
+      sortState
     };
 
     if (view.mode === 'dashboard') {
@@ -847,7 +1234,7 @@ class MetricsDisplay {
     return widget;
   }
 
-  async renderAppTable(data, view) {
+  async renderAppTable(data, view, sortState) {
     const table = new UITable();
     table.backgroundColor = new Color(BRAND.primary);
     table.showSeparators = false;
@@ -859,6 +1246,7 @@ class MetricsDisplay {
     const summary = data.summary;
     const parserHealth = data.parserHealth;
     const records = Array.isArray(data.records) ? data.records : [];
+    const parserSort = sortState || data.sortState || this.resolveSort(view);
     const recentRecords = this.getRecentRecords(records, this.getAppHistoryLimit());
     const chartSize = this.getAppChartSize();
 
@@ -899,14 +1287,16 @@ class MetricsDisplay {
       const parserLine = parserHealth.hasConfig
         ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
         : `Parsers run: ${parserHealth.ranCount}`;
-      this.addInfoRow(table, parserLine, parserHealth.hasConfig ? 'Not run parsers are listed as not run.' : 'Showing parsers from last run.');
+      const sortLabel = parserSort ? `Sort: ${this.getSortLabel(parserSort)}` : null;
+      this.addInfoRow(table, parserLine, sortLabel);
+      this.addParserTableHeader(table);
 
-      const items = parserHealth.items.slice(0, 12);
-      items.forEach(item => {
-        this.addParserRow(table, item);
+      const sortedItems = this.sortParserItems(parserHealth.items, parserSort).slice(0, 8);
+      sortedItems.forEach(item => {
+        this.addParserHealthRow(table, item);
       });
-      if (parserHealth.items.length > items.length) {
-        this.addInfoRow(table, `+${parserHealth.items.length - items.length} more parsers`, 'Use widget parameter parser:Name to focus.');
+      if (parserHealth.items.length > sortedItems.length) {
+        this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Open parser health to see all.');
       }
 
       if (summary?.totals) {
@@ -920,22 +1310,23 @@ class MetricsDisplay {
         );
       }
     } else if (view.mode === 'parsers') {
-      this.addSectionHeader(table, 'Parser health');
+      this.addSectionHeader(table, 'Parser health dashboard');
       const parserLine = parserHealth.hasConfig
         ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
         : `Parsers run: ${parserHealth.ranCount}`;
-      this.addInfoRow(table, parserLine, parserHealth.hasConfig ? 'Not run is neutral.' : 'Showing parsers from last run.');
+      this.addInfoRow(table, parserLine, parserHealth.hasConfig ? 'Status is based on last run per parser.' : 'Status is based on last run per parser.');
 
-      const series = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
-      const parserChart = this.buildLineChartImage(series, chartSize, {
-        lineColor: new Color(CHART_STYLE.lineSecondary),
-        fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-      });
-      this.addChartSection(table, `Final events (last ${Math.max(recentRecords.length, 1)} runs)`, parserChart);
+      this.addParserSortRow(table, parserSort);
+      this.addParserTableHeader(table);
 
-      parserHealth.items.forEach(item => {
-        this.addParserRow(table, item);
-      });
+      const sortedItems = this.sortParserItems(parserHealth.items, parserSort);
+      if (sortedItems.length === 0) {
+        this.addInfoRow(table, 'No parser metrics available.', 'Run the scraper to collect parser health.');
+      } else {
+        sortedItems.forEach(item => {
+          this.addParserHealthRow(table, item);
+        });
+      }
     } else if (view.mode === 'aggregate') {
       this.addSectionHeader(table, 'All-time totals');
       if (!summary?.totals) {
@@ -996,7 +1387,7 @@ class MetricsDisplay {
       }
     } else {
       view.mode = 'dashboard';
-      await this.renderAppTable(data, view);
+      await this.renderAppTable(data, view, parserSort);
       return;
     }
 
@@ -1061,21 +1452,141 @@ class MetricsDisplay {
     }
   }
 
-  addParserRow(table, item) {
-    const statusMeta = this.getParserStatusMeta(item);
+  getParserSortOptions() {
+    return [
+      { key: 'status', label: 'Status (issues first)', defaultDirection: 'desc' },
+      { key: 'events', label: 'Final events', defaultDirection: 'desc' },
+      { key: 'actions', label: 'Actions total', defaultDirection: 'desc' },
+      { key: 'new', label: 'New actions', defaultDirection: 'desc' },
+      { key: 'merge', label: 'Merge actions', defaultDirection: 'desc' },
+      { key: 'update', label: 'Update actions', defaultDirection: 'desc' },
+      { key: 'last-run', label: 'Last run', defaultDirection: 'desc' },
+      { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
+      { key: 'name', label: 'Name', defaultDirection: 'asc' }
+    ];
+  }
+
+  getSortLabel(sortState) {
+    if (!sortState) return 'Default';
+    const options = this.getParserSortOptions();
+    const match = options.find(option => option.key === sortState.key);
+    const label = match ? match.label : sortState.key;
+    const direction = sortState.direction === 'asc' ? 'asc' : 'desc';
+    return `${label} ${direction}`;
+  }
+
+  async presentSortPicker(currentSort) {
+    const options = this.getParserSortOptions();
+    const alert = new Alert();
+    alert.title = 'Sort parsers';
+    alert.message = 'Choose the sort order';
+    options.forEach(option => alert.addAction(option.label));
+    alert.addCancelAction('Cancel');
+    const idx = await alert.present();
+    if (idx < 0 || idx >= options.length) return null;
+    const chosen = options[idx];
+    let direction = chosen.defaultDirection || this.getDefaultSortDirection(chosen.key);
+    if (currentSort?.key === chosen.key) {
+      direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    }
+    return { key: chosen.key, direction };
+  }
+
+  addParserSortRow(table, sortState) {
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
-    const dot = row.addImage(this.buildStatusDot(statusMeta.color, 10));
-    dot.imageSize = new Size(10, 10);
-    const subtitle = item.ran
-      ? `Events: ${this.formatNumber(item.finalBearEvents)} • Actions: ${this.formatActions(item.actions)}`
-      : 'No run data for latest run.';
-    const cell = row.addText(`${item.name}: ${statusMeta.label}`, subtitle);
+    const label = this.getSortLabel(sortState);
+    const cell = row.addText(`Sort: ${label}`, 'Tap to change');
     cell.titleFont = Font.systemFont(FONT_SIZES.app.label);
     cell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
     cell.titleColor = new Color(BRAND.text);
     cell.subtitleColor = new Color(BRAND.textMuted);
+    row.onSelect = async () => {
+      const nextSort = await this.presentSortPicker(sortState);
+      if (!nextSort) return;
+      const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
+        view: 'parsers',
+        sort: nextSort.key,
+        dir: nextSort.direction
+      });
+      Safari.open(url);
+    };
     table.addRow(row);
+  }
+
+  addParserTableHeader(table) {
+    const row = new UITableRow();
+    row.backgroundColor = new Color(BRAND.primary);
+    const iconCell = row.addText('');
+    iconCell.widthWeight = 6;
+    const parserCell = row.addText('Parser');
+    parserCell.widthWeight = 30;
+    const actionsCell = row.addText('Actions');
+    actionsCell.widthWeight = 28;
+    const statusIconCell = row.addText('');
+    statusIconCell.widthWeight = 6;
+    const statusCell = row.addText('Status');
+    statusCell.widthWeight = 14;
+    const lastRunCell = row.addText('Last run');
+    lastRunCell.widthWeight = 16;
+
+    [iconCell, parserCell, actionsCell, statusIconCell, statusCell, lastRunCell].forEach(cell => {
+      cell.titleFont = Font.boldSystemFont(FONT_SIZES.app.small);
+      cell.titleColor = new Color(BRAND.textMuted);
+    });
+    table.addRow(row);
+  }
+
+  addParserHealthRow(table, item) {
+    const row = new UITableRow();
+    row.backgroundColor = new Color(BRAND.primary);
+
+    const iconSymbol = this.getParserIconSymbol(item);
+    const iconImage = this.buildSymbolImage(iconSymbol, 14, new Color(BRAND.text));
+    let iconCell = null;
+    if (iconImage) {
+      iconCell = row.addImage(iconImage);
+      iconCell.imageSize = new Size(14, 14);
+    } else {
+      iconCell = row.addText('');
+    }
+    iconCell.widthWeight = 6;
+
+    const parserCell = row.addText(item.name, this.formatEventSummary(item));
+    parserCell.titleFont = Font.systemFont(FONT_SIZES.app.label);
+    parserCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
+    parserCell.titleColor = new Color(BRAND.text);
+    parserCell.subtitleColor = new Color(BRAND.textMuted);
+    parserCell.widthWeight = 30;
+
+    const actionsCell = row.addText(this.formatActionsCompact(item.actions), this.formatActionsIssues(item.actions));
+    actionsCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    actionsCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
+    actionsCell.titleColor = new Color(BRAND.text);
+    actionsCell.subtitleColor = new Color(BRAND.textMuted);
+    actionsCell.widthWeight = 28;
+
+    const statusMeta = this.getParserStatusMeta(item);
+    const statusIcon = this.buildStatusIcon(statusMeta, 14);
+    const statusIconCell = row.addImage(statusIcon);
+    statusIconCell.imageSize = new Size(14, 14);
+    statusIconCell.widthWeight = 6;
+
+    const statusCell = row.addText(statusMeta.label);
+    statusCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    statusCell.titleColor = statusMeta.color;
+    statusCell.widthWeight = 14;
+
+    const lastRunCell = row.addText(this.formatLastRunLabel(item.lastRunAt));
+    lastRunCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    lastRunCell.titleColor = new Color(BRAND.text);
+    lastRunCell.widthWeight = 16;
+
+    table.addRow(row);
+  }
+
+  addParserRow(table, item) {
+    this.addParserHealthRow(table, item);
   }
 
   addSectionHeader(table, title) {
@@ -1109,16 +1620,22 @@ async function runMetricsDisplay() {
   const latestRecord = records.length ? records[records.length - 1] : null;
   const summary = await display.loadSummary();
   const configuredParsers = display.getConfiguredParsers();
-  const parserHealth = display.buildParserHealth(latestRecord, configuredParsers);
-  const data = { latestRecord, summary, parserHealth, records };
+  const latestRunData = latestRecord ? await display.loadRunDetails(latestRecord) : null;
+  const fallbackParserNames = configuredParsers.length
+    ? configuredParsers
+    : Object.keys(display.getParserLastRuns(records));
+  const latestErrorCounts = display.buildParserErrorCounts(latestRunData, fallbackParserNames);
+  const parserHealth = display.buildParserHealth(records, latestRecord, configuredParsers, latestErrorCounts);
 
   const view = await display.resolveView();
+  const sortState = display.resolveSort(view);
+  const data = { latestRecord, summary, parserHealth, records, sortState };
 
   if (display.runtime.runsInWidget) {
     const widget = await display.renderWidget(data, view);
     Script.setWidget(widget);
   } else {
-    await display.renderAppTable(data, view);
+    await display.renderAppTable(data, view, sortState);
   }
 
   Script.complete();
