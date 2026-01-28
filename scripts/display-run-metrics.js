@@ -616,15 +616,125 @@ class MetricsDisplay {
     return `Last run ${when} • Final ${finalEvents} • Total ${totalEvents}`;
   }
 
-  formatEventSummary(item) {
+  formatEventSummary(item, mode = 'last-run') {
     if (!item?.ran) return 'No run data';
-    if ((item?.allTimeRuns || 0) > 0) {
-      return this.formatAllTimeSummary(item, { compact: true, includeTotal: false });
+    const hasLastRun = !!item?.lastRunAt;
+    const hasHistory = (item?.historyRuns || 0) > 0;
+    const hasAllTime = (item?.allTimeRuns || 0) > 0;
+
+    if (mode === 'all-time') {
+      if (hasAllTime) return this.formatAllTimeSummary(item, { compact: true, includeTotal: false });
+      if (hasHistory) return this.formatHistorySummary(item, { compact: true, includeTotal: false });
+      if (hasLastRun) return this.formatLastRunSummary(item, { compact: true });
+      return 'No run data';
     }
-    if ((item?.historyRuns || 0) > 0) {
-      return this.formatHistorySummary(item, { compact: true, includeTotal: false });
+
+    if (mode === 'history') {
+      if (hasHistory) return this.formatHistorySummary(item, { compact: true, includeTotal: false });
+      if (hasAllTime) return this.formatAllTimeSummary(item, { compact: true, includeTotal: false });
+      if (hasLastRun) return this.formatLastRunSummary(item, { compact: true });
+      return 'No run data';
     }
-    return this.formatLastRunSummary(item, { compact: true });
+
+    if (hasLastRun) return this.formatLastRunSummary(item, { compact: true });
+    if (hasHistory) return this.formatHistorySummary(item, { compact: true, includeTotal: false });
+    if (hasAllTime) return this.formatAllTimeSummary(item, { compact: true, includeTotal: false });
+    return 'No run data';
+  }
+
+  formatRunId(runId) {
+    if (!runId) return 'n/a';
+    const raw = String(runId);
+    if (raw.length <= 8) return raw;
+    return `${raw.slice(0, 4)}...${raw.slice(-3)}`;
+  }
+
+  buildRunItems(records) {
+    if (!Array.isArray(records)) return [];
+    return records.map(record => {
+      const parsers = Array.isArray(record?.parsers) ? record.parsers : [];
+      const parserNames = parsers.map(parser => parser?.parser_name).filter(Boolean);
+      return {
+        runId: record?.run_id || null,
+        finishedAt: record?.finished_at || null,
+        startedAt: record?.started_at || null,
+        durationMs: record?.duration_ms || null,
+        status: record?.status || null,
+        triggerType: record?.trigger_type || null,
+        errorsCount: record?.errors_count || 0,
+        warningsCount: record?.warnings_count || 0,
+        totals: record?.totals || {},
+        finalEvents: record?.totals?.final_bear_events || 0,
+        totalEvents: record?.totals?.total_events || 0,
+        calendarEvents: record?.totals?.calendar_events || 0,
+        parsersCount: parsers.length,
+        parserNames
+      };
+    });
+  }
+
+  normalizeRunStatusFilter(value) {
+    if (!value) return null;
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized) return null;
+    if (['success', 'succeeded', 'ok', 'pass'].includes(normalized)) return 'success';
+    if (['partial', 'warning', 'warn', 'partial-success'].includes(normalized)) return 'partial';
+    if (['failed', 'failure', 'fail', 'error', 'errors'].includes(normalized)) return 'failed';
+    if (['issues', 'issue', 'problems', 'problem'].includes(normalized)) return 'issues';
+    if (['all', 'any', 'none'].includes(normalized)) return null;
+    return null;
+  }
+
+  applyRunFilters(items, filters) {
+    if (!Array.isArray(items) || !filters) return items || [];
+    let filtered = [...items];
+    const statusFilter = this.normalizeRunStatusFilter(filters.status);
+    const parserFilter = filters.parserFilter ? String(filters.parserFilter).toLowerCase() : null;
+    const daysFilter = Number.isFinite(filters.days) ? filters.days : null;
+
+    if (statusFilter) {
+      if (statusFilter === 'issues') {
+        filtered = filtered.filter(item => (item.errorsCount || 0) > 0 || (item.warningsCount || 0) > 0);
+      } else {
+        filtered = filtered.filter(item => String(item.status || '').toLowerCase() === statusFilter);
+      }
+    }
+
+    if (parserFilter) {
+      filtered = filtered.filter(item => {
+        const names = Array.isArray(item.parserNames) ? item.parserNames : [];
+        return names.some(name => String(name).toLowerCase().includes(parserFilter));
+      });
+    }
+
+    if (daysFilter && daysFilter > 0) {
+      const cutoff = Date.now() - (daysFilter * 24 * 60 * 60 * 1000);
+      filtered = filtered.filter(item => {
+        const time = this.getTimeValue(item.finishedAt);
+        return time >= cutoff;
+      });
+    }
+
+    return filtered;
+  }
+
+  formatRunFilterLabel(filters) {
+    if (!filters) return 'All runs';
+    const parts = [];
+    const statusFilter = this.normalizeRunStatusFilter(filters.status);
+    if (statusFilter) {
+      const statusLabel = statusFilter === 'issues'
+        ? 'Issues'
+        : this.formatStatusLabel(statusFilter);
+      parts.push(`Status ${statusLabel}`);
+    }
+    if (filters.parserFilter) {
+      parts.push(`Parser "${filters.parserFilter}"`);
+    }
+    if (Number.isFinite(filters.days) && filters.days > 0) {
+      parts.push(`Last ${filters.days}d`);
+    }
+    return parts.length ? parts.join(' • ') : 'All runs';
   }
 
   truncateText(value, maxLength) {
@@ -799,6 +909,46 @@ class MetricsDisplay {
     return sorted;
   }
 
+  getRunStatusRank(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'failed') return 3;
+    if (normalized === 'partial') return 2;
+    if (normalized === 'success') return 1;
+    return 0;
+  }
+
+  sortRunItems(items, sortState) {
+    if (!Array.isArray(items)) return [];
+    const sortKey = sortState?.key || 'finished';
+    const direction = sortState?.direction === 'asc' ? 1 : -1;
+    const sorted = [...items];
+    sorted.sort((a, b) => {
+      let diff = 0;
+      if (sortKey === 'finished') {
+        diff = this.getTimeValue(a?.finishedAt) - this.getTimeValue(b?.finishedAt);
+      } else if (sortKey === 'status') {
+        diff = this.getRunStatusRank(a?.status) - this.getRunStatusRank(b?.status);
+      } else if (sortKey === 'errors') {
+        diff = (a?.errorsCount || 0) - (b?.errorsCount || 0);
+      } else if (sortKey === 'warnings') {
+        diff = (a?.warningsCount || 0) - (b?.warningsCount || 0);
+      } else if (sortKey === 'duration') {
+        diff = (a?.durationMs || 0) - (b?.durationMs || 0);
+      } else if (sortKey === 'final-events') {
+        diff = (a?.finalEvents || 0) - (b?.finalEvents || 0);
+      } else if (sortKey === 'total-events') {
+        diff = (a?.totalEvents || 0) - (b?.totalEvents || 0);
+      } else if (sortKey === 'parsers') {
+        diff = (a?.parsersCount || 0) - (b?.parsersCount || 0);
+      }
+      if (diff === 0) {
+        diff = this.getTimeValue(a?.finishedAt) - this.getTimeValue(b?.finishedAt);
+      }
+      return diff * direction;
+    });
+    return sorted;
+  }
+
   buildLineChartImage(values, size, style = {}) {
     const safeValues = Array.isArray(values) && values.length ? values : [0];
     const chart = new LineChart(size.width, size.height, safeValues, {
@@ -882,14 +1032,23 @@ class MetricsDisplay {
     if (!value) return null;
     const raw = String(value).trim().toLowerCase();
     if (!raw) return null;
-    if (['parsers', 'parser-health', 'parserhealth', 'health'].includes(raw)) return 'parsers';
+    if (['parsers', 'parser-health', 'parserhealth', 'health', 'recent', 'latest'].includes(raw)) return 'parsers';
+    if (['runs', 'run-history', 'history', 'all-runs', 'allruns', 'runlist', 'run-list'].includes(raw)) return 'runs';
     if (['aggregate', 'summary', 'totals', 'all-time'].includes(raw)) return 'aggregate';
     if (['dashboard', 'overview', 'last-run'].includes(raw)) return 'dashboard';
     return null;
   }
 
   parseWidgetParams(param) {
-    const payload = { view: null, parserName: null, sortKey: null, sortDirection: null };
+    const payload = {
+      view: null,
+      parserName: null,
+      sortKey: null,
+      sortDirection: null,
+      status: null,
+      parserFilter: null,
+      days: null
+    };
     if (!param) return payload;
     const raw = String(param).trim();
     if (!raw) return payload;
@@ -909,6 +1068,43 @@ class MetricsDisplay {
         const viewValue = token.split('=').slice(1).join('=');
         const view = this.normalizeViewToken(viewValue);
         if (view) payload.view = view;
+        return;
+      }
+      if (lower.startsWith('status=')) {
+        payload.status = token.split('=').slice(1).join('=').trim();
+        return;
+      }
+      if (lower.startsWith('status:')) {
+        payload.status = token.slice(token.indexOf(':') + 1).trim();
+        return;
+      }
+      if (lower.startsWith('parserfilter=')
+        || lower.startsWith('parser-filter=')
+        || lower.startsWith('runparser=')
+        || lower.startsWith('run-parser=')
+        || lower.startsWith('filterparser=')
+        || lower.startsWith('filter-parser=')) {
+        payload.parserFilter = token.split('=').slice(1).join('=').trim();
+        return;
+      }
+      if (lower.startsWith('parserfilter:') || lower.startsWith('parser-filter:')) {
+        payload.parserFilter = token.slice(token.indexOf(':') + 1).trim();
+        return;
+      }
+      if (lower.startsWith('days=')) {
+        const rawDays = token.split('=').slice(1).join('=').trim();
+        const parsedDays = Number.parseInt(rawDays, 10);
+        if (Number.isFinite(parsedDays) && parsedDays > 0) {
+          payload.days = parsedDays;
+        }
+        return;
+      }
+      if (lower.startsWith('days:')) {
+        const rawDays = token.slice(token.indexOf(':') + 1).trim();
+        const parsedDays = Number.parseInt(rawDays, 10);
+        if (Number.isFinite(parsedDays) && parsedDays > 0) {
+          payload.days = parsedDays;
+        }
         return;
       }
       if (lower.startsWith('sort=')) {
@@ -1013,24 +1209,94 @@ class MetricsDisplay {
     return this.getDefaultSortForView(view);
   }
 
+  normalizeRunSortKey(value) {
+    if (!value) return null;
+    const normalized = String(value).toLowerCase().replace(/[^a-z]/g, '');
+    if (['finished', 'finish', 'finishedat', 'date', 'time', 'latest', 'last', 'run'].includes(normalized)) return 'finished';
+    if (['status', 'state'].includes(normalized)) return 'status';
+    if (['errors', 'error'].includes(normalized)) return 'errors';
+    if (['warnings', 'warning', 'warn'].includes(normalized)) return 'warnings';
+    if (['duration', 'runtime', 'length'].includes(normalized)) return 'duration';
+    if (['finalevents', 'finalevent', 'final', 'bear', 'events'].includes(normalized)) return 'final-events';
+    if (['totalevents', 'total', 'all'].includes(normalized)) return 'total-events';
+    if (['parsers', 'parser', 'parsercount'].includes(normalized)) return 'parsers';
+    return null;
+  }
+
+  getDefaultRunSortDirection(sortKey) {
+    if (sortKey === 'finished') return 'desc';
+    if (sortKey === 'status') return 'desc';
+    return 'desc';
+  }
+
+  getDefaultRunSort() {
+    return { key: 'finished', direction: 'desc' };
+  }
+
+  getRunSortFromQuery(query) {
+    if (!query) return null;
+    const key = this.normalizeRunSortKey(query.sort || query.order || query.sortBy || null);
+    if (!key) return null;
+    const direction = this.normalizeSortDirection(query.dir || query.direction || null);
+    return { key, direction: direction || this.getDefaultRunSortDirection(key) };
+  }
+
+  getRunSortFromParam(param) {
+    const parsed = this.parseWidgetParams(param);
+    const key = this.normalizeRunSortKey(parsed.sortKey);
+    if (!key) return null;
+    const direction = this.normalizeSortDirection(parsed.sortDirection);
+    return { key, direction: direction || this.getDefaultRunSortDirection(key) };
+  }
+
+  resolveRunSort(view) {
+    if (!view || view.mode !== 'runs') return null;
+    const fromQuery = this.getRunSortFromQuery(this.getQueryParams());
+    if (fromQuery) return fromQuery;
+    const fromParam = this.getRunSortFromParam(this.runtime.widgetParameter);
+    if (fromParam) return fromParam;
+    return this.getDefaultRunSort();
+  }
+
+  getRunFiltersFromQuery(query) {
+    if (!query) return {};
+    const status = this.normalizeRunStatusFilter(query.status || query.runStatus || query.state || null);
+    const parserFilter = query.parserFilter || query.runParser || query.parserContains || query.filterParser || null;
+    const rawDays = query.days || query.lastDays || query.sinceDays || null;
+    const parsedDays = rawDays ? Number.parseInt(rawDays, 10) : null;
+    return {
+      status,
+      parserFilter: parserFilter ? String(parserFilter).trim() : null,
+      days: Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : null
+    };
+  }
+
+  getRunFiltersFromParam(param) {
+    const parsed = this.parseWidgetParams(param);
+    return {
+      status: this.normalizeRunStatusFilter(parsed.status),
+      parserFilter: parsed.parserFilter ? String(parsed.parserFilter).trim() : null,
+      days: Number.isFinite(parsed.days) && parsed.days > 0 ? parsed.days : null
+    };
+  }
+
+  resolveRunFilters(view) {
+    if (!view || view.mode !== 'runs') return null;
+    const fromParam = this.getRunFiltersFromParam(this.runtime.widgetParameter);
+    const fromQuery = this.getRunFiltersFromQuery(this.getQueryParams());
+    return {
+      ...fromParam,
+      ...fromQuery
+    };
+  }
+
   async resolveView() {
     const queryView = this.parseViewFromQuery(this.getQueryParams());
     if (queryView) return queryView;
     const paramView = this.parseViewParam(this.runtime.widgetParameter);
     if (paramView) return paramView;
-    if (this.runtime.runsInWidget) return { mode: 'dashboard' };
-
-    const alert = new Alert();
-    alert.title = 'Metrics View';
-    alert.message = 'Choose a view';
-    alert.addAction('Dashboard');
-    alert.addAction('Parser health');
-    alert.addAction('All-time totals');
-    alert.addCancelAction('Cancel');
-    const idx = await alert.present();
-    if (idx === 1) return { mode: 'parsers' };
-    if (idx === 2) return { mode: 'aggregate' };
-    return { mode: 'dashboard' };
+    if (this.runtime.runsInWidget) return { mode: 'parsers' };
+    return { mode: 'parsers' };
   }
 
   getWidgetMaxRows() {
@@ -1142,7 +1408,7 @@ class MetricsDisplay {
     const sortState = context.sortState;
     const family = this.runtime.widgetFamily || 'medium';
 
-    const title = widget.addText('Parser health');
+    const title = widget.addText('Parser runs');
     title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
     title.textColor = new Color(BRAND.text);
     widget.addSpacer(4);
@@ -1218,9 +1484,12 @@ class MetricsDisplay {
       const allTimeFinalEvents = (item.allTimeRuns || 0) > 0
         ? (item.allTimeTotals?.final_bear_events || 0)
         : historyFinalEvents;
+      const fallbackFinalEvents = item.lastRunAt
+        ? (item.finalBearEvents || 0)
+        : (historyFinalEvents || allTimeFinalEvents);
       const infoLabel = showLastRun
         ? this.formatLastRunLabel(item.lastRunAt)
-        : this.formatNumber(allTimeFinalEvents);
+        : this.formatNumber(fallbackFinalEvents);
       const infoText = right.addText(infoLabel);
       infoText.font = Font.systemFont(FONT_SIZES.widget.small);
       infoText.textColor = new Color(BRAND.textMuted);
@@ -1315,6 +1584,73 @@ class MetricsDisplay {
     }
   }
 
+  renderWidgetRuns(widget, context) {
+    const runItems = Array.isArray(context.runItems) ? context.runItems : [];
+    const runSortState = context.runSortState || this.getDefaultRunSort();
+    const runFilters = context.runFilters || null;
+    const family = this.runtime.widgetFamily || 'medium';
+
+    const title = widget.addText('All runs');
+    title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
+    title.textColor = new Color(BRAND.text);
+    widget.addSpacer(4);
+
+    if (runFilters && (runFilters.status || runFilters.parserFilter || runFilters.days)) {
+      const filterLine = widget.addText(this.formatRunFilterLabel(runFilters));
+      filterLine.font = Font.systemFont(FONT_SIZES.widget.small);
+      filterLine.textColor = new Color(BRAND.textMuted);
+    }
+
+    if (runSortState && family !== 'small') {
+      const sortLabel = widget.addText(`Sort ${this.getRunSortLabel(runSortState)}`);
+      sortLabel.font = Font.systemFont(FONT_SIZES.widget.small);
+      sortLabel.textColor = new Color(BRAND.textMuted);
+      widget.addSpacer(2);
+    }
+
+    const filtered = this.applyRunFilters(runItems, runFilters);
+    const sorted = this.sortRunItems(filtered, runSortState);
+    const maxRows = this.getWidgetMaxRows();
+    const items = sorted.slice(0, maxRows);
+
+    if (items.length === 0) {
+      const none = widget.addText('No runs match filters.');
+      none.font = Font.systemFont(FONT_SIZES.widget.small);
+      none.textColor = new Color(BRAND.text);
+      return;
+    }
+
+    items.forEach((run, index) => {
+      if (index > 0) widget.addSpacer(4);
+      const row = widget.addStack();
+      row.layoutHorizontally();
+      row.centerAlignContent();
+      row.spacing = 6;
+
+      const statusMeta = this.getStatusMeta(run.status);
+      const statusIcon = this.buildStatusIcon(statusMeta, 12);
+      const statusImage = row.addImage(statusIcon);
+      statusImage.imageSize = new Size(12, 12);
+
+      const left = row.addStack();
+      left.layoutVertically();
+
+      const titleLine = left.addText(`${this.formatRunId(run.runId)} • ${this.formatNumber(run.finalEvents || 0)} final`);
+      titleLine.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+      titleLine.textColor = new Color(BRAND.text);
+
+      const subtitleLine = left.addText(`${statusMeta.label} • ${this.formatLastRunLabel(run.finishedAt)}`);
+      subtitleLine.font = Font.systemFont(FONT_SIZES.widget.small);
+      subtitleLine.textColor = new Color(BRAND.textMuted);
+    });
+
+    if (filtered.length > items.length) {
+      const more = widget.addText(`+${filtered.length - items.length} more`);
+      more.font = Font.systemFont(FONT_SIZES.widget.small);
+      more.textColor = new Color(BRAND.textMuted);
+    }
+  }
+
   renderWidgetAggregate(widget, context) {
     const summary = context.summary;
     const recentRecords = context.recentRecords;
@@ -1361,11 +1697,20 @@ class MetricsDisplay {
     const parserHealth = data.parserHealth;
     const records = Array.isArray(data.records) ? data.records : [];
     const sortState = data.sortState || null;
+    const runSortState = data.runSortState || this.resolveRunSort(view);
+    const runFilters = data.runFilters || this.resolveRunFilters(view);
+    const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
     const recentRecords = this.getRecentRecords(records, this.getWidgetHistoryLimit());
     const chartSize = this.getWidgetChartSize();
 
-    if (!latest && view.mode !== 'aggregate') {
+    if (!latest && view.mode !== 'aggregate' && view.mode !== 'runs') {
       const message = widget.addText('No metrics found yet.');
+      message.font = Font.systemFont(FONT_SIZES.widget.label);
+      message.textColor = new Color(BRAND.text);
+      return widget;
+    }
+    if (view.mode === 'runs' && runItems.length === 0) {
+      const message = widget.addText('No run metrics yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
       message.textColor = new Color(BRAND.text);
       return widget;
@@ -1378,13 +1723,18 @@ class MetricsDisplay {
       records,
       recentRecords,
       chartSize,
-      sortState
+      sortState,
+      runSortState,
+      runFilters,
+      runItems
     };
 
     if (view.mode === 'dashboard') {
       this.renderWidgetDashboard(widget, context);
     } else if (view.mode === 'parsers') {
       this.renderWidgetParserHealth(widget, context);
+    } else if (view.mode === 'runs') {
+      this.renderWidgetRuns(widget, context);
     } else if (view.mode === 'parser') {
       this.renderWidgetParserDetail(widget, context, view);
     } else if (view.mode === 'aggregate') {
@@ -1410,17 +1760,29 @@ class MetricsDisplay {
 
     const logoImage = await this.loadLogoImage();
     this.addTableHeader(table, logoImage);
+    this.addViewSwitcherRow(table, view);
 
     const latest = data.latestRecord;
     const summary = data.summary;
     const parserHealth = data.parserHealth;
     const records = Array.isArray(data.records) ? data.records : [];
     const parserSort = sortState || data.sortState || this.resolveSort(view);
+    const runSortState = data.runSortState || this.resolveRunSort(view);
+    const runSortResolved = runSortState || this.getDefaultRunSort();
+    const runFilters = data.runFilters || this.resolveRunFilters(view);
+    const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
+    const filteredRuns = this.applyRunFilters(runItems, runFilters);
+    const sortedRuns = this.sortRunItems(filteredRuns, runSortResolved);
     const recentRecords = this.getRecentRecords(records, this.getAppHistoryLimit());
     const chartSize = this.getAppChartSize();
 
-    if (!latest && view.mode !== 'aggregate') {
+    if (!latest && view.mode !== 'aggregate' && view.mode !== 'runs') {
       this.addInfoRow(table, 'No metrics found yet.', 'Run the scraper to generate metrics.');
+      await table.present();
+      return;
+    }
+    if (view.mode === 'runs' && runItems.length === 0) {
+      this.addInfoRow(table, 'No run metrics found.', 'Run the scraper to generate metrics.');
       await table.present();
       return;
     }
@@ -1452,7 +1814,7 @@ class MetricsDisplay {
       });
       this.addChartSection(table, `Duration (minutes, last ${historyCount} runs)`, durationChart, `Latest: ${this.formatDuration(latest?.duration_ms)}`);
 
-      this.addSectionHeader(table, 'Parser health');
+      this.addSectionHeader(table, 'Parser runs (latest)');
       const parserLine = parserHealth.hasConfig
         ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
         : `Parsers run: ${parserHealth.ranCount}`;
@@ -1479,7 +1841,7 @@ class MetricsDisplay {
         );
       }
     } else if (view.mode === 'parsers') {
-      this.addSectionHeader(table, 'Parser health dashboard');
+      this.addSectionHeader(table, 'Parser runs (latest)');
       const parserLine = parserHealth.hasConfig
         ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
         : `Parsers run: ${parserHealth.ranCount}`;
@@ -1500,6 +1862,24 @@ class MetricsDisplay {
       } else {
         sortedItems.forEach(item => {
           this.addParserHealthRow(table, item);
+        });
+      }
+    } else if (view.mode === 'runs') {
+      this.addSectionHeader(table, 'All runs');
+      const totalRuns = runItems.length;
+      const filteredCount = filteredRuns.length;
+      const summarySubtitle = totalRuns === filteredCount
+        ? null
+        : `Filtered from ${this.formatNumber(totalRuns)}`;
+      this.addInfoRow(table, `Runs: ${this.formatNumber(filteredCount)}`, summarySubtitle);
+      this.addRunFilterRow(table, runSortResolved, runFilters);
+      this.addRunSortRow(table, runSortResolved, runFilters);
+      this.addRunTableHeader(table);
+      if (sortedRuns.length === 0) {
+        this.addInfoRow(table, 'No runs match filters.', 'Adjust filters to see results.');
+      } else {
+        sortedRuns.forEach(run => {
+          this.addRunRow(table, run);
         });
       }
     } else if (view.mode === 'aggregate') {
@@ -1648,6 +2028,55 @@ class MetricsDisplay {
     table.addRow(header);
   }
 
+  getViewOptions() {
+    return [
+      { mode: 'parsers', label: 'Parser runs' },
+      { mode: 'runs', label: 'All runs' },
+      { mode: 'dashboard', label: 'Dashboard' },
+      { mode: 'aggregate', label: 'All-time totals' }
+    ];
+  }
+
+  getViewLabel(view) {
+    if (!view) return 'Parser runs';
+    if (view.mode === 'parser') {
+      return view.parserName ? `Parser detail: ${view.parserName}` : 'Parser detail';
+    }
+    const option = this.getViewOptions().find(item => item.mode === view.mode);
+    return option ? option.label : 'Parser runs';
+  }
+
+  async presentViewPicker(currentView) {
+    const options = this.getViewOptions();
+    const alert = new Alert();
+    alert.title = 'Choose view';
+    alert.message = `Current: ${this.getViewLabel(currentView)}`;
+    options.forEach(option => alert.addAction(option.label));
+    alert.addCancelAction('Cancel');
+    const idx = await alert.present();
+    if (idx < 0 || idx >= options.length) return null;
+    return options[idx].mode;
+  }
+
+  addViewSwitcherRow(table, view) {
+    const row = new UITableRow();
+    row.backgroundColor = new Color(BRAND.secondary);
+    const cell = row.addText(`View: ${this.getViewLabel(view)}`, 'Tap to switch');
+    cell.titleFont = Font.boldSystemFont(FONT_SIZES.app.label);
+    cell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
+    cell.titleColor = new Color('#ffffff');
+    cell.subtitleColor = new Color('#ffffff');
+    row.onSelect = async () => {
+      const nextView = await this.presentViewPicker(view);
+      if (!nextView) return;
+      const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
+        view: nextView
+      });
+      Safari.open(url);
+    };
+    table.addRow(row);
+  }
+
   addMetricRow(table, value, label) {
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
@@ -1735,6 +2164,192 @@ class MetricsDisplay {
     table.addRow(row);
   }
 
+  getRunSortOptions() {
+    return [
+      { key: 'finished', label: 'Finished time', defaultDirection: 'desc' },
+      { key: 'status', label: 'Status (issues first)', defaultDirection: 'desc' },
+      { key: 'final-events', label: 'Final events', defaultDirection: 'desc' },
+      { key: 'total-events', label: 'Total events', defaultDirection: 'desc' },
+      { key: 'errors', label: 'Errors', defaultDirection: 'desc' },
+      { key: 'warnings', label: 'Warnings', defaultDirection: 'desc' },
+      { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
+      { key: 'parsers', label: 'Parser count', defaultDirection: 'desc' }
+    ];
+  }
+
+  getRunSortLabel(sortState) {
+    if (!sortState) return 'Default';
+    const options = this.getRunSortOptions();
+    const match = options.find(option => option.key === sortState.key);
+    const label = match ? match.label : sortState.key;
+    const direction = sortState.direction === 'asc' ? 'asc' : 'desc';
+    return `${label} ${direction}`;
+  }
+
+  async presentRunSortPicker(currentSort) {
+    const options = this.getRunSortOptions();
+    const alert = new Alert();
+    alert.title = 'Sort runs';
+    alert.message = 'Choose the sort order';
+    options.forEach(option => alert.addAction(option.label));
+    alert.addCancelAction('Cancel');
+    const idx = await alert.present();
+    if (idx < 0 || idx >= options.length) return null;
+    const chosen = options[idx];
+    let direction = chosen.defaultDirection || this.getDefaultRunSortDirection(chosen.key);
+    if (currentSort?.key === chosen.key) {
+      direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    }
+    return { key: chosen.key, direction };
+  }
+
+  buildRunListUrl(sortState, filters) {
+    return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
+      view: 'runs',
+      sort: sortState?.key || null,
+      dir: sortState?.direction || null,
+      status: filters?.status || null,
+      parserFilter: filters?.parserFilter || null,
+      days: filters?.days || null
+    });
+  }
+
+  addRunSortRow(table, sortState, filters) {
+    const row = new UITableRow();
+    row.backgroundColor = new Color(BRAND.primary);
+    const label = this.getRunSortLabel(sortState);
+    const cell = row.addText(`Sort: ${label}`, 'Tap to change');
+    cell.titleFont = Font.systemFont(FONT_SIZES.app.label);
+    cell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
+    cell.titleColor = new Color(BRAND.text);
+    cell.subtitleColor = new Color(BRAND.textMuted);
+    row.onSelect = async () => {
+      const nextSort = await this.presentRunSortPicker(sortState);
+      if (!nextSort) return;
+      const url = this.buildRunListUrl(nextSort, filters);
+      Safari.open(url);
+    };
+    table.addRow(row);
+  }
+
+  async presentRunFilterPicker(currentFilters) {
+    const alert = new Alert();
+    alert.title = 'Filter runs';
+    alert.message = 'Set status, parser, or age filters';
+    alert.addTextField('Parser contains', currentFilters?.parserFilter || '');
+    alert.addTextField('Last N days (optional)', currentFilters?.days ? String(currentFilters.days) : '');
+    const options = [
+      { label: 'All statuses', value: null },
+      { label: 'Success', value: 'success' },
+      { label: 'Partial', value: 'partial' },
+      { label: 'Failed', value: 'failed' },
+      { label: 'Issues (errors/warnings)', value: 'issues' }
+    ];
+    options.forEach(option => alert.addAction(option.label));
+    alert.addCancelAction('Cancel');
+    const idx = await alert.present();
+    if (idx < 0 || idx >= options.length) return null;
+    const status = options[idx].value;
+    const parserFilter = (alert.textFieldValue(0) || '').trim();
+    const rawDays = (alert.textFieldValue(1) || '').trim();
+    const parsedDays = rawDays ? Number.parseInt(rawDays, 10) : null;
+    return {
+      status,
+      parserFilter: parserFilter || null,
+      days: Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : null
+    };
+  }
+
+  addRunFilterRow(table, sortState, filters) {
+    const row = new UITableRow();
+    row.backgroundColor = new Color(BRAND.primary);
+    const label = this.formatRunFilterLabel(filters);
+    const cell = row.addText(`Filter: ${label}`, 'Tap to change');
+    cell.titleFont = Font.systemFont(FONT_SIZES.app.label);
+    cell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
+    cell.titleColor = new Color(BRAND.text);
+    cell.subtitleColor = new Color(BRAND.textMuted);
+    row.onSelect = async () => {
+      const nextFilters = await this.presentRunFilterPicker(filters);
+      if (!nextFilters) return;
+      const url = this.buildRunListUrl(sortState, nextFilters);
+      Safari.open(url);
+    };
+    table.addRow(row);
+  }
+
+  addRunTableHeader(table) {
+    const row = new UITableRow();
+    row.backgroundColor = new Color(BRAND.primary);
+    const runCell = row.addText('Run');
+    runCell.widthWeight = 22;
+    const statusCell = row.addText('Status');
+    statusCell.widthWeight = 18;
+    const finalCell = row.addText('Final');
+    finalCell.widthWeight = 14;
+    const errorsCell = row.addText('Issues');
+    errorsCell.widthWeight = 18;
+    const finishedCell = row.addText('Finished');
+    finishedCell.widthWeight = 20;
+
+    [runCell, statusCell, finalCell, errorsCell, finishedCell].forEach(cell => {
+      cell.titleFont = Font.boldSystemFont(FONT_SIZES.app.small);
+      cell.titleColor = new Color(BRAND.textMuted);
+    });
+    table.addRow(row);
+  }
+
+  addRunRow(table, run) {
+    const row = new UITableRow();
+    row.backgroundColor = new Color(BRAND.primary);
+
+    const subtitleParts = [];
+    if (run.parsersCount) {
+      subtitleParts.push(`${run.parsersCount} parsers`);
+    }
+    if (run.durationMs) {
+      subtitleParts.push(this.formatDuration(run.durationMs));
+    }
+    const runCell = row.addText(this.formatRunId(run.runId), subtitleParts.join(' • '));
+    runCell.titleFont = Font.systemFont(FONT_SIZES.app.label);
+    runCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
+    runCell.titleColor = new Color(BRAND.text);
+    runCell.subtitleColor = new Color(BRAND.textMuted);
+    runCell.widthWeight = 22;
+
+    const statusMeta = this.getStatusMeta(run.status);
+    const statusCell = row.addText(statusMeta.label);
+    statusCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    statusCell.titleColor = statusMeta.color;
+    statusCell.widthWeight = 18;
+
+    const finalCell = row.addText(this.formatNumber(run.finalEvents || 0));
+    finalCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    finalCell.titleColor = new Color(BRAND.text);
+    finalCell.widthWeight = 14;
+
+    const issuesLabel = `E${run.errorsCount || 0} W${run.warningsCount || 0}`;
+    const issuesCell = row.addText(issuesLabel);
+    issuesCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    issuesCell.titleColor = new Color(BRAND.text);
+    issuesCell.widthWeight = 18;
+
+    const finishedCell = row.addText(this.formatLastRunLabel(run.finishedAt));
+    finishedCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    finishedCell.titleColor = new Color(BRAND.text);
+    finishedCell.widthWeight = 20;
+
+    row.onSelect = () => {
+      if (!run.runId) return;
+      const url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
+        runId: run.runId,
+        readOnly: true
+      });
+      Safari.open(url);
+    };
+    table.addRow(row);
+  }
+
   addParserTableHeader(table) {
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
@@ -1803,6 +2418,14 @@ class MetricsDisplay {
     lastRunCell.titleColor = new Color(BRAND.text);
     lastRunCell.widthWeight = 16;
 
+    row.onSelect = () => {
+      if (!item?.name) return;
+      const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
+        parser: item.name
+      });
+      Safari.open(url);
+    };
+
     table.addRow(row);
   }
 
@@ -1850,7 +2473,10 @@ async function runMetricsDisplay() {
 
   const view = await display.resolveView();
   const sortState = display.resolveSort(view);
-  const data = { latestRecord, summary, parserHealth, records, sortState };
+  const runSortState = display.resolveRunSort(view);
+  const runFilters = display.resolveRunFilters(view);
+  const runItems = display.buildRunItems(records);
+  const data = { latestRecord, summary, parserHealth, records, sortState, runSortState, runFilters, runItems };
 
   if (display.runtime.runsInWidget) {
     const widget = await display.renderWidget(data, view);
