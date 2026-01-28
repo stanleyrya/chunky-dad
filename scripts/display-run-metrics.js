@@ -357,6 +357,15 @@ class MetricsDisplay {
     };
   }
 
+  createParserTotals() {
+    return {
+      total_events: 0,
+      raw_bear_events: 0,
+      final_bear_events: 0,
+      duplicates_removed: 0
+    };
+  }
+
   sumActions(actions) {
     if (!actions) return 0;
     return Object.keys(actions).reduce((sum, key) => sum + (actions[key] || 0), 0);
@@ -377,6 +386,38 @@ class MetricsDisplay {
       });
     });
     return lastRuns;
+  }
+
+  buildParserHistoryMap(records) {
+    const history = {};
+    if (!Array.isArray(records)) return history;
+    records.forEach(record => {
+      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
+      parserRecords.forEach(parserRecord => {
+        const name = parserRecord?.parser_name;
+        if (!name) return;
+        if (!history[name]) {
+          history[name] = {
+            runs: 0,
+            totals: this.createParserTotals(),
+            actions: this.createActionCounts(),
+            durationMsTotal: 0
+          };
+        }
+        const bucket = history[name];
+        bucket.runs += 1;
+        bucket.durationMsTotal += parserRecord?.duration_ms || 0;
+        bucket.totals.total_events += parserRecord?.total_events || 0;
+        bucket.totals.raw_bear_events += parserRecord?.raw_bear_events || 0;
+        bucket.totals.final_bear_events += parserRecord?.final_bear_events || 0;
+        bucket.totals.duplicates_removed += parserRecord?.duplicates_removed || 0;
+        const actions = parserRecord?.actions || {};
+        Object.keys(bucket.actions).forEach(key => {
+          bucket.actions[key] += actions[key] || 0;
+        });
+      });
+    });
+    return history;
   }
 
   buildParserErrorCounts(runData, parserNames) {
@@ -400,8 +441,9 @@ class MetricsDisplay {
     return counts;
   }
 
-  buildParserHealth(records, latestRecord, configuredParsers, latestErrorCounts = {}) {
+  buildParserHealth(records, latestRecord, configuredParsers, latestErrorCounts = {}, summary = null) {
     const lastRuns = this.getParserLastRuns(records);
+    const historyByParser = this.buildParserHistoryMap(records);
     const latestParserRecords = Array.isArray(latestRecord?.parsers) ? latestRecord.parsers : [];
     const latestParserMap = {};
     latestParserRecords.forEach(record => {
@@ -411,27 +453,51 @@ class MetricsDisplay {
     });
 
     const hasConfig = configuredParsers.length > 0;
-    const parserNames = hasConfig ? configuredParsers : Object.keys(lastRuns);
+    const summaryParsers = summary?.by_parser_name || {};
+    const summaryNames = Object.keys(summaryParsers);
+    const parserNames = hasConfig
+      ? configuredParsers
+      : Array.from(new Set([...Object.keys(lastRuns), ...summaryNames]));
 
+    const hasLatestRecord = !!latestRecord;
     const items = parserNames.map(name => {
       const lastRun = lastRuns[name] || null;
       const record = lastRun?.parser || null;
       const actions = record?.actions ? record.actions : this.createActionCounts();
       const totalEvents = record?.total_events || 0;
-      const ran = !!record;
+      const summaryTotals = summaryParsers?.[name]?.totals || null;
+      const allTimeRuns = summaryTotals?.runs || 0;
+      const allTimeTotals = summaryTotals?.totals || this.createParserTotals();
+      const allTimeActions = summaryTotals?.actions || this.createActionCounts();
+      const allTimeDurationMs = summaryTotals?.duration_ms_total || 0;
+      const historyTotals = historyByParser?.[name]?.totals || this.createParserTotals();
+      const historyActions = historyByParser?.[name]?.actions || this.createActionCounts();
+      const historyRuns = historyByParser?.[name]?.runs || 0;
+      const historyDurationMs = historyByParser?.[name]?.durationMsTotal || 0;
+      const ran = !!record || allTimeRuns > 0 || historyRuns > 0;
+
       return {
         name,
         parserType: record?.parser_type || null,
         urlCount: record?.url_count || 0,
         ran,
         ranInLatest: !!latestParserMap[name],
+        hasLatestRecord,
         totalEvents,
         finalBearEvents: record?.final_bear_events || 0,
         durationMs: record?.duration_ms || null,
         actions,
         lastRunAt: lastRun?.record?.finished_at || null,
         lastRunId: lastRun?.record?.run_id || null,
-        latestErrorCount: latestErrorCounts?.[name] || 0
+        latestErrorCount: latestErrorCounts?.[name] || 0,
+        allTimeRuns,
+        allTimeTotals,
+        allTimeActions,
+        allTimeDurationMs,
+        historyRuns,
+        historyTotals,
+        historyActions,
+        historyDurationMs
       };
     });
 
@@ -507,11 +573,58 @@ class MetricsDisplay {
     return this.formatRelativeTime(isoString);
   }
 
-  formatEventSummary(item) {
-    if (!item?.ran) return 'No run data';
+  formatAllTimeSummary(item, options = {}) {
+    const runs = item?.allTimeRuns || 0;
+    if (runs <= 0) return 'No historical data';
+    const totals = item?.allTimeTotals || {};
+    const finalEvents = this.formatNumber(totals.final_bear_events || 0);
+    const totalEvents = this.formatNumber(totals.total_events || 0);
+    const runLabel = this.formatNumber(runs);
+    if (options.compact) {
+      return `All-time ${finalEvents} final • ${runLabel} runs`;
+    }
+    if (options.includeTotal === false) {
+      return `All-time final ${finalEvents} • Runs ${runLabel}`;
+    }
+    return `All-time final ${finalEvents} • Total ${totalEvents} • Runs ${runLabel}`;
+  }
+
+  formatHistorySummary(item, options = {}) {
+    const runs = item?.historyRuns || 0;
+    if (runs <= 0) return 'No recent history';
+    const totals = item?.historyTotals || {};
+    const finalEvents = this.formatNumber(totals.final_bear_events || 0);
+    const totalEvents = this.formatNumber(totals.total_events || 0);
+    const runLabel = this.formatNumber(runs);
+    if (options.compact) {
+      return `Recent ${finalEvents} final • ${runLabel} runs`;
+    }
+    if (options.includeTotal === false) {
+      return `Recent final ${finalEvents} • Runs ${runLabel}`;
+    }
+    return `Recent final ${finalEvents} • Total ${totalEvents} • Runs ${runLabel}`;
+  }
+
+  formatLastRunSummary(item, options = {}) {
+    if (!item?.lastRunAt) return 'Last run unknown';
     const finalEvents = this.formatNumber(item?.finalBearEvents || 0);
     const totalEvents = this.formatNumber(item?.totalEvents || 0);
-    return `Final ${finalEvents} • Total ${totalEvents}`;
+    const when = this.formatLastRunLabel(item.lastRunAt);
+    if (options.compact) {
+      return `Last ${when} • ${finalEvents} final`;
+    }
+    return `Last run ${when} • Final ${finalEvents} • Total ${totalEvents}`;
+  }
+
+  formatEventSummary(item) {
+    if (!item?.ran) return 'No run data';
+    if ((item?.allTimeRuns || 0) > 0) {
+      return this.formatAllTimeSummary(item, { compact: true, includeTotal: false });
+    }
+    if ((item?.historyRuns || 0) > 0) {
+      return this.formatHistorySummary(item, { compact: true, includeTotal: false });
+    }
+    return this.formatLastRunSummary(item, { compact: true });
   }
 
   truncateText(value, maxLength) {
@@ -548,12 +661,20 @@ class MetricsDisplay {
     if (!item.ran) return 'not-run';
     const actionTotal = this.sumActions(item.actions);
     const totalEvents = item.totalEvents || 0;
-    const hasEvents = totalEvents > 0 || (item.finalBearEvents || 0) > 0 || actionTotal > 0;
+    const finalEvents = item.finalBearEvents || 0;
+    const allTimeTotals = item.allTimeTotals || {};
+    const historyTotals = item.historyTotals || {};
+    const allTimeHasEvents = (allTimeTotals.final_bear_events || 0) > 0
+      || (allTimeTotals.total_events || 0) > 0;
+    const historyHasEvents = (historyTotals.final_bear_events || 0) > 0
+      || (historyTotals.total_events || 0) > 0;
+    const hasEvents = totalEvents > 0 || finalEvents > 0 || actionTotal > 0 || allTimeHasEvents || historyHasEvents;
     if (!hasEvents) return 'no-events';
     const warningActions = (item.actions?.conflict || 0)
       + (item.actions?.missing_calendar || 0)
       + (item.actions?.other || 0);
     if (warningActions > 0) return 'warning';
+    if (item.hasLatestRecord && item.ran && !item.ranInLatest) return 'warning';
     return 'healthy';
   }
 
@@ -1091,9 +1212,15 @@ class MetricsDisplay {
       const statusImage = right.addImage(statusIcon);
       statusImage.imageSize = new Size(12, 12);
 
+      const historyFinalEvents = (item.historyRuns || 0) > 0
+        ? (item.historyTotals?.final_bear_events || 0)
+        : (item.finalBearEvents || 0);
+      const allTimeFinalEvents = (item.allTimeRuns || 0) > 0
+        ? (item.allTimeTotals?.final_bear_events || 0)
+        : historyFinalEvents;
       const infoLabel = showLastRun
         ? this.formatLastRunLabel(item.lastRunAt)
-        : this.formatNumber(item.finalBearEvents || 0);
+        : this.formatNumber(allTimeFinalEvents);
       const infoText = right.addText(infoLabel);
       infoText.font = Font.systemFont(FONT_SIZES.widget.small);
       infoText.textColor = new Color(BRAND.textMuted);
@@ -1111,6 +1238,7 @@ class MetricsDisplay {
     const recentRecords = context.recentRecords;
     const chartSize = context.chartSize;
     const record = parserHealth.items.find(item => item.name === view.parserName);
+    const family = this.runtime.widgetFamily || 'medium';
 
     const title = widget.addText(`Parser: ${view.parserName}`);
     title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
@@ -1128,22 +1256,63 @@ class MetricsDisplay {
       widget.addSpacer(4);
     }
 
-    if (!record || !record.ran) {
-      const none = widget.addText('Not run in last run.');
+    const hasAllTime = (record?.allTimeRuns || 0) > 0;
+    const hasHistory = (record?.historyRuns || 0) > 0;
+    const hasLastRun = !!record?.lastRunAt;
+
+    if (!record || (!record.ran && !hasAllTime && !hasHistory)) {
+      const none = widget.addText('No parser metrics yet.');
       none.font = Font.systemFont(FONT_SIZES.widget.small);
       none.textColor = new Color(BRAND.text);
       return;
     }
 
-    const stats = widget.addText(`Events: ${this.formatNumber(record.finalBearEvents)}`);
-    stats.font = Font.systemFont(FONT_SIZES.widget.label);
-    stats.textColor = new Color(BRAND.text);
-    const duration = widget.addText(`Duration: ${this.formatDuration(record.durationMs)}`);
-    duration.font = Font.systemFont(FONT_SIZES.widget.small);
-    duration.textColor = new Color(BRAND.textMuted);
-    const actions = widget.addText(`Actions: ${this.formatActions(record.actions)}`);
-    actions.font = Font.systemFont(FONT_SIZES.widget.small);
-    actions.textColor = new Color(BRAND.textMuted);
+    if (hasAllTime) {
+      const allTime = widget.addText(this.formatAllTimeSummary(record, {
+        compact: family === 'small',
+        includeTotal: family !== 'small'
+      }));
+      allTime.font = Font.systemFont(FONT_SIZES.widget.label);
+      allTime.textColor = new Color(BRAND.text);
+    } else if (hasHistory) {
+      const recent = widget.addText(this.formatHistorySummary(record, {
+        compact: family === 'small',
+        includeTotal: family !== 'small'
+      }));
+      recent.font = Font.systemFont(FONT_SIZES.widget.label);
+      recent.textColor = new Color(BRAND.text);
+    } else {
+      const summaryMissing = widget.addText('History summary unavailable.');
+      summaryMissing.font = Font.systemFont(FONT_SIZES.widget.small);
+      summaryMissing.textColor = new Color(BRAND.textMuted);
+    }
+
+    const lastRunLabel = hasLastRun
+      ? this.formatLastRunSummary(record, { compact: family === 'small' })
+      : 'No recent run data.';
+    const lastRun = widget.addText(lastRunLabel);
+    lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
+    lastRun.textColor = new Color(BRAND.textMuted);
+
+    if (family !== 'small') {
+      const durationMs = hasLastRun
+        ? record.durationMs
+        : (hasAllTime && record.allTimeRuns > 0 ? Math.round(record.allTimeDurationMs / record.allTimeRuns) : null)
+          || (hasHistory && record.historyRuns > 0 ? Math.round(record.historyDurationMs / record.historyRuns) : null);
+      if (durationMs) {
+        const durationLabel = hasLastRun ? 'Duration' : 'Avg duration';
+        const duration = widget.addText(`${durationLabel}: ${this.formatDuration(durationMs)}`);
+        duration.font = Font.systemFont(FONT_SIZES.widget.small);
+        duration.textColor = new Color(BRAND.textMuted);
+      }
+
+      const actionSource = hasLastRun
+        ? record.actions
+        : (hasAllTime ? record.allTimeActions : record.historyActions);
+      const actions = widget.addText(`Actions: ${this.formatActions(actionSource)}`);
+      actions.font = Font.systemFont(FONT_SIZES.widget.small);
+      actions.textColor = new Color(BRAND.textMuted);
+    }
   }
 
   renderWidgetAggregate(widget, context) {
@@ -1314,7 +1483,13 @@ class MetricsDisplay {
       const parserLine = parserHealth.hasConfig
         ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
         : `Parsers run: ${parserHealth.ranCount}`;
-      this.addInfoRow(table, parserLine, parserHealth.hasConfig ? 'Status is based on last run per parser.' : 'Status is based on last run per parser.');
+      this.addInfoRow(
+        table,
+        parserLine,
+        parserHealth.hasConfig
+          ? 'Status uses latest run and historical totals.'
+          : 'Status uses latest run and historical totals.'
+      );
 
       this.addParserSortRow(table, parserSort);
       this.addParserTableHeader(table);
@@ -1372,11 +1547,57 @@ class MetricsDisplay {
     } else if (view.mode === 'parser') {
       this.addSectionHeader(table, `Parser detail: ${view.parserName}`);
       const record = parserHealth.items.find(item => item.name === view.parserName);
-      if (!record || !record.ran) {
-        this.addInfoRow(table, 'Not run in latest metrics.', 'Run the parser to collect metrics.');
+      const hasAllTime = (record?.allTimeRuns || 0) > 0;
+      const hasHistory = (record?.historyRuns || 0) > 0;
+      const hasLastRun = !!record?.lastRunAt;
+      if (!record || (!record.ran && !hasAllTime && !hasHistory)) {
+        this.addInfoRow(table, 'No parser metrics available.', 'Run the parser to collect metrics.');
       } else {
-        this.addMetricRow(table, this.formatNumber(record.finalBearEvents), 'Final bear events');
-        this.addInfoRow(table, `Duration: ${this.formatDuration(record.durationMs)}`, `Actions: ${this.formatActions(record.actions)}`);
+        if (hasAllTime) {
+          const totals = record.allTimeTotals || {};
+          this.addMetricRow(table, this.formatNumber(totals.final_bear_events || 0), 'All-time final events');
+          this.addInfoRow(
+            table,
+            `Runs: ${this.formatNumber(record.allTimeRuns || 0)}`,
+            `Total events: ${this.formatNumber(totals.total_events || 0)}`
+          );
+          this.addInfoRow(table, 'All-time actions', this.formatActions(record.allTimeActions));
+          const avgDurationMs = record.allTimeRuns > 0
+            ? Math.round(record.allTimeDurationMs / record.allTimeRuns)
+            : null;
+          if (avgDurationMs) {
+            this.addInfoRow(table, `Average duration: ${this.formatDuration(avgDurationMs)}`);
+          }
+        } else if (hasHistory) {
+          const totals = record.historyTotals || {};
+          this.addMetricRow(table, this.formatNumber(totals.final_bear_events || 0), 'Recent final events');
+          this.addInfoRow(
+            table,
+            `Runs: ${this.formatNumber(record.historyRuns || 0)}`,
+            `Total events: ${this.formatNumber(totals.total_events || 0)}`
+          );
+          this.addInfoRow(table, 'Recent actions', this.formatActions(record.historyActions));
+          const avgDurationMs = record.historyRuns > 0
+            ? Math.round(record.historyDurationMs / record.historyRuns)
+            : null;
+          if (avgDurationMs) {
+            this.addInfoRow(table, `Average duration: ${this.formatDuration(avgDurationMs)}`);
+          }
+        } else {
+          this.addInfoRow(table, 'History summary unavailable.', 'Run the scraper to generate summary metrics.');
+        }
+
+        if (hasLastRun) {
+          this.addSectionHeader(table, 'Latest run');
+          this.addInfoRow(
+            table,
+            `Last run: ${this.formatRelativeTime(record.lastRunAt)}`,
+            `Final events: ${this.formatNumber(record.finalBearEvents)}`
+          );
+          this.addInfoRow(table, `Duration: ${this.formatDuration(record.durationMs)}`, `Actions: ${this.formatActions(record.actions)}`);
+        } else {
+          this.addInfoRow(table, 'No recent run data.', 'Only historical totals are available.');
+        }
 
         const series = this.getParserSeries(recentRecords, view.parserName);
         const parserChart = this.buildLineChartImage(series, chartSize, {
@@ -1625,7 +1846,7 @@ async function runMetricsDisplay() {
     ? configuredParsers
     : Object.keys(display.getParserLastRuns(records));
   const latestErrorCounts = display.buildParserErrorCounts(latestRunData, fallbackParserNames);
-  const parserHealth = display.buildParserHealth(records, latestRecord, configuredParsers, latestErrorCounts);
+  const parserHealth = display.buildParserHealth(records, latestRecord, configuredParsers, latestErrorCounts, summary);
 
   const view = await display.resolveView();
   const sortState = display.resolveSort(view);
@@ -1645,9 +1866,31 @@ try {
   await runMetricsDisplay();
 } catch (error) {
   console.log(`Metrics display failed: ${error.message}`);
-  const alert = new Alert();
-  alert.title = 'Metrics Display Error';
-  alert.message = `${error.message}`;
-  alert.addAction('OK');
-  await alert.present();
+  let runsInWidget = false;
+  try {
+    if (typeof config !== 'undefined') {
+      runsInWidget = !!config.runsInWidget;
+    }
+  } catch (_) {
+    runsInWidget = false;
+  }
+  if (runsInWidget) {
+    const widget = new ListWidget();
+    widget.backgroundColor = new Color(BRAND.primary);
+    widget.setPadding(12, 12, 12, 12);
+    const title = widget.addText('Metrics unavailable');
+    title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
+    title.textColor = new Color(BRAND.text);
+    const message = widget.addText(`${error.message}`);
+    message.font = Font.systemFont(FONT_SIZES.widget.small);
+    message.textColor = new Color(BRAND.textMuted);
+    Script.setWidget(widget);
+    Script.complete();
+  } else {
+    const alert = new Alert();
+    alert.title = 'Metrics Display Error';
+    alert.message = `${error.message}`;
+    alert.addAction('OK');
+    await alert.present();
+  }
 }
