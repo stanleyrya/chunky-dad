@@ -436,7 +436,7 @@
     }
 
 
-    .existing-event-panel input[type="text"],
+    .existing-event-panel .existing-filter-input,
     .existing-event-panel select {
       width: 100%;
       max-width: 100%;
@@ -444,15 +444,7 @@
       min-inline-size: 0;
       inline-size: 100%;
       max-inline-size: 100%;
-    }
-
-    .existing-event-panel input[type="date"] {
-      width: 100%;
-      max-width: 100%;
-      min-width: 0;
-      min-inline-size: 0;
-      inline-size: 100%;
-      max-inline-size: 100%;
+      display: block;
     }
 
     .existing-event-panel .field-actions {
@@ -1627,12 +1619,12 @@
           </div>
           <div class="field-group">
             <label for="existing-search">Search text</label>
-            <input type="text" id="existing-search" autocomplete="off" placeholder="Goldiloxx, Rockbar, Leather Nite">
+            <input type="text" id="existing-search" class="existing-filter-input" autocomplete="off" placeholder="Goldiloxx, Rockbar, Leather Nite">
             <small>Optional. Match event name, venue, or notes.</small>
           </div>
           <div class="field-group">
             <label for="existing-date">Search date</label>
-            <input type="date" id="existing-date">
+            <input type="date" id="existing-date" class="existing-filter-input">
             <small>Optional. Filters events and occurrences on that day.</small>
           </div>
         </div>
