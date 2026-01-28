@@ -24,38 +24,26 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
-DTSTART:20250831T040000Z
-DTEND:20250831T090000Z
-DTSTAMP:20260128T200543Z
-UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
-CREATED:20250823T205551Z
-DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :
-  BEARS AT WORK\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue\, Las V
- egas\, NV 89169\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite
- .com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1
- 531257726079\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-
- vegas-labor-day-weekend-bears-at-work-tickets-1531257726079\ncover: $11.58 
- - $23.14 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
- .com%2Fimages%2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?cr
- op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
- x=0.5&fp-y=0.5&s=73fd269e7d0c3aa5168b99f977aba5d7\nshortName: MEGA-WOOF\nin
- stagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.goo
- gle.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=Ch
- IJxfTt6N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-08-31|dust las vegas|eventbri
- te
-LAST-MODIFIED:20250830T170548Z
-LOCATION:36.1214368\, -115.144945
+DTSTART;TZID=America/Los_Angeles:20251002T170000
+DTEND;TZID=America/Los_Angeles:20251002T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260128T220621Z
+UID:op01hk40s7eqfdgt9nq8m1qfrs@google.com
+CREATED:20250930T210149Z
+DESCRIPTION:Bar: Check instagram for this week’s location and finalized tim
+ e.\nTea: Popular happy hour that changes location every week.\nInstagram: h
+ ttps://www.instagram.com/bearhappyhourlv\nShorter: BHH\nWeb: https://linktr
+ .ee/bearhappyhour
+LAST-MODIFIED:20251012T161131Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
+SUMMARY:Bear Happy Hour
 TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251102T040000Z
 DTEND:20251102T110000Z
-DTSTAMP:20260128T200543Z
+DTSTAMP:20260128T220621Z
 UID:CD1401F3-1C01-4716-8C0D-4BCDC8CB458C
 CREATED:20250830T012218Z
 DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL 
@@ -80,20 +68,32 @@ TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20251002T170000
-DTEND;TZID=America/Los_Angeles:20251002T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260128T200543Z
-UID:op01hk40s7eqfdgt9nq8m1qfrs@google.com
-CREATED:20250930T210149Z
-DESCRIPTION:Bar: Check instagram for this week’s location and finalized tim
- e.\nTea: Popular happy hour that changes location every week.\nInstagram: h
- ttps://www.instagram.com/bearhappyhourlv\nShorter: BHH\nWeb: https://linktr
- .ee/bearhappyhour
-LAST-MODIFIED:20251012T161131Z
+DTSTART:20250831T040000Z
+DTEND:20250831T090000Z
+DTSTAMP:20260128T220621Z
+UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
+CREATED:20250823T205551Z
+DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :
+  BEARS AT WORK\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue\, Las V
+ egas\, NV 89169\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite
+ .com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1
+ 531257726079\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-
+ vegas-labor-day-weekend-bears-at-work-tickets-1531257726079\ncover: $11.58 
+ - $23.14 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
+ .com%2Fimages%2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?cr
+ op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
+ x=0.5&fp-y=0.5&s=73fd269e7d0c3aa5168b99f977aba5d7\nshortName: MEGA-WOOF\nin
+ stagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.goo
+ gle.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=Ch
+ IJxfTt6N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-08-31|dust las vegas|eventbri
+ te
+LAST-MODIFIED:20250830T170548Z
+LOCATION:36.1214368\, -115.144945
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
+SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR
