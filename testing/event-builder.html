@@ -1236,7 +1236,7 @@
               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
               <span>Reset</span>
             </button>
-            <button type="button" class="ghost-button action-button" id="edit-existing" aria-label="Edit existing event" aria-expanded="false" aria-controls="existing-event-panel" aria-haspopup="dialog">
+            <button type="button" class="ghost-button action-button" id="edit-existing" aria-label="Edit or copy existing event" aria-expanded="false" aria-controls="existing-event-panel" aria-haspopup="dialog">
               <i class="bi bi-pencil-square" aria-hidden="true"></i>
               <span>Edit Existing</span>
             </button>
@@ -1266,6 +1266,10 @@
                 <button type="button" class="ghost-button action-button is-compact" id="existing-change" aria-controls="existing-event-panel" aria-haspopup="dialog">
                   <i class="bi bi-search" aria-hidden="true"></i>
                   <span>Change</span>
+                </button>
+                <button type="button" class="ghost-button action-button is-compact" id="existing-copy-summary">
+                  <i class="bi bi-files" aria-hidden="true"></i>
+                  <span>Copy to New</span>
                 </button>
                 <button type="button" class="ghost-button action-button is-compact" id="existing-clear-summary">
                   <i class="bi bi-x-circle" aria-hidden="true"></i>
@@ -1603,10 +1607,10 @@
     <div class="existing-modal__content">
       <div class="existing-modal__header">
         <div>
-          <h2 id="existing-modal-title">Edit Existing Event</h2>
+          <h2 id="existing-modal-title">Edit or Copy Existing Event</h2>
           <p class="panel-subtitle">Choose a calendar, then optionally filter by text or date.</p>
         </div>
-        <button type="button" class="ghost-button action-button existing-modal__close" id="existing-modal-close" aria-label="Close edit existing dialog">
+        <button type="button" class="ghost-button action-button existing-modal__close" id="existing-modal-close" aria-label="Close existing event dialog">
           <i class="bi bi-x-lg" aria-hidden="true"></i>
         </button>
       </div>
@@ -1636,8 +1640,8 @@
         </div>
 
         <div class="field-group is-hidden" id="existing-mode-group">
-          <label>Edit as</label>
-          <div class="toggle-buttons" role="group" aria-label="Edit occurrence or series">
+          <label>Use as</label>
+          <div class="toggle-buttons" role="group" aria-label="Use occurrence or series">
             <button type="button" class="toggle-button is-active" data-edit-mode="occurrence">Occurrence</button>
             <button type="button" class="toggle-button" data-edit-mode="series">Series</button>
           </div>
@@ -1647,13 +1651,17 @@
         <div class="field-group is-hidden" id="existing-occurrence-group">
           <label for="existing-occurrence">Occurrence</label>
           <select id="existing-occurrence"></select>
-          <small class="field-hint" id="existing-occurrence-hint" data-default="Pick the occurrence to edit. Use Search date to jump to a specific day.">Pick the occurrence to edit. Use Search date to jump to a specific day.</small>
+          <small class="field-hint" id="existing-occurrence-hint" data-default="Pick the occurrence to edit or copy. Use Search date to jump to a specific day.">Pick the occurrence to edit or copy. Use Search date to jump to a specific day.</small>
         </div>
 
         <div class="field-actions">
           <button type="button" class="primary-button action-button" id="existing-load">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Load event</span>
+            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+            <span>Edit event</span>
+          </button>
+          <button type="button" class="secondary-button action-button" id="existing-copy">
+            <i class="bi bi-files" aria-hidden="true"></i>
+            <span>Copy to New</span>
           </button>
           <button type="button" class="ghost-button action-button" id="existing-clear">
             <i class="bi bi-x-circle" aria-hidden="true"></i>
@@ -1816,10 +1824,12 @@
         dom.existingOccurrenceSelect = document.getElementById('existing-occurrence');
         dom.existingOccurrenceHint = document.getElementById('existing-occurrence-hint');
         dom.existingLoadButton = document.getElementById('existing-load');
+        dom.existingCopyButton = document.getElementById('existing-copy');
         dom.existingClearButton = document.getElementById('existing-clear');
         dom.existingSelectionSummary = document.getElementById('existing-selection-summary');
         dom.existingSelectionText = document.getElementById('existing-selection-text');
         dom.existingChangeButton = document.getElementById('existing-change');
+        dom.existingCopySummaryButton = document.getElementById('existing-copy-summary');
         dom.existingClearSummaryButton = document.getElementById('existing-clear-summary');
         dom.calendarIframe = document.getElementById('calendar-preview');
         dom.calendarStatus = document.getElementById('calendar-status');
@@ -2044,6 +2054,7 @@
         setExistingOccurrenceHint(message || fallback, false);
         existingOccurrenceResults = [];
         selectedExistingOccurrence = null;
+        updateExistingActionButtons();
       }
 
       function setExistingOccurrenceHint(message, isError) {
@@ -2353,6 +2364,7 @@
         const textFilter = filters.textFilter || '';
         const targetDate = dateValue ? parseDateValue(dateValue) : null;
         const now = filters.now instanceof Date ? filters.now : new Date();
+        const includePast = Boolean(textFilter || dateValue);
 
         const addIfMatches = result => {
           if (!result) return;
@@ -2367,7 +2379,8 @@
               dateValue,
               now,
               maxCount: 1,
-              windowDays: 1
+              windowDays: 1,
+              includePast: true
             });
             if (!occurrences.length) return;
             addIfMatches(buildResultEntry({
@@ -2379,7 +2392,7 @@
 
           index.singleEvents.forEach(singleEvent => {
             if (singleEvent.dateKey !== dateValue) return;
-            if (!isEndDateEditable(singleEvent.endDate, now)) return;
+            if (!includePast && !isEndDateEditable(singleEvent.endDate, now)) return;
             addIfMatches(buildResultEntry({
               event: singleEvent,
               baseEvent: null,
@@ -2392,12 +2405,14 @@
         } else {
           index.baseEvents.forEach(baseEvent => {
             if (!baseEvent.recurrence) return;
-            const occurrences = buildOccurrenceResultsForEvent(index, baseEvent, {
-              now,
-              maxCount: 1,
-              windowDays: OCCURRENCE_LOOKAHEAD_DAYS
-            });
-            if (!occurrences.length) return;
+            if (!includePast) {
+              const occurrences = buildOccurrenceResultsForEvent(index, baseEvent, {
+                now,
+                maxCount: 1,
+                windowDays: OCCURRENCE_LOOKAHEAD_DAYS
+              });
+              if (!occurrences.length) return;
+            }
             addIfMatches(buildResultEntry({
               event: baseEvent,
               baseEvent,
@@ -2406,7 +2421,7 @@
           });
 
           index.singleEvents.forEach(singleEvent => {
-            if (!isEndDateEditable(singleEvent.endDate, now)) return;
+            if (!includePast && !isEndDateEditable(singleEvent.endDate, now)) return;
             addIfMatches(buildResultEntry({
               event: singleEvent,
               baseEvent: null,
@@ -2436,11 +2451,12 @@
         const dateValue = options.dateValue || '';
         const maxCount = Number.isFinite(options.maxCount) ? options.maxCount : OCCURRENCE_MAX_COUNT;
         const windowDays = Number.isFinite(options.windowDays) ? options.windowDays : OCCURRENCE_LOOKAHEAD_DAYS;
+        const includePast = Boolean(options.includePast);
         const overrides = (index.overrides || []).filter(override => override.uid && override.uid === baseEvent.uid);
 
         const addOverrideResult = override => {
           if (!override) return;
-          if (!isEndDateEditable(override.endDate, now)) return;
+          if (!includePast && !isEndDateEditable(override.endDate, now)) return;
           addExistingResult(results, buildResultEntry({
             event: override,
             baseEvent,
@@ -2453,7 +2469,7 @@
 
         const addOccurrenceResult = targetDate => {
           const occurrenceDates = buildOccurrenceDates(baseEvent, targetDate);
-          if (!isEndDateEditable(occurrenceDates.end, now)) return;
+          if (!includePast && !isEndDateEditable(occurrenceDates.end, now)) return;
           addExistingResult(results, buildResultEntry({
             event: baseEvent,
             baseEvent,
@@ -2613,6 +2629,7 @@
             dom.existingOccurrenceGroup.classList.add('is-hidden');
           }
           resetExistingOccurrences('');
+          updateExistingActionButtons();
           return;
         }
         dom.existingModeButtons.forEach(button => {
@@ -2628,6 +2645,7 @@
           setFieldHint(dom.existingModeHint, hint, false);
         }
         refreshExistingOccurrenceOptions();
+        updateExistingActionButtons();
       }
 
       function handleExistingOccurrenceChange() {
@@ -2635,9 +2653,11 @@
         const selectedIndex = parseInt(dom.existingOccurrenceSelect.value, 10);
         if (!Number.isFinite(selectedIndex) || !existingOccurrenceResults[selectedIndex]) {
           selectedExistingOccurrence = null;
+          updateExistingActionButtons();
           return;
         }
         selectedExistingOccurrence = existingOccurrenceResults[selectedIndex];
+        updateExistingActionButtons();
       }
 
       function refreshExistingOccurrenceOptions() {
@@ -2666,7 +2686,8 @@
           dateValue,
           now: new Date(),
           maxCount: OCCURRENCE_MAX_COUNT,
-          windowDays: OCCURRENCE_LOOKAHEAD_DAYS
+          windowDays: OCCURRENCE_LOOKAHEAD_DAYS,
+          includePast: Boolean(dateValue)
         });
         existingOccurrenceResults = results;
         renderExistingOccurrenceResults(results, { dateValue, baseEvent });
@@ -2684,6 +2705,7 @@
           const hint = dateValue ? 'No occurrences found on that date.' : 'No upcoming occurrences found.';
           setExistingOccurrenceHint(hint, false);
           selectedExistingOccurrence = null;
+          updateExistingActionButtons();
           return;
         }
         dom.existingOccurrenceSelect.appendChild(new Option('Select an occurrence...', ''));
@@ -2716,6 +2738,7 @@
           dom.existingOccurrenceSelect.value = String(matchIndex);
           selectedExistingOccurrence = results[matchIndex];
           pendingExistingOccurrenceId = '';
+          updateExistingActionButtons();
           return;
         }
         if (results.length === 1) {
@@ -2725,18 +2748,17 @@
           selectedExistingOccurrence = null;
         }
         pendingExistingOccurrenceId = '';
+        updateExistingActionButtons();
       }
 
-      function applyExistingSelection() {
+      function resolveExistingSelection(action = 'edit') {
         if (!selectedExistingResult) {
-          showToast('Pick a matching event first.', 'warn');
-          return;
+          return { error: 'Pick a matching event first.' };
         }
         const mode = selectedExistingMode === 'series' && selectedExistingResult.canEditSeries
           ? 'series'
           : 'occurrence';
         const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
-        const now = new Date();
         let eventData = selectedExistingResult.event;
         let startDate = selectedExistingResult.startDate || selectedExistingResult.event.startDate;
         let endDate = selectedExistingResult.endDate || selectedExistingResult.event.endDate;
@@ -2749,21 +2771,10 @@
           startDate = baseEvent.startDate;
           endDate = baseEvent.endDate;
           recurrence = baseEvent.recurrence;
-          if (existingCalendarIndex) {
-            const futureOccurrences = buildOccurrenceResultsForEvent(existingCalendarIndex, baseEvent, {
-              now,
-              maxCount: 1,
-              windowDays: OCCURRENCE_LOOKAHEAD_DAYS
-            });
-            if (!futureOccurrences.length) {
-              showToast('This series has already ended.', 'warn');
-              return;
-            }
-          }
         } else if (baseEvent && baseEvent.recurrence) {
           if (!selectedExistingOccurrence) {
-            showToast('Pick an occurrence to edit.', 'warn');
-            return;
+            const verb = action === 'copy' ? 'copy' : 'edit';
+            return { error: `Pick an occurrence to ${verb}.` };
           }
           summaryResult = selectedExistingOccurrence;
           occurrenceId = selectedExistingOccurrence.id;
@@ -2778,10 +2789,140 @@
 
         if (!startDate || !endDate || !(startDate instanceof Date) || !(endDate instanceof Date)
           || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-          showToast('Selected event is missing timing info.', 'warn');
+          return { error: 'Selected event is missing timing info.' };
+        }
+
+        return {
+          mode,
+          baseEvent,
+          eventData,
+          startDate,
+          endDate,
+          recurrence,
+          summaryResult,
+          occurrenceId
+        };
+      }
+
+      function getExistingSelectionStatus() {
+        const status = {
+          canEdit: false,
+          canCopy: false,
+          editHint: 'Pick a matching event first.',
+          copyHint: 'Pick a matching event first.'
+        };
+        const copySelection = resolveExistingSelection('copy');
+        if (copySelection.error) {
+          status.copyHint = copySelection.error;
+        } else {
+          status.canCopy = true;
+          status.copyHint = '';
+        }
+
+        const editSelection = resolveExistingSelection('edit');
+        if (editSelection.error) {
+          status.editHint = editSelection.error;
+          return status;
+        }
+
+        const now = new Date();
+        if (editSelection.mode === 'series' && editSelection.baseEvent && editSelection.baseEvent.recurrence
+          && existingCalendarIndex) {
+          const futureOccurrences = buildOccurrenceResultsForEvent(existingCalendarIndex, editSelection.baseEvent, {
+            now,
+            maxCount: 1,
+            windowDays: OCCURRENCE_LOOKAHEAD_DAYS
+          });
+          if (!futureOccurrences.length) {
+            status.editHint = 'This series has already ended.';
+            return status;
+          }
+        } else if (editSelection.mode !== 'series' && !isEndDateEditable(editSelection.endDate, now)) {
+          status.editHint = 'Past events cannot be edited.';
+          return status;
+        }
+
+        status.canEdit = true;
+        status.editHint = '';
+        return status;
+      }
+
+      function updateExistingActionButtons() {
+        if (!dom.existingLoadButton && !dom.existingCopyButton) return;
+        const status = getExistingSelectionStatus();
+        if (dom.existingLoadButton) {
+          dom.existingLoadButton.disabled = !status.canEdit;
+          if (status.editHint) {
+            dom.existingLoadButton.setAttribute('title', status.editHint);
+          } else {
+            dom.existingLoadButton.removeAttribute('title');
+          }
+        }
+        if (dom.existingCopyButton) {
+          dom.existingCopyButton.disabled = !status.canCopy;
+          if (status.copyHint) {
+            dom.existingCopyButton.setAttribute('title', status.copyHint);
+          } else {
+            dom.existingCopyButton.removeAttribute('title');
+          }
+        }
+      }
+
+      function toCopySummaryText(summaryText, fallbackName) {
+        const text = String(summaryText || '').trim();
+        if (text) {
+          if (text.startsWith('Copied from')) return text;
+          if (text.startsWith('Editing:')) {
+            return text.replace(/^Editing:/, 'Copied from:');
+          }
+          if (text.startsWith('Editing existing event')) {
+            return text.replace(/^Editing/, 'Copied from');
+          }
+          return `Copied from: ${text}`;
+        }
+        const name = normalizeText(fallbackName || '');
+        return name ? `Copied from: ${name}` : 'Copied from existing event';
+      }
+
+      function copyExistingSelectionFromSummary() {
+        if (!state) return;
+        const summaryText = toCopySummaryText(state.existingSelectionSummary, state.name);
+        clearEditingState();
+        setExistingSelectionSummary(summaryText, 'copy');
+        scheduleUrlUpdate();
+        showToast('Event copied into a new draft.', 'info');
+      }
+
+      function applyExistingSelection() {
+        const selection = resolveExistingSelection('edit');
+        if (selection.error) {
+          showToast(selection.error, 'warn');
           return;
         }
-        if (mode !== 'series' && endDate.getTime() < now.getTime()) {
+
+        const {
+          mode,
+          baseEvent,
+          eventData,
+          startDate,
+          endDate,
+          recurrence,
+          summaryResult,
+          occurrenceId
+        } = selection;
+        const now = new Date();
+
+        if (mode === 'series' && baseEvent && baseEvent.recurrence && existingCalendarIndex) {
+          const futureOccurrences = buildOccurrenceResultsForEvent(existingCalendarIndex, baseEvent, {
+            now,
+            maxCount: 1,
+            windowDays: OCCURRENCE_LOOKAHEAD_DAYS
+          });
+          if (!futureOccurrences.length) {
+            showToast('This series has already ended.', 'warn');
+            return;
+          }
+        } else if (mode !== 'series' && !isEndDateEditable(endDate, now)) {
           showToast('Past events cannot be edited.', 'warn');
           return;
         }
@@ -2805,9 +2946,47 @@
         scheduleEventPush();
         syncExistingCitySelection();
 
-        const summaryText = buildExistingSelectionText(summaryResult, mode, startDate, endDate);
-        updateExistingSelectionSummary(summaryText);
+        const summaryText = buildExistingSelectionText(summaryResult, mode, startDate, endDate, 'edit');
+        setExistingSelectionSummary(summaryText, 'edit');
         showToast('Event loaded. Edit the form as usual.', 'info');
+        closeExistingPanel();
+      }
+
+      function copyExistingSelection() {
+        const selection = resolveExistingSelection('copy');
+        if (selection.error) {
+          showToast(selection.error, 'warn');
+          return;
+        }
+
+        const {
+          mode,
+          eventData,
+          startDate,
+          endDate,
+          recurrence,
+          summaryResult
+        } = selection;
+
+        selectedBar = null;
+        state = buildExistingState(eventData, {
+          cityKey: eventData.city || state.city,
+          startDate,
+          endDate,
+          recurrence
+        });
+        clearEditingState();
+
+        applyStateToForm();
+        populateVenueOptions(state.city);
+        updateCalendarSource();
+        refreshUi();
+        scheduleEventPush();
+        syncExistingCitySelection();
+
+        const summaryText = buildExistingSelectionText(summaryResult, mode, startDate, endDate, 'copy');
+        setExistingSelectionSummary(summaryText, 'copy');
+        showToast('Event copied into a new draft.', 'info');
         closeExistingPanel();
       }
 
@@ -2844,9 +3023,11 @@
         };
       }
 
-      function buildExistingSelectionText(result, mode, startDate, endDate) {
-        const name = (result.event.name || result.baseEvent?.name || 'Event').trim();
-        const pieces = [`Editing: ${name}`];
+      function buildExistingSelectionText(result, mode, startDate, endDate, action = 'edit') {
+        const rawName = (result.event.name || result.baseEvent?.name || '').trim();
+        const label = action === 'copy' ? 'Copied from' : 'Editing';
+        const header = rawName ? `${label}: ${rawName}` : `${label} existing event`;
+        const pieces = [header];
         if (mode === 'series') {
           const recurrenceLabel = formatRecurrenceLabel(result.baseEvent || result.event);
           const detail = recurrenceLabel ? `Series · ${recurrenceLabel}` : 'Series';
@@ -3023,8 +3204,27 @@
         dom.existingSelectionText.textContent = text;
       }
 
+      function setExistingSelectionSummary(text, action = '') {
+        if (state) {
+          state.existingSelectionSummary = text || '';
+          state.existingSelectionAction = action || '';
+        }
+        updateExistingSelectionSummary(text);
+        if (state) {
+          scheduleUrlUpdate();
+        }
+      }
+
       function syncExistingSelectionSummaryFromState() {
-        if (!state || !state.isEditingExisting) {
+        if (!state) {
+          updateExistingSelectionSummary('');
+          return;
+        }
+        if (state.existingSelectionSummary) {
+          updateExistingSelectionSummary(state.existingSelectionSummary);
+          return;
+        }
+        if (!state.isEditingExisting) {
           updateExistingSelectionSummary('');
           return;
         }
@@ -3034,6 +3234,8 @@
           : (state.editingExistingMode === 'occurrence' ? 'Occurrence' : '');
         const suffix = modeLabel ? ` (${modeLabel})` : '';
         const summary = name ? `Editing: ${name}${suffix}` : `Editing existing event${suffix}`;
+        state.existingSelectionSummary = summary;
+        state.existingSelectionAction = 'edit';
         updateExistingSelectionSummary(summary);
       }
 
@@ -3074,18 +3276,23 @@
         setExistingPanelExpanded(false);
       }
 
+      function clearEditingState() {
+        if (!state) return;
+        state.isEditingExisting = false;
+        state.editingExistingId = '';
+        state.editingExistingMode = 'occurrence';
+        state.editingExistingOccurrenceId = '';
+      }
+
       function clearExistingSelection(options = {}) {
         const { resetInputs = false } = options;
         selectedExistingResult = null;
         selectedExistingOccurrence = null;
         pendingExistingOccurrenceId = '';
         updateExistingModeUi(null);
-        updateExistingSelectionSummary('');
+        setExistingSelectionSummary('', '');
         if (state) {
-          state.isEditingExisting = false;
-          state.editingExistingId = '';
-          state.editingExistingMode = 'occurrence';
-          state.editingExistingOccurrenceId = '';
+          clearEditingState();
           scheduleUrlUpdate();
         }
         if (resetInputs) {
@@ -3132,7 +3339,9 @@
           isEditingExisting: false,
           editingExistingId: '',
           editingExistingMode: 'occurrence',
-          editingExistingOccurrenceId: ''
+          editingExistingOccurrenceId: '',
+          existingSelectionSummary: '',
+          existingSelectionAction: ''
         };
       }
 
@@ -3236,6 +3445,17 @@
             case 'img':
               overrides.image = value;
               break;
+            case 'esummary':
+            case 'esum':
+              overrides.existingSelectionSummary = value;
+              break;
+            case 'eaction': {
+              const normalized = String(value).trim().toLowerCase();
+              overrides.existingSelectionAction = normalized === 'copy'
+                ? 'copy'
+                : (normalized === 'edit' ? 'edit' : '');
+              break;
+            }
             case 'edit':
             case 'editing':
               overrides.isEditingExisting = parseBooleanParam(value);
@@ -3264,6 +3484,12 @@
         });
         if (!sawEditFlag && (overrides.editingExistingId || overrides.editingExistingMode || overrides.editingExistingOccurrenceId)) {
           overrides.isEditingExisting = true;
+        }
+        if (overrides.existingSelectionAction === 'copy') {
+          overrides.isEditingExisting = false;
+          overrides.editingExistingId = '';
+          overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
+          overrides.editingExistingOccurrenceId = '';
         }
         if (overrides.isEditingExisting) {
           if (!overrides.editingExistingMode) {
@@ -3590,6 +3816,9 @@
         if (dom.existingLoadButton) {
           dom.existingLoadButton.addEventListener('click', applyExistingSelection);
         }
+        if (dom.existingCopyButton) {
+          dom.existingCopyButton.addEventListener('click', copyExistingSelection);
+        }
         if (dom.existingClearButton) {
           dom.existingClearButton.addEventListener('click', () => {
             clearExistingSelection({ resetInputs: true });
@@ -3599,6 +3828,9 @@
           dom.existingChangeButton.addEventListener('click', () => {
             openExistingPanel({ focusSearch: true });
           });
+        }
+        if (dom.existingCopySummaryButton) {
+          dom.existingCopySummaryButton.addEventListener('click', copyExistingSelectionFromSummary);
         }
         if (dom.existingClearSummaryButton) {
           dom.existingClearSummaryButton.addEventListener('click', () => {
@@ -4480,6 +4712,9 @@
         if (state.useVenueWebsite) params.set('vweb', '1');
         if (state.useVenueInstagram) params.set('vinsta', '1');
         if (state.useVenueFacebook) params.set('vfb', '1');
+        const summaryText = String(state.existingSelectionSummary || '').trim();
+        if (summaryText) params.set('esummary', summaryText);
+        if (state.existingSelectionAction) params.set('eaction', state.existingSelectionAction);
         if (state.isEditingExisting) {
           params.set('edit', '1');
           if (state.editingExistingId) params.set('editid', state.editingExistingId);
