@@ -275,15 +275,14 @@ const scraperConfig = {
     },
     {
       name: "Dallas Eagle",
-      enabled: true,
+      enabled: false,
       urls: ["https://www.eventbrite.com/o/77139864473"],
-      alwaysBear: true,
+      alwaysBear: false,
       urlDiscoveryDepth: 0,
       maxAdditionalUrls: null,
       dryRun: false,
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
         facebook: { priority: ["static"], merge: "clobber" },
         website: { priority: ["static"], merge: "clobber" },
@@ -300,7 +299,6 @@ const scraperConfig = {
         cover: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
-        shortName: { value: "DALLAS EAGLE" },
         website: { value: "https://www.thedallaseagle.com" },
         facebook: { value: "https://www.facebook.com/lonestareagle" },
         instagram: { value: "https://www.instagram.com/thedallaseagle/" },
