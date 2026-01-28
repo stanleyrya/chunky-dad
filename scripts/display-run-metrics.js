@@ -1472,11 +1472,11 @@ class MetricsDisplay {
 
       const right = row.addStack();
       right.layoutVertically();
-      right.rightAlignContent();
 
       const statusIcon = this.buildStatusIcon(statusMeta, 12);
       const statusImage = right.addImage(statusIcon);
       statusImage.imageSize = new Size(12, 12);
+      statusImage.rightAlignImage();
 
       const historyFinalEvents = (item.historyRuns || 0) > 0
         ? (item.historyTotals?.final_bear_events || 0)
@@ -1493,6 +1493,7 @@ class MetricsDisplay {
       const infoText = right.addText(infoLabel);
       infoText.font = Font.systemFont(FONT_SIZES.widget.small);
       infoText.textColor = new Color(BRAND.textMuted);
+      infoText.rightAlignText();
     });
 
     if (parserHealth.items.length > items.length) {
@@ -1751,6 +1752,873 @@ class MetricsDisplay {
     }
 
     return widget;
+  }
+
+  escapeHtml(value) {
+    return String(value === null || value === undefined ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  imageToDataUri(image) {
+    if (!image) return null;
+    try {
+      const data = Data.fromPNG(image);
+      return `data:image/png;base64,${data.toBase64String()}`;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  getRunStatusBadgeClass(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'success') return 'success';
+    if (normalized === 'partial') return 'warning';
+    if (normalized === 'failed') return 'danger';
+    return 'neutral';
+  }
+
+  getParserStatusBadgeClass(statusKey) {
+    if (statusKey === 'healthy') return 'success';
+    if (statusKey === 'warning') return 'warning';
+    if (statusKey === 'failed') return 'danger';
+    return 'neutral';
+  }
+
+  async renderAppHtml(data, view, sortState) {
+    const html = await this.buildAppHtml(data, view, sortState);
+    await WebView.loadHTML(html, null, null, true);
+  }
+
+  async buildAppHtml(data, view, sortState) {
+    const latest = data.latestRecord;
+    const summary = data.summary;
+    const parserHealth = data.parserHealth || {};
+    const parserItems = Array.isArray(parserHealth.items) ? parserHealth.items : [];
+    const records = Array.isArray(data.records) ? data.records : [];
+    const parserSort = sortState || data.sortState || this.resolveSort(view);
+    const parserSortResolved = parserSort || this.getDefaultSortForView({ mode: 'parsers' });
+    const runSortState = data.runSortState || this.resolveRunSort(view);
+    const runSortResolved = runSortState || this.getDefaultRunSort();
+    const runFilters = data.runFilters || this.resolveRunFilters(view);
+    const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
+    const filteredRuns = this.applyRunFilters(runItems, runFilters);
+    const sortedRuns = this.sortRunItems(filteredRuns, runSortResolved);
+    const recentRecords = this.getRecentRecords(records, this.getAppHistoryLimit());
+    const chartSize = this.getAppChartSize();
+    const safeView = view?.mode ? view : { mode: 'dashboard' };
+    const viewMode = safeView.mode;
+
+    const escapeHtml = value => this.escapeHtml(value);
+
+    const buildLink = (label, url, className = '') => {
+      const classes = className ? ` class="${className}"` : '';
+      return `<a${classes} href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
+    };
+
+    const buildChip = (label, url, isActive = false) => {
+      const className = `chip${isActive ? ' active' : ''}`;
+      return buildLink(label, url, className);
+    };
+
+    const buildBadge = (label, variant) => `<span class="badge ${variant}">${escapeHtml(label)}</span>`;
+
+    const buildMetric = (label, value) => `
+      <div class="metric">
+        <div class="metric-value">${escapeHtml(value)}</div>
+        <div class="metric-label">${escapeHtml(label)}</div>
+      </div>`;
+
+    const buildSection = (title, body, subtitleHtml) => `
+      <div class="card">
+        <div class="section-title">${escapeHtml(title)}</div>
+        ${subtitleHtml ? `<div class="section-subtitle">${subtitleHtml}</div>` : ''}
+        ${body}
+      </div>`;
+
+    const buildEmptyCard = (title, subtitle) => buildSection(
+      title,
+      subtitle ? `<div class="muted">${escapeHtml(subtitle)}</div>` : '',
+      null
+    );
+
+    const buildChartCard = (title, imageData, subtitle) => {
+      if (!imageData) return '';
+      return `
+      <div class="card">
+        <div class="section-title">${escapeHtml(title)}</div>
+        <img class="chart" src="${escapeHtml(imageData)}" alt="${escapeHtml(title)}">
+        ${subtitle ? `<div class="chart-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+      </div>`;
+    };
+
+    const buildParserTable = items => {
+      if (!items.length) {
+        return `<div class="muted">No parser metrics available.</div>`;
+      }
+      const rows = items.map(item => {
+        const statusMeta = this.getParserStatusMeta(item);
+        const badgeClass = this.getParserStatusBadgeClass(statusMeta.key);
+        const parserUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: item.name });
+        const summaryLine = this.formatEventSummary(item);
+        const actions = this.formatActionsCompact(item.actions);
+        const issues = this.formatActionsIssues(item.actions);
+        const finalEvents = this.formatNumber(item.finalBearEvents || 0);
+        const lastRun = this.formatLastRunLabel(item.lastRunAt);
+        return `
+          <tr>
+            <td>
+              <div class="cell-title">${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link')}</div>
+              <div class="cell-subtitle">${escapeHtml(summaryLine)}</div>
+            </td>
+            <td>${buildBadge(statusMeta.label, badgeClass)}</td>
+            <td class="num">${escapeHtml(finalEvents)}</td>
+            <td class="num">${escapeHtml(actions)}</td>
+            <td class="num">${escapeHtml(issues)}</td>
+            <td>${escapeHtml(lastRun)}</td>
+          </tr>`;
+      }).join('');
+      return `
+        <div class="table-wrapper">
+          <table class="metrics-table">
+            <thead>
+              <tr>
+                <th>Parser</th>
+                <th>Status</th>
+                <th class="num">Final</th>
+                <th class="num">Actions</th>
+                <th class="num">Issues</th>
+                <th>Last run</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>`;
+    };
+
+    const buildRunTable = items => {
+      if (!items.length) {
+        return `<div class="muted">No runs match filters.</div>`;
+      }
+      const rows = items.map(run => {
+        const statusMeta = this.getStatusMeta(run.status);
+        const badgeClass = this.getRunStatusBadgeClass(run.status);
+        const runUrl = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
+          runId: run.runId,
+          readOnly: true
+        });
+        const subtitleParts = [];
+        if (run.parsersCount) subtitleParts.push(`${run.parsersCount} parsers`);
+        if (run.durationMs) subtitleParts.push(this.formatDuration(run.durationMs));
+        const subtitle = subtitleParts.join(' • ');
+        const issuesLabel = `E${run.errorsCount || 0} W${run.warningsCount || 0}`;
+        return `
+          <tr>
+            <td>
+              <div class="cell-title">${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}</div>
+              ${subtitle ? `<div class="cell-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+            </td>
+            <td>${buildBadge(statusMeta.label, badgeClass)}</td>
+            <td class="num">${escapeHtml(this.formatNumber(run.finalEvents || 0))}</td>
+            <td class="num">${escapeHtml(issuesLabel)}</td>
+            <td>${escapeHtml(this.formatLastRunLabel(run.finishedAt))}</td>
+          </tr>`;
+      }).join('');
+      return `
+        <div class="table-wrapper">
+          <table class="metrics-table">
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th>Status</th>
+                <th class="num">Final</th>
+                <th class="num">Issues</th>
+                <th>Finished</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>`;
+    };
+
+    const buildSortChips = (options, currentSort, viewKey, directionResolver) => {
+      return options.map(option => {
+        const isActive = currentSort?.key === option.key;
+        const activeDirection = currentSort?.direction || directionResolver(option.key);
+        const nextDirection = isActive
+          ? (activeDirection === 'asc' ? 'desc' : 'asc')
+          : (option.defaultDirection || directionResolver(option.key));
+        const label = `${option.label}${isActive ? ` (${activeDirection})` : ''}`;
+        const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
+          view: viewKey,
+          sort: option.key,
+          dir: nextDirection
+        });
+        return buildChip(label, url, isActive);
+      }).join('');
+    };
+
+    const runFilterState = {
+      status: runFilters?.status || null,
+      parserFilter: runFilters?.parserFilter || null,
+      days: runFilters?.days || null
+    };
+
+    const buildRunFilterChip = (label, overrides, isActive) => {
+      const nextFilters = { ...runFilterState, ...overrides };
+      const url = this.buildRunListUrl(runSortResolved, nextFilters);
+      return buildChip(label, url, isActive);
+    };
+
+    const statusFilter = this.normalizeRunStatusFilter(runFilters?.status);
+    const statusOptions = [
+      { label: 'All', value: null },
+      { label: 'Success', value: 'success' },
+      { label: 'Partial', value: 'partial' },
+      { label: 'Failed', value: 'failed' },
+      { label: 'Issues', value: 'issues' }
+    ];
+    const statusChips = statusOptions.map(option => buildRunFilterChip(
+      option.label,
+      { status: option.value },
+      statusFilter === option.value || (!statusFilter && !option.value)
+    )).join('');
+
+    const dayOptions = [
+      { label: 'Any time', value: null },
+      { label: '7d', value: 7 },
+      { label: '30d', value: 30 },
+      { label: '90d', value: 90 }
+    ];
+    const dayChips = dayOptions.map(option => buildRunFilterChip(
+      option.label,
+      { days: option.value },
+      (runFilters?.days || null) === option.value
+    )).join('');
+
+    const parserNames = Array.from(new Set(parserItems.map(item => item?.name).filter(Boolean))).slice(0, 8);
+    const activeParserFilter = runFilters?.parserFilter ? String(runFilters.parserFilter).toLowerCase() : null;
+    const parserChips = ['All parsers', ...parserNames].map((name, index) => {
+      if (index === 0) {
+        return buildRunFilterChip(name, { parserFilter: null }, !activeParserFilter);
+      }
+      const isActive = activeParserFilter === String(name).toLowerCase();
+      return buildRunFilterChip(name, { parserFilter: name }, isActive);
+    }).join('');
+
+    const cards = [];
+    if (!latest && viewMode !== 'aggregate' && viewMode !== 'runs') {
+      cards.push(buildEmptyCard('No metrics found yet.', 'Run the scraper to generate metrics.'));
+    } else if (viewMode === 'runs' && runItems.length === 0) {
+      cards.push(buildEmptyCard('No run metrics found.', 'Run the scraper to generate metrics.'));
+    } else if (viewMode === 'dashboard') {
+      const lastRun = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'Unknown';
+      const statusMeta = this.getStatusMeta(latest?.status);
+      const totals = latest?.totals || {};
+      const finalEvents = totals.final_bear_events || 0;
+      const historyCount = Math.max(recentRecords.length, 1);
+
+      const dashboardBody = `
+        <div class="metrics-grid">
+          ${buildMetric('Final bear events', this.formatNumber(finalEvents))}
+          ${buildMetric('Calendar events', this.formatNumber(totals.calendar_events || 0))}
+          ${buildMetric('Duplicates removed', this.formatNumber(totals.duplicates_removed || 0))}
+          ${buildMetric('Run duration', this.formatDuration(latest?.duration_ms))}
+        </div>
+        <div class="meta-row">
+          <div class="meta-item">
+            <span class="meta-label">Last run</span>
+            <span class="meta-value">${escapeHtml(lastRun)}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Status</span>
+            ${buildBadge(statusMeta.label, this.getRunStatusBadgeClass(latest?.status))}
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Issues</span>
+            <span class="meta-value">${escapeHtml(`E${latest?.errors_count || 0} W${latest?.warnings_count || 0}`)}</span>
+          </div>
+        </div>`;
+      cards.push(buildSection('Dashboard', dashboardBody));
+
+      const finalSeries = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
+      const finalChart = this.buildLineChartImage(finalSeries, chartSize, {
+        lineColor: new Color(CHART_STYLE.line),
+        fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
+      });
+      const finalChartData = this.imageToDataUri(finalChart);
+      cards.push(buildChartCard(`Final events (last ${historyCount} runs)`, finalChartData, `Latest: ${this.formatNumber(finalEvents)}`));
+
+      const durationSeries = this.getSeries(recentRecords, record => this.getDurationMinutes(record?.duration_ms));
+      const durationChart = this.buildLineChartImage(durationSeries, chartSize, {
+        lineColor: new Color(CHART_STYLE.lineSecondary),
+        fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
+      });
+      const durationChartData = this.imageToDataUri(durationChart);
+      cards.push(buildChartCard(`Duration (minutes, last ${historyCount} runs)`, durationChartData, `Latest: ${this.formatDuration(latest?.duration_ms)}`));
+
+      const parserLine = parserHealth.hasConfig
+        ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
+        : `Parsers run: ${parserHealth.ranCount || 0}`;
+      const sortLabel = parserSortResolved ? `Sort: ${this.getSortLabel(parserSortResolved)}` : null;
+      const parserSubtitle = `${escapeHtml(parserLine)}${sortLabel ? ` • ${escapeHtml(sortLabel)}` : ''}`;
+      const sortedItems = this.sortParserItems(parserItems, parserSortResolved).slice(0, 8);
+      let parserTableHtml = buildParserTable(sortedItems);
+      if (parserItems.length > sortedItems.length) {
+        const moreUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+        parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers • ${buildLink('View all parsers', moreUrl, 'text-link')}</div>`;
+      }
+      cards.push(buildSection('Parser runs (latest)', parserTableHtml, parserSubtitle));
+
+      if (summary?.totals) {
+        const summaryTotals = summary.totals;
+        const totalsGrid = `
+          <div class="metrics-grid">
+            ${buildMetric('Runs', this.formatNumber(summaryTotals.runs || 0))}
+            ${buildMetric('Success', this.formatNumber(summaryTotals.statuses?.success || 0))}
+            ${buildMetric('Partial', this.formatNumber(summaryTotals.statuses?.partial || 0))}
+            ${buildMetric('Failed', this.formatNumber(summaryTotals.statuses?.failed || 0))}
+            ${buildMetric('Final events', this.formatNumber(summaryTotals.totals?.final_bear_events || 0))}
+            ${buildMetric('Calendar events', this.formatNumber(summaryTotals.totals?.calendar_events || 0))}
+          </div>
+          <div class="meta-row">
+            <div class="meta-item">
+              <span class="meta-label">Actions</span>
+              <span class="meta-value">${escapeHtml(this.formatActions(summaryTotals.actions))}</span>
+            </div>
+          </div>`;
+        cards.push(buildSection('All-time totals', totalsGrid));
+      }
+    } else if (viewMode === 'parsers') {
+      const parserLine = parserHealth.hasConfig
+        ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
+        : `Parsers run: ${parserHealth.ranCount || 0}`;
+      const sortChips = buildSortChips(this.getParserSortOptions(), parserSortResolved, 'parsers', this.getDefaultSortDirection.bind(this));
+      const sortedItems = this.sortParserItems(parserItems, parserSortResolved);
+      const body = `
+        <div class="chip-group">${sortChips}</div>
+        ${buildParserTable(sortedItems)}`;
+      cards.push(buildSection('Parser runs', body, escapeHtml(parserLine)));
+    } else if (viewMode === 'runs') {
+      const totalRuns = runItems.length;
+      const filteredCount = filteredRuns.length;
+      const summarySubtitle = totalRuns === filteredCount
+        ? null
+        : `Filtered from ${this.formatNumber(totalRuns)}`;
+      const runSubtitle = `Runs: ${this.formatNumber(filteredCount)}${summarySubtitle ? ` • ${summarySubtitle}` : ''}`;
+      const runSortChips = buildSortChips(this.getRunSortOptions(), runSortResolved, 'runs', this.getDefaultRunSortDirection.bind(this));
+      const filtersHtml = `
+        <div class="filter-block">
+          <div class="filter-label">Status</div>
+          <div class="chip-group">${statusChips}</div>
+        </div>
+        <div class="filter-block">
+          <div class="filter-label">Age</div>
+          <div class="chip-group">${dayChips}</div>
+        </div>
+        <div class="filter-block">
+          <div class="filter-label">Parser</div>
+          <div class="chip-group">${parserChips}</div>
+        </div>
+        <div class="filter-block">
+          <div class="filter-label">Sort</div>
+          <div class="chip-group">${runSortChips}</div>
+        </div>`;
+      const body = `
+        ${filtersHtml}
+        ${buildRunTable(sortedRuns)}`;
+      cards.push(buildSection('All runs', body, escapeHtml(runSubtitle)));
+    } else if (viewMode === 'aggregate') {
+      if (!summary?.totals) {
+        cards.push(buildEmptyCard('No summary metrics found.', 'Run the scraper to generate summary metrics.'));
+      } else {
+        const totals = summary.totals;
+        const totalsGrid = `
+          <div class="metrics-grid">
+            ${buildMetric('Runs', this.formatNumber(totals.runs || 0))}
+            ${buildMetric('Success', this.formatNumber(totals.statuses?.success || 0))}
+            ${buildMetric('Partial', this.formatNumber(totals.statuses?.partial || 0))}
+            ${buildMetric('Failed', this.formatNumber(totals.statuses?.failed || 0))}
+            ${buildMetric('Final events', this.formatNumber(totals.totals?.final_bear_events || 0))}
+            ${buildMetric('Calendar events', this.formatNumber(totals.totals?.calendar_events || 0))}
+          </div>
+          <div class="meta-row">
+            <div class="meta-item">
+              <span class="meta-label">Actions</span>
+              <span class="meta-value">${escapeHtml(this.formatActions(totals.actions))}</span>
+            </div>
+          </div>`;
+        cards.push(buildSection('All-time totals', totalsGrid));
+
+        const series = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
+        const totalsChart = this.buildLineChartImage(series, chartSize, {
+          lineColor: new Color(CHART_STYLE.line),
+          fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
+        });
+        const totalsChartData = this.imageToDataUri(totalsChart);
+        cards.push(buildChartCard(`Final events (last ${Math.max(recentRecords.length, 1)} runs)`, totalsChartData));
+
+        const parserTotals = summary.by_parser_name || {};
+        const parserRows = Object.keys(parserTotals).map(name => {
+          const totalsBucket = parserTotals[name]?.totals;
+          return {
+            name,
+            finalBearEvents: totalsBucket?.totals?.final_bear_events || 0,
+            runs: totalsBucket?.runs || 0
+          };
+        }).sort((a, b) => b.finalBearEvents - a.finalBearEvents);
+
+        if (parserRows.length > 0) {
+          const topRows = parserRows.slice(0, 8).map(row => `
+            <tr>
+              <td>${escapeHtml(row.name)}</td>
+              <td class="num">${escapeHtml(this.formatNumber(row.finalBearEvents))}</td>
+              <td class="num">${escapeHtml(this.formatNumber(row.runs))}</td>
+            </tr>`).join('');
+          const topTable = `
+            <div class="table-wrapper">
+              <table class="metrics-table">
+                <thead>
+                  <tr>
+                    <th>Parser</th>
+                    <th class="num">Final events</th>
+                    <th class="num">Runs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${topRows}
+                </tbody>
+              </table>
+            </div>`;
+          cards.push(buildSection('Top parsers (all-time)', topTable));
+        }
+      }
+    } else if (viewMode === 'parser') {
+      const backUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+      const parserName = safeView.parserName || 'Parser';
+      const headerBody = `<div class="chip-group">${buildChip('Back to parser runs', backUrl, false)}</div>`;
+      cards.push(buildSection('Parser detail', headerBody, escapeHtml(parserName)));
+
+      const record = parserItems.find(item => item.name === safeView.parserName);
+      const hasAllTime = (record?.allTimeRuns || 0) > 0;
+      const hasHistory = (record?.historyRuns || 0) > 0;
+      const hasLastRun = !!record?.lastRunAt;
+
+      if (!record || (!record.ran && !hasAllTime && !hasHistory)) {
+        cards.push(buildEmptyCard('No parser metrics available.', 'Run the parser to collect metrics.'));
+      } else {
+        if (hasAllTime || hasHistory) {
+          const totals = hasAllTime ? (record.allTimeTotals || {}) : (record.historyTotals || {});
+          const runsCount = hasAllTime ? record.allTimeRuns : record.historyRuns;
+          const actions = hasAllTime ? record.allTimeActions : record.historyActions;
+          const avgDurationMs = runsCount > 0
+            ? Math.round((hasAllTime ? record.allTimeDurationMs : record.historyDurationMs) / runsCount)
+            : null;
+          const metricsGrid = `
+            <div class="metrics-grid">
+              ${buildMetric('Final events', this.formatNumber(totals.final_bear_events || 0))}
+              ${buildMetric('Total events', this.formatNumber(totals.total_events || 0))}
+              ${buildMetric('Runs', this.formatNumber(runsCount || 0))}
+              ${buildMetric('Avg duration', avgDurationMs ? this.formatDuration(avgDurationMs) : 'n/a')}
+            </div>
+            <div class="meta-row">
+              <div class="meta-item">
+                <span class="meta-label">Actions</span>
+                <span class="meta-value">${escapeHtml(this.formatActions(actions))}</span>
+              </div>
+            </div>`;
+          cards.push(buildSection(hasAllTime ? 'All-time totals' : 'Recent totals', metricsGrid));
+        } else {
+          cards.push(buildEmptyCard('History summary unavailable.', 'Run the scraper to generate summary metrics.'));
+        }
+
+        if (hasLastRun) {
+          const lastRunBody = `
+            <div class="metrics-grid">
+              ${buildMetric('Final events', this.formatNumber(record.finalBearEvents || 0))}
+              ${buildMetric('Duration', this.formatDuration(record.durationMs))}
+              ${buildMetric('Actions', this.formatActions(record.actions))}
+            </div>`;
+          const lastRunSubtitle = `Last run ${this.formatRelativeTime(record.lastRunAt)}`;
+          cards.push(buildSection('Latest run', lastRunBody, escapeHtml(lastRunSubtitle)));
+        } else {
+          cards.push(buildEmptyCard('No recent run data.', 'Only historical totals are available.'));
+        }
+
+        const parserSeries = this.getParserSeries(recentRecords, safeView.parserName);
+        const parserChart = this.buildLineChartImage(parserSeries, chartSize, {
+          lineColor: new Color(CHART_STYLE.lineSecondary),
+          fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
+        });
+        const parserChartData = this.imageToDataUri(parserChart);
+        cards.push(buildChartCard(`Events per run (last ${Math.max(recentRecords.length, 1)} runs)`, parserChartData));
+      }
+    } else {
+      cards.push(buildEmptyCard('Unknown view.', 'Open the dashboard to get started.'));
+    }
+
+    const logoImage = await this.loadLogoImage();
+    const logoData = this.imageToDataUri(logoImage);
+    const viewLabel = this.getViewLabel(safeView);
+    const latestRunLabel = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'No runs yet';
+    const headerMeta = latest ? `Latest run ${latestRunLabel}` : 'No run data yet';
+    const lastRunUrl = latest?.run_id
+      ? this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, { runId: latest.run_id, readOnly: true })
+      : null;
+    const lastRunButton = lastRunUrl ? buildLink('Open last run', lastRunUrl, 'button') : '';
+    const navLinks = this.getViewOptions().map(option => {
+      const isActive = viewMode === option.mode || (viewMode === 'parser' && option.mode === 'parsers');
+      const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: option.mode });
+      return buildChip(option.label, url, isActive);
+    }).join('');
+    const parserChip = viewMode === 'parser'
+      ? `<span class="chip active">${escapeHtml(`Parser: ${safeView.parserName || 'detail'}`)}</span>`
+      : '';
+    const navHtml = `${navLinks}${parserChip}`;
+
+    const isDarkMode = Device.isUsingDarkAppearance();
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chunky Dad Metrics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: ${BRAND.primary};
+      --secondary-color: ${BRAND.secondary};
+      --accent-color: #764ba2;
+      --text-primary: #1f2544;
+      --text-secondary: #5a637a;
+      --text-inverse: #ffffff;
+      --background-primary: #ffffff;
+      --background-light: #f5f6ff;
+      --border-color: rgba(102, 126, 234, 0.15);
+      --card-shadow: 0 6px 18px rgba(35, 39, 71, 0.08);
+      --card-hover: 0 8px 24px rgba(102, 126, 234, 0.18);
+      --color-success: ${BRAND.success};
+      --color-warning: ${BRAND.warning};
+      --color-danger: ${BRAND.danger};
+      --color-neutral: #a7b0cc;
+    }
+    ${isDarkMode ? `
+    :root {
+      --text-primary: #f1f2ff;
+      --text-secondary: #c1c6e2;
+      --background-primary: #1b1c2b;
+      --background-light: #11121f;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --card-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      --card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+      --color-neutral: #b2b8d2;
+    }
+    ` : ''}
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: var(--background-light);
+      color: var(--text-primary);
+    }
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .header {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+      color: var(--text-inverse);
+      padding: 24px;
+      border-radius: 18px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 20px;
+    }
+    .header-main {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      object-fit: contain;
+      padding: 6px;
+    }
+    .header-text {
+      min-width: 180px;
+    }
+    .header-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .header-subtitle {
+      font-size: 13px;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+    .header-meta {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 6px;
+    }
+    .header-actions {
+      margin-left: auto;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #ffffff;
+      color: var(--primary-color);
+      font-weight: 600;
+      font-size: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    }
+    .nav-tabs {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.2);
+      color: var(--text-inverse);
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .chip.active {
+      background: #ffffff;
+      color: var(--primary-color);
+    }
+    .content {
+      display: grid;
+      gap: 16px;
+    }
+    .card {
+      background: var(--background-primary);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--card-shadow);
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .section-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      background: var(--background-light);
+      padding: 12px;
+      border-radius: 12px;
+    }
+    .metric-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .meta-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+    .meta-value {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .muted {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+    .chip-group .chip {
+      background: rgba(102, 126, 234, 0.12);
+      color: var(--primary-color);
+    }
+    .chip-group .chip.active {
+      background: var(--primary-color);
+      color: #ffffff;
+    }
+    .filter-block {
+      margin-bottom: 10px;
+    }
+    .filter-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    .metrics-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .metrics-table th {
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .metrics-table td {
+      padding: 10px 6px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+    }
+    .metrics-table tr:hover {
+      background: rgba(102, 126, 234, 0.05);
+    }
+    .num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .cell-title {
+      font-weight: 600;
+    }
+    .cell-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .row-link {
+      color: var(--primary-color);
+    }
+    .text-link {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge.success {
+      background: rgba(46, 213, 115, 0.18);
+      color: var(--color-success);
+    }
+    .badge.warning {
+      background: rgba(254, 202, 87, 0.2);
+      color: var(--color-warning);
+    }
+    .badge.danger {
+      background: rgba(255, 107, 107, 0.18);
+      color: var(--color-danger);
+    }
+    .badge.neutral {
+      background: rgba(167, 176, 204, 0.22);
+      color: var(--color-neutral);
+    }
+    .chart {
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 12px;
+      background: var(--background-light);
+      padding: 8px;
+    }
+    .chart-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+    .table-footer {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+    @media (max-width: 640px) {
+      body {
+        padding: 14px;
+      }
+      .header {
+        padding: 18px;
+      }
+      .metrics-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-main">
+      ${logoData ? `<img class="logo" src="${escapeHtml(logoData)}" alt="Chunky Dad">` : ''}
+      <div class="header-text">
+        <div class="header-title">Chunky Dad Metrics</div>
+        <div class="header-subtitle">${escapeHtml(viewLabel)}</div>
+        <div class="header-meta">${escapeHtml(headerMeta)}</div>
+      </div>
+      ${lastRunButton ? `<div class="header-actions">${lastRunButton}</div>` : ''}
+    </div>
+    <div class="nav-tabs">${navHtml}</div>
+  </div>
+  <div class="content">
+    ${cards.join('\n')}
+  </div>
+</body>
+</html>`;
+
+    return html;
   }
 
   async renderAppTable(data, view, sortState) {
@@ -2482,7 +3350,7 @@ async function runMetricsDisplay() {
     const widget = await display.renderWidget(data, view);
     Script.setWidget(widget);
   } else {
-    await display.renderAppTable(data, view, sortState);
+    await display.renderAppHtml(data, view, sortState);
   }
 
   Script.complete();
