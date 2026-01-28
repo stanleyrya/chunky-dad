@@ -324,12 +324,39 @@ class SavedRunDisplay {
 try {
     const display = new SavedRunDisplay();
 
+    const toBool = (value, fallback) => {
+        if (value === undefined || value === null) return fallback;
+        if (typeof value === 'boolean') return value;
+        const normalized = String(value).toLowerCase();
+        if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true;
+        if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false;
+        return fallback;
+    };
+
+    const query = (typeof args !== 'undefined' && args.queryParameters) ? args.queryParameters : {};
+    const widgetParam = (typeof args !== 'undefined' && args.widgetParameter) ? args.widgetParameter : null;
+    const runIdFromQuery = query.runId || query.runid || null;
+    let runIdFromParam = null;
+    let lastFromParam = false;
+    if (widgetParam) {
+        const trimmed = String(widgetParam).trim();
+        if (trimmed.toLowerCase() === 'last') {
+            lastFromParam = true;
+        } else if (trimmed.toLowerCase().startsWith('runid:')) {
+            runIdFromParam = trimmed.slice('runid:'.length).trim();
+        }
+    }
+
+    const runId = runIdFromQuery || runIdFromParam || null;
+    const last = runId ? false : (toBool(query.last, false) || lastFromParam);
+    const presentHistoryDefault = !runId && !last;
+
     // Options: change these to control behavior
     const OPTIONS = {
-        last: false,           // set true to auto-load most recent
-        runId: null,           // or set to a specific runId like "20250101-120000"
-        presentHistory: true,  // default: present a picker
-        readOnly: true         // TOTAL OVERRIDE: forces isDryRun=true, set false for calendar updates
+        last: last,                           // set true to auto-load most recent
+        runId: runId,                         // or set to a specific runId like "20250101-120000"
+        presentHistory: toBool(query.presentHistory, presentHistoryDefault),
+        readOnly: toBool(query.readOnly, true) // TOTAL OVERRIDE: forces isDryRun=true, set false for calendar updates
     };
 
     await display.displaySavedRun(OPTIONS);
