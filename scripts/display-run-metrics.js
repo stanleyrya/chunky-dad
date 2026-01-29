@@ -567,19 +567,19 @@ class MetricsDisplay {
   }
 
   formatActionsCompact(actions) {
-    if (!actions) return 'N0 M0 U0';
+    if (!actions) return 'New 0 • Merge 0 • Update 0';
     const newCount = actions.new || 0;
     const mergeCount = actions.merge || 0;
     const updateCount = actions.update || 0;
-    return `N${newCount} M${mergeCount} U${updateCount}`;
+    return `New ${newCount} • Merge ${mergeCount} • Update ${updateCount}`;
   }
 
   formatActionsIssues(actions) {
-    if (!actions) return 'C0 Miss0';
+    if (!actions) return 'Conflicts 0 • Missing cal 0 • Other 0';
     const conflictCount = actions.conflict || 0;
     const missingCount = actions.missing_calendar || 0;
     const otherCount = actions.other || 0;
-    return `C${conflictCount} Miss${missingCount} O${otherCount}`;
+    return `Conflicts ${conflictCount} • Missing cal ${missingCount} • Other ${otherCount}`;
   }
 
   formatLastRunLabel(isoString) {
@@ -860,6 +860,17 @@ class MetricsDisplay {
     return WIDGET_STYLE.rowPadding;
   }
 
+  getWidgetColumnCount(family) {
+    if (family === 'small') return 1;
+    return 2;
+  }
+
+  getWidgetCellPadding(family, columns) {
+    if (family === 'small') return WIDGET_STYLE.rowPaddingCompact;
+    if (columns > 1) return WIDGET_STYLE.rowPaddingCompact;
+    return WIDGET_STYLE.rowPadding;
+  }
+
   addWidgetRow(widget, family) {
     const row = widget.addStack();
     row.layoutHorizontally();
@@ -871,6 +882,18 @@ class MetricsDisplay {
     const padding = this.getWidgetRowPadding(family);
     row.setPadding(padding.top, padding.left, padding.bottom, padding.right);
     return row;
+  }
+
+  addWidgetCell(container, family, columns) {
+    const cell = container.addStack();
+    cell.layoutVertically();
+    cell.spacing = 2;
+    const alpha = family === 'small' ? WIDGET_STYLE.rowBackgroundAlphaCompact : WIDGET_STYLE.rowBackgroundAlpha;
+    cell.backgroundColor = new Color(WIDGET_STYLE.rowBackground, alpha);
+    cell.cornerRadius = WIDGET_STYLE.rowRadius;
+    const padding = this.getWidgetCellPadding(family, columns);
+    cell.setPadding(padding.top, padding.left, padding.bottom, padding.right);
+    return cell;
   }
 
   getWidgetBadgeColors(variant) {
@@ -1083,6 +1106,35 @@ class MetricsDisplay {
       .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
       .join('&');
     return query ? `${base}&${query}` : base;
+  }
+
+  buildWidgetDashboardUrl(view, sortState, runSortState, runFilters) {
+    const safeView = view?.mode ? view : { mode: 'parsers' };
+    if (safeView.mode === 'runs') {
+      const sort = runSortState || this.getDefaultRunSort();
+      return this.buildRunListUrl(sort, runFilters || null);
+    }
+    if (safeView.mode === 'parsers') {
+      const sort = sortState || this.getDefaultSortForView(safeView);
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
+        view: 'parsers',
+        sort: sort?.key || null,
+        dir: sort?.direction || null
+      });
+    }
+    if (safeView.mode === 'parser') {
+      if (safeView.parserName) {
+        return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: safeView.parserName });
+      }
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+    }
+    if (safeView.mode === 'aggregate') {
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'aggregate' });
+    }
+    if (safeView.mode === 'dashboard') {
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'dashboard' });
+    }
+    return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
   }
 
   getQueryParams() {
@@ -1468,6 +1520,7 @@ class MetricsDisplay {
     const parserHealth = context.parserHealth;
     const sortState = context.sortState;
     const family = this.runtime.widgetFamily || 'medium';
+    const latestRunId = context.latest?.run_id || null;
 
     const title = widget.addText('Parser runs');
     title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
@@ -1487,79 +1540,92 @@ class MetricsDisplay {
     }
     widget.addSpacer(4);
 
+    const columns = this.getWidgetColumnCount(family);
     const maxRows = this.getWidgetMaxRows();
     const sortedItems = this.sortParserItems(parserHealth.items, sortState);
-    const items = sortedItems.slice(0, maxRows);
-    const nameLimit = family === 'small' ? 14 : (family === 'large' ? 22 : 18);
-    const showMetrics = family !== 'small';
-    const showIssues = family === 'large';
+    const items = sortedItems.slice(0, maxRows * columns);
+    const nameLimit = family === 'small' ? 14 : (family === 'large' ? 20 : 16);
+    const showDetails = family === 'large';
 
-    items.forEach((item, index) => {
+    for (let index = 0; index < items.length; index += columns) {
       if (index > 0) widget.addSpacer(4);
-      const statusMeta = this.getParserStatusMeta(item);
-      const row = this.addWidgetRow(widget, family);
+      const row = widget.addStack();
+      row.layoutHorizontally();
+      row.spacing = WIDGET_STYLE.rowSpacing;
 
-      const iconSymbol = this.getParserIconSymbol(item);
-      const iconImage = this.buildSymbolImage(iconSymbol, 12, new Color(BRAND.textSoft));
-      if (iconImage) {
-        const icon = row.addImage(iconImage);
-        icon.imageSize = new Size(12, 12);
+      for (let columnIndex = 0; columnIndex < columns; columnIndex += 1) {
+        const item = items[index + columnIndex];
+        if (!item) {
+          row.addSpacer();
+          continue;
+        }
+        const statusMeta = this.getParserStatusMeta(item);
+        const cell = this.addWidgetCell(row, family, columns);
+        const runId = item?.lastRunId || latestRunId;
+        if (runId) {
+          cell.url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
+            runId,
+            readOnly: true
+          });
+        }
+
+        const header = cell.addStack();
+        header.layoutHorizontally();
+        header.centerAlignContent();
+        header.spacing = 4;
+
+        const iconSymbol = this.getParserIconSymbol(item);
+        const iconImage = this.buildSymbolImage(iconSymbol, 11, new Color(BRAND.textSoft));
+        if (iconImage) {
+          const icon = header.addImage(iconImage);
+          icon.imageSize = new Size(11, 11);
+        }
+
+        const name = header.addText(this.truncateText(item.name, nameLimit));
+        name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+        name.textColor = new Color(BRAND.text);
+        name.lineLimit = 1;
+
+        header.addSpacer();
+
+        const statusIcon = this.buildStatusIcon(statusMeta, 11);
+        if (statusIcon) {
+          const statusImage = header.addImage(statusIcon);
+          statusImage.imageSize = new Size(11, 11);
+        }
+
+        const historyFinalEvents = (item.historyRuns || 0) > 0
+          ? (item.historyTotals?.final_bear_events || 0)
+          : (item.finalBearEvents || 0);
+        const allTimeFinalEvents = (item.allTimeRuns || 0) > 0
+          ? (item.allTimeTotals?.final_bear_events || 0)
+          : historyFinalEvents;
+        const fallbackFinalEvents = item.lastRunAt
+          ? (item.finalBearEvents || 0)
+          : (historyFinalEvents || allTimeFinalEvents);
+
+        const summaryLabel = item?.lastRunAt
+          ? `Final ${this.formatNumber(fallbackFinalEvents)} • ${this.formatLastRunLabel(item.lastRunAt)}`
+          : `Final ${this.formatNumber(fallbackFinalEvents)} • No run`;
+        const summary = cell.addText(summaryLabel);
+        summary.font = Font.systemFont(FONT_SIZES.widget.small);
+        summary.textColor = new Color(BRAND.textMuted);
+        summary.lineLimit = 1;
+
+        if (showDetails) {
+          const actionTotal = this.sumActions(item.actions);
+          const issuesCount = item.latestErrorCount || 0;
+          const detailParts = [`Actions ${actionTotal}`];
+          if (issuesCount > 0) {
+            detailParts.push(`Issues ${issuesCount}`);
+          }
+          const details = cell.addText(detailParts.join(' • '));
+          details.font = Font.systemFont(FONT_SIZES.widget.small);
+          details.textColor = new Color(BRAND.textMuted);
+          details.lineLimit = 1;
+        }
       }
-
-      const left = row.addStack();
-      left.layoutVertically();
-      left.spacing = 2;
-
-      const name = left.addText(this.truncateText(item.name, nameLimit));
-      name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
-      name.textColor = new Color(BRAND.text);
-      name.lineLimit = 1;
-
-      const summaryLabel = family === 'small' && item?.lastRunAt
-        ? this.formatLastRunLabel(item.lastRunAt)
-        : this.formatEventSummary(item);
-      const summary = left.addText(summaryLabel);
-      summary.font = Font.systemFont(FONT_SIZES.widget.small);
-      summary.textColor = new Color(BRAND.textMuted);
-      summary.lineLimit = 1;
-
-      row.addSpacer();
-
-      const right = row.addStack();
-      right.layoutVertically();
-      right.spacing = 2;
-
-      const badgeVariant = this.getParserStatusBadgeClass(statusMeta.key);
-      this.addWidgetBadge(right, statusMeta.label, badgeVariant);
-
-      const historyFinalEvents = (item.historyRuns || 0) > 0
-        ? (item.historyTotals?.final_bear_events || 0)
-        : (item.finalBearEvents || 0);
-      const allTimeFinalEvents = (item.allTimeRuns || 0) > 0
-        ? (item.allTimeTotals?.final_bear_events || 0)
-        : historyFinalEvents;
-      const fallbackFinalEvents = item.lastRunAt
-        ? (item.finalBearEvents || 0)
-        : (historyFinalEvents || allTimeFinalEvents);
-
-      if (showMetrics) {
-        const actionsLine = this.formatActionsCompact(item.actions);
-        const issuesLine = this.formatActionsIssues(item.actions);
-        const metricsLine = showIssues ? `${actionsLine} • ${issuesLine}` : actionsLine;
-        const metrics = right.addText(metricsLine);
-        metrics.font = Font.systemFont(FONT_SIZES.widget.small);
-        metrics.textColor = new Color(BRAND.textMuted);
-        metrics.rightAlignText();
-        metrics.lineLimit = 1;
-      } else {
-        const finalLabel = this.formatNumber(fallbackFinalEvents);
-        const finalText = right.addText(finalLabel);
-        finalText.font = Font.systemFont(FONT_SIZES.widget.small);
-        finalText.textColor = new Color(BRAND.textMuted);
-        finalText.rightAlignText();
-        finalText.lineLimit = 1;
-      }
-    });
+    }
 
     if (parserHealth.items.length > items.length) {
       const more = widget.addText(`+${parserHealth.items.length - items.length} more`);
@@ -1676,8 +1742,9 @@ class MetricsDisplay {
 
     const filtered = this.applyRunFilters(runItems, runFilters);
     const sorted = this.sortRunItems(filtered, runSortState);
+    const columns = this.getWidgetColumnCount(family);
     const maxRows = this.getWidgetMaxRows();
-    const items = sorted.slice(0, maxRows);
+    const items = sorted.slice(0, maxRows * columns);
 
     if (items.length === 0) {
       const none = widget.addText('No runs match filters.');
@@ -1686,56 +1753,72 @@ class MetricsDisplay {
       return;
     }
 
-    items.forEach((run, index) => {
+    for (let index = 0; index < items.length; index += columns) {
       if (index > 0) widget.addSpacer(4);
-      const statusMeta = this.getStatusMeta(run.status);
-      const row = this.addWidgetRow(widget, family);
+      const row = widget.addStack();
+      row.layoutHorizontally();
+      row.spacing = WIDGET_STYLE.rowSpacing;
 
-      const left = row.addStack();
-      left.layoutVertically();
-      left.spacing = 2;
+      for (let columnIndex = 0; columnIndex < columns; columnIndex += 1) {
+        const run = items[index + columnIndex];
+        if (!run) {
+          row.addSpacer();
+          continue;
+        }
+        const statusMeta = this.getStatusMeta(run.status);
+        const cell = this.addWidgetCell(row, family, columns);
+        if (run.runId) {
+          cell.url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
+            runId: run.runId,
+            readOnly: true
+          });
+        }
 
-      const titleLine = left.addText(this.formatRunId(run.runId));
-      titleLine.font = Font.boldSystemFont(FONT_SIZES.widget.small);
-      titleLine.textColor = new Color(BRAND.text);
-      titleLine.lineLimit = 1;
+        const header = cell.addStack();
+        header.layoutHorizontally();
+        header.centerAlignContent();
+        header.spacing = 4;
 
-      const subtitleParts = [];
-      if (family === 'small') {
-        subtitleParts.push(this.formatLastRunLabel(run.finishedAt));
-      } else {
-        if (run.parsersCount) subtitleParts.push(`${run.parsersCount} parsers`);
-        if (run.durationMs) subtitleParts.push(this.formatDuration(run.durationMs));
-        subtitleParts.push(this.formatLastRunLabel(run.finishedAt));
+        const titleLine = header.addText(this.formatRunId(run.runId));
+        titleLine.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+        titleLine.textColor = new Color(BRAND.text);
+        titleLine.lineLimit = 1;
+
+        header.addSpacer();
+
+        const statusIcon = this.buildStatusIcon(statusMeta, 11);
+        if (statusIcon) {
+          const statusImage = header.addImage(statusIcon);
+          statusImage.imageSize = new Size(11, 11);
+        }
+
+        const finalLabel = this.formatNumber(run.finalEvents || 0);
+        const errors = run.errorsCount || 0;
+        const warnings = run.warningsCount || 0;
+        const issuesTotal = errors + warnings;
+        const summaryParts = [`Final ${finalLabel}`];
+        if (issuesTotal > 0) {
+          summaryParts.push(`Issues ${issuesTotal}`);
+        } else if (run.finishedAt) {
+          summaryParts.push(this.formatLastRunLabel(run.finishedAt));
+        }
+        const summary = cell.addText(summaryParts.join(' • '));
+        summary.font = Font.systemFont(FONT_SIZES.widget.small);
+        summary.textColor = new Color(BRAND.textMuted);
+        summary.lineLimit = 1;
+
+        if (family === 'large') {
+          const metaParts = [];
+          if (run.parsersCount) metaParts.push(`Parsers ${run.parsersCount}`);
+          if (run.durationMs) metaParts.push(this.formatDuration(run.durationMs));
+          metaParts.push(`Finished ${this.formatLastRunLabel(run.finishedAt)}`);
+          const metaLine = cell.addText(metaParts.join(' • '));
+          metaLine.font = Font.systemFont(FONT_SIZES.widget.small);
+          metaLine.textColor = new Color(BRAND.textMuted);
+          metaLine.lineLimit = 1;
+        }
       }
-      const subtitleLine = left.addText(subtitleParts.join(' • '));
-      subtitleLine.font = Font.systemFont(FONT_SIZES.widget.small);
-      subtitleLine.textColor = new Color(BRAND.textMuted);
-      subtitleLine.lineLimit = 1;
-
-      row.addSpacer();
-
-      const right = row.addStack();
-      right.layoutVertically();
-      right.spacing = 2;
-
-      const badgeVariant = this.getRunStatusBadgeClass(run.status);
-      this.addWidgetBadge(right, statusMeta.label, badgeVariant);
-
-      const finalLabel = this.formatNumber(run.finalEvents || 0);
-      const errors = run.errorsCount || 0;
-      const warnings = run.warningsCount || 0;
-      const hasIssues = errors > 0 || warnings > 0;
-      let metricsLine = `F${finalLabel}`;
-      if (family === 'large' || (family !== 'small' && hasIssues)) {
-        metricsLine += ` • E${errors} W${warnings}`;
-      }
-      const metricsText = right.addText(metricsLine);
-      metricsText.font = Font.systemFont(FONT_SIZES.widget.small);
-      metricsText.textColor = new Color(BRAND.textMuted);
-      metricsText.rightAlignText();
-      metricsText.lineLimit = 1;
-    });
+    }
 
     if (filtered.length > items.length) {
       const more = widget.addText(`+${filtered.length - items.length} more`);
@@ -1789,23 +1872,26 @@ class MetricsDisplay {
     const summary = data.summary;
     const parserHealth = data.parserHealth;
     const records = Array.isArray(data.records) ? data.records : [];
-    const sortState = data.sortState || null;
+    const sortState = data.sortState || this.resolveSort(view);
     const runSortState = data.runSortState || this.resolveRunSort(view);
     const runFilters = data.runFilters || this.resolveRunFilters(view);
     const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
     const recentRecords = this.getRecentRecords(records, this.getWidgetHistoryLimit());
     const chartSize = this.getWidgetChartSize();
+    const widgetUrl = this.buildWidgetDashboardUrl(view, sortState, runSortState, runFilters);
 
     if (!latest && view.mode !== 'aggregate' && view.mode !== 'runs') {
       const message = widget.addText('No metrics found yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
       message.textColor = new Color(BRAND.text);
+      if (widgetUrl) widget.url = widgetUrl;
       return widget;
     }
     if (view.mode === 'runs' && runItems.length === 0) {
       const message = widget.addText('No run metrics yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
       message.textColor = new Color(BRAND.text);
+      if (widgetUrl) widget.url = widgetUrl;
       return widget;
     }
 
@@ -1836,12 +1922,7 @@ class MetricsDisplay {
       this.renderWidgetDashboard(widget, context);
     }
 
-    if (latest?.run_id) {
-      widget.url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
-        runId: latest.run_id,
-        readOnly: true
-      });
-    }
+    if (widgetUrl) widget.url = widgetUrl;
 
     return widget;
   }
@@ -1931,6 +2012,10 @@ class MetricsDisplay {
     };
 
     const buildBadge = (label, variant) => `<span class="badge ${variant}">${escapeHtml(label)}</span>`;
+    const buildMetricChip = (label, value, variant = '') => {
+      const variantClass = variant ? ` ${variant}` : '';
+      return `<span class="metric-chip${variantClass}"><span class="metric-chip-label">${escapeHtml(label)}</span><span class="metric-chip-value">${escapeHtml(value)}</span></span>`;
+    };
 
     const buildMetric = (label, value) => `
       <div class="metric">
@@ -1987,41 +2072,39 @@ class MetricsDisplay {
           `data-parser-duration="${durationMs}"`
         ].join(' ');
         const summaryLine = this.formatEventSummary(item);
-        const actions = this.formatActionsCompact(item.actions);
-        const issues = this.formatActionsIssues(item.actions);
         const finalEvents = this.formatNumber(item.finalBearEvents || 0);
         const lastRun = this.formatLastRunLabel(item.lastRunAt);
+        const actions = item.actions || this.createActionCounts();
+        const issueTotal = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
+        const metricChips = [
+          { label: 'Final', value: finalEvents },
+          { label: 'New', value: actions.new || 0 },
+          { label: 'Merge', value: actions.merge || 0 },
+          { label: 'Update', value: actions.update || 0 },
+          { label: 'Issues', value: issueTotal, variant: issueTotal > 0 ? 'danger' : 'neutral' }
+        ].map(metric => buildMetricChip(metric.label, metric.value, metric.variant)).join('');
+        const metaParts = [];
+        if (item.lastRunAt) metaParts.push(`Last run ${lastRun}`);
+        if (item.durationMs) metaParts.push(`Duration ${this.formatDuration(item.durationMs)}`);
+        const metaLine = metaParts.join(' • ');
+        const issueDetails = [];
+        if (actions.conflict) issueDetails.push(`Conflicts ${actions.conflict}`);
+        if (actions.missing_calendar) issueDetails.push(`Missing cal ${actions.missing_calendar}`);
+        if (actions.other) issueDetails.push(`Other ${actions.other}`);
+        const issueLine = issueDetails.join(' • ');
         return `
-          <tr ${rowAttrs}>
-            <td>
-              <div class="cell-title">${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}</div>
-              <div class="cell-subtitle">${escapeHtml(summaryLine)}</div>
-            </td>
-            <td>${buildBadge(statusMeta.label, badgeClass)}</td>
-            <td class="num">${escapeHtml(finalEvents)}</td>
-            <td class="num">${escapeHtml(actions)}</td>
-            <td class="num">${escapeHtml(issues)}</td>
-            <td>${escapeHtml(lastRun)}</td>
-          </tr>`;
+          <div class="metrics-row" data-row="parser" ${rowAttrs}>
+            <div class="row-title">
+              ${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}
+              ${buildBadge(statusMeta.label, badgeClass)}
+            </div>
+            <div class="row-subtitle">${escapeHtml(summaryLine)}</div>
+            <div class="row-metrics">${metricChips}</div>
+            ${metaLine ? `<div class="row-meta">${escapeHtml(metaLine)}</div>` : ''}
+            ${issueLine ? `<div class="row-meta muted">${escapeHtml(issueLine)}</div>` : ''}
+          </div>`;
       }).join('');
-      return `
-        <div class="table-wrapper">
-          <table class="metrics-table">
-            <thead>
-              <tr>
-                <th>Parser</th>
-                <th>Status</th>
-                <th class="num">Final</th>
-                <th class="num">Actions</th>
-                <th class="num">Issues</th>
-                <th>Last run</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </div>`;
+      return `<div class="metrics-list" data-list="parsers">${rows}</div>`;
     };
 
     const buildRunTable = items => {
@@ -2055,36 +2138,37 @@ class MetricsDisplay {
         if (run.parsersCount) subtitleParts.push(`${run.parsersCount} parsers`);
         if (run.durationMs) subtitleParts.push(this.formatDuration(run.durationMs));
         const subtitle = subtitleParts.join(' • ');
-        const issuesLabel = `E${run.errorsCount || 0} W${run.warningsCount || 0}`;
+        const errors = run.errorsCount || 0;
+        const warnings = run.warningsCount || 0;
+        const issuesTotal = errors + warnings;
+        const runMetrics = [
+          { label: 'Final', value: this.formatNumber(run.finalEvents || 0) },
+          { label: 'Errors', value: errors, variant: errors > 0 ? 'danger' : '' },
+          { label: 'Warnings', value: warnings, variant: warnings > 0 ? 'warning' : '' },
+          { label: 'Parsers', value: run.parsersCount || 0 }
+        ];
+        if (run.durationMs) {
+          runMetrics.push({ label: 'Duration', value: this.formatDuration(run.durationMs) });
+        }
+        const metricChips = runMetrics
+          .map(metric => buildMetricChip(metric.label, metric.value, metric.variant))
+          .join('');
+        const metaParts = [];
+        if (run.finishedAt) metaParts.push(`Finished ${this.formatLastRunLabel(run.finishedAt)}`);
+        if (issuesTotal > 0) metaParts.push(`Issues ${issuesTotal}`);
+        const metaLine = metaParts.join(' • ');
         return `
-          <tr ${rowAttrs}>
-            <td>
-              <div class="cell-title">${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}</div>
-              ${subtitle ? `<div class="cell-subtitle">${escapeHtml(subtitle)}</div>` : ''}
-            </td>
-            <td>${buildBadge(statusMeta.label, badgeClass)}</td>
-            <td class="num">${escapeHtml(this.formatNumber(run.finalEvents || 0))}</td>
-            <td class="num">${escapeHtml(issuesLabel)}</td>
-            <td>${escapeHtml(this.formatLastRunLabel(run.finishedAt))}</td>
-          </tr>`;
+          <div class="metrics-row" data-row="run" ${rowAttrs}>
+            <div class="row-title">
+              ${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}
+              ${buildBadge(statusMeta.label, badgeClass)}
+            </div>
+            ${subtitle ? `<div class="row-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+            <div class="row-metrics">${metricChips}</div>
+            ${metaLine ? `<div class="row-meta">${escapeHtml(metaLine)}</div>` : ''}
+          </div>`;
       }).join('');
-      return `
-        <div class="table-wrapper">
-          <table class="metrics-table">
-            <thead>
-              <tr>
-                <th>Run</th>
-                <th>Status</th>
-                <th class="num">Final</th>
-                <th class="num">Issues</th>
-                <th>Finished</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </div>`;
+      return `<div class="metrics-list" data-list="runs">${rows}</div>`;
     };
 
     const buildSortChips = (options, currentSort, viewKey, directionResolver) => {
@@ -2750,6 +2834,79 @@ class MetricsDisplay {
       color: var(--text-secondary);
       margin-top: 2px;
     }
+    .metrics-list {
+      display: grid;
+      gap: 12px;
+    }
+    .metrics-row {
+      background: var(--background-light);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 8px;
+    }
+    .metrics-row.hidden {
+      display: none;
+    }
+    .row-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-weight: 600;
+    }
+    .row-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .row-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .row-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .metric-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(102, 126, 234, 0.12);
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .metric-chip-label {
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+    .metric-chip-value {
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-chip.danger {
+      background: rgba(255, 107, 107, 0.18);
+      color: var(--color-danger);
+    }
+    .metric-chip.warning {
+      background: rgba(254, 202, 87, 0.2);
+      color: var(--color-warning);
+    }
+    .metric-chip.neutral {
+      background: rgba(167, 176, 204, 0.22);
+      color: var(--color-neutral);
+    }
+    .metric-chip.danger .metric-chip-label,
+    .metric-chip.warning .metric-chip-label,
+    .metric-chip.neutral .metric-chip-label {
+      color: inherit;
+    }
     .row-link {
       color: var(--primary-color);
     }
@@ -2760,12 +2917,21 @@ class MetricsDisplay {
     .badge {
       display: inline-flex;
       align-items: center;
+      gap: 6px;
       padding: 4px 8px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+    }
+    .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
     }
     .badge.success {
       background: rgba(46, 213, 115, 0.18);
@@ -2840,8 +3006,8 @@ class MetricsDisplay {
       const parserSortChips = Array.from(document.querySelectorAll('[data-sort-view="parsers"]'));
       const runSortChips = Array.from(document.querySelectorAll('[data-sort-view="runs"]'));
       const runFilterChips = Array.from(document.querySelectorAll('[data-filter-view="runs"]'));
-      const parserTableBody = document.querySelector('section[data-view="parsers"] table.metrics-table tbody');
-      const runTableBody = document.querySelector('section[data-view="runs"] table.metrics-table tbody');
+      const parserList = document.querySelector('section[data-view="parsers"] [data-list="parsers"]');
+      const runList = document.querySelector('section[data-view="runs"] [data-list="runs"]');
       const runSubtitle = document.querySelector('section[data-view="runs"] [data-run-subtitle]');
 
       const parseNumber = value => {
@@ -2958,8 +3124,8 @@ class MetricsDisplay {
       };
 
       const sortParserRows = () => {
-        if (!parserTableBody) return;
-        const rows = Array.from(parserTableBody.querySelectorAll('tr'));
+        if (!parserList) return;
+        const rows = Array.from(parserList.querySelectorAll('[data-row="parser"]'));
         const direction = parserSortState.direction === 'asc' ? 1 : -1;
         rows.sort((a, b) => {
           const aData = a.dataset;
@@ -2989,7 +3155,7 @@ class MetricsDisplay {
           }
           return diff * direction;
         });
-        rows.forEach(row => parserTableBody.appendChild(row));
+        rows.forEach(row => parserList.appendChild(row));
       };
 
       const matchesRunFilters = row => {
@@ -3048,19 +3214,19 @@ class MetricsDisplay {
       };
 
       const applyRunFiltersAndSort = () => {
-        if (!runTableBody) return;
-        const rows = Array.from(runTableBody.querySelectorAll('tr'));
+        if (!runList) return;
+        const rows = Array.from(runList.querySelectorAll('[data-row="run"]'));
         const visibleRows = rows.filter(matchesRunFilters);
         const visibleSet = new Set(visibleRows);
         const hiddenRows = rows.filter(row => !visibleSet.has(row));
         const sortedVisible = sortRunRows(visibleRows);
         sortedVisible.forEach(row => {
-          row.style.display = '';
-          runTableBody.appendChild(row);
+          row.classList.remove('hidden');
+          runList.appendChild(row);
         });
         hiddenRows.forEach(row => {
-          row.style.display = 'none';
-          runTableBody.appendChild(row);
+          row.classList.add('hidden');
+          runList.appendChild(row);
         });
         if (runSubtitle) {
           const totalRuns = parseNumber(runSubtitle.getAttribute('data-run-total')) || rows.length;
