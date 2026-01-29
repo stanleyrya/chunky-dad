@@ -798,6 +798,13 @@ class CalendarCore {
         return num + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
     }
 
+    // Get day difference between two dates (date-only, UTC-safe)
+    getDayDifference(startDate, endDate) {
+        const startUTC = Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const endUTC = Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        return Math.floor((endUTC - startUTC) / 86400000);
+    }
+
 
     // Enhanced day/time formatting with context - always uses pattern-first approach
     getEnhancedDayTimeDisplay(event, calendarView = 'week', calendarPeriod = null) {
@@ -934,32 +941,40 @@ class CalendarCore {
         const eventStartDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         if (eventStartDate > periodEnd) return dates;
         
-        // For weekly events, use a simpler approach: check each day in the period
+        // For weekly events, check each day in the period with interval handling
         if (pattern.frequency === 'WEEKLY') {
-            const targetDayOfWeek = pattern.byDay && pattern.byDay.length > 0 ? 
-                this.getDayIndexFromCode(pattern.byDay[0]) : eventStartDate.getDay();
+            const interval = pattern.interval || 1;
+            const targetDays = pattern.byDay && pattern.byDay.length > 0
+                ? pattern.byDay
+                    .map(dayCode => this.getDayIndexFromCode(dayCode))
+                    .filter(dayIndex => dayIndex !== -1)
+                : [eventStartDate.getDay()];
             
-            if (targetDayOfWeek === -1) {
-                logger.warn('CALENDAR', 'Invalid day code in weekly recurrence', {
+            if (targetDays.length === 0) {
+                logger.warn('CALENDAR', 'Invalid BYDAY values in weekly recurrence', {
                     eventName: event.name,
                     byDay: pattern.byDay
                 });
                 return dates;
             }
             
-            // Check each day in the period to see if it matches the target day of week
+            // Check each day in the period to see if it matches the target days and interval
             const current = new Date(periodStart);
             while (current <= periodEnd) {
-                if (current.getDay() === targetDayOfWeek && current >= eventStartDate) {
-                    dates.push(new Date(current));
+                if (current >= eventStartDate && targetDays.includes(current.getDay())) {
+                    const daysSinceStart = this.getDayDifference(eventStartDate, current);
+                    const weeksSinceStart = Math.floor(daysSinceStart / 7);
+                    if (weeksSinceStart % interval === 0) {
+                        dates.push(new Date(current));
+                    }
                 }
                 current.setDate(current.getDate() + 1);
             }
             
             logger.debug('CALENDAR', 'Weekly event dates found', {
                 eventName: event.name,
-                targetDayOfWeek,
-                dayName: this.dayNames[targetDayOfWeek],
+                targetDays: targetDays.map(dayIndex => this.dayNames[dayIndex]),
+                interval,
                 datesFound: dates.map(d => d.toISOString().split('T')[0])
             });
             

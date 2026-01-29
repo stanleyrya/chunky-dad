@@ -2209,11 +2209,37 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Parse the recurrence rule to determine the pattern
         const recurrence = event.recurrence || '';
+        const pattern = this.parseRecurrencePattern(recurrence);
+        if (!pattern || !pattern.frequency) return false;
         
-        if (recurrence.includes('FREQ=WEEKLY')) {
-            // Weekly events: occur on the same day of the week
-            return eventDate.getDay() === checkDate.getDay();
-        } else if (recurrence.includes('FREQ=MONTHLY')) {
+        const interval = pattern.interval || 1;
+        const daysSinceStart = this.getDayDifference(eventDate, checkDate);
+        if (daysSinceStart < 0) return false;
+        
+        if (pattern.frequency === 'DAILY') {
+            // Daily events: occur every interval days
+            return daysSinceStart % interval === 0;
+        } else if (pattern.frequency === 'WEEKLY') {
+            // Weekly events: occur on matching weekdays, respecting interval
+            const targetDays = pattern.byDay && pattern.byDay.length > 0
+                ? pattern.byDay
+                    .map(dayCode => this.getDayIndexFromCode(dayCode))
+                    .filter(dayIndex => dayIndex !== -1)
+                : [eventDate.getDay()];
+            
+            if (targetDays.length === 0) {
+                return false;
+            }
+            
+            if (!targetDays.includes(checkDate.getDay())) return false;
+            
+            const weeksSinceStart = Math.floor(daysSinceStart / 7);
+            return weeksSinceStart % interval === 0;
+        } else if (pattern.frequency === 'MONTHLY') {
+            const monthsSinceStart = (checkDate.getFullYear() - eventDate.getFullYear()) * 12 +
+                (checkDate.getMonth() - eventDate.getMonth());
+            if (monthsSinceStart < 0 || monthsSinceStart % interval !== 0) return false;
+            
             // Monthly events: handle both BYMONTHDAY and BYDAY patterns
             if (recurrence.includes('BYMONTHDAY=')) {
                 const dayMatch = recurrence.match(/BYMONTHDAY=(\d+)/);
@@ -2258,17 +2284,16 @@ class DynamicCalendarLoader extends CalendarCore {
             const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
             const targetDay = Math.min(originalDay, lastDayOfMonth);
             return checkDate.getDate() === targetDay;
-        } else if (recurrence.includes('FREQ=DAILY')) {
-            // Daily events: occur every day
-            return true;
-        } else if (recurrence.includes('FREQ=YEARLY')) {
+        } else if (pattern.frequency === 'YEARLY') {
+            const yearsSinceStart = checkDate.getFullYear() - eventDate.getFullYear();
+            if (yearsSinceStart < 0 || yearsSinceStart % interval !== 0) return false;
+            
             // Yearly events: same month and day
             return eventDate.getMonth() === checkDate.getMonth() && 
                    eventDate.getDate() === checkDate.getDate();
         }
         
-        // Default fallback for other recurring patterns - use day of week
-        return eventDate.getDay() === checkDate.getDay();
+        return false;
     }
 
     // Simple deduplication: for each date, show either recurring event OR override, never both
