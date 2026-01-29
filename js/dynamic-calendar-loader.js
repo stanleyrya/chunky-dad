@@ -4034,6 +4034,7 @@ class DynamicCalendarLoader extends CalendarCore {
             isTestEvent: true
         };
         
+        // Ensure preview edits/overrides replace existing events by UID (+recurrenceId).
         const shouldRemoveExistingEvent = (event) => {
             if (!event) return false;
             if (event.slug && event.slug.startsWith('test-event-')) {
