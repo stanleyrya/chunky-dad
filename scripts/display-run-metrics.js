@@ -805,7 +805,7 @@ class MetricsDisplay {
   getParserStatusMeta(item) {
     const key = this.getParserStatusKey(item);
     if (key === 'healthy') {
-      return { key, label: 'Healthy', color: new Color(BRAND.success), icon: STATUS_ICONS.healthy, rank: 1 };
+      return { key, label: 'Healthy', color: new Color(BRAND.success), icon: STATUS_ICONS.healthy, rank: 2 };
     }
     if (key === 'warning') {
       return { key, label: 'Warning', color: new Color(BRAND.warning), icon: STATUS_ICONS.warning, rank: 3 };
@@ -817,9 +817,9 @@ class MetricsDisplay {
       return { key, label: 'No events', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['no-events'], rank: 2 };
     }
     if (key === 'not-run') {
-      return { key, label: 'Not run', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 0 };
+      return { key, label: 'Not run', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 1 };
     }
-    return { key, label: 'Unknown', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 0 };
+    return { key, label: 'Unknown', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 1 };
   }
 
   getParserStatusRank(item) {
@@ -984,6 +984,9 @@ class MetricsDisplay {
         diff = (a?.durationMs || 0) - (b?.durationMs || 0);
       } else if (sortKey === 'status') {
         diff = this.getParserStatusRank(a) - this.getParserStatusRank(b);
+        if (diff === 0) {
+          diff = (a?.finalBearEvents || 0) - (b?.finalBearEvents || 0);
+        }
       }
       if (diff === 0) {
         diff = String(a?.name || '').localeCompare(String(b?.name || ''));
@@ -1414,23 +1417,71 @@ class MetricsDisplay {
 
   getWidgetMaxRows() {
     const family = this.runtime.widgetFamily || 'medium';
-    if (family === 'small') return 2;
-    if (family === 'large') return 7;
-    return 4;
+    if (family === 'small') return 3;
+    if (family === 'large') return 8;
+    return 5;
   }
 
-  addWidgetHeader(widget, logoImage) {
+  getCompactSortLabel(sortState) {
+    if (!sortState?.key) return null;
+    const options = this.getParserSortOptions();
+    const match = options.find(option => option.key === sortState.key);
+    const label = match ? match.label : sortState.key;
+    return label.replace(/\s*\(.*?\)\s*/g, '').trim();
+  }
+
+  getWidgetViewLabel(view) {
+    if (!view) return 'Metrics';
+    if (view.mode === 'parser') {
+      return view.parserName ? `Parser ${view.parserName}` : 'Parser detail';
+    }
+    if (view.mode === 'runs') return 'Runs';
+    if (view.mode === 'dashboard') return 'Dashboard';
+    if (view.mode === 'aggregate') return 'Totals';
+    return 'Metrics';
+  }
+
+  getWidgetHeaderText(context, view, sortState) {
+    const family = this.runtime.widgetFamily || 'medium';
+    const parts = [];
+    if (family !== 'small') parts.push('Chunky Dad');
+    if (view?.mode === 'parsers') {
+      if (context?.latest?.status) {
+        const statusMeta = this.getStatusMeta(context.latest.status);
+        if (statusMeta?.label) parts.push(`Last ${statusMeta.label}`);
+      }
+      if (context?.parserHealth) {
+        const parserCount = context.parserHealth.hasConfig
+          ? `${context.parserHealth.ranCount}/${context.parserHealth.configuredCount}`
+          : `${context.parserHealth.ranCount}`;
+        parts.push(`Run ${parserCount}`);
+      }
+      const sortLabel = this.getCompactSortLabel(sortState);
+      if (sortLabel) parts.push(`Sort ${sortLabel}`);
+    } else {
+      const label = this.getWidgetViewLabel(view);
+      if (label) parts.push(label);
+    }
+    const headerText = parts.filter(Boolean).join(' • ');
+    if (headerText) return headerText;
+    return family === 'small' ? 'Metrics' : 'Chunky Dad Metrics';
+  }
+
+  addWidgetHeader(widget, logoImage, headerText) {
+    const family = this.runtime.widgetFamily || 'medium';
     const header = widget.addStack();
     header.centerAlignContent();
-    header.spacing = 6;
+    header.spacing = family === 'small' ? 4 : 6;
     if (logoImage) {
       const image = header.addImage(logoImage);
-      image.imageSize = new Size(24, 24);
+      const size = family === 'small' ? 20 : 24;
+      image.imageSize = new Size(size, size);
     }
-    const title = header.addText('Chunky Dad Metrics');
-    title.font = Font.boldSystemFont(FONT_SIZES.widget.title);
+    const title = header.addText(headerText || (family === 'small' ? 'Metrics' : 'Chunky Dad Metrics'));
+    title.font = Font.boldSystemFont(family === 'small' ? FONT_SIZES.widget.small : FONT_SIZES.widget.label);
     title.textColor = new Color(BRAND.text);
-    widget.addSpacer(6);
+    title.lineLimit = 1;
+    widget.addSpacer(family === 'small' ? 4 : 6);
   }
 
   renderWidgetDashboard(widget, context) {
@@ -1521,24 +1572,6 @@ class MetricsDisplay {
     const sortState = context.sortState;
     const family = this.runtime.widgetFamily || 'medium';
     const latestRunId = context.latest?.run_id || null;
-
-    const title = widget.addText('Parser runs');
-    title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
-    title.textColor = new Color(BRAND.text);
-    widget.addSpacer(4);
-
-    const parserLine = parserHealth.hasConfig
-      ? `Run ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
-      : `Run ${parserHealth.ranCount}`;
-    const parserText = widget.addText(parserLine);
-    parserText.font = Font.systemFont(FONT_SIZES.widget.label);
-    parserText.textColor = new Color(BRAND.text);
-    if (sortState && family !== 'small') {
-      const sortLabel = widget.addText(`Sort ${this.getSortLabel(sortState)}`);
-      sortLabel.font = Font.systemFont(FONT_SIZES.widget.small);
-      sortLabel.textColor = new Color(BRAND.textMuted);
-    }
-    widget.addSpacer(4);
 
     const columns = this.getWidgetColumnCount(family);
     const maxRows = this.getWidgetMaxRows();
@@ -1866,7 +1899,6 @@ class MetricsDisplay {
     widget.setPadding(12, 12, 12, 12);
 
     const logoImage = await this.loadLogoImage();
-    this.addWidgetHeader(widget, logoImage);
 
     const latest = data.latestRecord;
     const summary = data.summary;
@@ -1879,6 +1911,8 @@ class MetricsDisplay {
     const recentRecords = this.getRecentRecords(records, this.getWidgetHistoryLimit());
     const chartSize = this.getWidgetChartSize();
     const widgetUrl = this.buildWidgetDashboardUrl(view, sortState, runSortState, runFilters);
+    const headerText = this.getWidgetHeaderText({ latest, parserHealth }, view, sortState);
+    this.addWidgetHeader(widget, logoImage, headerText);
 
     if (!latest && view.mode !== 'aggregate' && view.mode !== 'runs') {
       const message = widget.addText('No metrics found yet.');
@@ -2075,36 +2109,49 @@ class MetricsDisplay {
         const finalEvents = this.formatNumber(item.finalBearEvents || 0);
         const lastRun = this.formatLastRunLabel(item.lastRunAt);
         const actions = item.actions || this.createActionCounts();
-        const issueTotal = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
-        const metricChips = [
-          { label: 'Final', value: finalEvents },
-          { label: 'New', value: actions.new || 0 },
-          { label: 'Merge', value: actions.merge || 0 },
-          { label: 'Update', value: actions.update || 0 },
-          { label: 'Issues', value: issueTotal, variant: issueTotal > 0 ? 'danger' : 'neutral' }
-        ].map(metric => buildMetricChip(metric.label, metric.value, metric.variant)).join('');
-        const metaParts = [];
-        if (item.lastRunAt) metaParts.push(`Last run ${lastRun}`);
-        if (item.durationMs) metaParts.push(`Duration ${this.formatDuration(item.durationMs)}`);
-        const metaLine = metaParts.join(' • ');
-        const issueDetails = [];
-        if (actions.conflict) issueDetails.push(`Conflicts ${actions.conflict}`);
-        if (actions.missing_calendar) issueDetails.push(`Missing cal ${actions.missing_calendar}`);
-        if (actions.other) issueDetails.push(`Other ${actions.other}`);
-        const issueLine = issueDetails.join(' • ');
+        const actionsCompact = this.formatActionsCompact(actions);
+        const issuesCount = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
+        const actionsIssues = issuesCount > 0 ? this.formatActionsIssues(actions) : null;
+        const durationLabel = item.durationMs ? this.formatDuration(item.durationMs) : null;
         return `
-          <div class="metrics-row" data-row="parser" ${rowAttrs}>
-            <div class="row-title">
-              ${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}
-              ${buildBadge(statusMeta.label, badgeClass)}
-            </div>
-            <div class="row-subtitle">${escapeHtml(summaryLine)}</div>
-            <div class="row-metrics">${metricChips}</div>
-            ${metaLine ? `<div class="row-meta">${escapeHtml(metaLine)}</div>` : ''}
-            ${issueLine ? `<div class="row-meta muted">${escapeHtml(issueLine)}</div>` : ''}
-          </div>`;
+          <tr data-row="parser" ${rowAttrs}>
+            <td>
+              <div class="cell-title inline">
+                ${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}
+                ${buildBadge(statusMeta.label, badgeClass)}
+              </div>
+              <div class="cell-subtitle">${escapeHtml(summaryLine)}</div>
+            </td>
+            <td class="num">
+              <div class="cell-title">${escapeHtml(finalEvents)}</div>
+              <div class="cell-subtitle">Final</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(actionsCompact)}</div>
+              ${actionsIssues ? `<div class="cell-subtitle">${escapeHtml(actionsIssues)}</div>` : ''}
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(lastRun)}</div>
+              ${durationLabel ? `<div class="cell-subtitle">${escapeHtml(durationLabel)}</div>` : ''}
+            </td>
+          </tr>`;
       }).join('');
-      return `<div class="metrics-list" data-list="parsers">${rows}</div>`;
+      return `
+        <div class="table-wrapper">
+          <table class="metrics-table list-table">
+            <thead>
+              <tr>
+                <th>Parser</th>
+                <th class="num">Final</th>
+                <th>Actions</th>
+                <th>Last run</th>
+              </tr>
+            </thead>
+            <tbody data-list="parsers">
+              ${rows}
+            </tbody>
+          </table>
+        </div>`;
     };
 
     const buildRunTable = items => {
@@ -2140,35 +2187,45 @@ class MetricsDisplay {
         const subtitle = subtitleParts.join(' • ');
         const errors = run.errorsCount || 0;
         const warnings = run.warningsCount || 0;
-        const issuesTotal = errors + warnings;
-        const runMetrics = [
-          { label: 'Final', value: this.formatNumber(run.finalEvents || 0) },
-          { label: 'Errors', value: errors, variant: errors > 0 ? 'danger' : '' },
-          { label: 'Warnings', value: warnings, variant: warnings > 0 ? 'warning' : '' },
-          { label: 'Parsers', value: run.parsersCount || 0 }
-        ];
-        if (run.durationMs) {
-          runMetrics.push({ label: 'Duration', value: this.formatDuration(run.durationMs) });
-        }
-        const metricChips = runMetrics
-          .map(metric => buildMetricChip(metric.label, metric.value, metric.variant))
-          .join('');
-        const metaParts = [];
-        if (run.finishedAt) metaParts.push(`Finished ${this.formatLastRunLabel(run.finishedAt)}`);
-        if (issuesTotal > 0) metaParts.push(`Issues ${issuesTotal}`);
-        const metaLine = metaParts.join(' • ');
+        const issuesLabel = `E${errors} W${warnings}`;
         return `
-          <div class="metrics-row" data-row="run" ${rowAttrs}>
-            <div class="row-title">
-              ${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}
-              ${buildBadge(statusMeta.label, badgeClass)}
-            </div>
-            ${subtitle ? `<div class="row-subtitle">${escapeHtml(subtitle)}</div>` : ''}
-            <div class="row-metrics">${metricChips}</div>
-            ${metaLine ? `<div class="row-meta">${escapeHtml(metaLine)}</div>` : ''}
-          </div>`;
+          <tr data-row="run" ${rowAttrs}>
+            <td>
+              <div class="cell-title">${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}</div>
+              ${subtitle ? `<div class="cell-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+            </td>
+            <td>
+              <div class="cell-title">${buildBadge(statusMeta.label, badgeClass)}</div>
+            </td>
+            <td class="num">
+              <div class="cell-title">${escapeHtml(this.formatNumber(run.finalEvents || 0))}</div>
+              <div class="cell-subtitle">Final</div>
+            </td>
+            <td class="num">
+              <div class="cell-title">${escapeHtml(issuesLabel)}</div>
+            </td>
+            <td>
+              <div class="cell-title">${escapeHtml(this.formatLastRunLabel(run.finishedAt))}</div>
+            </td>
+          </tr>`;
       }).join('');
-      return `<div class="metrics-list" data-list="runs">${rows}</div>`;
+      return `
+        <div class="table-wrapper">
+          <table class="metrics-table list-table">
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th>Status</th>
+                <th class="num">Final</th>
+                <th class="num">Issues</th>
+                <th>Finished</th>
+              </tr>
+            </thead>
+            <tbody data-list="runs">
+              ${rows}
+            </tbody>
+          </table>
+        </div>`;
     };
 
     const buildSortChips = (options, currentSort, viewKey, directionResolver) => {
@@ -2617,7 +2674,7 @@ class MetricsDisplay {
     body {
       font-family: 'Poppins', system-ui, -apple-system, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 16px;
       background: var(--background-light);
       color: var(--text-primary);
     }
@@ -2628,41 +2685,41 @@ class MetricsDisplay {
     .header {
       background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
       color: var(--text-inverse);
-      padding: 24px;
-      border-radius: 18px;
+      padding: 18px;
+      border-radius: 14px;
       box-shadow: var(--card-shadow);
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     .header-main {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }
     .logo {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
       background: rgba(255, 255, 255, 0.9);
       object-fit: contain;
-      padding: 6px;
+      padding: 4px;
     }
     .header-text {
       min-width: 180px;
     }
     .header-title {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
     }
     .header-subtitle {
-      font-size: 13px;
+      font-size: 12px;
       opacity: 0.85;
       margin-top: 2px;
     }
     .header-meta {
-      font-size: 12px;
+      font-size: 11px;
       opacity: 0.8;
-      margin-top: 6px;
+      margin-top: 4px;
     }
     .header-actions {
       margin-left: auto;
@@ -2679,7 +2736,7 @@ class MetricsDisplay {
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
     }
     .nav-tabs {
-      margin-top: 16px;
+      margin-top: 12px;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
@@ -2710,49 +2767,51 @@ class MetricsDisplay {
       display: none;
     }
     .view.active {
-      display: grid;
-      gap: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
     .card {
       background: var(--background-primary);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: var(--card-shadow);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: none;
     }
     .section-title {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 700;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .section-subtitle {
       font-size: 12px;
       color: var(--text-secondary);
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
+      gap: 8px;
     }
     .metric {
       background: var(--background-light);
-      padding: 12px;
-      border-radius: 12px;
+      padding: 8px;
+      border-radius: 10px;
     }
     .metric-value {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
     }
     .metric-label {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-secondary);
-      margin-top: 4px;
+      margin-top: 2px;
     }
     .meta-row {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
-      margin-top: 14px;
+      margin-top: 10px;
     }
     .meta-item {
       display: flex;
@@ -2777,7 +2836,7 @@ class MetricsDisplay {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin: 8px 0 12px;
+      margin: 6px 0 10px;
     }
     .chip-group .chip {
       background: rgba(102, 126, 234, 0.12);
@@ -2788,7 +2847,7 @@ class MetricsDisplay {
       color: #ffffff;
     }
     .filter-block {
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .filter-label {
       font-size: 11px;
@@ -2803,7 +2862,7 @@ class MetricsDisplay {
     .metrics-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12px;
     }
     .metrics-table th {
       text-align: left;
@@ -2811,13 +2870,16 @@ class MetricsDisplay {
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-secondary);
-      padding: 8px 6px;
+      padding: 6px 6px;
       border-bottom: 1px solid var(--border-color);
     }
     .metrics-table td {
-      padding: 10px 6px;
+      padding: 8px 6px;
       border-bottom: 1px solid var(--border-color);
       vertical-align: top;
+    }
+    .metrics-table tr.hidden {
+      display: none;
     }
     .metrics-table tr:hover {
       background: rgba(102, 126, 234, 0.05);
@@ -2829,8 +2891,14 @@ class MetricsDisplay {
     .cell-title {
       font-weight: 600;
     }
+    .cell-title.inline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
     .cell-subtitle {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-secondary);
       margin-top: 2px;
     }
@@ -2918,9 +2986,9 @@ class MetricsDisplay {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 8px;
+      padding: 3px 6px;
       border-radius: 999px;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -2968,10 +3036,10 @@ class MetricsDisplay {
     }
     @media (max-width: 640px) {
       body {
-        padding: 14px;
+        padding: 12px;
       }
       .header {
-        padding: 18px;
+        padding: 16px;
       }
       .metrics-grid {
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -3149,6 +3217,9 @@ class MetricsDisplay {
             diff = parseNumber(aData.parserDuration) - parseNumber(bData.parserDuration);
           } else if (parserSortState.key === 'status') {
             diff = parseNumber(aData.parserStatusRank) - parseNumber(bData.parserStatusRank);
+            if (diff === 0) {
+              diff = parseNumber(aData.parserFinalEvents) - parseNumber(bData.parserFinalEvents);
+            }
           }
           if (diff === 0) {
             diff = String(aData.parserName || '').localeCompare(String(bData.parserName || ''));
