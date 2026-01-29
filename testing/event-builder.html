@@ -1306,7 +1306,13 @@
                 </div>
                 <div class="field-group">
                   <label for="event-image">Promo Image URL</label>
-                  <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
+                  <div class="input-with-action">
+                    <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-image" aria-label="Paste promo image link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -4170,10 +4176,10 @@
         if (!targetId) return;
         const input = document.getElementById(targetId);
         if (!input) return;
-        const activeElement = document.activeElement;
-        if (activeElement && activeElement !== button && typeof activeElement.blur === 'function') {
-          activeElement.blur();
-        }
+
+        // Don't blur active element as it causes UI jumps on mobile
+        // and can interfere with clipboard operations
+
         const isSecure = typeof window.isSecureContext === 'boolean' ? window.isSecureContext : true;
         if (!isSecure) {
           showToast('Clipboard needs HTTPS/localhost. Paste manually.', 'warn');
@@ -4193,7 +4199,9 @@
           applyPasteValue(input, trimmed);
           showTemporaryState(button, 'Pasted');
         } catch (error) {
+          console.warn('Clipboard read failed:', error);
           showToast('Clipboard blocked. Paste manually.', 'warn');
+          input.focus();
         }
       }
 
