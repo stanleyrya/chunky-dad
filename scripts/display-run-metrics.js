@@ -384,6 +384,11 @@ class MetricsDisplay {
     return Object.keys(actions).reduce((sum, key) => sum + (actions[key] || 0), 0);
   }
 
+  sumDisplayActions(actions) {
+    if (!actions) return 0;
+    return (actions.new || 0) + (actions.merge || 0) + (actions.conflict || 0);
+  }
+
   getParserLastRuns(records) {
     const lastRuns = {};
     if (!Array.isArray(records)) return lastRuns;
@@ -555,28 +560,25 @@ class MetricsDisplay {
   formatActions(actions) {
     if (!actions) return 'n/a';
     const parts = [];
-    if (actions.new) parts.push(`new ${actions.new}`);
-    if (actions.merge) parts.push(`merge ${actions.merge}`);
-    if (actions.conflict) parts.push(`conflict ${actions.conflict}`);
-    if (actions.missing_calendar) parts.push(`missing cal ${actions.missing_calendar}`);
-    if (actions.other) parts.push(`other ${actions.other}`);
+    if (actions.new) parts.push(`adds ${actions.new}`);
+    if (actions.merge) parts.push(`merges ${actions.merge}`);
+    if (actions.conflict) parts.push(`conflicts ${actions.conflict}`);
     if (parts.length === 0) return 'none';
     return parts.join(', ');
   }
 
   formatActionsCompact(actions) {
-    if (!actions) return 'New 0 • Merge 0';
-    const newCount = actions.new || 0;
+    if (!actions) return 'Adds 0 • Merges 0 • Conflicts 0';
+    const addCount = actions.new || 0;
     const mergeCount = actions.merge || 0;
-    return `New ${newCount} • Merge ${mergeCount}`;
+    const conflictCount = actions.conflict || 0;
+    return `Adds ${addCount} • Merges ${mergeCount} • Conflicts ${conflictCount}`;
   }
 
   formatActionsIssues(actions) {
-    if (!actions) return 'Conflicts 0 • Missing cal 0 • Other 0';
+    if (!actions) return 'Conflicts 0';
     const conflictCount = actions.conflict || 0;
-    const missingCount = actions.missing_calendar || 0;
-    const otherCount = actions.other || 0;
-    return `Conflicts ${conflictCount} • Missing cal ${missingCount} • Other ${otherCount}`;
+    return `Conflicts ${conflictCount}`;
   }
 
   formatLastRunLabel(isoString) {
@@ -629,27 +631,20 @@ class MetricsDisplay {
 
   formatEventSummary(item, mode = 'last-run') {
     if (!item?.ran) return 'No run data';
-    const hasLastRun = !!item?.lastRunAt;
-    const hasHistory = (item?.historyRuns || 0) > 0;
-    const hasAllTime = (item?.allTimeRuns || 0) > 0;
+    const historyRuns = item?.historyRuns || 0;
+    const allTimeRuns = item?.allTimeRuns || 0;
 
-    if (mode === 'all-time') {
-      if (hasAllTime) return this.formatAllTimeSummary(item, { compact: true, includeTotal: false });
-      if (hasHistory) return this.formatHistorySummary(item, { compact: true, includeTotal: false });
-      if (hasLastRun) return this.formatLastRunSummary(item, { compact: true });
-      return 'No run data';
+    if (mode === 'all-time' && allTimeRuns > 0) {
+      return `All-time ${this.formatNumber(allTimeRuns)} runs`;
     }
 
-    if (mode === 'history') {
-      if (hasHistory) return this.formatHistorySummary(item, { compact: true, includeTotal: false });
-      if (hasAllTime) return this.formatAllTimeSummary(item, { compact: true, includeTotal: false });
-      if (hasLastRun) return this.formatLastRunSummary(item, { compact: true });
-      return 'No run data';
+    if (mode === 'history' && historyRuns > 0) {
+      return `Recent ${this.formatNumber(historyRuns)} runs`;
     }
 
-    if (hasLastRun) return this.formatLastRunSummary(item, { compact: true });
-    if (hasHistory) return this.formatHistorySummary(item, { compact: true, includeTotal: false });
-    if (hasAllTime) return this.formatAllTimeSummary(item, { compact: true, includeTotal: false });
+    if (historyRuns > 0) return `Recent ${this.formatNumber(historyRuns)} runs`;
+    if (allTimeRuns > 0) return `All-time ${this.formatNumber(allTimeRuns)} runs`;
+    if (item?.lastRunAt) return 'Runs 1';
     return 'No run data';
   }
 
@@ -776,6 +771,14 @@ class MetricsDisplay {
     return { label: this.formatStatusLabel(status), color: new Color(BRAND.textMuted) };
   }
 
+  getRunStatusEmoji(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'success') return '✅';
+    if (normalized === 'partial') return '⚠️';
+    if (normalized === 'failed') return '❌';
+    return '➖';
+  }
+
   getParserStatusKey(item) {
     if (!item) return 'unknown';
     if ((item.latestErrorCount || 0) > 0) return 'failed';
@@ -817,6 +820,16 @@ class MetricsDisplay {
       return { key, label: 'Not run', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 1 };
     }
     return { key, label: 'Unknown', color: new Color(BRAND.textMuted), icon: STATUS_ICONS['not-run'], rank: 1 };
+  }
+
+  getParserStatusEmoji(item) {
+    const key = this.getParserStatusKey(item);
+    if (key === 'healthy') return '✅';
+    if (key === 'warning') return '⚠️';
+    if (key === 'failed') return '❌';
+    if (key === 'no-events') return '➖';
+    if (key === 'not-run') return '⏸️';
+    return '➖';
   }
 
   getParserStatusRank(item) {
@@ -968,7 +981,7 @@ class MetricsDisplay {
       } else if (sortKey === 'events') {
         diff = (a?.finalBearEvents || 0) - (b?.finalBearEvents || 0);
       } else if (sortKey === 'actions') {
-        diff = this.sumActions(a?.actions) - this.sumActions(b?.actions);
+        diff = this.sumDisplayActions(a?.actions) - this.sumDisplayActions(b?.actions);
       } else if (sortKey === 'new') {
         diff = (a?.actions?.new || 0) - (b?.actions?.new || 0);
       } else if (sortKey === 'merge') {
@@ -980,7 +993,7 @@ class MetricsDisplay {
       } else if (sortKey === 'status') {
         diff = this.getParserStatusRank(a) - this.getParserStatusRank(b);
         if (diff === 0) {
-          diff = (a?.finalBearEvents || 0) - (b?.finalBearEvents || 0);
+          diff = this.sumDisplayActions(a?.actions) - this.sumDisplayActions(b?.actions);
         }
       }
       if (diff === 0) {
@@ -1010,6 +1023,10 @@ class MetricsDisplay {
         diff = this.getTimeValue(a?.finishedAt) - this.getTimeValue(b?.finishedAt);
       } else if (sortKey === 'status') {
         diff = this.getRunStatusRank(a?.status) - this.getRunStatusRank(b?.status);
+      } else if (sortKey === 'issues') {
+        const aIssues = (a?.errorsCount || 0) + (a?.warningsCount || 0);
+        const bIssues = (b?.errorsCount || 0) + (b?.warningsCount || 0);
+        diff = aIssues - bIssues;
       } else if (sortKey === 'errors') {
         diff = (a?.errorsCount || 0) - (b?.errorsCount || 0);
       } else if (sortKey === 'warnings') {
@@ -1324,6 +1341,7 @@ class MetricsDisplay {
     const normalized = String(value).toLowerCase().replace(/[^a-z]/g, '');
     if (['finished', 'finish', 'finishedat', 'date', 'time', 'latest', 'last', 'run'].includes(normalized)) return 'finished';
     if (['status', 'state'].includes(normalized)) return 'status';
+    if (['issues', 'issue', 'problems', 'problem'].includes(normalized)) return 'issues';
     if (['errors', 'error'].includes(normalized)) return 'errors';
     if (['warnings', 'warning', 'warn'].includes(normalized)) return 'warnings';
     if (['duration', 'runtime', 'length'].includes(normalized)) return 'duration';
@@ -1436,29 +1454,14 @@ class MetricsDisplay {
   }
 
   getWidgetHeaderText(context, view, sortState) {
-    const family = this.runtime.widgetFamily || 'medium';
-    const parts = [];
-    if (family !== 'small') parts.push('Chunky Dad');
-    if (view?.mode === 'parsers') {
-      if (context?.latest?.status) {
-        const statusMeta = this.getStatusMeta(context.latest.status);
-        if (statusMeta?.label) parts.push(`Last ${statusMeta.label}`);
-      }
-      if (context?.parserHealth) {
-        const parserCount = context.parserHealth.hasConfig
-          ? `${context.parserHealth.ranCount}/${context.parserHealth.configuredCount}`
-          : `${context.parserHealth.ranCount}`;
-        parts.push(`Run ${parserCount}`);
-      }
-      const sortLabel = this.getCompactSortLabel(sortState);
-      if (sortLabel) parts.push(`Sort ${sortLabel}`);
-    } else {
-      const label = this.getWidgetViewLabel(view);
-      if (label) parts.push(label);
+    if (view?.mode === 'parsers') return 'Parser health';
+    if (view?.mode === 'runs') return 'Run history';
+    if (view?.mode === 'aggregate') return 'Totals';
+    if (view?.mode === 'dashboard') return 'Metrics';
+    if (view?.mode === 'parser') {
+      return view.parserName ? `Parser ${view.parserName}` : 'Parser detail';
     }
-    const headerText = parts.filter(Boolean).join(' • ');
-    if (headerText) return headerText;
-    return family === 'small' ? 'Metrics' : 'Chunky Dad Metrics';
+    return 'Metrics';
   }
 
   addWidgetHeader(widget, logoImage, headerText) {
@@ -1640,7 +1643,7 @@ class MetricsDisplay {
         summary.lineLimit = 1;
 
         if (showDetails) {
-          const actionTotal = this.sumActions(item.actions);
+          const actionTotal = this.sumDisplayActions(item.actions);
           const issuesCount = item.latestErrorCount || 0;
           const detailParts = [`Actions ${actionTotal}`];
           if (issuesCount > 0) {
@@ -2051,6 +2054,33 @@ class MetricsDisplay {
         <div class="metric-label">${escapeHtml(label)}</div>
       </div>`;
 
+    const buildSortHeader = (label, key, sortState, viewKey, defaultDirection, extraClass = '') => {
+      if (!key) {
+        const className = extraClass ? ` class="${extraClass}"` : '';
+        return `<th${className}>${escapeHtml(label)}</th>`;
+      }
+      const safeDefaultDir = defaultDirection || 'desc';
+      const isActive = sortState?.key === key;
+      const direction = isActive && sortState?.direction === 'asc' ? 'asc' : 'desc';
+      const nextDirection = isActive ? (direction === 'asc' ? 'desc' : 'asc') : safeDefaultDir;
+      const arrow = isActive ? (direction === 'asc' ? '▲' : '▼') : '';
+      const classes = ['sortable', extraClass].filter(Boolean).join(' ');
+      const dataAttrs = [
+        `data-sort-view="${escapeHtml(viewKey)}"`,
+        `data-sort-key="${escapeHtml(key)}"`,
+        `data-sort-dir="${escapeHtml(nextDirection)}"`,
+        `data-sort-default-dir="${escapeHtml(safeDefaultDir)}"`,
+        `data-sort-label="${escapeHtml(label)}"`
+      ].join(' ');
+      return `
+        <th class="${classes}">
+          <button class="sort-button${isActive ? ' active' : ''}" type="button" ${dataAttrs}>
+            <span class="sort-label">${escapeHtml(label)}</span>
+            <span class="sort-arrow">${arrow}</span>
+          </button>
+        </th>`;
+    };
+
     const buildSection = (title, body, subtitleHtml) => `
       <div class="card">
         <div class="section-title">${escapeHtml(title)}</div>
@@ -2074,19 +2104,20 @@ class MetricsDisplay {
       </div>`;
     };
 
-    const buildParserTable = items => {
+    const buildParserTable = (items, sortState) => {
       if (!items.length) {
         return `<div class="muted">No parser metrics available.</div>`;
       }
       const rows = items.map(item => {
         const statusMeta = this.getParserStatusMeta(item);
-        const badgeClass = this.getParserStatusBadgeClass(statusMeta.key);
         const parserUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: item.name });
         const parserNavAttrs = buildNavAttributes('parser', item.name);
         const statusRank = this.getParserStatusRank(item);
-        const actionTotal = this.sumActions(item.actions);
+        const actionTotal = this.sumDisplayActions(item.actions);
         const lastRunValue = this.getTimeValue(item.lastRunAt);
         const durationMs = Number.isFinite(item?.durationMs) ? item.durationMs : 0;
+        const statusEmoji = this.getParserStatusEmoji(item);
+        const statusLabel = statusMeta?.label || 'Unknown';
         const rowAttrs = [
           `data-parser-name="${escapeHtml(item.name || '')}"`,
           `data-parser-status="${escapeHtml(statusMeta.key)}"`,
@@ -2099,33 +2130,27 @@ class MetricsDisplay {
           `data-parser-duration="${durationMs}"`
         ].join(' ');
         const summaryLine = this.formatEventSummary(item);
-        const finalEvents = this.formatNumber(item.finalBearEvents || 0);
         const lastRun = this.formatLastRunLabel(item.lastRunAt);
         const actions = item.actions || this.createActionCounts();
         const actionsCompact = this.formatActionsCompact(actions);
-        const issuesCount = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
-        const actionsIssues = issuesCount > 0 ? this.formatActionsIssues(actions) : null;
         const durationLabel = item.durationMs ? this.formatDuration(item.durationMs) : null;
         return `
           <tr data-row="parser" ${rowAttrs}>
             <td>
-              <div class="cell-title inline">
+              <div class="cell-title">
                 ${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}
-                ${buildBadge(statusMeta.label, badgeClass)}
               </div>
               <div class="cell-subtitle">${escapeHtml(summaryLine)}</div>
             </td>
-            <td class="num">
-              <div class="cell-title">${escapeHtml(finalEvents)}</div>
-              <div class="cell-subtitle">Final</div>
-            </td>
             <td>
               <div class="cell-title">${escapeHtml(actionsCompact)}</div>
-              ${actionsIssues ? `<div class="cell-subtitle">${escapeHtml(actionsIssues)}</div>` : ''}
             </td>
             <td>
               <div class="cell-title">${escapeHtml(lastRun)}</div>
               ${durationLabel ? `<div class="cell-subtitle">${escapeHtml(durationLabel)}</div>` : ''}
+            </td>
+            <td class="status-cell">
+              <span class="status-emoji" title="${escapeHtml(statusLabel)}">${escapeHtml(statusEmoji)}</span>
             </td>
           </tr>`;
       }).join('');
@@ -2134,10 +2159,10 @@ class MetricsDisplay {
           <table class="metrics-table list-table">
             <thead>
               <tr>
-                <th>Parser</th>
-                <th class="num">Final</th>
-                <th>Actions</th>
-                <th>Last run</th>
+                ${buildSortHeader('Parser', 'name', sortState, 'parsers', 'asc')}
+                ${buildSortHeader('Actions', 'actions', sortState, 'parsers', 'desc')}
+                ${buildSortHeader('Last run', 'last-run', sortState, 'parsers', 'desc')}
+                ${buildSortHeader('Status', 'status', sortState, 'parsers', 'desc', 'status-cell')}
               </tr>
             </thead>
             <tbody data-list="parsers">
@@ -2147,27 +2172,29 @@ class MetricsDisplay {
         </div>`;
     };
 
-    const buildRunTable = items => {
+    const buildRunTable = (items, sortState) => {
       if (!items.length) {
         return `<div class="muted">No runs match filters.</div>`;
       }
       const rows = items.map(run => {
         const statusMeta = this.getStatusMeta(run.status);
-        const badgeClass = this.getRunStatusBadgeClass(run.status);
         const runUrl = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
           runId: run.runId,
           readOnly: true
         });
         const finishedValue = this.getTimeValue(run.finishedAt);
         const statusRank = this.getRunStatusRank(run.status);
+        const statusEmoji = this.getRunStatusEmoji(run.status);
         const parserNames = Array.isArray(run.parserNames) ? run.parserNames : [];
         const parserNamesValue = parserNames.join('|');
+        const issuesTotal = (run.errorsCount || 0) + (run.warningsCount || 0);
         const rowAttrs = [
           `data-run-finished="${finishedValue}"`,
           `data-run-status="${escapeHtml(String(run.status || ''))}"`,
           `data-run-status-rank="${statusRank}"`,
           `data-run-errors="${run.errorsCount || 0}"`,
           `data-run-warnings="${run.warningsCount || 0}"`,
+          `data-run-issues="${issuesTotal}"`,
           `data-run-duration="${run.durationMs || 0}"`,
           `data-run-final-events="${run.finalEvents || 0}"`,
           `data-run-total-events="${run.totalEvents || 0}"`,
@@ -2187,18 +2214,14 @@ class MetricsDisplay {
               <div class="cell-title">${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}</div>
               ${subtitle ? `<div class="cell-subtitle">${escapeHtml(subtitle)}</div>` : ''}
             </td>
-            <td>
-              <div class="cell-title">${buildBadge(statusMeta.label, badgeClass)}</div>
-            </td>
-            <td class="num">
-              <div class="cell-title">${escapeHtml(this.formatNumber(run.finalEvents || 0))}</div>
-              <div class="cell-subtitle">Final</div>
-            </td>
             <td class="num">
               <div class="cell-title">${escapeHtml(issuesLabel)}</div>
             </td>
             <td>
               <div class="cell-title">${escapeHtml(this.formatLastRunLabel(run.finishedAt))}</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-emoji" title="${escapeHtml(statusMeta.label)}">${escapeHtml(statusEmoji)}</span>
             </td>
           </tr>`;
       }).join('');
@@ -2208,10 +2231,9 @@ class MetricsDisplay {
             <thead>
               <tr>
                 <th>Run</th>
-                <th>Status</th>
-                <th class="num">Final</th>
-                <th class="num">Issues</th>
-                <th>Finished</th>
+                ${buildSortHeader('Issues', 'issues', sortState, 'runs', 'desc', 'num')}
+                ${buildSortHeader('Finished', 'finished', sortState, 'runs', 'desc')}
+                ${buildSortHeader('Status', 'status', sortState, 'runs', 'desc', 'status-cell')}
               </tr>
             </thead>
             <tbody data-list="runs">
@@ -2361,10 +2383,9 @@ class MetricsDisplay {
         const parserLine = parserHealth.hasConfig
           ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
           : `Parsers run: ${parserHealth.ranCount || 0}`;
-        const sortLabel = parserSortResolved ? `Sort: ${this.getSortLabel(parserSortResolved)}` : null;
-        const parserSubtitle = `${escapeHtml(parserLine)}${sortLabel ? ` • ${escapeHtml(sortLabel)}` : ''}`;
+        const parserSubtitle = escapeHtml(parserLine);
         const sortedItems = this.sortParserItems(parserItems, parserSortResolved).slice(0, 8);
-        let parserTableHtml = buildParserTable(sortedItems);
+        let parserTableHtml = buildParserTable(sortedItems, parserSortResolved);
         if (parserItems.length > sortedItems.length) {
           const moreUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
           const moreLink = buildLink('View all parsers', moreUrl, 'text-link', buildNavAttributes('parsers', null));
@@ -2395,11 +2416,9 @@ class MetricsDisplay {
         const parserLine = parserHealth.hasConfig
           ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
           : `Parsers run: ${parserHealth.ranCount || 0}`;
-        const sortChips = buildSortChips(this.getParserSortOptions(), parserSortResolved, 'parsers', this.getDefaultSortDirection.bind(this));
         const sortedItems = this.sortParserItems(parserItems, parserSortResolved);
         const body = `
-          <div class="chip-group">${sortChips}</div>
-          ${buildParserTable(sortedItems)}`;
+          ${buildParserTable(sortedItems, parserSortResolved)}`;
         cards.push(buildSection('Parser runs', body, escapeHtml(parserLine)));
       } else if (viewMode === 'runs') {
         const totalRuns = runItems.length;
@@ -2409,7 +2428,6 @@ class MetricsDisplay {
           : `Filtered from ${this.formatNumber(totalRuns)}`;
         const runSubtitleText = `Runs: ${this.formatNumber(filteredCount)}${summarySubtitle ? ` • ${summarySubtitle}` : ''}`;
         const runSubtitle = `<span data-run-subtitle data-run-total="${totalRuns}">${escapeHtml(runSubtitleText)}</span>`;
-        const runSortChips = buildSortChips(this.getRunSortOptions(), runSortResolved, 'runs', this.getDefaultRunSortDirection.bind(this));
         const filtersHtml = `
           <div class="filter-block">
             <div class="filter-label">Status</div>
@@ -2422,14 +2440,10 @@ class MetricsDisplay {
           <div class="filter-block">
             <div class="filter-label">Parser</div>
             <div class="chip-group">${parserChips}</div>
-          </div>
-          <div class="filter-block">
-            <div class="filter-label">Sort</div>
-            <div class="chip-group">${runSortChips}</div>
           </div>`;
         const body = `
           ${filtersHtml}
-          ${buildRunTable(sortedRuns)}`;
+          ${buildRunTable(sortedRuns, runSortResolved)}`;
         cards.push(buildSection('All runs', body, runSubtitle));
       } else if (viewMode === 'aggregate') {
         if (!summary?.totals) {
@@ -2463,19 +2477,22 @@ class MetricsDisplay {
 
           const parserTotals = summary.by_parser_name || {};
           const parserRows = Object.keys(parserTotals).map(name => {
-            const totalsBucket = parserTotals[name]?.totals;
+            const totalsBucket = parserTotals[name]?.totals || {};
+            const actions = totalsBucket?.actions || this.createActionCounts();
+            const actionTotal = this.sumDisplayActions(actions);
             return {
               name,
-              finalBearEvents: totalsBucket?.totals?.final_bear_events || 0,
+              actions,
+              actionTotal,
               runs: totalsBucket?.runs || 0
             };
-          }).sort((a, b) => b.finalBearEvents - a.finalBearEvents);
+          }).sort((a, b) => b.actionTotal - a.actionTotal);
 
           if (parserRows.length > 0) {
             const topRows = parserRows.slice(0, 8).map(row => `
               <tr>
                 <td>${escapeHtml(row.name)}</td>
-                <td class="num">${escapeHtml(this.formatNumber(row.finalBearEvents))}</td>
+                <td>${escapeHtml(this.formatActionsCompact(row.actions))}</td>
                 <td class="num">${escapeHtml(this.formatNumber(row.runs))}</td>
               </tr>`).join('');
             const topTable = `
@@ -2484,7 +2501,7 @@ class MetricsDisplay {
                   <thead>
                     <tr>
                       <th>Parser</th>
-                      <th class="num">Final events</th>
+                      <th>Actions</th>
                       <th class="num">Runs</th>
                     </tr>
                   </thead>
@@ -2866,6 +2883,43 @@ class MetricsDisplay {
       padding: 6px 6px;
       border-bottom: 1px solid var(--border-color);
     }
+    .metrics-table th.sortable {
+      cursor: pointer;
+    }
+    .sort-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      padding: 0;
+      background: none;
+      border: none;
+      color: inherit;
+      font: inherit;
+      text-transform: inherit;
+      letter-spacing: inherit;
+      cursor: pointer;
+    }
+    .metrics-table th.num .sort-button {
+      justify-content: flex-end;
+    }
+    .metrics-table th.status-cell .sort-button {
+      justify-content: center;
+    }
+    .sort-arrow {
+      display: inline-block;
+      min-width: 10px;
+      text-align: center;
+      font-size: 10px;
+      opacity: 0.75;
+    }
+    .status-cell {
+      text-align: center;
+    }
+    .status-emoji {
+      font-size: 14px;
+      line-height: 1;
+    }
     .metrics-table td {
       padding: 8px 6px;
       border-bottom: 1px solid var(--border-color);
@@ -3064,8 +3118,8 @@ class MetricsDisplay {
       const navTabs = navLinks.filter(link => link.hasAttribute('data-nav-tab'));
       const headerSubtitle = document.querySelector('.header-subtitle');
       const parserChip = document.querySelector('[data-parser-chip]');
-      const parserSortChips = Array.from(document.querySelectorAll('[data-sort-view="parsers"]'));
-      const runSortChips = Array.from(document.querySelectorAll('[data-sort-view="runs"]'));
+      const parserSortButtons = Array.from(document.querySelectorAll('[data-sort-view="parsers"]'));
+      const runSortButtons = Array.from(document.querySelectorAll('[data-sort-view="runs"]'));
       const runFilterChips = Array.from(document.querySelectorAll('[data-filter-view="runs"]'));
       const parserList = document.querySelector('section[data-view="parsers"] [data-list="parsers"]');
       const runList = document.querySelector('section[data-view="runs"] [data-list="runs"]');
@@ -3148,17 +3202,19 @@ class MetricsDisplay {
         window.scrollTo(0, 0);
       };
 
-      const updateSortChips = (chips, state) => {
-        chips.forEach(chip => {
-          const key = chip.getAttribute('data-sort-key') || '';
-          const baseLabel = chip.getAttribute('data-sort-label') || chip.textContent || '';
-          const defaultDir = chip.getAttribute('data-sort-default-dir') || 'desc';
+      const updateSortButtons = (buttons, state) => {
+        buttons.forEach(button => {
+          const key = button.getAttribute('data-sort-key') || '';
+          const defaultDir = button.getAttribute('data-sort-default-dir') || 'desc';
           const isActive = key === state.key;
           const direction = state.direction === 'asc' ? 'asc' : 'desc';
           const nextDir = isActive ? (direction === 'asc' ? 'desc' : 'asc') : defaultDir;
-          chip.classList.toggle('active', isActive);
-          chip.textContent = isActive ? (baseLabel + ' (' + direction + ')') : baseLabel;
-          chip.setAttribute('data-sort-dir', nextDir);
+          button.classList.toggle('active', isActive);
+          button.setAttribute('data-sort-dir', nextDir);
+          const arrow = button.querySelector('.sort-arrow');
+          if (arrow) {
+            arrow.textContent = isActive ? (direction === 'asc' ? '▲' : '▼') : '';
+          }
         });
       };
 
@@ -3209,7 +3265,7 @@ class MetricsDisplay {
           } else if (parserSortState.key === 'status') {
             diff = parseNumber(aData.parserStatusRank) - parseNumber(bData.parserStatusRank);
             if (diff === 0) {
-              diff = parseNumber(aData.parserFinalEvents) - parseNumber(bData.parserFinalEvents);
+              diff = parseNumber(aData.parserActions) - parseNumber(bData.parserActions);
             }
           }
           if (diff === 0) {
@@ -3254,6 +3310,8 @@ class MetricsDisplay {
             diff = parseNumber(aData.runFinished) - parseNumber(bData.runFinished);
           } else if (runSortState.key === 'status') {
             diff = parseNumber(aData.runStatusRank) - parseNumber(bData.runStatusRank);
+          } else if (runSortState.key === 'issues') {
+            diff = parseNumber(aData.runIssues) - parseNumber(bData.runIssues);
           } else if (runSortState.key === 'errors') {
             diff = parseNumber(aData.runErrors) - parseNumber(bData.runErrors);
           } else if (runSortState.key === 'warnings') {
@@ -3308,28 +3366,28 @@ class MetricsDisplay {
         });
       });
 
-      parserSortChips.forEach(chip => {
-        chip.addEventListener('click', event => {
-          const key = chip.getAttribute('data-sort-key');
-          const dir = chip.getAttribute('data-sort-dir');
+      parserSortButtons.forEach(button => {
+        button.addEventListener('click', event => {
+          const key = button.getAttribute('data-sort-key');
+          const dir = button.getAttribute('data-sort-dir');
           if (!key || !dir) return;
           event.preventDefault();
           parserSortState.key = key;
           parserSortState.direction = normalizeDirection(dir);
-          updateSortChips(parserSortChips, parserSortState);
+          updateSortButtons(parserSortButtons, parserSortState);
           sortParserRows();
         });
       });
 
-      runSortChips.forEach(chip => {
-        chip.addEventListener('click', event => {
-          const key = chip.getAttribute('data-sort-key');
-          const dir = chip.getAttribute('data-sort-dir');
+      runSortButtons.forEach(button => {
+        button.addEventListener('click', event => {
+          const key = button.getAttribute('data-sort-key');
+          const dir = button.getAttribute('data-sort-dir');
           if (!key || !dir) return;
           event.preventDefault();
           runSortState.key = key;
           runSortState.direction = normalizeDirection(dir);
-          updateSortChips(runSortChips, runSortState);
+          updateSortButtons(runSortButtons, runSortState);
           applyRunFiltersAndSort();
         });
       });
@@ -3356,8 +3414,8 @@ class MetricsDisplay {
       const initialMode = body.getAttribute('data-view-mode') || 'dashboard';
       const initialParser = body.getAttribute('data-parser-name') || '';
       setActiveView(initialMode, initialParser);
-      updateSortChips(parserSortChips, parserSortState);
-      updateSortChips(runSortChips, runSortState);
+      updateSortButtons(parserSortButtons, parserSortState);
+      updateSortButtons(runSortButtons, runSortState);
       updateFilterChips();
       sortParserRows();
       applyRunFiltersAndSort();
@@ -3521,20 +3579,22 @@ class MetricsDisplay {
 
         const parserTotals = summary.by_parser_name || {};
         const parserRows = Object.keys(parserTotals).map(name => {
-          const totalsBucket = parserTotals[name]?.totals;
+          const totalsBucket = parserTotals[name]?.totals || {};
+          const actions = totalsBucket?.actions || this.createActionCounts();
           return {
             name,
-            finalBearEvents: totalsBucket?.totals?.final_bear_events || 0,
+            actions,
+            actionTotal: this.sumDisplayActions(actions),
             runs: totalsBucket?.runs || 0
           };
-        }).sort((a, b) => b.finalBearEvents - a.finalBearEvents);
+        }).sort((a, b) => b.actionTotal - a.actionTotal);
 
         if (parserRows.length > 0) {
           this.addSectionHeader(table, 'Top parsers (all-time)');
           parserRows.slice(0, 8).forEach(row => {
             this.addInfoRow(
               table,
-              `${row.name}: ${this.formatNumber(row.finalBearEvents)} events`,
+              `${row.name}: ${this.formatActionsCompact(row.actions)}`,
               `Runs: ${this.formatNumber(row.runs)}`
             );
           });
@@ -3720,14 +3780,10 @@ class MetricsDisplay {
 
   getParserSortOptions() {
     return [
-      { key: 'status', label: 'Status (issues first)', defaultDirection: 'desc' },
-      { key: 'events', label: 'Final events', defaultDirection: 'desc' },
-      { key: 'actions', label: 'Actions total', defaultDirection: 'desc' },
-      { key: 'new', label: 'New actions', defaultDirection: 'desc' },
-      { key: 'merge', label: 'Merge actions', defaultDirection: 'desc' },
+      { key: 'status', label: 'Status', defaultDirection: 'desc' },
+      { key: 'actions', label: 'Actions', defaultDirection: 'desc' },
       { key: 'last-run', label: 'Last run', defaultDirection: 'desc' },
-      { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
-      { key: 'name', label: 'Name', defaultDirection: 'asc' }
+      { key: 'name', label: 'Parser', defaultDirection: 'asc' }
     ];
   }
 
@@ -3781,14 +3837,9 @@ class MetricsDisplay {
 
   getRunSortOptions() {
     return [
-      { key: 'finished', label: 'Finished time', defaultDirection: 'desc' },
-      { key: 'status', label: 'Status (issues first)', defaultDirection: 'desc' },
-      { key: 'final-events', label: 'Final events', defaultDirection: 'desc' },
-      { key: 'total-events', label: 'Total events', defaultDirection: 'desc' },
-      { key: 'errors', label: 'Errors', defaultDirection: 'desc' },
-      { key: 'warnings', label: 'Warnings', defaultDirection: 'desc' },
-      { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
-      { key: 'parsers', label: 'Parser count', defaultDirection: 'desc' }
+      { key: 'finished', label: 'Finished', defaultDirection: 'desc' },
+      { key: 'issues', label: 'Issues', defaultDirection: 'desc' },
+      { key: 'status', label: 'Status', defaultDirection: 'desc' }
     ];
   }
 
@@ -3897,17 +3948,15 @@ class MetricsDisplay {
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
     const runCell = row.addText('Run');
-    runCell.widthWeight = 22;
-    const statusCell = row.addText('Status');
-    statusCell.widthWeight = 18;
-    const finalCell = row.addText('Final');
-    finalCell.widthWeight = 14;
-    const errorsCell = row.addText('Issues');
-    errorsCell.widthWeight = 18;
+    runCell.widthWeight = 34;
+    const issuesCell = row.addText('Issues');
+    issuesCell.widthWeight = 18;
     const finishedCell = row.addText('Finished');
-    finishedCell.widthWeight = 20;
+    finishedCell.widthWeight = 28;
+    const statusCell = row.addText('Status');
+    statusCell.widthWeight = 10;
 
-    [runCell, statusCell, finalCell, errorsCell, finishedCell].forEach(cell => {
+    [runCell, issuesCell, finishedCell, statusCell].forEach(cell => {
       cell.titleFont = Font.boldSystemFont(FONT_SIZES.app.small);
       cell.titleColor = new Color(BRAND.textMuted);
     });
@@ -3930,18 +3979,7 @@ class MetricsDisplay {
     runCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
     runCell.titleColor = new Color(BRAND.text);
     runCell.subtitleColor = new Color(BRAND.textMuted);
-    runCell.widthWeight = 22;
-
-    const statusMeta = this.getStatusMeta(run.status);
-    const statusCell = row.addText(statusMeta.label);
-    statusCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
-    statusCell.titleColor = statusMeta.color;
-    statusCell.widthWeight = 18;
-
-    const finalCell = row.addText(this.formatNumber(run.finalEvents || 0));
-    finalCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
-    finalCell.titleColor = new Color(BRAND.text);
-    finalCell.widthWeight = 14;
+    runCell.widthWeight = 34;
 
     const issuesLabel = `E${run.errorsCount || 0} W${run.warningsCount || 0}`;
     const issuesCell = row.addText(issuesLabel);
@@ -3952,7 +3990,14 @@ class MetricsDisplay {
     const finishedCell = row.addText(this.formatLastRunLabel(run.finishedAt));
     finishedCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     finishedCell.titleColor = new Color(BRAND.text);
-    finishedCell.widthWeight = 20;
+    finishedCell.widthWeight = 28;
+
+    const statusMeta = this.getStatusMeta(run.status);
+    const statusEmoji = this.getRunStatusEmoji(run.status);
+    const statusCell = row.addText(statusEmoji);
+    statusCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    statusCell.titleColor = statusMeta.color;
+    statusCell.widthWeight = 10;
 
     row.onSelect = () => {
       if (!run.runId) return;
@@ -3971,17 +4016,15 @@ class MetricsDisplay {
     const iconCell = row.addText('');
     iconCell.widthWeight = 6;
     const parserCell = row.addText('Parser');
-    parserCell.widthWeight = 30;
+    parserCell.widthWeight = 34;
     const actionsCell = row.addText('Actions');
-    actionsCell.widthWeight = 28;
-    const statusIconCell = row.addText('');
-    statusIconCell.widthWeight = 6;
-    const statusCell = row.addText('Status');
-    statusCell.widthWeight = 14;
+    actionsCell.widthWeight = 30;
     const lastRunCell = row.addText('Last run');
-    lastRunCell.widthWeight = 16;
+    lastRunCell.widthWeight = 20;
+    const statusCell = row.addText('Status');
+    statusCell.widthWeight = 10;
 
-    [iconCell, parserCell, actionsCell, statusIconCell, statusCell, lastRunCell].forEach(cell => {
+    [iconCell, parserCell, actionsCell, lastRunCell, statusCell].forEach(cell => {
       cell.titleFont = Font.boldSystemFont(FONT_SIZES.app.small);
       cell.titleColor = new Color(BRAND.textMuted);
     });
@@ -4008,30 +4051,24 @@ class MetricsDisplay {
     parserCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
     parserCell.titleColor = new Color(BRAND.text);
     parserCell.subtitleColor = new Color(BRAND.textMuted);
-    parserCell.widthWeight = 30;
+    parserCell.widthWeight = 34;
 
-    const actionsCell = row.addText(this.formatActionsCompact(item.actions), this.formatActionsIssues(item.actions));
+    const actionsCell = row.addText(this.formatActionsCompact(item.actions));
     actionsCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
-    actionsCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
     actionsCell.titleColor = new Color(BRAND.text);
-    actionsCell.subtitleColor = new Color(BRAND.textMuted);
-    actionsCell.widthWeight = 28;
-
-    const statusMeta = this.getParserStatusMeta(item);
-    const statusIcon = this.buildStatusIcon(statusMeta, 14);
-    const statusIconCell = row.addImage(statusIcon);
-    statusIconCell.imageSize = new Size(14, 14);
-    statusIconCell.widthWeight = 6;
-
-    const statusCell = row.addText(statusMeta.label);
-    statusCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
-    statusCell.titleColor = statusMeta.color;
-    statusCell.widthWeight = 14;
+    actionsCell.widthWeight = 30;
 
     const lastRunCell = row.addText(this.formatLastRunLabel(item.lastRunAt));
     lastRunCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     lastRunCell.titleColor = new Color(BRAND.text);
-    lastRunCell.widthWeight = 16;
+    lastRunCell.widthWeight = 20;
+
+    const statusMeta = this.getParserStatusMeta(item);
+    const statusEmoji = this.getParserStatusEmoji(item);
+    const statusCell = row.addText(statusEmoji);
+    statusCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    statusCell.titleColor = statusMeta.color;
+    statusCell.widthWeight = 10;
 
     row.onSelect = () => {
       if (!item?.name) return;
