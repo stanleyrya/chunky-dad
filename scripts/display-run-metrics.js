@@ -1085,6 +1085,35 @@ class MetricsDisplay {
     return query ? `${base}&${query}` : base;
   }
 
+  buildWidgetDashboardUrl(view, sortState, runSortState, runFilters) {
+    const safeView = view?.mode ? view : { mode: 'parsers' };
+    if (safeView.mode === 'runs') {
+      const sort = runSortState || this.getDefaultRunSort();
+      return this.buildRunListUrl(sort, runFilters || null);
+    }
+    if (safeView.mode === 'parsers') {
+      const sort = sortState || this.getDefaultSortForView(safeView);
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
+        view: 'parsers',
+        sort: sort?.key || null,
+        dir: sort?.direction || null
+      });
+    }
+    if (safeView.mode === 'parser') {
+      if (safeView.parserName) {
+        return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: safeView.parserName });
+      }
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+    }
+    if (safeView.mode === 'aggregate') {
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'aggregate' });
+    }
+    if (safeView.mode === 'dashboard') {
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'dashboard' });
+    }
+    return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+  }
+
   getQueryParams() {
     return this.runtime.queryParameters || {};
   }
@@ -1468,6 +1497,7 @@ class MetricsDisplay {
     const parserHealth = context.parserHealth;
     const sortState = context.sortState;
     const family = this.runtime.widgetFamily || 'medium';
+    const latestRunId = context.latest?.run_id || null;
 
     const title = widget.addText('Parser runs');
     title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
@@ -1498,6 +1528,13 @@ class MetricsDisplay {
       if (index > 0) widget.addSpacer(4);
       const statusMeta = this.getParserStatusMeta(item);
       const row = this.addWidgetRow(widget, family);
+      const runId = item?.lastRunId || latestRunId;
+      if (runId) {
+        row.url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
+          runId,
+          readOnly: true
+        });
+      }
 
       const iconSymbol = this.getParserIconSymbol(item);
       const iconImage = this.buildSymbolImage(iconSymbol, 12, new Color(BRAND.textSoft));
@@ -1690,6 +1727,12 @@ class MetricsDisplay {
       if (index > 0) widget.addSpacer(4);
       const statusMeta = this.getStatusMeta(run.status);
       const row = this.addWidgetRow(widget, family);
+      if (run.runId) {
+        row.url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
+          runId: run.runId,
+          readOnly: true
+        });
+      }
 
       const left = row.addStack();
       left.layoutVertically();
@@ -1789,23 +1832,26 @@ class MetricsDisplay {
     const summary = data.summary;
     const parserHealth = data.parserHealth;
     const records = Array.isArray(data.records) ? data.records : [];
-    const sortState = data.sortState || null;
+    const sortState = data.sortState || this.resolveSort(view);
     const runSortState = data.runSortState || this.resolveRunSort(view);
     const runFilters = data.runFilters || this.resolveRunFilters(view);
     const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
     const recentRecords = this.getRecentRecords(records, this.getWidgetHistoryLimit());
     const chartSize = this.getWidgetChartSize();
+    const widgetUrl = this.buildWidgetDashboardUrl(view, sortState, runSortState, runFilters);
 
     if (!latest && view.mode !== 'aggregate' && view.mode !== 'runs') {
       const message = widget.addText('No metrics found yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
       message.textColor = new Color(BRAND.text);
+      if (widgetUrl) widget.url = widgetUrl;
       return widget;
     }
     if (view.mode === 'runs' && runItems.length === 0) {
       const message = widget.addText('No run metrics yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
       message.textColor = new Color(BRAND.text);
+      if (widgetUrl) widget.url = widgetUrl;
       return widget;
     }
 
@@ -1836,12 +1882,7 @@ class MetricsDisplay {
       this.renderWidgetDashboard(widget, context);
     }
 
-    if (latest?.run_id) {
-      widget.url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
-        runId: latest.run_id,
-        readOnly: true
-      });
-    }
+    if (widgetUrl) widget.url = widgetUrl;
 
     return widget;
   }
