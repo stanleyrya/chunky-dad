@@ -1878,13 +1878,29 @@ class MetricsDisplay {
         const badgeClass = this.getParserStatusBadgeClass(statusMeta.key);
         const parserUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: item.name });
         const parserNavAttrs = buildNavAttributes('parser', item.name);
+        const statusRank = this.getParserStatusRank(item);
+        const actionTotal = this.sumActions(item.actions);
+        const lastRunValue = this.getTimeValue(item.lastRunAt);
+        const durationMs = Number.isFinite(item?.durationMs) ? item.durationMs : 0;
+        const rowAttrs = [
+          `data-parser-name="${escapeHtml(item.name || '')}"`,
+          `data-parser-status="${escapeHtml(statusMeta.key)}"`,
+          `data-parser-status-rank="${statusRank}"`,
+          `data-parser-final-events="${item.finalBearEvents || 0}"`,
+          `data-parser-actions="${actionTotal}"`,
+          `data-parser-new="${item.actions?.new || 0}"`,
+          `data-parser-merge="${item.actions?.merge || 0}"`,
+          `data-parser-update="${item.actions?.update || 0}"`,
+          `data-parser-last-run="${lastRunValue}"`,
+          `data-parser-duration="${durationMs}"`
+        ].join(' ');
         const summaryLine = this.formatEventSummary(item);
         const actions = this.formatActionsCompact(item.actions);
         const issues = this.formatActionsIssues(item.actions);
         const finalEvents = this.formatNumber(item.finalBearEvents || 0);
         const lastRun = this.formatLastRunLabel(item.lastRunAt);
         return `
-          <tr>
+          <tr ${rowAttrs}>
             <td>
               <div class="cell-title">${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}</div>
               <div class="cell-subtitle">${escapeHtml(summaryLine)}</div>
@@ -1927,13 +1943,29 @@ class MetricsDisplay {
           runId: run.runId,
           readOnly: true
         });
+        const finishedValue = this.getTimeValue(run.finishedAt);
+        const statusRank = this.getRunStatusRank(run.status);
+        const parserNames = Array.isArray(run.parserNames) ? run.parserNames : [];
+        const parserNamesValue = parserNames.join('|');
+        const rowAttrs = [
+          `data-run-finished="${finishedValue}"`,
+          `data-run-status="${escapeHtml(String(run.status || ''))}"`,
+          `data-run-status-rank="${statusRank}"`,
+          `data-run-errors="${run.errorsCount || 0}"`,
+          `data-run-warnings="${run.warningsCount || 0}"`,
+          `data-run-duration="${run.durationMs || 0}"`,
+          `data-run-final-events="${run.finalEvents || 0}"`,
+          `data-run-total-events="${run.totalEvents || 0}"`,
+          `data-run-parsers="${run.parsersCount || 0}"`,
+          `data-run-parser-names="${escapeHtml(parserNamesValue)}"`
+        ].join(' ');
         const subtitleParts = [];
         if (run.parsersCount) subtitleParts.push(`${run.parsersCount} parsers`);
         if (run.durationMs) subtitleParts.push(this.formatDuration(run.durationMs));
         const subtitle = subtitleParts.join(' • ');
         const issuesLabel = `E${run.errorsCount || 0} W${run.warningsCount || 0}`;
         return `
-          <tr>
+          <tr ${rowAttrs}>
             <td>
               <div class="cell-title">${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}</div>
               ${subtitle ? `<div class="cell-subtitle">${escapeHtml(subtitle)}</div>` : ''}
@@ -1965,18 +1997,26 @@ class MetricsDisplay {
 
     const buildSortChips = (options, currentSort, viewKey, directionResolver) => {
       return options.map(option => {
+        const defaultDirection = option.defaultDirection || directionResolver(option.key);
         const isActive = currentSort?.key === option.key;
-        const activeDirection = currentSort?.direction || directionResolver(option.key);
+        const activeDirection = currentSort?.direction || defaultDirection;
         const nextDirection = isActive
           ? (activeDirection === 'asc' ? 'desc' : 'asc')
-          : (option.defaultDirection || directionResolver(option.key));
+          : defaultDirection;
         const label = `${option.label}${isActive ? ` (${activeDirection})` : ''}`;
         const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
           view: viewKey,
           sort: option.key,
           dir: nextDirection
         });
-        return buildChip(label, url, isActive);
+        const dataAttrs = [
+          `data-sort-view="${escapeHtml(viewKey)}"`,
+          `data-sort-key="${escapeHtml(option.key)}"`,
+          `data-sort-dir="${escapeHtml(nextDirection)}"`,
+          `data-sort-default-dir="${escapeHtml(defaultDirection)}"`,
+          `data-sort-label="${escapeHtml(option.label)}"`
+        ].join(' ');
+        return buildChip(label, url, isActive, dataAttrs);
       }).join('');
     };
 
@@ -1986,10 +2026,16 @@ class MetricsDisplay {
       days: runFilters?.days || null
     };
 
-    const buildRunFilterChip = (label, overrides, isActive) => {
+    const buildRunFilterChip = (label, overrides, isActive, filterType, filterValue) => {
       const nextFilters = { ...runFilterState, ...overrides };
       const url = this.buildRunListUrl(runSortResolved, nextFilters);
-      return buildChip(label, url, isActive);
+      const normalizedValue = filterValue === null || filterValue === undefined ? '' : String(filterValue);
+      const dataAttrs = [
+        'data-filter-view="runs"',
+        `data-filter-type="${escapeHtml(filterType)}"`,
+        `data-filter-value="${escapeHtml(normalizedValue)}"`
+      ].join(' ');
+      return buildChip(label, url, isActive, dataAttrs);
     };
 
     const statusFilter = this.normalizeRunStatusFilter(runFilters?.status);
@@ -2003,7 +2049,9 @@ class MetricsDisplay {
     const statusChips = statusOptions.map(option => buildRunFilterChip(
       option.label,
       { status: option.value },
-      statusFilter === option.value || (!statusFilter && !option.value)
+      statusFilter === option.value || (!statusFilter && !option.value),
+      'status',
+      option.value
     )).join('');
 
     const dayOptions = [
@@ -2015,17 +2063,19 @@ class MetricsDisplay {
     const dayChips = dayOptions.map(option => buildRunFilterChip(
       option.label,
       { days: option.value },
-      (runFilters?.days || null) === option.value
+      (runFilters?.days || null) === option.value,
+      'days',
+      option.value
     )).join('');
 
     const parserNames = Array.from(new Set(parserItems.map(item => item?.name).filter(Boolean))).slice(0, 8);
     const activeParserFilter = runFilters?.parserFilter ? String(runFilters.parserFilter).toLowerCase() : null;
     const parserChips = ['All parsers', ...parserNames].map((name, index) => {
       if (index === 0) {
-        return buildRunFilterChip(name, { parserFilter: null }, !activeParserFilter);
+        return buildRunFilterChip(name, { parserFilter: null }, !activeParserFilter, 'parser', '');
       }
       const isActive = activeParserFilter === String(name).toLowerCase();
-      return buildRunFilterChip(name, { parserFilter: name }, isActive);
+      return buildRunFilterChip(name, { parserFilter: name }, isActive, 'parser', name);
     }).join('');
 
     const buildCardsForView = viewState => {
@@ -2131,7 +2181,8 @@ class MetricsDisplay {
         const summarySubtitle = totalRuns === filteredCount
           ? null
           : `Filtered from ${this.formatNumber(totalRuns)}`;
-        const runSubtitle = `Runs: ${this.formatNumber(filteredCount)}${summarySubtitle ? ` • ${summarySubtitle}` : ''}`;
+        const runSubtitleText = `Runs: ${this.formatNumber(filteredCount)}${summarySubtitle ? ` • ${summarySubtitle}` : ''}`;
+        const runSubtitle = `<span data-run-subtitle data-run-total="${totalRuns}">${escapeHtml(runSubtitleText)}</span>`;
         const runSortChips = buildSortChips(this.getRunSortOptions(), runSortResolved, 'runs', this.getDefaultRunSortDirection.bind(this));
         const filtersHtml = `
           <div class="filter-block">
@@ -2153,7 +2204,7 @@ class MetricsDisplay {
         const body = `
           ${filtersHtml}
           ${buildRunTable(sortedRuns)}`;
-        cards.push(buildSection('All runs', body, escapeHtml(runSubtitle)));
+        cards.push(buildSection('All runs', body, runSubtitle));
       } else if (viewMode === 'aggregate') {
         if (!summary?.totals) {
           cards.push(buildEmptyCard('No summary metrics found.', 'Run the scraper to generate summary metrics.'));
@@ -2336,6 +2387,14 @@ class MetricsDisplay {
     const parserChipLabel = `Parser: ${safeView.parserName || 'detail'}`;
     const parserChip = `<span class="${parserChipClass}" data-parser-chip>${escapeHtml(parserChipLabel)}</span>`;
     const navHtml = `${navLinks}${parserChip}`;
+
+    const parserSortKey = parserSortResolved?.key || 'status';
+    const parserSortDir = parserSortResolved?.direction || this.getDefaultSortDirection(parserSortKey);
+    const runSortKey = runSortResolved?.key || 'finished';
+    const runSortDir = runSortResolved?.direction || this.getDefaultRunSortDirection(runSortKey);
+    const runFilterStatus = runFilters?.status ? String(runFilters.status) : '';
+    const runFilterDays = Number.isFinite(runFilters?.days) ? String(runFilters.days) : '';
+    const runFilterParser = runFilters?.parserFilter ? String(runFilters.parserFilter) : '';
 
     const isDarkMode = Device.isUsingDarkAppearance();
     const html = `
@@ -2662,7 +2721,7 @@ class MetricsDisplay {
     }
   </style>
 </head>
-<body data-view-mode="${escapeHtml(viewMode)}" data-parser-name="${escapeHtml(initialParserName)}">
+<body data-view-mode="${escapeHtml(viewMode)}" data-parser-name="${escapeHtml(initialParserName)}" data-parser-sort-key="${escapeHtml(parserSortKey)}" data-parser-sort-dir="${escapeHtml(parserSortDir)}" data-run-sort-key="${escapeHtml(runSortKey)}" data-run-sort-dir="${escapeHtml(runSortDir)}" data-run-filter-status="${escapeHtml(runFilterStatus)}" data-run-filter-days="${escapeHtml(runFilterDays)}" data-run-filter-parser="${escapeHtml(runFilterParser)}">
   <div class="header">
     <div class="header-main">
       ${logoData ? `<img class="logo" src="${escapeHtml(logoData)}" alt="Chunky Dad">` : ''}
@@ -2686,6 +2745,38 @@ class MetricsDisplay {
       const navTabs = navLinks.filter(link => link.hasAttribute('data-nav-tab'));
       const headerSubtitle = document.querySelector('.header-subtitle');
       const parserChip = document.querySelector('[data-parser-chip]');
+      const parserSortChips = Array.from(document.querySelectorAll('[data-sort-view="parsers"]'));
+      const runSortChips = Array.from(document.querySelectorAll('[data-sort-view="runs"]'));
+      const runFilterChips = Array.from(document.querySelectorAll('[data-filter-view="runs"]'));
+      const parserTableBody = document.querySelector('section[data-view="parsers"] table.metrics-table tbody');
+      const runTableBody = document.querySelector('section[data-view="runs"] table.metrics-table tbody');
+      const runSubtitle = document.querySelector('section[data-view="runs"] [data-run-subtitle]');
+
+      const parseNumber = value => {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : 0;
+      };
+      const formatNumber = value => {
+        if (!Number.isFinite(value)) return '0';
+        return Math.round(value).toLocaleString();
+      };
+      const normalizeDirection = value => (value === 'asc' ? 'asc' : 'desc');
+      const normalizeText = value => String(value || '').toLowerCase();
+
+      const parserSortState = {
+        key: body.getAttribute('data-parser-sort-key') || 'status',
+        direction: normalizeDirection(body.getAttribute('data-parser-sort-dir'))
+      };
+      const runSortState = {
+        key: body.getAttribute('data-run-sort-key') || 'finished',
+        direction: normalizeDirection(body.getAttribute('data-run-sort-dir'))
+      };
+      const rawDays = parseNumber(body.getAttribute('data-run-filter-days'));
+      const runFilterState = {
+        status: normalizeText(body.getAttribute('data-run-filter-status')) || null,
+        days: rawDays > 0 ? rawDays : null,
+        parser: normalizeText(body.getAttribute('data-run-filter-parser')) || null
+      };
 
       const buildKey = (mode, parser) => (mode === 'parser' ? 'parser:' + (parser || '') : mode);
       const viewIndex = new Map();
@@ -2738,6 +2829,155 @@ class MetricsDisplay {
         window.scrollTo(0, 0);
       };
 
+      const updateSortChips = (chips, state) => {
+        chips.forEach(chip => {
+          const key = chip.getAttribute('data-sort-key') || '';
+          const baseLabel = chip.getAttribute('data-sort-label') || chip.textContent || '';
+          const defaultDir = chip.getAttribute('data-sort-default-dir') || 'desc';
+          const isActive = key === state.key;
+          const direction = state.direction === 'asc' ? 'asc' : 'desc';
+          const nextDir = isActive ? (direction === 'asc' ? 'desc' : 'asc') : defaultDir;
+          chip.classList.toggle('active', isActive);
+          chip.textContent = isActive ? `${baseLabel} (${direction})` : baseLabel;
+          chip.setAttribute('data-sort-dir', nextDir);
+        });
+      };
+
+      const updateFilterChips = () => {
+        runFilterChips.forEach(chip => {
+          const type = chip.getAttribute('data-filter-type') || '';
+          const rawValue = chip.getAttribute('data-filter-value') || '';
+          let isActive = false;
+          if (type === 'status') {
+            const value = normalizeText(rawValue);
+            isActive = (runFilterState.status || '') === value;
+            if (!runFilterState.status && !value) isActive = true;
+          } else if (type === 'days') {
+            const value = parseNumber(rawValue);
+            const current = Number.isFinite(runFilterState.days) ? runFilterState.days : null;
+            isActive = (current || null) === (value || null);
+          } else if (type === 'parser') {
+            const value = normalizeText(rawValue);
+            isActive = (runFilterState.parser || '') === value;
+            if (!runFilterState.parser && !value) isActive = true;
+          }
+          chip.classList.toggle('active', isActive);
+        });
+      };
+
+      const sortParserRows = () => {
+        if (!parserTableBody) return;
+        const rows = Array.from(parserTableBody.querySelectorAll('tr'));
+        const direction = parserSortState.direction === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const aData = a.dataset;
+          const bData = b.dataset;
+          let diff = 0;
+          if (parserSortState.key === 'name') {
+            diff = String(aData.parserName || '').localeCompare(String(bData.parserName || ''));
+          } else if (parserSortState.key === 'events') {
+            diff = parseNumber(aData.parserFinalEvents) - parseNumber(bData.parserFinalEvents);
+          } else if (parserSortState.key === 'actions') {
+            diff = parseNumber(aData.parserActions) - parseNumber(bData.parserActions);
+          } else if (parserSortState.key === 'new') {
+            diff = parseNumber(aData.parserNew) - parseNumber(bData.parserNew);
+          } else if (parserSortState.key === 'merge') {
+            diff = parseNumber(aData.parserMerge) - parseNumber(bData.parserMerge);
+          } else if (parserSortState.key === 'update') {
+            diff = parseNumber(aData.parserUpdate) - parseNumber(bData.parserUpdate);
+          } else if (parserSortState.key === 'last-run') {
+            diff = parseNumber(aData.parserLastRun) - parseNumber(bData.parserLastRun);
+          } else if (parserSortState.key === 'duration') {
+            diff = parseNumber(aData.parserDuration) - parseNumber(bData.parserDuration);
+          } else if (parserSortState.key === 'status') {
+            diff = parseNumber(aData.parserStatusRank) - parseNumber(bData.parserStatusRank);
+          }
+          if (diff === 0) {
+            diff = String(aData.parserName || '').localeCompare(String(bData.parserName || ''));
+          }
+          return diff * direction;
+        });
+        rows.forEach(row => parserTableBody.appendChild(row));
+      };
+
+      const matchesRunFilters = row => {
+        const data = row.dataset;
+        if (runFilterState.status) {
+          if (runFilterState.status === 'issues') {
+            const errors = parseNumber(data.runErrors);
+            const warnings = parseNumber(data.runWarnings);
+            if (errors <= 0 && warnings <= 0) return false;
+          } else {
+            const status = normalizeText(data.runStatus);
+            if (status !== runFilterState.status) return false;
+          }
+        }
+        if (runFilterState.parser) {
+          const names = normalizeText(data.runParserNames || '');
+          if (!names.includes(runFilterState.parser)) return false;
+        }
+        if (runFilterState.days) {
+          const finished = parseNumber(data.runFinished);
+          const cutoff = Date.now() - (runFilterState.days * 24 * 60 * 60 * 1000);
+          if (finished < cutoff) return false;
+        }
+        return true;
+      };
+
+      const sortRunRows = rows => {
+        const direction = runSortState.direction === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const aData = a.dataset;
+          const bData = b.dataset;
+          let diff = 0;
+          if (runSortState.key === 'finished') {
+            diff = parseNumber(aData.runFinished) - parseNumber(bData.runFinished);
+          } else if (runSortState.key === 'status') {
+            diff = parseNumber(aData.runStatusRank) - parseNumber(bData.runStatusRank);
+          } else if (runSortState.key === 'errors') {
+            diff = parseNumber(aData.runErrors) - parseNumber(bData.runErrors);
+          } else if (runSortState.key === 'warnings') {
+            diff = parseNumber(aData.runWarnings) - parseNumber(bData.runWarnings);
+          } else if (runSortState.key === 'duration') {
+            diff = parseNumber(aData.runDuration) - parseNumber(bData.runDuration);
+          } else if (runSortState.key === 'final-events') {
+            diff = parseNumber(aData.runFinalEvents) - parseNumber(bData.runFinalEvents);
+          } else if (runSortState.key === 'total-events') {
+            diff = parseNumber(aData.runTotalEvents) - parseNumber(bData.runTotalEvents);
+          } else if (runSortState.key === 'parsers') {
+            diff = parseNumber(aData.runParsers) - parseNumber(bData.runParsers);
+          }
+          if (diff === 0) {
+            diff = parseNumber(aData.runFinished) - parseNumber(bData.runFinished);
+          }
+          return diff * direction;
+        });
+        return rows;
+      };
+
+      const applyRunFiltersAndSort = () => {
+        if (!runTableBody) return;
+        const rows = Array.from(runTableBody.querySelectorAll('tr'));
+        const visibleRows = rows.filter(matchesRunFilters);
+        const visibleSet = new Set(visibleRows);
+        const hiddenRows = rows.filter(row => !visibleSet.has(row));
+        const sortedVisible = sortRunRows(visibleRows);
+        sortedVisible.forEach(row => {
+          row.style.display = '';
+          runTableBody.appendChild(row);
+        });
+        hiddenRows.forEach(row => {
+          row.style.display = 'none';
+          runTableBody.appendChild(row);
+        });
+        if (runSubtitle) {
+          const totalRuns = parseNumber(runSubtitle.getAttribute('data-run-total')) || rows.length;
+          const filteredCount = sortedVisible.length;
+          const summary = filteredCount === totalRuns ? '' : ` • Filtered from ${formatNumber(totalRuns)}`;
+          runSubtitle.textContent = `Runs: ${formatNumber(filteredCount)}${summary}`;
+        }
+      };
+
       navLinks.forEach(link => {
         link.addEventListener('click', event => {
           const mode = link.getAttribute('data-nav-view');
@@ -2748,9 +2988,59 @@ class MetricsDisplay {
         });
       });
 
+      parserSortChips.forEach(chip => {
+        chip.addEventListener('click', event => {
+          const key = chip.getAttribute('data-sort-key');
+          const dir = chip.getAttribute('data-sort-dir');
+          if (!key || !dir) return;
+          event.preventDefault();
+          parserSortState.key = key;
+          parserSortState.direction = normalizeDirection(dir);
+          updateSortChips(parserSortChips, parserSortState);
+          sortParserRows();
+        });
+      });
+
+      runSortChips.forEach(chip => {
+        chip.addEventListener('click', event => {
+          const key = chip.getAttribute('data-sort-key');
+          const dir = chip.getAttribute('data-sort-dir');
+          if (!key || !dir) return;
+          event.preventDefault();
+          runSortState.key = key;
+          runSortState.direction = normalizeDirection(dir);
+          updateSortChips(runSortChips, runSortState);
+          applyRunFiltersAndSort();
+        });
+      });
+
+      runFilterChips.forEach(chip => {
+        chip.addEventListener('click', event => {
+          const type = chip.getAttribute('data-filter-type');
+          const rawValue = chip.getAttribute('data-filter-value') || '';
+          if (!type) return;
+          event.preventDefault();
+          if (type === 'status') {
+            runFilterState.status = normalizeText(rawValue) || null;
+          } else if (type === 'days') {
+            const value = parseNumber(rawValue);
+            runFilterState.days = value > 0 ? value : null;
+          } else if (type === 'parser') {
+            runFilterState.parser = normalizeText(rawValue) || null;
+          }
+          updateFilterChips();
+          applyRunFiltersAndSort();
+        });
+      });
+
       const initialMode = body.getAttribute('data-view-mode') || 'dashboard';
       const initialParser = body.getAttribute('data-parser-name') || '';
       setActiveView(initialMode, initialParser);
+      updateSortChips(parserSortChips, parserSortState);
+      updateSortChips(runSortChips, runSortState);
+      updateFilterChips();
+      sortParserRows();
+      applyRunFiltersAndSort();
     })();
   </script>
 </body>
