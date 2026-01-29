@@ -3922,6 +3922,9 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         const timezone = testEventData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const testUid = testEventData.uid ? String(testEventData.uid).trim() : '';
+        const testRecurrenceId = toDate(testEventData.recurrenceId);
+        const isOverride = Boolean(testRecurrenceId);
         
         const formatTimeComponent = (date) => {
             const options = { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: timezone };
@@ -4020,8 +4023,10 @@ class DynamicCalendarLoader extends CalendarCore {
             website: testEventData.website || null,
             tickets: testEventData.tickets || null,
             links: normalizedLinks,
-            recurring: Boolean(testEventData.recurring),
-            recurrence: testEventData.recurrence || null,
+            uid: testUid || null,
+            recurrenceId: testRecurrenceId || null,
+            recurring: isOverride ? false : Boolean(testEventData.recurring),
+            recurrence: isOverride ? null : (testEventData.recurrence || null),
             coordinates: testEventData.coordinates || null,
             eventType: testEventData.eventType || null,
             source: testEventData.source || 'Event Generator',
@@ -4029,8 +4034,30 @@ class DynamicCalendarLoader extends CalendarCore {
             isTestEvent: true
         };
         
-        // Remove any existing test events
-        this.allEvents = this.allEvents.filter(event => !(event.slug && event.slug.startsWith('test-event-')));
+        const shouldRemoveExistingEvent = (event) => {
+            if (!event) return false;
+            if (event.slug && event.slug.startsWith('test-event-')) {
+                return true;
+            }
+            if (!testUid) {
+                return false;
+            }
+            const eventUid = event.uid || event.slug || event.name;
+            if (!eventUid || eventUid !== testUid) {
+                return false;
+            }
+            const eventRecurrenceId = toDate(event.recurrenceId);
+            if (isOverride) {
+                if (!eventRecurrenceId || !testRecurrenceId) {
+                    return false;
+                }
+                return eventRecurrenceId.getTime() === testRecurrenceId.getTime();
+            }
+            return !eventRecurrenceId;
+        };
+
+        // Remove any existing test events or matching base/override entry
+        this.allEvents = this.allEvents.filter(event => !shouldRemoveExistingEvent(event));
         
         // Add the new test event at the front of the list
         this.allEvents.unshift(testEvent);
