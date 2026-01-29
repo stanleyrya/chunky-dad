@@ -2838,7 +2838,7 @@ class MetricsDisplay {
           const direction = state.direction === 'asc' ? 'asc' : 'desc';
           const nextDir = isActive ? (direction === 'asc' ? 'desc' : 'asc') : defaultDir;
           chip.classList.toggle('active', isActive);
-          chip.textContent = isActive ? `${baseLabel} (${direction})` : baseLabel;
+          chip.textContent = isActive ? (baseLabel + ' (' + direction + ')') : baseLabel;
           chip.setAttribute('data-sort-dir', nextDir);
         });
       };
@@ -2973,8 +2973,8 @@ class MetricsDisplay {
         if (runSubtitle) {
           const totalRuns = parseNumber(runSubtitle.getAttribute('data-run-total')) || rows.length;
           const filteredCount = sortedVisible.length;
-          const summary = filteredCount === totalRuns ? '' : ` • Filtered from ${formatNumber(totalRuns)}`;
-          runSubtitle.textContent = `Runs: ${formatNumber(filteredCount)}${summary}`;
+          const summary = filteredCount === totalRuns ? '' : ' • Filtered from ' + formatNumber(totalRuns);
+          runSubtitle.textContent = 'Runs: ' + formatNumber(filteredCount) + summary;
         }
       };
 
