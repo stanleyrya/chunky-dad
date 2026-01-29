@@ -3555,10 +3555,19 @@
             case 'eid':
               overrides.editingExistingId = value;
               break;
+            case 'euid':
+              overrides.editingExistingUid = value;
+              break;
             case 'occid':
             case 'eocc':
             case 'editocc':
               overrides.editingExistingOccurrenceId = value;
+              break;
+            case 'erid':
+              overrides.editingExistingRecurrenceId = value;
+              break;
+            case 'ertz':
+              overrides.editingExistingRecurrenceTimezone = value;
               break;
             case 'editmode':
             case 'emode':
@@ -3572,7 +3581,12 @@
               break;
           }
         });
-        if (!sawEditFlag && (overrides.editingExistingId || overrides.editingExistingMode || overrides.editingExistingOccurrenceId)) {
+        if (!sawEditFlag && (overrides.editingExistingId
+          || overrides.editingExistingMode
+          || overrides.editingExistingOccurrenceId
+          || overrides.editingExistingUid
+          || overrides.editingExistingRecurrenceId
+          || overrides.editingExistingRecurrenceTimezone)) {
           overrides.isEditingExisting = true;
         }
         if (overrides.existingSelectionAction === 'copy') {
@@ -3580,6 +3594,9 @@
           overrides.editingExistingId = '';
           overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
           overrides.editingExistingOccurrenceId = '';
+          overrides.editingExistingUid = '';
+          overrides.editingExistingRecurrenceId = '';
+          overrides.editingExistingRecurrenceTimezone = '';
         }
         if (overrides.isEditingExisting) {
           if (!overrides.editingExistingMode) {
@@ -3592,6 +3609,9 @@
           overrides.editingExistingId = '';
           overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
           overrides.editingExistingOccurrenceId = '';
+          overrides.editingExistingUid = '';
+          overrides.editingExistingRecurrenceId = '';
+          overrides.editingExistingRecurrenceTimezone = '';
         }
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
@@ -4822,6 +4842,9 @@
           if (state.editingExistingId) params.set('editid', state.editingExistingId);
           if (state.editingExistingMode) params.set('emode', state.editingExistingMode);
           if (state.editingExistingOccurrenceId) params.set('occid', state.editingExistingOccurrenceId);
+          if (state.editingExistingUid) params.set('euid', state.editingExistingUid);
+          if (state.editingExistingRecurrenceId) params.set('erid', state.editingExistingRecurrenceId);
+          if (state.editingExistingRecurrenceTimezone) params.set('ertz', state.editingExistingRecurrenceTimezone);
         }
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
