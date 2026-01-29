@@ -13,7 +13,8 @@ const BRAND = {
   textSoft: '#f5f7ff',
   success: '#2ed573',
   warning: '#feca57',
-  danger: '#ff6b6b'
+  danger: '#ff6b6b',
+  neutral: '#a7b0cc'
 };
 
 const CHART_STYLE = {
@@ -22,6 +23,19 @@ const CHART_STYLE = {
   fillOpacity: 0.25,
   lineWidth: 2,
   padding: 6
+};
+
+const WIDGET_STYLE = {
+  rowBackground: '#ffffff',
+  rowBackgroundAlpha: 0.12,
+  rowBackgroundAlphaCompact: 0.08,
+  rowPadding: { top: 6, left: 8, bottom: 6, right: 8 },
+  rowPaddingCompact: { top: 4, left: 6, bottom: 4, right: 6 },
+  rowRadius: 8,
+  rowSpacing: 6,
+  badgePadding: { top: 2, left: 6, bottom: 2, right: 6 },
+  badgeRadius: 10,
+  badgeAlpha: 0.22
 };
 
 const FONT_SIZES = {
@@ -841,6 +855,53 @@ class MetricsDisplay {
     return FONT_SIZES.widget.metric;
   }
 
+  getWidgetRowPadding(family) {
+    if (family === 'small') return WIDGET_STYLE.rowPaddingCompact;
+    return WIDGET_STYLE.rowPadding;
+  }
+
+  addWidgetRow(widget, family) {
+    const row = widget.addStack();
+    row.layoutHorizontally();
+    row.centerAlignContent();
+    row.spacing = WIDGET_STYLE.rowSpacing;
+    const alpha = family === 'small' ? WIDGET_STYLE.rowBackgroundAlphaCompact : WIDGET_STYLE.rowBackgroundAlpha;
+    row.backgroundColor = new Color(WIDGET_STYLE.rowBackground, alpha);
+    row.cornerRadius = WIDGET_STYLE.rowRadius;
+    const padding = this.getWidgetRowPadding(family);
+    row.setPadding(padding.top, padding.left, padding.bottom, padding.right);
+    return row;
+  }
+
+  getWidgetBadgeColors(variant) {
+    const palette = {
+      success: BRAND.success,
+      warning: BRAND.warning,
+      danger: BRAND.danger,
+      neutral: BRAND.neutral || BRAND.textMuted
+    };
+    const base = palette[variant] || palette.neutral;
+    return {
+      text: new Color(base),
+      background: new Color(base, WIDGET_STYLE.badgeAlpha)
+    };
+  }
+
+  addWidgetBadge(container, label, variant, options = {}) {
+    const colors = this.getWidgetBadgeColors(variant);
+    const badge = container.addStack();
+    badge.backgroundColor = colors.background;
+    badge.cornerRadius = WIDGET_STYLE.badgeRadius;
+    const padding = WIDGET_STYLE.badgePadding;
+    badge.setPadding(padding.top, padding.left, padding.bottom, padding.right);
+    const displayLabel = String(label || '').trim() || 'Unknown';
+    const text = badge.addText(displayLabel);
+    text.font = Font.boldSystemFont(options.fontSize || FONT_SIZES.widget.small);
+    text.textColor = colors.text;
+    text.lineLimit = 1;
+    return badge;
+  }
+
   getRecentRecords(records, limit) {
     if (!Array.isArray(records) || records.length === 0) return [];
     if (!Number.isFinite(limit) || limit <= 0) return [...records];
@@ -1430,17 +1491,13 @@ class MetricsDisplay {
     const sortedItems = this.sortParserItems(parserHealth.items, sortState);
     const items = sortedItems.slice(0, maxRows);
     const nameLimit = family === 'small' ? 14 : (family === 'large' ? 22 : 18);
-    const showActions = family !== 'small';
-    const showEvents = family === 'large';
-    const showLastRun = family !== 'small';
+    const showMetrics = family !== 'small';
+    const showIssues = family === 'large';
 
     items.forEach((item, index) => {
       if (index > 0) widget.addSpacer(4);
       const statusMeta = this.getParserStatusMeta(item);
-      const row = widget.addStack();
-      row.layoutHorizontally();
-      row.centerAlignContent();
-      row.spacing = 6;
+      const row = this.addWidgetRow(widget, family);
 
       const iconSymbol = this.getParserIconSymbol(item);
       const iconImage = this.buildSymbolImage(iconSymbol, 12, new Color(BRAND.textSoft));
@@ -1451,32 +1508,29 @@ class MetricsDisplay {
 
       const left = row.addStack();
       left.layoutVertically();
+      left.spacing = 2;
 
       const name = left.addText(this.truncateText(item.name, nameLimit));
       name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
       name.textColor = new Color(BRAND.text);
+      name.lineLimit = 1;
 
-      if (showActions) {
-        const actions = left.addText(this.formatActionsCompact(item.actions));
-        actions.font = Font.systemFont(FONT_SIZES.widget.small);
-        actions.textColor = new Color(BRAND.textMuted);
-      }
-
-      if (showEvents) {
-        const events = left.addText(this.formatEventSummary(item));
-        events.font = Font.systemFont(FONT_SIZES.widget.small);
-        events.textColor = new Color(BRAND.textMuted);
-      }
+      const summaryLabel = family === 'small' && item?.lastRunAt
+        ? this.formatLastRunLabel(item.lastRunAt)
+        : this.formatEventSummary(item);
+      const summary = left.addText(summaryLabel);
+      summary.font = Font.systemFont(FONT_SIZES.widget.small);
+      summary.textColor = new Color(BRAND.textMuted);
+      summary.lineLimit = 1;
 
       row.addSpacer();
 
       const right = row.addStack();
       right.layoutVertically();
+      right.spacing = 2;
 
-      const statusIcon = this.buildStatusIcon(statusMeta, 12);
-      const statusImage = right.addImage(statusIcon);
-      statusImage.imageSize = new Size(12, 12);
-      statusImage.rightAlignImage();
+      const badgeVariant = this.getParserStatusBadgeClass(statusMeta.key);
+      this.addWidgetBadge(right, statusMeta.label, badgeVariant);
 
       const historyFinalEvents = (item.historyRuns || 0) > 0
         ? (item.historyTotals?.final_bear_events || 0)
@@ -1487,13 +1541,24 @@ class MetricsDisplay {
       const fallbackFinalEvents = item.lastRunAt
         ? (item.finalBearEvents || 0)
         : (historyFinalEvents || allTimeFinalEvents);
-      const infoLabel = showLastRun
-        ? this.formatLastRunLabel(item.lastRunAt)
-        : this.formatNumber(fallbackFinalEvents);
-      const infoText = right.addText(infoLabel);
-      infoText.font = Font.systemFont(FONT_SIZES.widget.small);
-      infoText.textColor = new Color(BRAND.textMuted);
-      infoText.rightAlignText();
+
+      if (showMetrics) {
+        const actionsLine = this.formatActionsCompact(item.actions);
+        const issuesLine = this.formatActionsIssues(item.actions);
+        const metricsLine = showIssues ? `${actionsLine} • ${issuesLine}` : actionsLine;
+        const metrics = right.addText(metricsLine);
+        metrics.font = Font.systemFont(FONT_SIZES.widget.small);
+        metrics.textColor = new Color(BRAND.textMuted);
+        metrics.rightAlignText();
+        metrics.lineLimit = 1;
+      } else {
+        const finalLabel = this.formatNumber(fallbackFinalEvents);
+        const finalText = right.addText(finalLabel);
+        finalText.font = Font.systemFont(FONT_SIZES.widget.small);
+        finalText.textColor = new Color(BRAND.textMuted);
+        finalText.rightAlignText();
+        finalText.lineLimit = 1;
+      }
     });
 
     if (parserHealth.items.length > items.length) {
@@ -1623,26 +1688,53 @@ class MetricsDisplay {
 
     items.forEach((run, index) => {
       if (index > 0) widget.addSpacer(4);
-      const row = widget.addStack();
-      row.layoutHorizontally();
-      row.centerAlignContent();
-      row.spacing = 6;
-
       const statusMeta = this.getStatusMeta(run.status);
-      const statusIcon = this.buildStatusIcon(statusMeta, 12);
-      const statusImage = row.addImage(statusIcon);
-      statusImage.imageSize = new Size(12, 12);
+      const row = this.addWidgetRow(widget, family);
 
       const left = row.addStack();
       left.layoutVertically();
+      left.spacing = 2;
 
-      const titleLine = left.addText(`${this.formatRunId(run.runId)} • ${this.formatNumber(run.finalEvents || 0)} final`);
+      const titleLine = left.addText(this.formatRunId(run.runId));
       titleLine.font = Font.boldSystemFont(FONT_SIZES.widget.small);
       titleLine.textColor = new Color(BRAND.text);
+      titleLine.lineLimit = 1;
 
-      const subtitleLine = left.addText(`${statusMeta.label} • ${this.formatLastRunLabel(run.finishedAt)}`);
+      const subtitleParts = [];
+      if (family === 'small') {
+        subtitleParts.push(this.formatLastRunLabel(run.finishedAt));
+      } else {
+        if (run.parsersCount) subtitleParts.push(`${run.parsersCount} parsers`);
+        if (run.durationMs) subtitleParts.push(this.formatDuration(run.durationMs));
+        subtitleParts.push(this.formatLastRunLabel(run.finishedAt));
+      }
+      const subtitleLine = left.addText(subtitleParts.join(' • '));
       subtitleLine.font = Font.systemFont(FONT_SIZES.widget.small);
       subtitleLine.textColor = new Color(BRAND.textMuted);
+      subtitleLine.lineLimit = 1;
+
+      row.addSpacer();
+
+      const right = row.addStack();
+      right.layoutVertically();
+      right.spacing = 2;
+
+      const badgeVariant = this.getRunStatusBadgeClass(run.status);
+      this.addWidgetBadge(right, statusMeta.label, badgeVariant);
+
+      const finalLabel = this.formatNumber(run.finalEvents || 0);
+      const errors = run.errorsCount || 0;
+      const warnings = run.warningsCount || 0;
+      const hasIssues = errors > 0 || warnings > 0;
+      let metricsLine = `F${finalLabel}`;
+      if (family === 'large' || (family !== 'small' && hasIssues)) {
+        metricsLine += ` • E${errors} W${warnings}`;
+      }
+      const metricsText = right.addText(metricsLine);
+      metricsText.font = Font.systemFont(FONT_SIZES.widget.small);
+      metricsText.textColor = new Color(BRAND.textMuted);
+      metricsText.rightAlignText();
+      metricsText.lineLimit = 1;
     });
 
     if (filtered.length > items.length) {
