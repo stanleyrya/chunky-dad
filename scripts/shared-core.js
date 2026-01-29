@@ -2168,7 +2168,6 @@ class SharedCore {
     analyzeEventActions(newEvents, existingEventsData) {
         const actions = {
             newEvents: [],
-            updateEvents: [],
             mergeEvents: [],
             conflictEvents: []
         };

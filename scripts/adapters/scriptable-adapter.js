@@ -559,7 +559,7 @@ class ScriptableAdapter {
             console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
             
             const failedEvents = [];
-            const actionCounts = { merge: [], update: [], skip: [], create: [] };
+            const actionCounts = { merge: [], skip: [], create: [] };
             let processedCount = 0;
             
             for (const event of analyzedEvents) {
@@ -582,39 +582,6 @@ class ScriptableAdapter {
                             targetEvent.url = event.url;
                             
                             await targetEvent.save();
-                            processedCount++;
-                            break;
-                        }
-                            
-                        case 'update': {
-                            actionCounts.update.push(event.title);
-                            const updateTarget = event._existingEvent;
-                            
-                            // Update the existing event in place
-                            const updateChanges = [];
-                            
-                            if (updateTarget.title !== event.title) {
-                                updateChanges.push('title');
-                                updateTarget.title = event.title;
-                            }
-                            if (updateTarget.notes !== event.notes) {
-                                updateChanges.push('notes');
-                                updateTarget.notes = event.notes;
-                            }
-                            if (updateTarget.location !== event.location) {
-                                updateChanges.push('location');
-                                updateTarget.location = event.location;
-                            }
-                            if (updateTarget.url !== event.url && event.url) {
-                                updateChanges.push('url');
-                                updateTarget.url = event.url;
-                            }
-                            
-                            if (updateChanges.length > 0) {
-                                console.log(`📱 Scriptable: Updated ${updateChanges.length} fields: ${updateChanges.join(', ')}`);
-                            }
-                            
-                            await updateTarget.save();
                             processedCount++;
                             break;
                         }
@@ -642,7 +609,6 @@ class ScriptableAdapter {
                 const actionSummary = [];
                 if (actionCounts.create.length > 0) actionSummary.push(`${actionCounts.create.length} created`);
                 if (actionCounts.merge.length > 0) actionSummary.push(`${actionCounts.merge.length} merged`);
-                if (actionCounts.update.length > 0) actionSummary.push(`${actionCounts.update.length} updated`);
                 if (actionCounts.skip.length > 0) actionSummary.push(`${actionCounts.skip.length} skipped`);
                 
                 console.log(`📱 Scriptable: ✓ Processed ${processedCount} events: ${actionSummary.join(', ')}`);
@@ -759,7 +725,7 @@ class ScriptableAdapter {
             const allEvents = this.getAllEventsFromResults(results);
             if (allEvents && allEvents.length > 0) {
                 const actionsCount = {
-                    new: 0, add: 0, merge: 0, update: 0, conflict: 0, enriched: 0
+                    new: 0, add: 0, merge: 0, conflict: 0, enriched: 0
                 };
                 
                 let hasActions = false;
@@ -778,8 +744,8 @@ class ScriptableAdapter {
                     Object.entries(actionsCount).forEach(([action, count]) => {
                         if (count > 0) {
                             const actionIcon = {
-                                'new': '➕', 'add': '➕', 'merge': '🔄', 
-                                'update': '📝', 'conflict': '⚠️', 'enriched': '✨'
+                                'new': '➕', 'add': '➕', 'merge': '🔄',
+                                'conflict': '⚠️', 'enriched': '✨'
                             }[action] || '❓';
                             console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count}`);
                         }
@@ -1104,7 +1070,6 @@ class ScriptableAdapter {
         const eventsByAction = {
             new: [],
             merge: [],
-            update: [],
             conflict: [],
             other: []
         };
@@ -1122,13 +1087,12 @@ class ScriptableAdapter {
         console.log(`\n📊 Event Actions Summary:`);
         console.log(`   ➕ New: ${eventsByAction.new.length} events`);
         console.log(`   🔀 Merge: ${eventsByAction.merge.length} events`);
-        console.log(`   🔄 Update: ${eventsByAction.update.length} events`);
         console.log(`   ⚠️  Conflict: ${eventsByAction.conflict.length} events`);
         if (eventsByAction.other.length > 0) {
             console.log(`   ❓ Other: ${eventsByAction.other.length} events`);
         }
         
-        const detailedActions = ['merge', 'update', 'conflict'];
+        const detailedActions = ['merge', 'conflict'];
         const actionsToShow = detailedActions.filter(action => eventsByAction[action].length > 0);
         if (actionsToShow.length === 0 && eventsByAction.new.length > 0) {
             actionsToShow.push('new');
@@ -1208,7 +1172,6 @@ class ScriptableAdapter {
             new: 0,
             add: 0,
             merge: 0,
-            update: 0,
             conflict: 0,
             enriched: 0,
             unknown: 0
@@ -1235,7 +1198,6 @@ class ScriptableAdapter {
                         'new': '➕',
                         'add': '➕',
                         'merge': '🔄',
-                        'update': '📝',
                         'conflict': '⚠️',
                         'enriched': '✨',
                         'unknown': '❓'
@@ -1403,7 +1365,6 @@ class ScriptableAdapter {
         
         // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];
-        const updatedEvents = [];
         const mergeEvents = [];
         const conflictEvents = [];
         
@@ -1412,9 +1373,6 @@ class ScriptableAdapter {
             switch (event._action) {
                 case 'new':
                     newEvents.push(event);
-                    break;
-                case 'update':
-                    updatedEvents.push(event);
                     break;
                 case 'merge':
                     mergeEvents.push(event);
@@ -1798,16 +1756,6 @@ class ScriptableAdapter {
         
         .badge-new::before {
             content: "➕ ";
-        }
-        
-        .badge-update {
-            background: var(--primary-color);
-            color: var(--text-inverse);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        }
-        
-        .badge-update::before {
-            content: "🔄 ";
         }
         
         .badge-merge {
@@ -2484,17 +2432,6 @@ class ScriptableAdapter {
             <span class="section-count">${newEvents.length}</span>
         </div>
         ${newEvents.map(event => this.generateEventCard(event)).join('')}
-    </div>
-    ` : ''}
-    
-    ${updatedEvents.length > 0 ? `
-    <div class="section">
-        <div class="section-header">
-            <span class="section-icon">🔄</span>
-            <span class="section-title">Events to Update</span>
-            <span class="section-count">${updatedEvents.length}</span>
-        </div>
-        ${updatedEvents.map(event => this.generateEventCard(event)).join('')}
     </div>
     ` : ''}
     
@@ -4115,7 +4052,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         let message = "Ready to execute the following calendar actions:\n\n";
         if (actionCounts.new) message += `➕ Create ${actionCounts.new} new events\n`;
         if (actionCounts.merge) message += `🔄 Merge ${actionCounts.merge} events\n`;
-        if (actionCounts.update) message += `📝 Update ${actionCounts.update} events\n`;
         if (actionCounts.conflict) message += `⚠️ Skip ${actionCounts.conflict} conflicted events\n`;
         if (actionCounts.missing_calendar) message += `❌ Skip ${actionCounts.missing_calendar} events (missing calendars)\n`;
         
@@ -4439,7 +4375,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return {
             new: 0,
             merge: 0,
-            update: 0,
             conflict: 0,
             missing_calendar: 0,
             other: 0

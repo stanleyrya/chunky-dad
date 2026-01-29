@@ -316,7 +316,7 @@ class WebAdapter {
             const allEvents = this.getAllEventsFromResults(results);
             if (allEvents && allEvents.length > 0) {
                 const actionsCount = {
-                    new: 0, add: 0, merge: 0, update: 0, conflict: 0, enriched: 0
+                    new: 0, add: 0, merge: 0, conflict: 0, enriched: 0
                 };
                 
                 let hasActions = false;
@@ -335,8 +335,8 @@ class WebAdapter {
                     Object.entries(actionsCount).forEach(([action, count]) => {
                         if (count > 0) {
                             const actionIcon = {
-                                'new': '➕', 'add': '➕', 'merge': '🔄', 
-                                'update': '📝', 'conflict': '⚠️', 'enriched': '✨'
+                                'new': '➕', 'add': '➕', 'merge': '🔄',
+                                'conflict': '⚠️', 'enriched': '✨'
                             }[action] || '❓';
                             console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count}`);
                         }

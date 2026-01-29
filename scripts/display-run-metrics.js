@@ -364,7 +364,6 @@ class MetricsDisplay {
     return {
       new: 0,
       merge: 0,
-      update: 0,
       conflict: 0,
       missing_calendar: 0,
       other: 0
@@ -558,7 +557,6 @@ class MetricsDisplay {
     const parts = [];
     if (actions.new) parts.push(`new ${actions.new}`);
     if (actions.merge) parts.push(`merge ${actions.merge}`);
-    if (actions.update) parts.push(`update ${actions.update}`);
     if (actions.conflict) parts.push(`conflict ${actions.conflict}`);
     if (actions.missing_calendar) parts.push(`missing cal ${actions.missing_calendar}`);
     if (actions.other) parts.push(`other ${actions.other}`);
@@ -567,11 +565,10 @@ class MetricsDisplay {
   }
 
   formatActionsCompact(actions) {
-    if (!actions) return 'New 0 • Merge 0 • Update 0';
+    if (!actions) return 'New 0 • Merge 0';
     const newCount = actions.new || 0;
     const mergeCount = actions.merge || 0;
-    const updateCount = actions.update || 0;
-    return `New ${newCount} • Merge ${mergeCount} • Update ${updateCount}`;
+    return `New ${newCount} • Merge ${mergeCount}`;
   }
 
   formatActionsIssues(actions) {
@@ -976,8 +973,6 @@ class MetricsDisplay {
         diff = (a?.actions?.new || 0) - (b?.actions?.new || 0);
       } else if (sortKey === 'merge') {
         diff = (a?.actions?.merge || 0) - (b?.actions?.merge || 0);
-      } else if (sortKey === 'update') {
-        diff = (a?.actions?.update || 0) - (b?.actions?.update || 0);
       } else if (sortKey === 'last-run') {
         diff = this.getTimeValue(a?.lastRunAt) - this.getTimeValue(b?.lastRunAt);
       } else if (sortKey === 'duration') {
@@ -1277,7 +1272,6 @@ class MetricsDisplay {
     if (['duration', 'time', 'runtime'].includes(normalized)) return 'duration';
     if (['new', 'added', 'adds'].includes(normalized)) return 'new';
     if (['merge', 'merged'].includes(normalized)) return 'merge';
-    if (['update', 'updated', 'updates'].includes(normalized)) return 'update';
     return null;
   }
 
@@ -2101,7 +2095,6 @@ class MetricsDisplay {
           `data-parser-actions="${actionTotal}"`,
           `data-parser-new="${item.actions?.new || 0}"`,
           `data-parser-merge="${item.actions?.merge || 0}"`,
-          `data-parser-update="${item.actions?.update || 0}"`,
           `data-parser-last-run="${lastRunValue}"`,
           `data-parser-duration="${durationMs}"`
         ].join(' ');
@@ -3209,8 +3202,6 @@ class MetricsDisplay {
             diff = parseNumber(aData.parserNew) - parseNumber(bData.parserNew);
           } else if (parserSortState.key === 'merge') {
             diff = parseNumber(aData.parserMerge) - parseNumber(bData.parserMerge);
-          } else if (parserSortState.key === 'update') {
-            diff = parseNumber(aData.parserUpdate) - parseNumber(bData.parserUpdate);
           } else if (parserSortState.key === 'last-run') {
             diff = parseNumber(aData.parserLastRun) - parseNumber(bData.parserLastRun);
           } else if (parserSortState.key === 'duration') {
@@ -3734,7 +3725,6 @@ class MetricsDisplay {
       { key: 'actions', label: 'Actions total', defaultDirection: 'desc' },
       { key: 'new', label: 'New actions', defaultDirection: 'desc' },
       { key: 'merge', label: 'Merge actions', defaultDirection: 'desc' },
-      { key: 'update', label: 'Update actions', defaultDirection: 'desc' },
       { key: 'last-run', label: 'Last run', defaultDirection: 'desc' },
       { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
       { key: 'name', label: 'Name', defaultDirection: 'asc' }
