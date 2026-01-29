@@ -2702,7 +2702,7 @@
           if (selectedExistingMode === 'series') {
             hint = 'Series keeps the RRULE and original start/end.';
           } else {
-            hint = 'Occurrence uses the selected occurrence and clears the RRULE.';
+            hint = 'Occurrence edits one instance (creates an override) and clears the RRULE.';
           }
           setFieldHint(dom.existingModeHint, hint, false);
         }
@@ -3000,6 +3000,29 @@
         state.editingExistingId = selectedExistingResult.id;
         state.editingExistingMode = mode;
         state.editingExistingOccurrenceId = occurrenceId;
+        const editingUid = (baseEvent && baseEvent.uid) || eventData.uid || '';
+        let editingRecurrenceDate = null;
+        let editingRecurrenceTimezone = '';
+        if (mode === 'occurrence') {
+          const recurrenceSource = (summaryResult && summaryResult.event && summaryResult.event.recurrenceId)
+            || (summaryResult && summaryResult.startDate);
+          if (recurrenceSource instanceof Date) {
+            editingRecurrenceDate = new Date(recurrenceSource.getTime());
+          } else if (recurrenceSource) {
+            const parsed = new Date(recurrenceSource);
+            if (!Number.isNaN(parsed.getTime())) {
+              editingRecurrenceDate = parsed;
+            }
+          }
+          editingRecurrenceTimezone = (summaryResult && summaryResult.event && summaryResult.event.timeZone)
+            || (baseEvent && baseEvent.timeZone)
+            || (eventData && eventData.timeZone)
+            || state.timezone
+            || browserTimezone;
+        }
+        state.editingExistingUid = editingUid;
+        state.editingExistingRecurrenceId = editingRecurrenceDate ? editingRecurrenceDate.toISOString() : '';
+        state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
 
         applyStateToForm();
         populateVenueOptions(state.city);
@@ -3342,6 +3365,9 @@
         state.editingExistingId = '';
         state.editingExistingMode = 'occurrence';
         state.editingExistingOccurrenceId = '';
+        state.editingExistingUid = '';
+        state.editingExistingRecurrenceId = '';
+        state.editingExistingRecurrenceTimezone = '';
       }
 
       function clearExistingSelection(options = {}) {
@@ -3401,6 +3427,9 @@
           editingExistingId: '',
           editingExistingMode: 'occurrence',
           editingExistingOccurrenceId: '',
+          editingExistingUid: '',
+          editingExistingRecurrenceId: '',
+          editingExistingRecurrenceTimezone: '',
           existingSelectionSummary: '',
           existingSelectionAction: ''
         };
@@ -3526,10 +3555,19 @@
             case 'eid':
               overrides.editingExistingId = value;
               break;
+            case 'euid':
+              overrides.editingExistingUid = value;
+              break;
             case 'occid':
             case 'eocc':
             case 'editocc':
               overrides.editingExistingOccurrenceId = value;
+              break;
+            case 'erid':
+              overrides.editingExistingRecurrenceId = value;
+              break;
+            case 'ertz':
+              overrides.editingExistingRecurrenceTimezone = value;
               break;
             case 'editmode':
             case 'emode':
@@ -3543,7 +3581,12 @@
               break;
           }
         });
-        if (!sawEditFlag && (overrides.editingExistingId || overrides.editingExistingMode || overrides.editingExistingOccurrenceId)) {
+        if (!sawEditFlag && (overrides.editingExistingId
+          || overrides.editingExistingMode
+          || overrides.editingExistingOccurrenceId
+          || overrides.editingExistingUid
+          || overrides.editingExistingRecurrenceId
+          || overrides.editingExistingRecurrenceTimezone)) {
           overrides.isEditingExisting = true;
         }
         if (overrides.existingSelectionAction === 'copy') {
@@ -3551,6 +3594,9 @@
           overrides.editingExistingId = '';
           overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
           overrides.editingExistingOccurrenceId = '';
+          overrides.editingExistingUid = '';
+          overrides.editingExistingRecurrenceId = '';
+          overrides.editingExistingRecurrenceTimezone = '';
         }
         if (overrides.isEditingExisting) {
           if (!overrides.editingExistingMode) {
@@ -3563,6 +3609,9 @@
           overrides.editingExistingId = '';
           overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
           overrides.editingExistingOccurrenceId = '';
+          overrides.editingExistingUid = '';
+          overrides.editingExistingRecurrenceId = '';
+          overrides.editingExistingRecurrenceTimezone = '';
         }
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
@@ -4793,6 +4842,9 @@
           if (state.editingExistingId) params.set('editid', state.editingExistingId);
           if (state.editingExistingMode) params.set('emode', state.editingExistingMode);
           if (state.editingExistingOccurrenceId) params.set('occid', state.editingExistingOccurrenceId);
+          if (state.editingExistingUid) params.set('euid', state.editingExistingUid);
+          if (state.editingExistingRecurrenceId) params.set('erid', state.editingExistingRecurrenceId);
+          if (state.editingExistingRecurrenceTimezone) params.set('ertz', state.editingExistingRecurrenceTimezone);
         }
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
@@ -4926,6 +4978,28 @@
         const links = buildLinks();
         const locationValue = (state.location || '').trim();
         const coordinates = parseCoordinates(locationValue);
+        const timezone = state.timezone || browserTimezone;
+        const rawRecurrence = (state.recurrence || '').trim();
+        const isOverride = state.isEditingExisting && state.editingExistingMode === 'occurrence';
+        const recurrence = isOverride ? '' : rawRecurrence;
+        const recurring = Boolean(recurrence);
+        let uid = '';
+        if (state.isEditingExisting && state.editingExistingUid) {
+          uid = state.editingExistingUid;
+        } else if (state.isEditingExisting && state.editingExistingId) {
+          const parsedUid = parseResultId(state.editingExistingId);
+          uid = parsedUid.uid || '';
+        }
+        let recurrenceId = null;
+        if (isOverride && state.editingExistingRecurrenceId) {
+          const parsedRecurrenceId = new Date(state.editingExistingRecurrenceId);
+          if (!Number.isNaN(parsedRecurrenceId.getTime())) {
+            recurrenceId = parsedRecurrenceId;
+          }
+        }
+        const recurrenceIdTimezone = isOverride
+          ? (state.editingExistingRecurrenceTimezone || timezone)
+          : '';
         return {
           name: (state.name || '').trim(),
           shortName: (state.shortName || '').trim(),
@@ -4940,7 +5014,10 @@
           day: dayLabel,
           startDate,
           endDate,
-          timezone: browserTimezone,
+          timezone,
+          uid,
+          recurrenceId,
+          recurrenceIdTimezone,
           image: (state.image || '').trim() || null,
           website: (state.website || '').trim() || null,
           instagram: (state.instagram || '').trim() || null,
@@ -4948,8 +5025,8 @@
           gmaps: (state.gmaps || '').trim() || null,
           ticketUrl: (state.ticketUrl || '').trim() || null,
           links,
-          recurring: Boolean(state.recurrence),
-          recurrence: (state.recurrence || '').trim(),
+          recurring,
+          recurrence,
           durationMinutes
         };
       }
@@ -4977,6 +5054,9 @@
           startDate: event.startDate.toISOString(),
           endDate: event.endDate.toISOString(),
           timezone: event.timezone,
+          uid: event.uid || null,
+          recurrenceId: event.recurrenceId ? event.recurrenceId.toISOString() : null,
+          recurrenceIdTimezone: event.recurrenceIdTimezone || null,
           durationMinutes: event.durationMinutes,
           image: event.image,
           website: event.website,
@@ -4987,7 +5067,9 @@
           tickets: event.ticketUrl,
           links: event.links,
           recurring: event.recurring,
-          recurrence: event.recurrence || null
+          recurrence: event.recurrence || null,
+          isEditingExisting: Boolean(state.isEditingExisting),
+          editingExistingMode: state.editingExistingMode || null
         };
       }
 
@@ -5321,18 +5403,31 @@
           'PRODID:-//chunky.dad//Event Builder//EN',
           'CALSCALE:GREGORIAN',
           'METHOD:PUBLISH',
-          'BEGIN:VEVENT',
-          `UID:${slugify(event.name || 'chunky-dad')}-${formatICSDate(new Date())}@chunky.dad`,
-          `DTSTAMP:${formatICSDate(new Date())}`,
-          `DTSTART:${formatICSDate(event.startDate)}`,
-          `DTEND:${formatICSDate(event.endDate)}`,
-          `SUMMARY:${escapeICS(event.name)}`
+          'BEGIN:VEVENT'
         ];
+        const uidValue = String(event.uid || '').trim()
+          || `${slugify(event.name || 'chunky-dad')}-${formatICSDate(new Date())}@chunky.dad`;
+        const timezone = event.timezone || browserTimezone;
+        const tzid = timezone ? `;TZID=${timezone}` : '';
+        lines.push(`UID:${uidValue}`);
+        lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
+        if (event.recurrenceId) {
+          const recurrenceTimezone = event.recurrenceIdTimezone || timezone;
+          const recurrenceTzid = recurrenceTimezone ? `;TZID=${recurrenceTimezone}` : '';
+          const recurrenceValue = formatICSDateInTimezone(event.recurrenceId, recurrenceTimezone)
+            || formatICSDate(event.recurrenceId);
+          if (recurrenceValue) {
+            lines.push(`RECURRENCE-ID${recurrenceTzid}:${recurrenceValue}`);
+          }
+        }
+        lines.push(`DTSTART${tzid}:${formatICSDateInTimezone(event.startDate, timezone) || formatICSDate(event.startDate)}`);
+        lines.push(`DTEND${tzid}:${formatICSDateInTimezone(event.endDate, timezone) || formatICSDate(event.endDate)}`);
+        lines.push(`SUMMARY:${escapeICS(event.name)}`);
         const notes = formatEventNotes(event);
         if (notes) {
           lines.push(`DESCRIPTION:${escapeICS(notes)}`);
         }
-        if (event.recurrence) {
+        if (event.recurrence && !event.recurrenceId) {
           lines.push(`RRULE:${event.recurrence}`);
         }
         const location = (event.location || '').trim();
@@ -5351,7 +5446,8 @@
           '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
           '_original', '_mergeInfo', '_changes', '_mergeDiff',
           'originalTitle', 'name', 'links', 'durationMinutes',
-          'time', 'day', 'recurring', 'recurrence', 'url'
+          'time', 'day', 'recurring', 'recurrence', 'url',
+          'uid', 'recurrenceId', 'recurrenceIdTimezone'
         ]);
         const notes = [];
         Object.keys(event).forEach(fieldName => {
@@ -5388,6 +5484,38 @@
         return text
           .replace(/\\/g, '\\\\')
           .replace(/:/g, '\\:');
+      }
+
+      function formatICSDateInTimezone(date, timeZone) {
+        if (!date || !(date instanceof Date)) return '';
+        if (!timeZone) return formatICSDate(date);
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).formatToParts(date);
+          const values = {};
+          parts.forEach(part => {
+            if (part.type !== 'literal') {
+              values[part.type] = part.value;
+            }
+          });
+          if (!values.year || !values.month || !values.day) {
+            return formatICSDate(date);
+          }
+          const hour = values.hour || '00';
+          const minute = values.minute || '00';
+          const second = values.second || '00';
+          return `${values.year}${values.month}${values.day}T${hour}${minute}${second}`;
+        } catch (error) {
+          return formatICSDate(date);
+        }
       }
 
       function formatICSDate(date) {
