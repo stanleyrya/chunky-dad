@@ -629,23 +629,12 @@ class MetricsDisplay {
     return `Last run ${when} • Final ${finalEvents} • Total ${totalEvents}`;
   }
 
-  formatEventSummary(item, mode = 'last-run') {
+  formatEventSummary(item) {
     if (!item?.ran) return 'No run data';
-    const historyRuns = item?.historyRuns || 0;
-    const allTimeRuns = item?.allTimeRuns || 0;
-
-    if (mode === 'all-time' && allTimeRuns > 0) {
-      return `All-time ${this.formatNumber(allTimeRuns)} runs`;
-    }
-
-    if (mode === 'history' && historyRuns > 0) {
-      return `Recent ${this.formatNumber(historyRuns)} runs`;
-    }
-
-    if (historyRuns > 0) return `Recent ${this.formatNumber(historyRuns)} runs`;
-    if (allTimeRuns > 0) return `All-time ${this.formatNumber(allTimeRuns)} runs`;
-    if (item?.lastRunAt) return 'Runs 1';
-    return 'No run data';
+    if (!item?.lastRunAt) return 'No last run';
+    const finalEvents = this.formatNumber(item?.finalBearEvents || 0);
+    const totalEvents = this.formatNumber(item?.totalEvents || 0);
+    return `Final ${finalEvents} • Total ${totalEvents}`;
   }
 
   formatRunId(runId) {
@@ -986,6 +975,8 @@ class MetricsDisplay {
         diff = (a?.actions?.new || 0) - (b?.actions?.new || 0);
       } else if (sortKey === 'merge') {
         diff = (a?.actions?.merge || 0) - (b?.actions?.merge || 0);
+      } else if (sortKey === 'conflict') {
+        diff = (a?.actions?.conflict || 0) - (b?.actions?.conflict || 0);
       } else if (sortKey === 'last-run') {
         diff = this.getTimeValue(a?.lastRunAt) - this.getTimeValue(b?.lastRunAt);
       } else if (sortKey === 'duration') {
@@ -1287,8 +1278,9 @@ class MetricsDisplay {
     if (['status', 'health', 'state'].includes(normalized)) return 'status';
     if (['lastrun', 'last', 'run'].includes(normalized)) return 'last-run';
     if (['duration', 'time', 'runtime'].includes(normalized)) return 'duration';
-    if (['new', 'added', 'adds'].includes(normalized)) return 'new';
-    if (['merge', 'merged'].includes(normalized)) return 'merge';
+    if (['new', 'add', 'adds', 'added'].includes(normalized)) return 'new';
+    if (['merge', 'merged', 'mrg'].includes(normalized)) return 'merge';
+    if (['conflict', 'conflicts', 'conf', 'cnf'].includes(normalized)) return 'conflict';
     return null;
   }
 
@@ -2113,7 +2105,8 @@ class MetricsDisplay {
         const parserUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: item.name });
         const parserNavAttrs = buildNavAttributes('parser', item.name);
         const statusRank = this.getParserStatusRank(item);
-        const actionTotal = this.sumDisplayActions(item.actions);
+        const actions = item.actions || this.createActionCounts();
+        const actionTotal = this.sumDisplayActions(actions);
         const lastRunValue = this.getTimeValue(item.lastRunAt);
         const durationMs = Number.isFinite(item?.durationMs) ? item.durationMs : 0;
         const statusEmoji = this.getParserStatusEmoji(item);
@@ -2124,16 +2117,15 @@ class MetricsDisplay {
           `data-parser-status-rank="${statusRank}"`,
           `data-parser-final-events="${item.finalBearEvents || 0}"`,
           `data-parser-actions="${actionTotal}"`,
-          `data-parser-new="${item.actions?.new || 0}"`,
-          `data-parser-merge="${item.actions?.merge || 0}"`,
+          `data-parser-new="${actions.new || 0}"`,
+          `data-parser-merge="${actions.merge || 0}"`,
+          `data-parser-conflict="${actions.conflict || 0}"`,
           `data-parser-last-run="${lastRunValue}"`,
           `data-parser-duration="${durationMs}"`
         ].join(' ');
         const summaryLine = this.formatEventSummary(item);
         const lastRun = this.formatLastRunLabel(item.lastRunAt);
-        const actions = item.actions || this.createActionCounts();
-        const actionsCompact = this.formatActionsCompact(actions);
-        const durationLabel = item.durationMs ? this.formatDuration(item.durationMs) : null;
+        const durationLabel = durationMs > 0 ? this.formatDuration(durationMs) : '-';
         return `
           <tr data-row="parser" ${rowAttrs}>
             <td>
@@ -2142,12 +2134,20 @@ class MetricsDisplay {
               </div>
               <div class="cell-subtitle">${escapeHtml(summaryLine)}</div>
             </td>
-            <td>
-              <div class="cell-title">${escapeHtml(actionsCompact)}</div>
+            <td class="num">
+              <div class="cell-title">${escapeHtml(this.formatNumber(actions.new || 0))}</div>
+            </td>
+            <td class="num">
+              <div class="cell-title">${escapeHtml(this.formatNumber(actions.merge || 0))}</div>
+            </td>
+            <td class="num">
+              <div class="cell-title">${escapeHtml(this.formatNumber(actions.conflict || 0))}</div>
             </td>
             <td>
               <div class="cell-title">${escapeHtml(lastRun)}</div>
-              ${durationLabel ? `<div class="cell-subtitle">${escapeHtml(durationLabel)}</div>` : ''}
+            </td>
+            <td class="num">
+              <div class="cell-title">${escapeHtml(durationLabel)}</div>
             </td>
             <td class="status-cell">
               <span class="status-emoji" title="${escapeHtml(statusLabel)}">${escapeHtml(statusEmoji)}</span>
@@ -2160,9 +2160,12 @@ class MetricsDisplay {
             <thead>
               <tr>
                 ${buildSortHeader('Parser', 'name', sortState, 'parsers', 'asc')}
-                ${buildSortHeader('Actions', 'actions', sortState, 'parsers', 'desc')}
-                ${buildSortHeader('Last run', 'last-run', sortState, 'parsers', 'desc')}
-                ${buildSortHeader('Status', 'status', sortState, 'parsers', 'desc', 'status-cell')}
+                ${buildSortHeader('Add', 'new', sortState, 'parsers', 'desc', 'num')}
+                ${buildSortHeader('Mrg', 'merge', sortState, 'parsers', 'desc', 'num')}
+                ${buildSortHeader('Cnf', 'conflict', sortState, 'parsers', 'desc', 'num')}
+                ${buildSortHeader('Last', 'last-run', sortState, 'parsers', 'desc')}
+                ${buildSortHeader('Dur', 'duration', sortState, 'parsers', 'desc', 'num')}
+                ${buildSortHeader('Stat', 'status', sortState, 'parsers', 'desc', 'status-cell')}
               </tr>
             </thead>
             <tbody data-list="parsers">
@@ -2380,10 +2383,6 @@ class MetricsDisplay {
         const durationChartData = this.imageToDataUri(durationChart);
         cards.push(buildChartCard(`Duration (minutes, last ${historyCount} runs)`, durationChartData, `Latest: ${this.formatDuration(latest?.duration_ms)}`));
 
-        const parserLine = parserHealth.hasConfig
-          ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
-          : `Parsers run: ${parserHealth.ranCount || 0}`;
-        const parserSubtitle = escapeHtml(parserLine);
         const sortedItems = this.sortParserItems(parserItems, parserSortResolved).slice(0, 8);
         let parserTableHtml = buildParserTable(sortedItems, parserSortResolved);
         if (parserItems.length > sortedItems.length) {
@@ -2391,7 +2390,7 @@ class MetricsDisplay {
           const moreLink = buildLink('View all parsers', moreUrl, 'text-link', buildNavAttributes('parsers', null));
           parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers • ${moreLink}</div>`;
         }
-        cards.push(buildSection('Parser runs (latest)', parserTableHtml, parserSubtitle));
+        cards.push(buildSection('Parser runs (latest)', parserTableHtml));
 
         if (summary?.totals) {
           const summaryTotals = summary.totals;
@@ -2413,13 +2412,10 @@ class MetricsDisplay {
           cards.push(buildSection('All-time totals', totalsGrid));
         }
       } else if (viewMode === 'parsers') {
-        const parserLine = parserHealth.hasConfig
-          ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
-          : `Parsers run: ${parserHealth.ranCount || 0}`;
         const sortedItems = this.sortParserItems(parserItems, parserSortResolved);
         const body = `
           ${buildParserTable(sortedItems, parserSortResolved)}`;
-        cards.push(buildSection('Parser runs', body, escapeHtml(parserLine)));
+        cards.push(buildSection('Parser runs', body));
       } else if (viewMode === 'runs') {
         const totalRuns = runItems.length;
         const filteredCount = filteredRuns.length;
@@ -3258,6 +3254,8 @@ class MetricsDisplay {
             diff = parseNumber(aData.parserNew) - parseNumber(bData.parserNew);
           } else if (parserSortState.key === 'merge') {
             diff = parseNumber(aData.parserMerge) - parseNumber(bData.parserMerge);
+          } else if (parserSortState.key === 'conflict') {
+            diff = parseNumber(aData.parserConflict) - parseNumber(bData.parserConflict);
           } else if (parserSortState.key === 'last-run') {
             diff = parseNumber(aData.parserLastRun) - parseNumber(bData.parserLastRun);
           } else if (parserSortState.key === 'duration') {
@@ -3489,11 +3487,6 @@ class MetricsDisplay {
       this.addChartSection(table, `Duration (minutes, last ${historyCount} runs)`, durationChart, `Latest: ${this.formatDuration(latest?.duration_ms)}`);
 
       this.addSectionHeader(table, 'Parser runs (latest)');
-      const parserLine = parserHealth.hasConfig
-        ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
-        : `Parsers run: ${parserHealth.ranCount}`;
-      const sortLabel = parserSort ? `Sort: ${this.getSortLabel(parserSort)}` : null;
-      this.addInfoRow(table, parserLine, sortLabel);
       this.addParserTableHeader(table);
 
       const sortedItems = this.sortParserItems(parserHealth.items, parserSort).slice(0, 8);
@@ -3516,17 +3509,6 @@ class MetricsDisplay {
       }
     } else if (view.mode === 'parsers') {
       this.addSectionHeader(table, 'Parser runs (latest)');
-      const parserLine = parserHealth.hasConfig
-        ? `Parsers run: ${parserHealth.ranCount} / ${parserHealth.configuredCount}`
-        : `Parsers run: ${parserHealth.ranCount}`;
-      this.addInfoRow(
-        table,
-        parserLine,
-        parserHealth.hasConfig
-          ? 'Status uses latest run and historical totals.'
-          : 'Status uses latest run and historical totals.'
-      );
-
       this.addParserSortRow(table, parserSort);
       this.addParserTableHeader(table);
 
@@ -3781,8 +3763,11 @@ class MetricsDisplay {
   getParserSortOptions() {
     return [
       { key: 'status', label: 'Status', defaultDirection: 'desc' },
-      { key: 'actions', label: 'Actions', defaultDirection: 'desc' },
       { key: 'last-run', label: 'Last run', defaultDirection: 'desc' },
+      { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
+      { key: 'new', label: 'Adds', defaultDirection: 'desc' },
+      { key: 'merge', label: 'Merges', defaultDirection: 'desc' },
+      { key: 'conflict', label: 'Conflicts', defaultDirection: 'desc' },
       { key: 'name', label: 'Parser', defaultDirection: 'asc' }
     ];
   }
@@ -4016,15 +4001,21 @@ class MetricsDisplay {
     const iconCell = row.addText('');
     iconCell.widthWeight = 6;
     const parserCell = row.addText('Parser');
-    parserCell.widthWeight = 34;
-    const actionsCell = row.addText('Actions');
-    actionsCell.widthWeight = 30;
-    const lastRunCell = row.addText('Last run');
-    lastRunCell.widthWeight = 20;
-    const statusCell = row.addText('Status');
-    statusCell.widthWeight = 10;
+    parserCell.widthWeight = 32;
+    const addCell = row.addText('Add');
+    addCell.widthWeight = 9;
+    const mergeCell = row.addText('Mrg');
+    mergeCell.widthWeight = 9;
+    const conflictCell = row.addText('Cnf');
+    conflictCell.widthWeight = 9;
+    const lastRunCell = row.addText('Last');
+    lastRunCell.widthWeight = 16;
+    const durationCell = row.addText('Dur');
+    durationCell.widthWeight = 12;
+    const statusCell = row.addText('Stat');
+    statusCell.widthWeight = 7;
 
-    [iconCell, parserCell, actionsCell, lastRunCell, statusCell].forEach(cell => {
+    [iconCell, parserCell, addCell, mergeCell, conflictCell, lastRunCell, durationCell, statusCell].forEach(cell => {
       cell.titleFont = Font.boldSystemFont(FONT_SIZES.app.small);
       cell.titleColor = new Color(BRAND.textMuted);
     });
@@ -4051,24 +4042,43 @@ class MetricsDisplay {
     parserCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
     parserCell.titleColor = new Color(BRAND.text);
     parserCell.subtitleColor = new Color(BRAND.textMuted);
-    parserCell.widthWeight = 34;
+    parserCell.widthWeight = 32;
 
-    const actionsCell = row.addText(this.formatActionsCompact(item.actions));
-    actionsCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
-    actionsCell.titleColor = new Color(BRAND.text);
-    actionsCell.widthWeight = 30;
+    const actions = item.actions || this.createActionCounts();
+    const addCell = row.addText(this.formatNumber(actions.new || 0));
+    addCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    addCell.titleColor = new Color(BRAND.text);
+    addCell.widthWeight = 9;
+
+    const mergeCell = row.addText(this.formatNumber(actions.merge || 0));
+    mergeCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    mergeCell.titleColor = new Color(BRAND.text);
+    mergeCell.widthWeight = 9;
+
+    const conflictCell = row.addText(this.formatNumber(actions.conflict || 0));
+    conflictCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    conflictCell.titleColor = new Color(BRAND.text);
+    conflictCell.widthWeight = 9;
 
     const lastRunCell = row.addText(this.formatLastRunLabel(item.lastRunAt));
     lastRunCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     lastRunCell.titleColor = new Color(BRAND.text);
-    lastRunCell.widthWeight = 20;
+    lastRunCell.widthWeight = 16;
+
+    const durationLabel = Number.isFinite(item?.durationMs) && item.durationMs > 0
+      ? this.formatDuration(item.durationMs)
+      : '-';
+    const durationCell = row.addText(durationLabel);
+    durationCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    durationCell.titleColor = new Color(BRAND.text);
+    durationCell.widthWeight = 12;
 
     const statusMeta = this.getParserStatusMeta(item);
     const statusEmoji = this.getParserStatusEmoji(item);
     const statusCell = row.addText(statusEmoji);
     statusCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     statusCell.titleColor = statusMeta.color;
-    statusCell.widthWeight = 10;
+    statusCell.widthWeight = 7;
 
     row.onSelect = () => {
       if (!item?.name) return;
