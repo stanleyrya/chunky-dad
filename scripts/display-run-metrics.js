@@ -1616,28 +1616,19 @@ class MetricsDisplay {
           statusImage.imageSize = new Size(11, 11);
         }
 
-        const historyFinalEvents = (item.historyRuns || 0) > 0
-          ? (item.historyTotals?.final_bear_events || 0)
-          : (item.finalBearEvents || 0);
-        const allTimeFinalEvents = (item.allTimeRuns || 0) > 0
-          ? (item.allTimeTotals?.final_bear_events || 0)
-          : historyFinalEvents;
-        const fallbackFinalEvents = item.lastRunAt
-          ? (item.finalBearEvents || 0)
-          : (historyFinalEvents || allTimeFinalEvents);
-
-        const summaryLabel = item?.lastRunAt
-          ? `Final ${this.formatNumber(fallbackFinalEvents)} • ${this.formatLastRunLabel(item.lastRunAt)}`
-          : `Final ${this.formatNumber(fallbackFinalEvents)} • No run`;
+        const actions = item.actions || this.createActionCounts();
+        const summaryLabel = `A${this.formatNumber(actions.new || 0)} M${this.formatNumber(actions.merge || 0)} C${this.formatNumber(actions.conflict || 0)}`;
         const summary = cell.addText(summaryLabel);
         summary.font = Font.systemFont(FONT_SIZES.widget.small);
         summary.textColor = new Color(BRAND.textMuted);
         summary.lineLimit = 1;
 
         if (showDetails) {
-          const actionTotal = this.sumDisplayActions(item.actions);
           const issuesCount = item.latestErrorCount || 0;
-          const detailParts = [`Actions ${actionTotal}`];
+          const lastRunText = item?.lastRunAt
+            ? `Last ${this.formatLastRunLabel(item.lastRunAt)}`
+            : 'No run yet';
+          const detailParts = [lastRunText];
           if (issuesCount > 0) {
             detailParts.push(`Issues ${issuesCount}`);
           }
@@ -2123,7 +2114,6 @@ class MetricsDisplay {
           `data-parser-last-run="${lastRunValue}"`,
           `data-parser-duration="${durationMs}"`
         ].join(' ');
-        const summaryLine = this.formatEventSummary(item);
         const lastRun = this.formatLastRunLabel(item.lastRunAt);
         const durationLabel = durationMs > 0 ? this.formatDuration(durationMs) : '-';
         return `
@@ -2132,15 +2122,14 @@ class MetricsDisplay {
               <div class="cell-title">
                 ${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}
               </div>
-              <div class="cell-subtitle">${escapeHtml(summaryLine)}</div>
             </td>
-            <td class="num">
+            <td class="num tight">
               <div class="cell-title">${escapeHtml(this.formatNumber(actions.new || 0))}</div>
             </td>
-            <td class="num">
+            <td class="num tight">
               <div class="cell-title">${escapeHtml(this.formatNumber(actions.merge || 0))}</div>
             </td>
-            <td class="num">
+            <td class="num tight">
               <div class="cell-title">${escapeHtml(this.formatNumber(actions.conflict || 0))}</div>
             </td>
             <td>
@@ -2160,9 +2149,9 @@ class MetricsDisplay {
             <thead>
               <tr>
                 ${buildSortHeader('Parser', 'name', sortState, 'parsers', 'asc')}
-                ${buildSortHeader('Add', 'new', sortState, 'parsers', 'desc', 'num')}
-                ${buildSortHeader('Mrg', 'merge', sortState, 'parsers', 'desc', 'num')}
-                ${buildSortHeader('Cnf', 'conflict', sortState, 'parsers', 'desc', 'num')}
+                ${buildSortHeader('Add', 'new', sortState, 'parsers', 'desc', 'num tight')}
+                ${buildSortHeader('Mrg', 'merge', sortState, 'parsers', 'desc', 'num tight')}
+                ${buildSortHeader('Cnf', 'conflict', sortState, 'parsers', 'desc', 'num tight')}
                 ${buildSortHeader('Last', 'last-run', sortState, 'parsers', 'desc')}
                 ${buildSortHeader('Dur', 'duration', sortState, 'parsers', 'desc', 'num')}
                 ${buildSortHeader('Stat', 'status', sortState, 'parsers', 'desc', 'status-cell')}
@@ -2204,24 +2193,32 @@ class MetricsDisplay {
           `data-run-parsers="${run.parsersCount || 0}"`,
           `data-run-parser-names="${escapeHtml(parserNamesValue)}"`
         ].join(' ');
-        const subtitleParts = [];
-        if (run.parsersCount) subtitleParts.push(`${run.parsersCount} parsers`);
-        if (run.durationMs) subtitleParts.push(this.formatDuration(run.durationMs));
-        const subtitle = subtitleParts.join(' • ');
         const errors = run.errorsCount || 0;
         const warnings = run.warningsCount || 0;
-        const issuesLabel = `E${errors} W${warnings}`;
+        const issuesLabel = this.formatNumber(issuesTotal);
+        const issuesTitle = `Errors ${errors} • Warnings ${warnings}`;
+        const finalLabel = this.formatNumber(run.finalEvents || 0);
+        const totalLabel = this.formatNumber(run.totalEvents || 0);
+        const durationLabel = run.durationMs ? this.formatDuration(run.durationMs) : '-';
         return `
           <tr data-row="run" ${rowAttrs}>
             <td>
               <div class="cell-title">${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}</div>
-              ${subtitle ? `<div class="cell-subtitle">${escapeHtml(subtitle)}</div>` : ''}
             </td>
-            <td class="num">
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(finalLabel)}</div>
+            </td>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(totalLabel)}</div>
+            </td>
+            <td class="num tight" title="${escapeHtml(issuesTitle)}">
               <div class="cell-title">${escapeHtml(issuesLabel)}</div>
             </td>
             <td>
               <div class="cell-title">${escapeHtml(this.formatLastRunLabel(run.finishedAt))}</div>
+            </td>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(durationLabel)}</div>
             </td>
             <td class="status-cell">
               <span class="status-emoji" title="${escapeHtml(statusMeta.label)}">${escapeHtml(statusEmoji)}</span>
@@ -2234,9 +2231,12 @@ class MetricsDisplay {
             <thead>
               <tr>
                 <th>Run</th>
-                ${buildSortHeader('Issues', 'issues', sortState, 'runs', 'desc', 'num')}
-                ${buildSortHeader('Finished', 'finished', sortState, 'runs', 'desc')}
-                ${buildSortHeader('Status', 'status', sortState, 'runs', 'desc', 'status-cell')}
+                ${buildSortHeader('Final', 'final-events', sortState, 'runs', 'desc', 'num tight')}
+                ${buildSortHeader('Total', 'total-events', sortState, 'runs', 'desc', 'num tight')}
+                ${buildSortHeader('Issues', 'issues', sortState, 'runs', 'desc', 'num tight')}
+                ${buildSortHeader('Last', 'finished', sortState, 'runs', 'desc')}
+                ${buildSortHeader('Dur', 'duration', sortState, 'runs', 'desc', 'num tight')}
+                ${buildSortHeader('Stat', 'status', sortState, 'runs', 'desc', 'status-cell')}
               </tr>
             </thead>
             <tbody data-list="runs">
@@ -2390,7 +2390,7 @@ class MetricsDisplay {
           const moreLink = buildLink('View all parsers', moreUrl, 'text-link', buildNavAttributes('parsers', null));
           parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers • ${moreLink}</div>`;
         }
-        cards.push(buildSection('Parser runs (latest)', parserTableHtml));
+        cards.push(buildSection('Parser health (latest)', parserTableHtml));
 
         if (summary?.totals) {
           const summaryTotals = summary.totals;
@@ -2415,7 +2415,7 @@ class MetricsDisplay {
         const sortedItems = this.sortParserItems(parserItems, parserSortResolved);
         const body = `
           ${buildParserTable(sortedItems, parserSortResolved)}`;
-        cards.push(buildSection('Parser runs', body));
+        cards.push(buildSection('Parser health', body));
       } else if (viewMode === 'runs') {
         const totalRuns = runItems.length;
         const filteredCount = filteredRuns.length;
@@ -2512,7 +2512,7 @@ class MetricsDisplay {
       } else if (viewMode === 'parser') {
         const backUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
         const parserName = safeView.parserName || 'Parser';
-        const backChip = buildChip('Back to parser runs', backUrl, false, buildNavAttributes('parsers', null));
+        const backChip = buildChip('Back to parser health', backUrl, false, buildNavAttributes('parsers', null));
         const headerBody = `<div class="chip-group">${backChip}</div>`;
         cards.push(buildSection('Parser detail', headerBody, escapeHtml(parserName)));
 
@@ -2920,6 +2920,13 @@ class MetricsDisplay {
       padding: 8px 6px;
       border-bottom: 1px solid var(--border-color);
       vertical-align: top;
+    }
+    .metrics-table th.tight,
+    .metrics-table td.tight {
+      padding-left: 4px;
+      padding-right: 4px;
+      width: 44px;
+      white-space: nowrap;
     }
     .metrics-table tr.hidden {
       display: none;
@@ -3486,7 +3493,7 @@ class MetricsDisplay {
       });
       this.addChartSection(table, `Duration (minutes, last ${historyCount} runs)`, durationChart, `Latest: ${this.formatDuration(latest?.duration_ms)}`);
 
-      this.addSectionHeader(table, 'Parser runs (latest)');
+      this.addSectionHeader(table, 'Parser health (latest)');
       this.addParserTableHeader(table);
 
       const sortedItems = this.sortParserItems(parserHealth.items, parserSort).slice(0, 8);
@@ -3508,7 +3515,7 @@ class MetricsDisplay {
         );
       }
     } else if (view.mode === 'parsers') {
-      this.addSectionHeader(table, 'Parser runs (latest)');
+      this.addSectionHeader(table, 'Parser health');
       this.addParserSortRow(table, parserSort);
       this.addParserTableHeader(table);
 
@@ -3688,7 +3695,7 @@ class MetricsDisplay {
 
   getViewOptions() {
     return [
-      { mode: 'parsers', label: 'Parser runs' },
+      { mode: 'parsers', label: 'Parser health' },
       { mode: 'runs', label: 'All runs' },
       { mode: 'dashboard', label: 'Dashboard' },
       { mode: 'aggregate', label: 'All-time totals' }
@@ -3696,12 +3703,12 @@ class MetricsDisplay {
   }
 
   getViewLabel(view) {
-    if (!view) return 'Parser runs';
+    if (!view) return 'Parser health';
     if (view.mode === 'parser') {
       return view.parserName ? `Parser detail: ${view.parserName}` : 'Parser detail';
     }
     const option = this.getViewOptions().find(item => item.mode === view.mode);
-    return option ? option.label : 'Parser runs';
+    return option ? option.label : 'Parser health';
   }
 
   async presentViewPicker(currentView) {
@@ -3822,8 +3829,11 @@ class MetricsDisplay {
 
   getRunSortOptions() {
     return [
-      { key: 'finished', label: 'Finished', defaultDirection: 'desc' },
+      { key: 'finished', label: 'Last run', defaultDirection: 'desc' },
+      { key: 'final-events', label: 'Final events', defaultDirection: 'desc' },
+      { key: 'total-events', label: 'Total events', defaultDirection: 'desc' },
       { key: 'issues', label: 'Issues', defaultDirection: 'desc' },
+      { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
       { key: 'status', label: 'Status', defaultDirection: 'desc' }
     ];
   }
@@ -3933,15 +3943,21 @@ class MetricsDisplay {
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
     const runCell = row.addText('Run');
-    runCell.widthWeight = 34;
+    runCell.widthWeight = 30;
+    const finalCell = row.addText('Final');
+    finalCell.widthWeight = 10;
+    const totalCell = row.addText('Total');
+    totalCell.widthWeight = 10;
     const issuesCell = row.addText('Issues');
-    issuesCell.widthWeight = 18;
-    const finishedCell = row.addText('Finished');
-    finishedCell.widthWeight = 28;
-    const statusCell = row.addText('Status');
+    issuesCell.widthWeight = 10;
+    const finishedCell = row.addText('Last');
+    finishedCell.widthWeight = 18;
+    const durationCell = row.addText('Dur');
+    durationCell.widthWeight = 12;
+    const statusCell = row.addText('Stat');
     statusCell.widthWeight = 10;
 
-    [runCell, issuesCell, finishedCell, statusCell].forEach(cell => {
+    [runCell, finalCell, totalCell, issuesCell, finishedCell, durationCell, statusCell].forEach(cell => {
       cell.titleFont = Font.boldSystemFont(FONT_SIZES.app.small);
       cell.titleColor = new Color(BRAND.textMuted);
     });
@@ -3952,30 +3968,37 @@ class MetricsDisplay {
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
 
-    const subtitleParts = [];
-    if (run.parsersCount) {
-      subtitleParts.push(`${run.parsersCount} parsers`);
-    }
-    if (run.durationMs) {
-      subtitleParts.push(this.formatDuration(run.durationMs));
-    }
-    const runCell = row.addText(this.formatRunId(run.runId), subtitleParts.join(' • '));
+    const runCell = row.addText(this.formatRunId(run.runId));
     runCell.titleFont = Font.systemFont(FONT_SIZES.app.label);
-    runCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
     runCell.titleColor = new Color(BRAND.text);
-    runCell.subtitleColor = new Color(BRAND.textMuted);
-    runCell.widthWeight = 34;
+    runCell.widthWeight = 30;
 
-    const issuesLabel = `E${run.errorsCount || 0} W${run.warningsCount || 0}`;
-    const issuesCell = row.addText(issuesLabel);
+    const finalCell = row.addText(this.formatNumber(run.finalEvents || 0));
+    finalCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    finalCell.titleColor = new Color(BRAND.text);
+    finalCell.widthWeight = 10;
+
+    const totalCell = row.addText(this.formatNumber(run.totalEvents || 0));
+    totalCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    totalCell.titleColor = new Color(BRAND.text);
+    totalCell.widthWeight = 10;
+
+    const issuesTotal = (run.errorsCount || 0) + (run.warningsCount || 0);
+    const issuesCell = row.addText(this.formatNumber(issuesTotal));
     issuesCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     issuesCell.titleColor = new Color(BRAND.text);
-    issuesCell.widthWeight = 18;
+    issuesCell.widthWeight = 10;
 
     const finishedCell = row.addText(this.formatLastRunLabel(run.finishedAt));
     finishedCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     finishedCell.titleColor = new Color(BRAND.text);
-    finishedCell.widthWeight = 28;
+    finishedCell.widthWeight = 18;
+
+    const durationLabel = run.durationMs ? this.formatDuration(run.durationMs) : '-';
+    const durationCell = row.addText(durationLabel);
+    durationCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    durationCell.titleColor = new Color(BRAND.text);
+    durationCell.widthWeight = 12;
 
     const statusMeta = this.getStatusMeta(run.status);
     const statusEmoji = this.getRunStatusEmoji(run.status);
@@ -4001,13 +4024,13 @@ class MetricsDisplay {
     const iconCell = row.addText('');
     iconCell.widthWeight = 6;
     const parserCell = row.addText('Parser');
-    parserCell.widthWeight = 32;
+    parserCell.widthWeight = 38;
     const addCell = row.addText('Add');
-    addCell.widthWeight = 9;
+    addCell.widthWeight = 7;
     const mergeCell = row.addText('Mrg');
-    mergeCell.widthWeight = 9;
+    mergeCell.widthWeight = 7;
     const conflictCell = row.addText('Cnf');
-    conflictCell.widthWeight = 9;
+    conflictCell.widthWeight = 7;
     const lastRunCell = row.addText('Last');
     lastRunCell.widthWeight = 16;
     const durationCell = row.addText('Dur');
@@ -4037,28 +4060,26 @@ class MetricsDisplay {
     }
     iconCell.widthWeight = 6;
 
-    const parserCell = row.addText(item.name, this.formatEventSummary(item));
+    const parserCell = row.addText(item.name);
     parserCell.titleFont = Font.systemFont(FONT_SIZES.app.label);
-    parserCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
     parserCell.titleColor = new Color(BRAND.text);
-    parserCell.subtitleColor = new Color(BRAND.textMuted);
-    parserCell.widthWeight = 32;
+    parserCell.widthWeight = 38;
 
     const actions = item.actions || this.createActionCounts();
     const addCell = row.addText(this.formatNumber(actions.new || 0));
     addCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     addCell.titleColor = new Color(BRAND.text);
-    addCell.widthWeight = 9;
+    addCell.widthWeight = 7;
 
     const mergeCell = row.addText(this.formatNumber(actions.merge || 0));
     mergeCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     mergeCell.titleColor = new Color(BRAND.text);
-    mergeCell.widthWeight = 9;
+    mergeCell.widthWeight = 7;
 
     const conflictCell = row.addText(this.formatNumber(actions.conflict || 0));
     conflictCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     conflictCell.titleColor = new Color(BRAND.text);
-    conflictCell.widthWeight = 9;
+    conflictCell.widthWeight = 7;
 
     const lastRunCell = row.addText(this.formatLastRunLabel(item.lastRunAt));
     lastRunCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
