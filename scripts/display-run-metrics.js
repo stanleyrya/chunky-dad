@@ -1446,7 +1446,7 @@ class MetricsDisplay {
   }
 
   getWidgetHeaderText(context, view, sortState) {
-    if (view?.mode === 'parsers') return 'Parser health';
+    if (view?.mode === 'parsers') return 'Parser Health';
     if (view?.mode === 'runs') return 'Run history';
     if (view?.mode === 'aggregate') return 'Totals';
     if (view?.mode === 'dashboard') return 'Metrics';
@@ -2390,7 +2390,7 @@ class MetricsDisplay {
           const moreLink = buildLink('View all parsers', moreUrl, 'text-link', buildNavAttributes('parsers', null));
           parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers • ${moreLink}</div>`;
         }
-        cards.push(buildSection('Parser health (latest)', parserTableHtml));
+        cards.push(buildSection('Parser Health (latest)', parserTableHtml));
 
         if (summary?.totals) {
           const summaryTotals = summary.totals;
@@ -2415,7 +2415,7 @@ class MetricsDisplay {
         const sortedItems = this.sortParserItems(parserItems, parserSortResolved);
         const body = `
           ${buildParserTable(sortedItems, parserSortResolved)}`;
-        cards.push(buildSection('Parser health', body));
+        cards.push(buildSection('Parser Health', body));
       } else if (viewMode === 'runs') {
         const totalRuns = runItems.length;
         const filteredCount = filteredRuns.length;
@@ -2512,7 +2512,7 @@ class MetricsDisplay {
       } else if (viewMode === 'parser') {
         const backUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
         const parserName = safeView.parserName || 'Parser';
-        const backChip = buildChip('Back to parser health', backUrl, false, buildNavAttributes('parsers', null));
+        const backChip = buildChip('Back to Parser Health', backUrl, false, buildNavAttributes('parsers', null));
         const headerBody = `<div class="chip-group">${backChip}</div>`;
         cards.push(buildSection('Parser detail', headerBody, escapeHtml(parserName)));
 
@@ -3493,7 +3493,7 @@ class MetricsDisplay {
       });
       this.addChartSection(table, `Duration (minutes, last ${historyCount} runs)`, durationChart, `Latest: ${this.formatDuration(latest?.duration_ms)}`);
 
-      this.addSectionHeader(table, 'Parser health (latest)');
+      this.addSectionHeader(table, 'Parser Health (latest)');
       this.addParserTableHeader(table);
 
       const sortedItems = this.sortParserItems(parserHealth.items, parserSort).slice(0, 8);
@@ -3501,7 +3501,7 @@ class MetricsDisplay {
         this.addParserHealthRow(table, item);
       });
       if (parserHealth.items.length > sortedItems.length) {
-        this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Open parser health to see all.');
+      this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Open Parser Health to see all.');
       }
 
       if (summary?.totals) {
@@ -3515,13 +3515,13 @@ class MetricsDisplay {
         );
       }
     } else if (view.mode === 'parsers') {
-      this.addSectionHeader(table, 'Parser health');
+      this.addSectionHeader(table, 'Parser Health');
       this.addParserSortRow(table, parserSort);
       this.addParserTableHeader(table);
 
       const sortedItems = this.sortParserItems(parserHealth.items, parserSort);
       if (sortedItems.length === 0) {
-        this.addInfoRow(table, 'No parser metrics available.', 'Run the scraper to collect parser health.');
+      this.addInfoRow(table, 'No parser metrics available.', 'Run the scraper to collect Parser Health.');
       } else {
         sortedItems.forEach(item => {
           this.addParserHealthRow(table, item);
@@ -3695,7 +3695,7 @@ class MetricsDisplay {
 
   getViewOptions() {
     return [
-      { mode: 'parsers', label: 'Parser health' },
+      { mode: 'parsers', label: 'Parser Health' },
       { mode: 'runs', label: 'All runs' },
       { mode: 'dashboard', label: 'Dashboard' },
       { mode: 'aggregate', label: 'All-time totals' }
@@ -3703,12 +3703,12 @@ class MetricsDisplay {
   }
 
   getViewLabel(view) {
-    if (!view) return 'Parser health';
+    if (!view) return 'Parser Health';
     if (view.mode === 'parser') {
       return view.parserName ? `Parser detail: ${view.parserName}` : 'Parser detail';
     }
     const option = this.getViewOptions().find(item => item.mode === view.mode);
-    return option ? option.label : 'Parser health';
+    return option ? option.label : 'Parser Health';
   }
 
   async presentViewPicker(currentView) {
