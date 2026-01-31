@@ -204,7 +204,6 @@ class ScriptableAdapter {
         this.runtimeContext = this.getScriptableRuntimeContext();
         this.runStartedAt = new Date();
         this.warnCount = 0;
-        this.runLogLines = [];
     }
 
     getScriptableRuntimeContext() {
@@ -673,31 +672,20 @@ class ScriptableAdapter {
     }
 
     // Display/Logging Adapter Implementation
-    appendRunLogLine(level, message) {
-        const safeLevel = level || 'INFO';
-        const safeMessage = message === undefined || message === null ? '' : String(message);
-        const timestamp = new Date().toISOString();
-        this.runLogLines.push(`${timestamp} [${safeLevel}] ${safeMessage}`);
-    }
-
     async logInfo(message) {
-        this.appendRunLogLine('INFO', message);
         console.log(message);
     }
 
     async logSuccess(message) {
-        this.appendRunLogLine('SUCCESS', message);
         console.log(message);
     }
 
     async logWarn(message) {
         this.warnCount += 1;
-        this.appendRunLogLine('WARN', message);
         console.warn(message);
     }
 
     async logError(message) {
-        this.appendRunLogLine('ERROR', message);
         console.error(message);
     }
 
@@ -4839,12 +4827,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     async appendLogSummary(results) {
         try {
-            if (results?._isDisplayingSavedRun) {
-                console.log('📱 Scriptable: Skipping log write (displaying saved run)');
-                return;
-            }
-
-            const runId = this.getRunIdForLogs(results);
+            const runId = results?.savedRunId || results?.sourceRunId || results?.runId || results?.summary?.runId || null;
             const runContext = results?.runContext || null;
             const logPath = this.getLogFilePath(runId);
             if (!logPath) {
@@ -4862,22 +4845,72 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     errors: (results.errors || []).length
                 }
             };
-            const summaryLine = `${new Date().toISOString()} [SUMMARY] ${JSON.stringify(summary)}`;
-            const logLines = Array.isArray(this.runLogLines) ? this.runLogLines.slice() : [];
-            logLines.push(summaryLine);
-            const logContent = logLines.join('\n') + '\n';
+            const line = JSON.stringify(summary);
 
+            // Prefer embedded logger API
+            if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
+                try {
+                    logger.log(line);
+                    // Use direct file writing instead of FileLogger to avoid path issues
+                    
+                    // Ensure directory exists
+                    if (!this.fm.fileExists(this.logsDir)) {
+                        this.fm.createDirectory(this.logsDir, true);
+                    }
+                    
+                    // Write directly using our FileManager
+                    this.fm.writeString(logPath, logger.logs);
+                    console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
+                    return;
+                } catch (loggerErr) {
+                    console.log(`📱 Scriptable: FileLogger failed: ${loggerErr.message}, falling back to direct write`);
+                    // Continue to fallback method
+                }
+            }
+            // Fallback: plain append
             const fm = this.fm || FileManager.iCloud();
+            const path = logPath;
+            console.log(`📱 Scriptable: Fallback write to path: ${path}`);
+            
+            // Ensure the directory exists before writing
+            const dir = path.substring(0, path.lastIndexOf('/'));
+            console.log(`📱 Scriptable: Checking directory: ${dir}`);
+            
             try {
-                if (!fm.fileExists(this.logsDir)) {
-                    fm.createDirectory(this.logsDir, true);
+                if (!fm.fileExists(dir)) {
+                    console.log(`📱 Scriptable: Creating log directory: ${dir}`);
+                    fm.createDirectory(dir, true);
+                    console.log(`📱 Scriptable: Successfully created directory: ${dir}`);
+                } else {
+                    console.log(`📱 Scriptable: Directory exists: ${dir}`);
                 }
             } catch (dirErr) {
-                console.log(`📱 Scriptable: Failed to create logs directory: ${dirErr.message}`);
+                console.log(`📱 Scriptable: Failed to create directory: ${dirErr.message}`);
+                throw dirErr;
             }
-
-            fm.writeString(logPath, logContent);
-            console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
+            
+            let existing = '';
+            if (fm.fileExists(path)) {
+                try { 
+                    fm.downloadFileFromiCloud(path); // Ensure file is synced
+                    existing = fm.readString(path) || ''; 
+                    console.log(`📱 Scriptable: Read existing log file, length: ${existing.length}`);
+                } catch (readErr) {
+                    console.log(`📱 Scriptable: Failed to read existing log: ${readErr.message}`);
+                    existing = ''; // Continue with empty content
+                }
+            } else {
+                console.log(`📱 Scriptable: Log file doesn't exist, will create: ${path}`);
+            }
+            
+            try {
+                const newContent = existing + new Date().toISOString() + " - " + line + '\n';
+                fm.writeString(path, newContent);
+                console.log(`📱 Scriptable: Successfully wrote log entry (${newContent.length} chars total)`);
+            } catch (writeErr) {
+                console.log(`📱 Scriptable: Write failed: ${writeErr.message}`);
+                throw writeErr;
+            }
         } catch (e) {
             console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
         }
