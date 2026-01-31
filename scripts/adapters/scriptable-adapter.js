@@ -4796,7 +4796,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 lines = lines.slice(0, -1);
             }
             const totalLines = lines.length;
-            const maxLines = 400;
+            const maxLines = 2000;
             let displayLines = lines;
             let truncated = false;
             if (lines.length > maxLines) {
