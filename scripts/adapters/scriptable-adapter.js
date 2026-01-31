@@ -2262,6 +2262,28 @@ class ScriptableAdapter {
             color: var(--text-primary);
         }
 
+        .log-line {
+            display: block;
+            padding: 2px 4px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+
+        .log-line-error {
+            color: ${isDarkMode ? '#ff8a80' : '#d32f2f'};
+            background: ${isDarkMode ? 'rgba(255, 138, 128, 0.15)' : 'rgba(211, 47, 47, 0.12)'};
+        }
+
+        .log-line-warn {
+            color: ${isDarkMode ? '#ffcc80' : '#ef6c00'};
+            background: ${isDarkMode ? 'rgba(255, 204, 128, 0.15)' : 'rgba(239, 108, 0, 0.12)'};
+        }
+
+        .log-line-success {
+            color: ${isDarkMode ? '#a5d6a7' : '#2e7d32'};
+            background: ${isDarkMode ? 'rgba(165, 214, 167, 0.15)' : 'rgba(46, 125, 50, 0.12)'};
+        }
+
         .log-empty {
             color: var(--text-secondary);
             font-size: 14px;
@@ -2848,10 +2870,40 @@ class ScriptableAdapter {
                 }
             });
         }
+
+        function getLogLineClass(line) {
+            const lower = line.toLowerCase();
+            if (lower.includes('error') || lower.includes('exception') || lower.includes('failed') || lower.includes('fail')) {
+                return 'log-line log-line-error';
+            }
+            if (lower.includes('warn')) {
+                return 'log-line log-line-warn';
+            }
+            if (lower.includes('success') || lower.includes('saved') || lower.includes('completed')) {
+                return 'log-line log-line-success';
+            }
+            return 'log-line';
+        }
+
+        function highlightLogOutput() {
+            const logBlocks = document.querySelectorAll('.log-output');
+            logBlocks.forEach(block => {
+                const rawText = block.textContent || '';
+                const lines = rawText.split(/\r?\n/);
+                block.textContent = '';
+                lines.forEach(line => {
+                    const span = document.createElement('span');
+                    span.className = getLogLineClass(line);
+                    span.textContent = line === '' ? ' ' : line;
+                    block.appendChild(span);
+                });
+            });
+        }
         
         // Initialize image display state on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleImages();
+            highlightLogOutput();
         });
     </script>
 </body>
