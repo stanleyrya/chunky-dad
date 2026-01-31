@@ -204,6 +204,7 @@ class ScriptableAdapter {
         this.runtimeContext = this.getScriptableRuntimeContext();
         this.runStartedAt = new Date();
         this.warnCount = 0;
+        this.runLogLines = [];
     }
 
     getScriptableRuntimeContext() {
@@ -672,20 +673,31 @@ class ScriptableAdapter {
     }
 
     // Display/Logging Adapter Implementation
+    appendRunLogLine(level, message) {
+        const safeLevel = level || 'INFO';
+        const safeMessage = message === undefined || message === null ? '' : String(message);
+        const timestamp = new Date().toISOString();
+        this.runLogLines.push(`${timestamp} [${safeLevel}] ${safeMessage}`);
+    }
+
     async logInfo(message) {
+        this.appendRunLogLine('INFO', message);
         console.log(message);
     }
 
     async logSuccess(message) {
+        this.appendRunLogLine('SUCCESS', message);
         console.log(message);
     }
 
     async logWarn(message) {
         this.warnCount += 1;
+        this.appendRunLogLine('WARN', message);
         console.warn(message);
     }
 
     async logError(message) {
+        this.appendRunLogLine('ERROR', message);
         console.error(message);
     }
 
@@ -1362,6 +1374,9 @@ class ScriptableAdapter {
         const runMetaLabel = runIdLabel
             ? `Run: ${runContextLabel} | ID: ${runIdLabel}`
             : `Run: ${runContextLabel}`;
+        const shouldShowLogs = results?._isDisplayingSavedRun === true;
+        const runLogInfo = shouldShowLogs ? await this.loadRunLogsForDisplay(results) : null;
+        const logSectionHtml = shouldShowLogs ? this.buildRunLogSectionHtml(runLogInfo) : '';
         
         // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];
@@ -2239,6 +2254,30 @@ class ScriptableAdapter {
             -webkit-overflow-scrolling: touch;
             color: var(--text-primary);
         }
+
+        .log-details {
+            margin-top: 10px;
+        }
+
+        .log-output {
+            background: ${isDarkMode ? '#1e1e1e' : '#f8f8f8'};
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            max-height: 360px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            color: var(--text-primary);
+        }
+
+        .log-empty {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
         
         .event-card.raw-mode .event-details,
         .event-card.raw-mode .event-metadata,
@@ -2478,6 +2517,8 @@ class ScriptableAdapter {
         </div>
     </div>
     ` : ''}
+
+    ${logSectionHtml}
     
     <script>
         function toggleDisplayMode() {
@@ -2830,6 +2871,56 @@ class ScriptableAdapter {
         `;
         
         return html;
+    }
+
+    buildRunLogSectionHtml(logInfo) {
+        if (!logInfo) {
+            return '';
+        }
+        const runLabel = logInfo.runId ? `run ${logInfo.runId}` : 'this run';
+        if (!logInfo.exists) {
+            let emptyMessage = `No logs available for ${runLabel}.`;
+            if (logInfo.reason === 'missing-run-id') {
+                emptyMessage = 'No run ID available for log lookup.';
+            } else if (logInfo.reason === 'missing-log-file') {
+                emptyMessage = `No log file found for ${runLabel}.`;
+            } else if (logInfo.reason === 'empty-log-file') {
+                emptyMessage = `Log file for ${runLabel} is empty.`;
+            } else if (logInfo.reason === 'read-failed') {
+                emptyMessage = `Log file for ${runLabel} could not be read.`;
+            }
+            return `
+    <div class="section log-section">
+        <div class="section-header">
+            <span class="section-icon">LOG</span>
+            <span class="section-title">Run Logs</span>
+            <span class="section-count">0</span>
+        </div>
+        <div class="log-empty">${this.escapeHtml(emptyMessage)}</div>
+    </div>
+            `;
+        }
+
+        const totalLines = Number.isFinite(logInfo.totalLines) ? logInfo.totalLines : (logInfo.shownLines || 0);
+        const shownLines = Number.isFinite(logInfo.shownLines) ? logInfo.shownLines : totalLines;
+        const summaryLabel = logInfo.truncated
+            ? `Showing last ${shownLines} of ${totalLines} lines`
+            : `Showing ${totalLines} lines`;
+        const logText = logInfo.text || '';
+
+        return `
+    <div class="section log-section">
+        <div class="section-header">
+            <span class="section-icon">LOG</span>
+            <span class="section-title">Run Logs</span>
+            <span class="section-count">${totalLines}</span>
+        </div>
+        <details class="log-details">
+            <summary>${this.escapeHtml(summaryLabel)}</summary>
+            <pre class="log-output">${this.escapeHtml(logText)}</pre>
+        </details>
+    </div>
+        `;
     }
     
     // Generate HTML for individual event card
@@ -4680,6 +4771,65 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     // Log helpers (prefer user's file logger)
+    getRunIdForLogs(results) {
+        return results?.sourceRunId
+            || results?.savedRunId
+            || results?.runId
+            || results?.summary?.runId
+            || null;
+    }
+
+    async loadRunLogsForDisplay(results) {
+        const runId = this.getRunIdForLogs(results);
+        if (!runId) {
+            return { runId: null, exists: false, reason: 'missing-run-id' };
+        }
+        const logPath = this.getLogFilePath(runId);
+        if (!logPath) {
+            return { runId, exists: false, reason: 'missing-log-path' };
+        }
+        const fm = this.fm || FileManager.iCloud();
+        if (!fm.fileExists(logPath)) {
+            return { runId, exists: false, reason: 'missing-log-file' };
+        }
+
+        try {
+            try {
+                await fm.downloadFileFromiCloud(logPath);
+            } catch (downloadError) {
+                console.log(`📱 Scriptable: Log iCloud download failed: ${downloadError.message}`);
+            }
+            const content = fm.readString(logPath);
+            if (!content || !content.trim()) {
+                return { runId, exists: false, reason: 'empty-log-file' };
+            }
+            let lines = content.split(/\r?\n/);
+            if (lines.length > 0 && lines[lines.length - 1] === '') {
+                lines = lines.slice(0, -1);
+            }
+            const totalLines = lines.length;
+            const maxLines = 400;
+            let displayLines = lines;
+            let truncated = false;
+            if (lines.length > maxLines) {
+                displayLines = lines.slice(lines.length - maxLines);
+                truncated = true;
+            }
+            const text = displayLines.join('\n');
+            return {
+                runId,
+                exists: true,
+                text,
+                totalLines,
+                shownLines: displayLines.length,
+                truncated
+            };
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to read log file: ${e.message}`);
+            return { runId, exists: false, reason: 'read-failed' };
+        }
+    }
+
     getLogFilePath(runId) {
         if (!runId) {
             return null;
@@ -4689,7 +4839,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
     async appendLogSummary(results) {
         try {
-            const runId = results?.savedRunId || results?.sourceRunId || results?.runId || results?.summary?.runId || null;
+            if (results?._isDisplayingSavedRun) {
+                console.log('📱 Scriptable: Skipping log write (displaying saved run)');
+                return;
+            }
+
+            const runId = this.getRunIdForLogs(results);
             const runContext = results?.runContext || null;
             const logPath = this.getLogFilePath(runId);
             if (!logPath) {
@@ -4707,72 +4862,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     errors: (results.errors || []).length
                 }
             };
-            const line = JSON.stringify(summary);
+            const summaryLine = `${new Date().toISOString()} [SUMMARY] ${JSON.stringify(summary)}`;
+            const logLines = Array.isArray(this.runLogLines) ? this.runLogLines.slice() : [];
+            logLines.push(summaryLine);
+            const logContent = logLines.join('\n') + '\n';
 
-            // Prefer embedded logger API
-            if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
-                try {
-                    logger.log(line);
-                    // Use direct file writing instead of FileLogger to avoid path issues
-                    
-                    // Ensure directory exists
-                    if (!this.fm.fileExists(this.logsDir)) {
-                        this.fm.createDirectory(this.logsDir, true);
-                    }
-                    
-                    // Write directly using our FileManager
-                    this.fm.writeString(logPath, logger.logs);
-                    console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
-                    return;
-                } catch (loggerErr) {
-                    console.log(`📱 Scriptable: FileLogger failed: ${loggerErr.message}, falling back to direct write`);
-                    // Continue to fallback method
-                }
-            }
-            // Fallback: plain append
             const fm = this.fm || FileManager.iCloud();
-            const path = logPath;
-            console.log(`📱 Scriptable: Fallback write to path: ${path}`);
-            
-            // Ensure the directory exists before writing
-            const dir = path.substring(0, path.lastIndexOf('/'));
-            console.log(`📱 Scriptable: Checking directory: ${dir}`);
-            
             try {
-                if (!fm.fileExists(dir)) {
-                    console.log(`📱 Scriptable: Creating log directory: ${dir}`);
-                    fm.createDirectory(dir, true);
-                    console.log(`📱 Scriptable: Successfully created directory: ${dir}`);
-                } else {
-                    console.log(`📱 Scriptable: Directory exists: ${dir}`);
+                if (!fm.fileExists(this.logsDir)) {
+                    fm.createDirectory(this.logsDir, true);
                 }
             } catch (dirErr) {
-                console.log(`📱 Scriptable: Failed to create directory: ${dirErr.message}`);
-                throw dirErr;
+                console.log(`📱 Scriptable: Failed to create logs directory: ${dirErr.message}`);
             }
-            
-            let existing = '';
-            if (fm.fileExists(path)) {
-                try { 
-                    fm.downloadFileFromiCloud(path); // Ensure file is synced
-                    existing = fm.readString(path) || ''; 
-                    console.log(`📱 Scriptable: Read existing log file, length: ${existing.length}`);
-                } catch (readErr) {
-                    console.log(`📱 Scriptable: Failed to read existing log: ${readErr.message}`);
-                    existing = ''; // Continue with empty content
-                }
-            } else {
-                console.log(`📱 Scriptable: Log file doesn't exist, will create: ${path}`);
-            }
-            
-            try {
-                const newContent = existing + new Date().toISOString() + " - " + line + '\n';
-                fm.writeString(path, newContent);
-                console.log(`📱 Scriptable: Successfully wrote log entry (${newContent.length} chars total)`);
-            } catch (writeErr) {
-                console.log(`📱 Scriptable: Write failed: ${writeErr.message}`);
-                throw writeErr;
-            }
+
+            fm.writeString(logPath, logContent);
+            console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
         }
