@@ -1362,6 +1362,9 @@ class ScriptableAdapter {
         const runMetaLabel = runIdLabel
             ? `Run: ${runContextLabel} | ID: ${runIdLabel}`
             : `Run: ${runContextLabel}`;
+        const shouldShowLogs = results?._isDisplayingSavedRun === true;
+        const runLogInfo = shouldShowLogs ? await this.loadRunLogsForDisplay(results) : null;
+        const logSectionHtml = shouldShowLogs ? this.buildRunLogSectionHtml(runLogInfo) : '';
         
         // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];
@@ -2239,6 +2242,52 @@ class ScriptableAdapter {
             -webkit-overflow-scrolling: touch;
             color: var(--text-primary);
         }
+
+        .log-details {
+            margin-top: 10px;
+        }
+
+        .log-output {
+            background: ${isDarkMode ? '#1e1e1e' : '#f8f8f8'};
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            max-height: 360px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            color: var(--text-primary);
+        }
+
+        .log-line {
+            display: block;
+            padding: 2px 4px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+
+        .log-line-error {
+            color: ${isDarkMode ? '#ff8a80' : '#d32f2f'};
+            background: ${isDarkMode ? 'rgba(255, 138, 128, 0.15)' : 'rgba(211, 47, 47, 0.12)'};
+        }
+
+        .log-line-warn {
+            color: ${isDarkMode ? '#ffcc80' : '#ef6c00'};
+            background: ${isDarkMode ? 'rgba(255, 204, 128, 0.15)' : 'rgba(239, 108, 0, 0.12)'};
+        }
+
+        .log-line-success {
+            color: ${isDarkMode ? '#a5d6a7' : '#2e7d32'};
+            background: ${isDarkMode ? 'rgba(165, 214, 167, 0.15)' : 'rgba(46, 125, 50, 0.12)'};
+        }
+
+        .log-empty {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
         
         .event-card.raw-mode .event-details,
         .event-card.raw-mode .event-metadata,
@@ -2478,6 +2527,8 @@ class ScriptableAdapter {
         </div>
     </div>
     ` : ''}
+
+    ${logSectionHtml}
     
     <script>
         function toggleDisplayMode() {
@@ -2819,10 +2870,40 @@ class ScriptableAdapter {
                 }
             });
         }
+
+        function getLogLineClass(line) {
+            const lower = line.toLowerCase();
+            if (lower.includes('error') || lower.includes('exception') || lower.includes('failed') || lower.includes('fail')) {
+                return 'log-line log-line-error';
+            }
+            if (lower.includes('warn')) {
+                return 'log-line log-line-warn';
+            }
+            if (lower.includes('success') || lower.includes('saved') || lower.includes('completed')) {
+                return 'log-line log-line-success';
+            }
+            return 'log-line';
+        }
+
+        function highlightLogOutput() {
+            const logBlocks = document.querySelectorAll('.log-output');
+            logBlocks.forEach(block => {
+                const rawText = block.textContent || '';
+                const lines = rawText.split(/\r?\n/);
+                block.textContent = '';
+                lines.forEach(line => {
+                    const span = document.createElement('span');
+                    span.className = getLogLineClass(line);
+                    span.textContent = line === '' ? ' ' : line;
+                    block.appendChild(span);
+                });
+            });
+        }
         
         // Initialize image display state on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleImages();
+            highlightLogOutput();
         });
     </script>
 </body>
@@ -2830,6 +2911,56 @@ class ScriptableAdapter {
         `;
         
         return html;
+    }
+
+    buildRunLogSectionHtml(logInfo) {
+        if (!logInfo) {
+            return '';
+        }
+        const runLabel = logInfo.runId ? `run ${logInfo.runId}` : 'this run';
+        if (!logInfo.exists) {
+            let emptyMessage = `No logs available for ${runLabel}.`;
+            if (logInfo.reason === 'missing-run-id') {
+                emptyMessage = 'No run ID available for log lookup.';
+            } else if (logInfo.reason === 'missing-log-file') {
+                emptyMessage = `No log file found for ${runLabel}.`;
+            } else if (logInfo.reason === 'empty-log-file') {
+                emptyMessage = `Log file for ${runLabel} is empty.`;
+            } else if (logInfo.reason === 'read-failed') {
+                emptyMessage = `Log file for ${runLabel} could not be read.`;
+            }
+            return `
+    <div class="section log-section">
+        <div class="section-header">
+            <span class="section-icon">LOG</span>
+            <span class="section-title">Run Logs</span>
+            <span class="section-count">0</span>
+        </div>
+        <div class="log-empty">${this.escapeHtml(emptyMessage)}</div>
+    </div>
+            `;
+        }
+
+        const totalLines = Number.isFinite(logInfo.totalLines) ? logInfo.totalLines : (logInfo.shownLines || 0);
+        const shownLines = Number.isFinite(logInfo.shownLines) ? logInfo.shownLines : totalLines;
+        const summaryLabel = logInfo.truncated
+            ? `Showing last ${shownLines} of ${totalLines} lines`
+            : `Showing ${totalLines} lines`;
+        const logText = logInfo.text || '';
+
+        return `
+    <div class="section log-section">
+        <div class="section-header">
+            <span class="section-icon">LOG</span>
+            <span class="section-title">Run Logs</span>
+            <span class="section-count">${totalLines}</span>
+        </div>
+        <details class="log-details">
+            <summary>${this.escapeHtml(summaryLabel)}</summary>
+            <pre class="log-output">${this.escapeHtml(logText)}</pre>
+        </details>
+    </div>
+        `;
     }
     
     // Generate HTML for individual event card
@@ -4680,6 +4811,65 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     // Log helpers (prefer user's file logger)
+    getRunIdForLogs(results) {
+        return results?.sourceRunId
+            || results?.savedRunId
+            || results?.runId
+            || results?.summary?.runId
+            || null;
+    }
+
+    async loadRunLogsForDisplay(results) {
+        const runId = this.getRunIdForLogs(results);
+        if (!runId) {
+            return { runId: null, exists: false, reason: 'missing-run-id' };
+        }
+        const logPath = this.getLogFilePath(runId);
+        if (!logPath) {
+            return { runId, exists: false, reason: 'missing-log-path' };
+        }
+        const fm = this.fm || FileManager.iCloud();
+        if (!fm.fileExists(logPath)) {
+            return { runId, exists: false, reason: 'missing-log-file' };
+        }
+
+        try {
+            try {
+                await fm.downloadFileFromiCloud(logPath);
+            } catch (downloadError) {
+                console.log(`📱 Scriptable: Log iCloud download failed: ${downloadError.message}`);
+            }
+            const content = fm.readString(logPath);
+            if (!content || !content.trim()) {
+                return { runId, exists: false, reason: 'empty-log-file' };
+            }
+            let lines = content.split(/\r?\n/);
+            if (lines.length > 0 && lines[lines.length - 1] === '') {
+                lines = lines.slice(0, -1);
+            }
+            const totalLines = lines.length;
+            const maxLines = 2000;
+            let displayLines = lines;
+            let truncated = false;
+            if (lines.length > maxLines) {
+                displayLines = lines.slice(lines.length - maxLines);
+                truncated = true;
+            }
+            const text = displayLines.join('\n');
+            return {
+                runId,
+                exists: true,
+                text,
+                totalLines,
+                shownLines: displayLines.length,
+                truncated
+            };
+        } catch (e) {
+            console.log(`📱 Scriptable: Failed to read log file: ${e.message}`);
+            return { runId, exists: false, reason: 'read-failed' };
+        }
+    }
+
     getLogFilePath(runId) {
         if (!runId) {
             return null;
