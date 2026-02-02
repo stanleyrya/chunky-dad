@@ -2724,23 +2724,13 @@ class ScriptableAdapter {
             });
         }
         
-        function toggleDiffView(button, eventKey) {
-            // Convert eventKey to safe ID for DOM lookups - handle both escaped and unescaped keys
-            let safeEventKey = eventKey;
-            
-            // If the key contains escaped characters, unescape them first
-            if (eventKey.includes("\\'")) {
-                safeEventKey = eventKey.replace(/\\'/g, "'");
-            }
-            
-            // Decode HTML entities before creating safe ID
-            safeEventKey = safeEventKey.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-            
-            // Convert to safe DOM ID (same logic as in HTML generation)
-            safeEventKey = safeEventKey.replace(/[^a-zA-Z0-9\-_]/g, '_');
-            
+        function toggleDiffView(button, safeEventId) {
+            const safeEventKey = String(safeEventId || '');
             const tableView = document.getElementById('table-view-' + safeEventKey);
             const lineView = document.getElementById('line-view-' + safeEventKey);
+            if (!tableView || !lineView) {
+                return;
+            }
             
             // Check current state - table view is visible if display is not 'none'
             const isTableVisible = tableView && tableView.style.display !== 'none';
@@ -2758,24 +2748,11 @@ class ScriptableAdapter {
             }
         }
         
-        function toggleComparisonSection(eventId) {
-            // Convert eventId to safe ID for DOM lookups - handle both escaped and unescaped keys
-            let safeEventId = eventId;
-            
-            // If the key contains escaped characters, unescape them first
-            if (eventId.includes("\\'")) {
-                safeEventId = eventId.replace(/\\'/g, "'");
-            }
-            
-            // Decode HTML entities before creating safe ID
-            safeEventId = safeEventId.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-            
-            // Convert to safe DOM ID (same logic as in HTML generation)
-            safeEventId = safeEventId.replace(/[^a-zA-Z0-9\-_]/g, '_');
-            
-            const content = document.getElementById('comparison-content-' + safeEventId);
-            const icon = document.getElementById('expand-icon-' + safeEventId);
-            const diffToggle = document.getElementById('diff-toggle-' + safeEventId);
+        function toggleComparisonSection(safeEventId) {
+            const safeEventKey = String(safeEventId || '');
+            const content = document.getElementById('comparison-content-' + safeEventKey);
+            const icon = document.getElementById('expand-icon-' + safeEventKey);
+            const diffToggle = document.getElementById('diff-toggle-' + safeEventKey);
             
             if (content && content.style.display === 'none') {
                 content.style.display = 'block';
@@ -3336,21 +3313,22 @@ class ScriptableAdapter {
                 // Decode HTML entities before creating safe ID
                 const decodedEventId = eventId.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
                 const safeEventId = decodedEventId.replace(/[^a-zA-Z0-9\-_]/g, '_'); // Create safe ID for DOM elements
-                const escapedEventId = decodedEventId.replace(/'/g, "\\'"); // Escape single quotes for JavaScript
                 const isExpanded = false; // Start collapsed; expand on click
                 
                 return `
                 <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer;"
-                         onclick="toggleComparisonSection('${escapedEventId}')">
-                        <h4 style="margin: 0; font-size: 14px;">
-                            <span id="expand-icon-${safeEventId}" style="display: inline-block; width: 20px; transition: transform 0.2s;">
-                                ${isExpanded ? '▼' : '▶'}
-                            </span>
-                            📊 ${event._action === 'conflict' ? 'Conflict Resolution' : 'Merge Comparison'}
-                            ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ''}
-                        </h4>
-                        <button onclick="event.stopPropagation(); toggleDiffView(this, '${escapedEventId}');" 
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="display: flex; align-items: center; cursor: pointer; flex: 1;"
+                             onclick="toggleComparisonSection('${safeEventId}')">
+                            <h4 style="margin: 0; font-size: 14px;">
+                                <span id="expand-icon-${safeEventId}" style="display: inline-block; width: 20px; transition: transform 0.2s;">
+                                    ${isExpanded ? '▼' : '▶'}
+                                </span>
+                                📊 ${event._action === 'conflict' ? 'Conflict Resolution' : 'Merge Comparison'}
+                                ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ''}
+                            </h4>
+                        </div>
+                        <button onclick="toggleDiffView(this, '${safeEventId}');" 
                                 style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); ${!isExpanded ? 'display: none;' : ''}"
                                 id="diff-toggle-${safeEventId}">
                             Switch to Line View
@@ -4749,14 +4727,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const startedAt = this.runStartedAt instanceof Date ? this.runStartedAt : null;
         const durationMs = startedAt ? finishedAt.getTime() - startedAt.getTime() : null;
         const errorsCount = (results?.errors || []).length;
-        const warningActionsCount = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
-        const warningsCount = (this.warnCount || 0) + warningActionsCount;
         const analyzedEvents = Array.isArray(results?.analyzedEvents) ? results.analyzedEvents : [];
         const parserResults = Array.isArray(results?.parserResults) ? results.parserResults : [];
         const runContext = results?.runContext || null;
         const triggerType = (runContext?.type === 'manual' || runContext?.type === 'automated') ? runContext.type : 'unknown';
         const actions = this.countMetricsActions(analyzedEvents);
         const actionsByParser = this.countMetricsActionsByParser(analyzedEvents);
+        const warningActionsCount = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
+        const warningsCount = (this.warnCount || 0) + warningActionsCount;
 
         const mergeDiffFieldsUpdated = analyzedEvents.reduce((sum, event) => {
             const updatedCount = event?._mergeDiff?.updated?.length || 0;
