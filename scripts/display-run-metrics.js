@@ -772,23 +772,10 @@ class MetricsDisplay {
   getParserStatusKey(item) {
     if (!item) return 'unknown';
     if ((item.latestErrorCount || 0) > 0) return 'failed';
-    if (!item.ran) return 'not-run';
-    const actionTotal = this.sumActions(item.actions);
-    const totalEvents = item.totalEvents || 0;
-    const finalEvents = item.finalBearEvents || 0;
-    const allTimeTotals = item.allTimeTotals || {};
-    const historyTotals = item.historyTotals || {};
-    const allTimeHasEvents = (allTimeTotals.final_bear_events || 0) > 0
-      || (allTimeTotals.total_events || 0) > 0;
-    const historyHasEvents = (historyTotals.final_bear_events || 0) > 0
-      || (historyTotals.total_events || 0) > 0;
-    const hasEvents = totalEvents > 0 || finalEvents > 0 || actionTotal > 0 || allTimeHasEvents || historyHasEvents;
-    if (!hasEvents) return 'no-events';
     const warningActions = (item.actions?.conflict || 0)
       + (item.actions?.missing_calendar || 0)
       + (item.actions?.other || 0);
     if (warningActions > 0) return 'warning';
-    if (item.hasLatestRecord && item.ran && !item.ranInLatest) return 'warning';
     return 'healthy';
   }
 
