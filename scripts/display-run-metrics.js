@@ -1630,29 +1630,29 @@ class MetricsDisplay {
         }
 
         const actions = item.actions || this.createActionCounts();
+        const issuesCount = item.latestErrorCount || 0;
+        const lastRunLabel = this.formatLastRunLabel(item?.lastRunAt);
         const summaryLabel = `➕${this.formatNumber(actions.new || 0)} 🔀${this.formatNumber(actions.merge || 0)} ⚠️${this.formatNumber(actions.conflict || 0)}`;
-        const summary = cell.addText(summaryLabel);
+        const summaryRow = cell.addStack();
+        summaryRow.layoutHorizontally();
+        summaryRow.centerAlignContent();
+        const summary = summaryRow.addText(summaryLabel);
         summary.font = Font.systemFont(FONT_SIZES.widget.small);
         summary.textColor = new Color(BRAND.textMuted);
         summary.lineLimit = 1;
+        summaryRow.addSpacer();
+        const lastRun = summaryRow.addText(lastRunLabel);
+        lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
+        lastRun.textColor = new Color(BRAND.textMuted);
+        lastRun.lineLimit = 1;
 
-        const issuesCount = item.latestErrorCount || 0;
-        const lastRunLabel = this.formatLastRunLabel(item?.lastRunAt);
-        cell.addSpacer();
-        const footer = cell.addStack();
-        footer.layoutHorizontally();
-        footer.centerAlignContent();
         if (showDetails && issuesCount > 0) {
-          const issues = footer.addText(`Issues ${issuesCount}`);
+          cell.addSpacer(2);
+          const issues = cell.addText(`Issues ${issuesCount}`);
           issues.font = Font.systemFont(FONT_SIZES.widget.small);
           issues.textColor = new Color(BRAND.textMuted);
           issues.lineLimit = 1;
         }
-        footer.addSpacer();
-        const lastRun = footer.addText(lastRunLabel);
-        lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
-        lastRun.textColor = new Color(BRAND.textMuted);
-        lastRun.lineLimit = 1;
       }
     }
 
