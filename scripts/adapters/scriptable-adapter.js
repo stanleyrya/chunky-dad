@@ -115,29 +115,203 @@ const jsonFileManager = new JSONFileManager();
  * https://github.com/stanleyrya/scriptable-playground/tree/main/file-logger
  *
  * Usage:
- *  * log(line): Adds the log line to the class' internal log object.
+ *  * log(line): Adds the log line to the class' internal log buffer.
  *  * writeLogs(relativePath): Writes the stored logs to the relative file path.
  */
 class FileLogger {
-    constructor() {
-        this.logs = "";
+    constructor(options = {}) {
+        this.entries = [];
+        this.totalBytes = 0;
+        this.maxLines = Number.isFinite(options.maxLines) ? options.maxLines : 2000;
+        this.maxBytes = Number.isFinite(options.maxBytes) ? options.maxBytes : 250000;
+        this.captureMode = options.captureMode || 'all';
+        this.consoleWrapped = false;
+        this.originalConsole = null;
+    }
+    
+    configure(options = {}) {
+        if (Number.isFinite(options.maxLines)) {
+            this.maxLines = options.maxLines;
+        }
+        if (Number.isFinite(options.maxBytes)) {
+            this.maxBytes = options.maxBytes;
+        }
+        if (typeof options.captureMode === 'string') {
+            this.captureMode = options.captureMode;
+        }
+    }
+    
+    get logs() {
+        return this.getLogText({ mode: 'full' });
     }
     
     log(line) {
-        if (line instanceof Error) {
-            console.error(line);
-        } else {
-            console.log(line);
-        }
-        this.logs += new Date() + " - " + line + "\n";
+        this.append('info', line);
     }
     
-    writeLogs(relativePath) {
+    warn(line) {
+        this.append('warn', line);
+    }
+    
+    error(line) {
+        this.append('error', line);
+    }
+    
+    captureConsole() {
+        if (this.consoleWrapped) {
+            return;
+        }
+        this.consoleWrapped = true;
+        this.originalConsole = {
+            log: typeof console.log === 'function' ? console.log : null,
+            warn: typeof console.warn === 'function' ? console.warn : null,
+            error: typeof console.error === 'function' ? console.error : null
+        };
+        
+        const callOriginal = (method, message) => {
+            const original = this.originalConsole?.[method] || this.originalConsole?.log;
+            if (typeof original === 'function') {
+                original.call(console, message);
+            }
+        };
+        
+        console.log = (...args) => {
+            const message = this.formatArgs(args);
+            this.append('info', message);
+            callOriginal('log', message);
+        };
+        
+        if (typeof console.warn === 'function') {
+            console.warn = (...args) => {
+                const message = this.formatArgs(args);
+                this.append('warn', message);
+                callOriginal('warn', message);
+            };
+        }
+        
+        if (typeof console.error === 'function') {
+            console.error = (...args) => {
+                const message = this.formatArgs(args);
+                this.append('error', message);
+                callOriginal('error', message);
+            };
+        }
+    }
+    
+    append(level, message) {
+        const normalized = this.normalizeLevel(level);
+        if (this.captureMode === 'none') {
+            return;
+        }
+        if (this.captureMode === 'errors' && normalized === 'info') {
+            return;
+        }
+        const line = this.formatEntry(normalized, message);
+        const byteSize = line.length + 1;
+        this.entries.push({ level: normalized, line, byteSize });
+        this.totalBytes += byteSize;
+        this.trimEntries();
+    }
+    
+    formatEntry(level, message) {
+        const safeMessage = typeof message === 'string' ? message : this.formatArgs([message]);
+        return `${new Date().toISOString()} [${level.toUpperCase()}] ${safeMessage}`;
+    }
+    
+    formatArgs(args) {
+        if (!Array.isArray(args) || args.length === 0) {
+            return '';
+        }
+        return args.map(arg => this.formatArg(arg)).join(' ');
+    }
+    
+    formatArg(arg) {
+        if (arg instanceof Error) {
+            return arg.stack || arg.message || String(arg);
+        }
+        if (arg === null) return 'null';
+        if (arg === undefined) return 'undefined';
+        const argType = typeof arg;
+        if (argType === 'string') return arg;
+        if (argType === 'number' || argType === 'boolean' || argType === 'bigint') {
+            return String(arg);
+        }
+        if (argType === 'function') {
+            return `[Function ${arg.name || 'anonymous'}]`;
+        }
+        if (argType === 'object') {
+            try {
+                return JSON.stringify(arg);
+            } catch (e) {
+                return String(arg);
+            }
+        }
+        return String(arg);
+    }
+    
+    normalizeLevel(level) {
+        const normalized = String(level || 'info').toLowerCase();
+        if (normalized === 'warn' || normalized === 'warning') return 'warn';
+        if (normalized === 'error') return 'error';
+        return 'info';
+    }
+    
+    trimEntries() {
+        const hasMaxLines = Number.isFinite(this.maxLines) && this.maxLines > 0;
+        const hasMaxBytes = Number.isFinite(this.maxBytes) && this.maxBytes > 0;
+        
+        while (hasMaxLines && this.entries.length > this.maxLines) {
+            const removed = this.entries.shift();
+            this.totalBytes -= removed ? removed.byteSize : 0;
+        }
+        
+        while (hasMaxBytes && this.totalBytes > this.maxBytes && this.entries.length > 0) {
+            const removed = this.entries.shift();
+            this.totalBytes -= removed ? removed.byteSize : 0;
+        }
+    }
+    
+    getLogText(options = {}) {
+        const mode = String(options.mode || 'full').toLowerCase();
+        if (mode === 'summary' || mode === 'none' || mode === 'off') {
+            return '';
+        }
+        
+        let entries = this.entries;
+        if (mode === 'errors' || mode === 'error') {
+            entries = entries.filter(entry => entry.level === 'error' || entry.level === 'warn');
+        }
+        
+        if (Number.isFinite(options.maxLines) && options.maxLines > 0 && entries.length > options.maxLines) {
+            entries = entries.slice(-options.maxLines);
+        }
+        
+        if (Number.isFinite(options.maxBytes) && options.maxBytes > 0) {
+            let totalBytes = 0;
+            const trimmed = [];
+            for (let i = entries.length - 1; i >= 0; i -= 1) {
+                const entry = entries[i];
+                totalBytes += entry.byteSize;
+                if (totalBytes > options.maxBytes) {
+                    break;
+                }
+                trimmed.push(entry);
+            }
+            entries = trimmed.reverse();
+        }
+        
+        if (!entries.length) {
+            return '';
+        }
+        
+        return `${entries.map(entry => entry.line).join('\n')}\n`;
+    }
+    
+    writeLogs(relativePath, options = {}) {
         const fm = this.getFileManager();
         const fullPath = this.getCurrentDir() + relativePath;
         const pathParts = relativePath.split("/");
         
-        // Create directory if needed
         if (pathParts.length > 1) {
             const fileName = pathParts[pathParts.length - 1];
             const dirPath = fullPath.replace("/" + fileName, "");
@@ -148,14 +322,13 @@ class FileLogger {
             }
         }
         
-        // Check if path is a directory
         if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
             throw new Error("Log file is a directory, please delete!");
         }
         
-        // Write the logs
+        const content = this.getLogText(options);
         try {
-            fm.writeString(fullPath, this.logs);
+            fm.writeString(fullPath, content);
             console.log(`📱 Scriptable: Successfully wrote logs to ${fullPath}`);
         } catch (writeErr) {
             console.log(`📱 Scriptable: Failed to write logs: ${writeErr.message}`);
@@ -178,6 +351,7 @@ class FileLogger {
     }
 }
 const logger = new FileLogger();
+logger.captureConsole();
 
 class ScriptableAdapter {
     constructor(config = {}) {
@@ -507,6 +681,8 @@ class ScriptableAdapter {
                 throw new Error('Configuration missing cities data');
             }
             
+            this.applyLogConfig(config);
+            
             return config;
             
         } catch (error) {
@@ -795,19 +971,23 @@ class ScriptableAdapter {
                 console.log(`📱 Scriptable: Skipping run save (${reason})`);
             }
 
-            // Append a simple log file entry and cleanup logs (regardless of calendar writes)
-            try {
-                await this.ensureRelativeStorageDirs();
-                await this.appendLogSummary(results);
-                await this.cleanupOldFiles('chunky-dad-scraper/logs', {
-                    maxAgeDays: retentionDays,
-                    keep: (name) => {
-                        const lower = name.toLowerCase();
-                        return lower.includes('performance') || lower.endsWith('.csv');
-                    }
-                });
-            } catch (logErr) {
-                console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
+            // Append a log file entry and cleanup logs (skip saved-run display)
+            if (!results?._isDisplayingSavedRun) {
+                try {
+                    await this.ensureRelativeStorageDirs();
+                    await this.appendLogSummary(results);
+                    await this.cleanupOldFiles('chunky-dad-scraper/logs', {
+                        maxAgeDays: retentionDays,
+                        keep: (name) => {
+                            const lower = name.toLowerCase();
+                            return lower.includes('performance') || lower.endsWith('.csv');
+                        }
+                    });
+                } catch (logErr) {
+                    console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
+                }
+            } else {
+                console.log('📱 Scriptable: Skipping log write (display mode)');
             }
 
             if (!results?._isDisplayingSavedRun) {
@@ -4811,6 +4991,53 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     // Log helpers (prefer user's file logger)
+    resolveLogConfig(config) {
+        const configRoot = config?.config || {};
+        const logging = config?.logging || configRoot.logging || {};
+        const mode = String(logging.mode || configRoot.logMode || 'tail').toLowerCase();
+        const maxLines = Number.isFinite(logging.maxLines)
+            ? logging.maxLines
+            : Number.isFinite(configRoot.logMaxLines)
+                ? configRoot.logMaxLines
+                : 2000;
+        const maxBytes = Number.isFinite(logging.maxBytes)
+            ? logging.maxBytes
+            : Number.isFinite(configRoot.logMaxBytes)
+                ? configRoot.logMaxBytes
+                : 250000;
+        return { mode, maxLines, maxBytes };
+    }
+    
+    applyLogConfig(config) {
+        const logConfig = this.resolveLogConfig(config);
+        let captureMode = 'all';
+        if (['summary', 'off', 'none'].includes(logConfig.mode)) {
+            captureMode = 'none';
+        } else if (['errors', 'error'].includes(logConfig.mode)) {
+            captureMode = 'errors';
+        }
+        logger.configure({
+            maxLines: logConfig.maxLines,
+            maxBytes: logConfig.maxBytes,
+            captureMode
+        });
+    }
+    
+    resolveLogOutputMode(logConfig, results) {
+        const mode = String(logConfig.mode || 'tail').toLowerCase();
+        if (['summary', 'off', 'none'].includes(mode)) {
+            return 'summary';
+        }
+        if (['errors', 'error', 'errors-only'].includes(mode)) {
+            return 'errors';
+        }
+        if (['failures', 'failure', 'failures-only', 'failure-only'].includes(mode)) {
+            const hasErrors = (results?.errors || []).length > 0;
+            return hasErrors ? 'full' : 'summary';
+        }
+        return 'full';
+    }
+    
     getRunIdForLogs(results) {
         return results?.sourceRunId
             || results?.savedRunId
@@ -4897,72 +5124,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     errors: (results.errors || []).length
                 }
             };
-            const line = JSON.stringify(summary);
-
-            // Prefer embedded logger API
-            if (typeof logger.log === 'function' && typeof logger.writeLogs === 'function') {
-                try {
-                    logger.log(line);
-                    // Use direct file writing instead of FileLogger to avoid path issues
-                    
-                    // Ensure directory exists
-                    if (!this.fm.fileExists(this.logsDir)) {
-                        this.fm.createDirectory(this.logsDir, true);
-                    }
-                    
-                    // Write directly using our FileManager
-                    this.fm.writeString(logPath, logger.logs);
-                    console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
-                    return;
-                } catch (loggerErr) {
-                    console.log(`📱 Scriptable: FileLogger failed: ${loggerErr.message}, falling back to direct write`);
-                    // Continue to fallback method
-                }
-            }
-            // Fallback: plain append
+            const summaryLine = `${new Date().toISOString()} - ${JSON.stringify(summary)}`;
+            const logConfig = this.resolveLogConfig(results?.config || {});
+            const outputMode = this.resolveLogOutputMode(logConfig, results);
+            const logText = logger.getLogText({
+                mode: outputMode,
+                maxLines: logConfig.maxLines,
+                maxBytes: logConfig.maxBytes
+            });
+            const content = logText ? `${summaryLine}\n${logText}` : `${summaryLine}\n`;
+            
             const fm = this.fm || FileManager.iCloud();
-            const path = logPath;
-            console.log(`📱 Scriptable: Fallback write to path: ${path}`);
-            
-            // Ensure the directory exists before writing
-            const dir = path.substring(0, path.lastIndexOf('/'));
-            console.log(`📱 Scriptable: Checking directory: ${dir}`);
-            
-            try {
-                if (!fm.fileExists(dir)) {
-                    console.log(`📱 Scriptable: Creating log directory: ${dir}`);
-                    fm.createDirectory(dir, true);
-                    console.log(`📱 Scriptable: Successfully created directory: ${dir}`);
-                } else {
-                    console.log(`📱 Scriptable: Directory exists: ${dir}`);
-                }
-            } catch (dirErr) {
-                console.log(`📱 Scriptable: Failed to create directory: ${dirErr.message}`);
-                throw dirErr;
+            if (!fm.fileExists(this.logsDir)) {
+                fm.createDirectory(this.logsDir, true);
             }
             
-            let existing = '';
-            if (fm.fileExists(path)) {
-                try { 
-                    fm.downloadFileFromiCloud(path); // Ensure file is synced
-                    existing = fm.readString(path) || ''; 
-                    console.log(`📱 Scriptable: Read existing log file, length: ${existing.length}`);
-                } catch (readErr) {
-                    console.log(`📱 Scriptable: Failed to read existing log: ${readErr.message}`);
-                    existing = ''; // Continue with empty content
-                }
-            } else {
-                console.log(`📱 Scriptable: Log file doesn't exist, will create: ${path}`);
-            }
-            
-            try {
-                const newContent = existing + new Date().toISOString() + " - " + line + '\n';
-                fm.writeString(path, newContent);
-                console.log(`📱 Scriptable: Successfully wrote log entry (${newContent.length} chars total)`);
-            } catch (writeErr) {
-                console.log(`📱 Scriptable: Write failed: ${writeErr.message}`);
-                throw writeErr;
-            }
+            fm.writeString(logPath, content);
+            console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
         }
