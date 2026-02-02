@@ -658,6 +658,7 @@ class MetricsDisplay {
         triggerType: record?.trigger_type || null,
         errorsCount: record?.errors_count || 0,
         warningsCount: record?.warnings_count || 0,
+        actions: record?.actions ? record.actions : this.createActionCounts(),
         totals: record?.totals || {},
         finalEvents: record?.totals?.final_bear_events || 0,
         totalEvents: record?.totals?.total_events || 0,
@@ -1010,10 +1011,18 @@ class MetricsDisplay {
     const sorted = [...items];
     sorted.sort((a, b) => {
       let diff = 0;
-      if (sortKey === 'finished') {
+      if (sortKey === 'run-id') {
+        diff = String(a?.runId || '').localeCompare(String(b?.runId || ''));
+      } else if (sortKey === 'finished') {
         diff = this.getTimeValue(a?.finishedAt) - this.getTimeValue(b?.finishedAt);
       } else if (sortKey === 'status') {
         diff = this.getRunStatusRank(a?.status) - this.getRunStatusRank(b?.status);
+      } else if (sortKey === 'new') {
+        diff = (a?.actions?.new || 0) - (b?.actions?.new || 0);
+      } else if (sortKey === 'merge') {
+        diff = (a?.actions?.merge || 0) - (b?.actions?.merge || 0);
+      } else if (sortKey === 'conflict') {
+        diff = (a?.actions?.conflict || 0) - (b?.actions?.conflict || 0);
       } else if (sortKey === 'issues') {
         const aIssues = (a?.errorsCount || 0) + (a?.warningsCount || 0);
         const bIssues = (b?.errorsCount || 0) + (b?.warningsCount || 0);
@@ -1331,8 +1340,12 @@ class MetricsDisplay {
   normalizeRunSortKey(value) {
     if (!value) return null;
     const normalized = String(value).toLowerCase().replace(/[^a-z]/g, '');
+    if (['run', 'runid', 'id'].includes(normalized)) return 'run-id';
     if (['finished', 'finish', 'finishedat', 'date', 'time', 'latest', 'last', 'run'].includes(normalized)) return 'finished';
     if (['status', 'state'].includes(normalized)) return 'status';
+    if (['new', 'add', 'adds', 'added'].includes(normalized)) return 'new';
+    if (['merge', 'merged', 'mrg'].includes(normalized)) return 'merge';
+    if (['conflict', 'conflicts', 'conf', 'cnf'].includes(normalized)) return 'conflict';
     if (['issues', 'issue', 'problems', 'problem'].includes(normalized)) return 'issues';
     if (['errors', 'error'].includes(normalized)) return 'errors';
     if (['warnings', 'warning', 'warn'].includes(normalized)) return 'warnings';
@@ -1617,26 +1630,29 @@ class MetricsDisplay {
         }
 
         const actions = item.actions || this.createActionCounts();
-        const summaryLabel = `A${this.formatNumber(actions.new || 0)} M${this.formatNumber(actions.merge || 0)} C${this.formatNumber(actions.conflict || 0)}`;
+        const summaryLabel = `➕${this.formatNumber(actions.new || 0)} 🔀${this.formatNumber(actions.merge || 0)} ⚠️${this.formatNumber(actions.conflict || 0)}`;
         const summary = cell.addText(summaryLabel);
         summary.font = Font.systemFont(FONT_SIZES.widget.small);
         summary.textColor = new Color(BRAND.textMuted);
         summary.lineLimit = 1;
 
-        if (showDetails) {
-          const issuesCount = item.latestErrorCount || 0;
-          const lastRunText = item?.lastRunAt
-            ? `Last ${this.formatLastRunLabel(item.lastRunAt)}`
-            : 'No run yet';
-          const detailParts = [lastRunText];
-          if (issuesCount > 0) {
-            detailParts.push(`Issues ${issuesCount}`);
-          }
-          const details = cell.addText(detailParts.join(' • '));
-          details.font = Font.systemFont(FONT_SIZES.widget.small);
-          details.textColor = new Color(BRAND.textMuted);
-          details.lineLimit = 1;
+        const issuesCount = item.latestErrorCount || 0;
+        const lastRunLabel = this.formatLastRunLabel(item?.lastRunAt);
+        cell.addSpacer();
+        const footer = cell.addStack();
+        footer.layoutHorizontally();
+        footer.centerAlignContent();
+        if (showDetails && issuesCount > 0) {
+          const issues = footer.addText(`Issues ${issuesCount}`);
+          issues.font = Font.systemFont(FONT_SIZES.widget.small);
+          issues.textColor = new Color(BRAND.textMuted);
+          issues.lineLimit = 1;
         }
+        footer.addSpacer();
+        const lastRun = footer.addText(lastRunLabel);
+        lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
+        lastRun.textColor = new Color(BRAND.textMuted);
+        lastRun.lineLimit = 1;
       }
     }
 
@@ -2180,10 +2196,17 @@ class MetricsDisplay {
         const parserNames = Array.isArray(run.parserNames) ? run.parserNames : [];
         const parserNamesValue = parserNames.join('|');
         const issuesTotal = (run.errorsCount || 0) + (run.warningsCount || 0);
+        const actions = run.actions || this.createActionCounts();
+        const actionTotal = this.sumDisplayActions(actions);
         const rowAttrs = [
+          `data-run-id="${escapeHtml(String(run.runId || ''))}"`,
           `data-run-finished="${finishedValue}"`,
           `data-run-status="${escapeHtml(String(run.status || ''))}"`,
           `data-run-status-rank="${statusRank}"`,
+          `data-run-actions="${actionTotal}"`,
+          `data-run-new="${actions.new || 0}"`,
+          `data-run-merge="${actions.merge || 0}"`,
+          `data-run-conflict="${actions.conflict || 0}"`,
           `data-run-errors="${run.errorsCount || 0}"`,
           `data-run-warnings="${run.warningsCount || 0}"`,
           `data-run-issues="${issuesTotal}"`,
@@ -2193,12 +2216,9 @@ class MetricsDisplay {
           `data-run-parsers="${run.parsersCount || 0}"`,
           `data-run-parser-names="${escapeHtml(parserNamesValue)}"`
         ].join(' ');
-        const errors = run.errorsCount || 0;
-        const warnings = run.warningsCount || 0;
-        const issuesLabel = this.formatNumber(issuesTotal);
-        const issuesTitle = `Errors ${errors} • Warnings ${warnings}`;
-        const finalLabel = this.formatNumber(run.finalEvents || 0);
-        const totalLabel = this.formatNumber(run.totalEvents || 0);
+        const addLabel = this.formatNumber(actions.new || 0);
+        const mergeLabel = this.formatNumber(actions.merge || 0);
+        const conflictLabel = this.formatNumber(actions.conflict || 0);
         const durationLabel = run.durationMs ? this.formatDuration(run.durationMs) : '-';
         return `
           <tr data-row="run" ${rowAttrs}>
@@ -2206,18 +2226,18 @@ class MetricsDisplay {
               <div class="cell-title">${buildLink(this.formatRunId(run.runId), runUrl, 'row-link')}</div>
             </td>
             <td class="num tight">
-              <div class="cell-title">${escapeHtml(finalLabel)}</div>
+              <div class="cell-title">${escapeHtml(addLabel)}</div>
             </td>
             <td class="num tight">
-              <div class="cell-title">${escapeHtml(totalLabel)}</div>
+              <div class="cell-title">${escapeHtml(mergeLabel)}</div>
             </td>
-            <td class="num tight" title="${escapeHtml(issuesTitle)}">
-              <div class="cell-title">${escapeHtml(issuesLabel)}</div>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(conflictLabel)}</div>
             </td>
             <td>
               <div class="cell-title">${escapeHtml(this.formatLastRunLabel(run.finishedAt))}</div>
             </td>
-            <td class="num tight">
+            <td class="num">
               <div class="cell-title">${escapeHtml(durationLabel)}</div>
             </td>
             <td class="status-cell">
@@ -2230,12 +2250,12 @@ class MetricsDisplay {
           <table class="metrics-table list-table">
             <thead>
               <tr>
-                <th>Run</th>
-                ${buildSortHeader('Final', 'final-events', sortState, 'runs', 'desc', 'num tight')}
-                ${buildSortHeader('Total', 'total-events', sortState, 'runs', 'desc', 'num tight')}
-                ${buildSortHeader('Issues', 'issues', sortState, 'runs', 'desc', 'num tight')}
+                ${buildSortHeader('Run', 'run-id', sortState, 'runs', 'desc')}
+                ${buildSortHeader('Add', 'new', sortState, 'runs', 'desc', 'num tight')}
+                ${buildSortHeader('Mrg', 'merge', sortState, 'runs', 'desc', 'num tight')}
+                ${buildSortHeader('Cnf', 'conflict', sortState, 'runs', 'desc', 'num tight')}
                 ${buildSortHeader('Last', 'finished', sortState, 'runs', 'desc')}
-                ${buildSortHeader('Dur', 'duration', sortState, 'runs', 'desc', 'num tight')}
+                ${buildSortHeader('Dur', 'duration', sortState, 'runs', 'desc', 'num')}
                 ${buildSortHeader('Stat', 'status', sortState, 'runs', 'desc', 'status-cell')}
               </tr>
             </thead>
@@ -2417,13 +2437,6 @@ class MetricsDisplay {
           ${buildParserTable(sortedItems, parserSortResolved)}`;
         cards.push(buildSection('Parser Health', body));
       } else if (viewMode === 'runs') {
-        const totalRuns = runItems.length;
-        const filteredCount = filteredRuns.length;
-        const summarySubtitle = totalRuns === filteredCount
-          ? null
-          : `Filtered from ${this.formatNumber(totalRuns)}`;
-        const runSubtitleText = `Runs: ${this.formatNumber(filteredCount)}${summarySubtitle ? ` • ${summarySubtitle}` : ''}`;
-        const runSubtitle = `<span data-run-subtitle data-run-total="${totalRuns}">${escapeHtml(runSubtitleText)}</span>`;
         const filtersHtml = `
           <div class="filter-block">
             <div class="filter-label">Status</div>
@@ -2440,7 +2453,7 @@ class MetricsDisplay {
         const body = `
           ${filtersHtml}
           ${buildRunTable(sortedRuns, runSortResolved)}`;
-        cards.push(buildSection('All runs', body, runSubtitle));
+        cards.push(buildSection('All runs', body));
       } else if (viewMode === 'aggregate') {
         if (!summary?.totals) {
           cards.push(buildEmptyCard('No summary metrics found.', 'Run the scraper to generate summary metrics.'));
@@ -3126,7 +3139,6 @@ class MetricsDisplay {
       const runFilterChips = Array.from(document.querySelectorAll('[data-filter-view="runs"]'));
       const parserList = document.querySelector('section[data-view="parsers"] [data-list="parsers"]');
       const runList = document.querySelector('section[data-view="runs"] [data-list="runs"]');
-      const runSubtitle = document.querySelector('section[data-view="runs"] [data-run-subtitle]');
 
       const parseNumber = value => {
         const num = Number(value);
@@ -3311,10 +3323,18 @@ class MetricsDisplay {
           const aData = a.dataset;
           const bData = b.dataset;
           let diff = 0;
-          if (runSortState.key === 'finished') {
+          if (runSortState.key === 'run-id') {
+            diff = String(aData.runId || '').localeCompare(String(bData.runId || ''));
+          } else if (runSortState.key === 'finished') {
             diff = parseNumber(aData.runFinished) - parseNumber(bData.runFinished);
           } else if (runSortState.key === 'status') {
             diff = parseNumber(aData.runStatusRank) - parseNumber(bData.runStatusRank);
+          } else if (runSortState.key === 'new') {
+            diff = parseNumber(aData.runNew) - parseNumber(bData.runNew);
+          } else if (runSortState.key === 'merge') {
+            diff = parseNumber(aData.runMerge) - parseNumber(bData.runMerge);
+          } else if (runSortState.key === 'conflict') {
+            diff = parseNumber(aData.runConflict) - parseNumber(bData.runConflict);
           } else if (runSortState.key === 'issues') {
             diff = parseNumber(aData.runIssues) - parseNumber(bData.runIssues);
           } else if (runSortState.key === 'errors') {
@@ -3353,12 +3373,6 @@ class MetricsDisplay {
           row.classList.add('hidden');
           runList.appendChild(row);
         });
-        if (runSubtitle) {
-          const totalRuns = parseNumber(runSubtitle.getAttribute('data-run-total')) || rows.length;
-          const filteredCount = sortedVisible.length;
-          const summary = filteredCount === totalRuns ? '' : ' • Filtered from ' + formatNumber(totalRuns);
-          runSubtitle.textContent = 'Runs: ' + formatNumber(filteredCount) + summary;
-        }
       };
 
       navLinks.forEach(link => {
@@ -3529,12 +3543,6 @@ class MetricsDisplay {
       }
     } else if (view.mode === 'runs') {
       this.addSectionHeader(table, 'All runs');
-      const totalRuns = runItems.length;
-      const filteredCount = filteredRuns.length;
-      const summarySubtitle = totalRuns === filteredCount
-        ? null
-        : `Filtered from ${this.formatNumber(totalRuns)}`;
-      this.addInfoRow(table, `Runs: ${this.formatNumber(filteredCount)}`, summarySubtitle);
       this.addRunFilterRow(table, runSortResolved, runFilters);
       this.addRunSortRow(table, runSortResolved, runFilters);
       this.addRunTableHeader(table);
@@ -3830,9 +3838,10 @@ class MetricsDisplay {
   getRunSortOptions() {
     return [
       { key: 'finished', label: 'Last run', defaultDirection: 'desc' },
-      { key: 'final-events', label: 'Final events', defaultDirection: 'desc' },
-      { key: 'total-events', label: 'Total events', defaultDirection: 'desc' },
-      { key: 'issues', label: 'Issues', defaultDirection: 'desc' },
+      { key: 'run-id', label: 'Run id', defaultDirection: 'desc' },
+      { key: 'new', label: 'Adds', defaultDirection: 'desc' },
+      { key: 'merge', label: 'Merges', defaultDirection: 'desc' },
+      { key: 'conflict', label: 'Conflicts', defaultDirection: 'desc' },
       { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
       { key: 'status', label: 'Status', defaultDirection: 'desc' }
     ];
@@ -3943,21 +3952,21 @@ class MetricsDisplay {
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
     const runCell = row.addText('Run');
-    runCell.widthWeight = 30;
-    const finalCell = row.addText('Final');
-    finalCell.widthWeight = 10;
-    const totalCell = row.addText('Total');
-    totalCell.widthWeight = 10;
-    const issuesCell = row.addText('Issues');
-    issuesCell.widthWeight = 10;
+    runCell.widthWeight = 44;
+    const addCell = row.addText('Add');
+    addCell.widthWeight = 7;
+    const mergeCell = row.addText('Mrg');
+    mergeCell.widthWeight = 7;
+    const conflictCell = row.addText('Cnf');
+    conflictCell.widthWeight = 7;
     const finishedCell = row.addText('Last');
-    finishedCell.widthWeight = 18;
+    finishedCell.widthWeight = 16;
     const durationCell = row.addText('Dur');
     durationCell.widthWeight = 12;
     const statusCell = row.addText('Stat');
-    statusCell.widthWeight = 10;
+    statusCell.widthWeight = 7;
 
-    [runCell, finalCell, totalCell, issuesCell, finishedCell, durationCell, statusCell].forEach(cell => {
+    [runCell, addCell, mergeCell, conflictCell, finishedCell, durationCell, statusCell].forEach(cell => {
       cell.titleFont = Font.boldSystemFont(FONT_SIZES.app.small);
       cell.titleColor = new Color(BRAND.textMuted);
     });
@@ -3971,28 +3980,28 @@ class MetricsDisplay {
     const runCell = row.addText(this.formatRunId(run.runId));
     runCell.titleFont = Font.systemFont(FONT_SIZES.app.label);
     runCell.titleColor = new Color(BRAND.text);
-    runCell.widthWeight = 30;
+    runCell.widthWeight = 44;
 
-    const finalCell = row.addText(this.formatNumber(run.finalEvents || 0));
-    finalCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
-    finalCell.titleColor = new Color(BRAND.text);
-    finalCell.widthWeight = 10;
+    const actions = run.actions || this.createActionCounts();
+    const addCell = row.addText(this.formatNumber(actions.new || 0));
+    addCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    addCell.titleColor = new Color(BRAND.text);
+    addCell.widthWeight = 7;
 
-    const totalCell = row.addText(this.formatNumber(run.totalEvents || 0));
-    totalCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
-    totalCell.titleColor = new Color(BRAND.text);
-    totalCell.widthWeight = 10;
+    const mergeCell = row.addText(this.formatNumber(actions.merge || 0));
+    mergeCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    mergeCell.titleColor = new Color(BRAND.text);
+    mergeCell.widthWeight = 7;
 
-    const issuesTotal = (run.errorsCount || 0) + (run.warningsCount || 0);
-    const issuesCell = row.addText(this.formatNumber(issuesTotal));
-    issuesCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
-    issuesCell.titleColor = new Color(BRAND.text);
-    issuesCell.widthWeight = 10;
+    const conflictCell = row.addText(this.formatNumber(actions.conflict || 0));
+    conflictCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
+    conflictCell.titleColor = new Color(BRAND.text);
+    conflictCell.widthWeight = 7;
 
     const finishedCell = row.addText(this.formatLastRunLabel(run.finishedAt));
     finishedCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     finishedCell.titleColor = new Color(BRAND.text);
-    finishedCell.widthWeight = 18;
+    finishedCell.widthWeight = 16;
 
     const durationLabel = run.durationMs ? this.formatDuration(run.durationMs) : '-';
     const durationCell = row.addText(durationLabel);
@@ -4005,7 +4014,7 @@ class MetricsDisplay {
     const statusCell = row.addText(statusEmoji);
     statusCell.titleFont = Font.systemFont(FONT_SIZES.app.small);
     statusCell.titleColor = statusMeta.color;
-    statusCell.widthWeight = 10;
+    statusCell.widthWeight = 7;
 
     row.onSelect = () => {
       if (!run.runId) return;
