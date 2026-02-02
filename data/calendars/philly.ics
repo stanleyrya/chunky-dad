@@ -6,9 +6,36 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-philadelphia
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
+DTSTART:20251101T010000Z
+DTEND:20251101T060000Z
+DTSTAMP:20260202T121023Z
+UID:3D97C917-CD83-44B2-A03C-0F6095F987D2
+CREATED:20250930T142205Z
+DESCRIPTION:description: CUBHOUSE returns on October 31st for a HALLOWEEN D
+ ANCE PART!\nbar: 254\naddress: 254 South 12th Street\, Philadelphia\, PA 19
+ 107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cu
+ bhouse-philly-halloween-dance-party-tickets-1633106779339\ncover: $18.09 - 
+ $29.14 (as of 10/11)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.
+ com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?cr
+ op=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75
+ 680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29\nsh
+ ortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nu
+ rl: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?
+ api=1&query=39.9470542%2C-75.161054&query_place_id=101718083\nkey: cubhouse
+ -philly-halloween-dance-party|2025-11-01|254|eventbrite
+LAST-MODIFIED:20251011T213435Z
+LOCATION:39.9470542\, -75.161054
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CUBHOUSE PHILLY HALLOWEEN DANCE PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260214T020000Z
 DTEND:20260214T070000Z
-DTSTAMP:20260202T081207Z
+DTSTAMP:20260202T121023Z
 UID:C9791D00-2BAB-4EB3-8347-4823E6C75F4A
 CREATED:20260117T204747Z
 DESCRIPTION:description: CUBHOUSE returns for dancing with your VALENTINE'S
@@ -30,33 +57,6 @@ LOCATION:39.9470542\, -75.161054
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:CUBHOUSE PHILLY VALENTINE'S DANCE PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20251101T010000Z
-DTEND:20251101T060000Z
-DTSTAMP:20260202T081207Z
-UID:3D97C917-CD83-44B2-A03C-0F6095F987D2
-CREATED:20250930T142205Z
-DESCRIPTION:description: CUBHOUSE returns on October 31st for a HALLOWEEN D
- ANCE PART!\nbar: 254\naddress: 254 South 12th Street\, Philadelphia\, PA 19
- 107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cu
- bhouse-philly-halloween-dance-party-tickets-1633106779339\ncover: $18.09 - 
- $29.14 (as of 10/11)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.
- com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?cr
- op=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75
- 680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29\nsh
- ortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nu
- rl: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?
- api=1&query=39.9470542%2C-75.161054&query_place_id=101718083\nkey: cubhouse
- -philly-halloween-dance-party|2025-11-01|254|eventbrite
-LAST-MODIFIED:20251011T213435Z
-LOCATION:39.9470542\, -75.161054
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CUBHOUSE PHILLY HALLOWEEN DANCE PARTY
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
