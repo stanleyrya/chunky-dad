@@ -294,7 +294,7 @@ class MetricsDisplay {
       try {
         const record = JSON.parse(line);
         if (record) {
-          records.push(record);
+          records.push(this.normalizeMetricsRecord(record));
         }
       } catch (_) {
         return;
@@ -377,6 +377,26 @@ class MetricsDisplay {
       final_bear_events: 0,
       duplicates_removed: 0
     };
+  }
+
+  getWarningActionCount(actions) {
+    if (!actions) return 0;
+    return (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
+  }
+
+  getRunWarningCount(record) {
+    const baseWarnings = Number.isFinite(record?.warnings_count) ? record.warnings_count : 0;
+    const actionWarnings = this.getWarningActionCount(record?.actions);
+    if (baseWarnings >= actionWarnings) return baseWarnings;
+    return baseWarnings + actionWarnings;
+  }
+
+  normalizeMetricsRecord(record) {
+    if (!record || typeof record !== 'object') return record;
+    const errorsCount = Number.isFinite(record.errors_count) ? record.errors_count : 0;
+    const warningsCount = this.getRunWarningCount(record);
+    const status = this.getRunStatusFromCounts(errorsCount, warningsCount, record.status);
+    return { ...record, warnings_count: warningsCount, status };
   }
 
   sumActions(actions) {
@@ -493,6 +513,7 @@ class MetricsDisplay {
       const historyRuns = historyByParser?.[name]?.runs || 0;
       const historyDurationMs = historyByParser?.[name]?.durationMsTotal || 0;
       const ran = !!record || allTimeRuns > 0 || historyRuns > 0;
+      const warningCount = this.getWarningActionCount(actions);
 
       return {
         name,
@@ -505,6 +526,7 @@ class MetricsDisplay {
         finalBearEvents: record?.final_bear_events || 0,
         durationMs: record?.duration_ms || null,
         actions,
+        warningCount,
         lastRunAt: lastRun?.record?.finished_at || null,
         lastRunId: lastRun?.record?.run_id || null,
         latestErrorCount: latestErrorCounts?.[name] || 0,
@@ -649,6 +671,7 @@ class MetricsDisplay {
     return records.map(record => {
       const parsers = Array.isArray(record?.parsers) ? record.parsers : [];
       const parserNames = parsers.map(parser => parser?.parser_name).filter(Boolean);
+      const warningsCount = this.getRunWarningCount(record);
       return {
         runId: record?.run_id || null,
         finishedAt: record?.finished_at || null,
@@ -657,7 +680,7 @@ class MetricsDisplay {
         status: record?.status || null,
         triggerType: record?.trigger_type || null,
         errorsCount: record?.errors_count || 0,
-        warningsCount: record?.warnings_count || 0,
+        warningsCount,
         actions: record?.actions ? record.actions : this.createActionCounts(),
         totals: record?.totals || {},
         finalEvents: record?.totals?.final_bear_events || 0,
@@ -743,8 +766,18 @@ class MetricsDisplay {
 
   formatStatusLabel(status) {
     if (!status) return 'Unknown';
-    const raw = String(status);
-    return raw.charAt(0).toUpperCase() + raw.slice(1);
+    const normalized = String(status).toLowerCase();
+    if (normalized === 'partial') return 'Warning';
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+
+  getRunStatusFromCounts(errorsCount, warningsCount, fallbackStatus) {
+    const errors = Number.isFinite(errorsCount) ? errorsCount : 0;
+    const warnings = Number.isFinite(warningsCount) ? warningsCount : 0;
+    if (errors > 0) return 'failed';
+    if (warnings > 0) return 'partial';
+    if (fallbackStatus) return String(fallbackStatus).toLowerCase();
+    return 'success';
   }
 
   getStatusMeta(status) {
@@ -753,7 +786,7 @@ class MetricsDisplay {
       return { label: 'Success', color: new Color(BRAND.success) };
     }
     if (normalized === 'partial') {
-      return { label: 'Partial', color: new Color(BRAND.warning) };
+      return { label: 'Warning', color: new Color(BRAND.warning) };
     }
     if (normalized === 'failed') {
       return { label: 'Failed', color: new Color(BRAND.danger) };
@@ -773,22 +806,10 @@ class MetricsDisplay {
     if (!item) return 'unknown';
     if ((item.latestErrorCount || 0) > 0) return 'failed';
     if (!item.ran) return 'not-run';
-    const actionTotal = this.sumActions(item.actions);
-    const totalEvents = item.totalEvents || 0;
-    const finalEvents = item.finalBearEvents || 0;
-    const allTimeTotals = item.allTimeTotals || {};
-    const historyTotals = item.historyTotals || {};
-    const allTimeHasEvents = (allTimeTotals.final_bear_events || 0) > 0
-      || (allTimeTotals.total_events || 0) > 0;
-    const historyHasEvents = (historyTotals.final_bear_events || 0) > 0
-      || (historyTotals.total_events || 0) > 0;
-    const hasEvents = totalEvents > 0 || finalEvents > 0 || actionTotal > 0 || allTimeHasEvents || historyHasEvents;
-    if (!hasEvents) return 'no-events';
-    const warningActions = (item.actions?.conflict || 0)
-      + (item.actions?.missing_calendar || 0)
-      + (item.actions?.other || 0);
-    if (warningActions > 0) return 'warning';
-    if (item.hasLatestRecord && item.ran && !item.ranInLatest) return 'warning';
+    const warningCount = Number.isFinite(item.warningCount)
+      ? item.warningCount
+      : this.getWarningActionCount(item.actions);
+    if (warningCount > 0) return 'warning';
     return 'healthy';
   }
 
@@ -1630,29 +1651,29 @@ class MetricsDisplay {
         }
 
         const actions = item.actions || this.createActionCounts();
+        const issuesCount = item.latestErrorCount || 0;
+        const lastRunLabel = this.formatLastRunLabel(item?.lastRunAt);
         const summaryLabel = `➕${this.formatNumber(actions.new || 0)} 🔀${this.formatNumber(actions.merge || 0)} ⚠️${this.formatNumber(actions.conflict || 0)}`;
-        const summary = cell.addText(summaryLabel);
+        const summaryRow = cell.addStack();
+        summaryRow.layoutHorizontally();
+        summaryRow.centerAlignContent();
+        const summary = summaryRow.addText(summaryLabel);
         summary.font = Font.systemFont(FONT_SIZES.widget.small);
         summary.textColor = new Color(BRAND.textMuted);
         summary.lineLimit = 1;
+        summaryRow.addSpacer();
+        const lastRun = summaryRow.addText(lastRunLabel);
+        lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
+        lastRun.textColor = new Color(BRAND.textMuted);
+        lastRun.lineLimit = 1;
 
-        const issuesCount = item.latestErrorCount || 0;
-        const lastRunLabel = this.formatLastRunLabel(item?.lastRunAt);
-        cell.addSpacer();
-        const footer = cell.addStack();
-        footer.layoutHorizontally();
-        footer.centerAlignContent();
         if (showDetails && issuesCount > 0) {
-          const issues = footer.addText(`Issues ${issuesCount}`);
+          cell.addSpacer(2);
+          const issues = cell.addText(`Issues ${issuesCount}`);
           issues.font = Font.systemFont(FONT_SIZES.widget.small);
           issues.textColor = new Color(BRAND.textMuted);
           issues.lineLimit = 1;
         }
-        footer.addSpacer();
-        const lastRun = footer.addText(lastRunLabel);
-        lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
-        lastRun.textColor = new Color(BRAND.textMuted);
-        lastRun.lineLimit = 1;
       }
     }
 
@@ -2313,7 +2334,7 @@ class MetricsDisplay {
     const statusOptions = [
       { label: 'All', value: null },
       { label: 'Success', value: 'success' },
-      { label: 'Partial', value: 'partial' },
+      { label: 'Warning', value: 'partial' },
       { label: 'Failed', value: 'failed' },
       { label: 'Issues', value: 'issues' }
     ];
@@ -2418,7 +2439,7 @@ class MetricsDisplay {
             <div class="metrics-grid">
               ${buildMetric('Runs', this.formatNumber(summaryTotals.runs || 0))}
               ${buildMetric('Success', this.formatNumber(summaryTotals.statuses?.success || 0))}
-              ${buildMetric('Partial', this.formatNumber(summaryTotals.statuses?.partial || 0))}
+              ${buildMetric('Warnings', this.formatNumber(summaryTotals.statuses?.partial || 0))}
               ${buildMetric('Failed', this.formatNumber(summaryTotals.statuses?.failed || 0))}
               ${buildMetric('Final events', this.formatNumber(summaryTotals.totals?.final_bear_events || 0))}
               ${buildMetric('Calendar events', this.formatNumber(summaryTotals.totals?.calendar_events || 0))}
@@ -2463,7 +2484,7 @@ class MetricsDisplay {
             <div class="metrics-grid">
               ${buildMetric('Runs', this.formatNumber(totals.runs || 0))}
               ${buildMetric('Success', this.formatNumber(totals.statuses?.success || 0))}
-              ${buildMetric('Partial', this.formatNumber(totals.statuses?.partial || 0))}
+              ${buildMetric('Warnings', this.formatNumber(totals.statuses?.partial || 0))}
               ${buildMetric('Failed', this.formatNumber(totals.statuses?.failed || 0))}
               ${buildMetric('Final events', this.formatNumber(totals.totals?.final_bear_events || 0))}
               ${buildMetric('Calendar events', this.formatNumber(totals.totals?.calendar_events || 0))}
@@ -3521,7 +3542,7 @@ class MetricsDisplay {
       if (summary?.totals) {
         this.addSectionHeader(table, 'All-time totals');
         const summaryTotals = summary.totals;
-        this.addInfoRow(table, `Runs: ${this.formatNumber(summaryTotals.runs || 0)}`, `Success: ${summaryTotals.statuses?.success || 0} • Partial: ${summaryTotals.statuses?.partial || 0} • Failed: ${summaryTotals.statuses?.failed || 0}`);
+        this.addInfoRow(table, `Runs: ${this.formatNumber(summaryTotals.runs || 0)}`, `Success: ${summaryTotals.statuses?.success || 0} • Warnings: ${summaryTotals.statuses?.partial || 0} • Failed: ${summaryTotals.statuses?.failed || 0}`);
         this.addInfoRow(
           table,
           `Final bear events: ${this.formatNumber(summaryTotals.totals?.final_bear_events || 0)}`,
@@ -3559,7 +3580,7 @@ class MetricsDisplay {
         this.addInfoRow(table, 'No summary metrics found.', 'Run the scraper to generate summary metrics.');
       } else {
         const totals = summary.totals;
-        this.addInfoRow(table, `Runs: ${this.formatNumber(totals.runs || 0)}`, `Success: ${totals.statuses?.success || 0} • Partial: ${totals.statuses?.partial || 0} • Failed: ${totals.statuses?.failed || 0}`);
+        this.addInfoRow(table, `Runs: ${this.formatNumber(totals.runs || 0)}`, `Success: ${totals.statuses?.success || 0} • Warnings: ${totals.statuses?.partial || 0} • Failed: ${totals.statuses?.failed || 0}`);
         this.addInfoRow(
           table,
           `Final bear events: ${this.formatNumber(totals.totals?.final_bear_events || 0)}`,
@@ -3911,7 +3932,7 @@ class MetricsDisplay {
     const options = [
       { label: 'All statuses', value: null },
       { label: 'Success', value: 'success' },
-      { label: 'Partial', value: 'partial' },
+      { label: 'Warning', value: 'partial' },
       { label: 'Failed', value: 'failed' },
       { label: 'Issues (errors/warnings)', value: 'issues' }
     ];

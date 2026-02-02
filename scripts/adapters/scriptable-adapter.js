@@ -4727,11 +4727,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return countsByParser;
     }
 
-    getMetricsStatus(results, errorsCount) {
-        if (errorsCount > 0) {
-            const hasParsers = (results?.parserResults || []).length > 0;
-            const hasEvents = (results?.totalEvents || 0) > 0;
-            return (hasParsers || hasEvents) ? 'partial' : 'failed';
+    getMetricsStatus(results, errorsCount, warningsCount) {
+        const errorTotal = Number.isFinite(errorsCount) ? errorsCount : 0;
+        const warningTotal = Number.isFinite(warningsCount) ? warningsCount : 0;
+        if (errorTotal > 0) {
+            return 'failed';
+        }
+        if (warningTotal > 0) {
+            return 'partial';
         }
         return 'success';
     }
@@ -4746,7 +4749,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const startedAt = this.runStartedAt instanceof Date ? this.runStartedAt : null;
         const durationMs = startedAt ? finishedAt.getTime() - startedAt.getTime() : null;
         const errorsCount = (results?.errors || []).length;
-        const warningsCount = this.warnCount || 0;
+        const warningActionsCount = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
+        const warningsCount = (this.warnCount || 0) + warningActionsCount;
         const analyzedEvents = Array.isArray(results?.analyzedEvents) ? results.analyzedEvents : [];
         const parserResults = Array.isArray(results?.parserResults) ? results.parserResults : [];
         const runContext = results?.runContext || null;
@@ -4794,7 +4798,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             finished_at: finishedAt.toISOString(),
             duration_ms: durationMs,
             trigger_type: triggerType,
-            status: this.getMetricsStatus(results, errorsCount),
+            status: this.getMetricsStatus(results, errorsCount, warningsCount),
             environment: runContext?.environment || this.runtimeContext?.environment || 'unknown',
             run_context: runContext,
             config_files: ['scraper-input.js', 'scraper-cities.js'],
