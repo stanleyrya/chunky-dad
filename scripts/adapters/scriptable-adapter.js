@@ -4749,7 +4749,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const startedAt = this.runStartedAt instanceof Date ? this.runStartedAt : null;
         const durationMs = startedAt ? finishedAt.getTime() - startedAt.getTime() : null;
         const errorsCount = (results?.errors || []).length;
-        const warningsCount = this.warnCount || 0;
+        const warningActionsCount = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
+        const warningsCount = (this.warnCount || 0) + warningActionsCount;
         const analyzedEvents = Array.isArray(results?.analyzedEvents) ? results.analyzedEvents : [];
         const parserResults = Array.isArray(results?.parserResults) ? results.parserResults : [];
         const runContext = results?.runContext || null;

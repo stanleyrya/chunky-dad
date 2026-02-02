@@ -379,12 +379,24 @@ class MetricsDisplay {
     };
   }
 
+  getWarningActionCount(actions) {
+    if (!actions) return 0;
+    return (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
+  }
+
+  getRunWarningCount(record) {
+    const baseWarnings = Number.isFinite(record?.warnings_count) ? record.warnings_count : 0;
+    const actionWarnings = this.getWarningActionCount(record?.actions);
+    if (baseWarnings >= actionWarnings) return baseWarnings;
+    return baseWarnings + actionWarnings;
+  }
+
   normalizeMetricsRecord(record) {
     if (!record || typeof record !== 'object') return record;
     const errorsCount = Number.isFinite(record.errors_count) ? record.errors_count : 0;
-    const warningsCount = Number.isFinite(record.warnings_count) ? record.warnings_count : 0;
+    const warningsCount = this.getRunWarningCount(record);
     const status = this.getRunStatusFromCounts(errorsCount, warningsCount, record.status);
-    return { ...record, status };
+    return { ...record, warnings_count: warningsCount, status };
   }
 
   sumActions(actions) {
@@ -501,6 +513,7 @@ class MetricsDisplay {
       const historyRuns = historyByParser?.[name]?.runs || 0;
       const historyDurationMs = historyByParser?.[name]?.durationMsTotal || 0;
       const ran = !!record || allTimeRuns > 0 || historyRuns > 0;
+      const warningCount = this.getWarningActionCount(actions);
 
       return {
         name,
@@ -513,6 +526,7 @@ class MetricsDisplay {
         finalBearEvents: record?.final_bear_events || 0,
         durationMs: record?.duration_ms || null,
         actions,
+        warningCount,
         lastRunAt: lastRun?.record?.finished_at || null,
         lastRunId: lastRun?.record?.run_id || null,
         latestErrorCount: latestErrorCounts?.[name] || 0,
@@ -657,6 +671,7 @@ class MetricsDisplay {
     return records.map(record => {
       const parsers = Array.isArray(record?.parsers) ? record.parsers : [];
       const parserNames = parsers.map(parser => parser?.parser_name).filter(Boolean);
+      const warningsCount = this.getRunWarningCount(record);
       return {
         runId: record?.run_id || null,
         finishedAt: record?.finished_at || null,
@@ -665,7 +680,7 @@ class MetricsDisplay {
         status: record?.status || null,
         triggerType: record?.trigger_type || null,
         errorsCount: record?.errors_count || 0,
-        warningsCount: record?.warnings_count || 0,
+        warningsCount,
         actions: record?.actions ? record.actions : this.createActionCounts(),
         totals: record?.totals || {},
         finalEvents: record?.totals?.final_bear_events || 0,
@@ -791,10 +806,10 @@ class MetricsDisplay {
     if (!item) return 'unknown';
     if ((item.latestErrorCount || 0) > 0) return 'failed';
     if (!item.ran) return 'not-run';
-    const warningActions = (item.actions?.conflict || 0)
-      + (item.actions?.missing_calendar || 0)
-      + (item.actions?.other || 0);
-    if (warningActions > 0) return 'warning';
+    const warningCount = Number.isFinite(item.warningCount)
+      ? item.warningCount
+      : this.getWarningActionCount(item.actions);
+    if (warningCount > 0) return 'warning';
     return 'healthy';
   }
 
