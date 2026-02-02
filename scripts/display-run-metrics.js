@@ -294,7 +294,7 @@ class MetricsDisplay {
       try {
         const record = JSON.parse(line);
         if (record) {
-          records.push(record);
+          records.push(this.normalizeMetricsRecord(record));
         }
       } catch (_) {
         return;
@@ -377,6 +377,14 @@ class MetricsDisplay {
       final_bear_events: 0,
       duplicates_removed: 0
     };
+  }
+
+  normalizeMetricsRecord(record) {
+    if (!record || typeof record !== 'object') return record;
+    const errorsCount = Number.isFinite(record.errors_count) ? record.errors_count : 0;
+    const warningsCount = Number.isFinite(record.warnings_count) ? record.warnings_count : 0;
+    const status = this.getRunStatusFromCounts(errorsCount, warningsCount, record.status);
+    return { ...record, status };
   }
 
   sumActions(actions) {
@@ -743,8 +751,18 @@ class MetricsDisplay {
 
   formatStatusLabel(status) {
     if (!status) return 'Unknown';
-    const raw = String(status);
-    return raw.charAt(0).toUpperCase() + raw.slice(1);
+    const normalized = String(status).toLowerCase();
+    if (normalized === 'partial') return 'Warning';
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+
+  getRunStatusFromCounts(errorsCount, warningsCount, fallbackStatus) {
+    const errors = Number.isFinite(errorsCount) ? errorsCount : 0;
+    const warnings = Number.isFinite(warningsCount) ? warningsCount : 0;
+    if (errors > 0) return 'failed';
+    if (warnings > 0) return 'partial';
+    if (fallbackStatus) return String(fallbackStatus).toLowerCase();
+    return 'success';
   }
 
   getStatusMeta(status) {
@@ -753,7 +771,7 @@ class MetricsDisplay {
       return { label: 'Success', color: new Color(BRAND.success) };
     }
     if (normalized === 'partial') {
-      return { label: 'Partial', color: new Color(BRAND.warning) };
+      return { label: 'Warning', color: new Color(BRAND.warning) };
     }
     if (normalized === 'failed') {
       return { label: 'Failed', color: new Color(BRAND.danger) };
@@ -772,6 +790,7 @@ class MetricsDisplay {
   getParserStatusKey(item) {
     if (!item) return 'unknown';
     if ((item.latestErrorCount || 0) > 0) return 'failed';
+    if (!item.ran) return 'not-run';
     const warningActions = (item.actions?.conflict || 0)
       + (item.actions?.missing_calendar || 0)
       + (item.actions?.other || 0);
@@ -2300,7 +2319,7 @@ class MetricsDisplay {
     const statusOptions = [
       { label: 'All', value: null },
       { label: 'Success', value: 'success' },
-      { label: 'Partial', value: 'partial' },
+      { label: 'Warning', value: 'partial' },
       { label: 'Failed', value: 'failed' },
       { label: 'Issues', value: 'issues' }
     ];
@@ -2405,7 +2424,7 @@ class MetricsDisplay {
             <div class="metrics-grid">
               ${buildMetric('Runs', this.formatNumber(summaryTotals.runs || 0))}
               ${buildMetric('Success', this.formatNumber(summaryTotals.statuses?.success || 0))}
-              ${buildMetric('Partial', this.formatNumber(summaryTotals.statuses?.partial || 0))}
+              ${buildMetric('Warnings', this.formatNumber(summaryTotals.statuses?.partial || 0))}
               ${buildMetric('Failed', this.formatNumber(summaryTotals.statuses?.failed || 0))}
               ${buildMetric('Final events', this.formatNumber(summaryTotals.totals?.final_bear_events || 0))}
               ${buildMetric('Calendar events', this.formatNumber(summaryTotals.totals?.calendar_events || 0))}
@@ -2450,7 +2469,7 @@ class MetricsDisplay {
             <div class="metrics-grid">
               ${buildMetric('Runs', this.formatNumber(totals.runs || 0))}
               ${buildMetric('Success', this.formatNumber(totals.statuses?.success || 0))}
-              ${buildMetric('Partial', this.formatNumber(totals.statuses?.partial || 0))}
+              ${buildMetric('Warnings', this.formatNumber(totals.statuses?.partial || 0))}
               ${buildMetric('Failed', this.formatNumber(totals.statuses?.failed || 0))}
               ${buildMetric('Final events', this.formatNumber(totals.totals?.final_bear_events || 0))}
               ${buildMetric('Calendar events', this.formatNumber(totals.totals?.calendar_events || 0))}
@@ -3508,7 +3527,7 @@ class MetricsDisplay {
       if (summary?.totals) {
         this.addSectionHeader(table, 'All-time totals');
         const summaryTotals = summary.totals;
-        this.addInfoRow(table, `Runs: ${this.formatNumber(summaryTotals.runs || 0)}`, `Success: ${summaryTotals.statuses?.success || 0} • Partial: ${summaryTotals.statuses?.partial || 0} • Failed: ${summaryTotals.statuses?.failed || 0}`);
+        this.addInfoRow(table, `Runs: ${this.formatNumber(summaryTotals.runs || 0)}`, `Success: ${summaryTotals.statuses?.success || 0} • Warnings: ${summaryTotals.statuses?.partial || 0} • Failed: ${summaryTotals.statuses?.failed || 0}`);
         this.addInfoRow(
           table,
           `Final bear events: ${this.formatNumber(summaryTotals.totals?.final_bear_events || 0)}`,
@@ -3546,7 +3565,7 @@ class MetricsDisplay {
         this.addInfoRow(table, 'No summary metrics found.', 'Run the scraper to generate summary metrics.');
       } else {
         const totals = summary.totals;
-        this.addInfoRow(table, `Runs: ${this.formatNumber(totals.runs || 0)}`, `Success: ${totals.statuses?.success || 0} • Partial: ${totals.statuses?.partial || 0} • Failed: ${totals.statuses?.failed || 0}`);
+        this.addInfoRow(table, `Runs: ${this.formatNumber(totals.runs || 0)}`, `Success: ${totals.statuses?.success || 0} • Warnings: ${totals.statuses?.partial || 0} • Failed: ${totals.statuses?.failed || 0}`);
         this.addInfoRow(
           table,
           `Final bear events: ${this.formatNumber(totals.totals?.final_bear_events || 0)}`,
@@ -3898,7 +3917,7 @@ class MetricsDisplay {
     const options = [
       { label: 'All statuses', value: null },
       { label: 'Success', value: 'success' },
-      { label: 'Partial', value: 'partial' },
+      { label: 'Warning', value: 'partial' },
       { label: 'Failed', value: 'failed' },
       { label: 'Issues (errors/warnings)', value: 'issues' }
     ];
