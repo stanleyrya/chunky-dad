@@ -4849,6 +4849,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return {
             runs: 0,
             duration_ms_total: 0,
+            statuses: { success: 0, partial: 0, failed: 0 },
             totals: {
                 total_events: 0,
                 raw_bear_events: 0,
@@ -4887,9 +4888,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         bucket.merge_diff_fields_updated += record.merge_diff_fields_updated || 0;
     }
 
-    applyParserRecordToBucket(bucket, parserRecord) {
+    applyParserRecordToBucket(bucket, parserRecord, runStatus) {
         bucket.runs += 1;
         bucket.duration_ms_total += parserRecord.duration_ms || 0;
+        if (!bucket.statuses) {
+            bucket.statuses = { success: 0, partial: 0, failed: 0 };
+        }
+        const normalizedStatus = String(runStatus || '').toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(bucket.statuses, normalizedStatus)) {
+            bucket.statuses[normalizedStatus] += 1;
+        }
 
         Object.keys(bucket.totals).forEach(key => {
             bucket.totals[key] += parserRecord?.[key] || 0;
@@ -4948,11 +4956,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     summary.by_parser_name[parserRecord.parser_name] = this.createParserSummaryGroup();
                 }
                 const parserGroup = summary.by_parser_name[parserRecord.parser_name];
-                this.applyParserRecordToBucket(parserGroup.totals, parserRecord);
+                this.applyParserRecordToBucket(parserGroup.totals, parserRecord, record.status);
                 if (!parserGroup.by_day[dayKey]) parserGroup.by_day[dayKey] = this.createParserSummaryBucket();
-                this.applyParserRecordToBucket(parserGroup.by_day[dayKey], parserRecord);
+                this.applyParserRecordToBucket(parserGroup.by_day[dayKey], parserRecord, record.status);
                 if (!parserGroup.by_month[monthKey]) parserGroup.by_month[monthKey] = this.createParserSummaryBucket();
-                this.applyParserRecordToBucket(parserGroup.by_month[monthKey], parserRecord);
+                this.applyParserRecordToBucket(parserGroup.by_month[monthKey], parserRecord, record.status);
             }
 
             if (parserRecord.parser_type) {
@@ -4960,11 +4968,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     summary.by_parser_type[parserRecord.parser_type] = this.createParserSummaryGroup();
                 }
                 const parserTypeGroup = summary.by_parser_type[parserRecord.parser_type];
-                this.applyParserRecordToBucket(parserTypeGroup.totals, parserRecord);
+                this.applyParserRecordToBucket(parserTypeGroup.totals, parserRecord, record.status);
                 if (!parserTypeGroup.by_day[dayKey]) parserTypeGroup.by_day[dayKey] = this.createParserSummaryBucket();
-                this.applyParserRecordToBucket(parserTypeGroup.by_day[dayKey], parserRecord);
+                this.applyParserRecordToBucket(parserTypeGroup.by_day[dayKey], parserRecord, record.status);
                 if (!parserTypeGroup.by_month[monthKey]) parserTypeGroup.by_month[monthKey] = this.createParserSummaryBucket();
-                this.applyParserRecordToBucket(parserTypeGroup.by_month[monthKey], parserRecord);
+                this.applyParserRecordToBucket(parserTypeGroup.by_month[monthKey], parserRecord, record.status);
             }
         });
 
