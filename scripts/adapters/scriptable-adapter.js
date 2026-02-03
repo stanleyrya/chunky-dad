@@ -3169,7 +3169,6 @@ class ScriptableAdapter {
         // Use the final notes that will actually be saved
         const notes = event.notes || '';
         const calendarName = this.getCalendarNameForDisplay(event);
-        const comparisonOriginal = this.getComparisonOriginal(event);
         
         let html = `
         <div class="event-card">
@@ -3308,8 +3307,8 @@ class ScriptableAdapter {
             </div>
             
             <!-- Show comparison for all non-new events with original data -->
-            ${comparisonOriginal && event._action !== 'new' ? (() => {
-                const hasDifferences = this.hasEventDifferences(event, comparisonOriginal);
+            ${event._original && event._action !== 'new' ? (() => {
+                const hasDifferences = this.hasEventDifferences(event);
                 const eventId = event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
                 // Decode HTML entities before creating safe ID
                 const decodedEventId = eventId.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
@@ -3340,9 +3339,9 @@ class ScriptableAdapter {
                     <!-- Simple three-object comparison -->
                     <div style="margin-bottom: 10px;">
                         <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
-                            📊 <strong>Scraper:</strong> ${Object.keys(comparisonOriginal.scraper || {}).length} fields |
-                            📅 <strong>Calendar:</strong> ${Object.keys(comparisonOriginal.calendar || {}).length} fields |
-                            🔀 <strong>Merged:</strong> ${Object.keys(comparisonOriginal.merged || {}).length} fields
+                            📊 <strong>Scraper:</strong> ${Object.keys(event._original?.scraper || {}).length} fields |
+                            📅 <strong>Calendar:</strong> ${Object.keys(event._original?.calendar || {}).length} fields |
+                            🔀 <strong>Merged:</strong> ${Object.keys(event._original?.merged || {}).length} fields
                         </div>
                     </div>
                     
@@ -3845,52 +3844,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         return this.getCalendarName(city);
     }
     
-    // Normalize original comparison data across run versions
-    getComparisonOriginal(event) {
-        if (!event || !event._original) return null;
-        
-        const original = event._original || {};
-        const scraper = original.scraper || original.new || original.scraped || null;
-        const calendar = original.calendar || original.existing || original.current || null;
-        let merged = original.merged || original.final || null;
-        
-        if (!merged || typeof merged !== 'object') {
-            merged = this.buildMergedSnapshot(event);
-        }
-        
-        return {
-            scraper: scraper || {},
-            calendar: calendar || {},
-            merged: merged || {}
-        };
-    }
-    
-    buildMergedSnapshot(event) {
-        if (!event || typeof event !== 'object') return {};
-        const merged = {};
-        Object.keys(event).forEach(field => {
-            if (field.startsWith('_') || field === 'notes') return;
-            const value = event[field];
-            if (typeof value === 'function') return;
-            merged[field] = value;
-        });
-        return merged;
-    }
-    
     // Check if event has actual differences to show
-    hasEventDifferences(event, comparisonOriginal = null) {
-        const original = comparisonOriginal || this.getComparisonOriginal(event);
-        if (!original) return false;
+    hasEventDifferences(event) {
+        if (!event._original) return false;
         
         // Get all fields that would be included in the calendar event, using the same logic as formatEventNotes
-        const fieldsToCheck = this.getFieldsForComparison(event, original);
+        const fieldsToCheck = this.getFieldsForComparison(event);
         
         for (const field of fieldsToCheck) {
             // Skip notes field as it's a computed field that combines other fields
             if (field === 'notes') continue;
             
-            let newValue = original.scraper[field] || '';
-            let existingValue = original.calendar?.[field] || '';
+            let newValue = event._original.scraper[field] || '';
+            let existingValue = event._original.calendar?.[field] || '';
             
             // Skip empty fields
             if (!newValue && !existingValue) continue;
@@ -3905,15 +3871,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     // Get all fields that should be compared/displayed - check ALL fields except underscore fields and functions
-    getFieldsForComparison(event, comparisonOriginal = null) {
+    getFieldsForComparison(event) {
         // Get all fields from both new and existing events
         const allFields = new Set();
-        const original = comparisonOriginal || this.getComparisonOriginal(event);
         
         // Use the same exclusion logic as formatEventNotes in shared-core.js
-        // These are fields that are NOT saved to calendar notes and should NOT be displayed
+        // Keep core calendar fields (title/date/location) for comparison visibility
         const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
+            'coordinates', 'notes',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
@@ -3934,27 +3899,27 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         };
         
         // Add fields from scraper event
-        if (original?.scraper) {
-            Object.keys(original.scraper).forEach(field => {
-                if (shouldIncludeField(original.scraper, field)) {
+        if (event._original?.scraper) {
+            Object.keys(event._original.scraper).forEach(field => {
+                if (shouldIncludeField(event._original.scraper, field)) {
                     allFields.add(field);
                 }
             });
         }
         
         // Add fields from calendar event
-        if (original?.calendar) {
-            Object.keys(original.calendar).forEach(field => {
-                if (shouldIncludeField(original.calendar, field)) {
+        if (event._original?.calendar) {
+            Object.keys(event._original.calendar).forEach(field => {
+                if (shouldIncludeField(event._original.calendar, field)) {
                     allFields.add(field);
                 }
             });
         }
         
         // Add fields from merged event
-        if (original?.merged) {
-            Object.keys(original.merged).forEach(field => {
-                if (shouldIncludeField(original.merged, field)) {
+        if (event._original?.merged) {
+            Object.keys(event._original.merged).forEach(field => {
+                if (shouldIncludeField(event._original.merged, field)) {
                     allFields.add(field);
                 }
             });
@@ -4051,11 +4016,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     
     // Generate comparison rows for conflict display
     generateComparisonRows(event) {
-        const comparisonOriginal = this.getComparisonOriginal(event);
-        if (!comparisonOriginal) return '';
+        if (!event._original) return '';
         
         // Use the same field logic as what goes into calendar notes
-        const fieldsToCompare = this.getFieldsForComparison(event, comparisonOriginal);
+        const fieldsToCompare = this.getFieldsForComparison(event);
         const rows = [];
         
         fieldsToCompare.forEach(field => {
@@ -4064,8 +4028,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (field === 'notes') return;
             
             // Get the actual scraped value - don't default to empty string yet
-            let newValue = comparisonOriginal.scraper?.[field];
-            let existingValue = comparisonOriginal.calendar?.[field];
+            let newValue = event._original?.scraper?.[field];
+            let existingValue = event._original?.calendar?.[field];
             let finalValue = event[field];
             
             // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
@@ -4225,11 +4189,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     
     // Generate line-by-line diff view
     generateLineDiffView(event) {
-        const comparisonOriginal = this.getComparisonOriginal(event);
-        if (!comparisonOriginal) return '<p>No comparison data available</p>';
+        if (!event._original) return '<p>No comparison data available</p>';
         
         // Use the same field logic as what goes into calendar notes
-        const fieldsToCompare = this.getFieldsForComparison(event, comparisonOriginal);
+        const fieldsToCompare = this.getFieldsForComparison(event);
         let html = '<div style="font-family: \'SF Mono\', Monaco, \'Courier New\', monospace; font-size: 12px; background: var(--background-primary); padding: 12px; border-radius: 8px; line-height: 1.6; color: var(--text-primary);">';
         
         fieldsToCompare.forEach((field, index) => {
@@ -4237,8 +4200,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // This makes the comparison confusing and it's often broken
             if (field === 'notes') return;
             
-            let newValue = comparisonOriginal.scraper[field] || '';
-            let existingValue = comparisonOriginal.calendar?.[field] || '';
+            let newValue = event._original.scraper[field] || '';
+            let existingValue = event._original.calendar?.[field] || '';
             let finalValue = event[field] || '';
             // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
             const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
