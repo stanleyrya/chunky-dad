@@ -25,6 +25,23 @@ const CHART_STYLE = {
   padding: 6
 };
 
+const CHART_AXIS_LABELS = {
+  runs: 'Runs (oldest to newest)',
+  finalEvents: 'Final events',
+  durationMinutes: 'Duration (min)'
+};
+
+const CHART_SERIES_COLORS = [
+  CHART_STYLE.line,
+  CHART_STYLE.lineSecondary,
+  '#ff9f43',
+  '#2ed573',
+  '#54a0ff',
+  '#ff6b6b'
+];
+
+const MAX_PARSER_DURATION_SERIES = 4;
+
 const WIDGET_STYLE = {
   rowBackground: '#ffffff',
   rowBackgroundAlpha: 0.12,
@@ -969,6 +986,35 @@ class MetricsDisplay {
     });
   }
 
+  getParserDurationSeries(records, parserName) {
+    if (!Array.isArray(records) || !parserName) return [];
+    return records.map(record => {
+      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
+      const match = parserRecords.find(item => item?.parser_name === parserName);
+      return this.getDurationMinutes(match?.duration_ms);
+    });
+  }
+
+  getParserNamesByRecentRuns(records, limit) {
+    if (!Array.isArray(records)) return [];
+    const counts = {};
+    records.forEach(record => {
+      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
+      parserRecords.forEach(parserRecord => {
+        const name = parserRecord?.parser_name;
+        if (!name) return;
+        counts[name] = (counts[name] || 0) + 1;
+      });
+    });
+    const sorted = Object.keys(counts).sort((a, b) => {
+      const diff = (counts[b] || 0) - (counts[a] || 0);
+      if (diff !== 0) return diff;
+      return String(a).localeCompare(String(b));
+    });
+    if (!Number.isFinite(limit) || limit <= 0) return sorted;
+    return sorted.slice(0, limit);
+  }
+
   getDurationMinutes(ms) {
     if (!Number.isFinite(ms) || ms <= 0) return 0;
     return Math.round(ms / 60000);
@@ -1090,6 +1136,56 @@ class MetricsDisplay {
       dotRadius: style.dotRadius,
       dotColor: style.dotColor || lineColor
     });
+  }
+
+  buildMultiLineChartImage(seriesList, size, style = {}) {
+    const safeSeries = Array.isArray(seriesList)
+      ? seriesList.filter(series => series && Array.isArray(series.values) && series.values.length)
+      : [];
+    if (!safeSeries.length) return null;
+
+    const flattened = [];
+    safeSeries.forEach(series => {
+      series.values.forEach(value => {
+        if (Number.isFinite(value)) flattened.push(value);
+      });
+    });
+
+    const minValue = Number.isFinite(style.minValue) ? style.minValue : 0;
+    const maxFromValues = flattened.length ? Math.max(...flattened) : minValue + 1;
+    const maxValue = Number.isFinite(style.maxValue)
+      ? style.maxValue
+      : Math.max(maxFromValues, minValue + 1);
+    const padding = Number.isFinite(style.padding) ? style.padding : CHART_STYLE.padding;
+    const lineWidth = Number.isFinite(style.lineWidth) ? style.lineWidth : CHART_STYLE.lineWidth;
+    const showDots = !!style.showDots;
+    const dotRadius = Number.isFinite(style.dotRadius) ? style.dotRadius : 2;
+
+    const ctx = new DrawContext();
+    ctx.size = new Size(size.width, size.height);
+    ctx.respectScreenScale = true;
+    ctx.opaque = false;
+
+    safeSeries.forEach((series, index) => {
+      const rawColor = series.color || CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length] || CHART_STYLE.line;
+      const lineColor = rawColor instanceof Color ? rawColor : new Color(rawColor);
+      const chart = new LineChart(size.width, size.height, series.values, {
+        minValue,
+        maxValue,
+        padding
+      });
+      const lineImage = chart.getImage({
+        lineColor,
+        fillColor: null,
+        lineWidth,
+        showDots,
+        dotRadius,
+        dotColor: lineColor
+      });
+      ctx.drawImageAtPoint(lineImage, new Point(0, 0));
+    });
+
+    return ctx.getImage();
   }
 
   buildStatusDot(color, size = 10) {
@@ -2114,12 +2210,38 @@ class MetricsDisplay {
       null
     );
 
-    const buildChartCard = (title, imageData, subtitle) => {
+    const buildChartLegend = seriesList => {
+      if (!Array.isArray(seriesList) || seriesList.length === 0) return '';
+      const items = seriesList.map(item => {
+        const label = item?.label || item?.name || '';
+        const color = item?.color || CHART_STYLE.line;
+        if (!label) return '';
+        return `
+          <span class="chart-legend-item">
+            <span class="chart-swatch" style="background:${escapeHtml(color)}"></span>
+            ${escapeHtml(label)}
+          </span>`;
+      }).filter(Boolean).join('');
+      if (!items) return '';
+      return `<div class="chart-legend">${items}</div>`;
+    };
+
+    const buildChartCard = (title, imageData, subtitle, options = {}) => {
       if (!imageData) return '';
+      const xLabel = options.xLabel || '';
+      const yLabel = options.yLabel || '';
+      const legendHtml = options.legendHtml || '';
       return `
       <div class="card">
         <div class="section-title">${escapeHtml(title)}</div>
-        <img class="chart" src="${escapeHtml(imageData)}" alt="${escapeHtml(title)}">
+        <div class="chart-wrapper">
+          <div class="chart-axis-y">${escapeHtml(yLabel)}</div>
+          <div class="chart-axis-main">
+            <img class="chart" src="${escapeHtml(imageData)}" alt="${escapeHtml(title)}">
+            <div class="chart-axis-x">${escapeHtml(xLabel)}</div>
+          </div>
+        </div>
+        ${legendHtml}
         ${subtitle ? `<div class="chart-subtitle">${escapeHtml(subtitle)}</div>` : ''}
       </div>`;
     };
@@ -2370,6 +2492,10 @@ class MetricsDisplay {
       return buildRunFilterChip(name, { parserFilter: name }, isActive, 'parser', name);
     }).join('');
 
+    const runAxisLabel = CHART_AXIS_LABELS.runs;
+    const finalEventsAxisLabel = CHART_AXIS_LABELS.finalEvents;
+    const durationAxisLabel = CHART_AXIS_LABELS.durationMinutes;
+
     const buildCardsForView = viewState => {
       const safeView = viewState?.mode ? viewState : { mode: 'dashboard' };
       const viewMode = safeView.mode;
@@ -2414,7 +2540,10 @@ class MetricsDisplay {
           fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
         });
         const finalChartData = this.imageToDataUri(finalChart);
-        cards.push(buildChartCard(`Final events (last ${historyCount} runs)`, finalChartData, `Latest: ${this.formatNumber(finalEvents)}`));
+        cards.push(buildChartCard(`Final events (last ${historyCount} runs)`, finalChartData, `Latest: ${this.formatNumber(finalEvents)}`, {
+          xLabel: runAxisLabel,
+          yLabel: finalEventsAxisLabel
+        }));
 
         const durationSeries = this.getSeries(recentRecords, record => this.getDurationMinutes(record?.duration_ms));
         const durationChart = this.buildLineChartImage(durationSeries, chartSize, {
@@ -2422,7 +2551,32 @@ class MetricsDisplay {
           fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
         });
         const durationChartData = this.imageToDataUri(durationChart);
-        cards.push(buildChartCard(`Duration (minutes, last ${historyCount} runs)`, durationChartData, `Latest: ${this.formatDuration(latest?.duration_ms)}`));
+        cards.push(buildChartCard(`Duration (minutes, last ${historyCount} runs)`, durationChartData, `Latest: ${this.formatDuration(latest?.duration_ms)}`, {
+          xLabel: runAxisLabel,
+          yLabel: durationAxisLabel
+        }));
+
+        const durationParserNames = this.getParserNamesByRecentRuns(recentRecords, MAX_PARSER_DURATION_SERIES);
+        if (durationParserNames.length > 0) {
+          const parserDurationSeries = durationParserNames.map((name, index) => ({
+            label: name,
+            values: this.getParserDurationSeries(recentRecords, name),
+            color: CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length]
+          }));
+          const parserDurationChart = this.buildMultiLineChartImage(parserDurationSeries, chartSize, {
+            lineWidth: CHART_STYLE.lineWidth
+          });
+          const parserDurationData = parserDurationChart ? this.imageToDataUri(parserDurationChart) : null;
+          const parserLegend = buildChartLegend(parserDurationSeries);
+          const parserSubtitle = durationParserNames.length > 1
+            ? `Top ${durationParserNames.length} parsers by recent runs`
+            : `Parser duration over last ${historyCount} runs`;
+          cards.push(buildChartCard(`Parser durations (minutes, last ${historyCount} runs)`, parserDurationData, parserSubtitle, {
+            xLabel: runAxisLabel,
+            yLabel: durationAxisLabel,
+            legendHtml: parserLegend
+          }));
+        }
 
         const sortedItems = this.sortParserItems(parserItems, parserSortResolved).slice(0, 8);
         let parserTableHtml = buildParserTable(sortedItems, parserSortResolved);
@@ -2503,7 +2657,10 @@ class MetricsDisplay {
             fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
           });
           const totalsChartData = this.imageToDataUri(totalsChart);
-          cards.push(buildChartCard(`Final events (last ${Math.max(recentRecords.length, 1)} runs)`, totalsChartData));
+          cards.push(buildChartCard(`Final events (last ${Math.max(recentRecords.length, 1)} runs)`, totalsChartData, null, {
+            xLabel: runAxisLabel,
+            yLabel: finalEventsAxisLabel
+          }));
 
           const parserTotals = summary.by_parser_name || {};
           const parserRows = Object.keys(parserTotals).map(name => {
@@ -2602,7 +2759,24 @@ class MetricsDisplay {
             fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
           });
           const parserChartData = this.imageToDataUri(parserChart);
-          cards.push(buildChartCard(`Events per run (last ${Math.max(recentRecords.length, 1)} runs)`, parserChartData));
+          cards.push(buildChartCard(`Events per run (last ${Math.max(recentRecords.length, 1)} runs)`, parserChartData, null, {
+            xLabel: runAxisLabel,
+            yLabel: finalEventsAxisLabel
+          }));
+
+          const parserDurationSeries = this.getParserDurationSeries(recentRecords, safeView.parserName);
+          const parserDurationChart = this.buildLineChartImage(parserDurationSeries, chartSize, {
+            lineColor: new Color(CHART_STYLE.line),
+            fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
+          });
+          const parserDurationData = this.imageToDataUri(parserDurationChart);
+          const durationSubtitle = hasLastRun && record?.durationMs
+            ? `Latest: ${this.formatDuration(record.durationMs)}`
+            : null;
+          cards.push(buildChartCard(`Duration (minutes, last ${Math.max(recentRecords.length, 1)} runs)`, parserDurationData, durationSubtitle, {
+            xLabel: runAxisLabel,
+            yLabel: durationAxisLabel
+          }));
         }
       } else {
         cards.push(buildEmptyCard('Unknown view.', 'Open the dashboard to get started.'));
@@ -3101,12 +3275,55 @@ class MetricsDisplay {
       background: rgba(167, 176, 204, 0.22);
       color: var(--color-neutral);
     }
+    .chart-wrapper {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .chart-axis-y {
+      font-size: 11px;
+      color: var(--text-secondary);
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      text-align: center;
+      letter-spacing: 0.3px;
+    }
+    .chart-axis-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-axis-x {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      text-align: center;
+    }
     .chart {
       width: 100%;
-      margin-top: 12px;
       border-radius: 12px;
       background: var(--background-light);
       padding: 8px;
+    }
+    .chart-legend {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .chart-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chart-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--text-secondary);
     }
     .chart-subtitle {
       font-size: 12px;
@@ -3519,14 +3736,46 @@ class MetricsDisplay {
         lineColor: new Color(CHART_STYLE.line),
         fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
       });
-      this.addChartSection(table, `Final events (last ${historyCount} runs)`, finalChart, `Latest: ${this.formatNumber(finalEvents)}`);
+      this.addChartSection(table, `Final events (last ${historyCount} runs)`, finalChart, {
+        subtitle: `Latest: ${this.formatNumber(finalEvents)}`,
+        xLabel: CHART_AXIS_LABELS.runs,
+        yLabel: CHART_AXIS_LABELS.finalEvents
+      });
 
       const durationSeries = this.getSeries(recentRecords, record => this.getDurationMinutes(record?.duration_ms));
       const durationChart = this.buildLineChartImage(durationSeries, chartSize, {
         lineColor: new Color(CHART_STYLE.lineSecondary),
         fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
       });
-      this.addChartSection(table, `Duration (minutes, last ${historyCount} runs)`, durationChart, `Latest: ${this.formatDuration(latest?.duration_ms)}`);
+      this.addChartSection(table, `Duration (minutes, last ${historyCount} runs)`, durationChart, {
+        subtitle: `Latest: ${this.formatDuration(latest?.duration_ms)}`,
+        xLabel: CHART_AXIS_LABELS.runs,
+        yLabel: CHART_AXIS_LABELS.durationMinutes
+      });
+
+      const durationParserNames = this.getParserNamesByRecentRuns(recentRecords, MAX_PARSER_DURATION_SERIES);
+      if (durationParserNames.length > 0) {
+        const parserDurationSeries = durationParserNames.map((name, index) => ({
+          label: name,
+          values: this.getParserDurationSeries(recentRecords, name),
+          color: CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length]
+        }));
+        const parserDurationChart = this.buildMultiLineChartImage(parserDurationSeries, chartSize, {
+          lineWidth: CHART_STYLE.lineWidth
+        });
+        if (parserDurationChart) {
+          const legend = `Parsers: ${durationParserNames.join(', ')}`;
+          const subtitle = durationParserNames.length > 1
+            ? `Top ${durationParserNames.length} parsers by recent runs`
+            : `Parser duration over last ${historyCount} runs`;
+          this.addChartSection(table, `Parser durations (minutes, last ${historyCount} runs)`, parserDurationChart, {
+            subtitle,
+            xLabel: CHART_AXIS_LABELS.runs,
+            yLabel: CHART_AXIS_LABELS.durationMinutes,
+            legend
+          });
+        }
+      }
 
       this.addSectionHeader(table, 'Parser Health (latest)');
       this.addParserTableHeader(table);
@@ -3593,7 +3842,10 @@ class MetricsDisplay {
           lineColor: new Color(CHART_STYLE.line),
           fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
         });
-        this.addChartSection(table, `Final events (last ${Math.max(recentRecords.length, 1)} runs)`, totalsChart);
+        this.addChartSection(table, `Final events (last ${Math.max(recentRecords.length, 1)} runs)`, totalsChart, {
+          xLabel: CHART_AXIS_LABELS.runs,
+          yLabel: CHART_AXIS_LABELS.finalEvents
+        });
 
         const parserTotals = summary.by_parser_name || {};
         const parserRows = Object.keys(parserTotals).map(name => {
@@ -3678,7 +3930,24 @@ class MetricsDisplay {
           lineColor: new Color(CHART_STYLE.lineSecondary),
           fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
         });
-        this.addChartSection(table, `Events per run (last ${Math.max(recentRecords.length, 1)} runs)`, parserChart);
+        this.addChartSection(table, `Events per run (last ${Math.max(recentRecords.length, 1)} runs)`, parserChart, {
+          xLabel: CHART_AXIS_LABELS.runs,
+          yLabel: CHART_AXIS_LABELS.finalEvents
+        });
+
+        const durationSeries = this.getParserDurationSeries(recentRecords, view.parserName);
+        const durationChart = this.buildLineChartImage(durationSeries, chartSize, {
+          lineColor: new Color(CHART_STYLE.line),
+          fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
+        });
+        const durationSubtitle = hasLastRun && record?.durationMs
+          ? `Latest: ${this.formatDuration(record.durationMs)}`
+          : null;
+        this.addChartSection(table, `Duration (minutes, last ${Math.max(recentRecords.length, 1)} runs)`, durationChart, {
+          subtitle: durationSubtitle,
+          xLabel: CHART_AXIS_LABELS.runs,
+          yLabel: CHART_AXIS_LABELS.durationMinutes
+        });
       }
     } else {
       view.mode = 'dashboard';
@@ -3782,7 +4051,20 @@ class MetricsDisplay {
     table.addRow(row);
   }
 
-  addChartSection(table, title, image, subtitle) {
+  addChartSection(table, title, image, options = null) {
+    let subtitle = null;
+    let xLabel = null;
+    let yLabel = null;
+    let legend = null;
+    if (typeof options === 'string') {
+      subtitle = options;
+    } else if (options && typeof options === 'object') {
+      subtitle = options.subtitle || null;
+      xLabel = options.xLabel || null;
+      yLabel = options.yLabel || null;
+      legend = options.legend || null;
+    }
+
     this.addSectionHeader(table, title);
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
@@ -3791,6 +4073,16 @@ class MetricsDisplay {
     const img = row.addImage(image);
     img.imageSize = new Size(size.width, size.height);
     table.addRow(row);
+
+    if (xLabel || yLabel) {
+      const axisParts = [];
+      if (xLabel) axisParts.push(`X: ${xLabel}`);
+      if (yLabel) axisParts.push(`Y: ${yLabel}`);
+      this.addInfoRow(table, axisParts.join(' | '));
+    }
+    if (legend) {
+      this.addInfoRow(table, legend);
+    }
     if (subtitle) {
       this.addInfoRow(table, subtitle);
     }
