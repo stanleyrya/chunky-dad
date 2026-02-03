@@ -25,6 +25,8 @@ const CHART_STYLE = {
   padding: 6
 };
 
+const DEBUG_CHART_POINTS = true;
+
 const CHART_AXIS_LABELS = {
   runs: 'Runs (oldest to newest)',
   finalEvents: 'Final events',
@@ -103,6 +105,9 @@ class LineChart {
 
   getImage(style = {}) {
     const points = this.getPoints();
+    if (style.logPoints) {
+      this.logPoints(points, style);
+    }
     if (points.length === 0) {
       return this.ctx.getImage();
     }
@@ -138,6 +143,35 @@ class LineChart {
     }
 
     return this.ctx.getImage();
+  }
+
+  logPoints(points, style = {}) {
+    const count = this.values.length;
+    const limit = Number.isFinite(style.logLimit) ? style.logLimit : 30;
+    const label = style.logLabel ? ` (${style.logLabel})` : '';
+    const width = this.ctx.size.width;
+    const height = this.ctx.size.height;
+    const padding = this.padding;
+    const numericValues = this.values.filter(value => Number.isFinite(value));
+    const maxFromValues = numericValues.length ? Math.max(...numericValues, this.minValue) : this.minValue;
+    const maxValue = Number.isFinite(this.maxValue)
+      ? this.maxValue
+      : (maxFromValues > this.minValue ? maxFromValues : this.minValue + 1);
+    const diff = maxValue - this.minValue || 1;
+    const previewCount = Math.min(limit, count);
+    const valuesPreview = this.values.slice(0, previewCount).map(value => (
+      Number.isFinite(value) ? Number(value.toFixed(3)) : value
+    ));
+    const pointsPreview = points.slice(0, previewCount).map(point => ({
+      x: Number(point.x.toFixed(2)),
+      y: Number(point.y.toFixed(2))
+    }));
+    const truncation = count > limit ? ` (first ${limit} of ${count})` : '';
+    console.log(
+      `Metrics chart${label}: count=${count}, size=${width}x${height}, padding=${padding}, min=${this.minValue}, max=${Number(maxValue.toFixed(3))}, diff=${Number(diff.toFixed(3))}${truncation}`
+    );
+    console.log(`Metrics chart${label} values${truncation}: ${JSON.stringify(valuesPreview)}`);
+    console.log(`Metrics chart${label} points${truncation}: ${JSON.stringify(pointsPreview)}`);
   }
 
   getPoints() {
@@ -1129,6 +1163,7 @@ class MetricsDisplay {
     const fillColor = style.fillColor === null
       ? null
       : (style.fillColor || new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity));
+    const logPoints = style.logPoints ?? this.shouldLogChartPoints();
 
     return chart.getImage({
       lineColor,
@@ -1136,7 +1171,10 @@ class MetricsDisplay {
       lineWidth: Number.isFinite(style.lineWidth) ? style.lineWidth : CHART_STYLE.lineWidth,
       showDots: !!style.showDots,
       dotRadius: style.dotRadius,
-      dotColor: style.dotColor || lineColor
+      dotColor: style.dotColor || lineColor,
+      logPoints,
+      logLabel: style.logLabel,
+      logLimit: style.logLimit
     });
   }
 
@@ -1162,6 +1200,7 @@ class MetricsDisplay {
     const lineWidth = Number.isFinite(style.lineWidth) ? style.lineWidth : CHART_STYLE.lineWidth;
     const showDots = !!style.showDots;
     const dotRadius = Number.isFinite(style.dotRadius) ? style.dotRadius : 2;
+    const logPoints = style.logPoints ?? this.shouldLogChartPoints();
 
     const ctx = new DrawContext();
     ctx.size = new Size(size.width, size.height);
@@ -1171,6 +1210,10 @@ class MetricsDisplay {
     safeSeries.forEach((series, index) => {
       const rawColor = series.color || CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length] || CHART_STYLE.line;
       const lineColor = rawColor instanceof Color ? rawColor : new Color(rawColor);
+      const seriesLabel = series.label || series.name || null;
+      const logLabel = logPoints
+        ? (style.logLabel && seriesLabel ? `${style.logLabel} - ${seriesLabel}` : (style.logLabel || seriesLabel || `Series ${index + 1}`))
+        : null;
       const chart = new LineChart(size.width, size.height, series.values, {
         minValue,
         maxValue,
@@ -1182,7 +1225,10 @@ class MetricsDisplay {
         lineWidth,
         showDots,
         dotRadius,
-        dotColor: lineColor
+        dotColor: lineColor,
+        logPoints,
+        logLabel,
+        logLimit: style.logLimit
       });
       ctx.drawImageAtPoint(lineImage, new Point(0, 0));
     });
@@ -1273,6 +1319,18 @@ class MetricsDisplay {
 
   getQueryParams() {
     return this.runtime.queryParameters || {};
+  }
+
+  shouldLogChartPoints() {
+    const query = this.getQueryParams() || {};
+    const raw = query.debugCharts ?? query.debugChart ?? null;
+    if (raw !== null && raw !== undefined) {
+      const normalized = String(raw).trim().toLowerCase();
+      if (!normalized) return false;
+      if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+      return true;
+    }
+    return DEBUG_CHART_POINTS;
   }
 
   normalizeViewToken(value) {
