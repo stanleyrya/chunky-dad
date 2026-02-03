@@ -132,15 +132,16 @@ class RedEyeTicketsParser {
         
         const events = [];
         performances.forEach((performance, index) => {
-            const startDate = this.parseApiDate(performance.start_at);
+            const timeZone = performance.time_zone || eventData.venue_time_zone || null;
+            const resolvedTimeZone = this.resolveTimeZone(timeZone, city, cityConfig);
+            const startDate = this.parseApiDate(performance.start_at, resolvedTimeZone);
             if (!startDate) {
                 console.warn(`🎫 RedEyeTickets: Performance ${index + 1} missing start time`);
                 return;
             }
             
-            const endDate = this.parseApiDate(performance.end_at);
-            const timeZone = performance.time_zone || eventData.venue_time_zone || null;
-            const resolvedEndDate = this.resolvePerformanceEndDate(startDate, endDate, timeZone, venue);
+            const endDate = this.parseApiDate(performance.end_at, resolvedTimeZone);
+            const resolvedEndDate = this.resolvePerformanceEndDate(startDate, endDate, resolvedTimeZone, venue);
             const cover = this.extractApiPricing(performance);
             
             const event = {
@@ -190,16 +191,96 @@ class RedEyeTicketsParser {
         return `${origin.replace(/\/+$/, '')}/api/v1`;
     }
 
-    parseApiDate(value) {
+    parseApiDate(value, timeZone = null) {
         if (!value || typeof value !== 'string') {
             return null;
         }
-        const date = new Date(value);
+        const trimmed = value.trim();
+        const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(trimmed);
+        
+        if (hasTimezone) {
+            const date = new Date(trimmed);
+            if (isNaN(date.getTime())) {
+                console.warn(`🎫 RedEyeTickets: Invalid API date: ${value}`);
+                return null;
+            }
+            return date;
+        }
+        
+        const localParts = this.parseLocalDateTime(trimmed);
+        if (localParts) {
+            const resolvedTimeZone = this.normalizeTimeZone(timeZone);
+            
+            if (resolvedTimeZone === 'UTC') {
+                const utcDate = new Date(Date.UTC(
+                    localParts.year,
+                    localParts.month,
+                    localParts.day,
+                    localParts.hour,
+                    localParts.minute,
+                    localParts.second,
+                    0
+                ));
+                if (isNaN(utcDate.getTime())) {
+                    console.warn(`🎫 RedEyeTickets: Invalid API date: ${value}`);
+                    return null;
+                }
+                return utcDate;
+            }
+            
+            if (resolvedTimeZone) {
+                return this.convertLocalTimeToUTC(
+                    localParts.year,
+                    localParts.month,
+                    localParts.day,
+                    localParts.hour,
+                    localParts.minute,
+                    localParts.second,
+                    resolvedTimeZone
+                );
+            }
+        }
+        
+        const date = new Date(trimmed);
         if (isNaN(date.getTime())) {
             console.warn(`🎫 RedEyeTickets: Invalid API date: ${value}`);
             return null;
         }
         return date;
+    }
+    
+    parseLocalDateTime(value) {
+        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (!match) {
+            return null;
+        }
+        return {
+            year: Number(match[1]),
+            month: Number(match[2]) - 1,
+            day: Number(match[3]),
+            hour: match[4] ? Number(match[4]) : 0,
+            minute: match[5] ? Number(match[5]) : 0,
+            second: match[6] ? Number(match[6]) : 0
+        };
+    }
+    
+    resolveTimeZone(timeZone, city, cityConfig) {
+        const normalized = this.normalizeTimeZone(timeZone);
+        if (normalized && normalized !== 'UTC') {
+            return normalized;
+        }
+        const cityTimeZone = city && cityConfig && cityConfig[city] && cityConfig[city].timezone
+            ? cityConfig[city].timezone
+            : null;
+        return cityTimeZone || normalized || null;
+    }
+    
+    normalizeTimeZone(timeZone) {
+        if (!timeZone || typeof timeZone !== 'string') {
+            return null;
+        }
+        const normalized = timeZone.trim();
+        return normalized.length > 0 ? normalized : null;
     }
 
     resolvePerformanceEndDate(startDate, endDate, timeZone, venueName) {
