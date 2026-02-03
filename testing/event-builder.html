@@ -5383,7 +5383,7 @@
           return;
         }
         const icsOptions = state && state.isEditingExisting
-          ? { sequence: Date.now(), lastModified: new Date() }
+          ? { sequence: Math.floor(Date.now() / 1000), lastModified: new Date() }
           : null;
         const icsContent = generateICS(event, icsOptions);
         const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
@@ -5444,6 +5444,8 @@
         if (notes) {
           lines.push(`DESCRIPTION:${escapeICS(notes)}`);
         }
+        lines.push('STATUS:CONFIRMED');
+        lines.push('TRANSP:OPAQUE');
         if (event.recurrence && !event.recurrenceId) {
           lines.push(`RRULE:${event.recurrence}`);
         }
