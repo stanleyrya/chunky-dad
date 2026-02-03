@@ -151,8 +151,10 @@ class LineChart {
     const usableHeight = Math.max(1, height - (padding * 2));
     const step = count === 1 ? 0 : usableWidth / (count - 1);
 
-    const maxFromValues = Math.max(...this.values, 0);
-    const maxValue = Number.isFinite(this.maxValue) ? this.maxValue : Math.max(maxFromValues, this.minValue + 1);
+    const maxFromValues = Math.max(...this.values, this.minValue);
+    const maxValue = Number.isFinite(this.maxValue)
+      ? this.maxValue
+      : (maxFromValues > this.minValue ? maxFromValues : this.minValue + 1);
     const diff = maxValue - this.minValue || 1;
 
     return this.values.map((current, index) => {
@@ -1017,7 +1019,7 @@ class MetricsDisplay {
 
   getDurationMinutes(ms) {
     if (!Number.isFinite(ms) || ms <= 0) return 0;
-    return Math.round(ms / 60000);
+    return ms / 60000;
   }
 
   getTimeValue(isoString) {
@@ -1152,10 +1154,10 @@ class MetricsDisplay {
     });
 
     const minValue = Number.isFinite(style.minValue) ? style.minValue : 0;
-    const maxFromValues = flattened.length ? Math.max(...flattened) : minValue + 1;
+    const maxFromValues = flattened.length ? Math.max(...flattened, minValue) : minValue;
     const maxValue = Number.isFinite(style.maxValue)
       ? style.maxValue
-      : Math.max(maxFromValues, minValue + 1);
+      : (maxFromValues > minValue ? maxFromValues : minValue + 1);
     const padding = Number.isFinite(style.padding) ? style.padding : CHART_STYLE.padding;
     const lineWidth = Number.isFinite(style.lineWidth) ? style.lineWidth : CHART_STYLE.lineWidth;
     const showDots = !!style.showDots;
