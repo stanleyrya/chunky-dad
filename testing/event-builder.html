@@ -3021,7 +3021,7 @@
             || browserTimezone;
         }
         state.editingExistingUid = editingUid;
-        state.editingExistingRecurrenceId = editingRecurrenceDate ? editingRecurrenceDate.toISOString() : '';
+        state.editingExistingRecurrenceId = editingRecurrenceDate ? formatInputValue(editingRecurrenceDate) : '';
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
 
         applyStateToForm();
@@ -4990,16 +4990,13 @@
           const parsedUid = parseResultId(state.editingExistingId);
           uid = parsedUid.uid || '';
         }
-        let recurrenceId = null;
-        if (isOverride && state.editingExistingRecurrenceId) {
-          const parsedRecurrenceId = new Date(state.editingExistingRecurrenceId);
-          if (!Number.isNaN(parsedRecurrenceId.getTime())) {
-            recurrenceId = parsedRecurrenceId;
-          }
-        }
         const recurrenceIdTimezone = isOverride
           ? (state.editingExistingRecurrenceTimezone || timezone)
           : '';
+        let recurrenceId = null;
+        if (isOverride && state.editingExistingRecurrenceId) {
+          recurrenceId = parseEditingRecurrenceId(state.editingExistingRecurrenceId, recurrenceIdTimezone || timezone);
+        }
         return {
           name: (state.name || '').trim(),
           shortName: (state.shortName || '').trim(),
@@ -5150,6 +5147,21 @@
         const [hour, minute] = timePart.split(':').map(Number);
         const utcDate = new Date(Date.UTC(year, (month || 1) - 1, day || 1, hour || 0, minute || 0));
         return new Date(utcDate.getTime() - getTimeZoneOffset(utcDate, timeZone || browserTimezone));
+      }
+
+      function parseEditingRecurrenceId(value, timeZone) {
+        if (!value) return null;
+        if (value instanceof Date) {
+          return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+        }
+        const trimmed = String(value).trim();
+        if (!trimmed) return null;
+        const sanitized = sanitizeDateTimeInput(trimmed);
+        if (sanitized) {
+          return parseLocalDateTime(sanitized, timeZone || browserTimezone);
+        }
+        const parsed = new Date(trimmed);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
       }
 
       function getTimeZoneOffset(date, timeZone) {
