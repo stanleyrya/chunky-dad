@@ -5382,8 +5382,13 @@
           updateCalendarStatus('Add start & end times before exporting', 'warn');
           return;
         }
-        const icsOptions = state && state.isEditingExisting
-          ? { sequence: Math.floor(Date.now() / 1000), lastModified: new Date() }
+        const isEditingExisting = Boolean(state && state.isEditingExisting);
+        const icsOptions = isEditingExisting
+          ? {
+              method: 'REQUEST',
+              sequence: Math.floor(Date.now() / 1000),
+              lastModified: new Date()
+            }
           : null;
         const icsContent = generateICS(event, icsOptions);
         const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
@@ -5402,8 +5407,10 @@
       function generateICS(event, options = {}) {
         const settings = options && typeof options === 'object' ? options : {};
         const now = new Date();
+        const rawMethod = typeof settings.method === 'string' ? settings.method.trim().toUpperCase() : '';
+        const method = (rawMethod === 'REQUEST' || rawMethod === 'PUBLISH') ? rawMethod : 'PUBLISH';
         const sequence = Number.isFinite(settings.sequence)
-          ? Math.max(0, Math.floor(settings.sequence))
+          ? Math.max(1, Math.floor(settings.sequence))
           : null;
         const lastModified = settings.lastModified instanceof Date
           ? settings.lastModified
@@ -5413,7 +5420,7 @@
           'VERSION:2.0',
           'PRODID:-//chunky.dad//Event Builder//EN',
           'CALSCALE:GREGORIAN',
-          'METHOD:PUBLISH',
+          `METHOD:${method}`,
           'BEGIN:VEVENT'
         ];
         const uidValue = String(event.uid || '').trim()
