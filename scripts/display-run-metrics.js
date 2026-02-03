@@ -432,6 +432,30 @@ class MetricsDisplay {
     };
   }
 
+  createStatusCounts() {
+    return {
+      success: 0,
+      warning: 0,
+      failed: 0
+    };
+  }
+
+  normalizeStatusCounts(counts) {
+    return {
+      success: counts?.success || 0,
+      warning: counts?.warning ?? counts?.partial ?? 0,
+      failed: counts?.failed || 0
+    };
+  }
+
+  getRunStatusBucketKey(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'success') return 'success';
+    if (normalized === 'partial' || normalized === 'warning') return 'warning';
+    if (normalized === 'failed') return 'failed';
+    return null;
+  }
+
   getWarningActionCount(actions) {
     if (!actions) return 0;
     return (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
@@ -492,7 +516,8 @@ class MetricsDisplay {
             runs: 0,
             totals: this.createParserTotals(),
             actions: this.createActionCounts(),
-            durationMsTotal: 0
+            durationMsTotal: 0,
+            statusCounts: this.createStatusCounts()
           };
         }
         const bucket = history[name];
@@ -506,6 +531,10 @@ class MetricsDisplay {
         Object.keys(bucket.actions).forEach(key => {
           bucket.actions[key] += actions[key] || 0;
         });
+        const statusKey = this.getRunStatusBucketKey(record?.status);
+        if (statusKey && bucket.statusCounts) {
+          bucket.statusCounts[statusKey] = (bucket.statusCounts[statusKey] || 0) + 1;
+        }
       });
     });
     return history;
@@ -600,6 +629,30 @@ class MetricsDisplay {
       ranCount: latestParserRecords.length,
       items
     };
+  }
+
+  buildAllTimeParserRows(records, summary) {
+    const historyByParser = this.buildParserHistoryMap(records);
+    const summaryParsers = summary?.by_parser_name || {};
+    const names = Array.from(new Set([
+      ...Object.keys(summaryParsers),
+      ...Object.keys(historyByParser)
+    ]));
+    return names.map(name => {
+      const summaryTotals = summaryParsers?.[name]?.totals || null;
+      const historyTotals = historyByParser?.[name] || null;
+      const actions = summaryTotals?.actions || historyTotals?.actions || this.createActionCounts();
+      const runs = Number.isFinite(summaryTotals?.runs) ? summaryTotals.runs : (historyTotals?.runs || 0);
+      const statusCounts = this.normalizeStatusCounts(
+        summaryTotals?.statuses || historyTotals?.statusCounts || this.createStatusCounts()
+      );
+      return {
+        name,
+        actions,
+        runs,
+        statusCounts
+      };
+    });
   }
 
   formatNumber(value) {
@@ -1099,6 +1152,38 @@ class MetricsDisplay {
     return sorted;
   }
 
+  sortAggregateParserRows(items, sortState) {
+    if (!Array.isArray(items)) return [];
+    const sortKey = sortState?.key || 'runs';
+    const direction = sortState?.direction === 'asc' ? 1 : -1;
+    const sorted = [...items];
+    sorted.sort((a, b) => {
+      let diff = 0;
+      if (sortKey === 'name') {
+        diff = String(a?.name || '').localeCompare(String(b?.name || ''));
+      } else if (sortKey === 'new') {
+        diff = (a?.actions?.new || 0) - (b?.actions?.new || 0);
+      } else if (sortKey === 'merge') {
+        diff = (a?.actions?.merge || 0) - (b?.actions?.merge || 0);
+      } else if (sortKey === 'conflict') {
+        diff = (a?.actions?.conflict || 0) - (b?.actions?.conflict || 0);
+      } else if (sortKey === 'runs') {
+        diff = (a?.runs || 0) - (b?.runs || 0);
+      } else if (sortKey === 'success') {
+        diff = (a?.statusCounts?.success || 0) - (b?.statusCounts?.success || 0);
+      } else if (sortKey === 'warning') {
+        diff = (a?.statusCounts?.warning || 0) - (b?.statusCounts?.warning || 0);
+      } else if (sortKey === 'failed') {
+        diff = (a?.statusCounts?.failed || 0) - (b?.statusCounts?.failed || 0);
+      }
+      if (diff === 0) {
+        diff = String(a?.name || '').localeCompare(String(b?.name || ''));
+      }
+      return diff * direction;
+    });
+    return sorted;
+  }
+
   getRunStatusRank(status) {
     const normalized = String(status || '').toLowerCase();
     if (normalized === 'failed') return 3;
@@ -1513,6 +1598,49 @@ class MetricsDisplay {
     const fromParam = this.getSortFromParam(this.runtime.widgetParameter);
     if (fromParam) return fromParam;
     return this.getDefaultSortForView(view);
+  }
+
+  normalizeAggregateSortKey(value) {
+    if (!value) return null;
+    const normalized = String(value).toLowerCase().replace(/[^a-z]/g, '');
+    if (['name', 'parser'].includes(normalized)) return 'name';
+    if (['new', 'add', 'adds', 'added'].includes(normalized)) return 'new';
+    if (['merge', 'merged', 'mrg'].includes(normalized)) return 'merge';
+    if (['conflict', 'conflicts', 'conf', 'cnf'].includes(normalized)) return 'conflict';
+    if (['runs', 'run'].includes(normalized)) return 'runs';
+    if (['success', 'suc'].includes(normalized)) return 'success';
+    if (['warning', 'warnings', 'warn', 'partial'].includes(normalized)) return 'warning';
+    if (['failed', 'fail'].includes(normalized)) return 'failed';
+    return null;
+  }
+
+  getDefaultAggregateSort() {
+    return { key: 'runs', direction: 'desc' };
+  }
+
+  getAggregateSortFromQuery(query) {
+    if (!query) return null;
+    const key = this.normalizeAggregateSortKey(query.sort || query.order || query.sortBy || null);
+    if (!key) return null;
+    const direction = this.normalizeSortDirection(query.dir || query.direction || null);
+    return { key, direction: direction || this.getDefaultSortDirection(key) };
+  }
+
+  getAggregateSortFromParam(param) {
+    const parsed = this.parseWidgetParams(param);
+    const key = this.normalizeAggregateSortKey(parsed.sortKey);
+    if (!key) return null;
+    const direction = this.normalizeSortDirection(parsed.sortDirection);
+    return { key, direction: direction || this.getDefaultSortDirection(key) };
+  }
+
+  resolveAggregateSort(view) {
+    if (!view || view.mode !== 'aggregate') return null;
+    const fromQuery = this.getAggregateSortFromQuery(this.getQueryParams());
+    if (fromQuery) return fromQuery;
+    const fromParam = this.getAggregateSortFromParam(this.runtime.widgetParameter);
+    if (fromParam) return fromParam;
+    return this.getDefaultAggregateSort();
   }
 
   normalizeRunSortKey(value) {
@@ -2036,8 +2164,6 @@ class MetricsDisplay {
 
   renderWidgetAggregate(widget, context) {
     const summary = context.summary;
-    const recentRecords = context.recentRecords;
-    const chartSize = context.chartSize;
 
     if (!summary?.totals) {
       const message = widget.addText('No summary metrics yet.');
@@ -2047,24 +2173,17 @@ class MetricsDisplay {
     }
 
     const totals = summary.totals;
-    const runsLine = `Runs ${this.formatNumber(totals.runs || 0)} • Success ${totals.statuses?.success || 0}`;
+    const statusCounts = this.normalizeStatusCounts(totals.statuses);
+    const actions = totals.actions || this.createActionCounts();
+    const runsLine = `Runs ${this.formatNumber(totals.runs || 0)} • Success ${this.formatNumber(statusCounts.success || 0)} • Warnings ${this.formatNumber(statusCounts.warning || 0)} • Failed ${this.formatNumber(statusCounts.failed || 0)}`;
     const runsText = widget.addText(runsLine);
     runsText.font = Font.systemFont(FONT_SIZES.widget.label);
     runsText.textColor = new Color(BRAND.text);
 
-    const eventsLine = `Final events ${this.formatNumber(totals.totals?.final_bear_events || 0)}`;
-    const eventsText = widget.addText(eventsLine);
-    eventsText.font = Font.systemFont(FONT_SIZES.widget.small);
-    eventsText.textColor = new Color(BRAND.textMuted);
-
-    const series = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
-    const chartImage = this.buildLineChartImage(series, chartSize, {
-      lineColor: new Color(CHART_STYLE.lineSecondary),
-      fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-    });
-    widget.addSpacer(4);
-    const chart = widget.addImage(chartImage);
-    chart.imageSize = new Size(chartSize.width, chartSize.height);
+    const actionsLine = `Adds ${this.formatNumber(actions.new || 0)} • Merges ${this.formatNumber(actions.merge || 0)} • Conflicts ${this.formatNumber(actions.conflict || 0)}`;
+    const actionsText = widget.addText(actionsLine);
+    actionsText.font = Font.systemFont(FONT_SIZES.widget.small);
+    actionsText.textColor = new Color(BRAND.textMuted);
   }
 
   async renderWidget(data, view) {
@@ -2184,6 +2303,8 @@ class MetricsDisplay {
     const parserSortResolved = parserSort || this.getDefaultSortForView({ mode: 'parsers' });
     const runSortState = data.runSortState || this.resolveRunSort(view);
     const runSortResolved = runSortState || this.getDefaultRunSort();
+    const aggregateSortState = data.aggregateSortState || this.resolveAggregateSort(view);
+    const aggregateSortResolved = aggregateSortState || this.getDefaultAggregateSort();
     const runFilters = data.runFilters || this.resolveRunFilters(view);
     const runItems = Array.isArray(data.runItems) ? data.runItems : this.buildRunItems(records);
     const filteredRuns = this.applyRunFilters(runItems, runFilters);
@@ -2378,6 +2499,77 @@ class MetricsDisplay {
               </tr>
             </thead>
             <tbody data-list="parsers">
+              ${rows}
+            </tbody>
+          </table>
+        </div>`;
+    };
+
+    const buildAggregateParserTable = (items, sortState) => {
+      if (!items.length) {
+        return `<div class="muted">No parser totals available.</div>`;
+      }
+      const rows = items.map(item => {
+        const parserUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: item.name });
+        const parserNavAttrs = buildNavAttributes('parser', item.name);
+        const actions = item.actions || this.createActionCounts();
+        const statusCounts = this.normalizeStatusCounts(item.statusCounts || this.createStatusCounts());
+        const rowAttrs = [
+          `data-aggregate-name="${escapeHtml(item.name || '')}"`,
+          `data-aggregate-new="${actions.new || 0}"`,
+          `data-aggregate-merge="${actions.merge || 0}"`,
+          `data-aggregate-conflict="${actions.conflict || 0}"`,
+          `data-aggregate-runs="${item.runs || 0}"`,
+          `data-aggregate-success="${statusCounts.success || 0}"`,
+          `data-aggregate-warning="${statusCounts.warning || 0}"`,
+          `data-aggregate-failed="${statusCounts.failed || 0}"`
+        ].join(' ');
+        return `
+          <tr data-row="aggregate-parser" ${rowAttrs}>
+            <td>
+              <div class="cell-title">
+                ${buildLink(item.name || 'Unknown parser', parserUrl, 'row-link', parserNavAttrs)}
+              </div>
+            </td>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(this.formatNumber(actions.new || 0))}</div>
+            </td>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(this.formatNumber(actions.merge || 0))}</div>
+            </td>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(this.formatNumber(actions.conflict || 0))}</div>
+            </td>
+            <td class="num">
+              <div class="cell-title">${escapeHtml(this.formatNumber(item.runs || 0))}</div>
+            </td>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(this.formatNumber(statusCounts.success || 0))}</div>
+            </td>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(this.formatNumber(statusCounts.warning || 0))}</div>
+            </td>
+            <td class="num tight">
+              <div class="cell-title">${escapeHtml(this.formatNumber(statusCounts.failed || 0))}</div>
+            </td>
+          </tr>`;
+      }).join('');
+      return `
+        <div class="table-wrapper">
+          <table class="metrics-table list-table">
+            <thead>
+              <tr>
+                ${buildSortHeader('Parser', 'name', sortState, 'aggregate', 'asc')}
+                ${buildSortHeader('Add', 'new', sortState, 'aggregate', 'desc', 'num tight')}
+                ${buildSortHeader('Mrg', 'merge', sortState, 'aggregate', 'desc', 'num tight')}
+                ${buildSortHeader('Cnf', 'conflict', sortState, 'aggregate', 'desc', 'num tight')}
+                ${buildSortHeader('Runs', 'runs', sortState, 'aggregate', 'desc', 'num')}
+                ${buildSortHeader('Suc', 'success', sortState, 'aggregate', 'desc', 'num tight')}
+                ${buildSortHeader('Wrn', 'warning', sortState, 'aggregate', 'desc', 'num tight')}
+                ${buildSortHeader('Fail', 'failed', sortState, 'aggregate', 'desc', 'num tight')}
+              </tr>
+            </thead>
+            <tbody data-list="aggregate-parsers">
               ${rows}
             </tbody>
           </table>
@@ -2650,20 +2842,19 @@ class MetricsDisplay {
 
         if (summary?.totals) {
           const summaryTotals = summary.totals;
+          const statusCounts = this.normalizeStatusCounts(summaryTotals.statuses);
+          const actions = summaryTotals.actions || this.createActionCounts();
           const totalsGrid = `
             <div class="metrics-grid">
               ${buildMetric('Runs', this.formatNumber(summaryTotals.runs || 0))}
-              ${buildMetric('Success', this.formatNumber(summaryTotals.statuses?.success || 0))}
-              ${buildMetric('Warnings', this.formatNumber(summaryTotals.statuses?.partial || 0))}
-              ${buildMetric('Failed', this.formatNumber(summaryTotals.statuses?.failed || 0))}
-              ${buildMetric('Final events', this.formatNumber(summaryTotals.totals?.final_bear_events || 0))}
-              ${buildMetric('Calendar events', this.formatNumber(summaryTotals.totals?.calendar_events || 0))}
+              ${buildMetric('Success', this.formatNumber(statusCounts.success || 0))}
+              ${buildMetric('Warnings', this.formatNumber(statusCounts.warning || 0))}
+              ${buildMetric('Failed', this.formatNumber(statusCounts.failed || 0))}
             </div>
-            <div class="meta-row">
-              <div class="meta-item">
-                <span class="meta-label">Actions</span>
-                <span class="meta-value">${escapeHtml(this.formatActions(summaryTotals.actions))}</span>
-              </div>
+            <div class="metrics-grid">
+              ${buildMetric('Adds', this.formatNumber(actions.new || 0))}
+              ${buildMetric('Merges', this.formatNumber(actions.merge || 0))}
+              ${buildMetric('Conflicts', this.formatNumber(actions.conflict || 0))}
             </div>`;
           cards.push(buildSection('All-time totals', totalsGrid));
         }
@@ -2695,70 +2886,26 @@ class MetricsDisplay {
           cards.push(buildEmptyCard('No summary metrics found.', 'Run the scraper to generate summary metrics.'));
         } else {
           const totals = summary.totals;
+          const statusCounts = this.normalizeStatusCounts(totals.statuses);
+          const actions = totals.actions || this.createActionCounts();
           const totalsGrid = `
             <div class="metrics-grid">
               ${buildMetric('Runs', this.formatNumber(totals.runs || 0))}
-              ${buildMetric('Success', this.formatNumber(totals.statuses?.success || 0))}
-              ${buildMetric('Warnings', this.formatNumber(totals.statuses?.partial || 0))}
-              ${buildMetric('Failed', this.formatNumber(totals.statuses?.failed || 0))}
-              ${buildMetric('Final events', this.formatNumber(totals.totals?.final_bear_events || 0))}
-              ${buildMetric('Calendar events', this.formatNumber(totals.totals?.calendar_events || 0))}
+              ${buildMetric('Success', this.formatNumber(statusCounts.success || 0))}
+              ${buildMetric('Warnings', this.formatNumber(statusCounts.warning || 0))}
+              ${buildMetric('Failed', this.formatNumber(statusCounts.failed || 0))}
             </div>
-            <div class="meta-row">
-              <div class="meta-item">
-                <span class="meta-label">Actions</span>
-                <span class="meta-value">${escapeHtml(this.formatActions(totals.actions))}</span>
-              </div>
+            <div class="metrics-grid">
+              ${buildMetric('Adds', this.formatNumber(actions.new || 0))}
+              ${buildMetric('Merges', this.formatNumber(actions.merge || 0))}
+              ${buildMetric('Conflicts', this.formatNumber(actions.conflict || 0))}
             </div>`;
           cards.push(buildSection('All-time totals', totalsGrid));
-
-          const series = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
-          const totalsChart = this.buildLineChartImage(series, chartSize, {
-            lineColor: new Color(CHART_STYLE.line),
-            fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
-          });
-          const totalsChartData = this.imageToDataUri(totalsChart);
-          cards.push(buildChartCard(`Final events (last ${Math.max(recentRecords.length, 1)} runs)`, totalsChartData, null, {
-            xLabel: runAxisLabel,
-            yLabel: finalEventsAxisLabel
-          }));
-
-          const parserTotals = summary.by_parser_name || {};
-          const parserRows = Object.keys(parserTotals).map(name => {
-            const totalsBucket = parserTotals[name]?.totals || {};
-            const actions = totalsBucket?.actions || this.createActionCounts();
-            const actionTotal = this.sumDisplayActions(actions);
-            return {
-              name,
-              actions,
-              actionTotal,
-              runs: totalsBucket?.runs || 0
-            };
-          }).sort((a, b) => b.actionTotal - a.actionTotal);
-
-          if (parserRows.length > 0) {
-            const topRows = parserRows.slice(0, 8).map(row => `
-              <tr>
-                <td>${escapeHtml(row.name)}</td>
-                <td>${escapeHtml(this.formatActionsCompact(row.actions))}</td>
-                <td class="num">${escapeHtml(this.formatNumber(row.runs))}</td>
-              </tr>`).join('');
-            const topTable = `
-              <div class="table-wrapper">
-                <table class="metrics-table">
-                  <thead>
-                    <tr>
-                      <th>Parser</th>
-                      <th>Actions</th>
-                      <th class="num">Runs</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${topRows}
-                  </tbody>
-                </table>
-              </div>`;
-            cards.push(buildSection('Top parsers (all-time)', topTable));
+          const parserTotals = this.buildAllTimeParserRows(records, summary);
+          const sortedParserTotals = this.sortAggregateParserRows(parserTotals, aggregateSortResolved);
+          if (sortedParserTotals.length > 0) {
+            const totalsTable = buildAggregateParserTable(sortedParserTotals, aggregateSortResolved);
+            cards.push(buildSection('Parser totals (all-time)', totalsTable));
           }
         }
       } else if (viewMode === 'parser') {
@@ -2900,6 +3047,8 @@ class MetricsDisplay {
     const parserSortDir = parserSortResolved?.direction || this.getDefaultSortDirection(parserSortKey);
     const runSortKey = runSortResolved?.key || 'finished';
     const runSortDir = runSortResolved?.direction || this.getDefaultRunSortDirection(runSortKey);
+    const aggregateSortKey = aggregateSortResolved?.key || 'runs';
+    const aggregateSortDir = aggregateSortResolved?.direction || this.getDefaultSortDirection(aggregateSortKey);
     const runFilterStatus = runFilters?.status ? String(runFilters.status) : '';
     const runFilterDays = Number.isFinite(runFilters?.days) ? String(runFilters.days) : '';
     const runFilterParser = runFilters?.parserFilter ? String(runFilters.parserFilter) : '';
@@ -3067,6 +3216,9 @@ class MetricsDisplay {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 8px;
+    }
+    .metrics-grid + .metrics-grid {
+      margin-top: 8px;
     }
     .metric {
       background: var(--background-light);
@@ -3409,7 +3561,7 @@ class MetricsDisplay {
     }
   </style>
 </head>
-<body data-view-mode="${escapeHtml(viewMode)}" data-parser-name="${escapeHtml(initialParserName)}" data-parser-sort-key="${escapeHtml(parserSortKey)}" data-parser-sort-dir="${escapeHtml(parserSortDir)}" data-run-sort-key="${escapeHtml(runSortKey)}" data-run-sort-dir="${escapeHtml(runSortDir)}" data-run-filter-status="${escapeHtml(runFilterStatus)}" data-run-filter-days="${escapeHtml(runFilterDays)}" data-run-filter-parser="${escapeHtml(runFilterParser)}">
+<body data-view-mode="${escapeHtml(viewMode)}" data-parser-name="${escapeHtml(initialParserName)}" data-parser-sort-key="${escapeHtml(parserSortKey)}" data-parser-sort-dir="${escapeHtml(parserSortDir)}" data-run-sort-key="${escapeHtml(runSortKey)}" data-run-sort-dir="${escapeHtml(runSortDir)}" data-aggregate-sort-key="${escapeHtml(aggregateSortKey)}" data-aggregate-sort-dir="${escapeHtml(aggregateSortDir)}" data-run-filter-status="${escapeHtml(runFilterStatus)}" data-run-filter-days="${escapeHtml(runFilterDays)}" data-run-filter-parser="${escapeHtml(runFilterParser)}">
   <div class="header">
     <div class="header-main">
       ${logoData ? `<img class="logo" src="${escapeHtml(logoData)}" alt="Chunky Dad">` : ''}
@@ -3435,9 +3587,11 @@ class MetricsDisplay {
       const parserChip = document.querySelector('[data-parser-chip]');
       const parserSortButtons = Array.from(document.querySelectorAll('[data-sort-view="parsers"]'));
       const runSortButtons = Array.from(document.querySelectorAll('[data-sort-view="runs"]'));
+      const aggregateSortButtons = Array.from(document.querySelectorAll('[data-sort-view="aggregate"]'));
       const runFilterChips = Array.from(document.querySelectorAll('[data-filter-view="runs"]'));
       const parserList = document.querySelector('section[data-view="parsers"] [data-list="parsers"]');
       const runList = document.querySelector('section[data-view="runs"] [data-list="runs"]');
+      const aggregateList = document.querySelector('section[data-view="aggregate"] [data-list="aggregate-parsers"]');
 
       const parseNumber = value => {
         const num = Number(value);
@@ -3453,6 +3607,10 @@ class MetricsDisplay {
       const parserSortState = {
         key: body.getAttribute('data-parser-sort-key') || 'status',
         direction: normalizeDirection(body.getAttribute('data-parser-sort-dir'))
+      };
+      const aggregateSortState = {
+        key: body.getAttribute('data-aggregate-sort-key') || 'runs',
+        direction: normalizeDirection(body.getAttribute('data-aggregate-sort-dir'))
       };
       const runSortState = {
         key: body.getAttribute('data-run-sort-key') || 'finished',
@@ -3592,6 +3750,39 @@ class MetricsDisplay {
         rows.forEach(row => parserList.appendChild(row));
       };
 
+      const sortAggregateRows = () => {
+        if (!aggregateList) return;
+        const rows = Array.from(aggregateList.querySelectorAll('[data-row="aggregate-parser"]'));
+        const direction = aggregateSortState.direction === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const aData = a.dataset;
+          const bData = b.dataset;
+          let diff = 0;
+          if (aggregateSortState.key === 'name') {
+            diff = String(aData.aggregateName || '').localeCompare(String(bData.aggregateName || ''));
+          } else if (aggregateSortState.key === 'new') {
+            diff = parseNumber(aData.aggregateNew) - parseNumber(bData.aggregateNew);
+          } else if (aggregateSortState.key === 'merge') {
+            diff = parseNumber(aData.aggregateMerge) - parseNumber(bData.aggregateMerge);
+          } else if (aggregateSortState.key === 'conflict') {
+            diff = parseNumber(aData.aggregateConflict) - parseNumber(bData.aggregateConflict);
+          } else if (aggregateSortState.key === 'runs') {
+            diff = parseNumber(aData.aggregateRuns) - parseNumber(bData.aggregateRuns);
+          } else if (aggregateSortState.key === 'success') {
+            diff = parseNumber(aData.aggregateSuccess) - parseNumber(bData.aggregateSuccess);
+          } else if (aggregateSortState.key === 'warning') {
+            diff = parseNumber(aData.aggregateWarning) - parseNumber(bData.aggregateWarning);
+          } else if (aggregateSortState.key === 'failed') {
+            diff = parseNumber(aData.aggregateFailed) - parseNumber(bData.aggregateFailed);
+          }
+          if (diff === 0) {
+            diff = String(aData.aggregateName || '').localeCompare(String(bData.aggregateName || ''));
+          }
+          return diff * direction;
+        });
+        rows.forEach(row => aggregateList.appendChild(row));
+      };
+
       const matchesRunFilters = row => {
         const data = row.dataset;
         if (runFilterState.status) {
@@ -3697,6 +3888,19 @@ class MetricsDisplay {
         });
       });
 
+      aggregateSortButtons.forEach(button => {
+        button.addEventListener('click', event => {
+          const key = button.getAttribute('data-sort-key');
+          const dir = button.getAttribute('data-sort-dir');
+          if (!key || !dir) return;
+          event.preventDefault();
+          aggregateSortState.key = key;
+          aggregateSortState.direction = normalizeDirection(dir);
+          updateSortButtons(aggregateSortButtons, aggregateSortState);
+          sortAggregateRows();
+        });
+      });
+
       runSortButtons.forEach(button => {
         button.addEventListener('click', event => {
           const key = button.getAttribute('data-sort-key');
@@ -3733,9 +3937,11 @@ class MetricsDisplay {
       const initialParser = body.getAttribute('data-parser-name') || '';
       setActiveView(initialMode, initialParser);
       updateSortButtons(parserSortButtons, parserSortState);
+      updateSortButtons(aggregateSortButtons, aggregateSortState);
       updateSortButtons(runSortButtons, runSortState);
       updateFilterChips();
       sortParserRows();
+      sortAggregateRows();
       applyRunFiltersAndSort();
     })();
   </script>
@@ -3852,11 +4058,17 @@ class MetricsDisplay {
       if (summary?.totals) {
         this.addSectionHeader(table, 'All-time totals');
         const summaryTotals = summary.totals;
-        this.addInfoRow(table, `Runs: ${this.formatNumber(summaryTotals.runs || 0)}`, `Success: ${summaryTotals.statuses?.success || 0} • Warnings: ${summaryTotals.statuses?.partial || 0} • Failed: ${summaryTotals.statuses?.failed || 0}`);
+        const statusCounts = this.normalizeStatusCounts(summaryTotals.statuses);
+        const actions = summaryTotals.actions || this.createActionCounts();
         this.addInfoRow(
           table,
-          `Final bear events: ${this.formatNumber(summaryTotals.totals?.final_bear_events || 0)}`,
-          `Calendar events: ${this.formatNumber(summaryTotals.totals?.calendar_events || 0)}`
+          `Runs: ${this.formatNumber(summaryTotals.runs || 0)}`,
+          `Success: ${this.formatNumber(statusCounts.success || 0)} • Warnings: ${this.formatNumber(statusCounts.warning || 0)} • Failed: ${this.formatNumber(statusCounts.failed || 0)}`
+        );
+        this.addInfoRow(
+          table,
+          `Adds: ${this.formatNumber(actions.new || 0)} • Merges: ${this.formatNumber(actions.merge || 0)}`,
+          `Conflicts: ${this.formatNumber(actions.conflict || 0)}`
         );
       }
     } else if (view.mode === 'parsers') {
@@ -3890,43 +4102,38 @@ class MetricsDisplay {
         this.addInfoRow(table, 'No summary metrics found.', 'Run the scraper to generate summary metrics.');
       } else {
         const totals = summary.totals;
-        this.addInfoRow(table, `Runs: ${this.formatNumber(totals.runs || 0)}`, `Success: ${totals.statuses?.success || 0} • Warnings: ${totals.statuses?.partial || 0} • Failed: ${totals.statuses?.failed || 0}`);
+        const statusCounts = this.normalizeStatusCounts(totals.statuses);
+        const actions = totals.actions || this.createActionCounts();
         this.addInfoRow(
           table,
-          `Final bear events: ${this.formatNumber(totals.totals?.final_bear_events || 0)}`,
-          `Calendar events: ${this.formatNumber(totals.totals?.calendar_events || 0)}`
+          `Runs: ${this.formatNumber(totals.runs || 0)}`,
+          `Success: ${this.formatNumber(statusCounts.success || 0)} • Warnings: ${this.formatNumber(statusCounts.warning || 0)} • Failed: ${this.formatNumber(statusCounts.failed || 0)}`
         );
-        this.addInfoRow(table, 'Actions', this.formatActions(totals.actions));
+        this.addInfoRow(
+          table,
+          `Adds: ${this.formatNumber(actions.new || 0)} • Merges: ${this.formatNumber(actions.merge || 0)}`,
+          `Conflicts: ${this.formatNumber(actions.conflict || 0)}`
+        );
 
-        const series = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
-        const totalsChart = this.buildLineChartImage(series, chartSize, {
-          lineColor: new Color(CHART_STYLE.line),
-          fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
-        });
-        this.addChartSection(table, `Final events (last ${Math.max(recentRecords.length, 1)} runs)`, totalsChart, {
-          xLabel: CHART_AXIS_LABELS.runs,
-          yLabel: CHART_AXIS_LABELS.finalEvents
-        });
-
-        const parserTotals = summary.by_parser_name || {};
-        const parserRows = Object.keys(parserTotals).map(name => {
-          const totalsBucket = parserTotals[name]?.totals || {};
-          const actions = totalsBucket?.actions || this.createActionCounts();
-          return {
-            name,
-            actions,
-            actionTotal: this.sumDisplayActions(actions),
-            runs: totalsBucket?.runs || 0
-          };
-        }).sort((a, b) => b.actionTotal - a.actionTotal);
-
+        const parserRows = this.buildAllTimeParserRows(records, summary);
         if (parserRows.length > 0) {
-          this.addSectionHeader(table, 'Top parsers (all-time)');
-          parserRows.slice(0, 8).forEach(row => {
+          const sortedParserRows = this.sortAggregateParserRows(parserRows, this.getDefaultAggregateSort());
+          this.addSectionHeader(table, 'Parser totals (all-time)');
+          sortedParserRows.forEach(row => {
+            const rowActions = row.actions || this.createActionCounts();
+            const rowStatuses = this.normalizeStatusCounts(row.statusCounts);
+            const summaryLine = [
+              `Adds ${this.formatNumber(rowActions.new || 0)}`,
+              `Merges ${this.formatNumber(rowActions.merge || 0)}`,
+              `Conflicts ${this.formatNumber(rowActions.conflict || 0)}`,
+              `Success ${this.formatNumber(rowStatuses.success || 0)}`,
+              `Warnings ${this.formatNumber(rowStatuses.warning || 0)}`,
+              `Failed ${this.formatNumber(rowStatuses.failed || 0)}`
+            ].join(' • ');
             this.addInfoRow(
               table,
-              `${row.name}: ${this.formatActionsCompact(row.actions)}`,
-              `Runs: ${this.formatNumber(row.runs)}`
+              `${row.name} • Runs ${this.formatNumber(row.runs || 0)}`,
+              summaryLine
             );
           });
         }
