@@ -353,6 +353,10 @@ class FileLogger {
 const logger = new FileLogger();
 logger.captureConsole();
 
+const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
+const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
+const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 class ScriptableAdapter {
     constructor(config = {}) {
         this.config = {
@@ -374,6 +378,7 @@ class ScriptableAdapter {
         this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
         this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
+        this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
         
         this.runtimeContext = this.getScriptableRuntimeContext();
         this.runStartedAt = new Date();
@@ -467,6 +472,54 @@ class ScriptableAdapter {
         }
         
         return label;
+    }
+
+    async loadHeaderLogoData() {
+        const logoImage = await this.loadHeaderLogoImage();
+        return logoImage ? this.imageToDataUri(logoImage) : null;
+    }
+
+    async loadHeaderLogoImage() {
+        try {
+            if (!this.fm.fileExists(this.cacheDir)) {
+                this.fm.createDirectory(this.cacheDir, true);
+            }
+        } catch (error) {
+            console.log(`📱 Scriptable: Logo cache dir setup failed: ${error.message}`);
+        }
+        
+        const cachePath = this.fm.joinPath(this.cacheDir, HEADER_LOGO_CACHE_FILE);
+        try {
+            if (this.fm.fileExists(cachePath)) {
+                const mtime = this.fm.modificationDate(cachePath);
+                if (mtime && (Date.now() - mtime.getTime()) < HEADER_LOGO_CACHE_TTL_MS) {
+                    return Image.fromFile(cachePath);
+                }
+            }
+        } catch (error) {
+            console.log(`📱 Scriptable: Logo cache read failed: ${error.message}`);
+        }
+        
+        try {
+            const request = new Request(HEADER_LOGO_URL);
+            const image = await request.loadImage();
+            this.fm.writeImage(cachePath, image);
+            return image;
+        } catch (error) {
+            console.log(`📱 Scriptable: Logo download failed: ${error.message}`);
+            return null;
+        }
+    }
+
+    imageToDataUri(image) {
+        if (!image) return null;
+        try {
+            const data = Data.fromPNG(image);
+            return `data:image/png;base64,${data.toBase64String()}`;
+        } catch (error) {
+            console.log(`📱 Scriptable: Logo data conversion failed: ${error.message}`);
+            return null;
+        }
     }
 
     sanitizeEventForRunSave(event) {
@@ -1545,6 +1598,8 @@ class ScriptableAdapter {
         const shouldShowLogs = results?._isDisplayingSavedRun === true;
         const runLogInfo = shouldShowLogs ? await this.loadRunLogsForDisplay(results) : null;
         const logSectionHtml = shouldShowLogs ? this.buildRunLogSectionHtml(runLogInfo) : '';
+        const headerLogoData = await this.loadHeaderLogoData();
+        const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
         
         // Group events by their pre-analyzed actions (set by shared-core)
         const newEvents = [];
@@ -2501,7 +2556,7 @@ class ScriptableAdapter {
 <body>
     <div class="header">
         <div class="header-content">
-            <img src="https://raw.githubusercontent.com/stanleyrya/chunky-dad/main/Rising_Star_Ryan_Head_Compressed.png" 
+            <img src="${headerLogoSrc}" 
                  alt="chunky.dad logo" class="header-logo">
             <h1>
                 <div class="header-title">chunky.dad</div>
@@ -4395,6 +4450,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (!fm.fileExists(this.runsDir)) fm.createDirectory(this.runsDir, true);
             if (!fm.fileExists(this.logsDir)) fm.createDirectory(this.logsDir, true);
             if (!fm.fileExists(this.metricsDir)) fm.createDirectory(this.metricsDir, true);
+            if (!fm.fileExists(this.cacheDir)) fm.createDirectory(this.cacheDir, true);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`);
         }
