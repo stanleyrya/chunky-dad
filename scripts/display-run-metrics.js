@@ -1322,6 +1322,7 @@ class MetricsDisplay {
   }
 
   shouldLogChartPoints() {
+    if (this.runtime?.runsInWidget) return false;
     const query = this.getQueryParams() || {};
     const raw = query.debugCharts ?? query.debugChart ?? null;
     if (raw !== null && raw !== undefined) {
