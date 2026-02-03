@@ -3046,7 +3046,7 @@ class ScriptableAdapter {
             const logBlocks = document.querySelectorAll('.log-output');
             logBlocks.forEach(block => {
                 const rawText = block.textContent || '';
-                const lines = rawText.split(/\r?\n/);
+                const lines = rawText.split(/\\r?\\n/);
                 block.textContent = '';
                 lines.forEach(line => {
                     const span = document.createElement('span');
