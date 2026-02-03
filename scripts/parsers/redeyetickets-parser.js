@@ -132,15 +132,16 @@ class RedEyeTicketsParser {
         
         const events = [];
         performances.forEach((performance, index) => {
-            const startDate = this.parseApiDate(performance.start_at);
+            const apiTimeZone = performance.time_zone || eventData.venue_time_zone || null;
+            const cityTimeZone = this.getCityTimeZone(city, cityConfig);
+            const startDate = this.parseApiDate(performance.start_at, apiTimeZone, cityTimeZone);
             if (!startDate) {
                 console.warn(`🎫 RedEyeTickets: Performance ${index + 1} missing start time`);
                 return;
             }
             
-            const endDate = this.parseApiDate(performance.end_at);
-            const timeZone = performance.time_zone || eventData.venue_time_zone || null;
-            const resolvedEndDate = this.resolvePerformanceEndDate(startDate, endDate, timeZone, venue);
+            const endDate = this.parseApiDate(performance.end_at, apiTimeZone, cityTimeZone);
+            const resolvedEndDate = this.resolvePerformanceEndDate(startDate, endDate, apiTimeZone, cityTimeZone, venue);
             const cover = this.extractApiPricing(performance);
             
             const event = {
@@ -190,19 +191,124 @@ class RedEyeTicketsParser {
         return `${origin.replace(/\/+$/, '')}/api/v1`;
     }
 
-    parseApiDate(value) {
+    parseApiDate(value, apiTimeZone = null, cityTimeZone = null) {
         if (!value || typeof value !== 'string') {
             return null;
         }
-        const date = new Date(value);
+        const trimmed = value.trim();
+        const normalizedApiTimeZone = this.normalizeTimeZone(apiTimeZone);
+        const normalizedCityTimeZone = this.normalizeTimeZone(cityTimeZone);
+        const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(trimmed);
+        
+        if (hasTimezone) {
+            const shouldCorrectUtcLabel = normalizedApiTimeZone === 'UTC' &&
+                normalizedCityTimeZone &&
+                normalizedCityTimeZone !== 'UTC';
+            
+            if (shouldCorrectUtcLabel) {
+                const localParts = this.parseLocalDateTime(this.stripTimezoneSuffix(trimmed));
+                if (localParts) {
+                    const corrected = this.convertLocalTimeToUTC(
+                        localParts.year,
+                        localParts.month,
+                        localParts.day,
+                        localParts.hour,
+                        localParts.minute,
+                        localParts.second,
+                        normalizedCityTimeZone
+                    );
+                    if (corrected && !isNaN(corrected.getTime())) {
+                        return corrected;
+                    }
+                }
+            }
+            
+            const date = new Date(trimmed);
+            if (isNaN(date.getTime())) {
+                console.warn(`🎫 RedEyeTickets: Invalid API date: ${value}`);
+                return null;
+            }
+            return date;
+        }
+        
+        const localParts = this.parseLocalDateTime(trimmed);
+        if (localParts) {
+            if (!normalizedApiTimeZone) {
+                console.warn(`🎫 RedEyeTickets: Missing timezone for API date: ${value}`);
+                return null;
+            }
+            
+            if (normalizedApiTimeZone === 'UTC') {
+                const utcDate = new Date(Date.UTC(
+                    localParts.year,
+                    localParts.month,
+                    localParts.day,
+                    localParts.hour,
+                    localParts.minute,
+                    localParts.second,
+                    0
+                ));
+                if (isNaN(utcDate.getTime())) {
+                    console.warn(`🎫 RedEyeTickets: Invalid API date: ${value}`);
+                    return null;
+                }
+                return utcDate;
+            }
+            
+            return this.convertLocalTimeToUTC(
+                localParts.year,
+                localParts.month,
+                localParts.day,
+                localParts.hour,
+                localParts.minute,
+                localParts.second,
+                normalizedApiTimeZone
+            );
+        }
+        
+        const date = new Date(trimmed);
         if (isNaN(date.getTime())) {
             console.warn(`🎫 RedEyeTickets: Invalid API date: ${value}`);
             return null;
         }
         return date;
     }
+    
+    parseLocalDateTime(value) {
+        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?)?$/);
+        if (!match) {
+            return null;
+        }
+        return {
+            year: Number(match[1]),
+            month: Number(match[2]) - 1,
+            day: Number(match[3]),
+            hour: match[4] ? Number(match[4]) : 0,
+            minute: match[5] ? Number(match[5]) : 0,
+            second: match[6] ? Number(match[6]) : 0
+        };
+    }
+    
+    stripTimezoneSuffix(value) {
+        return value.replace(/([zZ]|[+-]\d{2}:\d{2})$/, '');
+    }
+    
+    getCityTimeZone(city, cityConfig) {
+        if (!city || !cityConfig || !cityConfig[city] || !cityConfig[city].timezone) {
+            return null;
+        }
+        return cityConfig[city].timezone;
+    }
+    
+    normalizeTimeZone(timeZone) {
+        if (!timeZone || typeof timeZone !== 'string') {
+            return null;
+        }
+        const normalized = timeZone.trim();
+        return normalized.length > 0 ? normalized : null;
+    }
 
-    resolvePerformanceEndDate(startDate, endDate, timeZone, venueName) {
+    resolvePerformanceEndDate(startDate, endDate, apiTimeZone, cityTimeZone, venueName) {
         let resolvedEndDate = endDate;
         
         if (resolvedEndDate && startDate && resolvedEndDate <= startDate) {
@@ -210,7 +316,10 @@ class RedEyeTicketsParser {
         }
         
         if (!resolvedEndDate && startDate && venueName && venueName.toLowerCase().includes('red eye')) {
-            const timezone = timeZone || 'America/New_York';
+            const timezone = this.normalizeTimeZone(cityTimeZone) || this.normalizeTimeZone(apiTimeZone);
+            if (!timezone) {
+                return resolvedEndDate;
+            }
             const nextDay = new Date(startDate);
             nextDay.setDate(nextDay.getDate() + 1);
             const year = nextDay.getFullYear();
