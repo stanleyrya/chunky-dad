@@ -819,30 +819,30 @@ class SharedCore {
         enrichedMergedEvent.notes = this.formatEventNotes(enrichedMergedEvent);
         
         // Create _original object for display purposes (same as createFinalEventObject)
+        const calendarObject = {
+            // These are the CURRENT values that will be replaced during save
+            title: existingEvent.title || '',
+            startDate: existingEvent.startDate || '',
+            endDate: existingEvent.endDate || '',
+            location: existingEvent.location || '',
+            notes: existingEvent.notes || '',
+            url: existingEvent.url || '',
+            // Add fields extracted from current notes for rich comparison
+            ...existingFields
+        };
+        
+        const scraperObject = { ...newEvent };
+        
+        const mergedObject = {};
+        Object.keys(enrichedMergedEvent).forEach(fieldName => {
+            if (fieldName.startsWith('_') || fieldName === 'notes') return;
+            mergedObject[fieldName] = enrichedMergedEvent[fieldName];
+        });
+        
         enrichedMergedEvent._original = {
-            existing: { 
-                // These are the CURRENT values that will be replaced during save
-                title: existingEvent.title || '',
-                startDate: existingEvent.startDate || '',
-                endDate: existingEvent.endDate || '',
-                location: existingEvent.location || '',
-                notes: existingEvent.notes || '',
-                url: existingEvent.url || '',
-                // Add fields extracted from current notes for rich comparison
-                ...existingFields
-            },
-            new: { 
-                // Include ALL scraped values from newEvent for comparison
-                // This ensures preserve fields show what was scraped vs what was kept
-                ...newEvent,
-                // Override with final calendar values for core fields
-                title: enrichedMergedEvent.title,
-                startDate: enrichedMergedEvent.startDate,
-                endDate: enrichedMergedEvent.endDate,
-                location: enrichedMergedEvent.location,
-                notes: enrichedMergedEvent.notes,
-                url: enrichedMergedEvent.url
-            }
+            scraper: scraperObject,
+            calendar: calendarObject,
+            merged: mergedObject
         };
         
         return enrichedMergedEvent;
