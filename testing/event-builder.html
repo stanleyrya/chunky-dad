@@ -5382,7 +5382,10 @@
           updateCalendarStatus('Add start & end times before exporting', 'warn');
           return;
         }
-        const icsContent = generateICS(event);
+        const icsOptions = state && state.isEditingExisting
+          ? { sequence: Date.now(), lastModified: new Date() }
+          : null;
+        const icsContent = generateICS(event, icsOptions);
         const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
         const blob = new Blob([icsContent], { type: 'text/calendar' });
         const url = URL.createObjectURL(blob);
@@ -5396,7 +5399,15 @@
         showTemporaryState(dom.addToCalendarButton, 'ICS ready!');
       }
 
-      function generateICS(event) {
+      function generateICS(event, options = {}) {
+        const settings = options && typeof options === 'object' ? options : {};
+        const now = new Date();
+        const sequence = Number.isFinite(settings.sequence)
+          ? Math.max(0, Math.floor(settings.sequence))
+          : null;
+        const lastModified = settings.lastModified instanceof Date
+          ? settings.lastModified
+          : (sequence !== null ? now : null);
         const lines = [
           'BEGIN:VCALENDAR',
           'VERSION:2.0',
@@ -5410,7 +5421,13 @@
         const timezone = event.timezone || browserTimezone;
         const tzid = timezone ? `;TZID=${timezone}` : '';
         lines.push(`UID:${uidValue}`);
-        lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
+        lines.push(`DTSTAMP:${formatICSDate(now)}`);
+        if (lastModified) {
+          lines.push(`LAST-MODIFIED:${formatICSDate(lastModified)}`);
+        }
+        if (sequence !== null) {
+          lines.push(`SEQUENCE:${sequence}`);
+        }
         if (event.recurrenceId) {
           const recurrenceTimezone = event.recurrenceIdTimezone || timezone;
           const recurrenceTzid = recurrenceTimezone ? `;TZID=${recurrenceTimezone}` : '';
