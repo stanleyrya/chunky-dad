@@ -1250,9 +1250,13 @@
               <i class="bi bi-send" aria-hidden="true"></i>
               <span>Tell Dad</span>
             </button>
-            <button type="button" class="primary-button action-button" id="add-to-calendar" aria-label="Add to calendar">
+            <button type="button" class="primary-button action-button is-hidden" id="add-to-calendar" aria-label="Add to calendar">
               <i class="bi bi-calendar-plus" aria-hidden="true"></i>
               <span>Add</span>
+            </button>
+            <button type="button" class="secondary-button action-button is-hidden" id="open-scriptable" aria-label="Open Scriptable">
+              <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+              <span>Scriptable</span>
             </button>
           </div>
         </div>
@@ -1716,6 +1720,7 @@
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'info@chunky.dad';
+      const SCRIPTABLE_SCRIPT_NAME = 'Bear Event Scraper';
 
       const dom = {};
       let state;
@@ -1761,10 +1766,11 @@
         const baseState = createDefaultState();
         const urlState = loadStateFromUrl(baseState);
         state = { ...baseState, ...urlState.overrides };
-        state.timezone = browserTimezone;
+        state.timezone = state.timezone || browserTimezone;
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
+        applyDebugVisibility();
         syncExistingSelectionSummaryFromState();
         syncExistingCitySelection();
         resetExistingResults('Choose a calendar to load events.');
@@ -1829,6 +1835,7 @@
         dom.imageInput = document.getElementById('event-image');
         dom.resetButton = document.getElementById('reset-form');
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
+        dom.openScriptableButton = document.getElementById('open-scriptable');
         dom.copyShareButton = document.getElementById('copy-link');
         dom.editExistingButton = document.getElementById('edit-existing');
         dom.existingPanel = document.getElementById('existing-event-panel');
@@ -1865,6 +1872,16 @@
         dom.previewCover = document.getElementById('preview-cover');
         dom.previewLinks = document.getElementById('preview-links');
         dom.toastContainer = document.getElementById('toast-container');
+      }
+
+      function applyDebugVisibility() {
+        const showDebug = Boolean(state && state.debug);
+        if (dom.addToCalendarButton) {
+          dom.addToCalendarButton.classList.toggle('is-hidden', !showDebug);
+        }
+        if (dom.openScriptableButton) {
+          dom.openScriptableButton.classList.toggle('is-hidden', !showDebug);
+        }
       }
 
       function setupStickyHeaderOffset() {
@@ -3412,6 +3429,7 @@
           start: formatInputValue(start),
           end: formatInputValue(end),
           timezone: browserTimezone,
+          debug: false,
           recurrence: '',
           recurrenceMode: 'builder',
           website: '',
@@ -3576,6 +3594,10 @@
             case 'rmode':
             case 'recurrencemode':
               overrides.recurrenceMode = value === 'raw' ? 'raw' : 'builder';
+              break;
+            case 'debug':
+            case 'dbg':
+              overrides.debug = parseBooleanParam(value);
               break;
             default:
               break;
@@ -3874,6 +3896,11 @@
         }
         if (dom.addToCalendarButton) {
           dom.addToCalendarButton.addEventListener('click', handleAddToCalendar);
+        }
+        if (dom.openScriptableButton) {
+          dom.openScriptableButton.addEventListener('click', () => {
+            handleOpenScriptable(dom.openScriptableButton);
+          });
         }
         if (dom.editExistingButton) {
           dom.editExistingButton.addEventListener('click', () => {
@@ -4811,7 +4838,7 @@
         });
       }
 
-      function buildShareUrl() {
+      function buildShareUrl(options = {}) {
         const params = new URLSearchParams();
         if (state.name) params.set('name', state.name);
         if (state.shortName) params.set('short', state.shortName);
@@ -4849,19 +4876,26 @@
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
         if (coordsValue) params.set('coords', coordsValue);
+        const includeDebug = typeof options.includeDebug === 'boolean'
+          ? options.includeDebug
+          : Boolean(state && state.debug);
+        if (includeDebug) params.set('debug', '1');
         const sorted = new URLSearchParams();
         [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
         const query = sorted.toString();
         return query ? `${window.location.pathname}?${query}` : window.location.pathname;
       }
 
-      function updateUrl() {
-        const newUrl = buildShareUrl();
+      function applyHistoryUrl(newUrl) {
         const current = `${window.location.pathname}${window.location.search}`;
         if (current !== newUrl) {
           window.history.replaceState({}, '', newUrl);
         }
         return newUrl;
+      }
+
+      function updateUrl() {
+        return applyHistoryUrl(buildShareUrl());
       }
 
       function scheduleUrlUpdate() {
@@ -4874,8 +4908,10 @@
         }, URL_UPDATE_DELAY);
       }
 
-      function getShareUrl() {
-        const newUrl = updateUrl();
+      function getShareUrl(options = {}) {
+        const newUrl = options.skipHistory
+          ? buildShareUrl({ includeDebug: options.includeDebug })
+          : applyHistoryUrl(buildShareUrl({ includeDebug: options.includeDebug }));
         try {
           return new URL(newUrl, window.location.href).href;
         } catch (error) {
@@ -4883,8 +4919,54 @@
         }
       }
 
+      function buildScriptableCallbackUrl() {
+        if (!state) return '';
+        const params = new URLSearchParams();
+        params.set('scriptName', SCRIPTABLE_SCRIPT_NAME);
+        const addParam = (key, value) => {
+          const trimmed = String(value || '').trim();
+          if (!trimmed) return;
+          params.set(key, trimmed);
+        };
+        const startValue = sanitizeDateTimeInput(state.start);
+        const endValue = sanitizeDateTimeInput(state.end);
+        addParam('title', state.name);
+        addParam('shortName', state.shortName);
+        addParam('description', state.description);
+        addParam('cover', state.cover);
+        addParam('bar', state.venue);
+        addParam('address', state.address);
+        addParam('location', state.location);
+        addParam('city', state.city);
+        addParam('timezone', state.timezone || browserTimezone);
+        if (startValue) params.set('startDate', startValue);
+        if (endValue) params.set('endDate', endValue);
+        addParam('recurrence', state.recurrence);
+        addParam('website', state.website);
+        addParam('ticketUrl', state.ticketUrl);
+        addParam('instagram', state.instagram);
+        addParam('facebook', state.facebook);
+        addParam('gmaps', state.gmaps);
+        addParam('image', state.image);
+        const coordinates = parseCoordinates(state.location);
+        if (coordinates) {
+          params.set('lat', coordinates.lat);
+          params.set('lng', coordinates.lng);
+        }
+        const identifier = state.editingExistingUid
+          || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '');
+        if (identifier) params.set('identifier', identifier);
+        const recurrenceIdValue = sanitizeDateTimeInput(state.editingExistingRecurrenceId);
+        if (recurrenceIdValue) params.set('recurrenceId', recurrenceIdValue);
+        if (state.editingExistingRecurrenceTimezone) {
+          params.set('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
+        }
+        return `scriptable:///run?${params.toString()}`;
+      }
+
       function buildTellDadMessage() {
-        const shareUrl = getShareUrl();
+        const shareUrl = getShareUrl({ includeDebug: true, skipHistory: !state || !state.debug });
+        const scriptableUrl = buildScriptableCallbackUrl();
         const eventName = (state.name || '').trim();
         const cityLabel = getCityDisplayName(state.city);
         const subjectParts = ['Event Builder'];
@@ -4895,8 +4977,12 @@
           'Hey Dad, here is the event link:',
           shareUrl
         ];
+        if (scriptableUrl) {
+          bodyLines.push('', 'Scriptable URL Input (x-callback-url):', scriptableUrl);
+        }
         return {
           shareUrl,
+          scriptableUrl,
           subject,
           body: bodyLines.join('\n')
         };
@@ -5414,6 +5500,22 @@
         document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         showTemporaryState(dom.addToCalendarButton, 'ICS ready!');
+      }
+
+      function handleOpenScriptable(button) {
+        const name = String(state && state.name ? state.name : '').trim();
+        const startValue = sanitizeDateTimeInput(state && state.start ? state.start : '');
+        if (!name || !startValue) {
+          showToast('Add an event name and start time first.', 'warn');
+          return;
+        }
+        const scriptableUrl = buildScriptableCallbackUrl();
+        if (!scriptableUrl) {
+          showToast('Scriptable link is missing details.', 'warn');
+          return;
+        }
+        window.location.href = scriptableUrl;
+        showTemporaryState(button, 'Opening...');
       }
 
       function generateICS(event, options = {}) {
