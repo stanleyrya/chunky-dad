@@ -4934,8 +4934,13 @@
 
       function buildScriptableCallbackUrl() {
         if (!state) return '';
+        const scriptName = String(SCRIPTABLE_SCRIPT_NAME || '').trim();
+        if (!scriptName) return '';
         const params = new URLSearchParams();
-        params.set('scriptName', SCRIPTABLE_SCRIPT_NAME);
+        params.set('scriptName', scriptName);
+        if (state.debug) {
+          params.set('openEditor', 'true');
+        }
         const addParam = (key, value) => {
           const trimmed = String(value || '').trim();
           if (!trimmed) return;
@@ -4974,7 +4979,8 @@
         if (state.editingExistingRecurrenceTimezone) {
           params.set('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
         }
-        return `scriptable://x-callback-url/run?${params.toString()}`;
+        const encodedScriptName = encodeURIComponent(scriptName);
+        return `scriptable:///run/${encodedScriptName}?${params.toString()}`;
       }
 
       function buildTellDadMessage() {
