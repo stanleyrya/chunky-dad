@@ -1254,6 +1254,15 @@ class SharedCore {
         // Create a copy to avoid modifying the original
         const normalizedEvent = { ...event };
         
+        // Remove empty/whitespace-only strings so undefined/"" don't diverge
+        Object.keys(normalizedEvent).forEach(key => {
+            if (key.startsWith('_')) return;
+            const value = normalizedEvent[key];
+            if (typeof value === 'string' && value.trim() === '') {
+                delete normalizedEvent[key];
+            }
+        });
+        
         // Description field is now saved and read literally - no normalization
         // We could normalize other text fields here if needed in the future
         // For example: title, bar, address, etc.
