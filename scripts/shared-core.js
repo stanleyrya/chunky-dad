@@ -42,6 +42,10 @@ class SharedCore {
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
             {
+                pattern: /^scriptable-input:\/\//i,
+                parser: 'scriptable-input'
+            },
+            {
                 pattern: /eventbrite\.com/i,
                 parser: 'eventbrite'
             },
@@ -223,6 +227,7 @@ class SharedCore {
         
         const parserStartedAt = Date.now();
         const allEvents = [];
+        const hasInlineInput = parserConfig.input && typeof parserConfig.input === 'object';
         // Use global processedUrls to prevent duplicate processing across all parsers
 
         // Process main URLs
@@ -235,7 +240,13 @@ class SharedCore {
             globalProcessedUrls.add(url);
 
             try {
-                const htmlData = await httpAdapter.fetchData(url);
+                if (hasInlineInput && i === 0) {
+                    await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
+                }
+
+                const htmlData = hasInlineInput
+                    ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
+                    : await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
                 const urlParserName = this.detectParserFromUrl(url) || parserName;
@@ -2425,6 +2436,9 @@ class SharedCore {
         let targetMatchKey = null;
         let targetSource = '';
         let targetKeyFormat = null;
+        let targetIdentifier = null;
+        let targetRecurrenceId = null;
+        let targetSequence = null;
         
         if (typeof targetEventOrKey === 'string') {
             targetKey = targetEventOrKey;
@@ -2433,6 +2447,9 @@ class SharedCore {
             targetMatchKey = targetEventOrKey.matchKey || null;
             targetSource = targetEventOrKey.source || '';
             targetKeyFormat = targetEventOrKey._parserConfig?.keyTemplate || null;
+            targetIdentifier = targetEventOrKey.identifier || targetEventOrKey.id || null;
+            targetRecurrenceId = targetEventOrKey.recurrenceId || targetEventOrKey.recurrenceID || targetEventOrKey.recurrence_id || null;
+            targetSequence = targetEventOrKey.sequence || targetEventOrKey.sequenced || targetEventOrKey.seq || null;
             
             if (!targetSource && targetEventOrKey.url) {
                 const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
@@ -2442,7 +2459,20 @@ class SharedCore {
             }
         }
         
-        if (!targetKey && !targetMatchKey) return null;
+        const normalizeIdentifier = (value) => {
+            if (value === null || value === undefined) return null;
+            const normalized = String(value).trim();
+            return normalized.length > 0 ? normalized : null;
+        };
+        
+        const normalizedIdentifier = normalizeIdentifier(targetIdentifier);
+        const normalizedRecurrenceId = normalizeIdentifier(targetRecurrenceId);
+        const normalizedSequence = normalizeIdentifier(targetSequence);
+        
+        const hasDirectIdentifier = Boolean(normalizedIdentifier || normalizedRecurrenceId || normalizedSequence);
+        const hasKeyMatch = Boolean(targetKey || targetMatchKey);
+        
+        if (!hasDirectIdentifier && !hasKeyMatch) return null;
         
         const wantsWildcardMatch = Boolean(targetMatchKey && targetMatchKey.includes('*'));
         
@@ -2454,6 +2484,31 @@ class SharedCore {
                 : null;
             return { event, fields, computedKey, localComputedKey };
         });
+        
+        if (hasDirectIdentifier) {
+            for (const { event, fields } of parsedEvents) {
+                const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
+                if (normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
+                    return { event, matchedKey: eventIdentifier, matchType: 'identifier' };
+                }
+                
+                const eventRecurrenceId = normalizeIdentifier(
+                    event.recurrenceId || event.recurrenceID || fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id
+                );
+                if (normalizedRecurrenceId && eventRecurrenceId === normalizedRecurrenceId) {
+                    return { event, matchedKey: eventRecurrenceId, matchType: 'recurrenceId' };
+                }
+                
+                const eventSequence = normalizeIdentifier(
+                    event.sequence || event.sequenced || fields.sequence || fields.sequenced || fields.seq
+                );
+                if (normalizedSequence && eventSequence === normalizedSequence) {
+                    return { event, matchedKey: eventSequence, matchType: 'sequence' };
+                }
+            }
+        }
+        
+        if (!hasKeyMatch) return null;
         
         // First pass: exact match on key or matchKey (from notes)
         for (const { event, fields } of parsedEvents) {
