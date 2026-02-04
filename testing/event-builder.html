@@ -1251,11 +1251,11 @@
         </div>
         <div class="tool-actions">
           <div class="tool-buttons">
-            <button type="button" class="ghost-button action-button" id="reset-form" aria-label="Reset form">
+            <button type="button" class="secondary-button action-button" id="reset-form" aria-label="Reset form">
               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
               <span>Reset</span>
             </button>
-            <button type="button" class="ghost-button action-button" id="edit-existing" aria-label="Edit or copy existing event" aria-expanded="false" aria-controls="existing-event-panel" aria-haspopup="dialog">
+            <button type="button" class="secondary-button action-button" id="edit-existing" aria-label="Edit or copy existing event" aria-expanded="false" aria-controls="existing-event-panel" aria-haspopup="dialog">
               <i class="bi bi-pencil-square" aria-hidden="true"></i>
               <span>Edit Existing</span>
             </button>
@@ -4934,8 +4934,13 @@
 
       function buildScriptableCallbackUrl() {
         if (!state) return '';
+        const scriptName = String(SCRIPTABLE_SCRIPT_NAME || '').trim();
+        if (!scriptName) return '';
         const params = new URLSearchParams();
-        params.set('scriptName', SCRIPTABLE_SCRIPT_NAME);
+        params.set('scriptName', scriptName);
+        if (state.debug) {
+          params.set('openEditor', 'true');
+        }
         const addParam = (key, value) => {
           const trimmed = String(value || '').trim();
           if (!trimmed) return;
@@ -4974,7 +4979,8 @@
         if (state.editingExistingRecurrenceTimezone) {
           params.set('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
         }
-        return `scriptable://x-callback-url/run?${params.toString()}`;
+        const encodedScriptName = encodeURIComponent(scriptName);
+        return `scriptable:///run/${encodedScriptName}?${params.toString()}`;
       }
 
       function buildTellDadMessage() {
