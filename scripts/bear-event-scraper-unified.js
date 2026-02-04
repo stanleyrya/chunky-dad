@@ -31,6 +31,7 @@ class BearEventScraperOrchestrator {
         this.isWeb = typeof window !== 'undefined';
         this.isInitialized = false;
         this.modules = {};
+        this.moduleLoadErrors = {};
     }
 
     async initialize() {
@@ -66,37 +67,61 @@ class BearEventScraperOrchestrator {
     async loadScriptableModules() {
         try {
             console.log('📱 Loading Scriptable modules...');
-            
+
+            const importScriptableModule = (modulePath, options = {}) => {
+                const label = options.label || modulePath;
+                const optional = options.optional === true;
+                try {
+                    return importModule(modulePath);
+                } catch (error) {
+                    const errorMessage = error && error.message ? error.message : `${error}`;
+                    if (optional) {
+                        this.moduleLoadErrors[modulePath] = errorMessage;
+                        console.warn(`📱 ⚠️ Optional module missing (${label}): ${errorMessage}`);
+                        return null;
+                    }
+                    throw new Error(`${label} failed to load: ${errorMessage}`);
+                }
+            };
+
             // Load core modules
-            const sharedCoreModule = importModule('shared-core');
-            const scriptableAdapterModule = importModule('adapters/scriptable-adapter');
-            
+            const sharedCoreModule = importScriptableModule('shared-core', { label: 'Shared core' });
+            const scriptableAdapterModule = importScriptableModule('adapters/scriptable-adapter', { label: 'Scriptable adapter' });
+
             // Load parsers
-            const eventbriteParserModule = importModule('parsers/eventbrite-parser');
-            const bearracudaParserModule = importModule('parsers/bearracuda-parser');
-            const genericParserModule = importModule('parsers/generic-parser');
-            const chunkParserModule = importModule('parsers/chunk-parser');
-            const furballParserModule = importModule('parsers/furball-parser');
-            const linktreeParserModule = importModule('parsers/linktree-parser');
-            const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
-            const ticketleapParserModule = importModule('parsers/ticketleap-parser');
-            const scriptableUrlParserModule = importModule('parsers/scriptable-url-parser');
-            
+            const eventbriteParserModule = importScriptableModule('parsers/eventbrite-parser', { label: 'Eventbrite parser' });
+            const bearracudaParserModule = importScriptableModule('parsers/bearracuda-parser', { label: 'Bearracuda parser' });
+            const genericParserModule = importScriptableModule('parsers/generic-parser', { label: 'Generic parser' });
+            const chunkParserModule = importScriptableModule('parsers/chunk-parser', { label: 'Chunk parser' });
+            const furballParserModule = importScriptableModule('parsers/furball-parser', { label: 'Furball parser' });
+            const linktreeParserModule = importScriptableModule('parsers/linktree-parser', { label: 'Linktree parser' });
+            const redeyeticketsParserModule = importScriptableModule('parsers/redeyetickets-parser', { label: 'RedEyeTickets parser' });
+            const ticketleapParserModule = importScriptableModule('parsers/ticketleap-parser', { label: 'Ticketleap parser' });
+            const scriptableUrlParserModule = importScriptableModule('parsers/scriptable-url-parser', {
+                label: 'Scriptable URL parser',
+                optional: true
+            });
+
+            const parsers = {
+                eventbrite: eventbriteParserModule.EventbriteParser,
+                bearracuda: bearracudaParserModule.BearraccudaParser,
+                generic: genericParserModule.GenericParser,
+                chunk: chunkParserModule.ChunkParser,
+                furball: furballParserModule.FurballParser,
+                linktree: linktreeParserModule.LinktreeParser,
+                redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
+                ticketleap: ticketleapParserModule.TicketleapParser
+            };
+
+            if (scriptableUrlParserModule && scriptableUrlParserModule.ScriptableUrlParser) {
+                parsers['scriptable-input'] = scriptableUrlParserModule.ScriptableUrlParser;
+            }
+
             // Store modules
             this.modules = {
                 SharedCore: sharedCoreModule.SharedCore,
                 adapter: scriptableAdapterModule.ScriptableAdapter,
-                parsers: {
-                    eventbrite: eventbriteParserModule.EventbriteParser,
-                    bearracuda: bearracudaParserModule.BearraccudaParser,
-                    generic: genericParserModule.GenericParser,
-                    chunk: chunkParserModule.ChunkParser,
-                    furball: furballParserModule.FurballParser,
-                    linktree: linktreeParserModule.LinktreeParser,
-                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
-                    ticketleap: ticketleapParserModule.TicketleapParser,
-                    'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser
-                }
+                parsers
             };
         } catch (error) {
             console.error(`📱 ✗ Failed to load Scriptable modules: ${error}`);
@@ -188,6 +213,23 @@ class BearEventScraperOrchestrator {
         }
     }
 
+    requiresScriptableUrlParser(config) {
+        if (!config || !Array.isArray(config.parsers)) {
+            return false;
+        }
+        for (const parserConfig of config.parsers) {
+            if (!parserConfig || !Array.isArray(parserConfig.urls)) {
+                continue;
+            }
+            for (const url of parserConfig.urls) {
+                if (typeof url === 'string' && url.startsWith('scriptable-input://')) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     async run() {
         try {
             // Initialize if not already done
@@ -200,6 +242,12 @@ class BearEventScraperOrchestrator {
             
             // Load configuration early so we can pass cities config to SharedCore
             const config = await adapter.loadConfiguration();
+
+            if (this.isScriptable && this.requiresScriptableUrlParser(config) && !this.modules.parsers['scriptable-input']) {
+                const loadError = this.moduleLoadErrors['parsers/scriptable-url-parser'];
+                const detail = loadError ? ` (${loadError})` : '';
+                throw new Error(`Scriptable URL input requires parsers/scriptable-url-parser.js to be available and valid${detail}. Ensure the file exists in your Scriptable folder.`);
+            }
             
             // Create shared core instance with cities configuration
             const sharedCore = new this.modules.SharedCore(config.cities);
