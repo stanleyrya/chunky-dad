@@ -1989,6 +1989,10 @@ class SharedCore {
             // Scriptable-specific properties that shouldn't be in notes
             'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
             'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
+            // Recurrence metadata used for matching, not for notes storage
+            'recurrenceId', 'recurrenceIdTimezone', 'sequence',
+            // Coordinate helpers that duplicate location data
+            'lat', 'lng',
             // Location-specific fields that shouldn't be in notes (used internally)
             'placeId'
         ]);
@@ -2093,22 +2097,8 @@ class SharedCore {
                 // Analyze what changed
                 Object.keys(originalFields).forEach(key => {
                     // Check the merge strategy for this field
-                    const fieldPriorities = analyzedEvent._fieldPriorities || {};
-                    const priorityConfig = fieldPriorities[key];
-                    const mergeStrategy = priorityConfig?.merge || 'preserve';
-                    
                     if (mergedFields[key] === originalFields[key]) {
-                        // For clobber strategy, even if values are the same, it should be marked as updated
-                        // because the intent was to replace the value
-                        if (mergeStrategy === 'clobber') {
-                            analyzedEvent._mergeDiff.updated.push({ 
-                                key, 
-                                from: originalFields[key], 
-                                to: mergedFields[key] 
-                            });
-                        } else {
-                            analyzedEvent._mergeDiff.preserved.push(key);
-                        }
+                        analyzedEvent._mergeDiff.preserved.push(key);
                     } else if (!mergedFields[key]) {
                         // Check if this is preserve strategy - if so, undefined should be preserved, not removed
                         const fieldPriorities = analyzedEvent._fieldPriorities || {};

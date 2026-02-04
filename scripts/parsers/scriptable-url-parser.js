@@ -87,18 +87,20 @@ class ScriptableUrlParser {
         });
 
         this.applyCoordinateFallbacks(fields, inputFields);
+        this.normalizeUrlFields(fields, inputFields);
+        const orderedFields = this.orderFields(fields);
 
-        const dateInfo = this.resolveEventDates(fields);
+        const dateInfo = this.resolveEventDates(orderedFields);
         if (!dateInfo.startDate) {
             console.warn('🔗 Scriptable URL: Missing or invalid startDate');
             return null;
         }
 
         const event = {
-            ...fields,
+            ...orderedFields,
             startDate: dateInfo.startDate,
             endDate: dateInfo.endDate,
-            source: fields.source || this.config.source
+            source: orderedFields.source || this.config.source
         };
 
         if (!event.endDate) {
@@ -148,7 +150,7 @@ class ScriptableUrlParser {
             }
 
             const canonicalKey = this.getCanonicalKey(normalizedKey);
-            const normalizedValue = decodeQueryValues
+            let normalizedValue = decodeQueryValues
                 ? this.normalizeQueryValue(value)
                 : this.normalizeValue(value);
 
@@ -156,6 +158,7 @@ class ScriptableUrlParser {
                 return;
             }
 
+            normalizedValue = this.normalizeUrlLikeValue(normalizedValue);
             fields[canonicalKey] = normalizedValue;
             inputFields.add(canonicalKey);
         });
@@ -300,6 +303,142 @@ class ScriptableUrlParser {
             return decoded.trim();
         }
         return value;
+    }
+
+    hasNonEmptyValue(value) {
+        if (value === null || value === undefined) {
+            return false;
+        }
+        if (Array.isArray(value)) {
+            return value.some(item => this.hasNonEmptyValue(item));
+        }
+        return String(value).trim().length > 0;
+    }
+
+    isUrlLikeValue(value) {
+        if (!value || typeof value !== 'string') return false;
+        const lower = value.trim().toLowerCase();
+        return lower.startsWith('http://') ||
+            lower.startsWith('https://') ||
+            lower.startsWith('mailto:') ||
+            lower.startsWith('tel:') ||
+            lower.startsWith('sms:');
+    }
+
+    normalizeUrlLikeValue(value) {
+        if (!this.isUrlLikeValue(value)) {
+            return value;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return trimmed;
+        }
+        const hashIndex = trimmed.indexOf('#');
+        const hash = hashIndex >= 0 ? trimmed.slice(hashIndex + 1) : '';
+        const withoutHash = hashIndex >= 0 ? trimmed.slice(0, hashIndex) : trimmed;
+        const queryIndex = withoutHash.indexOf('?');
+        const base = queryIndex >= 0 ? withoutHash.slice(0, queryIndex) : withoutHash;
+        const queryString = queryIndex >= 0 ? withoutHash.slice(queryIndex + 1) : '';
+        const encodedBase = encodeURI(base);
+
+        if (!queryString) {
+            return hash ? `${encodedBase}#${hash}` : encodedBase;
+        }
+
+        const decodeComponent = (component) => {
+            if (!component) return '';
+            try {
+                return decodeURIComponent(component.replace(/\+/g, ' '));
+            } catch (error) {
+                return component;
+            }
+        };
+
+        const normalizedParams = queryString.split('&').map(part => {
+            if (!part) return '';
+            const [rawKey, ...rest] = part.split('=');
+            const rawValue = rest.join('=');
+            const decodedKey = decodeComponent(rawKey);
+            const decodedValue = decodeComponent(rawValue);
+            const encodedKey = encodeURIComponent(decodedKey);
+            if (!rest.length) {
+                return encodedKey;
+            }
+            const encodedValue = encodeURIComponent(decodedValue);
+            return `${encodedKey}=${encodedValue}`;
+        }).join('&');
+
+        const normalized = `${encodedBase}?${normalizedParams}`;
+        return hash ? `${normalized}#${hash}` : normalized;
+    }
+
+    normalizeUrlFields(fields, inputFields) {
+        if (!fields || typeof fields !== 'object') {
+            return;
+        }
+        const urlProvided = inputFields && inputFields.has('url');
+        if (!urlProvided && this.hasNonEmptyValue(fields.website)) {
+            fields.url = fields.website;
+            if (inputFields) {
+                inputFields.add('url');
+                inputFields.delete('website');
+            }
+            delete fields.website;
+        }
+    }
+
+    orderFields(fields) {
+        if (!fields || typeof fields !== 'object') {
+            return fields;
+        }
+        const orderedKeys = [
+            'title',
+            'description',
+            'startDate',
+            'endDate',
+            'bar',
+            'location',
+            'address',
+            'city',
+            'timezone',
+            'url',
+            'ticketUrl',
+            'cover',
+            'image',
+            'source',
+            'isBearEvent',
+            'shortName',
+            'shorterName',
+            'instagram',
+            'facebook',
+            'website',
+            'twitter',
+            'gmaps',
+            'key',
+            'matchKey',
+            'identifier',
+            'recurrence',
+            'recurrenceId',
+            'recurrenceIdTimezone',
+            'sequence',
+            'lat',
+            'lng',
+            'coordinates'
+        ];
+        const ordered = {};
+        const seen = new Set();
+        orderedKeys.forEach(key => {
+            if (Object.prototype.hasOwnProperty.call(fields, key)) {
+                ordered[key] = fields[key];
+                seen.add(key);
+            }
+        });
+        Object.keys(fields).forEach(key => {
+            if (!seen.has(key)) {
+                ordered[key] = fields[key];
+            }
+        });
+        return ordered;
     }
 
     applyCoordinateFallbacks(fields, inputFields) {
