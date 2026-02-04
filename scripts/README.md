@@ -246,6 +246,23 @@ metadata: {
 4. Run `bear-event-scraper-unified.js` or `display-saved-run.js`
 5. Set `dryRun: false` when ready for live calendar updates
 
+### Scriptable URL Input (x-callback-url)
+You can pass a single event via URL parameters (Scriptable input parser).
+
+Examples (JSON must be URL-encoded):
+```
+scriptable:///run?scriptName=Bear%20Event%20Scraper&title=Bear%20Night&startDate=2026-02-05T20:00:00-05:00&endDate=2026-02-05T23:00:00-05:00&identifier=ABC123
+scriptable:///run?scriptName=Bear%20Event%20Scraper&event=%7B%22title%22%3A%22Bear%20Night%22%2C%22startDate%22%3A%222026-02-05T20%3A00%3A00-05%3A00%22%2C%22endDate%22%3A%222026-02-05T23%3A00%3A00-05%3A00%22%2C%22identifier%22%3A%22ABC123%22%7D
+```
+
+Supported fields (aliases accepted): title/name/summary, startDate/start/date, endDate/end,
+startTime/endTime (with date), description, bar/venue, location/address, city, timezone,
+url, ticketUrl, gmaps, image, cover, shortName, instagram, facebook, website,
+key/matchKey, identifier/id, recurrenceId, sequence, lat/lng.
+
+Optional control params: dryRun, daysToLookAhead, allowPastEvents, alwaysBear, keyTemplate.
+If URL input is present, `scraper-input.js` is optional, but `scraper-cities.js` is still required.
+
 **IMPORTANT**: All scriptable files are now in the ROOT directory for proper Scriptable compatibility. The `chunky-dad/` folder contains backup/development copies but Scriptable should use the root files.
 
 ### For Web Testing
