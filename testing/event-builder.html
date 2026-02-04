@@ -132,6 +132,17 @@
       white-space: nowrap;
     }
 
+    .tool-buttons .ghost-button {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    .tool-buttons .ghost-button:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.34);
+    }
+
     .layout {
       display: grid;
       grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
@@ -1136,14 +1147,16 @@
 
       .tool-buttons {
         width: 100%;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
       }
 
       .tool-buttons .action-button {
         justify-content: center;
-        width: 100%;
+        flex: 1 1 calc(33.333% - 0.5rem);
+        min-width: 0;
+        width: auto;
         min-height: 36px;
         padding: 0.45rem 0.5rem;
         font-size: 0.75rem;
@@ -1246,7 +1259,7 @@
               <i class="bi bi-pencil-square" aria-hidden="true"></i>
               <span>Edit Existing</span>
             </button>
-            <button type="button" class="secondary-button action-button" id="copy-link" aria-label="Tell dad">
+            <button type="button" class="primary-button action-button" id="copy-link" aria-label="Tell dad">
               <i class="bi bi-send" aria-hidden="true"></i>
               <span>Tell Dad</span>
             </button>
@@ -1254,7 +1267,7 @@
               <i class="bi bi-calendar-plus" aria-hidden="true"></i>
               <span>Add</span>
             </button>
-            <button type="button" class="secondary-button action-button is-hidden" id="open-scriptable" aria-label="Open Scriptable">
+            <button type="button" class="primary-button action-button is-hidden" id="open-scriptable" aria-label="Open Scriptable">
               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
               <span>Scriptable</span>
             </button>
@@ -1720,7 +1733,7 @@
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'info@chunky.dad';
-      const SCRIPTABLE_SCRIPT_NAME = 'Bear Event Scraper';
+      const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
 
       const dom = {};
       let state;
@@ -4961,7 +4974,7 @@
         if (state.editingExistingRecurrenceTimezone) {
           params.set('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
         }
-        return `scriptable:///run?${params.toString()}`;
+        return `scriptable://x-callback-url/run?${params.toString()}`;
       }
 
       function buildTellDadMessage() {
@@ -4975,10 +4988,15 @@
         const subject = subjectParts.join(' - ');
         const bodyLines = [
           'Hey Dad, here is the event link:',
+          '',
           shareUrl
         ];
         if (scriptableUrl) {
-          bodyLines.push('', 'Scriptable URL Input (x-callback-url):', scriptableUrl);
+          bodyLines.push(
+            '',
+            'Scriptable URL Input (x-callback-url)',
+            scriptableUrl
+          );
         }
         return {
           shareUrl,
