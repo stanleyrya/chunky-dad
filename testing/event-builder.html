@@ -4941,44 +4941,40 @@
         if (state.debug) {
           params.set('openEditor', 'true');
         }
-        const addParam = (key, value) => {
-          const trimmed = String(value || '').trim();
-          if (!trimmed) return;
+        const setParam = (key, value) => {
+          const normalized = value ?? '';
+          const trimmed = String(normalized).trim();
           params.set(key, trimmed);
         };
         const startValue = sanitizeDateTimeInput(state.start);
         const endValue = sanitizeDateTimeInput(state.end);
-        addParam('title', state.name);
-        addParam('shortName', state.shortName);
-        addParam('description', state.description);
-        addParam('cover', state.cover);
-        addParam('bar', state.venue);
-        addParam('address', state.address);
-        addParam('location', state.location);
-        addParam('city', state.city);
-        addParam('timezone', state.timezone || browserTimezone);
-        if (startValue) params.set('startDate', startValue);
-        if (endValue) params.set('endDate', endValue);
-        addParam('recurrence', state.recurrence);
-        addParam('website', state.website);
-        addParam('ticketUrl', state.ticketUrl);
-        addParam('instagram', state.instagram);
-        addParam('facebook', state.facebook);
-        addParam('gmaps', state.gmaps);
-        addParam('image', state.image);
+        setParam('title', state.name);
+        setParam('shortName', state.shortName);
+        setParam('description', state.description);
+        setParam('cover', state.cover);
+        setParam('bar', state.venue);
+        setParam('address', state.address);
+        setParam('location', state.location);
+        setParam('city', state.city);
+        setParam('timezone', state.timezone || browserTimezone);
+        setParam('startDate', startValue);
+        setParam('endDate', endValue);
+        setParam('recurrence', state.recurrence);
+        setParam('website', state.website);
+        setParam('ticketUrl', state.ticketUrl);
+        setParam('instagram', state.instagram);
+        setParam('facebook', state.facebook);
+        setParam('gmaps', state.gmaps);
+        setParam('image', state.image);
         const coordinates = parseCoordinates(state.location);
-        if (coordinates) {
-          params.set('lat', coordinates.lat);
-          params.set('lng', coordinates.lng);
-        }
+        setParam('lat', coordinates ? coordinates.lat : '');
+        setParam('lng', coordinates ? coordinates.lng : '');
         const identifier = state.editingExistingUid
           || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '');
-        if (identifier) params.set('identifier', identifier);
+        setParam('identifier', identifier);
         const recurrenceIdValue = sanitizeDateTimeInput(state.editingExistingRecurrenceId);
-        if (recurrenceIdValue) params.set('recurrenceId', recurrenceIdValue);
-        if (state.editingExistingRecurrenceTimezone) {
-          params.set('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
-        }
+        setParam('recurrenceId', recurrenceIdValue);
+        setParam('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
         const encodedScriptName = encodeURIComponent(scriptName);
         return `scriptable:///run/${encodedScriptName}?${params.toString()}`;
       }
