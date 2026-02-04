@@ -1250,6 +1250,10 @@
               <i class="bi bi-send" aria-hidden="true"></i>
               <span>Tell Dad</span>
             </button>
+            <button type="button" class="secondary-button action-button" id="open-scriptable" aria-label="Open in Scriptable">
+              <i class="bi bi-phone" aria-hidden="true"></i>
+              <span>Scriptable</span>
+            </button>
             <button type="button" class="primary-button action-button" id="add-to-calendar" aria-label="Add to calendar">
               <i class="bi bi-calendar-plus" aria-hidden="true"></i>
               <span>Add</span>
@@ -1716,6 +1720,8 @@
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'info@chunky.dad';
+      const SCRIPTABLE_RUN_PATH = 'scriptable:///run';
+      const SCRIPTABLE_SCRIPT_NAME = 'event-builder-import';
 
       const dom = {};
       let state;
@@ -1830,6 +1836,7 @@
         dom.resetButton = document.getElementById('reset-form');
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
         dom.copyShareButton = document.getElementById('copy-link');
+        dom.openScriptableButton = document.getElementById('open-scriptable');
         dom.editExistingButton = document.getElementById('edit-existing');
         dom.existingPanel = document.getElementById('existing-event-panel');
         dom.existingModalClose = document.getElementById('existing-modal-close');
@@ -3872,6 +3879,11 @@
             openTellDadEmail(dom.copyShareButton);
           });
         }
+        if (dom.openScriptableButton) {
+          dom.openScriptableButton.addEventListener('click', () => {
+            openScriptableLink(dom.openScriptableButton);
+          });
+        }
         if (dom.addToCalendarButton) {
           dom.addToCalendarButton.addEventListener('click', handleAddToCalendar);
         }
@@ -4811,7 +4823,7 @@
         });
       }
 
-      function buildShareUrl() {
+      function buildShareParams() {
         const params = new URLSearchParams();
         if (state.name) params.set('name', state.name);
         if (state.shortName) params.set('short', state.shortName);
@@ -4849,10 +4861,30 @@
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
         if (coordsValue) params.set('coords', coordsValue);
+        return params;
+      }
+
+      function serializeParams(params) {
         const sorted = new URLSearchParams();
         [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
-        const query = sorted.toString();
+        return sorted.toString();
+      }
+
+      function buildShareUrl() {
+        const query = serializeParams(buildShareParams());
         return query ? `${window.location.pathname}?${query}` : window.location.pathname;
+      }
+
+      function buildScriptableUrl() {
+        const params = buildShareParams();
+        params.set('scriptName', SCRIPTABLE_SCRIPT_NAME);
+        params.set('source', 'event-builder');
+        if (state.timezone) params.set('tz', state.timezone);
+        const query = serializeParams(params);
+        if (!query) {
+          return `${SCRIPTABLE_RUN_PATH}?scriptName=${encodeURIComponent(SCRIPTABLE_SCRIPT_NAME)}`;
+        }
+        return `${SCRIPTABLE_RUN_PATH}?${query}`;
       }
 
       function updateUrl() {
@@ -4885,6 +4917,7 @@
 
       function buildTellDadMessage() {
         const shareUrl = getShareUrl();
+        const scriptableUrl = buildScriptableUrl();
         const eventName = (state.name || '').trim();
         const cityLabel = getCityDisplayName(state.city);
         const subjectParts = ['Event Builder'];
@@ -4895,8 +4928,12 @@
           'Hey Dad, here is the event link:',
           shareUrl
         ];
+        if (scriptableUrl) {
+          bodyLines.push('', 'Open in Scriptable (iOS):', scriptableUrl);
+        }
         return {
           shareUrl,
+          scriptableUrl,
           subject,
           body: bodyLines.join('\n')
         };
@@ -4921,6 +4958,21 @@
         }
         copyToClipboard(fallbackText, button);
         showToast('Email details copied. Paste into your mail app.', 'warn');
+      }
+
+      function openScriptableLink(button) {
+        const event = buildEventPayload();
+        if (!event.startDate || !event.endDate) {
+          showToast('Add start & end times before sending to Scriptable.', 'warn');
+          return;
+        }
+        const scriptableUrl = buildScriptableUrl();
+        if (!scriptableUrl) return;
+        const fallbackText = `Scriptable link:\n${scriptableUrl}`;
+        window.location.href = scriptableUrl;
+        showTemporaryState(button, 'Opening...');
+        copyToClipboard(fallbackText);
+        showToast('If Scriptable does not open, the link is copied.', 'info');
       }
 
       function refreshUi() {
