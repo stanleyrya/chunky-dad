@@ -249,16 +249,20 @@ metadata: {
 ### Scriptable URL Input (x-callback-url)
 You can pass a single event via URL parameters (Scriptable input parser).
 
-Examples (JSON must be URL-encoded):
+Examples (query params only):
 ```
 scriptable:///run?scriptName=Bear%20Event%20Scraper&title=Bear%20Night&startDate=2026-02-05T20:00:00-05:00&endDate=2026-02-05T23:00:00-05:00&identifier=ABC123
-scriptable:///run?scriptName=Bear%20Event%20Scraper&event=%7B%22title%22%3A%22Bear%20Night%22%2C%22startDate%22%3A%222026-02-05T20%3A00%3A00-05%3A00%22%2C%22endDate%22%3A%222026-02-05T23%3A00%3A00-05%3A00%22%2C%22identifier%22%3A%22ABC123%22%7D
 ```
+
+Notes:
+- Query params are the only supported input format (JSON payloads are not parsed).
+- All provided params are treated as explicit and clobber existing fields.
+- Send the full set of params every time; empty values clear fields.
 
 Supported fields (aliases accepted): title/name/summary, startDate/start/date, endDate/end,
 startTime/endTime (with date), description, bar/venue, location/address, city, timezone,
 url, ticketUrl, gmaps, image, cover, shortName, instagram, facebook, website,
-key/matchKey, identifier/id, recurrenceId, sequence, lat/lng.
+key/matchKey, identifier/id, recurrence, recurrenceId, sequence, lat/lng.
 
 Optional control params: dryRun, daysToLookAhead, allowPastEvents, alwaysBear, keyTemplate.
 If URL input is present, `scraper-input.js` is optional, but `scraper-cities.js` is still required.

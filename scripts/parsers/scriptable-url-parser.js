@@ -68,43 +68,23 @@ class ScriptableUrlParser {
         if (htmlData && htmlData.input && typeof htmlData.input === 'object') {
             return htmlData.input;
         }
-        if (htmlData && typeof htmlData.html === 'string' && htmlData.html.trim()) {
-            const parsed = this.safeParseJson(htmlData.html);
-            if (parsed && typeof parsed === 'object') {
-                return parsed;
-            }
-        }
         return null;
     }
 
     buildEventFromPayload(payload, parserConfig, cityConfig) {
         const queryParameters = payload.queryParameters || payload.query || payload.params || null;
-
-        let eventData = payload.event || payload.data || payload.payload || null;
-        if (typeof eventData === 'string') {
-            eventData = this.safeParseJson(eventData);
-        }
-
-        if (!eventData && queryParameters && typeof queryParameters === 'object') {
-            const eventJson = this.getFirstQueryValue(queryParameters, [
-                'event', 'eventJson', 'event_json', 'payload', 'data'
-            ]);
-            if (eventJson) {
-                eventData = this.safeParseJson(eventJson);
-            }
-        }
-
-        const rawData = (eventData && typeof eventData === 'object')
-            ? eventData
-            : (queryParameters && typeof queryParameters === 'object')
-                ? queryParameters
-                : null;
+        const rawData = (queryParameters && typeof queryParameters === 'object')
+            ? queryParameters
+            : null;
 
         if (!rawData) {
             return null;
         }
 
-        const { fields, inputFields } = this.normalizeInputFields(rawData);
+        const isQueryPayload = true;
+        const { fields, inputFields } = this.normalizeInputFields(rawData, {
+            decodeQueryValues: isQueryPayload
+        });
 
         this.applyCoordinateFallbacks(fields, inputFields);
 
@@ -143,12 +123,14 @@ class ScriptableUrlParser {
         return event;
     }
 
-    normalizeInputFields(rawData) {
+    normalizeInputFields(rawData, options = {}) {
         const fields = {};
         const inputFields = new Set();
+        const decodeQueryValues = Boolean(options.decodeQueryValues);
         const reservedKeys = new Set([
             'scriptname', 'script', 'action', 'callback', 'callbackurl',
-            'xsuccess', 'xerror', 'xcancel', 'xsource'
+            'xsuccess', 'xerror', 'xcancel', 'xsource',
+            'openeditor', 'event', 'eventjson', 'payload', 'data'
         ]);
 
         Object.entries(rawData || {}).forEach(([key, value]) => {
@@ -166,7 +148,9 @@ class ScriptableUrlParser {
             }
 
             const canonicalKey = this.getCanonicalKey(normalizedKey);
-            const normalizedValue = this.normalizeValue(value);
+            const normalizedValue = decodeQueryValues
+                ? this.normalizeQueryValue(value)
+                : this.normalizeValue(value);
 
             if (normalizedValue === undefined) {
                 return;
@@ -291,31 +275,31 @@ class ScriptableUrlParser {
         return value;
     }
 
-    safeParseJson(value) {
-        if (!value || typeof value !== 'string') {
-            return null;
+    normalizeQueryValue(value) {
+        if (Array.isArray(value)) {
+            if (value.length === 0) {
+                return '';
+            }
+            return this.normalizeQueryValue(value[0]);
         }
-        try {
-            return JSON.parse(value);
-        } catch (error) {
-            console.warn(`🔗 Scriptable URL: Failed to parse JSON payload: ${error}`);
-            return null;
+        if (value instanceof Date) {
+            return value;
         }
-    }
-
-    getFirstQueryValue(queryParameters, keys) {
-        if (!queryParameters || typeof queryParameters !== 'object') {
-            return null;
+        if (value === null || value === undefined) {
+            return value;
         }
-        for (const key of keys) {
-            if (queryParameters[key] !== undefined && queryParameters[key] !== null) {
-                const value = this.normalizeValue(queryParameters[key]);
-                if (value !== undefined && value !== null && String(value).trim().length > 0) {
-                    return value;
+        if (typeof value === 'string') {
+            let decoded = value.replace(/\+/g, ' ');
+            if (/%[0-9A-Fa-f]{2}/.test(decoded)) {
+                try {
+                    decoded = decodeURIComponent(decoded);
+                } catch (error) {
+                    // Keep best-effort decode for malformed inputs.
                 }
             }
+            return decoded.trim();
         }
-        return null;
+        return value;
     }
 
     applyCoordinateFallbacks(fields, inputFields) {
