@@ -24,9 +24,78 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250718T220000
+DTEND;TZID=America/New_York:20250719T040000
+RRULE:FREQ=MONTHLY;BYDAY=3FR
+DTSTAMP:20260204T061628Z
+UID:dqepj75ddmjn7gqihe482s8kqs@google.com
+CREATED:20250719T040756Z
+DESCRIPTION:Bar: Nowhere\nInstagram: https://www.instagram.com/fatfvc\nGoog
+ le Maps: https://maps.app.goo.gl/T6iQ6bX883v3W9yJ9
+LAST-MODIFIED:20250719T040756Z
+LOCATION:40.7317472\, -73.9841307
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Fat Fuc
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250706T170000
+DTEND;TZID=America/New_York:20250707T040000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260204T061628Z
+UID:96d0b400rgfpagk14sc2bd1aks@google.com
+CREATED:20250712T180243Z
+DESCRIPTION:Name: Beer Blast\nBar: Eagle NYC \nCover: No cover till 9PM\, $
+ 20 cover at 9PM\nWebsite: https://eagle-ny.com\nGoogle Maps: https://maps.a
+ pp.goo.gl/8N8zpGGAYwXJjgsGA\nNickname: Eagle\nShorter: EGL
+LAST-MODIFIED:20250723T045749Z
+LOCATION:40.75168692425323\, -74.00431317114098
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Beer Blast
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250710T190000
+DTEND;TZID=America/New_York:20250710T220000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260204T061628Z
+UID:v12lqkpglh2iupk54ttds6pcmg@google.com
+CREATED:20250712T180243Z
+DESCRIPTION:Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww
+ w.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/Xvrwk
+ XqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for t
+ hose that want to go out in Brooklyn. Patio space and goes a bit later.
+LAST-MODIFIED:20260121T231021Z
+LOCATION:40.71739735291992\, -73.94930680925715
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Bears Are Animals
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250705T220000
+DTEND;TZID=America/New_York:20250706T040000
+RRULE:FREQ=MONTHLY;BYDAY=1SA
+DTSTAMP:20260204T061628Z
+UID:suljenhlak65mplsbrft5rgcd0@google.com
+CREATED:20250720T011008Z
+DESCRIPTION:Tea: Go-Go Bears\, Cubs and LOTS of other fun things to grab on
+ to!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https:/
+ /www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBU
+ pQjekPZUW4u7\nBar: Rockbar\nShorter: BNO
+LAST-MODIFIED:20250723T045844Z
+LOCATION:40.7326824\, -74.0097099
+SEQUENCE:2
+STATUS:CONFIRMED
+SUMMARY:Bears Night Out
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20260124T210000
 DTEND;TZID=America/New_York:20260125T160000
-DTSTAMP:20260204T043253Z
+DTSTAMP:20260204T061628Z
 UID:1ics4s7g0ec4n4ft64v0r6lauk@google.com
 RECURRENCE-ID;TZID=America/New_York:20260131T210000
 CREATED:20251010T210009Z
@@ -50,27 +119,70 @@ TRIGGER;VALUE=DATE-TIME:19760401T005545Z
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250710T190000
-DTEND;TZID=America/New_York:20250710T220000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260204T043253Z
-UID:v12lqkpglh2iupk54ttds6pcmg@google.com
-CREATED:20250712T180243Z
-DESCRIPTION:Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww
- w.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/Xvrwk
- XqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for t
- hose that want to go out in Brooklyn. Patio space and goes a bit later.
-LAST-MODIFIED:20260121T231021Z
-LOCATION:40.71739735291992\, -73.94930680925715
-SEQUENCE:1
+DTSTART;TZID=America/New_York:20251025T210000
+DTEND;TZID=America/New_York:20251026T040000
+DTSTAMP:20260204T061628Z
+UID:1ics4s7g0ec4n4ft64v0r6lauk@google.com
+RECURRENCE-ID;TZID=America/New_York:20251025T210000
+CREATED:20251010T210009Z
+DESCRIPTION:shortName: GOLDI-LOXX\ntea: The party has two floors with two d
+ ifferent vibes. Upstairs is flirty/dance/mingle. Downstairs is… \;)\;)\;) S
+ exy Beefy Gogos all night\ncover: Varies\, ~$25 tickets\nbar: Red Eye NY & 
+ The Cockpit\naddress: 355 W 41st St #2FL\, New York\, NY 10036\ntimezone: A
+ merica/New_York\ninstagram: https://www.instagram.com/goldiloxx__\ngmaps: h
+ ttps://maps.app.goo.gl/EWAtZea7ZZukum1K9
+LAST-MODIFIED:20260203T212404Z
+LOCATION:40.75775322645565\, -73.99257438113817
+SEQUENCE:1770153836
 STATUS:CONFIRMED
-SUMMARY:Bears Are Animals
+SUMMARY:GOLDILOXX
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+BEGIN:VALARM
+ACTION:NONE
+TRIGGER;VALUE=DATE-TIME:19760401T005545Z
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250704T220000
+DTEND;TZID=America/New_York:20250705T040000
+RRULE:FREQ=MONTHLY;BYDAY=1FR
+DTSTAMP:20260204T061628Z
+UID:bdstnukmpv6keg7pon3fram2qg@google.com
+CREATED:20250719T041643Z
+DESCRIPTION:Tea: Jockstraps encouraged\, clothes check available!\nCover: $
+ 10 entry\, $1 clothes check\nInstagram: https://www.instagram.com/rockbarny
+ \nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nNickname: Rock-st
+ rap\nBar: Rockbar\nShorter: RBR
+LAST-MODIFIED:20250723T045823Z
+LOCATION:40.7326824\, -74.0097099
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Rockstrap
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250710T170000
+DTEND;TZID=America/New_York:20250710T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260204T061628Z
+UID:6thhos5ct3pllq5kmvsp7infd8@google.com
+CREATED:20250712T180243Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week in Manhattan.\nInstagram: https:/
+ /www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/b
+ earhappyhour
+LAST-MODIFIED:20251012T161111Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260215T033000Z
 DTEND:20260215T090000Z
-DTSTAMP:20260204T043253Z
+DTSTAMP:20260204T061628Z
 UID:AFFFF047-A265-4DE5-9016-E7B47423232B
 CREATED:20260117T205136Z
 DESCRIPTION:description: CHUNK returns to NY - Saturday February 14th // fe
@@ -95,80 +207,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250704T220000
-DTEND;TZID=America/New_York:20250705T040000
-RRULE:FREQ=MONTHLY;BYDAY=1FR
-DTSTAMP:20260204T043253Z
-UID:bdstnukmpv6keg7pon3fram2qg@google.com
-CREATED:20250719T041643Z
-DESCRIPTION:Tea: Jockstraps encouraged\, clothes check available!\nCover: $
- 10 entry\, $1 clothes check\nInstagram: https://www.instagram.com/rockbarny
- \nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nNickname: Rock-st
- rap\nBar: Rockbar\nShorter: RBR
-LAST-MODIFIED:20250723T045823Z
-LOCATION:40.7326824\, -74.0097099
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Rockstrap
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250718T220000
-DTEND;TZID=America/New_York:20250719T040000
-RRULE:FREQ=MONTHLY;BYDAY=3FR
-DTSTAMP:20260204T043253Z
-UID:dqepj75ddmjn7gqihe482s8kqs@google.com
-CREATED:20250719T040756Z
-DESCRIPTION:Bar: Nowhere\nInstagram: https://www.instagram.com/fatfvc\nGoog
- le Maps: https://maps.app.goo.gl/T6iQ6bX883v3W9yJ9
-LAST-MODIFIED:20250719T040756Z
-LOCATION:40.7317472\, -73.9841307
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Fat Fuc
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250726T210000
-DTEND;TZID=America/New_York:20250727T040000
-RRULE:FREQ=MONTHLY;BYDAY=-1SA
-DTSTAMP:20260204T043253Z
-UID:1ics4s7g0ec4n4ft64v0r6lauk@google.com
-CREATED:20251010T210009Z
-DESCRIPTION:shortName: GOLDI-LOXX\ntea: The party has two floors with two d
- ifferent vibes. Upstairs is flirty/dance/mingle. Downstairs is… \;)\;)\;) S
- exy Beefy Gogos all night\ncover: Varies\, ~$25 tickets\nbar: Red Eye NY & 
- The Cockpit\naddress: 355 W 41st St #2FL\, New York\, NY 10036\ntimezone: A
- merica/New_York\ninstagram: https://www.instagram.com/goldiloxx__\ngmaps: h
- ttps://maps.app.goo.gl/EWAtZea7ZZukum1K9
-LAST-MODIFIED:20260203T212404Z
-LOCATION:40.75775322645565\, -73.99257438113817
-SEQUENCE:1770153836
-STATUS:CONFIRMED
-SUMMARY:GOLDILOXX
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250710T170000
-DTEND;TZID=America/New_York:20250710T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260204T043253Z
-UID:6thhos5ct3pllq5kmvsp7infd8@google.com
-CREATED:20250712T180243Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week in Manhattan.\nInstagram: https:/
- /www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/b
- earhappyhour
-LAST-MODIFIED:20251012T161111Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20260214T210000
 DTEND;TZID=America/New_York:20260215T040000
-DTSTAMP:20260204T043253Z
+DTSTAMP:20260204T061628Z
 UID:1ics4s7g0ec4n4ft64v0r6lauk@google.com
 RECURRENCE-ID;TZID=America/New_York:20260228T210000
 CREATED:20251010T210009Z
@@ -186,12 +227,12 @@ DESCRIPTION:description: GOLDILOXX VDAY LEATHER NITE (Leather is encouraged
  y_2026_scrf_a21a.jpeg?v=6526d6fdee9231da8347b7da85c9b452ee500e8f4591e14d3e2
  d939b02be811c\nticketUrl: https://redeyetickets.com/events/goldiloxx-leathe
  r-nite\nurl: https://redeyetickets.com/events/goldiloxx-leather-nite\ncover
- : $25 - $35 (as of 2/3)\nshortName: GOLDI-LOXX\nshorterName: GLX\ninstagram
+ : $25 - $35 (as of 2/4)\nshortName: GOLDI-LOXX\nshorterName: GLX\ninstagram
  : https://www.instagram.com/goldiloxx__\nmatchKey: goldiloxx*|2026-02-*|*\n
  gmaps: https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20
  355%20West%2041st%20Street%2C%20New%20York%20NY%2010036\nkey: goldiloxx-lea
  ther-nite|2026-02-15|red eye ny
-LAST-MODIFIED:20260203T212450Z
+LAST-MODIFIED:20260204T051121Z
 LOCATION:40.75775322645565\, -73.99257438113817
 SEQUENCE:1770153836
 STATUS:CONFIRMED
@@ -205,46 +246,11 @@ TRIGGER;VALUE=DATE-TIME:19760401T005545Z
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250705T220000
-DTEND;TZID=America/New_York:20250706T040000
-RRULE:FREQ=MONTHLY;BYDAY=1SA
-DTSTAMP:20260204T043253Z
-UID:suljenhlak65mplsbrft5rgcd0@google.com
-CREATED:20250720T011008Z
-DESCRIPTION:Tea: Go-Go Bears\, Cubs and LOTS of other fun things to grab on
- to!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https:/
- /www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBU
- pQjekPZUW4u7\nBar: Rockbar\nShorter: BNO
-LAST-MODIFIED:20250723T045844Z
-LOCATION:40.7326824\, -74.0097099
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:Bears Night Out
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250706T170000
-DTEND;TZID=America/New_York:20250707T040000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260204T043253Z
-UID:96d0b400rgfpagk14sc2bd1aks@google.com
-CREATED:20250712T180243Z
-DESCRIPTION:Name: Beer Blast\nBar: Eagle NYC \nCover: No cover till 9PM\, $
- 20 cover at 9PM\nWebsite: https://eagle-ny.com\nGoogle Maps: https://maps.a
- pp.goo.gl/8N8zpGGAYwXJjgsGA\nNickname: Eagle\nShorter: EGL
-LAST-MODIFIED:20250723T045749Z
-LOCATION:40.75168692425323\, -74.00431317114098
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Beer Blast
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20251025T210000
-DTEND;TZID=America/New_York:20251026T040000
-DTSTAMP:20260204T043253Z
+DTSTART;TZID=America/New_York:20250726T210000
+DTEND;TZID=America/New_York:20250727T040000
+RRULE:FREQ=MONTHLY;BYDAY=-1SA
+DTSTAMP:20260204T061628Z
 UID:1ics4s7g0ec4n4ft64v0r6lauk@google.com
-RECURRENCE-ID;TZID=America/New_York:20251025T210000
 CREATED:20251010T210009Z
 DESCRIPTION:shortName: GOLDI-LOXX\ntea: The party has two floors with two d
  ifferent vibes. Upstairs is flirty/dance/mingle. Downstairs is… \;)\;)\;) S
@@ -258,17 +264,11 @@ SEQUENCE:1770153836
 STATUS:CONFIRMED
 SUMMARY:GOLDILOXX
 TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-BEGIN:VALARM
-ACTION:NONE
-TRIGGER;VALUE=DATE-TIME:19760401T005545Z
-END:VALARM
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20251115T210000
 DTEND;TZID=America/New_York:20251116T040000
-DTSTAMP:20260204T043253Z
+DTSTAMP:20260204T061628Z
 UID:1ics4s7g0ec4n4ft64v0r6lauk@google.com
 RECURRENCE-ID;TZID=America/New_York:20251129T210000
 CREATED:20251010T210009Z
