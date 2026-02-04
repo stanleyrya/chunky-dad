@@ -80,6 +80,7 @@ class BearEventScraperOrchestrator {
             const linktreeParserModule = importModule('parsers/linktree-parser');
             const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
             const ticketleapParserModule = importModule('parsers/ticketleap-parser');
+            const scriptableUrlParserModule = importModule('parsers/scriptable-url-parser');
             
             // Store modules
             this.modules = {
@@ -93,7 +94,8 @@ class BearEventScraperOrchestrator {
                     furball: furballParserModule.FurballParser,
                     linktree: linktreeParserModule.LinktreeParser,
                     redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
-                    ticketleap: ticketleapParserModule.TicketleapParser
+                    ticketleap: ticketleapParserModule.TicketleapParser,
+                    'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser
                 }
             };
         } catch (error) {
@@ -119,6 +121,7 @@ class BearEventScraperOrchestrator {
             const linktreeParserModule = require('./parsers/linktree-parser');
             const redeyeticketsParserModule = require('./parsers/redeyetickets-parser');
             const ticketleapParserModule = require('./parsers/ticketleap-parser');
+            const scriptableUrlParserModule = require('./parsers/scriptable-url-parser');
             
             // Store modules
             this.modules = {
@@ -132,7 +135,8 @@ class BearEventScraperOrchestrator {
                     furball: furballParserModule.FurballParser,
                     linktree: linktreeParserModule.LinktreeParser,
                     redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
-                    ticketleap: ticketleapParserModule.TicketleapParser
+                    ticketleap: ticketleapParserModule.TicketleapParser,
+                    'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser
                 }
             };
         } catch (error) {
@@ -158,19 +162,25 @@ class BearEventScraperOrchestrator {
             }
             
             // Store modules
+            const parsers = {
+                eventbrite: window.EventbriteParser,
+                bearracuda: window.BearraccudaParser,
+                generic: window.GenericParser,
+                chunk: window.ChunkParser,
+                furball: window.FurballParser,
+                linktree: window.LinktreeParser,
+                redeyetickets: window.RedEyeTicketsParser,
+                ticketleap: window.TicketleapParser
+            };
+
+            if (window.ScriptableUrlParser) {
+                parsers['scriptable-input'] = window.ScriptableUrlParser;
+            }
+
             this.modules = {
                 SharedCore: window.SharedCore,
                 adapter: window.WebAdapter,
-                parsers: {
-                    eventbrite: window.EventbriteParser,
-                    bearracuda: window.BearraccudaParser,
-                    generic: window.GenericParser,
-                    chunk: window.ChunkParser,
-                    furball: window.FurballParser,
-                    linktree: window.LinktreeParser,
-                    redeyetickets: window.RedEyeTicketsParser,
-                    ticketleap: window.TicketleapParser
-                }
+                parsers
             };
         } catch (error) {
             console.error(`🌐 ✗ Failed to load web modules: ${error}`);

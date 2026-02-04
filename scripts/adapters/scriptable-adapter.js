@@ -395,7 +395,8 @@ class ScriptableAdapter {
             runsInActionExtension: false,
             runsWithSiri: false,
             widgetFamily: null,
-            widgetParameter: null
+            widgetParameter: null,
+            queryParameters: {}
         };
         
         try {
@@ -408,6 +409,7 @@ class ScriptableAdapter {
             }
             if (typeof args !== 'undefined') {
                 runtime.widgetParameter = args.widgetParameter || null;
+                runtime.queryParameters = args.queryParameters || {};
             }
         } catch (error) {
             console.log(`📱 Scriptable: Run context detection failed: ${error.message}`);
@@ -677,16 +679,149 @@ class ScriptableAdapter {
         }
     }
 
+    hasNonEmptyValue(value) {
+        if (value === null || value === undefined) return false;
+        if (Array.isArray(value)) {
+            return value.some(item => this.hasNonEmptyValue(item));
+        }
+        return String(value).trim().length > 0;
+    }
+
+    parseBoolean(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const normalized = String(value).toLowerCase().trim();
+        if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
+        if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+        return null;
+    }
+
+    getQueryValue(queryParameters, keys) {
+        if (!queryParameters || typeof queryParameters !== 'object') {
+            return null;
+        }
+        for (const key of keys) {
+            if (queryParameters[key] !== undefined && queryParameters[key] !== null) {
+                const value = queryParameters[key];
+                if (this.hasNonEmptyValue(value)) {
+                    return Array.isArray(value) ? value[0] : value;
+                }
+            }
+        }
+        return null;
+    }
+
+    getUrlInputPayload() {
+        const queryParameters = this.runtimeContext?.queryParameters || {};
+        if (!queryParameters || Object.keys(queryParameters).length === 0) {
+            return null;
+        }
+
+        const hasEventJson = this.hasNonEmptyValue(
+            this.getQueryValue(queryParameters, ['event', 'eventJson', 'event_json', 'payload', 'data'])
+        );
+        const hasTitle = this.hasNonEmptyValue(
+            this.getQueryValue(queryParameters, ['title', 'name', 'summary'])
+        );
+        const hasStartDate = this.hasNonEmptyValue(
+            this.getQueryValue(queryParameters, ['startDate', 'start_date', 'start', 'date'])
+        );
+
+        if (!hasEventJson && !(hasTitle || hasStartDate)) {
+            return null;
+        }
+
+        return {
+            queryParameters,
+            receivedAt: new Date().toISOString(),
+            source: 'url-scheme'
+        };
+    }
+
+    parseUrlInputOptions(queryParameters) {
+        const options = {};
+
+        const allowPastEventsValue = this.getQueryValue(queryParameters, [
+            'allowPastEvents', 'allow_past_events', 'allowPast'
+        ]);
+        const allowPastEvents = this.parseBoolean(allowPastEventsValue);
+        if (allowPastEvents !== null) {
+            options.allowPastEvents = allowPastEvents;
+        }
+
+        const alwaysBearValue = this.getQueryValue(queryParameters, [
+            'alwaysBear', 'always_bear'
+        ]);
+        const alwaysBear = this.parseBoolean(alwaysBearValue);
+        if (alwaysBear !== null) {
+            options.alwaysBear = alwaysBear;
+        }
+
+        const dryRunValue = this.getQueryValue(queryParameters, ['dryRun', 'dry_run']);
+        const dryRun = this.parseBoolean(dryRunValue);
+        if (dryRun !== null) {
+            options.dryRun = dryRun;
+        }
+
+        const daysToLookAheadValue = this.getQueryValue(queryParameters, [
+            'daysToLookAhead', 'days_to_look_ahead', 'days'
+        ]);
+        if (daysToLookAheadValue !== null && daysToLookAheadValue !== undefined) {
+            const parsedDays = Number(daysToLookAheadValue);
+            if (Number.isFinite(parsedDays)) {
+                options.daysToLookAhead = parsedDays;
+            }
+        }
+
+        const keyTemplate = this.getQueryValue(queryParameters, [
+            'keyTemplate', 'key_template', 'keyFormat', 'key_format'
+        ]);
+        if (this.hasNonEmptyValue(keyTemplate)) {
+            options.keyTemplate = String(keyTemplate).trim();
+        }
+
+        return options;
+    }
+
+    buildUrlInputParserConfig(urlInput) {
+        const queryParameters = urlInput?.queryParameters || {};
+        const options = this.parseUrlInputOptions(queryParameters);
+        const alwaysBear = typeof options.alwaysBear === 'boolean' ? options.alwaysBear : true;
+
+        const parserConfig = {
+            name: 'Scriptable URL Input',
+            enabled: true,
+            urls: ['scriptable-input://event'],
+            alwaysBear: alwaysBear,
+            allowPastEvents: options.allowPastEvents === true,
+            urlDiscoveryDepth: 0,
+            maxAdditionalUrls: 0,
+            input: urlInput
+        };
+
+        if (options.keyTemplate) {
+            parserConfig.keyTemplate = options.keyTemplate;
+        }
+
+        return {
+            parserConfig,
+            configOverrides: options
+        };
+    }
+
     // Configuration Loading
     async loadConfiguration() {
         try {
             const fm = FileManager.iCloud();
             const scriptableDir = fm.documentsDirectory();
+            const urlInput = this.getUrlInputPayload();
             
-            const loadConfigFile = (fileName, moduleName, missingMessage, emptyMessage) => {
+            const loadConfigFile = (fileName, moduleName, missingMessage, emptyMessage, options = {}) => {
                 const configPath = fm.joinPath(scriptableDir, fileName);
                 
                 if (!fm.fileExists(configPath)) {
+                    if (options.optional) {
+                        return null;
+                    }
                     console.error(`📱 Scriptable: ✗ Configuration file not found at: ${configPath}`);
                     // List files in directory for debugging
                     try {
@@ -709,12 +844,24 @@ class ScriptableAdapter {
                 return configModule || eval(configText);
             };
             
-            const config = loadConfigFile(
+            let config = loadConfigFile(
                 'scraper-input.js',
                 'scraper-input',
                 'Configuration file not found at iCloud Drive/Scriptable/scraper-input.js',
-                'Configuration file is empty'
+                'Configuration file is empty',
+                { optional: Boolean(urlInput) }
             );
+
+            if (!config && urlInput) {
+                console.log('📱 Scriptable: Using URL input without scraper-input.js');
+                config = {
+                    config: {
+                        dryRun: true,
+                        daysToLookAhead: null
+                    },
+                    parsers: []
+                };
+            }
             
             const cities = loadConfigFile(
                 'scraper-cities.js',
@@ -724,6 +871,23 @@ class ScriptableAdapter {
             );
             
             config.cities = cities;
+
+            if (urlInput) {
+                const { parserConfig, configOverrides } = this.buildUrlInputParserConfig(urlInput);
+                config.parsers = [parserConfig];
+
+                if (!config.config || typeof config.config !== 'object') {
+                    config.config = { dryRun: true, daysToLookAhead: null };
+                }
+                if (typeof configOverrides.dryRun === 'boolean') {
+                    config.config.dryRun = configOverrides.dryRun;
+                }
+                if (Number.isFinite(configOverrides.daysToLookAhead)) {
+                    config.config.daysToLookAhead = configOverrides.daysToLookAhead;
+                }
+
+                console.log('📱 Scriptable: URL input detected - using scriptable input parser');
+            }
             
             // Validate configuration structure
             if (!config.parsers || !Array.isArray(config.parsers)) {
