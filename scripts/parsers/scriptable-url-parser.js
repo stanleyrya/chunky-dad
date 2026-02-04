@@ -104,7 +104,10 @@ class ScriptableUrlParser {
             return null;
         }
 
-        const { fields, inputFields } = this.normalizeInputFields(rawData);
+        const isQueryPayload = !eventData && queryParameters && typeof queryParameters === 'object';
+        const { fields, inputFields } = this.normalizeInputFields(rawData, {
+            decodeQueryValues: isQueryPayload
+        });
 
         this.applyCoordinateFallbacks(fields, inputFields);
 
@@ -143,9 +146,10 @@ class ScriptableUrlParser {
         return event;
     }
 
-    normalizeInputFields(rawData) {
+    normalizeInputFields(rawData, options = {}) {
         const fields = {};
         const inputFields = new Set();
+        const decodeQueryValues = Boolean(options.decodeQueryValues);
         const reservedKeys = new Set([
             'scriptname', 'script', 'action', 'callback', 'callbackurl',
             'xsuccess', 'xerror', 'xcancel', 'xsource'
@@ -166,7 +170,9 @@ class ScriptableUrlParser {
             }
 
             const canonicalKey = this.getCanonicalKey(normalizedKey);
-            const normalizedValue = this.normalizeValue(value);
+            const normalizedValue = decodeQueryValues
+                ? this.normalizeQueryValue(value)
+                : this.normalizeValue(value);
 
             if (normalizedValue === undefined) {
                 return;
@@ -291,6 +297,33 @@ class ScriptableUrlParser {
         return value;
     }
 
+    normalizeQueryValue(value) {
+        if (Array.isArray(value)) {
+            if (value.length === 0) {
+                return '';
+            }
+            return this.normalizeQueryValue(value[0]);
+        }
+        if (value instanceof Date) {
+            return value;
+        }
+        if (value === null || value === undefined) {
+            return value;
+        }
+        if (typeof value === 'string') {
+            let decoded = value.replace(/\+/g, ' ');
+            if (/%[0-9A-Fa-f]{2}/.test(decoded)) {
+                try {
+                    decoded = decodeURIComponent(decoded);
+                } catch (error) {
+                    // Keep best-effort decode for malformed inputs.
+                }
+            }
+            return decoded.trim();
+        }
+        return value;
+    }
+
     safeParseJson(value) {
         if (!value || typeof value !== 'string') {
             return null;
@@ -309,7 +342,7 @@ class ScriptableUrlParser {
         }
         for (const key of keys) {
             if (queryParameters[key] !== undefined && queryParameters[key] !== null) {
-                const value = this.normalizeValue(queryParameters[key]);
+                const value = this.normalizeQueryValue(queryParameters[key]);
                 if (value !== undefined && value !== null && String(value).trim().length > 0) {
                     return value;
                 }
