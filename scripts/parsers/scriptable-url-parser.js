@@ -68,43 +68,20 @@ class ScriptableUrlParser {
         if (htmlData && htmlData.input && typeof htmlData.input === 'object') {
             return htmlData.input;
         }
-        if (htmlData && typeof htmlData.html === 'string' && htmlData.html.trim()) {
-            const parsed = this.safeParseJson(htmlData.html);
-            if (parsed && typeof parsed === 'object') {
-                return parsed;
-            }
-        }
         return null;
     }
 
     buildEventFromPayload(payload, parserConfig, cityConfig) {
         const queryParameters = payload.queryParameters || payload.query || payload.params || null;
-
-        let eventData = payload.event || payload.data || payload.payload || null;
-        if (typeof eventData === 'string') {
-            eventData = this.safeParseJson(eventData);
-        }
-
-        if (!eventData && queryParameters && typeof queryParameters === 'object') {
-            const eventJson = this.getFirstQueryValue(queryParameters, [
-                'event', 'eventJson', 'event_json', 'payload', 'data'
-            ]);
-            if (eventJson) {
-                eventData = this.safeParseJson(eventJson);
-            }
-        }
-
-        const rawData = (eventData && typeof eventData === 'object')
-            ? eventData
-            : (queryParameters && typeof queryParameters === 'object')
-                ? queryParameters
-                : null;
+        const rawData = (queryParameters && typeof queryParameters === 'object')
+            ? queryParameters
+            : null;
 
         if (!rawData) {
             return null;
         }
 
-        const isQueryPayload = !eventData && queryParameters && typeof queryParameters === 'object';
+        const isQueryPayload = true;
         const { fields, inputFields } = this.normalizeInputFields(rawData, {
             decodeQueryValues: isQueryPayload
         });
@@ -152,7 +129,8 @@ class ScriptableUrlParser {
         const decodeQueryValues = Boolean(options.decodeQueryValues);
         const reservedKeys = new Set([
             'scriptname', 'script', 'action', 'callback', 'callbackurl',
-            'xsuccess', 'xerror', 'xcancel', 'xsource'
+            'xsuccess', 'xerror', 'xcancel', 'xsource',
+            'openeditor', 'event', 'eventjson', 'payload', 'data'
         ]);
 
         Object.entries(rawData || {}).forEach(([key, value]) => {
@@ -322,33 +300,6 @@ class ScriptableUrlParser {
             return decoded.trim();
         }
         return value;
-    }
-
-    safeParseJson(value) {
-        if (!value || typeof value !== 'string') {
-            return null;
-        }
-        try {
-            return JSON.parse(value);
-        } catch (error) {
-            console.warn(`🔗 Scriptable URL: Failed to parse JSON payload: ${error}`);
-            return null;
-        }
-    }
-
-    getFirstQueryValue(queryParameters, keys) {
-        if (!queryParameters || typeof queryParameters !== 'object') {
-            return null;
-        }
-        for (const key of keys) {
-            if (queryParameters[key] !== undefined && queryParameters[key] !== null) {
-                const value = this.normalizeQueryValue(queryParameters[key]);
-                if (value !== undefined && value !== null && String(value).trim().length > 0) {
-                    return value;
-                }
-            }
-        }
-        return null;
     }
 
     applyCoordinateFallbacks(fields, inputFields) {

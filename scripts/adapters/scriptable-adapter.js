@@ -716,17 +716,20 @@ class ScriptableAdapter {
             return null;
         }
 
-        const hasEventJson = this.hasNonEmptyValue(
-            this.getQueryValue(queryParameters, ['event', 'eventJson', 'event_json', 'payload', 'data'])
-        );
-        const hasTitle = this.hasNonEmptyValue(
-            this.getQueryValue(queryParameters, ['title', 'name', 'summary'])
-        );
-        const hasStartDate = this.hasNonEmptyValue(
-            this.getQueryValue(queryParameters, ['startDate', 'start_date', 'start', 'date'])
-        );
+        const reservedKeys = new Set([
+            'scriptname', 'script', 'action', 'callback', 'callbackurl',
+            'xsuccess', 'xerror', 'xcancel', 'xsource',
+            'openeditor', 'event', 'eventjson', 'payload', 'data'
+        ]);
+        const hasEventFields = Object.entries(queryParameters).some(([key, value]) => {
+            const normalizedKey = String(key).toLowerCase().replace(/[\s\-_]/g, '');
+            if (reservedKeys.has(normalizedKey)) {
+                return false;
+            }
+            return this.hasNonEmptyValue(value);
+        });
 
-        if (!hasEventJson && !(hasTitle || hasStartDate)) {
+        if (!hasEventFields) {
             return null;
         }
 
