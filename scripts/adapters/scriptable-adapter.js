@@ -4108,6 +4108,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // Scriptable-specific properties that shouldn't be in notes
             'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
             'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
+            // Recurrence metadata used for matching, not for notes storage
+            'recurrenceId', 'recurrenceIdTimezone', 'sequence',
+            // Coordinate helpers that duplicate location data
+            'lat', 'lng',
             // Location-specific fields that shouldn't be in notes (used internally)
             'placeId'
         ]);
