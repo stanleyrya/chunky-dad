@@ -949,12 +949,6 @@ class ScriptableAdapter {
 
             const identifierRaw = event && (event.identifier || event.id) ? String(event.identifier || event.id).trim() : '';
             const hasIdentifier = Boolean(identifierRaw);
-            const debugLog = hasIdentifier
-                ? (message) => console.log(message)
-                : () => {};
-            const debugLogRid = (hasIdentifier && identifierRaw.includes('/RID='))
-                ? (message) => console.log(message)
-                : () => {};
             
             // Parse dates from formatted event
             const startDate = coerceDate(event.startDate);
@@ -985,11 +979,11 @@ class ScriptableAdapter {
                 searchEnd.setDate(searchEnd.getDate() + searchRangeDays);
             }
 
-            debugLog(`📱 Scriptable: Identifier match enabled (uid="${identifierRaw}")`);
-            debugLog(`📱 Scriptable: Existing event search window: ${searchStart.toISOString()} → ${searchEnd.toISOString()}`);
-            debugLogRid(identifierRidDate
-                ? `📱 Scriptable: Identifier RID date detected: ${identifierRidDate.toISOString()}`
-                : `📱 Scriptable: Identifier RID date detected: (unparsed)`);
+            const identifierLabel = identifierRaw || '(none)';
+            const ridLabel = identifierRidDate ? identifierRidDate.toISOString() : '(none)';
+            console.log(`📱 Scriptable: Existing event search (hasIdentifier=${hasIdentifier}) identifier="${identifierLabel}"`);
+            console.log(`📱 Scriptable: Existing event search window: ${searchStart.toISOString()} → ${searchEnd.toISOString()}`);
+            console.log(`📱 Scriptable: Identifier RID date detected: ${ridLabel}`);
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
             return existingEvents;
