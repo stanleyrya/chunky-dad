@@ -356,6 +356,7 @@ class CalendarCore {
                 // Store UID and recurrence ID for event merging
                 uid: calendarEvent.uid || null,
                 recurrenceId: calendarEvent.recurrenceId || null,
+                recurrenceIdTimezone: calendarEvent.recurrenceIdTimezone || null,
                 sequence: calendarEvent.sequence ?? null
             };
             

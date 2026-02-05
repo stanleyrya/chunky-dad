@@ -2341,6 +2341,7 @@
         const address = extractDescriptionValue(description, ['address', 'addr']);
         const timezoneFromDescription = extractDescriptionValue(description, ['timezone', 'tz']);
         const timeZone = event.startTimezone || timezoneFromDescription || event.calendarTimezone || browserTimezone;
+        const recurrenceIdTimezone = event.recurrenceIdTimezone || timeZone;
         const startDate = event.startDate instanceof Date ? new Date(event.startDate) : (event.startDate ? new Date(event.startDate) : null);
         const endDate = event.endDate instanceof Date ? new Date(event.endDate) : (event.endDate ? new Date(event.endDate) : null);
         const recurrenceId = event.recurrenceId instanceof Date ? new Date(event.recurrenceId) : (event.recurrenceId ? new Date(event.recurrenceId) : null);
@@ -2369,6 +2370,7 @@
           recurrence: normalizeText(event.recurrence || ''),
           recurring: Boolean(event.recurrence),
           recurrenceId,
+          recurrenceIdTimezone,
           sequence: Number.isFinite(event.sequence) ? event.sequence : null,
           startDate,
           endDate,
@@ -3049,7 +3051,8 @@
               editingRecurrenceDate = parsed;
             }
           }
-          editingRecurrenceTimezone = (summaryResult && summaryResult.event && summaryResult.event.timeZone)
+          editingRecurrenceTimezone = (summaryResult && summaryResult.event && summaryResult.event.recurrenceIdTimezone)
+            || (summaryResult && summaryResult.event && summaryResult.event.timeZone)
             || (baseEvent && baseEvent.timeZone)
             || (eventData && eventData.timeZone)
             || state.timezone
