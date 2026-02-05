@@ -9,7 +9,14 @@ class FormsManager {
         this.modalCloseBtn = null;
         this.eventBuilderOption = null;
         this.bearIntelTypeSelect = null;
-        this.mailtoEmail = 'info@chunky.dad';
+        this.defaultMailtoEmail = 'info@chunky.dad';
+        this.categoryEmailMap = {
+            event: 'events@chunky.dad',
+            venue: 'bars@chunky.dad',
+            business: 'businesses@chunky.dad',
+            city: 'cities@chunky.dad',
+            other: 'info@chunky.dad'
+        };
         this.modalSetupComplete = false;
         this.init();
     }
@@ -205,10 +212,10 @@ class FormsManager {
         this.bearIntelModal.style.display = 'flex';
         document.body.style.overflow = 'hidden'; // Prevent background scrolling
         
-        // Focus on first input
-        const firstInput = this.bearIntelForm.querySelector('input[type="text"]');
-        if (firstInput) {
-            setTimeout(() => firstInput.focus(), 100);
+        // Focus on first interactive field
+        const firstField = this.bearIntelForm.querySelector('select, textarea, input');
+        if (firstField) {
+            setTimeout(() => firstField.focus(), 100);
         }
     }
 
@@ -246,16 +253,30 @@ class FormsManager {
     }
 
     collectFormData(form) {
-        const name = form.querySelector('input[type="text"]').value;
-        const email = form.querySelector('input[type="email"]').value;
-        const message = form.querySelector('textarea').value;
-        const category = form.querySelector('select').value;
-        
-        const formData = { name, email, message, category };
-        
+        const nameInput = form.querySelector('input[type="text"]');
+        const emailInput = form.querySelector('input[type="email"]');
+        const messageInput = form.querySelector('textarea');
+        const categorySelect = form.querySelector('select');
+
+        const name = nameInput ? nameInput.value.trim() : '';
+        const email = emailInput ? emailInput.value.trim() : '';
+        const message = messageInput ? messageInput.value.trim() : '';
+        const category = categorySelect ? categorySelect.value : '';
+
+        const formData = {
+            name,
+            email,
+            message,
+            category,
+            hasNameField: Boolean(nameInput),
+            hasEmailField: Boolean(emailInput),
+            hasCategoryField: Boolean(categorySelect),
+            hasMessageField: Boolean(messageInput)
+        };
+
         logger.debug('FORM', 'Form data collected', {
-            name: name ? 'provided' : 'missing',
-            email: email ? 'provided' : 'missing',
+            name: formData.hasNameField ? (name ? 'provided' : 'missing') : 'not requested',
+            email: formData.hasEmailField ? (email ? 'provided' : 'missing') : 'not requested',
             message: message ? `${message.length} chars` : 'missing',
             category: category || 'not selected'
         });
@@ -264,22 +285,45 @@ class FormsManager {
     }
 
     validateFormData(formData) {
-        const { name, email, message } = formData;
-        
-        if (!name || !email || !message) {
+        const {
+            name,
+            email,
+            message,
+            category,
+            hasNameField,
+            hasEmailField,
+            hasCategoryField,
+            hasMessageField
+        } = formData;
+
+        const missingFields = [];
+        if (hasNameField && !name) {
+            missingFields.push('name');
+        }
+        if (hasEmailField && !email) {
+            missingFields.push('email');
+        }
+        if (hasMessageField && !message) {
+            missingFields.push('message');
+        }
+        if (hasCategoryField && !category) {
+            missingFields.push('category');
+        }
+
+        if (missingFields.length > 0) {
             logger.warn('FORM', 'Form validation failed - missing required fields', {
-                name: !!name,
-                email: !!email,
-                message: !!message
+                missingFields
             });
             return false;
         }
 
-        // Basic email validation
-        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailPattern.test(email)) {
-            logger.warn('FORM', 'Form validation failed - invalid email format', { email });
-            return false;
+        if (hasEmailField && email) {
+            // Basic email validation
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                logger.warn('FORM', 'Form validation failed - invalid email format', { email });
+                return false;
+            }
         }
 
         logger.debug('FORM', 'Form validation passed');
@@ -288,20 +332,26 @@ class FormsManager {
 
     submitViaEmail(formData, form) {
         logger.userInteraction('FORM', 'Form submitted via email');
-        
+        const mailtoEmail = this.getMailtoEmail(formData.category);
+
         // Create email content
-        const subject = encodeURIComponent(`Bear Intel: ${formData.category}`);
-        const body = encodeURIComponent(`Name: ${formData.name}
-Email: ${formData.email}
-Category: ${formData.category}
+        const subjectLabel = formData.category ? `Bear Intel: ${formData.category}` : 'Bear Intel';
+        const subject = encodeURIComponent(subjectLabel);
+        const bodyLines = [];
 
-Message:
-${formData.message}
-
----
-Sent from chunky.dad contact form`);
+        if (formData.name) {
+            bodyLines.push(`Name: ${formData.name}`);
+        }
+        if (formData.email) {
+            bodyLines.push(`Email: ${formData.email}`);
+        }
+        if (formData.category) {
+            bodyLines.push(`Category: ${formData.category}`);
+        }
+        bodyLines.push('', 'Message:', formData.message || '', '', '---', 'Sent from chunky.dad contact form');
+        const body = encodeURIComponent(bodyLines.join('\n'));
         
-        const mailtoUrl = `mailto:${this.mailtoEmail}?subject=${subject}&body=${body}`;
+        const mailtoUrl = `mailto:${mailtoEmail}?subject=${subject}&body=${body}`;
         
         // Reset form
         this.resetForm(form);
@@ -310,9 +360,9 @@ Sent from chunky.dad contact form`);
         window.location.href = mailtoUrl;
         
         logger.info('FORM', 'Email client opened with pre-filled content', {
-            to: this.mailtoEmail,
-            subject: `Bear Intel: ${formData.category}`,
-            messageLength: formData.message.length
+            to: mailtoEmail,
+            subject: subjectLabel,
+            messageLength: formData.message ? formData.message.length : 0
         });
     }
 
@@ -326,6 +376,13 @@ Sent from chunky.dad contact form`);
     // Public method to open modal from other components
     showBearIntelModal() {
         this.openBearIntelModal();
+    }
+
+    getMailtoEmail(category) {
+        if (!category) {
+            return this.defaultMailtoEmail;
+        }
+        return this.categoryEmailMap[category] || this.defaultMailtoEmail;
     }
 
     // Method to add more form handlers in the future
