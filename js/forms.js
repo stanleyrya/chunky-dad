@@ -7,6 +7,8 @@ class FormsManager {
         this.shareIntelBtn = null;
         this.submitInfoBtn = null;
         this.modalCloseBtn = null;
+        this.eventBuilderOption = null;
+        this.bearIntelTypeSelect = null;
         this.mailtoEmail = 'info@chunky.dad';
         this.modalSetupComplete = false;
         this.init();
@@ -64,6 +66,8 @@ class FormsManager {
         this.submitInfoBtn = document.getElementById('submit-info-btn');
         this.modalCloseBtn = document.getElementById('modal-close-btn');
         this.bearIntelForm = document.querySelector('.bear-intel-form');
+        this.eventBuilderOption = document.getElementById('event-builder-option');
+        this.bearIntelTypeSelect = this.bearIntelForm ? this.bearIntelForm.querySelector('select') : null;
 
         if (!this.bearIntelModal || !this.shareIntelBtn) {
             logger.debug('FORM', 'Bear Intel modal components not found - skipping setup');
@@ -110,6 +114,13 @@ class FormsManager {
             this.bearIntelForm.addEventListener('submit', (e) => {
                 this.handleBearIntelFormSubmission(e);
             });
+        }
+
+        if (this.bearIntelTypeSelect) {
+            this.bearIntelTypeSelect.addEventListener('change', () => {
+                this.updateEventBuilderOption();
+            });
+            this.updateEventBuilderOption();
         }
 
         this.modalSetupComplete = true;
@@ -160,6 +171,7 @@ class FormsManager {
             if (selectElement) {
                 selectElement.value = 'city';
                 logger.debug('FORM', 'City preset applied to modal form');
+                this.updateEventBuilderOption();
             }
         }, 100);
     }
@@ -174,8 +186,18 @@ class FormsManager {
             if (selectElement) {
                 selectElement.value = 'event';
                 logger.debug('FORM', 'Event preset applied to modal form');
+                this.updateEventBuilderOption();
             }
         }, 100);
+    }
+
+    updateEventBuilderOption() {
+        if (!this.eventBuilderOption || !this.bearIntelTypeSelect) {
+            return;
+        }
+        const isEvent = this.bearIntelTypeSelect.value === 'event';
+        this.eventBuilderOption.classList.toggle('is-visible', isEvent);
+        this.eventBuilderOption.setAttribute('aria-hidden', String(!isEvent));
     }
 
     openBearIntelModal() {
