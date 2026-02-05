@@ -27,7 +27,7 @@ class ComponentsManager {
         const footerHTML = `
             <p>&copy; 2025 chunky.dad</p>
             <p>All info is community-sourced.</p>
-            <button id="share-intel-btn" class="share-intel-footer-btn">Share Bear Intel 📧</button>
+            <button id="share-intel-btn" class="share-intel-footer-btn">Share Bear 📧</button>
         `;
 
         footerElements.forEach((container, index) => {
@@ -58,11 +58,9 @@ class ComponentsManager {
                     </div>
                     <div class="modal-body">
                         <form class="bear-intel-form">
-                            <input type="text" placeholder="Your Name" required>
-                            <input type="email" placeholder="Your Email" required>
                             <select required>
                                 <option value="">What are you sharing?</option>
-                                <option value="event">Bear Event or Bar Night</option>
+                                <option value="event">Bear Event</option>
                                 <option value="business">Bear-Owned Business</option>
                                 <option value="venue">Bar or Venue Info</option>
                                 <option value="city">Suggest a New City 🌍</option>
@@ -100,11 +98,9 @@ class ComponentsManager {
                     </div>
                     <div class="modal-body">
                         <form class="bear-intel-form">
-                            <input type="text" placeholder="Your Name" required>
-                            <input type="email" placeholder="Your Email" required>
                             <select required>
                                 <option value="">What are you sharing?</option>
-                                <option value="event">Bear Event or Bar Night</option>
+                                <option value="event">Bear Event</option>
                                 <option value="business">Bear-Owned Business</option>
                                 <option value="venue">Bar or Venue Info</option>
                                 <option value="city">Suggest a New City 🌍</option>
