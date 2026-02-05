@@ -3056,7 +3056,9 @@
             || browserTimezone;
         }
         state.editingExistingUid = editingUid;
-        state.editingExistingRecurrenceId = editingRecurrenceDate ? formatInputValue(editingRecurrenceDate) : '';
+        state.editingExistingRecurrenceId = editingRecurrenceDate
+          ? formatInputValueInTimezone(editingRecurrenceDate, editingRecurrenceTimezone || state.timezone || browserTimezone)
+          : '';
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
         const candidateSequence = (() => {
           const summarySeq = summaryResult && summaryResult.event ? summaryResult.event.sequence : null;
@@ -3131,8 +3133,8 @@
           location: normalizeCoordinatesValue(eventData.coordinates || eventData.location),
           description: normalizeText(eventData.tea || eventData.description || ''),
           cover: normalizeText(eventData.cover || ''),
-          start: formatInputValue(startDate),
-          end: formatInputValue(endDate),
+          start: formatInputValueInTimezone(startDate, timezone),
+          end: formatInputValueInTimezone(endDate, timezone),
           timezone,
           recurrence: normalizeText(options.recurrence || ''),
           recurrenceMode: 'builder',
@@ -5354,6 +5356,34 @@
       function formatInputValue(date) {
         const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
         return local.toISOString().slice(0, 16);
+      }
+
+      function formatInputValueInTimezone(date, timeZone) {
+        if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+        const tz = timeZone || browserTimezone;
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }).formatToParts(date);
+          const values = {};
+          parts.forEach(part => {
+            if (part.type !== 'literal') {
+              values[part.type] = part.value;
+            }
+          });
+          if (!values.year || !values.month || !values.day) return formatInputValue(date);
+          const hour = values.hour || '00';
+          const minute = values.minute || '00';
+          return `${values.year}-${values.month}-${values.day}T${hour}:${minute}`;
+        } catch (error) {
+          return formatInputValue(date);
+        }
       }
 
       function sanitizeDateTimeInput(value) {
