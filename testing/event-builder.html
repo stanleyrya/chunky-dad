@@ -3412,7 +3412,6 @@
 
       function clearEditingState() {
         if (!state) return;
-        const wasEditingExisting = Boolean(state.isEditingExisting);
         state.isEditingExisting = false;
         state.editingExistingId = '';
         state.editingExistingMode = 'occurrence';
@@ -3420,9 +3419,9 @@
         state.editingExistingUid = '';
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
-        if (wasEditingExisting) {
-          state.uid = generateDraftUid();
-        }
+        // When leaving edit mode (or copying to new), treat it as a brand new event.
+        // Removing identifiers avoids Scriptable/calendar overwrite behavior.
+        state.uid = '';
       }
 
       function clearExistingSelection(options = {}) {
@@ -5000,12 +4999,15 @@
         setParam('lat', coordinates ? coordinates.lat : '');
         setParam('lng', coordinates ? coordinates.lng : '');
         const identifier = state.editingExistingUid
-          || String(state.uid || '').trim()
           || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '');
-        setParam('identifier', identifier);
+        if (identifier) {
+          setParam('identifier', identifier);
+        }
         const recurrenceIdValue = sanitizeDateTimeInput(state.editingExistingRecurrenceId);
-        setParam('recurrenceId', recurrenceIdValue);
-        setParam('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
+        if (recurrenceIdValue) {
+          setParam('recurrenceId', recurrenceIdValue);
+          setParam('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
+        }
         const encodedScriptName = encodeURIComponent(scriptName);
         logger.debug('EVENT', 'Built Scriptable callback URL params', {
           identifier,
@@ -5126,7 +5128,7 @@
         const isOverride = state.isEditingExisting && state.editingExistingMode === 'occurrence';
         const recurrence = isOverride ? '' : rawRecurrence;
         const recurring = Boolean(recurrence);
-        let uid = String(state.uid || '').trim();
+        let uid = '';
         if (state.isEditingExisting && state.editingExistingUid) {
           uid = state.editingExistingUid;
         } else if (state.isEditingExisting && state.editingExistingId) {
