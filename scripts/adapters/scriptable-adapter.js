@@ -919,15 +919,32 @@ class ScriptableAdapter {
             const calendarName = this.getCalendarName(city);
             const calendar = await this.getOrCreateCalendar(calendarName);
             
+            const coerceDate = (value) => {
+                if (!value) return null;
+                if (value instanceof Date) {
+                    return isNaN(value.getTime()) ? null : value;
+                }
+                const parsed = new Date(value);
+                return isNaN(parsed.getTime()) ? null : parsed;
+            };
+            
             // Parse dates from formatted event
-            const startDate = event.startDate;
-            const endDate = event.endDate;
+            const startDate = coerceDate(event.startDate);
+            const endDate = coerceDate(event.endDate || event.startDate);
+            const recurrenceDate = coerceDate(event.recurrenceId);
+            const dateCandidates = [startDate, endDate, recurrenceDate].filter(Boolean);
+            
+            if (dateCandidates.length === 0) {
+                return [];
+            }
             
             // Expand search range for conflict detection
             const searchRangeDays = Number(event._parserConfig?.calendarSearchRangeDays || 0);
-            const searchStart = new Date(startDate);
+            const earliestTime = Math.min(...dateCandidates.map(date => date.getTime()));
+            const latestTime = Math.max(...dateCandidates.map(date => date.getTime()));
+            const searchStart = new Date(earliestTime);
             searchStart.setHours(0, 0, 0, 0);
-            const searchEnd = new Date(endDate);
+            const searchEnd = new Date(latestTime);
             searchEnd.setHours(23, 59, 59, 999);
             
             if (Number.isFinite(searchRangeDays) && searchRangeDays > 0) {

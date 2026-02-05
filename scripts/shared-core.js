@@ -1137,7 +1137,12 @@ class SharedCore {
             'image': 'image',
             'url': 'url',
             'timezone': 'timezone',
-            'key': 'key'
+            'key': 'key',
+            'uid': 'identifier',
+            'recurrenceid': 'recurrenceId',
+            'recurrenceidtimezone': 'recurrenceIdTimezone',
+            'sequence': 'sequence',
+            'seq': 'sequence'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
@@ -1996,10 +2001,8 @@ class SharedCore {
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
             'originalTitle', 'name', // These are usually duplicates of title
             // Scriptable-specific properties that shouldn't be in notes
-            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+            'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
             'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
-            // Recurrence metadata used for matching, not for notes storage
-            'recurrenceId', 'recurrenceIdTimezone', 'sequence',
             // Coordinate helpers that duplicate location data
             'lat', 'lng',
             // Location-specific fields that shouldn't be in notes (used internally)
@@ -2485,25 +2488,66 @@ class SharedCore {
         });
         
         if (hasDirectIdentifier) {
+            const recurrenceMatches = [];
+            const identifierMatches = [];
+            const sequenceMatches = [];
+            const targetRecurrenceDate = normalizedRecurrenceId
+                ? this.parseDate(normalizedRecurrenceId)
+                : null;
+            
             for (const { event, fields } of parsedEvents) {
                 const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
-                if (normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
-                    return { event, matchedKey: eventIdentifier, matchType: 'identifier' };
-                }
-                
                 const eventRecurrenceId = normalizeIdentifier(
                     event.recurrenceId || event.recurrenceID || fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id
                 );
-                if (normalizedRecurrenceId && eventRecurrenceId === normalizedRecurrenceId) {
-                    return { event, matchedKey: eventRecurrenceId, matchType: 'recurrenceId' };
-                }
-                
                 const eventSequence = normalizeIdentifier(
                     event.sequence || event.sequenced || fields.sequence || fields.sequenced || fields.seq
                 );
-                if (normalizedSequence && eventSequence === normalizedSequence) {
-                    return { event, matchedKey: eventSequence, matchType: 'sequence' };
+                
+                if (normalizedRecurrenceId) {
+                    const matchesStoredRecurrence = eventRecurrenceId && eventRecurrenceId === normalizedRecurrenceId;
+                    let matchesStartDate = false;
+                    if (!matchesStoredRecurrence && targetRecurrenceDate) {
+                        const eventStartDate = event.startDate instanceof Date
+                            ? event.startDate
+                            : this.parseDate(event.startDate);
+                        if (eventStartDate) {
+                            matchesStartDate = this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1);
+                        }
+                    }
+                    
+                    if (matchesStoredRecurrence || matchesStartDate) {
+                        if (normalizedIdentifier && eventIdentifier && eventIdentifier !== normalizedIdentifier) {
+                            // Prefer matches that also align on identifier when possible.
+                        } else if (normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
+                            return { event, matchedKey: eventRecurrenceId || normalizedRecurrenceId, matchType: 'recurrenceId' };
+                        } else {
+                            recurrenceMatches.push({
+                                event,
+                                matchedKey: eventRecurrenceId || normalizedRecurrenceId,
+                                matchType: 'recurrenceId'
+                            });
+                        }
+                    }
                 }
+                
+                if (normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
+                    identifierMatches.push({ event, matchedKey: eventIdentifier, matchType: 'identifier' });
+                }
+                
+                if (normalizedSequence && eventSequence === normalizedSequence) {
+                    sequenceMatches.push({ event, matchedKey: eventSequence, matchType: 'sequence' });
+                }
+            }
+            
+            if (recurrenceMatches.length > 0) {
+                return recurrenceMatches[0];
+            }
+            if (identifierMatches.length > 0) {
+                return identifierMatches[0];
+            }
+            if (sequenceMatches.length > 0) {
+                return sequenceMatches[0];
             }
         }
         
