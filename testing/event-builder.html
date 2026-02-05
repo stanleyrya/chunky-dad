@@ -3063,6 +3063,12 @@
           ? formatInputValueInTimezone(editingRecurrenceDate, editingRecurrenceTimezone || state.timezone || browserTimezone)
           : '';
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
+        state.editingExistingSearchStartDate = (startDate && startDate instanceof Date && !Number.isNaN(startDate.getTime()))
+          ? startDate.toISOString()
+          : '';
+        state.editingExistingSearchEndDate = (endDate && endDate instanceof Date && !Number.isNaN(endDate.getTime()))
+          ? endDate.toISOString()
+          : '';
         const candidateSequence = (() => {
           const summarySeq = summaryResult && summaryResult.event ? summaryResult.event.sequence : null;
           if (Number.isFinite(summarySeq)) return summarySeq;
@@ -3417,6 +3423,8 @@
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
         state.editingExistingSequence = '';
+        state.editingExistingSearchStartDate = '';
+        state.editingExistingSearchEndDate = '';
       }
 
       function clearExistingSelection(options = {}) {
@@ -3481,6 +3489,8 @@
           editingExistingRecurrenceId: '',
           editingExistingRecurrenceTimezone: '',
           editingExistingSequence: '',
+          editingExistingSearchStartDate: '',
+          editingExistingSearchEndDate: '',
           existingSelectionSummary: '',
           existingSelectionAction: ''
         };
@@ -4993,6 +5003,12 @@
           || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '');
         if (identifier) {
           setParam('identifier', identifier);
+        }
+        if (state.isEditingExisting && state.editingExistingSearchStartDate) {
+          setParam('searchStartDate', state.editingExistingSearchStartDate);
+        }
+        if (state.isEditingExisting && state.editingExistingSearchEndDate) {
+          setParam('searchEndDate', state.editingExistingSearchEndDate);
         }
         const recurrenceIdValue = sanitizeDateTimeInput(state.editingExistingRecurrenceId);
         if (recurrenceIdValue) {

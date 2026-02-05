@@ -954,15 +954,16 @@ class ScriptableAdapter {
             const startDate = coerceDate(event.startDate);
             const endDate = coerceDate(event.endDate || event.startDate);
             const recurrenceDate = coerceDate(event.recurrenceId);
+            const searchStartDate = coerceDate(event.searchStartDate);
+            const searchEndDate = coerceDate(event.searchEndDate);
             const identifierRidDate = hasIdentifier ? parseRidDateFromIdentifier(identifierRaw) : null;
             const hasRecurrenceAnchor = Boolean(recurrenceDate || identifierRidDate);
-            const dateCandidates = [startDate, endDate, recurrenceDate, identifierRidDate].filter(Boolean);
+            const dateCandidates = [startDate, endDate, recurrenceDate, identifierRidDate, searchStartDate, searchEndDate].filter(Boolean);
             
             if (dateCandidates.length === 0) {
                 return [];
             }
             
-            // Expand search range for conflict detection
             const identifierLabel = identifierRaw || '(none)';
             const ridLabel = identifierRidDate ? identifierRidDate.toISOString() : '(none)';
             console.log(`📱 Scriptable: Existing event search (hasIdentifier=${hasIdentifier}) identifier="${identifierLabel}"`);
@@ -973,21 +974,40 @@ class ScriptableAdapter {
                 ? configuredRangeDays
                 : 2;
 
-            // Avoid huge windows for recurring edits by searching around the old anchor date (RECURRENCE-ID / RID).
-            // This prevents "over-matching" by pulling a full year of occurrences.
-            const primaryDates = hasRecurrenceAnchor
-                ? [recurrenceDate, identifierRidDate].filter(Boolean)
-                : [startDate, endDate].filter(Boolean);
-
-            const buildWindow = (date) => {
+            const buildWindow = (date, days) => {
                 const start = new Date(date);
                 start.setHours(0, 0, 0, 0);
-                start.setDate(start.getDate() - rangeDays);
+                start.setDate(start.getDate() - days);
                 const end = new Date(date);
                 end.setHours(23, 59, 59, 999);
-                end.setDate(end.getDate() + rangeDays);
+                end.setDate(end.getDate() + days);
                 return { start, end };
             };
+
+            // Keep the tighter, multi-window logic scoped to identifier-based edits only.
+            // For normal scraper runs, use the original single-window approach.
+            if (!hasIdentifier) {
+                const earliestTime = Math.min(...dateCandidates.map(date => date.getTime()));
+                const latestTime = Math.max(...dateCandidates.map(date => date.getTime()));
+                const searchStart = new Date(earliestTime);
+                searchStart.setHours(0, 0, 0, 0);
+                const searchEnd = new Date(latestTime);
+                searchEnd.setHours(23, 59, 59, 999);
+                if (Number.isFinite(configuredRangeDays) && configuredRangeDays > 0) {
+                    searchStart.setDate(searchStart.getDate() - configuredRangeDays);
+                    searchEnd.setDate(searchEnd.getDate() + configuredRangeDays);
+                }
+                console.log(`📱 Scriptable: Existing event search window: ${searchStart.toISOString()} → ${searchEnd.toISOString()}`);
+                return await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+            }
+
+            // Identifier edit: prefer the old *visible* date (pre-edit) if provided.
+            // This prevents over-matching and also finds already-overridden events that were moved off the anchor date.
+            const primaryDates = (searchStartDate || searchEndDate)
+                ? [searchStartDate, searchEndDate].filter(Boolean)
+                : hasRecurrenceAnchor
+                    ? [recurrenceDate, identifierRidDate].filter(Boolean)
+                    : [startDate, endDate].filter(Boolean);
 
             const windowKeys = new Set();
             const windows = [];
@@ -995,7 +1015,7 @@ class ScriptableAdapter {
                 const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
                 if (windowKeys.has(key)) return;
                 windowKeys.add(key);
-                windows.push(buildWindow(date));
+                windows.push(buildWindow(date, rangeDays));
             });
 
             console.log(`📱 Scriptable: Existing event search windows=${windows.length} rangeDays=${rangeDays}`);
@@ -1008,18 +1028,8 @@ class ScriptableAdapter {
                     allEvents.push(...slice);
                 }
             }
-
-            // Deduplicate results by identifier (Scriptable occurrences can appear in multiple windows).
-            const deduped = [];
-            const seen = new Set();
-            for (const ev of allEvents) {
-                const key = ev && ev.identifier ? String(ev.identifier) : '';
-                if (key && seen.has(key)) continue;
-                if (key) seen.add(key);
-                deduped.push(ev);
-            }
-            console.log(`📱 Scriptable: Existing events found=${deduped.length} (raw=${allEvents.length})`);
-            return deduped;
+            console.log(`📱 Scriptable: Existing events found=${allEvents.length}`);
+            return allEvents;
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);

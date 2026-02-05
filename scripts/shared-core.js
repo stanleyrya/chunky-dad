@@ -2024,6 +2024,8 @@ class SharedCore {
             'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
             // Recurrence metadata used for matching, not for notes storage
             'recurrenceId', 'recurrenceIdTimezone', 'sequence',
+            // Scriptable adapter helper fields (used only for searching existing calendar data)
+            'searchStartDate', 'searchEndDate',
             // Coordinate helpers that duplicate location data
             'lat', 'lng',
             // Location-specific fields that shouldn't be in notes (used internally)
