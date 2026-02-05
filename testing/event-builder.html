@@ -5561,11 +5561,11 @@
           : NaN;
         const nextSequence = Number.isFinite(existingSequence)
           ? existingSequence + 1
-          : Math.floor(Date.now() / 1000);
+          : null;
         const icsOptions = isEditingExisting
           ? {
               method: 'REQUEST',
-              sequence: nextSequence,
+              ...(Number.isFinite(existingSequence) ? { sequence: nextSequence } : {}),
               lastModified: new Date()
             }
           : null;
@@ -5577,7 +5577,7 @@
           timezone: event.timezone || browserTimezone,
           method: isEditingExisting ? 'REQUEST' : 'PUBLISH',
           previousSequence: Number.isFinite(existingSequence) ? existingSequence : null,
-          nextSequence: isEditingExisting ? nextSequence : null
+          nextSequence: Number.isFinite(existingSequence) ? nextSequence : null
         });
         const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
         const blob = new Blob([icsContent], { type: 'text/calendar' });
