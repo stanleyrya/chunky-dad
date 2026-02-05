@@ -1772,6 +1772,20 @@
 
       document.addEventListener('DOMContentLoaded', init);
 
+      function generateDraftUid() {
+        const domain = 'chunky.dad';
+        try {
+          if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return `${crypto.randomUUID()}@${domain}`;
+          }
+        } catch (error) {
+          // Ignore and fall back.
+        }
+        const random = Math.random().toString(16).slice(2);
+        const stamp = Date.now().toString(16);
+        return `chunky-dad-${stamp}-${random}@${domain}`;
+      }
+
       function init() {
         cacheDom();
         setupStickyHeaderOffset();
@@ -1780,6 +1794,7 @@
         const urlState = loadStateFromUrl(baseState);
         state = { ...baseState, ...urlState.overrides };
         state.timezone = state.timezone || browserTimezone;
+        state.uid = String(state.uid || '').trim() || generateDraftUid();
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
@@ -1797,6 +1812,11 @@
         updateCalendarSource(true);
         setupMessaging();
         scheduleEventPush();
+        logger.componentInit('EVENT', 'Event builder initialized', {
+          uid: state.uid,
+          isEditingExisting: Boolean(state.isEditingExisting),
+          editingMode: state.editingExistingMode || null
+        });
       }
 
       function cacheDom() {
@@ -3121,6 +3141,7 @@
           start: formatInputValue(startDate),
           end: formatInputValue(endDate),
           timezone,
+          uid: normalizeText(eventData.uid || '') || state.uid || generateDraftUid(),
           recurrence: normalizeText(options.recurrence || ''),
           recurrenceMode: 'builder',
           website: normalizeText(eventData.website || ''),
@@ -3391,6 +3412,7 @@
 
       function clearEditingState() {
         if (!state) return;
+        const wasEditingExisting = Boolean(state.isEditingExisting);
         state.isEditingExisting = false;
         state.editingExistingId = '';
         state.editingExistingMode = 'occurrence';
@@ -3398,6 +3420,9 @@
         state.editingExistingUid = '';
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
+        if (wasEditingExisting) {
+          state.uid = generateDraftUid();
+        }
       }
 
       function clearExistingSelection(options = {}) {
@@ -3442,6 +3467,7 @@
           start: formatInputValue(start),
           end: formatInputValue(end),
           timezone: browserTimezone,
+          uid: generateDraftUid(),
           debug: false,
           recurrence: '',
           recurrenceMode: 'builder',
@@ -3491,6 +3517,9 @@
           switch (key) {
             case 'name':
               overrides.name = value;
+              break;
+            case 'uid':
+              overrides.uid = value;
               break;
             case 'short':
               overrides.shortName = value;
@@ -4856,6 +4885,7 @@
         if (state.name) params.set('name', state.name);
         if (state.shortName) params.set('short', state.shortName);
         if (state.city) params.set('city', state.city);
+        if (state.uid) params.set('uid', state.uid);
         const savedBarName = normalizeText(state.savedBar);
         if (savedBarName) params.set('bar', savedBarName);
         if (state.venue) params.set('venue', state.venue);
@@ -4970,12 +5000,20 @@
         setParam('lat', coordinates ? coordinates.lat : '');
         setParam('lng', coordinates ? coordinates.lng : '');
         const identifier = state.editingExistingUid
+          || String(state.uid || '').trim()
           || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '');
         setParam('identifier', identifier);
         const recurrenceIdValue = sanitizeDateTimeInput(state.editingExistingRecurrenceId);
         setParam('recurrenceId', recurrenceIdValue);
         setParam('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
         const encodedScriptName = encodeURIComponent(scriptName);
+        logger.debug('EVENT', 'Built Scriptable callback URL params', {
+          identifier,
+          recurrenceId: recurrenceIdValue || '',
+          recurrenceIdTimezone: state.editingExistingRecurrenceTimezone || '',
+          isEditingExisting: Boolean(state.isEditingExisting),
+          editingExistingMode: state.editingExistingMode || null
+        });
         return `scriptable:///run/${encodedScriptName}?${params.toString()}`;
       }
 
@@ -5064,7 +5102,7 @@
             data: payload
           }, '*');
         } catch (error) {
-          console.error('Failed to send event to calendar iframe', error);
+          logger.componentError('EVENT', 'Failed to send event to calendar iframe', error);
           updateCalendarStatus('Could not reach preview', 'error');
         }
       }
@@ -5088,7 +5126,7 @@
         const isOverride = state.isEditingExisting && state.editingExistingMode === 'occurrence';
         const recurrence = isOverride ? '' : rawRecurrence;
         const recurring = Boolean(recurrence);
-        let uid = '';
+        let uid = String(state.uid || '').trim();
         if (state.isEditingExisting && state.editingExistingUid) {
           uid = state.editingExistingUid;
         } else if (state.isEditingExisting && state.editingExistingId) {
@@ -5508,6 +5546,13 @@
             }
           : null;
         const icsContent = generateICS(event, icsOptions);
+        logger.info('EVENT', 'Generated ICS export', {
+          uid: event.uid || '',
+          hasRecurrenceRule: Boolean(event.recurrence),
+          hasRecurrenceId: Boolean(event.recurrenceId),
+          timezone: event.timezone || browserTimezone,
+          method: isEditingExisting ? 'REQUEST' : 'PUBLISH'
+        });
         const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
         const blob = new Blob([icsContent], { type: 'text/calendar' });
         const url = URL.createObjectURL(blob);
