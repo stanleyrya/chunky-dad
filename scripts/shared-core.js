@@ -2461,6 +2461,9 @@ class SharedCore {
         let targetKeyFormat = null;
         let targetIdentifier = null;
         let targetRecurrenceId = null;
+        let targetTimezone = null;
+        let targetRecurrenceIdTimezone = null;
+        let targetTitle = '';
         
         if (typeof targetEventOrKey === 'string') {
             targetKey = targetEventOrKey;
@@ -2471,6 +2474,9 @@ class SharedCore {
             targetKeyFormat = targetEventOrKey._parserConfig?.keyTemplate || null;
             targetIdentifier = targetEventOrKey.identifier || targetEventOrKey.id || null;
             targetRecurrenceId = targetEventOrKey.recurrenceId || targetEventOrKey.recurrenceID || targetEventOrKey.recurrence_id || null;
+            targetTimezone = targetEventOrKey.timezone || targetEventOrKey.timeZone || null;
+            targetRecurrenceIdTimezone = targetEventOrKey.recurrenceIdTimezone || targetTimezone || null;
+            targetTitle = targetEventOrKey.title || targetEventOrKey.name || '';
             
             if (!targetSource && targetEventOrKey.url) {
                 const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
@@ -2487,22 +2493,52 @@ class SharedCore {
         };
         
         const normalizedIdentifier = normalizeIdentifier(targetIdentifier);
-        const normalizedRecurrenceId = normalizeIdentifier(targetRecurrenceId);
         const targetIdentifierInfo = this.parseScriptableIdentifier(normalizedIdentifier);
         const targetUid = targetIdentifierInfo.uid || normalizedIdentifier;
-        const targetRecurrenceDate = normalizedRecurrenceId
-            ? this.parseDate(normalizedRecurrenceId)
-            : targetIdentifierInfo.recurrenceDate;
-        const targetStartDate = targetEventOrKey && typeof targetEventOrKey === 'object'
-            ? (targetEventOrKey.startDate instanceof Date
-                ? targetEventOrKey.startDate
-                : this.parseDate(targetEventOrKey.startDate))
-            : null;
+
+        // Handle recurrenceId with timezone context if available
+        let targetRecurrenceDate = null;
+        if (targetRecurrenceId instanceof Date) {
+            targetRecurrenceDate = targetRecurrenceId;
+        } else if (targetRecurrenceId) {
+            const rawRecurrenceId = String(targetRecurrenceId).trim();
+            if (targetRecurrenceIdTimezone) {
+                targetRecurrenceDate = SharedCore.parseDateWithTimezone(rawRecurrenceId, targetRecurrenceIdTimezone);
+            }
+            if (!targetRecurrenceDate) {
+                targetRecurrenceDate = this.parseDate(rawRecurrenceId);
+            }
+        } else {
+            targetRecurrenceDate = targetIdentifierInfo.recurrenceDate;
+        }
+
+        let targetStartDate = null;
+        if (targetEventOrKey && typeof targetEventOrKey === 'object') {
+            if (targetEventOrKey.startDate instanceof Date) {
+                targetStartDate = targetEventOrKey.startDate;
+            } else if (targetEventOrKey.startDate) {
+                const rawStart = String(targetEventOrKey.startDate).trim();
+                if (targetTimezone) {
+                    targetStartDate = SharedCore.parseDateWithTimezone(rawStart, targetTimezone);
+                }
+                if (!targetStartDate) {
+                    targetStartDate = this.parseDate(rawStart);
+                }
+            }
+        }
+
+        const logPrefix = `🔍 MATCH ["${targetTitle}"]:`;
+        if (targetUid || targetRecurrenceDate || targetStartDate) {
+            console.log(`${logPrefix} Searching for UID=${targetUid}, RecurrenceID=${targetRecurrenceDate?.toISOString()}, StartDate=${targetStartDate?.toISOString()}`);
+        }
         
         const hasDirectIdentifier = Boolean(targetUid);
         const hasKeyMatch = Boolean(targetKey || targetMatchKey);
         
-        if (!hasDirectIdentifier && !hasKeyMatch) return null;
+        if (!hasDirectIdentifier && !hasKeyMatch) {
+            console.log(`${logPrefix} No identifier or key match criteria provided.`);
+            return null;
+        }
         
         const wantsWildcardMatch = Boolean(targetMatchKey && targetMatchKey.includes('*'));
         
@@ -2523,6 +2559,7 @@ class SharedCore {
                 const notesIdentifierRaw = normalizeIdentifier(fields.uid || fields.identifier || fields.id || '');
                 const notesIdentifierInfo = this.parseScriptableIdentifier(notesIdentifierRaw);
                 const eventUid = eventIdentifierInfo.uid || notesIdentifierInfo.uid || notesIdentifierRaw || null;
+
                 if (!eventUid || eventUid !== targetUid) {
                     continue;
                 }
@@ -2540,33 +2577,45 @@ class SharedCore {
             }
 
             if (candidates.length > 0) {
+                console.log(`${logPrefix} Found ${candidates.length} candidates with matching UID=${targetUid}`);
+
                 if (targetRecurrenceDate) {
+                    console.log(`${logPrefix} Attempting match using targetRecurrenceDate=${targetRecurrenceDate.toISOString()}`);
                     const recurrenceMatch = candidates.find(candidate =>
                         candidate.eventRecurrenceDate && this.areDatesEqual(candidate.eventRecurrenceDate, targetRecurrenceDate, 1)
                     );
                     if (recurrenceMatch) {
+                        console.log(`${logPrefix} ✓ Matched by recurrenceId (instance match)`);
                         return { event: recurrenceMatch.event, matchedKey: targetUid, matchType: 'recurrenceId' };
                     }
                     const startMatch = candidates.find(candidate =>
                         candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetRecurrenceDate, 1)
                     );
                     if (startMatch) {
+                        console.log(`${logPrefix} ✓ Matched by recurrenceId matching eventStartDate (likely first instance or moved occurrence)`);
                         return { event: startMatch.event, matchedKey: targetUid, matchType: 'recurrenceId' };
                     }
                 }
 
                 if (targetStartDate) {
+                    console.log(`${logPrefix} Attempting match using targetStartDate=${targetStartDate.toISOString()}`);
                     const startMatch = candidates.find(candidate =>
                         candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetStartDate, 1)
                     );
                     if (startMatch) {
+                        console.log(`${logPrefix} ✓ Matched by identifier and startDate`);
                         return { event: startMatch.event, matchedKey: targetUid, matchType: 'identifier' };
                     }
                 }
 
-                if (candidates.length === 1) {
+                if (candidates.length === 1 && !targetRecurrenceDate) {
+                    console.log(`${logPrefix} ✓ Only one candidate with matching UID found, matching it.`);
                     return { event: candidates[0].event, matchedKey: targetUid, matchType: 'identifier' };
                 }
+
+                console.log(`${logPrefix} ✗ No candidate precisely matched the date criteria.`);
+            } else {
+                console.log(`${logPrefix} ✗ No existing events found with UID=${targetUid}`);
             }
         }
         
@@ -2646,6 +2695,54 @@ class SharedCore {
         return start1 < end2 && end1 > start2;
     }
     
+    // Parse date with timezone context
+    static parseDateWithTimezone(dateString, timeZone) {
+        if (!dateString || !timeZone) return null;
+        try {
+            // Check if string already has timezone offset
+            if (dateString.includes('Z') || /[\+\-]\d{2}:?\d{2}$/.test(dateString)) {
+                return new Date(dateString);
+            }
+
+            // Assume ISO format without Z
+            const parts = dateString.split('T');
+            const datePart = parts[0];
+            const timePart = parts[1] || '00:00:00';
+
+            if (typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hour, minute, second = 0] = timePart.split(':').map(Number);
+
+                const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+
+                const formatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone,
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit',
+                    hour12: false
+                });
+
+                const formattedParts = {};
+                formatter.formatToParts(utcDate).forEach(p => { if (p.type !== 'literal') formattedParts[p.type] = p.value; });
+
+                const asUTC = Date.UTC(
+                    Number(formattedParts.year),
+                    Number(formattedParts.month) - 1,
+                    Number(formattedParts.day),
+                    Number(formattedParts.hour),
+                    Number(formattedParts.minute),
+                    Number(formattedParts.second || 0)
+                );
+
+                const offset = asUTC - utcDate.getTime();
+                return new Date(utcDate.getTime() - offset);
+            }
+        } catch (error) {
+            console.warn(`⚠️ SharedCore: Failed to parse date with timezone: ${dateString} (${timeZone})`);
+        }
+        return null;
+    }
+
     // Fuzzy title matching to handle variations
     areTitlesSimilar(title1, title2) {
         if (!title1 || !title2) return false;

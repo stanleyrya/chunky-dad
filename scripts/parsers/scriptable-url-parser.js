@@ -235,6 +235,7 @@ class ScriptableUrlParser {
             'id': 'identifier',
 
             'recurrenceid': 'recurrenceId',
+            'recurrenceidtimezone': 'recurrenceIdTimezone',
             'sequence': 'sequence',
             'sequenced': 'sequence',
             'seq': 'sequence',
@@ -468,11 +469,18 @@ class ScriptableUrlParser {
         const dateValue = fields.date || null;
         const startTime = fields.startTime || null;
         const endTime = fields.endTime || null;
+        const timezone = fields.timezone || fields.timeZone || null;
 
         let explicitStartDate = false;
         let explicitEndDate = false;
 
-        let startDate = this.parseDate(startDateValue);
+        let startDate = null;
+        if (startDateValue && timezone) {
+            startDate = SharedCore.parseDateWithTimezone(String(startDateValue), timezone);
+        }
+        if (!startDate) {
+            startDate = this.parseDate(startDateValue);
+        }
         if (startDate && startDateValue !== null && startDateValue !== undefined) {
             explicitStartDate = true;
         }
@@ -495,7 +503,13 @@ class ScriptableUrlParser {
         }
 
         if (!endDate && dateValue && endTime) {
-            endDate = this.parseDate(`${dateValue}T${endTime}`);
+            const rawEnd = `${dateValue}T${endTime}`;
+            if (timezone) {
+                endDate = SharedCore.parseDateWithTimezone(rawEnd, timezone);
+            }
+            if (!endDate) {
+                endDate = this.parseDate(rawEnd);
+            }
             explicitEndDate = Boolean(endDate);
         }
 

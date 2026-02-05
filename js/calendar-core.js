@@ -288,6 +288,9 @@ class CalendarCore {
         } else if (line.startsWith('UID:')) {
             currentEvent.uid = line.substring(4).trim();
             parsed = true;
+        } else if (line.startsWith('SEQUENCE:')) {
+            currentEvent.sequence = parseInt(line.substring(9).trim(), 10) || 0;
+            parsed = true;
         } else if (line.startsWith('RECURRENCE-ID')) {
             // Handle RECURRENCE-ID with potential timezone information
             if (line.includes(';TZID=')) {
@@ -350,7 +353,8 @@ class CalendarCore {
                 wasUTC: calendarEvent.start?._wasUTC || false,
                 // Store UID and recurrence ID for event merging
                 uid: calendarEvent.uid || null,
-                recurrenceId: calendarEvent.recurrenceId || null
+                recurrenceId: calendarEvent.recurrenceId || null,
+                sequence: calendarEvent.sequence || 0
             };
             
 

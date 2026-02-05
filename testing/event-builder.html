@@ -2368,6 +2368,7 @@
           startDate,
           endDate,
           timeZone,
+          sequence: parseInt(event.sequence, 10) || 0,
           city: cityKey || '',
           dateKey: startDate ? formatDateKey(startDate) : '',
           recurrenceDateKey: recurrenceId ? formatDateKey(recurrenceId) : ''
@@ -3031,28 +3032,36 @@
         state.editingExistingMode = mode;
         state.editingExistingOccurrenceId = occurrenceId;
         const editingUid = (baseEvent && baseEvent.uid) || eventData.uid || '';
+
+        // Always capture the original start time as recurrenceId to help Scriptable find it
+        // and to define RECURRENCE-ID for overrides.
         let editingRecurrenceDate = null;
         let editingRecurrenceTimezone = '';
-        if (mode === 'occurrence') {
-          const recurrenceSource = (summaryResult && summaryResult.event && summaryResult.event.recurrenceId)
-            || (summaryResult && summaryResult.startDate);
-          if (recurrenceSource instanceof Date) {
-            editingRecurrenceDate = new Date(recurrenceSource.getTime());
-          } else if (recurrenceSource) {
-            const parsed = new Date(recurrenceSource);
-            if (!Number.isNaN(parsed.getTime())) {
-              editingRecurrenceDate = parsed;
-            }
+
+        const recurrenceSource = (summaryResult && summaryResult.event && summaryResult.event.recurrenceId)
+          || (summaryResult && summaryResult.startDate)
+          || eventData.startDate;
+
+        if (recurrenceSource instanceof Date) {
+          editingRecurrenceDate = new Date(recurrenceSource.getTime());
+        } else if (recurrenceSource) {
+          const parsed = new Date(recurrenceSource);
+          if (!Number.isNaN(parsed.getTime())) {
+            editingRecurrenceDate = parsed;
           }
-          editingRecurrenceTimezone = (summaryResult && summaryResult.event && summaryResult.event.timeZone)
-            || (baseEvent && baseEvent.timeZone)
-            || (eventData && eventData.timeZone)
-            || state.timezone
-            || browserTimezone;
         }
+
+        editingRecurrenceTimezone = (summaryResult && summaryResult.event && summaryResult.event.timeZone)
+          || (baseEvent && baseEvent.timeZone)
+          || (eventData && eventData.timeZone)
+          || state.timezone
+          || browserTimezone;
+
         state.editingExistingUid = editingUid;
         state.editingExistingRecurrenceId = editingRecurrenceDate ? formatInputValue(editingRecurrenceDate) : '';
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
+        state.editingExistingSequence = parseInt(eventData.sequence, 10) || 0;
+        state.isEditingRecurring = Boolean(baseEvent && baseEvent.recurrence);
 
         applyStateToForm();
         populateVenueOptions(state.city);
@@ -3132,7 +3141,8 @@
           useVenueInstagram: false,
           useVenueFacebook: false,
           image: normalizeText(eventData.image || ''),
-          isEditingExisting: true
+          isEditingExisting: true,
+          isEditingRecurring: Boolean(options.recurrence || eventData.recurrence)
         };
       }
 
@@ -3599,6 +3609,12 @@
               break;
             case 'ertz':
               overrides.editingExistingRecurrenceTimezone = value;
+              break;
+            case 'eseq':
+              overrides.editingExistingSequence = parseInt(value, 10) || 0;
+              break;
+            case 'erec':
+              overrides.isEditingRecurring = parseBooleanParam(value);
               break;
             case 'editmode':
             case 'emode':
@@ -4885,6 +4901,8 @@
           if (state.editingExistingUid) params.set('euid', state.editingExistingUid);
           if (state.editingExistingRecurrenceId) params.set('erid', state.editingExistingRecurrenceId);
           if (state.editingExistingRecurrenceTimezone) params.set('ertz', state.editingExistingRecurrenceTimezone);
+          if (state.editingExistingSequence) params.set('eseq', state.editingExistingSequence);
+          if (state.isEditingRecurring) params.set('erec', '1');
         }
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
@@ -4975,6 +4993,9 @@
         const recurrenceIdValue = sanitizeDateTimeInput(state.editingExistingRecurrenceId);
         setParam('recurrenceId', recurrenceIdValue);
         setParam('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
+        if (state.editingExistingSequence) {
+          setParam('sequence', state.editingExistingSequence);
+        }
         const encodedScriptName = encodeURIComponent(scriptName);
         return `scriptable:///run/${encodedScriptName}?${params.toString()}`;
       }
@@ -5085,7 +5106,7 @@
         const coordinates = parseCoordinates(locationValue);
         const timezone = state.timezone || browserTimezone;
         const rawRecurrence = (state.recurrence || '').trim();
-        const isOverride = state.isEditingExisting && state.editingExistingMode === 'occurrence';
+        const isOverride = state.isEditingExisting && state.editingExistingMode === 'occurrence' && (rawRecurrence || state.isEditingRecurring);
         const recurrence = isOverride ? '' : rawRecurrence;
         const recurring = Boolean(recurrence);
         let uid = '';
@@ -5095,11 +5116,11 @@
           const parsedUid = parseResultId(state.editingExistingId);
           uid = parsedUid.uid || '';
         }
-        const recurrenceIdTimezone = isOverride
+        const recurrenceIdTimezone = (state.isEditingExisting)
           ? (state.editingExistingRecurrenceTimezone || timezone)
           : '';
         let recurrenceId = null;
-        if (isOverride && state.editingExistingRecurrenceId) {
+        if (state.isEditingExisting && state.editingExistingRecurrenceId) {
           recurrenceId = parseEditingRecurrenceId(state.editingExistingRecurrenceId, recurrenceIdTimezone || timezone);
         }
         return {
@@ -5127,6 +5148,7 @@
           gmaps: (state.gmaps || '').trim() || null,
           ticketUrl: (state.ticketUrl || '').trim() || null,
           links,
+          isOverride,
           recurring,
           recurrence,
           durationMinutes
@@ -5502,8 +5524,8 @@
         const isEditingExisting = Boolean(state && state.isEditingExisting);
         const icsOptions = isEditingExisting
           ? {
-              method: 'REQUEST',
-              sequence: Math.floor(Date.now() / 1000),
+              method: 'PUBLISH',
+              sequence: (parseInt(state.editingExistingSequence, 10) || 0) + 1,
               lastModified: new Date()
             }
           : null;
@@ -5568,7 +5590,7 @@
         if (sequence !== null) {
           lines.push(`SEQUENCE:${sequence}`);
         }
-        if (event.recurrenceId) {
+        if (event.recurrenceId && event.isOverride) {
           const recurrenceTimezone = event.recurrenceIdTimezone || timezone;
           const recurrenceTzid = recurrenceTimezone ? `;TZID=${recurrenceTimezone}` : '';
           const recurrenceValue = formatICSDateInTimezone(event.recurrenceId, recurrenceTimezone)
