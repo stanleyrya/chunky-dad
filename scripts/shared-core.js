@@ -1453,6 +1453,30 @@ class SharedCore {
         return isNaN(date.getTime()) ? null : date;
     }
 
+    parseAppleRecurrenceId(value) {
+        const seconds = Number(value);
+        if (!Number.isFinite(seconds)) return null;
+        const baseMillis = Date.UTC(2001, 0, 1, 0, 0, 0, 0);
+        const millis = baseMillis + seconds * 1000;
+        const date = new Date(millis);
+        return isNaN(date.getTime()) ? null : date;
+    }
+
+    parseScriptableIdentifier(value) {
+        if (!value) return { uid: null, recurrenceDate: null };
+        const raw = String(value).trim();
+        if (!raw) return { uid: null, recurrenceDate: null };
+        const colonIndex = raw.indexOf(':');
+        const afterColon = colonIndex >= 0 ? raw.slice(colonIndex + 1) : raw;
+        const ridMatch = afterColon.match(/\/RID=(\d+)/i);
+        const uid = ridMatch ? afterColon.slice(0, ridMatch.index) : afterColon;
+        const recurrenceDate = ridMatch ? this.parseAppleRecurrenceId(ridMatch[1]) : null;
+        return {
+            uid: uid && uid.length > 0 ? uid : null,
+            recurrenceDate
+        };
+    }
+
     formatDateForCalendar(date) {
         if (!date) return null;
         if (typeof date === 'string') date = new Date(date);
@@ -2437,7 +2461,6 @@ class SharedCore {
         let targetKeyFormat = null;
         let targetIdentifier = null;
         let targetRecurrenceId = null;
-        let targetSequence = null;
         
         if (typeof targetEventOrKey === 'string') {
             targetKey = targetEventOrKey;
@@ -2448,7 +2471,6 @@ class SharedCore {
             targetKeyFormat = targetEventOrKey._parserConfig?.keyTemplate || null;
             targetIdentifier = targetEventOrKey.identifier || targetEventOrKey.id || null;
             targetRecurrenceId = targetEventOrKey.recurrenceId || targetEventOrKey.recurrenceID || targetEventOrKey.recurrence_id || null;
-            targetSequence = targetEventOrKey.sequence || targetEventOrKey.sequenced || targetEventOrKey.seq || null;
             
             if (!targetSource && targetEventOrKey.url) {
                 const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
@@ -2466,9 +2488,18 @@ class SharedCore {
         
         const normalizedIdentifier = normalizeIdentifier(targetIdentifier);
         const normalizedRecurrenceId = normalizeIdentifier(targetRecurrenceId);
-        const normalizedSequence = normalizeIdentifier(targetSequence);
+        const targetIdentifierInfo = this.parseScriptableIdentifier(normalizedIdentifier);
+        const targetUid = targetIdentifierInfo.uid || normalizedIdentifier;
+        const targetRecurrenceDate = normalizedRecurrenceId
+            ? this.parseDate(normalizedRecurrenceId)
+            : targetIdentifierInfo.recurrenceDate;
+        const targetStartDate = targetEventOrKey && typeof targetEventOrKey === 'object'
+            ? (targetEventOrKey.startDate instanceof Date
+                ? targetEventOrKey.startDate
+                : this.parseDate(targetEventOrKey.startDate))
+            : null;
         
-        const hasDirectIdentifier = Boolean(normalizedIdentifier || normalizedRecurrenceId || normalizedSequence);
+        const hasDirectIdentifier = Boolean(targetUid);
         const hasKeyMatch = Boolean(targetKey || targetMatchKey);
         
         if (!hasDirectIdentifier && !hasKeyMatch) return null;
@@ -2485,86 +2516,58 @@ class SharedCore {
         });
         
         if (hasDirectIdentifier) {
-            const targetRecurrenceDate = normalizedRecurrenceId
-                ? this.parseDate(normalizedRecurrenceId)
-                : null;
-            
-            if (normalizedRecurrenceId) {
-                const targetEvent = targetEventOrKey && typeof targetEventOrKey === 'object'
-                    ? targetEventOrKey
-                    : null;
-                const targetTitle = targetEvent?.title || '';
-                const normalizeVenue = (value) => {
-                    if (!value) return '';
-                    return String(value).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-                };
-                const normalizedTargetVenue = normalizeVenue(
-                    targetEvent ? (targetEvent.bar || targetEvent.venue || targetEvent.location || '') : ''
+            const candidates = [];
+            for (const { event, fields } of parsedEvents) {
+                const eventIdentifierRaw = normalizeIdentifier(event.identifier || '');
+                const eventIdentifierInfo = this.parseScriptableIdentifier(eventIdentifierRaw);
+                const notesIdentifierRaw = normalizeIdentifier(fields.uid || fields.identifier || fields.id || '');
+                const notesIdentifierInfo = this.parseScriptableIdentifier(notesIdentifierRaw);
+                const eventUid = eventIdentifierInfo.uid || notesIdentifierInfo.uid || notesIdentifierRaw || null;
+                if (!eventUid || eventUid !== targetUid) {
+                    continue;
+                }
+
+                const notesRecurrenceId = normalizeIdentifier(
+                    fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id || ''
                 );
-                const shouldMatchByTitle = targetTitle && String(targetTitle).trim().length > 0;
-                const shouldMatchByVenue = normalizedTargetVenue.length > 0;
-                const matchesTitleOrVenue = (event, fields) => {
-                    if (!shouldMatchByTitle && !shouldMatchByVenue) return false;
-                    const titleMatches = shouldMatchByTitle && this.areTitlesSimilar(event.title, targetTitle);
-                    if (titleMatches) return true;
-                    if (!shouldMatchByVenue) return false;
-                    const candidateVenue = fields?.bar || fields?.venue || fields?.location || event.location || '';
-                    return normalizeVenue(candidateVenue) === normalizedTargetVenue;
-                };
+                const notesRecurrenceDate = notesRecurrenceId ? this.parseDate(notesRecurrenceId) : null;
+                const eventRecurrenceDate = eventIdentifierInfo.recurrenceDate || notesIdentifierInfo.recurrenceDate || notesRecurrenceDate;
+                const eventStartDate = event.startDate instanceof Date
+                    ? event.startDate
+                    : this.parseDate(event.startDate);
 
-                for (const { event, fields } of parsedEvents) {
-                    const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
-                    const eventRecurrenceId = normalizeIdentifier(
-                        event.recurrenceId || event.recurrenceID || fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id
-                    );
-                    if (eventRecurrenceId && eventRecurrenceId === normalizedRecurrenceId) {
-                        if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier || matchesTitleOrVenue(event, fields)) {
-                            return { event, matchedKey: eventRecurrenceId, matchType: 'recurrenceId' };
-                        }
-                    }
-                    
-                    if (targetRecurrenceDate) {
-                        const parsedEventRecurrence = eventRecurrenceId
-                            ? this.parseDate(eventRecurrenceId)
-                            : null;
-                        if (parsedEventRecurrence && this.areDatesEqual(parsedEventRecurrence, targetRecurrenceDate, 1)) {
-                            if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier || matchesTitleOrVenue(event, fields)) {
-                                return { event, matchedKey: eventRecurrenceId || normalizedRecurrenceId, matchType: 'recurrenceId' };
-                            }
-                        }
-                        
-                        const eventStartDate = event.startDate instanceof Date
-                            ? event.startDate
-                            : this.parseDate(event.startDate);
-                        if (eventStartDate && this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1)) {
-                            if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier || matchesTitleOrVenue(event, fields)) {
-                                return { event, matchedKey: normalizedRecurrenceId, matchType: 'recurrenceId' };
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (normalizedIdentifier) {
-                for (const { event, fields } of parsedEvents) {
-                    const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
-                    if (eventIdentifier === normalizedIdentifier) {
-                        return { event, matchedKey: eventIdentifier, matchType: 'identifier' };
-                    }
-                }
-            }
-            
-            if (normalizedSequence) {
-                for (const { event, fields } of parsedEvents) {
-                    const eventSequence = normalizeIdentifier(
-                        event.sequence || event.sequenced || fields.sequence || fields.sequenced || fields.seq
-                    );
-                    if (eventSequence === normalizedSequence) {
-                        return { event, matchedKey: eventSequence, matchType: 'sequence' };
-                    }
-                }
+                candidates.push({ event, eventUid, eventRecurrenceDate, eventStartDate });
             }
 
+            if (candidates.length > 0) {
+                if (targetRecurrenceDate) {
+                    const recurrenceMatch = candidates.find(candidate =>
+                        candidate.eventRecurrenceDate && this.areDatesEqual(candidate.eventRecurrenceDate, targetRecurrenceDate, 1)
+                    );
+                    if (recurrenceMatch) {
+                        return { event: recurrenceMatch.event, matchedKey: targetUid, matchType: 'recurrenceId' };
+                    }
+                    const startMatch = candidates.find(candidate =>
+                        candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetRecurrenceDate, 1)
+                    );
+                    if (startMatch) {
+                        return { event: startMatch.event, matchedKey: targetUid, matchType: 'recurrenceId' };
+                    }
+                }
+
+                if (targetStartDate) {
+                    const startMatch = candidates.find(candidate =>
+                        candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetStartDate, 1)
+                    );
+                    if (startMatch) {
+                        return { event: startMatch.event, matchedKey: targetUid, matchType: 'identifier' };
+                    }
+                }
+
+                if (candidates.length === 1) {
+                    return { event: candidates[0].event, matchedKey: targetUid, matchType: 'identifier' };
+                }
+            }
         }
         
         if (!hasKeyMatch) return null;
