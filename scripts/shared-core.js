@@ -2542,6 +2542,67 @@ class SharedCore {
                     }
                 }
             }
+
+            if (targetRecurrenceDate) {
+                const targetEvent = targetEventOrKey && typeof targetEventOrKey === 'object'
+                    ? targetEventOrKey
+                    : null;
+                const targetTitle = targetEvent?.title || '';
+                const targetVenue = targetEvent
+                    ? (targetEvent.bar || targetEvent.venue || targetEvent.location || '')
+                    : '';
+                const normalizeVenue = (value) => {
+                    if (!value) return '';
+                    return String(value).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+                };
+                const normalizedTargetVenue = normalizeVenue(targetVenue);
+                const recurrenceCandidates = [];
+
+                for (const { event, fields } of parsedEvents) {
+                    const eventStartDate = event.startDate instanceof Date
+                        ? event.startDate
+                        : this.parseDate(event.startDate);
+                    if (!eventStartDate || !this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1)) {
+                        continue;
+                    }
+                    const candidateVenue = fields?.bar || fields?.venue || fields?.location || event.location || '';
+                    recurrenceCandidates.push({
+                        event,
+                        normalizedVenue: normalizeVenue(candidateVenue)
+                    });
+                }
+
+                if (recurrenceCandidates.length > 0) {
+                    let matched = null;
+                    if (targetTitle) {
+                        matched = recurrenceCandidates.find(candidate =>
+                            this.areTitlesSimilar(candidate.event.title, targetTitle)
+                        );
+                    }
+                    if (!matched && normalizedTargetVenue) {
+                        matched = recurrenceCandidates.find(candidate =>
+                            candidate.normalizedVenue && candidate.normalizedVenue === normalizedTargetVenue
+                        );
+                    }
+                    if (!matched && recurrenceCandidates.length === 1) {
+                        matched = recurrenceCandidates[0];
+                    }
+                    if (matched) {
+                        const targetLabel = targetTitle || 'event';
+                        const existingLabel = matched.event.title || 'event';
+                        const shouldLog = targetEvent && (targetEvent.source === 'scriptable-input' || targetEvent._parserConfig?.name === 'Scriptable URL Input');
+                        if (shouldLog) {
+                            console.log(`🔎 SharedCore: RecurrenceId fallback matched "${targetLabel}" to "${existingLabel}"`);
+                        }
+                        return { event: matched.event, matchedKey: normalizedRecurrenceId, matchType: 'recurrenceDate' };
+                    }
+                    const shouldLog = targetEvent && (targetEvent.source === 'scriptable-input' || targetEvent._parserConfig?.name === 'Scriptable URL Input');
+                    if (shouldLog) {
+                        const targetLabel = targetTitle || 'event';
+                        console.log(`🔎 SharedCore: RecurrenceId fallback found ${recurrenceCandidates.length} candidate(s) but no title/venue match for "${targetLabel}"`);
+                    }
+                }
+            }
         }
         
         if (!hasKeyMatch) return null;
