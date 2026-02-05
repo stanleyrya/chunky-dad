@@ -1137,12 +1137,7 @@ class SharedCore {
             'image': 'image',
             'url': 'url',
             'timezone': 'timezone',
-            'key': 'key',
-            'uid': 'identifier',
-            'recurrenceid': 'recurrenceId',
-            'recurrenceidtimezone': 'recurrenceIdTimezone',
-            'sequence': 'sequence',
-            'seq': 'sequence'
+            'key': 'key'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
@@ -2001,8 +1996,10 @@ class SharedCore {
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
             'originalTitle', 'name', // These are usually duplicates of title
             // Scriptable-specific properties that shouldn't be in notes
-            'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
             'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
+            // Recurrence metadata used for matching, not for notes storage
+            'recurrenceId', 'recurrenceIdTimezone', 'sequence',
             // Coordinate helpers that duplicate location data
             'lat', 'lng',
             // Location-specific fields that shouldn't be in notes (used internally)
@@ -2488,66 +2485,62 @@ class SharedCore {
         });
         
         if (hasDirectIdentifier) {
-            const recurrenceMatches = [];
-            const identifierMatches = [];
-            const sequenceMatches = [];
             const targetRecurrenceDate = normalizedRecurrenceId
                 ? this.parseDate(normalizedRecurrenceId)
                 : null;
             
-            for (const { event, fields } of parsedEvents) {
-                const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
-                const eventRecurrenceId = normalizeIdentifier(
-                    event.recurrenceId || event.recurrenceID || fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id
-                );
-                const eventSequence = normalizeIdentifier(
-                    event.sequence || event.sequenced || fields.sequence || fields.sequenced || fields.seq
-                );
-                
-                if (normalizedRecurrenceId) {
-                    const matchesStoredRecurrence = eventRecurrenceId && eventRecurrenceId === normalizedRecurrenceId;
-                    let matchesStartDate = false;
-                    if (!matchesStoredRecurrence && targetRecurrenceDate) {
-                        const eventStartDate = event.startDate instanceof Date
-                            ? event.startDate
-                            : this.parseDate(event.startDate);
-                        if (eventStartDate) {
-                            matchesStartDate = this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1);
+            if (normalizedRecurrenceId) {
+                for (const { event, fields } of parsedEvents) {
+                    const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
+                    const eventRecurrenceId = normalizeIdentifier(
+                        event.recurrenceId || event.recurrenceID || fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id
+                    );
+                    if (eventRecurrenceId && eventRecurrenceId === normalizedRecurrenceId) {
+                        if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier) {
+                            return { event, matchedKey: eventRecurrenceId, matchType: 'recurrenceId' };
                         }
                     }
                     
-                    if (matchesStoredRecurrence || matchesStartDate) {
-                        if (normalizedIdentifier && eventIdentifier && eventIdentifier !== normalizedIdentifier) {
-                            // Prefer matches that also align on identifier when possible.
-                        } else if (normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
-                            return { event, matchedKey: eventRecurrenceId || normalizedRecurrenceId, matchType: 'recurrenceId' };
-                        } else {
-                            recurrenceMatches.push({
-                                event,
-                                matchedKey: eventRecurrenceId || normalizedRecurrenceId,
-                                matchType: 'recurrenceId'
-                            });
+                    if (targetRecurrenceDate) {
+                        const parsedEventRecurrence = eventRecurrenceId
+                            ? this.parseDate(eventRecurrenceId)
+                            : null;
+                        if (parsedEventRecurrence && this.areDatesEqual(parsedEventRecurrence, targetRecurrenceDate, 1)) {
+                            if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier) {
+                                return { event, matchedKey: eventRecurrenceId || normalizedRecurrenceId, matchType: 'recurrenceId' };
+                            }
+                        }
+                        
+                        if (!eventRecurrenceId && normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
+                            const eventStartDate = event.startDate instanceof Date
+                                ? event.startDate
+                                : this.parseDate(event.startDate);
+                            if (eventStartDate && this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1)) {
+                                return { event, matchedKey: normalizedRecurrenceId, matchType: 'recurrenceId' };
+                            }
                         }
                     }
                 }
-                
-                if (normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
-                    identifierMatches.push({ event, matchedKey: eventIdentifier, matchType: 'identifier' });
-                }
-                
-                if (normalizedSequence && eventSequence === normalizedSequence) {
-                    sequenceMatches.push({ event, matchedKey: eventSequence, matchType: 'sequence' });
+            }
+            
+            if (normalizedIdentifier) {
+                for (const { event, fields } of parsedEvents) {
+                    const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
+                    if (eventIdentifier === normalizedIdentifier) {
+                        return { event, matchedKey: eventIdentifier, matchType: 'identifier' };
+                    }
                 }
             }
             
-            if (recurrenceMatches.length > 0) {
-                return recurrenceMatches[0];
-            }
-            if (identifierMatches.length > 0) {
-                return identifierMatches[0];
-            }
-            if (sequenceMatches.length > 0) {
-                return sequenceMatches[0];
+            if (normalizedSequence) {
+                for (const { event, fields } of parsedEvents) {
+                    const eventSequence = normalizeIdentifier(
+                        event.sequence || event.sequenced || fields.sequence || fields.sequenced || fields.seq
+                    );
+                    if (eventSequence === normalizedSequence) {
+                        return { event, matchedKey: eventSequence, matchType: 'sequence' };
+                    }
+                }
             }
         }
         

@@ -233,10 +233,8 @@ class ScriptableUrlParser {
 
             'identifier': 'identifier',
             'id': 'identifier',
-            'uid': 'identifier',
 
             'recurrenceid': 'recurrenceId',
-            'recurrenceidtimezone': 'recurrenceIdTimezone',
             'sequence': 'sequence',
             'sequenced': 'sequence',
             'seq': 'sequence',
