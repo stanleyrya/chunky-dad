@@ -4991,19 +4991,17 @@
         const bodyTextLines = [
           'Hey Dad, here is the event link:',
           '',
+          '',
+          '',
           shareUrl
         ];
-        const shareUrlHtml = String(shareUrl || '')
-          .replace(/&/g, '&amp;')
-          .replace(/"/g, '&quot;');
-        const bodyHtml = `Hey Dad, here is the event link:<br><br><a href="${shareUrlHtml}">${shareUrlHtml}</a>`;
+        const bodyText = bodyTextLines.join('\n');
         return {
           shareUrl,
           scriptableUrl,
           subject,
-          body: bodyTextLines.join('\n'),
-          bodyText: bodyTextLines.join('\n'),
-          bodyHtml
+          body: bodyText,
+          bodyText
         };
       }
 
