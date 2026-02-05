@@ -27,7 +27,7 @@ class ComponentsManager {
         const footerHTML = `
             <p>&copy; 2025 chunky.dad</p>
             <p>All info is community-sourced.</p>
-            <button id="share-intel-btn" class="share-intel-footer-btn">Share Bear 📧</button>
+            <button id="share-intel-btn" class="share-intel-footer-btn">Share Bear Intel 📧</button>
         `;
 
         footerElements.forEach((container, index) => {
