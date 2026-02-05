@@ -4141,7 +4141,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     hasEventDifferences(event) {
         if (!event._original) return false;
         
-        // Get all fields that would be included in the calendar event, using the same logic as formatEventNotes
+        // Get all fields used for comparison display (includes core fields beyond notes)
         const fieldsToCheck = this.getFieldsForComparison(event);
         
         for (const field of fieldsToCheck) {
@@ -4154,8 +4154,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // Skip empty fields
             if (!newValue && !existingValue) continue;
             
-            // Check for differences
-            if (newValue !== existingValue) {
+            const isDateField = field.toLowerCase().includes('date');
+            
+            // Check for differences (date-aware to avoid timezone noise)
+            if (isDateField) {
+                if (!this.datesEqualForDisplay(existingValue, newValue)) {
+                    return true;
+                }
+            } else if (newValue !== existingValue) {
                 return true;
             }
         }
@@ -4168,22 +4174,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         // Get all fields from both new and existing events
         const allFields = new Set();
         
-        // Use the same exclusion logic as formatEventNotes in shared-core.js
-        // These are fields that are NOT saved to calendar notes and should NOT be displayed
+        // Exclude only internal/Scriptable/search helper fields from comparison.
+        // Keep core calendar fields (title/startDate/endDate/location) and coordinates
+        // even though they are not stored in notes.
         const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
+            'notes',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
             '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
             'originalTitle', 'name', // These are usually duplicates of title
-            // Scriptable-specific properties that shouldn't be in notes
+            // Scriptable-specific properties that shouldn't be in comparison
             'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
             'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
             // Recurrence metadata used for matching, not for notes storage
             'recurrenceId', 'recurrenceIdTimezone', 'sequence',
-            // Coordinate helpers that duplicate location data
-            'lat', 'lng',
-            // Location-specific fields that shouldn't be in notes (used internally)
+            // Search helper fields used only for identifier matching
+            'searchStartDate', 'searchEndDate',
+            // Location-specific fields that are internal to geocoding
             'placeId'
         ]);
         
@@ -4258,6 +4265,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             'location': 20,     // alias for venue
             'host': 20,         // alias for venue
             'address': 21,
+            'coordinates': 22,
+            'lat': 23,
+            'lng': 24,
             // Note: city is now excluded as it shouldn't be saved to calendar
             
             // Contact/Social fields
@@ -4315,7 +4325,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateComparisonRows(event) {
         if (!event._original) return '';
         
-        // Use the same field logic as what goes into calendar notes
+        // Use the same field logic as comparison (includes core fields not in notes)
         const fieldsToCompare = this.getFieldsForComparison(event);
         const rows = [];
         
@@ -4380,7 +4390,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                         ...eventForField
                     });
                 }
-                const str = val.toString();
+                let stringValue = '';
+                if (typeof val === 'object') {
+                    try {
+                        stringValue = JSON.stringify(val);
+                    } catch (e) {
+                        stringValue = String(val);
+                    }
+                } else {
+                    stringValue = val.toString();
+                }
+                const str = stringValue;
                 if (str.length > maxLength) {
                     return `<span title="${this.escapeHtml(str)}">${this.escapeHtml(str.substring(0, maxLength))}...</span>`;
                 }
@@ -4488,7 +4508,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     generateLineDiffView(event) {
         if (!event._original) return '<p>No comparison data available</p>';
         
-        // Use the same field logic as what goes into calendar notes
+        // Use the same field logic as comparison (includes core fields not in notes)
         const fieldsToCompare = this.getFieldsForComparison(event);
         let html = '<div style="font-family: \'SF Mono\', Monaco, \'Courier New\', monospace; font-size: 12px; background: var(--background-primary); padding: 12px; border-radius: 8px; line-height: 1.6; color: var(--text-primary);">';
         
@@ -4513,6 +4533,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     // Get timezone from city configuration instead of expecting it on the event
                     const timezone = this.getTimezoneForCity(event.city);
                     return new Date(val).toLocaleString('en-US', { timeZone: timezone });
+                }
+                if (typeof val === 'object') {
+                    try {
+                        return JSON.stringify(val);
+                    } catch (e) {
+                        return String(val);
+                    }
                 }
                 return val.toString();
             };
