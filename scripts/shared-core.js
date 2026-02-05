@@ -2485,24 +2485,61 @@ class SharedCore {
         });
         
         if (hasDirectIdentifier) {
-            for (const { event, fields } of parsedEvents) {
-                const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
-                if (normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
-                    return { event, matchedKey: eventIdentifier, matchType: 'identifier' };
+            const targetRecurrenceDate = normalizedRecurrenceId
+                ? this.parseDate(normalizedRecurrenceId)
+                : null;
+            
+            if (normalizedRecurrenceId) {
+                for (const { event, fields } of parsedEvents) {
+                    const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
+                    const eventRecurrenceId = normalizeIdentifier(
+                        event.recurrenceId || event.recurrenceID || fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id
+                    );
+                    if (eventRecurrenceId && eventRecurrenceId === normalizedRecurrenceId) {
+                        if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier) {
+                            return { event, matchedKey: eventRecurrenceId, matchType: 'recurrenceId' };
+                        }
+                    }
+                    
+                    if (targetRecurrenceDate) {
+                        const parsedEventRecurrence = eventRecurrenceId
+                            ? this.parseDate(eventRecurrenceId)
+                            : null;
+                        if (parsedEventRecurrence && this.areDatesEqual(parsedEventRecurrence, targetRecurrenceDate, 1)) {
+                            if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier) {
+                                return { event, matchedKey: eventRecurrenceId || normalizedRecurrenceId, matchType: 'recurrenceId' };
+                            }
+                        }
+                        
+                        if (!eventRecurrenceId && normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
+                            const eventStartDate = event.startDate instanceof Date
+                                ? event.startDate
+                                : this.parseDate(event.startDate);
+                            if (eventStartDate && this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1)) {
+                                return { event, matchedKey: normalizedRecurrenceId, matchType: 'recurrenceId' };
+                            }
+                        }
+                    }
                 }
-                
-                const eventRecurrenceId = normalizeIdentifier(
-                    event.recurrenceId || event.recurrenceID || fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id
-                );
-                if (normalizedRecurrenceId && eventRecurrenceId === normalizedRecurrenceId) {
-                    return { event, matchedKey: eventRecurrenceId, matchType: 'recurrenceId' };
+            }
+            
+            if (normalizedIdentifier) {
+                for (const { event, fields } of parsedEvents) {
+                    const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
+                    if (eventIdentifier === normalizedIdentifier) {
+                        return { event, matchedKey: eventIdentifier, matchType: 'identifier' };
+                    }
                 }
-                
-                const eventSequence = normalizeIdentifier(
-                    event.sequence || event.sequenced || fields.sequence || fields.sequenced || fields.seq
-                );
-                if (normalizedSequence && eventSequence === normalizedSequence) {
-                    return { event, matchedKey: eventSequence, matchType: 'sequence' };
+            }
+            
+            if (normalizedSequence) {
+                for (const { event, fields } of parsedEvents) {
+                    const eventSequence = normalizeIdentifier(
+                        event.sequence || event.sequenced || fields.sequence || fields.sequenced || fields.seq
+                    );
+                    if (eventSequence === normalizedSequence) {
+                        return { event, matchedKey: eventSequence, matchType: 'sequence' };
+                    }
                 }
             }
         }
