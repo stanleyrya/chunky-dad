@@ -927,19 +927,48 @@ class ScriptableAdapter {
                 const parsed = new Date(value);
                 return isNaN(parsed.getTime()) ? null : parsed;
             };
+
+            const parseAppleRecurrenceIdSeconds = (value) => {
+                const seconds = Number(value);
+                if (!Number.isFinite(seconds)) return null;
+                const baseMillis = Date.UTC(2001, 0, 1, 0, 0, 0, 0);
+                const date = new Date(baseMillis + seconds * 1000);
+                return isNaN(date.getTime()) ? null : date;
+            };
+
+            const parseRidDateFromIdentifier = (identifierValue) => {
+                if (!identifierValue) return null;
+                const raw = String(identifierValue).trim();
+                if (!raw) return null;
+                const colonIndex = raw.indexOf(':');
+                const afterColon = colonIndex >= 0 ? raw.slice(colonIndex + 1) : raw;
+                const ridMatch = afterColon.match(/\/RID=(\d+)/i);
+                if (!ridMatch) return null;
+                return parseAppleRecurrenceIdSeconds(ridMatch[1]);
+            };
+
+            const identifierRaw = event && (event.identifier || event.id) ? String(event.identifier || event.id).trim() : '';
+            const hasIdentifier = Boolean(identifierRaw);
             
             // Parse dates from formatted event
             const startDate = coerceDate(event.startDate);
             const endDate = coerceDate(event.endDate || event.startDate);
             const recurrenceDate = coerceDate(event.recurrenceId);
-            const dateCandidates = [startDate, endDate, recurrenceDate].filter(Boolean);
+            const identifierRidDate = hasIdentifier ? parseRidDateFromIdentifier(identifierRaw) : null;
+            const dateCandidates = [startDate, endDate, recurrenceDate, identifierRidDate].filter(Boolean);
             
             if (dateCandidates.length === 0) {
                 return [];
             }
             
             // Expand search range for conflict detection
-            const searchRangeDays = Number(event._parserConfig?.calendarSearchRangeDays || 0);
+            let searchRangeDays = Number(event._parserConfig?.calendarSearchRangeDays || 0);
+            if (hasIdentifier) {
+                const defaultIdentifierSearchDays = 400;
+                if (!Number.isFinite(searchRangeDays) || searchRangeDays < defaultIdentifierSearchDays) {
+                    searchRangeDays = defaultIdentifierSearchDays;
+                }
+            }
             const earliestTime = Math.min(...dateCandidates.map(date => date.getTime()));
             const latestTime = Math.max(...dateCandidates.map(date => date.getTime()));
             const searchStart = new Date(earliestTime);
@@ -950,6 +979,14 @@ class ScriptableAdapter {
             if (Number.isFinite(searchRangeDays) && searchRangeDays > 0) {
                 searchStart.setDate(searchStart.getDate() - searchRangeDays);
                 searchEnd.setDate(searchEnd.getDate() + searchRangeDays);
+            }
+
+            if (hasIdentifier) {
+                console.log(`📱 Scriptable: Identifier match enabled (uid="${identifierRaw}")`);
+                console.log(`📱 Scriptable: Existing event search window: ${searchStart.toISOString()} → ${searchEnd.toISOString()}`);
+                if (identifierRidDate) {
+                    console.log(`📱 Scriptable: Identifier RID date detected: ${identifierRidDate.toISOString()}`);
+                }
             }
             
             const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
