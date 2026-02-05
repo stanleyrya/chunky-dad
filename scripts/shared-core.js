@@ -2257,6 +2257,15 @@ class SharedCore {
                     existingKey: matchedKey
                 };
             }
+
+            if (keyMatch.matchType === 'identifier' || keyMatch.matchType === 'recurrenceId') {
+                return {
+                    action: 'merge',
+                    reason: 'Identifier match found',
+                    existingEvent: existingEvent,
+                    existingKey: matchedKey
+                };
+            }
         }
         
         // Check for exact or similar duplicates
@@ -2500,6 +2509,17 @@ class SharedCore {
                 ? targetEventOrKey.startDate
                 : this.parseDate(targetEventOrKey.startDate))
             : null;
+        const targetSearchStartDate = targetEventOrKey && typeof targetEventOrKey === 'object'
+            ? (targetEventOrKey.searchStartDate instanceof Date
+                ? targetEventOrKey.searchStartDate
+                : this.parseDate(targetEventOrKey.searchStartDate))
+            : null;
+        const targetSearchEndDate = targetEventOrKey && typeof targetEventOrKey === 'object'
+            ? (targetEventOrKey.searchEndDate instanceof Date
+                ? targetEventOrKey.searchEndDate
+                : this.parseDate(targetEventOrKey.searchEndDate))
+            : null;
+        const targetSearchDate = targetSearchStartDate || targetSearchEndDate || null;
         
         const hasDirectIdentifier = Boolean(targetUid);
         const hasKeyMatch = Boolean(targetKey || targetMatchKey);
@@ -2543,9 +2563,26 @@ class SharedCore {
 
             if (candidates.length > 0) {
                 const targetRecurrenceLabel = targetRecurrenceDate ? targetRecurrenceDate.toISOString() : '';
+                const targetSearchLabel = targetSearchDate ? targetSearchDate.toISOString() : '';
                 const targetStartLabel = targetStartDate ? targetStartDate.toISOString() : '';
-                console.log(`🔎 SharedCore: Identifier candidates=${candidates.length} uid="${targetUid}" recurrenceId="${targetRecurrenceLabel}" start="${targetStartLabel}"`);
-                if (targetRecurrenceDate) {
+                console.log(`🔎 SharedCore: Identifier candidates=${candidates.length} uid="${targetUid}" search="${targetSearchLabel}" recurrenceId="${targetRecurrenceLabel}" start="${targetStartLabel}"`);
+                if (targetSearchDate) {
+                    const searchStartMatch = candidates.find(candidate =>
+                        candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetSearchDate, 1)
+                    );
+                    if (searchStartMatch) {
+                        console.log(`🔎 SharedCore: Matched by UID + search date uid="${targetUid}"`);
+                        return { event: searchStartMatch.event, matchedKey: targetUid, matchType: 'identifier' };
+                    }
+                    const searchRecurrenceMatch = candidates.find(candidate =>
+                        candidate.eventRecurrenceDate && this.areDatesEqual(candidate.eventRecurrenceDate, targetSearchDate, 1)
+                    );
+                    if (searchRecurrenceMatch) {
+                        console.log(`🔎 SharedCore: Matched by UID + (recurrenceDate≈searchDate) uid="${targetUid}"`);
+                        return { event: searchRecurrenceMatch.event, matchedKey: targetUid, matchType: 'identifier' };
+                    }
+                }
+                if (targetRecurrenceDate && !targetSearchDate) {
                     const recurrenceMatch = candidates.find(candidate =>
                         candidate.eventRecurrenceDate && this.areDatesEqual(candidate.eventRecurrenceDate, targetRecurrenceDate, 1)
                     );

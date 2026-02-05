@@ -5010,16 +5010,9 @@
         if (state.isEditingExisting && state.editingExistingSearchEndDate) {
           setParam('searchEndDate', state.editingExistingSearchEndDate);
         }
-        const recurrenceIdValue = sanitizeDateTimeInput(state.editingExistingRecurrenceId);
-        if (recurrenceIdValue) {
-          setParam('recurrenceId', recurrenceIdValue);
-          setParam('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
-        }
         const encodedScriptName = encodeURIComponent(scriptName);
         logger.debug('EVENT', 'Built Scriptable callback URL params', {
           identifier,
-          recurrenceId: recurrenceIdValue || '',
-          recurrenceIdTimezone: state.editingExistingRecurrenceTimezone || '',
           isEditingExisting: Boolean(state.isEditingExisting),
           editingExistingMode: state.editingExistingMode || null
         });
