@@ -2229,13 +2229,12 @@ class SharedCore {
     
     // Analyze a single event against existing events
     analyzeEventAction(event, existingEventsData, mergeMode = 'upsert') {
-        if (!existingEventsData || existingEventsData.length === 0) {
-            return { action: 'new', reason: 'No existing events found' };
-        }
-        
         const hasIdentifier = Boolean(event && (event.identifier || event.id));
         
         if (hasIdentifier) {
+            if (!existingEventsData || existingEventsData.length === 0) {
+                return { action: 'conflict', reason: 'Identifier match not found' };
+            }
             const keyMatch = this.findEventByKey(existingEventsData, event);
             if (keyMatch && keyMatch.matchType === 'identifier') {
                 const existingEvent = keyMatch.event;
@@ -2248,6 +2247,10 @@ class SharedCore {
                 };
             }
             return { action: 'conflict', reason: 'Identifier match not found' };
+        }
+        
+        if (!existingEventsData || existingEventsData.length === 0) {
+            return { action: 'new', reason: 'No existing events found' };
         }
         
         // Check for key-based merging first (exact or wildcard)
