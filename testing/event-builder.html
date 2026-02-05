@@ -2369,6 +2369,7 @@
           recurrence: normalizeText(event.recurrence || ''),
           recurring: Boolean(event.recurrence),
           recurrenceId,
+          sequence: Number.isFinite(event.sequence) ? event.sequence : null,
           startDate,
           endDate,
           timeZone,
@@ -3057,6 +3058,14 @@
         state.editingExistingUid = editingUid;
         state.editingExistingRecurrenceId = editingRecurrenceDate ? formatInputValue(editingRecurrenceDate) : '';
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
+        const candidateSequence = (() => {
+          const summarySeq = summaryResult && summaryResult.event ? summaryResult.event.sequence : null;
+          if (Number.isFinite(summarySeq)) return summarySeq;
+          if (Number.isFinite(eventData && eventData.sequence)) return eventData.sequence;
+          if (Number.isFinite(baseEvent && baseEvent.sequence)) return baseEvent.sequence;
+          return null;
+        })();
+        state.editingExistingSequence = candidateSequence !== null ? String(candidateSequence) : '';
 
         applyStateToForm();
         populateVenueOptions(state.city);
@@ -3402,6 +3411,7 @@
         state.editingExistingUid = '';
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
+        state.editingExistingSequence = '';
       }
 
       function clearExistingSelection(options = {}) {
@@ -3465,6 +3475,7 @@
           editingExistingUid: '',
           editingExistingRecurrenceId: '',
           editingExistingRecurrenceTimezone: '',
+          editingExistingSequence: '',
           existingSelectionSummary: '',
           existingSelectionAction: ''
         };
@@ -5515,10 +5526,16 @@
           return;
         }
         const isEditingExisting = Boolean(state && state.isEditingExisting);
+        const existingSequence = isEditingExisting
+          ? parseInt(String(state && state.editingExistingSequence ? state.editingExistingSequence : '').trim(), 10)
+          : NaN;
+        const nextSequence = Number.isFinite(existingSequence)
+          ? existingSequence + 1
+          : Math.floor(Date.now() / 1000);
         const icsOptions = isEditingExisting
           ? {
               method: 'REQUEST',
-              sequence: Math.floor(Date.now() / 1000),
+              sequence: nextSequence,
               lastModified: new Date()
             }
           : null;
@@ -5528,7 +5545,9 @@
           hasRecurrenceRule: Boolean(event.recurrence),
           hasRecurrenceId: Boolean(event.recurrenceId),
           timezone: event.timezone || browserTimezone,
-          method: isEditingExisting ? 'REQUEST' : 'PUBLISH'
+          method: isEditingExisting ? 'REQUEST' : 'PUBLISH',
+          previousSequence: Number.isFinite(existingSequence) ? existingSequence : null,
+          nextSequence: isEditingExisting ? nextSequence : null
         });
         const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
         const blob = new Blob([icsContent], { type: 'text/calendar' });
