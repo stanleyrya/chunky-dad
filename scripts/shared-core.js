@@ -2490,13 +2490,35 @@ class SharedCore {
                 : null;
             
             if (normalizedRecurrenceId) {
+                const targetEvent = targetEventOrKey && typeof targetEventOrKey === 'object'
+                    ? targetEventOrKey
+                    : null;
+                const targetTitle = targetEvent?.title || '';
+                const normalizeVenue = (value) => {
+                    if (!value) return '';
+                    return String(value).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+                };
+                const normalizedTargetVenue = normalizeVenue(
+                    targetEvent ? (targetEvent.bar || targetEvent.venue || targetEvent.location || '') : ''
+                );
+                const shouldMatchByTitle = targetTitle && String(targetTitle).trim().length > 0;
+                const shouldMatchByVenue = normalizedTargetVenue.length > 0;
+                const matchesTitleOrVenue = (event, fields) => {
+                    if (!shouldMatchByTitle && !shouldMatchByVenue) return false;
+                    const titleMatches = shouldMatchByTitle && this.areTitlesSimilar(event.title, targetTitle);
+                    if (titleMatches) return true;
+                    if (!shouldMatchByVenue) return false;
+                    const candidateVenue = fields?.bar || fields?.venue || fields?.location || event.location || '';
+                    return normalizeVenue(candidateVenue) === normalizedTargetVenue;
+                };
+
                 for (const { event, fields } of parsedEvents) {
                     const eventIdentifier = normalizeIdentifier(event.identifier || fields.identifier || fields.id);
                     const eventRecurrenceId = normalizeIdentifier(
                         event.recurrenceId || event.recurrenceID || fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id
                     );
                     if (eventRecurrenceId && eventRecurrenceId === normalizedRecurrenceId) {
-                        if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier) {
+                        if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier || matchesTitleOrVenue(event, fields)) {
                             return { event, matchedKey: eventRecurrenceId, matchType: 'recurrenceId' };
                         }
                     }
@@ -2506,16 +2528,16 @@ class SharedCore {
                             ? this.parseDate(eventRecurrenceId)
                             : null;
                         if (parsedEventRecurrence && this.areDatesEqual(parsedEventRecurrence, targetRecurrenceDate, 1)) {
-                            if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier) {
+                            if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier || matchesTitleOrVenue(event, fields)) {
                                 return { event, matchedKey: eventRecurrenceId || normalizedRecurrenceId, matchType: 'recurrenceId' };
                             }
                         }
                         
-                        if (!eventRecurrenceId && normalizedIdentifier && eventIdentifier === normalizedIdentifier) {
-                            const eventStartDate = event.startDate instanceof Date
-                                ? event.startDate
-                                : this.parseDate(event.startDate);
-                            if (eventStartDate && this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1)) {
+                        const eventStartDate = event.startDate instanceof Date
+                            ? event.startDate
+                            : this.parseDate(event.startDate);
+                        if (eventStartDate && this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1)) {
+                            if (!normalizedIdentifier || eventIdentifier === normalizedIdentifier || matchesTitleOrVenue(event, fields)) {
                                 return { event, matchedKey: normalizedRecurrenceId, matchType: 'recurrenceId' };
                             }
                         }
@@ -2543,66 +2565,6 @@ class SharedCore {
                 }
             }
 
-            if (targetRecurrenceDate) {
-                const targetEvent = targetEventOrKey && typeof targetEventOrKey === 'object'
-                    ? targetEventOrKey
-                    : null;
-                const targetTitle = targetEvent?.title || '';
-                const targetVenue = targetEvent
-                    ? (targetEvent.bar || targetEvent.venue || targetEvent.location || '')
-                    : '';
-                const normalizeVenue = (value) => {
-                    if (!value) return '';
-                    return String(value).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-                };
-                const normalizedTargetVenue = normalizeVenue(targetVenue);
-                const recurrenceCandidates = [];
-
-                for (const { event, fields } of parsedEvents) {
-                    const eventStartDate = event.startDate instanceof Date
-                        ? event.startDate
-                        : this.parseDate(event.startDate);
-                    if (!eventStartDate || !this.areDatesEqual(eventStartDate, targetRecurrenceDate, 1)) {
-                        continue;
-                    }
-                    const candidateVenue = fields?.bar || fields?.venue || fields?.location || event.location || '';
-                    recurrenceCandidates.push({
-                        event,
-                        normalizedVenue: normalizeVenue(candidateVenue)
-                    });
-                }
-
-                if (recurrenceCandidates.length > 0) {
-                    let matched = null;
-                    if (targetTitle) {
-                        matched = recurrenceCandidates.find(candidate =>
-                            this.areTitlesSimilar(candidate.event.title, targetTitle)
-                        );
-                    }
-                    if (!matched && normalizedTargetVenue) {
-                        matched = recurrenceCandidates.find(candidate =>
-                            candidate.normalizedVenue && candidate.normalizedVenue === normalizedTargetVenue
-                        );
-                    }
-                    if (!matched && recurrenceCandidates.length === 1) {
-                        matched = recurrenceCandidates[0];
-                    }
-                    if (matched) {
-                        const targetLabel = targetTitle || 'event';
-                        const existingLabel = matched.event.title || 'event';
-                        const shouldLog = targetEvent && (targetEvent.source === 'scriptable-input' || targetEvent._parserConfig?.name === 'Scriptable URL Input');
-                        if (shouldLog) {
-                            console.log(`🔎 SharedCore: RecurrenceId fallback matched "${targetLabel}" to "${existingLabel}"`);
-                        }
-                        return { event: matched.event, matchedKey: normalizedRecurrenceId, matchType: 'recurrenceDate' };
-                    }
-                    const shouldLog = targetEvent && (targetEvent.source === 'scriptable-input' || targetEvent._parserConfig?.name === 'Scriptable URL Input');
-                    if (shouldLog) {
-                        const targetLabel = targetTitle || 'event';
-                        console.log(`🔎 SharedCore: RecurrenceId fallback found ${recurrenceCandidates.length} candidate(s) but no title/venue match for "${targetLabel}"`);
-                    }
-                }
-            }
         }
         
         if (!hasKeyMatch) return null;
