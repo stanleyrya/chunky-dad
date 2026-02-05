@@ -2229,6 +2229,26 @@ class SharedCore {
     
     // Analyze a single event against existing events
     analyzeEventAction(event, existingEventsData, mergeMode = 'upsert') {
+        const hasIdentifier = Boolean(event && (event.identifier || event.id));
+        
+        if (hasIdentifier) {
+            if (!existingEventsData || existingEventsData.length === 0) {
+                return { action: 'conflict', reason: 'Identifier match not found' };
+            }
+            const keyMatch = this.findEventByKey(existingEventsData, event);
+            if (keyMatch && keyMatch.matchType === 'identifier') {
+                const existingEvent = keyMatch.event;
+                const matchedKey = keyMatch.matchedKey || null;
+                return {
+                    action: 'merge',
+                    reason: 'Identifier match found',
+                    existingEvent: existingEvent,
+                    existingKey: matchedKey
+                };
+            }
+            return { action: 'conflict', reason: 'Identifier match not found' };
+        }
+        
         if (!existingEventsData || existingEventsData.length === 0) {
             return { action: 'new', reason: 'No existing events found' };
         }
@@ -2462,7 +2482,6 @@ class SharedCore {
         let targetSource = '';
         let targetKeyFormat = null;
         let targetIdentifier = null;
-        let targetRecurrenceId = null;
         
         if (typeof targetEventOrKey === 'string') {
             targetKey = targetEventOrKey;
@@ -2472,7 +2491,6 @@ class SharedCore {
             targetSource = targetEventOrKey.source || '';
             targetKeyFormat = targetEventOrKey._parserConfig?.keyTemplate || null;
             targetIdentifier = targetEventOrKey.identifier || targetEventOrKey.id || null;
-            targetRecurrenceId = targetEventOrKey.recurrenceId || targetEventOrKey.recurrenceID || targetEventOrKey.recurrence_id || null;
             
             if (!targetSource && targetEventOrKey.url) {
                 const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
@@ -2489,17 +2507,19 @@ class SharedCore {
         };
         
         const normalizedIdentifier = normalizeIdentifier(targetIdentifier);
-        const normalizedRecurrenceId = normalizeIdentifier(targetRecurrenceId);
         const targetIdentifierInfo = this.parseScriptableIdentifier(normalizedIdentifier);
         const targetUid = targetIdentifierInfo.uid || normalizedIdentifier;
-        const targetRecurrenceDate = normalizedRecurrenceId
-            ? this.parseDate(normalizedRecurrenceId)
-            : targetIdentifierInfo.recurrenceDate;
-        const targetStartDate = targetEventOrKey && typeof targetEventOrKey === 'object'
-            ? (targetEventOrKey.startDate instanceof Date
-                ? targetEventOrKey.startDate
-                : this.parseDate(targetEventOrKey.startDate))
+        const targetSearchStartDate = targetEventOrKey && typeof targetEventOrKey === 'object'
+            ? (targetEventOrKey.searchStartDate instanceof Date
+                ? targetEventOrKey.searchStartDate
+                : this.parseDate(targetEventOrKey.searchStartDate))
             : null;
+        const targetSearchEndDate = targetEventOrKey && typeof targetEventOrKey === 'object'
+            ? (targetEventOrKey.searchEndDate instanceof Date
+                ? targetEventOrKey.searchEndDate
+                : this.parseDate(targetEventOrKey.searchEndDate))
+            : null;
+        const targetSearchDate = targetSearchStartDate || targetSearchEndDate || null;
         
         const hasDirectIdentifier = Boolean(targetUid);
         const hasKeyMatch = Boolean(targetKey || targetMatchKey);
@@ -2518,6 +2538,10 @@ class SharedCore {
         });
         
         if (hasDirectIdentifier) {
+            if (!targetSearchDate) {
+                console.log(`🔎 SharedCore: Identifier match missing search date uid="${targetUid}"`);
+                return null;
+            }
             const candidates = [];
             for (const { event, fields } of parsedEvents) {
                 const eventIdentifierRaw = normalizeIdentifier(event.identifier || '');
@@ -2528,55 +2552,24 @@ class SharedCore {
                 if (!eventUid || eventUid !== targetUid) {
                     continue;
                 }
-
-                const notesRecurrenceId = normalizeIdentifier(
-                    fields.recurrenceId || fields.recurrenceID || fields.recurrenceid || fields.recurrence_id || ''
-                );
-                const notesRecurrenceDate = notesRecurrenceId ? this.parseDate(notesRecurrenceId) : null;
-                const eventRecurrenceDate = eventIdentifierInfo.recurrenceDate || notesIdentifierInfo.recurrenceDate || notesRecurrenceDate;
                 const eventStartDate = event.startDate instanceof Date
                     ? event.startDate
                     : this.parseDate(event.startDate);
-
-                candidates.push({ event, eventUid, eventRecurrenceDate, eventStartDate });
+                candidates.push({ event, eventUid, eventStartDate });
             }
 
             if (candidates.length > 0) {
-                const targetRecurrenceLabel = targetRecurrenceDate ? targetRecurrenceDate.toISOString() : '';
-                const targetStartLabel = targetStartDate ? targetStartDate.toISOString() : '';
-                console.log(`🔎 SharedCore: Identifier candidates=${candidates.length} uid="${targetUid}" recurrenceId="${targetRecurrenceLabel}" start="${targetStartLabel}"`);
-                if (targetRecurrenceDate) {
-                    const recurrenceMatch = candidates.find(candidate =>
-                        candidate.eventRecurrenceDate && this.areDatesEqual(candidate.eventRecurrenceDate, targetRecurrenceDate, 1)
-                    );
-                    if (recurrenceMatch) {
-                        console.log(`🔎 SharedCore: Matched by UID + RECURRENCE-ID uid="${targetUid}"`);
-                        return { event: recurrenceMatch.event, matchedKey: targetUid, matchType: 'recurrenceId' };
-                    }
-                    const startMatch = candidates.find(candidate =>
-                        candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetRecurrenceDate, 1)
-                    );
-                    if (startMatch) {
-                        console.log(`🔎 SharedCore: Matched by UID + (startDate≈RECURRENCE-ID) uid="${targetUid}"`);
-                        return { event: startMatch.event, matchedKey: targetUid, matchType: 'recurrenceId' };
-                    }
-                }
-
-                if (targetStartDate) {
-                    const startMatch = candidates.find(candidate =>
-                        candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetStartDate, 1)
-                    );
-                    if (startMatch) {
-                        console.log(`🔎 SharedCore: Matched by UID + DTSTART uid="${targetUid}"`);
-                        return { event: startMatch.event, matchedKey: targetUid, matchType: 'identifier' };
-                    }
-                }
-
-                if (candidates.length === 1) {
-                    console.log(`🔎 SharedCore: Matched by UID (single candidate) uid="${targetUid}"`);
-                    return { event: candidates[0].event, matchedKey: targetUid, matchType: 'identifier' };
+                const targetSearchLabel = targetSearchDate ? targetSearchDate.toISOString() : '';
+                console.log(`🔎 SharedCore: Identifier candidates=${candidates.length} uid="${targetUid}" search="${targetSearchLabel}"`);
+                const searchStartMatch = candidates.find(candidate =>
+                    candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetSearchDate, 1)
+                );
+                if (searchStartMatch) {
+                    console.log(`🔎 SharedCore: Matched by UID + search date uid="${targetUid}"`);
+                    return { event: searchStartMatch.event, matchedKey: targetUid, matchType: 'identifier' };
                 }
             }
+            return null;
         }
         
         if (!hasKeyMatch) return null;

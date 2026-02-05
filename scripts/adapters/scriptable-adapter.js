@@ -928,46 +928,29 @@ class ScriptableAdapter {
                 return isNaN(parsed.getTime()) ? null : parsed;
             };
 
-            const parseAppleRecurrenceIdSeconds = (value) => {
-                const seconds = Number(value);
-                if (!Number.isFinite(seconds)) return null;
-                const baseMillis = Date.UTC(2001, 0, 1, 0, 0, 0, 0);
-                const date = new Date(baseMillis + seconds * 1000);
-                return isNaN(date.getTime()) ? null : date;
-            };
-
-            const parseRidDateFromIdentifier = (identifierValue) => {
-                if (!identifierValue) return null;
-                const raw = String(identifierValue).trim();
-                if (!raw) return null;
-                const colonIndex = raw.indexOf(':');
-                const afterColon = colonIndex >= 0 ? raw.slice(colonIndex + 1) : raw;
-                const ridMatch = afterColon.match(/\/RID=(\d+)/i);
-                if (!ridMatch) return null;
-                return parseAppleRecurrenceIdSeconds(ridMatch[1]);
-            };
-
             const identifierRaw = event && (event.identifier || event.id) ? String(event.identifier || event.id).trim() : '';
             const hasIdentifier = Boolean(identifierRaw);
             
             // Parse dates from formatted event
             const startDate = coerceDate(event.startDate);
             const endDate = coerceDate(event.endDate || event.startDate);
-            const recurrenceDate = coerceDate(event.recurrenceId);
             const searchStartDate = coerceDate(event.searchStartDate);
             const searchEndDate = coerceDate(event.searchEndDate);
-            const identifierRidDate = hasIdentifier ? parseRidDateFromIdentifier(identifierRaw) : null;
-            const hasRecurrenceAnchor = Boolean(recurrenceDate || identifierRidDate);
-            const dateCandidates = [startDate, endDate, recurrenceDate, identifierRidDate, searchStartDate, searchEndDate].filter(Boolean);
+            const dateCandidates = hasIdentifier
+                ? [searchStartDate, searchEndDate].filter(Boolean)
+                : [startDate, endDate].filter(Boolean);
+            
+            if (hasIdentifier && dateCandidates.length === 0) {
+                console.log('📱 Scriptable: Identifier search requires searchStartDate/searchEndDate');
+                return [];
+            }
             
             if (dateCandidates.length === 0) {
                 return [];
             }
             
             const identifierLabel = identifierRaw || '(none)';
-            const ridLabel = identifierRidDate ? identifierRidDate.toISOString() : '(none)';
             console.log(`📱 Scriptable: Existing event search (hasIdentifier=${hasIdentifier}) identifier="${identifierLabel}"`);
-            console.log(`📱 Scriptable: Identifier RID date detected: ${ridLabel}`);
 
             const configuredRangeDays = Number(event._parserConfig?.calendarSearchRangeDays || 0);
             const rangeDays = Number.isFinite(configuredRangeDays) && configuredRangeDays > 0
@@ -1001,13 +984,8 @@ class ScriptableAdapter {
                 return await CalendarEvent.between(searchStart, searchEnd, [calendar]);
             }
 
-            // Identifier edit: prefer the old *visible* date (pre-edit) if provided.
-            // This prevents over-matching and also finds already-overridden events that were moved off the anchor date.
-            const primaryDates = (searchStartDate || searchEndDate)
-                ? [searchStartDate, searchEndDate].filter(Boolean)
-                : hasRecurrenceAnchor
-                    ? [recurrenceDate, identifierRidDate].filter(Boolean)
-                    : [startDate, endDate].filter(Boolean);
+            // Identifier edit: only use the old visible date (pre-edit).
+            const primaryDates = [searchStartDate, searchEndDate].filter(Boolean);
 
             const windowKeys = new Set();
             const windows = [];
