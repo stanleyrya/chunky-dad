@@ -1797,6 +1797,10 @@
         updateCalendarSource(true);
         setupMessaging();
         scheduleEventPush();
+        logger.componentInit('EVENT', 'Event builder initialized', {
+          isEditingExisting: Boolean(state.isEditingExisting),
+          editingMode: state.editingExistingMode || null
+        });
       }
 
       function cacheDom() {
@@ -2337,6 +2341,7 @@
         const address = extractDescriptionValue(description, ['address', 'addr']);
         const timezoneFromDescription = extractDescriptionValue(description, ['timezone', 'tz']);
         const timeZone = event.startTimezone || timezoneFromDescription || event.calendarTimezone || browserTimezone;
+        const recurrenceIdTimezone = event.recurrenceIdTimezone || timeZone;
         const startDate = event.startDate instanceof Date ? new Date(event.startDate) : (event.startDate ? new Date(event.startDate) : null);
         const endDate = event.endDate instanceof Date ? new Date(event.endDate) : (event.endDate ? new Date(event.endDate) : null);
         const recurrenceId = event.recurrenceId instanceof Date ? new Date(event.recurrenceId) : (event.recurrenceId ? new Date(event.recurrenceId) : null);
@@ -2365,6 +2370,8 @@
           recurrence: normalizeText(event.recurrence || ''),
           recurring: Boolean(event.recurrence),
           recurrenceId,
+          recurrenceIdTimezone,
+          sequence: Number.isFinite(event.sequence) ? event.sequence : null,
           startDate,
           endDate,
           timeZone,
@@ -3044,15 +3051,32 @@
               editingRecurrenceDate = parsed;
             }
           }
-          editingRecurrenceTimezone = (summaryResult && summaryResult.event && summaryResult.event.timeZone)
+          editingRecurrenceTimezone = (summaryResult && summaryResult.event && summaryResult.event.recurrenceIdTimezone)
+            || (summaryResult && summaryResult.event && summaryResult.event.timeZone)
             || (baseEvent && baseEvent.timeZone)
             || (eventData && eventData.timeZone)
             || state.timezone
             || browserTimezone;
         }
         state.editingExistingUid = editingUid;
-        state.editingExistingRecurrenceId = editingRecurrenceDate ? formatInputValue(editingRecurrenceDate) : '';
+        state.editingExistingRecurrenceId = editingRecurrenceDate
+          ? formatInputValueInTimezone(editingRecurrenceDate, editingRecurrenceTimezone || state.timezone || browserTimezone)
+          : '';
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
+        state.editingExistingSearchStartDate = (startDate && startDate instanceof Date && !Number.isNaN(startDate.getTime()))
+          ? startDate.toISOString()
+          : '';
+        state.editingExistingSearchEndDate = (endDate && endDate instanceof Date && !Number.isNaN(endDate.getTime()))
+          ? endDate.toISOString()
+          : '';
+        const candidateSequence = (() => {
+          const summarySeq = summaryResult && summaryResult.event ? summaryResult.event.sequence : null;
+          if (Number.isFinite(summarySeq)) return summarySeq;
+          if (Number.isFinite(eventData && eventData.sequence)) return eventData.sequence;
+          if (Number.isFinite(baseEvent && baseEvent.sequence)) return baseEvent.sequence;
+          return null;
+        })();
+        state.editingExistingSequence = candidateSequence !== null ? String(candidateSequence) : '';
 
         applyStateToForm();
         populateVenueOptions(state.city);
@@ -3118,8 +3142,8 @@
           location: normalizeCoordinatesValue(eventData.coordinates || eventData.location),
           description: normalizeText(eventData.tea || eventData.description || ''),
           cover: normalizeText(eventData.cover || ''),
-          start: formatInputValue(startDate),
-          end: formatInputValue(endDate),
+          start: formatInputValueInTimezone(startDate, timezone),
+          end: formatInputValueInTimezone(endDate, timezone),
           timezone,
           recurrence: normalizeText(options.recurrence || ''),
           recurrenceMode: 'builder',
@@ -3398,6 +3422,9 @@
         state.editingExistingUid = '';
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
+        state.editingExistingSequence = '';
+        state.editingExistingSearchStartDate = '';
+        state.editingExistingSearchEndDate = '';
       }
 
       function clearExistingSelection(options = {}) {
@@ -3461,6 +3488,9 @@
           editingExistingUid: '',
           editingExistingRecurrenceId: '',
           editingExistingRecurrenceTimezone: '',
+          editingExistingSequence: '',
+          editingExistingSearchStartDate: '',
+          editingExistingSearchEndDate: '',
           existingSelectionSummary: '',
           existingSelectionAction: ''
         };
@@ -4971,11 +5001,28 @@
         setParam('lng', coordinates ? coordinates.lng : '');
         const identifier = state.editingExistingUid
           || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '');
-        setParam('identifier', identifier);
+        if (identifier) {
+          setParam('identifier', identifier);
+        }
+        if (state.isEditingExisting && state.editingExistingSearchStartDate) {
+          setParam('searchStartDate', state.editingExistingSearchStartDate);
+        }
+        if (state.isEditingExisting && state.editingExistingSearchEndDate) {
+          setParam('searchEndDate', state.editingExistingSearchEndDate);
+        }
         const recurrenceIdValue = sanitizeDateTimeInput(state.editingExistingRecurrenceId);
-        setParam('recurrenceId', recurrenceIdValue);
-        setParam('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
+        if (recurrenceIdValue) {
+          setParam('recurrenceId', recurrenceIdValue);
+          setParam('recurrenceIdTimezone', state.editingExistingRecurrenceTimezone);
+        }
         const encodedScriptName = encodeURIComponent(scriptName);
+        logger.debug('EVENT', 'Built Scriptable callback URL params', {
+          identifier,
+          recurrenceId: recurrenceIdValue || '',
+          recurrenceIdTimezone: state.editingExistingRecurrenceTimezone || '',
+          isEditingExisting: Boolean(state.isEditingExisting),
+          editingExistingMode: state.editingExistingMode || null
+        });
         return `scriptable:///run/${encodedScriptName}?${params.toString()}`;
       }
 
@@ -5064,7 +5111,7 @@
             data: payload
           }, '*');
         } catch (error) {
-          console.error('Failed to send event to calendar iframe', error);
+          logger.componentError('EVENT', 'Failed to send event to calendar iframe', error);
           updateCalendarStatus('Could not reach preview', 'error');
         }
       }
@@ -5330,6 +5377,34 @@
         return local.toISOString().slice(0, 16);
       }
 
+      function formatInputValueInTimezone(date, timeZone) {
+        if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+        const tz = timeZone || browserTimezone;
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }).formatToParts(date);
+          const values = {};
+          parts.forEach(part => {
+            if (part.type !== 'literal') {
+              values[part.type] = part.value;
+            }
+          });
+          if (!values.year || !values.month || !values.day) return formatInputValue(date);
+          const hour = values.hour || '00';
+          const minute = values.minute || '00';
+          return `${values.year}-${values.month}-${values.day}T${hour}:${minute}`;
+        } catch (error) {
+          return formatInputValue(date);
+        }
+      }
+
       function sanitizeDateTimeInput(value) {
         if (typeof value !== 'string') return '';
         const trimmed = value.trim();
@@ -5500,14 +5575,29 @@
           return;
         }
         const isEditingExisting = Boolean(state && state.isEditingExisting);
+        const existingSequence = isEditingExisting
+          ? parseInt(String(state && state.editingExistingSequence ? state.editingExistingSequence : '').trim(), 10)
+          : NaN;
+        const nextSequence = Number.isFinite(existingSequence)
+          ? existingSequence + 1
+          : null;
         const icsOptions = isEditingExisting
           ? {
               method: 'REQUEST',
-              sequence: Math.floor(Date.now() / 1000),
+              ...(Number.isFinite(existingSequence) ? { sequence: nextSequence } : {}),
               lastModified: new Date()
             }
           : null;
         const icsContent = generateICS(event, icsOptions);
+        logger.info('EVENT', 'Generated ICS export', {
+          uid: event.uid || '',
+          hasRecurrenceRule: Boolean(event.recurrence),
+          hasRecurrenceId: Boolean(event.recurrenceId),
+          timezone: event.timezone || browserTimezone,
+          method: isEditingExisting ? 'REQUEST' : 'PUBLISH',
+          previousSequence: Number.isFinite(existingSequence) ? existingSequence : null,
+          nextSequence: Number.isFinite(existingSequence) ? nextSequence : null
+        });
         const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
         const blob = new Blob([icsContent], { type: 'text/calendar' });
         const url = URL.createObjectURL(blob);

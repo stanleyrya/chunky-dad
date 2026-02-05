@@ -2024,6 +2024,8 @@ class SharedCore {
             'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
             // Recurrence metadata used for matching, not for notes storage
             'recurrenceId', 'recurrenceIdTimezone', 'sequence',
+            // Scriptable adapter helper fields (used only for searching existing calendar data)
+            'searchStartDate', 'searchEndDate',
             // Coordinate helpers that duplicate location data
             'lat', 'lng',
             // Location-specific fields that shouldn't be in notes (used internally)
@@ -2540,17 +2542,22 @@ class SharedCore {
             }
 
             if (candidates.length > 0) {
+                const targetRecurrenceLabel = targetRecurrenceDate ? targetRecurrenceDate.toISOString() : '';
+                const targetStartLabel = targetStartDate ? targetStartDate.toISOString() : '';
+                console.log(`🔎 SharedCore: Identifier candidates=${candidates.length} uid="${targetUid}" recurrenceId="${targetRecurrenceLabel}" start="${targetStartLabel}"`);
                 if (targetRecurrenceDate) {
                     const recurrenceMatch = candidates.find(candidate =>
                         candidate.eventRecurrenceDate && this.areDatesEqual(candidate.eventRecurrenceDate, targetRecurrenceDate, 1)
                     );
                     if (recurrenceMatch) {
+                        console.log(`🔎 SharedCore: Matched by UID + RECURRENCE-ID uid="${targetUid}"`);
                         return { event: recurrenceMatch.event, matchedKey: targetUid, matchType: 'recurrenceId' };
                     }
                     const startMatch = candidates.find(candidate =>
                         candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetRecurrenceDate, 1)
                     );
                     if (startMatch) {
+                        console.log(`🔎 SharedCore: Matched by UID + (startDate≈RECURRENCE-ID) uid="${targetUid}"`);
                         return { event: startMatch.event, matchedKey: targetUid, matchType: 'recurrenceId' };
                     }
                 }
@@ -2560,11 +2567,13 @@ class SharedCore {
                         candidate.eventStartDate && this.areDatesEqual(candidate.eventStartDate, targetStartDate, 1)
                     );
                     if (startMatch) {
+                        console.log(`🔎 SharedCore: Matched by UID + DTSTART uid="${targetUid}"`);
                         return { event: startMatch.event, matchedKey: targetUid, matchType: 'identifier' };
                     }
                 }
 
                 if (candidates.length === 1) {
+                    console.log(`🔎 SharedCore: Matched by UID (single candidate) uid="${targetUid}"`);
                     return { event: candidates[0].event, matchedKey: targetUid, matchType: 'identifier' };
                 }
             }

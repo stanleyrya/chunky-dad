@@ -303,8 +303,13 @@ class CalendarCore {
                 }
             }
             parsed = true;
+        } else if (line.startsWith('SEQUENCE:')) {
+            const rawValue = line.substring(9).trim();
+            const parsedSeq = parseInt(rawValue, 10);
+            currentEvent.sequence = Number.isFinite(parsedSeq) ? parsedSeq : null;
+            parsed = true;
         } else if (line.startsWith('DTSTAMP:') || line.startsWith('CREATED:') || 
-                   line.startsWith('LAST-MODIFIED:') || line.startsWith('SEQUENCE:') || line.startsWith('STATUS:') || 
+                   line.startsWith('LAST-MODIFIED:') || line.startsWith('STATUS:') || 
                    line.startsWith('TRANSP:') || line.startsWith('ORGANIZER:') || line.startsWith('ATTENDEE:') ||
                    line.startsWith('CLASS:') || line.startsWith('PRIORITY:') || line.startsWith('CATEGORIES:') ||
                    line.startsWith('COMMENT:') || line.startsWith('CONTACT:') || line.startsWith('REQUEST-STATUS:') ||
@@ -350,7 +355,9 @@ class CalendarCore {
                 wasUTC: calendarEvent.start?._wasUTC || false,
                 // Store UID and recurrence ID for event merging
                 uid: calendarEvent.uid || null,
-                recurrenceId: calendarEvent.recurrenceId || null
+                recurrenceId: calendarEvent.recurrenceId || null,
+                recurrenceIdTimezone: calendarEvent.recurrenceIdTimezone || null,
+                sequence: calendarEvent.sequence ?? null
             };
             
 

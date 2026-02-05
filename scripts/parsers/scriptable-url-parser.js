@@ -235,6 +235,8 @@ class ScriptableUrlParser {
             'id': 'identifier',
 
             'recurrenceid': 'recurrenceId',
+            'searchstartdate': 'searchStartDate',
+            'searchenddate': 'searchEndDate',
             'sequence': 'sequence',
             'sequenced': 'sequence',
             'seq': 'sequence',
