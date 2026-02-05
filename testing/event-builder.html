@@ -1772,20 +1772,6 @@
 
       document.addEventListener('DOMContentLoaded', init);
 
-      function generateDraftUid() {
-        const domain = 'chunky.dad';
-        try {
-          if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-            return `${crypto.randomUUID()}@${domain}`;
-          }
-        } catch (error) {
-          // Ignore and fall back.
-        }
-        const random = Math.random().toString(16).slice(2);
-        const stamp = Date.now().toString(16);
-        return `chunky-dad-${stamp}-${random}@${domain}`;
-      }
-
       function init() {
         cacheDom();
         setupStickyHeaderOffset();
@@ -1794,7 +1780,6 @@
         const urlState = loadStateFromUrl(baseState);
         state = { ...baseState, ...urlState.overrides };
         state.timezone = state.timezone || browserTimezone;
-        state.uid = String(state.uid || '').trim() || generateDraftUid();
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
@@ -1813,7 +1798,6 @@
         setupMessaging();
         scheduleEventPush();
         logger.componentInit('EVENT', 'Event builder initialized', {
-          uid: state.uid,
           isEditingExisting: Boolean(state.isEditingExisting),
           editingMode: state.editingExistingMode || null
         });
@@ -3141,7 +3125,6 @@
           start: formatInputValue(startDate),
           end: formatInputValue(endDate),
           timezone,
-          uid: normalizeText(eventData.uid || '') || state.uid || generateDraftUid(),
           recurrence: normalizeText(options.recurrence || ''),
           recurrenceMode: 'builder',
           website: normalizeText(eventData.website || ''),
@@ -3419,9 +3402,6 @@
         state.editingExistingUid = '';
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
-        // When leaving edit mode (or copying to new), treat it as a brand new event.
-        // Removing identifiers avoids Scriptable/calendar overwrite behavior.
-        state.uid = '';
       }
 
       function clearExistingSelection(options = {}) {
@@ -3466,7 +3446,6 @@
           start: formatInputValue(start),
           end: formatInputValue(end),
           timezone: browserTimezone,
-          uid: generateDraftUid(),
           debug: false,
           recurrence: '',
           recurrenceMode: 'builder',
@@ -3516,9 +3495,6 @@
           switch (key) {
             case 'name':
               overrides.name = value;
-              break;
-            case 'uid':
-              overrides.uid = value;
               break;
             case 'short':
               overrides.shortName = value;
@@ -4884,7 +4860,6 @@
         if (state.name) params.set('name', state.name);
         if (state.shortName) params.set('short', state.shortName);
         if (state.city) params.set('city', state.city);
-        if (state.uid) params.set('uid', state.uid);
         const savedBarName = normalizeText(state.savedBar);
         if (savedBarName) params.set('bar', savedBarName);
         if (state.venue) params.set('venue', state.venue);
