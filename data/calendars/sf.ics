@@ -24,76 +24,9 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
-DTSTART:20251019T040000Z
-DTEND:20251019T090000Z
-DTSTAMP:20260205T121028Z
-UID:3F9230E0-3F04-4F12-98C1-311ACA95E3D8
-CREATED:20250930T014036Z
-DESCRIPTION:description: The Occult Underwear Party returns to SF for Bearr
- ison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ Naught
- yBoyy.\nbar: The Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 941
- 03\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/
- beefwitch-tickets-1728182092159\ncover: $12.51 - $17.85 (as of 10/1)\nimage
- : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2
- F2198683436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=23
- 0&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e19484
- 3ee640607400ec97184904\ninstagram: https://www.instagram.com/coachafterdark
- \ngmaps: https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.
- 4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs\nkey: beefwitch|2025-10-
- 19|the stud|eventbrite\nshortName: Coach After Dark
-LAST-MODIFIED:20251002T003902Z
-LOCATION:37.7761825\, -122.4083567
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFWITCH
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260329T040000Z
-DTEND:20260329T090000Z
-DTSTAMP:20260205T121028Z
-UID:9D681FB7-DEDE-43CA-82D9-23985C241DAD
-CREATED:20260123T030752Z
-DESCRIPTION:description: Photos & Decor by Dusti Cunningham\nbar: THE STUD\
- naddress: 1123 Folsom Street\, San Francisco\, CA 94103\ntimezone: America/
- Los_Angeles\nurl: https://bearracuda.com/events/sf20/\nimage: https://bearr
- acuda.com/wp-content/uploads/2025/11/insta-3.jpg\nfacebook: https://www.fac
- ebook.com/events/753717904452981\nticketUrl: https://www.eventbrite.com/e/b
- earracuda-sf-20-year-anniversary-tickets-1976399528192\nshortName: Bear-rac
- -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=THE%20STUD%2C%201123%20Folsom%20Street%2
- C%20San%20Francisco%2C%20CA%2094103\nkey: bearracuda-2026-03-29-sf
-LAST-MODIFIED:20260126T235325Z
-LOCATION:37.7761062\, -122.4083888
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda SF:  20 YEAR ANNIVERSARY!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20251002T170000
-DTEND;TZID=America/Los_Angeles:20251002T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260205T121028Z
-UID:dkep613fqcsi8tlh6bfsp12h50@google.com
-CREATED:20250930T210125Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nInstagram: https://www.instagra
- m.com/bearhappyhoursf\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161140Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250927T040000Z
 DTEND:20250927T100000Z
-DTSTAMP:20260205T121028Z
+DTSTAMP:20260205T141802Z
 UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
 CREATED:20250817T231656Z
 DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
@@ -116,34 +49,9 @@ TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260627T040000Z
-DTEND:20260627T100000Z
-DTSTAMP:20260205T121028Z
-UID:77CEB24A-C15A-4D66-82A3-E51D9C5804D4
-CREATED:20260123T030753Z
-DESCRIPTION:description: Music & Entertainment\n• DJ Kristian Nairn\n• DJ M
- ateo Segade\nbar: The Public Works SF\naddress: 161 Erie Street\, San Franc
- isco\, CA 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com
- /events/sf-pride/\nimage: https://bearracuda.com/wp-content/uploads/2025/12
- /cuda-sf_pride_2026-1.jpg\nfacebook: https://www.facebook.com/events/415801
- 4157743645\nticketUrl: https://www.eventbrite.com/e/bearracuda-sf-pride-202
- 6-hold-the-door-tickets-1977224297098\nshortName: Bear-rac-uda\ninstagram: 
- https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/se
- arch/?api=1&query=The%20Public%20Works%20SF%2C%20161%20Erie%20Street%2C%20S
- an%20Francisco%2C%20CA%2094103\nkey: bearracuda-2026-06-27-sf
-LAST-MODIFIED:20260126T235326Z
-LOCATION:37.7689137\, -122.4192514
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda SF Pride 2026: HOLD THE DOOR
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260503T050000Z
 DTEND:20260503T103000Z
-DTSTAMP:20260205T121028Z
+DTSTAMP:20260205T141802Z
 UID:56CFF5FC-B1E1-4512-8FBC-EDBD2064A2E6
 CREATED:20260204T221331Z
 DESCRIPTION:description: New Orleans DADDY Father Figure joins us for CHUNK
@@ -169,29 +77,77 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260118T060000Z
-DTEND:20260118T120000Z
-DTSTAMP:20260205T121028Z
-UID:7F66ECD5-BDAB-4CA8-BBC0-AAC031F6E4DB
-CREATED:20260117T205137Z
-DESCRIPTION:description: CHUNK SF celebrates MLK JR Weekend  - Atlanta LEGE
- ND Vicki Powell from DEEP SOUTH DJ Collective. Resident DJs MR PICKLES & DR
-  TIME & BEN FONIK. Cavalcade of HOT GOGO BEARS - 2 rooms f8 NIGHTCLUB 10-4a
- m\nbar: San Francisco\naddress: 1192 Folsom St\, San Francisco\, CA 94103\,
-  USA\ntimezone: America/Los_Angeles\nurl: https://www.chunk-party.com/event
- -details/chunk-san-francisco-saturday-january-17th\nticketUrl: https://www.
- chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th\nco
- ver: $20.50 - $41.00\nimage: https://static.wixstatic.com/media/42b6cb_8466
- 22553967483cb81ea3b1a938bc04~mv2.jpg/v1/fill/w_809\,h_1012\,al_c\,q_85/42b6
- cb_846622553967483cb81ea3b1a938bc04~mv2.jpg\nshortName: CHUNK\ninstagram: h
- ttps://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=37.7
- 7526599999999\,-122.4100374\nkey: chunk-san-francisco-saturday-january-17th
- |2026-01-18|san francisco|chunk
-LAST-MODIFIED:20260117T205137Z
-LOCATION:37.77526599999999\, -122.4100374
+DTSTART:20260329T040000Z
+DTEND:20260329T090000Z
+DTSTAMP:20260205T141802Z
+UID:9D681FB7-DEDE-43CA-82D9-23985C241DAD
+CREATED:20260123T030752Z
+DESCRIPTION:description: Photos & Decor by Dusti Cunningham\nbar: THE STUD\
+ naddress: 1123 Folsom Street\, San Francisco\, CA 94103\ntimezone: America/
+ Los_Angeles\nurl: https://bearracuda.com/events/sf20/\nimage: https://bearr
+ acuda.com/wp-content/uploads/2025/11/insta-3.jpg\nfacebook: https://www.fac
+ ebook.com/events/753717904452981\nticketUrl: https://www.eventbrite.com/e/b
+ earracuda-sf-20-year-anniversary-tickets-1976399528192\nshortName: Bear-rac
+ -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=THE%20STUD%2C%201123%20Folsom%20Street%2
+ C%20San%20Francisco%2C%20CA%2094103\nkey: bearracuda-2026-03-29-sf
+LAST-MODIFIED:20260126T235325Z
+LOCATION:37.7761062\, -122.4083888
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:CHUNK San Francisco - Saturday January 17th
+SUMMARY:Bearracuda SF:  20 YEAR ANNIVERSARY!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251019T040000Z
+DTEND:20251019T090000Z
+DTSTAMP:20260205T141802Z
+UID:3F9230E0-3F04-4F12-98C1-311ACA95E3D8
+CREATED:20250930T014036Z
+DESCRIPTION:description: The Occult Underwear Party returns to SF for Bearr
+ ison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ Naught
+ yBoyy.\nbar: The Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 941
+ 03\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/
+ beefwitch-tickets-1728182092159\ncover: $12.51 - $17.85 (as of 10/1)\nimage
+ : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2
+ F2198683436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=23
+ 0&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e19484
+ 3ee640607400ec97184904\ninstagram: https://www.instagram.com/coachafterdark
+ \ngmaps: https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.
+ 4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs\nkey: beefwitch|2025-10-
+ 19|the stud|eventbrite\nshortName: Coach After Dark
+LAST-MODIFIED:20251002T003902Z
+LOCATION:37.7761825\, -122.4083567
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFWITCH
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260627T040000Z
+DTEND:20260627T100000Z
+DTSTAMP:20260205T141802Z
+UID:77CEB24A-C15A-4D66-82A3-E51D9C5804D4
+CREATED:20260123T030753Z
+DESCRIPTION:description: Music & Entertainment\n• DJ Kristian Nairn\n• DJ M
+ ateo Segade\nbar: The Public Works SF\naddress: 161 Erie Street\, San Franc
+ isco\, CA 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com
+ /events/sf-pride/\nimage: https://bearracuda.com/wp-content/uploads/2025/12
+ /cuda-sf_pride_2026-1.jpg\nfacebook: https://www.facebook.com/events/415801
+ 4157743645\nticketUrl: https://www.eventbrite.com/e/bearracuda-sf-pride-202
+ 6-hold-the-door-tickets-1977224297098\nshortName: Bear-rac-uda\ninstagram: 
+ https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/se
+ arch/?api=1&query=The%20Public%20Works%20SF%2C%20161%20Erie%20Street%2C%20S
+ an%20Francisco%2C%20CA%2094103\nkey: bearracuda-2026-06-27-sf
+LAST-MODIFIED:20260126T235326Z
+LOCATION:37.7689137\, -122.4192514
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda SF Pride 2026: HOLD THE DOOR
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -199,7 +155,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250928T050000Z
 DTEND:20250928T110000Z
-DTSTAMP:20260205T121028Z
+DTSTAMP:20260205T141802Z
 UID:9D1A1197-0811-4645-ABAE-ECF5464CC76F
 CREATED:20250901T054018Z
 DESCRIPTION:description: CHUNK SF presents BEARS IN SPACE (LA/CDMX) 5 DJS /
@@ -220,6 +176,50 @@ LOCATION:37.77526599999999\, -122.4100374
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:CHUNK presents FOLSOM '25
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20251002T170000
+DTEND;TZID=America/Los_Angeles:20251002T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260205T141802Z
+UID:dkep613fqcsi8tlh6bfsp12h50@google.com
+CREATED:20250930T210125Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nInstagram: https://www.instagra
+ m.com/bearhappyhoursf\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161140Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260118T060000Z
+DTEND:20260118T120000Z
+DTSTAMP:20260205T141802Z
+UID:7F66ECD5-BDAB-4CA8-BBC0-AAC031F6E4DB
+CREATED:20260117T205137Z
+DESCRIPTION:description: CHUNK SF celebrates MLK JR Weekend  - Atlanta LEGE
+ ND Vicki Powell from DEEP SOUTH DJ Collective. Resident DJs MR PICKLES & DR
+  TIME & BEN FONIK. Cavalcade of HOT GOGO BEARS - 2 rooms f8 NIGHTCLUB 10-4a
+ m\nbar: San Francisco\naddress: 1192 Folsom St\, San Francisco\, CA 94103\,
+  USA\ntimezone: America/Los_Angeles\nurl: https://www.chunk-party.com/event
+ -details/chunk-san-francisco-saturday-january-17th\nticketUrl: https://www.
+ chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th\nco
+ ver: $20.50 - $41.00\nimage: https://static.wixstatic.com/media/42b6cb_8466
+ 22553967483cb81ea3b1a938bc04~mv2.jpg/v1/fill/w_809\,h_1012\,al_c\,q_85/42b6
+ cb_846622553967483cb81ea3b1a938bc04~mv2.jpg\nshortName: CHUNK\ninstagram: h
+ ttps://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=37.7
+ 7526599999999\,-122.4100374\nkey: chunk-san-francisco-saturday-january-17th
+ |2026-01-18|san francisco|chunk
+LAST-MODIFIED:20260117T205137Z
+LOCATION:37.77526599999999\, -122.4100374
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CHUNK San Francisco - Saturday January 17th
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
