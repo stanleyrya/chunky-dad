@@ -46,6 +46,9 @@ class ComponentsManager {
         }
 
         const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
+        const eventBuilderPath = window.pathUtils
+            ? window.pathUtils.resolvePath('testing/event-builder.html')
+            : 'testing/event-builder.html';
         const modalHTML = `
             <div id="bear-intel-modal" class="bear-intel-modal" style="display: none;">
                 <div class="modal-content">
@@ -65,6 +68,10 @@ class ComponentsManager {
                                 <option value="city">Suggest a New City 🌍</option>
                                 <option value="other">Other Bear Intel</option>
                             </select>
+                            <div class="bear-intel-event-option" id="event-builder-option" aria-hidden="true">
+                                <p>Prefer to build the full event yourself?</p>
+                                <a class="event-builder-link" href="${eventBuilderPath}" target="_blank" rel="noopener">Open Event Builder</a>
+                            </div>
                             <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
                             <button type="submit">Send Bear Intel <img src="${logoPath}" alt="chunky.dad" class="button-icon"></button>
                         </form>
@@ -81,6 +88,9 @@ class ComponentsManager {
     // Method to get the modal HTML for pages that need it before JS loads
     static getModalHTML() {
         const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
+        const eventBuilderPath = window.pathUtils
+            ? window.pathUtils.resolvePath('testing/event-builder.html')
+            : 'testing/event-builder.html';
         return `
             <div id="bear-intel-modal" class="bear-intel-modal" style="display: none;">
                 <div class="modal-content">
@@ -100,6 +110,10 @@ class ComponentsManager {
                                 <option value="city">Suggest a New City 🌍</option>
                                 <option value="other">Other Bear Intel</option>
                             </select>
+                            <div class="bear-intel-event-option" id="event-builder-option" aria-hidden="true">
+                                <p>Prefer to build the full event yourself?</p>
+                                <a class="event-builder-link" href="${eventBuilderPath}" target="_blank" rel="noopener">Open Event Builder</a>
+                            </div>
                             <textarea placeholder="Tell us about it! Include city, address, and any special details..." rows="4" required></textarea>
                             <button type="submit">Send Bear Intel <img src="${logoPath}" alt="chunky.dad" class="button-icon"></button>
                         </form>

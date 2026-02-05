@@ -4988,35 +4988,36 @@
         if (eventName) subjectParts.push(eventName);
         if (cityLabel) subjectParts.push(cityLabel);
         const subject = subjectParts.join(' - ');
-        const bodyLines = [
+        const bodyTextLines = [
           'Hey Dad, here is the event link:',
           '',
           shareUrl
         ];
-        if (scriptableUrl) {
-          bodyLines.push(
-            '',
-            'Scriptable URL Input (x-callback-url)',
-            scriptableUrl
-          );
-        }
+        const shareUrlHtml = String(shareUrl || '')
+          .replace(/&/g, '&amp;')
+          .replace(/"/g, '&quot;');
+        const bodyHtml = `Hey Dad, here is the event link:<br><br><a href="${shareUrlHtml}">${shareUrlHtml}</a>`;
         return {
           shareUrl,
           scriptableUrl,
           subject,
-          body: bodyLines.join('\n')
+          body: bodyTextLines.join('\n'),
+          bodyText: bodyTextLines.join('\n'),
+          bodyHtml
         };
       }
 
       function buildTellDadMailto(message = buildTellDadMessage()) {
         if (!message || !message.shareUrl) return '';
-        return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(message.body)}`;
+        const body = message.bodyHtml || message.bodyText || message.body || '';
+        return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(body)}`;
       }
 
       function openTellDadEmail(button) {
         const message = buildTellDadMessage();
         if (!message.shareUrl) return;
-        const fallbackText = `To: ${DAD_EMAIL}\nSubject: ${message.subject}\n\n${message.body}`;
+        const fallbackBody = message.bodyText || message.body || '';
+        const fallbackText = `To: ${DAD_EMAIL}\nSubject: ${message.subject}\n\n${fallbackBody}`;
         const mailtoUrl = buildTellDadMailto(message);
         if (mailtoUrl) {
           window.location.href = mailtoUrl;

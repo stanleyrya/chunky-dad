@@ -5689,6 +5689,38 @@ footer {
     transition: border-color 0.3s ease;
 }
 
+.bear-intel-event-option {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    background: var(--background-light);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.bear-intel-event-option.is-visible {
+    display: flex;
+}
+
+.bear-intel-event-option p {
+    margin: 0;
+}
+
+.event-builder-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.event-builder-link:hover {
+    color: var(--accent);
+}
+
 .bear-intel-form input:focus,
 .bear-intel-form textarea:focus,
 .bear-intel-form select:focus {
