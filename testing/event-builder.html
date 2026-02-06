@@ -4160,6 +4160,14 @@
             case 'ertz':
               overrides.editingExistingRecurrenceTimezone = value;
               break;
+            case 'searchstartdate':
+            case 'searchStartDate':
+              overrides.editingExistingSearchStartDate = value;
+              break;
+            case 'searchenddate':
+            case 'searchEndDate':
+              overrides.editingExistingSearchEndDate = value;
+              break;
             case 'editmode':
             case 'emode':
               overrides.editingExistingMode = value === 'series' ? 'series' : 'occurrence';
@@ -4181,7 +4189,9 @@
           || overrides.editingExistingOccurrenceId
           || overrides.editingExistingUid
           || overrides.editingExistingRecurrenceId
-          || overrides.editingExistingRecurrenceTimezone)) {
+          || overrides.editingExistingRecurrenceTimezone
+          || overrides.editingExistingSearchStartDate
+          || overrides.editingExistingSearchEndDate)) {
           overrides.isEditingExisting = true;
         }
         if (overrides.existingSelectionAction === 'copy') {
@@ -4192,6 +4202,8 @@
           overrides.editingExistingUid = '';
           overrides.editingExistingRecurrenceId = '';
           overrides.editingExistingRecurrenceTimezone = '';
+          overrides.editingExistingSearchStartDate = '';
+          overrides.editingExistingSearchEndDate = '';
         }
         if (overrides.isEditingExisting) {
           if (!overrides.editingExistingMode) {
@@ -4207,6 +4219,8 @@
           overrides.editingExistingUid = '';
           overrides.editingExistingRecurrenceId = '';
           overrides.editingExistingRecurrenceTimezone = '';
+          overrides.editingExistingSearchStartDate = '';
+          overrides.editingExistingSearchEndDate = '';
         }
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
@@ -5482,6 +5496,8 @@
           if (state.editingExistingUid) params.set('euid', state.editingExistingUid);
           if (state.editingExistingRecurrenceId) params.set('erid', state.editingExistingRecurrenceId);
           if (state.editingExistingRecurrenceTimezone) params.set('ertz', state.editingExistingRecurrenceTimezone);
+          if (state.editingExistingSearchStartDate) params.set('searchStartDate', state.editingExistingSearchStartDate);
+          if (state.editingExistingSearchEndDate) params.set('searchEndDate', state.editingExistingSearchEndDate);
         }
         if (state.image) params.set('img', state.image);
         const coordsValue = (state.location || '').trim();
