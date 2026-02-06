@@ -1459,24 +1459,12 @@ class MetricsDisplay {
   }
 
   buildWidgetDashboardUrl(view, sortState, runSortState, runFilters) {
-    const safeView = view?.mode ? view : { mode: 'parsers' };
-    if (safeView.mode === 'runs') {
-      const sort = runSortState || this.getDefaultRunSort();
-      return this.buildRunListUrl(sort, runFilters || null);
-    }
-    if (safeView.mode === 'parsers') {
-      const sort = sortState || this.getDefaultSortForView(safeView);
-      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
-        view: 'parsers',
-        sort: sort?.key || null,
-        dir: sort?.direction || null
-      });
-    }
+    const safeView = view?.mode ? view : { mode: 'dashboard' };
     if (safeView.mode === 'parser') {
       if (safeView.parserName) {
         return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: safeView.parserName });
       }
-      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'dashboard' });
     }
     if (safeView.mode === 'aggregate') {
       return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'aggregate' });
@@ -1484,7 +1472,7 @@ class MetricsDisplay {
     if (safeView.mode === 'dashboard') {
       return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'dashboard' });
     }
-    return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+    return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'dashboard' });
   }
 
   getQueryParams() {
@@ -1508,8 +1496,6 @@ class MetricsDisplay {
     if (!value) return null;
     const raw = String(value).trim().toLowerCase();
     if (!raw) return null;
-    if (['parsers', 'parser-health', 'parserhealth', 'health', 'recent', 'latest'].includes(raw)) return 'parsers';
-    if (['runs', 'run-history', 'history', 'all-runs', 'allruns', 'runlist', 'run-list'].includes(raw)) return 'runs';
     if (['aggregate', 'summary', 'totals', 'all-time'].includes(raw)) return 'aggregate';
     if (['dashboard', 'overview', 'last-run'].includes(raw)) return 'dashboard';
     return null;
@@ -1610,7 +1596,7 @@ class MetricsDisplay {
     const parsed = this.parseWidgetParams(param);
     if (!parsed.view) return null;
     if (parsed.view === 'parser') {
-      return parsed.parserName ? { mode: 'parser', parserName: parsed.parserName } : { mode: 'parsers' };
+      return parsed.parserName ? { mode: 'parser', parserName: parsed.parserName } : { mode: 'dashboard' };
     }
     return { mode: parsed.view };
   }
@@ -1654,7 +1640,7 @@ class MetricsDisplay {
   }
 
   getDefaultSortForView(view) {
-    if (view?.mode === 'parsers') {
+    if (view?.mode === 'dashboard') {
       return { key: 'status', direction: 'desc' };
     }
     return null;
@@ -1677,7 +1663,7 @@ class MetricsDisplay {
   }
 
   resolveSort(view) {
-    if (!view || view.mode !== 'parsers') return null;
+    if (!view || view.mode !== 'dashboard') return null;
     const fromQuery = this.getSortFromQuery(this.getQueryParams());
     if (fromQuery) return fromQuery;
     const fromParam = this.getSortFromParam(this.runtime.widgetParameter);
@@ -1774,7 +1760,7 @@ class MetricsDisplay {
   }
 
   resolveRunSort(view) {
-    if (!view || view.mode !== 'runs') return null;
+    if (!view || view.mode !== 'aggregate') return null;
     const fromQuery = this.getRunSortFromQuery(this.getQueryParams());
     if (fromQuery) return fromQuery;
     const fromParam = this.getRunSortFromParam(this.runtime.widgetParameter);
@@ -1805,7 +1791,7 @@ class MetricsDisplay {
   }
 
   resolveRunFilters(view) {
-    if (!view || view.mode !== 'runs') return null;
+    if (!view || view.mode !== 'aggregate') return null;
     const fromParam = this.getRunFiltersFromParam(this.runtime.widgetParameter);
     const fromQuery = this.getRunFiltersFromQuery(this.getQueryParams());
     return {
@@ -1819,8 +1805,8 @@ class MetricsDisplay {
     if (queryView) return queryView;
     const paramView = this.parseViewParam(this.runtime.widgetParameter);
     if (paramView) return paramView;
-    if (this.runtime.runsInWidget) return { mode: 'parsers' };
-    return { mode: 'parsers' };
+    if (this.runtime.runsInWidget) return { mode: 'dashboard' };
+    return { mode: 'dashboard' };
   }
 
   getWidgetMaxRows() {
@@ -1839,25 +1825,22 @@ class MetricsDisplay {
   }
 
   getWidgetViewLabel(view) {
-    if (!view) return 'Metrics';
+    if (!view) return 'Dashboard';
     if (view.mode === 'parser') {
       return view.parserName ? `Parser ${view.parserName}` : 'Parser Detail';
     }
-    if (view.mode === 'runs') return 'All Runs';
     if (view.mode === 'dashboard') return 'Dashboard';
     if (view.mode === 'aggregate') return 'All Time Totals';
-    return 'Metrics';
+    return 'Dashboard';
   }
 
   getWidgetHeaderText(context, view, sortState) {
-    if (view?.mode === 'parsers') return 'Parser Health';
-    if (view?.mode === 'runs') return 'All Runs';
     if (view?.mode === 'aggregate') return 'All Time Totals';
-    if (view?.mode === 'dashboard') return 'Metrics';
+    if (view?.mode === 'dashboard') return 'Dashboard';
     if (view?.mode === 'parser') {
       return view.parserName ? `Parser ${view.parserName}` : 'Parser Detail';
     }
-    return 'Metrics';
+    return 'Dashboard';
   }
 
   addWidgetHeader(widget, logoImage, headerText) {
@@ -2309,14 +2292,14 @@ class MetricsDisplay {
     const headerText = this.getWidgetHeaderText({ latest, parserHealth }, view, sortState);
     this.addWidgetHeader(widget, logoImage, headerText);
 
-    if (!latest && view.mode !== 'aggregate' && view.mode !== 'runs') {
+    if (!latest && view.mode !== 'aggregate') {
       const message = widget.addText('No metrics found yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
       message.textColor = new Color(BRAND.text);
       if (widgetUrl) widget.url = widgetUrl;
       return widget;
     }
-    if (view.mode === 'runs' && runItems.length === 0) {
+    if (view.mode === 'aggregate' && runItems.length === 0) {
       const message = widget.addText('No run metrics yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
       message.textColor = new Color(BRAND.text);
@@ -2339,10 +2322,6 @@ class MetricsDisplay {
 
     if (view.mode === 'dashboard') {
       this.renderWidgetDashboard(widget, context);
-    } else if (view.mode === 'parsers') {
-      this.renderWidgetParserHealth(widget, context);
-    } else if (view.mode === 'runs') {
-      this.renderWidgetRuns(widget, context);
     } else if (view.mode === 'parser') {
       this.renderWidgetParserDetail(widget, context, view);
     } else if (view.mode === 'aggregate') {
@@ -2886,17 +2865,15 @@ class MetricsDisplay {
         const lastRun = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'Unknown';
         const latestErrors = Number.isFinite(latest?.errors_count) ? latest.errors_count : 0;
         const latestWarnings = this.getRunWarningCount(latest);
-        const latestStatusKey = this.getRunStatusFromCounts(latestErrors, latestWarnings, latest?.status);
-        const statusMeta = this.getStatusMeta(latestStatusKey);
         const totals = latest?.totals || {};
         const finalEvents = totals.final_bear_events || 0;
         const historyCount = Math.max(recentRecords.length, 1);
         const parserCounts = this.getParserStatusCounts(parserItems);
         const runningCount = parserCounts.running;
         const overallHealthValue = this.formatPercent(parserCounts.healthy, runningCount);
-        const overallHealthDetail = runningCount > 0
-          ? `${this.formatNumber(parserCounts.healthy)} / ${this.formatNumber(runningCount)} running`
-          : 'No parsers running';
+        const healthSummary = runningCount > 0
+          ? `H${this.formatNumber(parserCounts.healthy)}/${this.formatNumber(runningCount)} running • W${this.formatNumber(parserCounts.warning)} F${this.formatNumber(parserCounts.failed)} Idle ${this.formatNumber(parserCounts.notRun)} • T${this.formatNumber(parserCounts.total)}`
+          : `W${this.formatNumber(parserCounts.warning)} F${this.formatNumber(parserCounts.failed)} Idle ${this.formatNumber(parserCounts.notRun)} • T${this.formatNumber(parserCounts.total)}`;
         const runHealth = this.getRunHealthSummary(records);
         const failureStreak = runHealth.failureStreak || 0;
         const lastSuccessAt = runHealth.lastSuccessAt;
@@ -2905,41 +2882,23 @@ class MetricsDisplay {
         const lastSuccessLabel = lastSuccessAt ? this.formatRelativeTime(lastSuccessAt) : 'Never';
         const latestStatusLabel = this.formatStatusLabel(runHealth.latestStatus);
 
+        const successAgeSuffix = Number.isFinite(daysSinceSuccess) ? ` (${daysSinceSuccessValue})` : '';
+        const lastSuccessSummary = lastSuccessAt
+          ? `Last success ${lastSuccessLabel}${successAgeSuffix}`
+          : 'No successful runs';
+        const latestRunSummary = `${latestStatusLabel} • E${latestErrors} W${latestWarnings}`;
         const dashboardBody = `
           <div class="metrics-grid">
-            ${buildMetric('Parsers healthy', this.formatNumber(parserCounts.healthy))}
-            ${buildMetric('Parsers warning', this.formatNumber(parserCounts.warning))}
-            ${buildMetric('Parsers failed', this.formatNumber(parserCounts.failed))}
-            ${buildMetric('Not running', this.formatNumber(parserCounts.notRun))}
-          </div>
-          <div class="metrics-grid">
-            ${buildMetric('Overall health', overallHealthValue, overallHealthDetail)}
-            ${buildMetric('Failures in a row', this.formatNumber(failureStreak), `Latest: ${latestStatusLabel}`)}
-            ${buildMetric('Days since success', daysSinceSuccessValue, lastSuccessAt ? `Last success ${lastSuccessLabel}` : 'No successful runs')}
-            ${buildMetric('Parsers total', this.formatNumber(parserCounts.total))}
-          </div>
-          <div class="meta-row">
-            <div class="meta-item">
-              <span class="meta-label">Last run</span>
-              <span class="meta-value">${escapeHtml(lastRun)}</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Latest status</span>
-              ${buildBadge(statusMeta.label, this.getRunStatusBadgeClass(latestStatusKey))}
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Issues</span>
-              <span class="meta-value">${escapeHtml(`E${latestErrors} W${latestWarnings}`)}</span>
-            </div>
+            ${buildMetric('Health', overallHealthValue, healthSummary)}
+            ${buildMetric('Failures in row', this.formatNumber(failureStreak), lastSuccessSummary)}
+            ${buildMetric('Last run', lastRun, latestRunSummary)}
           </div>`;
         cards.push(buildSection('Parser Health Snapshot', dashboardBody));
 
         const sortedItems = this.sortParserItems(parserItems, parserSortResolved).slice(0, 8);
         let parserTableHtml = buildParserTable(sortedItems, parserSortResolved);
         if (parserItems.length > sortedItems.length) {
-          const moreUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
-          const moreLink = buildLink('View all parsers', moreUrl, 'text-link', buildNavAttributes('parsers', null));
-          parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers • ${moreLink}</div>`;
+          parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers not shown</div>`;
         }
         cards.push(buildSection('Parser Health (Latest)', parserTableHtml));
 
@@ -3059,29 +3018,6 @@ class MetricsDisplay {
             </div>`;
           cards.push(buildSection('All Time Totals', totalsGrid));
         }
-      } else if (viewMode === 'parsers') {
-        const sortedItems = this.sortParserItems(parserItems, parserSortResolved);
-        const body = `
-          ${buildParserTable(sortedItems, parserSortResolved)}`;
-        cards.push(buildSection('Parser Health', body));
-      } else if (viewMode === 'runs') {
-        const filtersHtml = `
-          <div class="filter-block">
-            <div class="filter-label">Status</div>
-            <div class="chip-group">${statusChips}</div>
-          </div>
-          <div class="filter-block">
-            <div class="filter-label">Age</div>
-            <div class="chip-group">${dayChips}</div>
-          </div>
-          <div class="filter-block">
-            <div class="filter-label">Parser</div>
-            <div class="chip-group">${parserChips}</div>
-          </div>`;
-        const body = `
-          ${filtersHtml}
-          ${buildRunTable(sortedRuns, runSortResolved)}`;
-        cards.push(buildSection('All Runs', body));
       } else if (viewMode === 'aggregate') {
         if (!summary?.totals) {
           cards.push(buildEmptyCard('No summary metrics found.', 'Run the scraper to generate summary metrics.'));
@@ -3120,6 +3056,23 @@ class MetricsDisplay {
             cards.push(buildSection('Per-Parser Totals', totalsBody));
           }
         }
+        const filtersHtml = `
+          <div class="filter-block">
+            <div class="filter-label">Status</div>
+            <div class="chip-group">${statusChips}</div>
+          </div>
+          <div class="filter-block">
+            <div class="filter-label">Age</div>
+            <div class="chip-group">${dayChips}</div>
+          </div>
+          <div class="filter-block">
+            <div class="filter-label">Parser</div>
+            <div class="chip-group">${parserChips}</div>
+          </div>`;
+        const runsBody = `
+          ${filtersHtml}
+          ${buildRunTable(sortedRuns, runSortResolved)}`;
+        cards.push(buildSection('All Runs', runsBody));
       } else if (viewMode === 'parser') {
         const parserName = safeView.parserName || 'Parser';
         const record = parserItems.find(item => item.name === safeView.parserName);
@@ -3289,7 +3242,7 @@ class MetricsDisplay {
       : null;
     const lastRunButton = lastRunUrl ? buildLink('Open last run', lastRunUrl, 'button') : '';
     const navLinks = this.getViewOptions().map(option => {
-      const isActive = viewMode === option.mode || (viewMode === 'parser' && option.mode === 'parsers');
+      const isActive = viewMode === option.mode || (viewMode === 'parser' && option.mode === 'dashboard');
       const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: option.mode });
       return buildChip(option.label, url, isActive, buildNavAttributes(option.mode, null, true));
     }).join('');
@@ -3909,8 +3862,8 @@ class MetricsDisplay {
       const runSortButtons = Array.from(document.querySelectorAll('[data-sort-view="runs"]'));
       const aggregateSortButtons = Array.from(document.querySelectorAll('[data-sort-view="aggregate"]'));
       const runFilterChips = Array.from(document.querySelectorAll('[data-filter-view="runs"]'));
-      const parserList = document.querySelector('section[data-view="parsers"] [data-list="parsers"]');
-      const runList = document.querySelector('section[data-view="runs"] [data-list="runs"]');
+      const parserList = document.querySelector('[data-list="parsers"]');
+      const runList = document.querySelector('[data-list="runs"]');
       const aggregateList = document.querySelector('section[data-view="aggregate"] [data-list="aggregate-parsers"]');
       const aggregateToggle = document.querySelector('[data-aggregate-toggle]');
       const parserDurationToggle = document.querySelector('[data-parser-duration-toggle]');
@@ -3996,7 +3949,7 @@ class MetricsDisplay {
         }
         const activeMode = section.getAttribute('data-view') || mode;
         const activeParser = section.getAttribute('data-parser') || '';
-        const navMode = activeMode === 'parser' ? 'parsers' : activeMode;
+        const navMode = activeMode === 'parser' ? 'dashboard' : activeMode;
         navTabs.forEach(tab => {
           const tabMode = tab.getAttribute('data-nav-view') || '';
           tab.classList.toggle('active', tabMode === navMode);
@@ -4371,12 +4324,12 @@ class MetricsDisplay {
     const recentRecords = this.getRecentRecords(records, this.getAppHistoryLimit());
     const chartSize = this.getAppChartSize();
 
-    if (!latest && view.mode !== 'aggregate' && view.mode !== 'runs') {
+    if (!latest && view.mode !== 'aggregate') {
       this.addInfoRow(table, 'No metrics found yet.', 'Run the scraper to generate metrics.');
       await table.present();
       return;
     }
-    if (view.mode === 'runs' && runItems.length === 0) {
+    if (view.mode === 'aggregate' && runItems.length === 0) {
       this.addInfoRow(table, 'No run metrics found.', 'Run the scraper to generate metrics.');
       await table.present();
       return;
@@ -4392,9 +4345,9 @@ class MetricsDisplay {
       const parserCounts = this.getParserStatusCounts(parserHealth.items);
       const runningCount = parserCounts.running;
       const overallHealthValue = this.formatPercent(parserCounts.healthy, runningCount);
-      const overallHealthDetail = runningCount > 0
-        ? `Healthy ${this.formatNumber(parserCounts.healthy)} / ${this.formatNumber(runningCount)} running`
-        : 'No parsers running';
+      const healthSummary = runningCount > 0
+        ? `H${this.formatNumber(parserCounts.healthy)}/${this.formatNumber(runningCount)} running • W${this.formatNumber(parserCounts.warning)} F${this.formatNumber(parserCounts.failed)} Idle ${this.formatNumber(parserCounts.notRun)}`
+        : `W${this.formatNumber(parserCounts.warning)} F${this.formatNumber(parserCounts.failed)} Idle ${this.formatNumber(parserCounts.notRun)}`;
       const runHealth = this.getRunHealthSummary(records);
       const failureStreak = runHealth.failureStreak || 0;
       const lastSuccessAt = runHealth.lastSuccessAt;
@@ -4403,21 +4356,17 @@ class MetricsDisplay {
       const lastSuccessLabel = lastSuccessAt ? this.formatRelativeTime(lastSuccessAt) : 'Never';
       const latestStatusLabel = this.formatStatusLabel(runHealth.latestStatus);
 
+      const lastSuccessSummary = lastSuccessAt
+        ? `Last success: ${lastSuccessLabel} (${daysSinceSuccessValue})`
+        : 'Last success: Never';
       this.addSectionHeader(table, 'Parser Health Snapshot');
-      this.addMetricRow(table, overallHealthValue, 'Overall health');
-      this.addInfoRow(table, overallHealthDetail, `Total parsers: ${this.formatNumber(parserCounts.total)}`);
+      this.addMetricRow(table, overallHealthValue, 'Parser health');
+      this.addInfoRow(table, healthSummary, `Total parsers: ${this.formatNumber(parserCounts.total)}`);
       this.addInfoRow(
         table,
-        `Warnings: ${this.formatNumber(parserCounts.warning)} • Failed: ${this.formatNumber(parserCounts.failed)}`,
-        `Not running: ${this.formatNumber(parserCounts.notRun)}`
+        `Last run: ${lastRun} (${latestStatusLabel}) • Failures: ${this.formatNumber(failureStreak)}`,
+        `Issues: E${latestErrors} W${latestWarnings} • ${lastSuccessSummary}`
       );
-      this.addInfoRow(
-        table,
-        `Failures in a row: ${this.formatNumber(failureStreak)}`,
-        `Days since success: ${daysSinceSuccessValue}`
-      );
-      this.addInfoRow(table, `Last run: ${lastRun}`, `Latest status: ${latestStatusLabel}`);
-      this.addInfoRow(table, `Issues: E${latestErrors} W${latestWarnings}`, `Last success: ${lastSuccessLabel}`);
 
       this.addSectionHeader(table, 'Parser Health (Latest)');
       this.addParserTableHeader(table);
@@ -4427,7 +4376,7 @@ class MetricsDisplay {
         this.addParserHealthRow(table, item);
       });
       if (parserHealth.items.length > sortedItems.length) {
-        this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Open Parser Health to see all.');
+        this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Showing top parsers by recent health.');
       }
 
       const finalSeries = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
@@ -4502,31 +4451,6 @@ class MetricsDisplay {
           `Conflicts: ${this.formatNumber(actions.conflict || 0)}`
         );
       }
-    } else if (view.mode === 'parsers') {
-      this.addSectionHeader(table, 'Parser Health');
-      this.addParserSortRow(table, parserSort);
-      this.addParserTableHeader(table);
-
-      const sortedItems = this.sortParserItems(parserHealth.items, parserSort);
-      if (sortedItems.length === 0) {
-      this.addInfoRow(table, 'No parser metrics available.', 'Run the scraper to collect Parser Health.');
-      } else {
-        sortedItems.forEach(item => {
-          this.addParserHealthRow(table, item);
-        });
-      }
-    } else if (view.mode === 'runs') {
-      this.addSectionHeader(table, 'All Runs');
-      this.addRunFilterRow(table, runSortResolved, runFilters);
-      this.addRunSortRow(table, runSortResolved, runFilters);
-      this.addRunTableHeader(table);
-      if (sortedRuns.length === 0) {
-        this.addInfoRow(table, 'No runs match filters.', 'Adjust filters to see results.');
-      } else {
-        sortedRuns.forEach(run => {
-          this.addRunRow(table, run);
-        });
-      }
     } else if (view.mode === 'aggregate') {
       this.addSectionHeader(table, 'All Time Totals');
       if (!summary?.totals) {
@@ -4582,6 +4506,17 @@ class MetricsDisplay {
             );
           });
         }
+      }
+      this.addSectionHeader(table, 'All Runs');
+      this.addRunFilterRow(table, runSortResolved, runFilters);
+      this.addRunSortRow(table, runSortResolved, runFilters);
+      this.addRunTableHeader(table);
+      if (sortedRuns.length === 0) {
+        this.addInfoRow(table, 'No runs match filters.', 'Adjust filters to see results.');
+      } else {
+        sortedRuns.forEach(run => {
+          this.addRunRow(table, run);
+        });
       }
     } else if (view.mode === 'parser') {
       this.addSectionHeader(table, `Parser Detail: ${view.parserName}`);
@@ -4765,20 +4700,18 @@ class MetricsDisplay {
 
   getViewOptions() {
     return [
-      { mode: 'parsers', label: 'Parser Health' },
-      { mode: 'runs', label: 'All Runs' },
       { mode: 'dashboard', label: 'Dashboard' },
       { mode: 'aggregate', label: 'All Time Totals' }
     ];
   }
 
   getViewLabel(view) {
-    if (!view) return 'Parser Health';
+    if (!view) return 'Dashboard';
     if (view.mode === 'parser') {
       return view.parserName ? `Parser Detail: ${view.parserName}` : 'Parser Detail';
     }
     const option = this.getViewOptions().find(item => item.mode === view.mode);
-    return option ? option.label : 'Parser Health';
+    return option ? option.label : 'Dashboard';
   }
 
   async presentViewPicker(currentView) {
@@ -4911,7 +4844,7 @@ class MetricsDisplay {
       const nextSort = await this.presentSortPicker(sortState);
       if (!nextSort) return;
       const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
-        view: 'parsers',
+        view: 'dashboard',
         sort: nextSort.key,
         dir: nextSort.direction
       });
@@ -4960,7 +4893,7 @@ class MetricsDisplay {
 
   buildRunListUrl(sortState, filters) {
     return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
-      view: 'runs',
+      view: 'aggregate',
       sort: sortState?.key || null,
       dir: sortState?.direction || null,
       status: filters?.status || null,
