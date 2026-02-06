@@ -1505,8 +1505,6 @@ class MetricsDisplay {
     if (!raw) return null;
     if (['parsers', 'parser-health', 'parserhealth', 'health', 'recent', 'latest'].includes(raw)) return 'parsers';
     if (['runs', 'run-history', 'history', 'all-runs', 'allruns', 'runlist', 'run-list'].includes(raw)) return 'runs';
-    if (['aggregate', 'summary', 'totals', 'all-time'].includes(raw)) return 'runs';
-    if (['dashboard', 'overview', 'last-run'].includes(raw)) return 'parsers';
     return null;
   }
 
@@ -1616,7 +1614,7 @@ class MetricsDisplay {
     if (parserName) {
       return { mode: 'parser', parserName: String(parserName) };
     }
-    const viewValue = query.view || query.mode || query.dashboard || query.tab || null;
+    const viewValue = query.view || query.mode || null;
     const viewToken = this.normalizeViewToken(viewValue);
     return viewToken ? { mode: viewToken } : null;
   }
@@ -1649,7 +1647,7 @@ class MetricsDisplay {
   }
 
   getDefaultSortForView(view) {
-    if (view?.mode === 'parsers' || view?.mode === 'dashboard') {
+    if (view?.mode === 'parsers') {
       return { key: 'status', direction: 'desc' };
     }
     return null;
@@ -1672,7 +1670,7 @@ class MetricsDisplay {
   }
 
   resolveSort(view) {
-    if (!view || (view.mode !== 'dashboard' && view.mode !== 'parsers')) return null;
+    if (!view || view.mode !== 'parsers') return null;
     const fromQuery = this.getSortFromQuery(this.getQueryParams());
     if (fromQuery) return fromQuery;
     const fromParam = this.getSortFromParam(this.runtime.widgetParameter);
@@ -1715,7 +1713,7 @@ class MetricsDisplay {
   }
 
   resolveAggregateSort(view) {
-    if (!view || (view.mode !== 'runs' && view.mode !== 'aggregate')) return null;
+    if (!view || view.mode !== 'runs') return null;
     const fromQuery = this.getAggregateSortFromQuery(this.getQueryParams());
     if (fromQuery) return fromQuery;
     const fromParam = this.getAggregateSortFromParam(this.runtime.widgetParameter);
@@ -1769,7 +1767,7 @@ class MetricsDisplay {
   }
 
   resolveRunSort(view) {
-    if (!view || (view.mode !== 'aggregate' && view.mode !== 'runs')) return null;
+    if (!view || view.mode !== 'runs') return null;
     const fromQuery = this.getRunSortFromQuery(this.getQueryParams());
     if (fromQuery) return fromQuery;
     const fromParam = this.getRunSortFromParam(this.runtime.widgetParameter);
@@ -1800,7 +1798,7 @@ class MetricsDisplay {
   }
 
   resolveRunFilters(view) {
-    if (!view || (view.mode !== 'aggregate' && view.mode !== 'runs')) return null;
+    if (!view || view.mode !== 'runs') return null;
     const fromParam = this.getRunFiltersFromParam(this.runtime.widgetParameter);
     const fromQuery = this.getRunFiltersFromQuery(this.getQueryParams());
     return {
@@ -1838,14 +1836,14 @@ class MetricsDisplay {
     if (view.mode === 'parser') {
       return view.parserName ? `Parser ${view.parserName}` : 'Parser Detail';
     }
-    if (view.mode === 'parsers' || view.mode === 'dashboard') return 'Parser Health';
-    if (view.mode === 'runs' || view.mode === 'aggregate') return 'All Runs';
+    if (view.mode === 'parsers') return 'Parser Health';
+    if (view.mode === 'runs') return 'All Runs';
     return 'Parser Health';
   }
 
   getWidgetHeaderText(context, view, sortState) {
-    if (view?.mode === 'parsers' || view?.mode === 'dashboard') return 'Parser Health';
-    if (view?.mode === 'runs' || view?.mode === 'aggregate') return 'All Runs';
+    if (view?.mode === 'parsers') return 'Parser Health';
+    if (view?.mode === 'runs') return 'All Runs';
     if (view?.mode === 'parser') {
       return view.parserName ? `Parser ${view.parserName}` : 'Parser Detail';
     }
@@ -4336,8 +4334,8 @@ class MetricsDisplay {
     const recentRecords = this.getRecentRecords(records, this.getAppHistoryLimit());
     const chartSize = this.getAppChartSize();
 
-    const isParserHealthView = view.mode === 'parsers' || view.mode === 'dashboard';
-    const isAllRunsView = view.mode === 'runs' || view.mode === 'aggregate';
+    const isParserHealthView = view.mode === 'parsers';
+    const isAllRunsView = view.mode === 'runs';
 
     if (!latest && !isAllRunsView) {
       this.addInfoRow(table, 'No metrics found yet.', 'Run the scraper to generate metrics.');
@@ -4725,8 +4723,6 @@ class MetricsDisplay {
     if (view.mode === 'parser') {
       return view.parserName ? `Parser Detail: ${view.parserName}` : 'Parser Detail';
     }
-    if (view.mode === 'dashboard') return 'Parser Health';
-    if (view.mode === 'aggregate') return 'All Runs';
     const option = this.getViewOptions().find(item => item.mode === view.mode);
     return option ? option.label : 'Parser Health';
   }
