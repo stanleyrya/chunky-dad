@@ -468,6 +468,148 @@
       margin-top: 0.2rem;
     }
 
+    .existing-calendar {
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.65rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 18, 28, 0.6);
+    }
+
+    .existing-calendar__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .existing-calendar__header label {
+      margin: 0;
+      font-size: 0.84rem;
+    }
+
+    .existing-calendar__controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .existing-calendar__nav {
+      display: inline-flex;
+      gap: 0.2rem;
+    }
+
+    .existing-calendar__nav .action-button.is-compact {
+      padding: 0.28rem 0.45rem;
+    }
+
+    .existing-calendar__meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      gap: 0.35rem;
+    }
+
+    .existing-calendar__month {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .existing-calendar__grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.2rem;
+      padding: 0.35rem;
+      border-radius: 10px;
+      background: #0d111a;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .existing-calendar__weekday {
+      text-align: center;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .existing-calendar__day {
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(16, 20, 30, 0.9);
+      color: var(--text-primary);
+      border-radius: 8px;
+      font-size: 0.72rem;
+      padding: 0.35rem 0;
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.1s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .existing-calendar__day:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 162, 74, 0.4);
+    }
+
+    .existing-calendar__day.is-muted {
+      color: var(--text-muted);
+      opacity: 0.55;
+    }
+
+    .existing-calendar__day.is-past {
+      color: rgba(196, 200, 228, 0.75);
+    }
+
+    .existing-calendar__day.is-today {
+      background: rgba(255, 162, 74, 0.12);
+      border-color: rgba(255, 162, 74, 0.4);
+    }
+
+    .existing-calendar__day.is-selected {
+      border-color: rgba(255, 162, 74, 0.6);
+      box-shadow: 0 0 0 2px rgba(255, 162, 74, 0.3);
+    }
+
+    .existing-calendar__count {
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      padding: 0 0.25rem;
+      border-radius: 999px;
+      background: rgba(255, 162, 74, 0.25);
+      color: var(--text-primary);
+      font-size: 0.55rem;
+      line-height: 1.3;
+    }
+
+    .existing-calendar__footer {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .existing-calendar__hint {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .existing-calendar__input {
+      max-width: 100%;
+    }
+
+    .existing-calendar__assist {
+      margin-top: 0.2rem;
+    }
+
     .existing-modal {
       margin: auto;
       width: min(760px, calc(100vw - 2rem));
@@ -1655,10 +1797,44 @@
             <input type="text" id="existing-search" class="existing-filter-input" autocomplete="off" placeholder="Goldiloxx, Rockbar, Leather Nite">
             <small>Optional. Match event name, venue, or notes.</small>
           </div>
-          <div class="field-group">
-            <label for="existing-date">Search date</label>
-            <input type="date" id="existing-date" class="existing-filter-input">
-            <small>Optional. Filters events and occurrences on that day.</small>
+          <div class="field-group existing-calendar-group">
+            <div class="existing-calendar">
+              <div class="existing-calendar__header">
+                <label for="existing-date">Search date</label>
+                <div class="existing-calendar__controls">
+                  <div class="toggle-buttons existing-calendar__toggle" role="group" aria-label="Calendar view">
+                    <button type="button" class="toggle-button is-active" data-existing-calendar-view="week">Week</button>
+                    <button type="button" class="toggle-button" data-existing-calendar-view="month">Month</button>
+                  </div>
+                  <div class="existing-calendar__nav" aria-label="Calendar navigation">
+                    <button type="button" class="ghost-button action-button is-compact" id="existing-calendar-prev" aria-label="Previous">
+                      <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="ghost-button action-button is-compact" id="existing-calendar-next" aria-label="Next">
+                      <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="existing-calendar__meta">
+                <span class="existing-calendar__month" id="existing-calendar-month">Month</span>
+                <span class="existing-calendar__range" id="existing-calendar-range"></span>
+              </div>
+              <div class="existing-calendar__grid" id="existing-calendar-grid" role="grid" aria-label="Calendar date selector"></div>
+              <div class="existing-calendar__footer">
+                <button type="button" class="ghost-button action-button is-compact" id="existing-calendar-today">
+                  <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                  <span>Today</span>
+                </button>
+                <button type="button" class="ghost-button action-button is-compact" id="existing-calendar-clear">
+                  <i class="bi bi-x-circle" aria-hidden="true"></i>
+                  <span>Clear</span>
+                </button>
+                <span class="existing-calendar__hint">Past days show for copy-only.</span>
+              </div>
+              <input type="date" id="existing-date" class="existing-filter-input existing-calendar__input" autocomplete="off">
+            </div>
+            <small class="existing-calendar__assist">Optional. Filters events and occurrences on that day.</small>
           </div>
         </div>
 
@@ -1680,7 +1856,7 @@
         <div class="field-group is-hidden" id="existing-occurrence-group">
           <label for="existing-occurrence">Occurrence</label>
           <select id="existing-occurrence"></select>
-          <small class="field-hint" id="existing-occurrence-hint" data-default="Pick the occurrence to edit or copy. Use Search date to jump to a specific day.">Pick the occurrence to edit or copy. Use Search date to jump to a specific day.</small>
+          <small class="field-hint" id="existing-occurrence-hint" data-default="Pick the occurrence to edit or copy. Use the date grid to jump to a specific day.">Pick the occurrence to edit or copy. Use the date grid to jump to a specific day.</small>
         </div>
 
         <div class="field-actions">
@@ -1760,10 +1936,14 @@
       let pendingExistingSelectionId = '';
       let pendingExistingOccurrenceId = '';
       let existingSearchTimeoutId = null;
+      let existingCalendarView = 'week';
+      let existingCalendarAnchor = null;
       const existingPanelState = {
         city: '',
         searchText: '',
         dateValue: '',
+        calendarView: 'week',
+        calendarAnchor: '',
         resultId: '',
         occurrenceId: '',
         mode: 'occurrence',
@@ -1787,6 +1967,7 @@
         syncExistingSelectionSummaryFromState();
         syncExistingCitySelection();
         resetExistingResults('Choose a calendar to load events.');
+        initExistingCalendarUi();
         queueExistingSelectionFromState();
         bindEvents();
         populateVenueOptions(state.city);
@@ -1860,6 +2041,14 @@
         dom.existingCitySelect = document.getElementById('existing-city');
         dom.existingSearchInput = document.getElementById('existing-search');
         dom.existingDateInput = document.getElementById('existing-date');
+        dom.existingCalendarGrid = document.getElementById('existing-calendar-grid');
+        dom.existingCalendarMonth = document.getElementById('existing-calendar-month');
+        dom.existingCalendarRange = document.getElementById('existing-calendar-range');
+        dom.existingCalendarViewButtons = document.querySelectorAll('[data-existing-calendar-view]');
+        dom.existingCalendarPrev = document.getElementById('existing-calendar-prev');
+        dom.existingCalendarNext = document.getElementById('existing-calendar-next');
+        dom.existingCalendarToday = document.getElementById('existing-calendar-today');
+        dom.existingCalendarClear = document.getElementById('existing-calendar-clear');
         dom.existingResultsSelect = document.getElementById('existing-results');
         dom.existingResultsHint = document.getElementById('existing-results-hint');
         dom.existingModeGroup = document.getElementById('existing-mode-group');
@@ -2124,6 +2313,10 @@
         existingPanelState.city = dom.existingCitySelect.value || '';
         existingPanelState.searchText = dom.existingSearchInput ? dom.existingSearchInput.value : '';
         existingPanelState.dateValue = dom.existingDateInput ? dom.existingDateInput.value : '';
+        existingPanelState.calendarView = existingCalendarView === 'month' ? 'month' : 'week';
+        existingPanelState.calendarAnchor = (existingCalendarAnchor && isValidDateObject(existingCalendarAnchor))
+          ? formatDateKey(existingCalendarAnchor)
+          : '';
         existingPanelState.resultId = selectedExistingResult ? selectedExistingResult.id : '';
         existingPanelState.occurrenceId = selectedExistingOccurrence ? selectedExistingOccurrence.id : '';
         existingPanelState.mode = selectedExistingMode === 'series' ? 'series' : 'occurrence';
@@ -2142,6 +2335,11 @@
         if (dom.existingDateInput) {
           dom.existingDateInput.value = existingPanelState.dateValue || '';
         }
+        applyExistingCalendarState({
+          view: existingPanelState.calendarView,
+          anchorValue: existingPanelState.calendarAnchor
+        });
+        renderExistingCalendarUi();
         selectedExistingMode = existingPanelState.mode === 'series' ? 'series' : 'occurrence';
         pendingExistingSelectionId = existingPanelState.resultId || '';
         pendingExistingOccurrenceId = existingPanelState.occurrenceId || '';
@@ -2186,11 +2384,13 @@
         if (!cityKey) {
           existingCalendarIndex = null;
           resetExistingResults('Choose a calendar to load events.');
+          renderExistingCalendarUi();
           return;
         }
         if (!calendarCore) {
           existingCalendarIndex = null;
           resetExistingResults('Calendar tools are unavailable here.');
+          renderExistingCalendarUi();
           return;
         }
         setExistingResultsHint('Loading calendar events...', false);
@@ -2203,9 +2403,11 @@
           existingCalendarIndex = index;
           existingResults = results;
           renderExistingResults(results);
+          renderExistingCalendarUi();
         } catch (error) {
           existingCalendarIndex = null;
           resetExistingResults('Unable to load that calendar.');
+          renderExistingCalendarUi();
           showToast('Calendar data could not be loaded.', 'warn');
         }
       }
@@ -2275,6 +2477,221 @@
         pendingExistingSelectionId = '';
         selectedExistingResult = null;
         updateExistingModeUi(null);
+      }
+
+      function initExistingCalendarUi() {
+        applyExistingCalendarState({
+          view: existingPanelState.calendarView,
+          anchorValue: existingPanelState.calendarAnchor,
+          preferInput: true
+        });
+        renderExistingCalendarUi();
+        logger.componentInit('EVENT', 'Existing event calendar filter ready', {
+          view: existingCalendarView
+        });
+      }
+
+      function applyExistingCalendarState(options = {}) {
+        const nextView = options.view === 'month' ? 'month' : 'week';
+        existingCalendarView = nextView;
+        const anchorFromState = parseDateValue(options.anchorValue || '');
+        const anchorFromInput = options.preferInput
+          ? parseDateValue(dom.existingDateInput ? dom.existingDateInput.value : '')
+          : null;
+        const anchor = anchorFromState || anchorFromInput || existingCalendarAnchor || startOfDay(new Date());
+        existingCalendarAnchor = startOfDay(anchor);
+        updateExistingCalendarViewButtons();
+      }
+
+      function updateExistingCalendarViewButtons() {
+        if (!dom.existingCalendarViewButtons || !dom.existingCalendarViewButtons.length) return;
+        dom.existingCalendarViewButtons.forEach(button => {
+          button.classList.toggle('is-active', button.dataset.existingCalendarView === existingCalendarView);
+        });
+      }
+
+      function setExistingCalendarView(view) {
+        existingCalendarView = view === 'month' ? 'month' : 'week';
+        updateExistingCalendarViewButtons();
+        storeExistingPanelState();
+        renderExistingCalendarUi();
+      }
+
+      function getExistingCalendarAnchor() {
+        if (existingCalendarAnchor && isValidDateObject(existingCalendarAnchor)) {
+          return new Date(existingCalendarAnchor);
+        }
+        const fallback = parseDateValue(dom.existingDateInput ? dom.existingDateInput.value : '');
+        return startOfDay(fallback || new Date());
+      }
+
+      function shiftExistingCalendarAnchor(step) {
+        const anchor = getExistingCalendarAnchor();
+        const next = new Date(anchor);
+        if (existingCalendarView === 'month') {
+          next.setMonth(anchor.getMonth() + step, 1);
+        } else {
+          next.setDate(anchor.getDate() + step * 7);
+        }
+        existingCalendarAnchor = startOfDay(next);
+        storeExistingPanelState();
+        renderExistingCalendarUi();
+      }
+
+      function setExistingDateFilter(dateValue, options = {}) {
+        if (!dom.existingDateInput) return;
+        const { fallbackToToday = false } = options;
+        dom.existingDateInput.value = dateValue || '';
+        const nextAnchor = parseDateValue(dom.existingDateInput.value);
+        if (nextAnchor) {
+          existingCalendarAnchor = startOfDay(nextAnchor);
+        } else if (fallbackToToday) {
+          existingCalendarAnchor = startOfDay(new Date());
+        }
+        storeExistingPanelState();
+        renderExistingCalendarUi();
+        scheduleExistingResultsUpdate();
+      }
+
+      function renderExistingCalendarUi() {
+        if (!dom.existingCalendarGrid) return;
+        const anchor = getExistingCalendarAnchor();
+        const view = existingCalendarView === 'month' ? 'month' : 'week';
+        const { days, monthLabel, rangeLabel, monthIndex } = buildExistingCalendarRange(anchor, view);
+        if (dom.existingCalendarMonth) {
+          dom.existingCalendarMonth.textContent = monthLabel;
+        }
+        if (dom.existingCalendarRange) {
+          dom.existingCalendarRange.textContent = rangeLabel;
+        }
+        const selectedDate = dom.existingDateInput ? parseDateValue(dom.existingDateInput.value) : null;
+        const selectedKey = selectedDate ? formatDateKey(selectedDate) : '';
+        const today = startOfDay(new Date());
+        const textFilter = normalizeText(dom.existingSearchInput ? dom.existingSearchInput.value : '').toLowerCase();
+        const counts = buildExistingCalendarCounts(existingCalendarIndex, days, textFilter);
+        const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const html = [];
+        weekdayLabels.forEach(label => {
+          html.push(`<div class="existing-calendar__weekday" role="columnheader">${label}</div>`);
+        });
+        days.forEach(date => {
+          const dateKey = formatDateKey(date);
+          const count = counts.get(dateKey) || 0;
+          const isMuted = view === 'month' && date.getMonth() !== monthIndex;
+          const isToday = today && date.getTime() === today.getTime();
+          const isSelected = Boolean(selectedKey && dateKey === selectedKey);
+          const isPast = today && date < today;
+          const countLabel = count > 9 ? '9+' : (count ? String(count) : '');
+          const classes = ['existing-calendar__day'];
+          if (count) classes.push('has-events');
+          if (isMuted) classes.push('is-muted');
+          if (isPast) classes.push('is-past');
+          if (isToday) classes.push('is-today');
+          if (isSelected) classes.push('is-selected');
+          html.push(
+            `<button type="button" class="${classes.join(' ')}" data-date="${dateKey}" role="gridcell" aria-pressed="${isSelected ? 'true' : 'false'}" aria-label="${formatCalendarDayLabel(date, count)}">` +
+            `${date.getDate()}` +
+            `${countLabel ? `<span class="existing-calendar__count">${countLabel}</span>` : ''}` +
+            `</button>`
+          );
+        });
+        dom.existingCalendarGrid.innerHTML = html.join('');
+      }
+
+      function buildExistingCalendarRange(anchor, view) {
+        const safeAnchor = startOfDay(anchor) || startOfDay(new Date());
+        if (view === 'month') {
+          const monthStart = new Date(safeAnchor.getFullYear(), safeAnchor.getMonth(), 1);
+          const gridStart = new Date(monthStart);
+          gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+          const days = [];
+          for (let i = 0; i < 42; i += 1) {
+            const day = new Date(gridStart);
+            day.setDate(gridStart.getDate() + i);
+            days.push(day);
+          }
+          const gridEnd = days[days.length - 1];
+          const monthEnd = new Date(safeAnchor.getFullYear(), safeAnchor.getMonth() + 1, 0);
+          return {
+            days,
+            startDate: gridStart,
+            endDate: gridEnd,
+            monthLabel: formatCalendarMonthLabel(safeAnchor),
+            rangeLabel: formatCalendarRangeLabel(monthStart, monthEnd),
+            monthIndex: safeAnchor.getMonth()
+          };
+        }
+        const weekStart = new Date(safeAnchor);
+        weekStart.setDate(safeAnchor.getDate() - safeAnchor.getDay());
+        const days = [];
+        for (let i = 0; i < 7; i += 1) {
+          const day = new Date(weekStart);
+          day.setDate(weekStart.getDate() + i);
+          days.push(day);
+        }
+        const weekEnd = days[days.length - 1];
+        return {
+          days,
+          startDate: weekStart,
+          endDate: weekEnd,
+          monthLabel: formatCalendarMonthLabel(safeAnchor),
+          rangeLabel: formatCalendarRangeLabel(weekStart, weekEnd),
+          monthIndex: safeAnchor.getMonth()
+        };
+      }
+
+      function buildExistingCalendarCounts(index, days, textFilter) {
+        const counts = new Map();
+        if (!index || !Array.isArray(days) || !days.length) return counts;
+        const now = new Date();
+        days.forEach(date => {
+          const dateValue = formatDateKey(date);
+          const results = buildExistingResults(index, { textFilter, dateValue, now });
+          counts.set(dateValue, results.length);
+        });
+        return counts;
+      }
+
+      function formatCalendarMonthLabel(date) {
+        if (!date || !(date instanceof Date)) return '';
+        try {
+          return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
+        } catch (error) {
+          return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+      }
+
+      function formatCalendarRangeLabel(start, end) {
+        if (!start || !end) return '';
+        try {
+          const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+          const startLabel = formatter.format(start);
+          const endLabel = formatter.format(end);
+          if (start.getFullYear() === end.getFullYear()) {
+            return `${startLabel} – ${endLabel}`;
+          }
+          return `${startLabel} ${start.getFullYear()} – ${endLabel} ${end.getFullYear()}`;
+        } catch (error) {
+          return `${start.toLocaleDateString('en-US')} – ${end.toLocaleDateString('en-US')}`;
+        }
+      }
+
+      function formatCalendarDayLabel(date, count) {
+        if (!date || !(date instanceof Date)) return '';
+        let baseLabel = '';
+        try {
+          baseLabel = new Intl.DateTimeFormat('en-US', {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }).format(date);
+        } catch (error) {
+          baseLabel = date.toLocaleDateString('en-US');
+        }
+        if (count === 1) return `${baseLabel}, 1 match`;
+        if (count > 1) return `${baseLabel}, ${count} matches`;
+        return `${baseLabel}, no matches`;
       }
 
       async function fetchCalendarIndex(cityKey) {
@@ -3442,6 +3859,8 @@
           if (dom.existingSearchInput) dom.existingSearchInput.value = '';
           if (dom.existingDateInput) dom.existingDateInput.value = '';
           if (dom.existingResultsSelect) dom.existingResultsSelect.value = '';
+          existingCalendarAnchor = startOfDay(new Date());
+          renderExistingCalendarUi();
           scheduleExistingResultsUpdate();
         }
         storeExistingPanelState();
@@ -3980,13 +4399,44 @@
           });
         }
         if (dom.existingDateInput) {
-          dom.existingDateInput.addEventListener('input', () => {
-            storeExistingPanelState();
-            scheduleExistingResultsUpdate();
+          const handleExistingDateInput = () => {
+            setExistingDateFilter(dom.existingDateInput.value, { fallbackToToday: false });
+          };
+          dom.existingDateInput.addEventListener('input', handleExistingDateInput);
+          dom.existingDateInput.addEventListener('change', handleExistingDateInput);
+        }
+        if (dom.existingCalendarViewButtons && dom.existingCalendarViewButtons.length) {
+          dom.existingCalendarViewButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              setExistingCalendarView(button.dataset.existingCalendarView);
+            });
           });
-          dom.existingDateInput.addEventListener('change', () => {
-            storeExistingPanelState();
-            scheduleExistingResultsUpdate();
+        }
+        if (dom.existingCalendarPrev) {
+          dom.existingCalendarPrev.addEventListener('click', () => {
+            shiftExistingCalendarAnchor(-1);
+          });
+        }
+        if (dom.existingCalendarNext) {
+          dom.existingCalendarNext.addEventListener('click', () => {
+            shiftExistingCalendarAnchor(1);
+          });
+        }
+        if (dom.existingCalendarToday) {
+          dom.existingCalendarToday.addEventListener('click', () => {
+            setExistingDateFilter(formatDateKey(new Date()), { fallbackToToday: true });
+          });
+        }
+        if (dom.existingCalendarClear) {
+          dom.existingCalendarClear.addEventListener('click', () => {
+            setExistingDateFilter('', { fallbackToToday: true });
+          });
+        }
+        if (dom.existingCalendarGrid) {
+          dom.existingCalendarGrid.addEventListener('click', event => {
+            const button = event.target.closest('[data-date]');
+            if (!button) return;
+            setExistingDateFilter(button.dataset.date, { fallbackToToday: false });
           });
         }
         if (dom.existingResultsSelect) {
