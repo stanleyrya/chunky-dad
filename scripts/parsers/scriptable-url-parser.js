@@ -448,6 +448,9 @@ class ScriptableUrlParser {
             return;
         }
 
+        const hasLat = fields.lat !== undefined;
+        const hasLng = fields.lng !== undefined;
+
         if (!fields.location && fields.coordinates) {
             if (typeof fields.coordinates === 'string') {
                 fields.location = fields.coordinates;
@@ -458,9 +461,18 @@ class ScriptableUrlParser {
             }
         }
 
-        if (!fields.location && fields.lat !== undefined && fields.lng !== undefined) {
+        if (!fields.location && hasLat && hasLng) {
             fields.location = `${fields.lat}, ${fields.lng}`;
             inputFields.add('location');
+        }
+
+        if (hasLat || hasLng) {
+            delete fields.lat;
+            delete fields.lng;
+            if (inputFields) {
+                inputFields.delete('lat');
+                inputFields.delete('lng');
+            }
         }
     }
 
