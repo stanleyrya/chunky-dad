@@ -349,7 +349,7 @@ class FormsManager {
             bodyLines.push(`Category: ${formData.category}`);
         }
         bodyLines.push('', 'Message:', formData.message || '', '', '---', 'Sent from chunky.dad contact form');
-        const body = encodeURIComponent(bodyLines.join('\n'));
+        const body = encodeURIComponent(bodyLines.join('\r\n'));
         
         const mailtoUrl = `mailto:${mailtoEmail}?subject=${subject}&body=${body}`;
         
