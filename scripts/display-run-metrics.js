@@ -1460,18 +1460,6 @@ class MetricsDisplay {
 
   buildWidgetDashboardUrl(view, sortState, runSortState, runFilters) {
     const safeView = view?.mode ? view : { mode: 'dashboard' };
-    if (safeView.mode === 'runs') {
-      const sort = runSortState || this.getDefaultRunSort();
-      return this.buildRunListUrl(sort, runFilters || null);
-    }
-    if (safeView.mode === 'parsers') {
-      const sort = sortState || this.getDefaultSortForView({ mode: 'dashboard' });
-      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
-        view: 'dashboard',
-        sort: sort?.key || null,
-        dir: sort?.direction || null
-      });
-    }
     if (safeView.mode === 'parser') {
       if (safeView.parserName) {
         return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { parser: safeView.parserName });
@@ -1508,8 +1496,6 @@ class MetricsDisplay {
     if (!value) return null;
     const raw = String(value).trim().toLowerCase();
     if (!raw) return null;
-    if (['parsers', 'parser-health', 'parserhealth', 'health', 'recent', 'latest'].includes(raw)) return 'dashboard';
-    if (['runs', 'run-history', 'history', 'all-runs', 'allruns', 'runlist', 'run-list'].includes(raw)) return 'aggregate';
     if (['aggregate', 'summary', 'totals', 'all-time'].includes(raw)) return 'aggregate';
     if (['dashboard', 'overview', 'last-run'].includes(raw)) return 'dashboard';
     return null;
@@ -1654,7 +1640,7 @@ class MetricsDisplay {
   }
 
   getDefaultSortForView(view) {
-    if (view?.mode === 'parsers' || view?.mode === 'dashboard') {
+    if (view?.mode === 'dashboard') {
       return { key: 'status', direction: 'desc' };
     }
     return null;
@@ -1677,7 +1663,7 @@ class MetricsDisplay {
   }
 
   resolveSort(view) {
-    if (!view || !['parsers', 'dashboard'].includes(view.mode)) return null;
+    if (!view || view.mode !== 'dashboard') return null;
     const fromQuery = this.getSortFromQuery(this.getQueryParams());
     if (fromQuery) return fromQuery;
     const fromParam = this.getSortFromParam(this.runtime.widgetParameter);
@@ -1774,7 +1760,7 @@ class MetricsDisplay {
   }
 
   resolveRunSort(view) {
-    if (!view || !['runs', 'aggregate'].includes(view.mode)) return null;
+    if (!view || view.mode !== 'aggregate') return null;
     const fromQuery = this.getRunSortFromQuery(this.getQueryParams());
     if (fromQuery) return fromQuery;
     const fromParam = this.getRunSortFromParam(this.runtime.widgetParameter);
@@ -1805,7 +1791,7 @@ class MetricsDisplay {
   }
 
   resolveRunFilters(view) {
-    if (!view || !['runs', 'aggregate'].includes(view.mode)) return null;
+    if (!view || view.mode !== 'aggregate') return null;
     const fromParam = this.getRunFiltersFromParam(this.runtime.widgetParameter);
     const fromQuery = this.getRunFiltersFromQuery(this.getQueryParams());
     return {
@@ -1843,16 +1829,12 @@ class MetricsDisplay {
     if (view.mode === 'parser') {
       return view.parserName ? `Parser ${view.parserName}` : 'Parser Detail';
     }
-    if (view.mode === 'runs') return 'All Time Totals';
-    if (view.mode === 'parsers') return 'Dashboard';
     if (view.mode === 'dashboard') return 'Dashboard';
     if (view.mode === 'aggregate') return 'All Time Totals';
     return 'Dashboard';
   }
 
   getWidgetHeaderText(context, view, sortState) {
-    if (view?.mode === 'parsers') return 'Dashboard';
-    if (view?.mode === 'runs') return 'All Time Totals';
     if (view?.mode === 'aggregate') return 'All Time Totals';
     if (view?.mode === 'dashboard') return 'Dashboard';
     if (view?.mode === 'parser') {
@@ -2340,10 +2322,6 @@ class MetricsDisplay {
 
     if (view.mode === 'dashboard') {
       this.renderWidgetDashboard(widget, context);
-    } else if (view.mode === 'parsers') {
-      this.renderWidgetDashboard(widget, context);
-    } else if (view.mode === 'runs') {
-      this.renderWidgetAggregate(widget, context);
     } else if (view.mode === 'parser') {
       this.renderWidgetParserDetail(widget, context, view);
     } else if (view.mode === 'aggregate') {
@@ -4732,8 +4710,6 @@ class MetricsDisplay {
     if (view.mode === 'parser') {
       return view.parserName ? `Parser Detail: ${view.parserName}` : 'Parser Detail';
     }
-    if (view.mode === 'parsers') return 'Dashboard';
-    if (view.mode === 'runs') return 'All Time Totals';
     const option = this.getViewOptions().find(item => item.mode === view.mode);
     return option ? option.label : 'Dashboard';
   }
