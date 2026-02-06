@@ -4089,6 +4089,10 @@
               if (sanitizedEnd) overrides.end = sanitizedEnd;
               break;
             }
+            case 'tz':
+            case 'timezone':
+              overrides.timezone = value;
+              break;
             case 'rrule':
               overrides.recurrence = value;
               break;
@@ -4160,6 +4164,11 @@
             case 'ertz':
               overrides.editingExistingRecurrenceTimezone = value;
               break;
+            case 'eseq':
+            case 'editseq':
+            case 'editsequence':
+              overrides.editingExistingSequence = value;
+              break;
             case 'searchstartdate':
             case 'searchStartDate':
               overrides.editingExistingSearchStartDate = value;
@@ -4190,6 +4199,7 @@
           || overrides.editingExistingUid
           || overrides.editingExistingRecurrenceId
           || overrides.editingExistingRecurrenceTimezone
+          || overrides.editingExistingSequence
           || overrides.editingExistingSearchStartDate
           || overrides.editingExistingSearchEndDate)) {
           overrides.isEditingExisting = true;
@@ -4202,6 +4212,7 @@
           overrides.editingExistingUid = '';
           overrides.editingExistingRecurrenceId = '';
           overrides.editingExistingRecurrenceTimezone = '';
+          overrides.editingExistingSequence = '';
           overrides.editingExistingSearchStartDate = '';
           overrides.editingExistingSearchEndDate = '';
         }
@@ -4219,6 +4230,7 @@
           overrides.editingExistingUid = '';
           overrides.editingExistingRecurrenceId = '';
           overrides.editingExistingRecurrenceTimezone = '';
+          overrides.editingExistingSequence = '';
           overrides.editingExistingSearchStartDate = '';
           overrides.editingExistingSearchEndDate = '';
         }
@@ -5475,6 +5487,7 @@
         if (state.cover) params.set('cover', state.cover);
         if (state.start) params.set('start', state.start);
         if (state.end) params.set('end', state.end);
+        if (state.timezone) params.set('tz', state.timezone);
         if (state.recurrence) params.set('rrule', state.recurrence);
         if (state.recurrenceMode === 'raw') params.set('rmode', 'raw');
         if (state.website) params.set('web', state.website);
@@ -5496,6 +5509,7 @@
           if (state.editingExistingUid) params.set('euid', state.editingExistingUid);
           if (state.editingExistingRecurrenceId) params.set('erid', state.editingExistingRecurrenceId);
           if (state.editingExistingRecurrenceTimezone) params.set('ertz', state.editingExistingRecurrenceTimezone);
+          if (state.editingExistingSequence) params.set('eseq', state.editingExistingSequence);
           if (state.editingExistingSearchStartDate) params.set('searchStartDate', state.editingExistingSearchStartDate);
           if (state.editingExistingSearchEndDate) params.set('searchEndDate', state.editingExistingSearchEndDate);
         }
