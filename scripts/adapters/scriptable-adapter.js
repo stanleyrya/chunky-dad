@@ -4191,7 +4191,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             // Search helper fields used only for identifier matching
             'searchStartDate', 'searchEndDate',
             // Location-specific fields that are internal to geocoding
-            'placeId'
+            'placeId',
+            // Coordinate helpers that should not show in comparisons
+            'lat', 'lng'
         ]);
         
         // Helper function to check if a field should be included
