@@ -959,6 +959,72 @@ class MetricsDisplay {
     return this.getParserStatusMeta(item).rank || 0;
   }
 
+  getParserStatusCounts(items) {
+    const counts = {
+      total: 0,
+      healthy: 0,
+      warning: 0,
+      failed: 0,
+      notRun: 0,
+      running: 0
+    };
+    if (!Array.isArray(items)) return counts;
+    counts.total = items.length;
+    items.forEach(item => {
+      const key = this.getParserStatusKey(item);
+      if (key === 'healthy') {
+        counts.healthy += 1;
+      } else if (key === 'warning') {
+        counts.warning += 1;
+      } else if (key === 'failed') {
+        counts.failed += 1;
+      } else if (key === 'not-run') {
+        counts.notRun += 1;
+      } else {
+        counts.notRun += 1;
+      }
+    });
+    counts.running = Math.max(0, counts.total - counts.notRun);
+    return counts;
+  }
+
+  getRunHealthSummary(records) {
+    const summary = {
+      failureStreak: 0,
+      lastSuccessAt: null,
+      latestStatus: null
+    };
+    if (!Array.isArray(records) || records.length === 0) return summary;
+    let counting = true;
+    for (let i = records.length - 1; i >= 0; i -= 1) {
+      const record = records[i];
+      const errorsCount = Number.isFinite(record?.errors_count) ? record.errors_count : 0;
+      const warningsCount = this.getRunWarningCount(record);
+      const status = this.getRunStatusFromCounts(errorsCount, warningsCount, record?.status);
+      if (summary.latestStatus === null) summary.latestStatus = status;
+      if (!summary.lastSuccessAt && status === 'success' && record?.finished_at) {
+        summary.lastSuccessAt = record.finished_at;
+      }
+      if (counting) {
+        if (status === 'success') {
+          counting = false;
+        } else {
+          summary.failureStreak += 1;
+        }
+      }
+    }
+    return summary;
+  }
+
+  getDaysSince(isoString) {
+    if (!isoString) return null;
+    const time = new Date(isoString).getTime();
+    if (!Number.isFinite(time)) return null;
+    const diffMs = Date.now() - time;
+    if (!Number.isFinite(diffMs)) return null;
+    return Math.max(0, Math.floor(diffMs / (24 * 60 * 60 * 1000)));
+  }
+
   getWidgetChartSize() {
     const family = this.runtime.widgetFamily || 'medium';
     if (family === 'small') return { width: 120, height: 56 };
@@ -978,7 +1044,7 @@ class MetricsDisplay {
   }
 
   getAppHistoryLimit() {
-    return 20;
+    return 0;
   }
 
   getWidgetMetricFontSize() {
@@ -2803,17 +2869,39 @@ class MetricsDisplay {
         cards.push(buildEmptyCard('No run metrics found.', 'Run the scraper to generate metrics.'));
       } else if (viewMode === 'dashboard') {
         const lastRun = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'Unknown';
-        const statusMeta = this.getStatusMeta(latest?.status);
+        const latestErrors = Number.isFinite(latest?.errors_count) ? latest.errors_count : 0;
+        const latestWarnings = this.getRunWarningCount(latest);
+        const latestStatusKey = this.getRunStatusFromCounts(latestErrors, latestWarnings, latest?.status);
+        const statusMeta = this.getStatusMeta(latestStatusKey);
         const totals = latest?.totals || {};
         const finalEvents = totals.final_bear_events || 0;
         const historyCount = Math.max(recentRecords.length, 1);
+        const parserCounts = this.getParserStatusCounts(parserItems);
+        const runningCount = parserCounts.running;
+        const overallHealthValue = this.formatPercent(parserCounts.healthy, runningCount);
+        const overallHealthDetail = runningCount > 0
+          ? `${this.formatNumber(parserCounts.healthy)} / ${this.formatNumber(runningCount)} running`
+          : 'No parsers running';
+        const runHealth = this.getRunHealthSummary(records);
+        const failureStreak = runHealth.failureStreak || 0;
+        const lastSuccessAt = runHealth.lastSuccessAt;
+        const daysSinceSuccess = this.getDaysSince(lastSuccessAt);
+        const daysSinceSuccessValue = Number.isFinite(daysSinceSuccess) ? `${daysSinceSuccess}d` : 'n/a';
+        const lastSuccessLabel = lastSuccessAt ? this.formatRelativeTime(lastSuccessAt) : 'Never';
+        const latestStatusLabel = this.formatStatusLabel(runHealth.latestStatus);
 
         const dashboardBody = `
           <div class="metrics-grid">
-            ${buildMetric('Final bear events', this.formatNumber(finalEvents))}
-            ${buildMetric('Calendar events', this.formatNumber(totals.calendar_events || 0))}
-            ${buildMetric('Duplicates removed', this.formatNumber(totals.duplicates_removed || 0))}
-            ${buildMetric('Run duration', this.formatDuration(latest?.duration_ms))}
+            ${buildMetric('Parsers healthy', this.formatNumber(parserCounts.healthy))}
+            ${buildMetric('Parsers warning', this.formatNumber(parserCounts.warning))}
+            ${buildMetric('Parsers failed', this.formatNumber(parserCounts.failed))}
+            ${buildMetric('Not running', this.formatNumber(parserCounts.notRun))}
+          </div>
+          <div class="metrics-grid">
+            ${buildMetric('Overall health', overallHealthValue, overallHealthDetail)}
+            ${buildMetric('Failures in a row', this.formatNumber(failureStreak), `Latest: ${latestStatusLabel}`)}
+            ${buildMetric('Days since success', daysSinceSuccessValue, lastSuccessAt ? `Last success ${lastSuccessLabel}` : 'No successful runs')}
+            ${buildMetric('Parsers total', this.formatNumber(parserCounts.total))}
           </div>
           <div class="meta-row">
             <div class="meta-item">
@@ -2821,15 +2909,24 @@ class MetricsDisplay {
               <span class="meta-value">${escapeHtml(lastRun)}</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label">Status</span>
-              ${buildBadge(statusMeta.label, this.getRunStatusBadgeClass(latest?.status))}
+              <span class="meta-label">Latest status</span>
+              ${buildBadge(statusMeta.label, this.getRunStatusBadgeClass(latestStatusKey))}
             </div>
             <div class="meta-item">
               <span class="meta-label">Issues</span>
-              <span class="meta-value">${escapeHtml(`E${latest?.errors_count || 0} W${latest?.warnings_count || 0}`)}</span>
+              <span class="meta-value">${escapeHtml(`E${latestErrors} W${latestWarnings}`)}</span>
             </div>
           </div>`;
-        cards.push(buildSection('Dashboard', dashboardBody));
+        cards.push(buildSection('Parser Health Snapshot', dashboardBody));
+
+        const sortedItems = this.sortParserItems(parserItems, parserSortResolved).slice(0, 8);
+        let parserTableHtml = buildParserTable(sortedItems, parserSortResolved);
+        if (parserItems.length > sortedItems.length) {
+          const moreUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+          const moreLink = buildLink('View all parsers', moreUrl, 'text-link', buildNavAttributes('parsers', null));
+          parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers • ${moreLink}</div>`;
+        }
+        cards.push(buildSection('Parser Health (Latest)', parserTableHtml));
 
         const finalSeries = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
         const finalChart = this.buildLineChartImage(finalSeries, chartSize, {
@@ -2874,15 +2971,6 @@ class MetricsDisplay {
             legendHtml: parserLegend
           }));
         }
-
-        const sortedItems = this.sortParserItems(parserItems, parserSortResolved).slice(0, 8);
-        let parserTableHtml = buildParserTable(sortedItems, parserSortResolved);
-        if (parserItems.length > sortedItems.length) {
-          const moreUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
-          const moreLink = buildLink('View all parsers', moreUrl, 'text-link', buildNavAttributes('parsers', null));
-          parserTableHtml += `<div class="table-footer">+${parserItems.length - sortedItems.length} more parsers • ${moreLink}</div>`;
-        }
-        cards.push(buildSection('Parser Health (Latest)', parserTableHtml));
 
         if (summary?.totals) {
           const summaryTotals = summary.totals;
@@ -4129,16 +4217,51 @@ class MetricsDisplay {
 
     if (view.mode === 'dashboard') {
       const lastRun = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'Unknown';
-      const statusMeta = this.getStatusMeta(latest?.status);
+      const latestErrors = Number.isFinite(latest?.errors_count) ? latest.errors_count : 0;
+      const latestWarnings = this.getRunWarningCount(latest);
       const totals = latest?.totals || {};
       const finalEvents = totals.final_bear_events || 0;
       const historyCount = Math.max(recentRecords.length, 1);
+      const parserCounts = this.getParserStatusCounts(parserHealth.items);
+      const runningCount = parserCounts.running;
+      const overallHealthValue = this.formatPercent(parserCounts.healthy, runningCount);
+      const overallHealthDetail = runningCount > 0
+        ? `Healthy ${this.formatNumber(parserCounts.healthy)} / ${this.formatNumber(runningCount)} running`
+        : 'No parsers running';
+      const runHealth = this.getRunHealthSummary(records);
+      const failureStreak = runHealth.failureStreak || 0;
+      const lastSuccessAt = runHealth.lastSuccessAt;
+      const daysSinceSuccess = this.getDaysSince(lastSuccessAt);
+      const daysSinceSuccessValue = Number.isFinite(daysSinceSuccess) ? `${daysSinceSuccess}d` : 'n/a';
+      const lastSuccessLabel = lastSuccessAt ? this.formatRelativeTime(lastSuccessAt) : 'Never';
+      const latestStatusLabel = this.formatStatusLabel(runHealth.latestStatus);
 
-      this.addSectionHeader(table, 'Dashboard');
-      this.addMetricRow(table, this.formatNumber(finalEvents), 'Final bear events');
-      this.addInfoRow(table, `Calendar events: ${this.formatNumber(totals.calendar_events || 0)}`, `Duplicates removed: ${this.formatNumber(totals.duplicates_removed || 0)}`);
-      this.addInfoRow(table, `Last run: ${lastRun}`, `Duration: ${this.formatDuration(latest?.duration_ms)}`);
-      this.addInfoRow(table, `Status: ${statusMeta.label}`, `Errors: ${latest?.errors_count || 0} • Warnings: ${latest?.warnings_count || 0}`);
+      this.addSectionHeader(table, 'Parser Health Snapshot');
+      this.addMetricRow(table, overallHealthValue, 'Overall health');
+      this.addInfoRow(table, overallHealthDetail, `Total parsers: ${this.formatNumber(parserCounts.total)}`);
+      this.addInfoRow(
+        table,
+        `Warnings: ${this.formatNumber(parserCounts.warning)} • Failed: ${this.formatNumber(parserCounts.failed)}`,
+        `Not running: ${this.formatNumber(parserCounts.notRun)}`
+      );
+      this.addInfoRow(
+        table,
+        `Failures in a row: ${this.formatNumber(failureStreak)}`,
+        `Days since success: ${daysSinceSuccessValue}`
+      );
+      this.addInfoRow(table, `Last run: ${lastRun}`, `Latest status: ${latestStatusLabel}`);
+      this.addInfoRow(table, `Issues: E${latestErrors} W${latestWarnings}`, `Last success: ${lastSuccessLabel}`);
+
+      this.addSectionHeader(table, 'Parser Health (Latest)');
+      this.addParserTableHeader(table);
+
+      const sortedItems = this.sortParserItems(parserHealth.items, parserSort).slice(0, 8);
+      sortedItems.forEach(item => {
+        this.addParserHealthRow(table, item);
+      });
+      if (parserHealth.items.length > sortedItems.length) {
+        this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Open Parser Health to see all.');
+      }
 
       const finalSeries = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
       const finalChart = this.buildLineChartImage(finalSeries, chartSize, {
@@ -4184,17 +4307,6 @@ class MetricsDisplay {
             legend
           });
         }
-      }
-
-      this.addSectionHeader(table, 'Parser Health (Latest)');
-      this.addParserTableHeader(table);
-
-      const sortedItems = this.sortParserItems(parserHealth.items, parserSort).slice(0, 8);
-      sortedItems.forEach(item => {
-        this.addParserHealthRow(table, item);
-      });
-      if (parserHealth.items.length > sortedItems.length) {
-      this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Open Parser Health to see all.');
       }
 
       if (summary?.totals) {
