@@ -338,17 +338,23 @@ class FormsManager {
         const subjectLabel = formData.category ? `Bear Intel: ${formData.category}` : 'Bear Intel';
         const subject = encodeURIComponent(subjectLabel);
         const bodyLines = [];
+        const headerLines = [];
 
         if (formData.name) {
-            bodyLines.push(`Name: ${formData.name}`);
+            headerLines.push(`Name: ${formData.name}`);
         }
         if (formData.email) {
-            bodyLines.push(`Email: ${formData.email}`);
+            headerLines.push(`Email: ${formData.email}`);
         }
         if (formData.category) {
-            bodyLines.push(`Category: ${formData.category}`);
+            headerLines.push(`Category: ${formData.category}`);
         }
-        bodyLines.push('', 'Message:', formData.message || '', '', '---', 'Sent from chunky.dad contact form');
+        if (headerLines.length > 0) {
+            bodyLines.push(...headerLines, '');
+        }
+
+        const messageText = formData.message ? formData.message : '(No message provided)';
+        bodyLines.push('Message:', messageText, '', '---', 'Sent from chunky.dad contact form');
         const body = encodeURIComponent(bodyLines.join('\r\n'));
         
         const mailtoUrl = `mailto:${mailtoEmail}?subject=${subject}&body=${body}`;
