@@ -1834,7 +1834,7 @@
               </div>
               <input type="date" id="existing-date" class="existing-filter-input existing-calendar__input" autocomplete="off">
             </div>
-            <small class="existing-calendar__assist">Optional. Filters events and occurrences on that day.</small>
+            <small class="existing-calendar__assist">Optional. Pick a day to filter to that date. Clear it to show the full week/month.</small>
           </div>
         </div>
 
@@ -2399,7 +2399,14 @@
           const index = await fetchCalendarIndex(cityKey);
           const textFilter = normalizeText(dom.existingSearchInput ? dom.existingSearchInput.value : '').toLowerCase();
           const dateValue = dom.existingDateInput ? dom.existingDateInput.value : '';
-          const results = buildExistingResults(index, { textFilter, dateValue, now: new Date() });
+          const filterRange = (!dateValue) ? getExistingCalendarFilterRange() : null;
+          const results = buildExistingResults(index, {
+            textFilter,
+            dateValue,
+            now: new Date(),
+            rangeStart: filterRange ? filterRange.startDate : null,
+            rangeEnd: filterRange ? filterRange.endDate : null
+          });
           existingCalendarIndex = index;
           existingResults = results;
           renderExistingResults(results);
@@ -2515,6 +2522,7 @@
         updateExistingCalendarViewButtons();
         storeExistingPanelState();
         renderExistingCalendarUi();
+        scheduleExistingResultsUpdate();
       }
 
       function getExistingCalendarAnchor() {
@@ -2536,6 +2544,7 @@
         existingCalendarAnchor = startOfDay(next);
         storeExistingPanelState();
         renderExistingCalendarUi();
+        scheduleExistingResultsUpdate();
       }
 
       function setExistingDateFilter(dateValue, options = {}) {
@@ -2551,6 +2560,28 @@
         storeExistingPanelState();
         renderExistingCalendarUi();
         scheduleExistingResultsUpdate();
+      }
+
+      function getExistingCalendarFilterRange() {
+        const anchor = getExistingCalendarAnchor();
+        if (!anchor) return null;
+        const view = existingCalendarView === 'month' ? 'month' : 'week';
+        if (view === 'month') {
+          const startDate = startOfDay(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
+          const endDate = startOfDay(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0));
+          if (!startDate || !endDate) {
+            return null;
+          }
+          return { startDate, endDate };
+        }
+        const range = buildExistingCalendarRange(anchor, view);
+        if (!range || !range.startDate || !range.endDate) {
+          return null;
+        }
+        return {
+          startDate: range.startDate,
+          endDate: range.endDate
+        };
       }
 
       function renderExistingCalendarUi() {
@@ -2877,8 +2908,11 @@
         const dateValue = filters.dateValue || '';
         const textFilter = filters.textFilter || '';
         const targetDate = dateValue ? parseDateValue(dateValue) : null;
+        const rangeStart = isValidDateObject(filters.rangeStart) ? startOfDay(filters.rangeStart) : null;
+        const rangeEnd = isValidDateObject(filters.rangeEnd) ? startOfDay(filters.rangeEnd) : null;
+        const hasRangeFilter = Boolean(rangeStart && rangeEnd);
         const now = filters.now instanceof Date ? filters.now : new Date();
-        const includePast = Boolean(textFilter || dateValue);
+        const includePast = Boolean(textFilter || dateValue || hasRangeFilter);
 
         const addIfMatches = result => {
           if (!result) return;
@@ -2912,6 +2946,34 @@
               baseEvent: null,
               type: 'single',
               occurrenceDate: targetDate,
+              startDate: singleEvent.startDate,
+              endDate: singleEvent.endDate
+            }));
+          });
+        } else if (hasRangeFilter) {
+          const rangeStartTime = rangeStart.getTime();
+          const rangeEndTime = rangeEnd.getTime();
+          index.baseEvents.forEach(baseEvent => {
+            if (!baseEvent.recurrence) return;
+            if (!doesRecurringEventMatchRange(index, baseEvent, rangeStart, rangeEnd, { now, includePast })) return;
+            addIfMatches(buildResultEntry({
+              event: baseEvent,
+              baseEvent,
+              type: 'series'
+            }));
+          });
+
+          index.singleEvents.forEach(singleEvent => {
+            if (!singleEvent.startDate) return;
+            const startDay = startOfDay(singleEvent.startDate);
+            if (!startDay) return;
+            const startTime = startDay.getTime();
+            if (startTime < rangeStartTime || startTime > rangeEndTime) return;
+            if (!includePast && !isEndDateEditable(singleEvent.endDate, now)) return;
+            addIfMatches(buildResultEntry({
+              event: singleEvent,
+              baseEvent: null,
+              type: 'single',
               startDate: singleEvent.startDate,
               endDate: singleEvent.endDate
             }));
@@ -2955,6 +3017,55 @@
         });
 
         return results;
+      }
+
+      function doesRecurringEventMatchRange(index, baseEvent, rangeStart, rangeEnd, options = {}) {
+        if (!index || !baseEvent || !baseEvent.recurrence) return false;
+        const start = startOfDay(rangeStart);
+        const end = startOfDay(rangeEnd);
+        if (!start || !end) return false;
+        const now = options.now instanceof Date ? options.now : new Date();
+        const includePast = Boolean(options.includePast);
+        const overrideLookup = (baseEvent.uid && index.overridesByUidDateKey)
+          ? index.overridesByUidDateKey
+          : null;
+        const fallbackOverrides = baseEvent.uid
+          ? (index.overrides || []).filter(override => override.uid && override.uid === baseEvent.uid)
+          : [];
+        const fallbackByDateKey = new Map();
+        if (fallbackOverrides.length) {
+          fallbackOverrides.forEach(override => {
+            const dateKey = override.startDate ? formatDateKey(override.startDate) : '';
+            if (dateKey) {
+              fallbackByDateKey.set(dateKey, override);
+            }
+          });
+        }
+        for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+          const dateKey = formatDateKey(cursor);
+          let override = null;
+          if (overrideLookup && baseEvent.uid) {
+            override = overrideLookup.get(`${baseEvent.uid}::${dateKey}`) || null;
+          }
+          if (!override && fallbackByDateKey.size) {
+            override = fallbackByDateKey.get(dateKey) || null;
+          }
+          if (override) {
+            if (includePast || isEndDateEditable(override.endDate, now)) {
+              return true;
+            }
+            continue;
+          }
+          if (!doesRecurringEventMatchDate(baseEvent, cursor)) {
+            continue;
+          }
+          const occurrenceDates = buildOccurrenceDates(baseEvent, cursor);
+          if (!includePast && !isEndDateEditable(occurrenceDates.end, now)) {
+            continue;
+          }
+          return true;
+        }
+        return false;
       }
 
       function buildOccurrenceResultsForEvent(index, baseEvent, options = {}) {
@@ -4429,14 +4540,20 @@
         }
         if (dom.existingCalendarClear) {
           dom.existingCalendarClear.addEventListener('click', () => {
-            setExistingDateFilter('', { fallbackToToday: true });
+            setExistingDateFilter('', { fallbackToToday: false });
           });
         }
         if (dom.existingCalendarGrid) {
           dom.existingCalendarGrid.addEventListener('click', event => {
             const button = event.target.closest('[data-date]');
             if (!button) return;
-            setExistingDateFilter(button.dataset.date, { fallbackToToday: false });
+            const nextDate = button.dataset.date || '';
+            const currentDate = dom.existingDateInput ? dom.existingDateInput.value : '';
+            if (currentDate && currentDate === nextDate) {
+              setExistingDateFilter('', { fallbackToToday: false });
+              return;
+            }
+            setExistingDateFilter(nextDate, { fallbackToToday: false });
           });
         }
         if (dom.existingResultsSelect) {
