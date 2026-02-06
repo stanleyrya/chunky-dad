@@ -1138,22 +1138,35 @@ class MetricsDisplay {
     });
   }
 
+  getSeriesAverage(values) {
+    if (!Array.isArray(values) || values.length === 0) return null;
+    const total = values.reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
+    return total / values.length;
+  }
+
   getParserSeries(records, parserName) {
     if (!Array.isArray(records) || !parserName) return [];
-    return records.map(record => {
+    const series = [];
+    records.forEach(record => {
       const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
       const match = parserRecords.find(item => item?.parser_name === parserName);
-      return match?.final_bear_events || 0;
+      if (!match) return;
+      const value = match?.final_bear_events;
+      series.push(Number.isFinite(value) ? value : 0);
     });
+    return series;
   }
 
   getParserDurationSeries(records, parserName) {
     if (!Array.isArray(records) || !parserName) return [];
-    return records.map(record => {
+    const series = [];
+    records.forEach(record => {
       const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
       const match = parserRecords.find(item => item?.parser_name === parserName);
-      return this.getDurationMinutes(match?.duration_ms);
+      if (!match) return;
+      series.push(this.getDurationMinutes(match?.duration_ms));
     });
+    return series;
   }
 
   getParserNamesByRecentRuns(records, limit) {
@@ -2055,13 +2068,15 @@ class MetricsDisplay {
 
     if (recentRecords.length > 0) {
       const series = this.getParserSeries(recentRecords, view.parserName);
-      const chartImage = this.buildLineChartImage(series, chartSize, {
-        lineColor: new Color(CHART_STYLE.lineSecondary),
-        fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-      });
-      const chart = widget.addImage(chartImage);
-      chart.imageSize = new Size(chartSize.width, chartSize.height);
-      widget.addSpacer(4);
+      if (series.length > 0) {
+        const chartImage = this.buildLineChartImage(series, chartSize, {
+          lineColor: new Color(CHART_STYLE.lineSecondary),
+          fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
+        });
+        const chart = widget.addImage(chartImage);
+        chart.imageSize = new Size(chartSize.width, chartSize.height);
+        widget.addSpacer(4);
+      }
     }
 
     const hasAllTime = (record?.allTimeRuns || 0) > 0;
@@ -2951,12 +2966,14 @@ class MetricsDisplay {
         }));
 
         const durationParserNames = this.getParserNamesByRecentRuns(recentRecords, MAX_PARSER_DURATION_SERIES);
+        const allDurationParserNames = this.getParserNamesByRecentRuns(recentRecords, 0);
         if (durationParserNames.length > 0) {
-          const parserDurationSeries = durationParserNames.map((name, index) => ({
+          const buildDurationSeries = names => names.map((name, index) => ({
             label: name,
             values: this.getParserDurationSeries(recentRecords, name),
             color: CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length]
-          }));
+          })).filter(series => Array.isArray(series.values) && series.values.length > 0);
+          const parserDurationSeries = buildDurationSeries(durationParserNames);
           const parserDurationChart = this.buildMultiLineChartImage(parserDurationSeries, chartSize, {
             lineWidth: CHART_STYLE.lineWidth
           });
@@ -2965,11 +2982,58 @@ class MetricsDisplay {
           const parserSubtitle = durationParserNames.length > 1
             ? `Top ${durationParserNames.length} parsers by recent runs`
             : `Parser duration over last ${historyCount} runs`;
-          cards.push(buildChartCard(`Parser Durations (Minutes, Last ${historyCount} Runs)`, parserDurationData, parserSubtitle, {
-            xLabel: runAxisLabel,
-            yLabel: durationAxisLabel,
-            legendHtml: parserLegend
-          }));
+
+          if (allDurationParserNames.length > durationParserNames.length) {
+            const allDurationSeries = buildDurationSeries(allDurationParserNames);
+            const allDurationChart = this.buildMultiLineChartImage(allDurationSeries, chartSize, {
+              lineWidth: CHART_STYLE.lineWidth
+            });
+            const allDurationData = allDurationChart ? this.imageToDataUri(allDurationChart) : null;
+            const allLegend = buildChartLegend(allDurationSeries);
+            const allSubtitle = `All ${allDurationParserNames.length} parsers by recent runs`;
+            if (parserDurationData && allDurationData) {
+              const topLegendBlock = parserLegend ? `<div data-parser-duration-legend="top">${parserLegend}</div>` : '';
+              const allLegendBlock = allLegend ? `<div class="is-hidden" data-parser-duration-legend="all">${allLegend}</div>` : '';
+              const topSubtitleBlock = parserSubtitle
+                ? `<div class="chart-subtitle" data-parser-duration-subtitle="top">${escapeHtml(parserSubtitle)}</div>`
+                : '';
+              const allSubtitleBlock = allSubtitle
+                ? `<div class="chart-subtitle is-hidden" data-parser-duration-subtitle="all">${escapeHtml(allSubtitle)}</div>`
+                : '';
+              const chartCard = `
+                <div class="card" data-parser-duration-card>
+                  <div class="section-title">Parser Durations (Minutes, Last ${historyCount} Runs)</div>
+                  <div class="chart-wrapper">
+                    <div class="chart-axis-y">${escapeHtml(durationAxisLabel)}</div>
+                    <div class="chart-axis-main">
+                      <img class="chart" data-parser-duration-chart="top" src="${escapeHtml(parserDurationData)}" alt="Parser durations (top parsers)">
+                      <img class="chart is-hidden" data-parser-duration-chart="all" src="${escapeHtml(allDurationData)}" alt="Parser durations (all parsers)">
+                      <div class="chart-axis-x">${escapeHtml(runAxisLabel)}</div>
+                    </div>
+                  </div>
+                  ${topLegendBlock}
+                  ${allLegendBlock}
+                  ${topSubtitleBlock}
+                  ${allSubtitleBlock}
+                  <div class="card-actions">
+                    <button class="toggle-button" type="button" data-parser-duration-toggle>Show all parsers</button>
+                  </div>
+                </div>`;
+              cards.push(chartCard);
+            } else if (parserDurationData) {
+              cards.push(buildChartCard(`Parser Durations (Minutes, Last ${historyCount} Runs)`, parserDurationData, parserSubtitle, {
+                xLabel: runAxisLabel,
+                yLabel: durationAxisLabel,
+                legendHtml: parserLegend
+              }));
+            }
+          } else if (parserDurationData) {
+            cards.push(buildChartCard(`Parser Durations (Minutes, Last ${historyCount} Runs)`, parserDurationData, parserSubtitle, {
+              xLabel: runAxisLabel,
+              yLabel: durationAxisLabel,
+              legendHtml: parserLegend
+            }));
+          }
         }
 
         if (summary?.totals) {
@@ -3057,12 +3121,7 @@ class MetricsDisplay {
           }
         }
       } else if (viewMode === 'parser') {
-        const backUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
         const parserName = safeView.parserName || 'Parser';
-        const backChip = buildChip('Back to Parser Health', backUrl, false, buildNavAttributes('parsers', null));
-        const headerBody = `<div class="chip-group">${backChip}</div>`;
-        cards.push(buildSection('Parser Detail', headerBody, escapeHtml(parserName)));
-
         const record = parserItems.find(item => item.name === safeView.parserName);
         const hasAllTime = (record?.allTimeRuns || 0) > 0;
         const hasHistory = (record?.historyRuns || 0) > 0;
@@ -3071,6 +3130,26 @@ class MetricsDisplay {
         if (!record || (!record.ran && !hasAllTime && !hasHistory)) {
           cards.push(buildEmptyCard('No parser metrics available.', 'Run the parser to collect metrics.'));
         } else {
+          if (hasLastRun) {
+            const lastRunUrl = record?.lastRunId
+              ? this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, { runId: record.lastRunId, readOnly: true })
+              : null;
+            const lastRunAction = lastRunUrl
+              ? `<div class="card-actions">${buildLink('Open run details', lastRunUrl, 'button small')}</div>`
+              : '';
+            const lastRunBody = `
+              <div class="metrics-grid">
+                ${buildMetric('Final events', this.formatNumber(record.finalBearEvents || 0))}
+                ${buildMetric('Duration', this.formatDuration(record.durationMs))}
+                ${buildMetric('Actions', this.formatActions(record.actions))}
+              </div>
+              ${lastRunAction}`;
+            const lastRunSubtitle = `Last run ${this.formatRelativeTime(record.lastRunAt)}`;
+            cards.push(buildSection('Latest Run', lastRunBody, escapeHtml(lastRunSubtitle)));
+          } else {
+            cards.push(buildEmptyCard('No recent run data.', 'Only historical totals are available.'));
+          }
+
           if (hasAllTime || hasHistory) {
             const totals = hasAllTime ? (record.allTimeTotals || {}) : (record.historyTotals || {});
             const runsCount = hasAllTime ? record.allTimeRuns : record.historyRuns;
@@ -3096,43 +3175,72 @@ class MetricsDisplay {
             cards.push(buildEmptyCard('History summary unavailable.', 'Run the scraper to generate summary metrics.'));
           }
 
-          if (hasLastRun) {
-            const lastRunBody = `
-              <div class="metrics-grid">
-                ${buildMetric('Final events', this.formatNumber(record.finalBearEvents || 0))}
-                ${buildMetric('Duration', this.formatDuration(record.durationMs))}
-                ${buildMetric('Actions', this.formatActions(record.actions))}
-              </div>`;
-            const lastRunSubtitle = `Last run ${this.formatRelativeTime(record.lastRunAt)}`;
-            cards.push(buildSection('Latest Run', lastRunBody, escapeHtml(lastRunSubtitle)));
+          const parserSeries = this.getParserSeries(recentRecords, safeView.parserName);
+          if (parserSeries.length > 0) {
+            const parserAverage = this.getSeriesAverage(parserSeries);
+            const parserSeriesList = [
+              { label: parserName, values: parserSeries, color: CHART_STYLE.lineSecondary }
+            ];
+            if (Number.isFinite(parserAverage)) {
+              parserSeriesList.push({
+                label: 'Average',
+                values: new Array(parserSeries.length).fill(parserAverage),
+                color: CHART_STYLE.line
+              });
+            }
+            const parserChart = this.buildMultiLineChartImage(parserSeriesList, chartSize, {
+              lineWidth: CHART_STYLE.lineWidth
+            });
+            const parserChartData = parserChart ? this.imageToDataUri(parserChart) : null;
+            const parserLegend = buildChartLegend(parserSeriesList);
+            const avgLabel = Number.isFinite(parserAverage)
+              ? `Avg: ${this.formatNumber(Math.round(parserAverage))}`
+              : null;
+            const parserSubtitle = avgLabel ? avgLabel : null;
+            const parserRunCount = parserSeries.length || 1;
+            cards.push(buildChartCard(`Events Per Run (Last ${parserRunCount} Parser Runs)`, parserChartData, parserSubtitle, {
+              xLabel: runAxisLabel,
+              yLabel: finalEventsAxisLabel,
+              legendHtml: parserLegend
+            }));
           } else {
-            cards.push(buildEmptyCard('No recent run data.', 'Only historical totals are available.'));
+            cards.push(buildEmptyCard('Events Per Run', 'No recent parser runs to chart.'));
           }
 
-          const parserSeries = this.getParserSeries(recentRecords, safeView.parserName);
-          const parserChart = this.buildLineChartImage(parserSeries, chartSize, {
-            lineColor: new Color(CHART_STYLE.lineSecondary),
-            fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-          });
-          const parserChartData = this.imageToDataUri(parserChart);
-          cards.push(buildChartCard(`Events Per Run (Last ${Math.max(recentRecords.length, 1)} Runs)`, parserChartData, null, {
-            xLabel: runAxisLabel,
-            yLabel: finalEventsAxisLabel
-          }));
-
           const parserDurationSeries = this.getParserDurationSeries(recentRecords, safeView.parserName);
-          const parserDurationChart = this.buildLineChartImage(parserDurationSeries, chartSize, {
-            lineColor: new Color(CHART_STYLE.line),
-            fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
-          });
-          const parserDurationData = this.imageToDataUri(parserDurationChart);
-          const durationSubtitle = hasLastRun && record?.durationMs
-            ? `Latest: ${this.formatDuration(record.durationMs)}`
-            : null;
-          cards.push(buildChartCard(`Duration (Minutes, Last ${Math.max(recentRecords.length, 1)} Runs)`, parserDurationData, durationSubtitle, {
-            xLabel: runAxisLabel,
-            yLabel: durationAxisLabel
-          }));
+          if (parserDurationSeries.length > 0) {
+            const parserDurationAverage = this.getSeriesAverage(parserDurationSeries);
+            const durationSeriesList = [
+              { label: parserName, values: parserDurationSeries, color: CHART_STYLE.line }
+            ];
+            if (Number.isFinite(parserDurationAverage)) {
+              durationSeriesList.push({
+                label: 'Average',
+                values: new Array(parserDurationSeries.length).fill(parserDurationAverage),
+                color: CHART_STYLE.lineSecondary
+              });
+            }
+            const parserDurationChart = this.buildMultiLineChartImage(durationSeriesList, chartSize, {
+              lineWidth: CHART_STYLE.lineWidth
+            });
+            const parserDurationData = parserDurationChart ? this.imageToDataUri(parserDurationChart) : null;
+            const durationLegend = buildChartLegend(durationSeriesList);
+            const avgDurationMs = Number.isFinite(parserDurationAverage)
+              ? Math.round(parserDurationAverage * 60000)
+              : null;
+            const durationSubtitleParts = [];
+            if (avgDurationMs !== null) durationSubtitleParts.push(`Avg: ${this.formatDuration(avgDurationMs)}`);
+            if (hasLastRun && record?.durationMs) durationSubtitleParts.push(`Latest: ${this.formatDuration(record.durationMs)}`);
+            const durationSubtitle = durationSubtitleParts.length ? durationSubtitleParts.join(' • ') : null;
+            const parserDurationRuns = parserDurationSeries.length || 1;
+            cards.push(buildChartCard(`Duration (Minutes, Last ${parserDurationRuns} Parser Runs)`, parserDurationData, durationSubtitle, {
+              xLabel: runAxisLabel,
+              yLabel: durationAxisLabel,
+              legendHtml: durationLegend
+            }));
+          } else {
+            cards.push(buildEmptyCard('Duration', 'No recent parser runs to chart.'));
+          }
         }
       } else {
         cards.push(buildEmptyCard('Unknown view.', 'Open the dashboard to get started.'));
@@ -3307,6 +3415,11 @@ class MetricsDisplay {
       font-size: 12px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
     }
+    .button.small {
+      padding: 6px 12px;
+      font-size: 11px;
+      box-shadow: none;
+    }
     .nav-tabs {
       margin-top: 12px;
       display: flex;
@@ -3332,6 +3445,9 @@ class MetricsDisplay {
     .chip.hidden {
       display: none;
     }
+    .is-hidden {
+      display: none;
+    }
     .content {
       display: block;
     }
@@ -3349,6 +3465,12 @@ class MetricsDisplay {
       padding: 12px;
       border: 1px solid var(--border-color);
       box-shadow: none;
+    }
+    .card-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
     .section-title {
       font-size: 14px;
@@ -3760,7 +3882,7 @@ class MetricsDisplay {
     }
   </style>
 </head>
-<body data-view-mode="${escapeHtml(viewMode)}" data-parser-name="${escapeHtml(initialParserName)}" data-parser-sort-key="${escapeHtml(parserSortKey)}" data-parser-sort-dir="${escapeHtml(parserSortDir)}" data-run-sort-key="${escapeHtml(runSortKey)}" data-run-sort-dir="${escapeHtml(runSortDir)}" data-aggregate-sort-key="${escapeHtml(aggregateSortKey)}" data-aggregate-sort-dir="${escapeHtml(aggregateSortDir)}" data-aggregate-display="${escapeHtml(aggregateDisplay)}" data-run-filter-status="${escapeHtml(runFilterStatus)}" data-run-filter-days="${escapeHtml(runFilterDays)}" data-run-filter-parser="${escapeHtml(runFilterParser)}">
+<body data-view-mode="${escapeHtml(viewMode)}" data-parser-name="${escapeHtml(initialParserName)}" data-parser-sort-key="${escapeHtml(parserSortKey)}" data-parser-sort-dir="${escapeHtml(parserSortDir)}" data-run-sort-key="${escapeHtml(runSortKey)}" data-run-sort-dir="${escapeHtml(runSortDir)}" data-aggregate-sort-key="${escapeHtml(aggregateSortKey)}" data-aggregate-sort-dir="${escapeHtml(aggregateSortDir)}" data-aggregate-display="${escapeHtml(aggregateDisplay)}" data-parser-duration-view="top" data-run-filter-status="${escapeHtml(runFilterStatus)}" data-run-filter-days="${escapeHtml(runFilterDays)}" data-run-filter-parser="${escapeHtml(runFilterParser)}">
   <div class="header">
     <div class="header-main">
       ${logoData ? `<img class="logo" src="${escapeHtml(logoData)}" alt="Chunky Dad">` : ''}
@@ -3791,6 +3913,20 @@ class MetricsDisplay {
       const runList = document.querySelector('section[data-view="runs"] [data-list="runs"]');
       const aggregateList = document.querySelector('section[data-view="aggregate"] [data-list="aggregate-parsers"]');
       const aggregateToggle = document.querySelector('[data-aggregate-toggle]');
+      const parserDurationToggle = document.querySelector('[data-parser-duration-toggle]');
+      const parserDurationCharts = {
+        top: document.querySelector('[data-parser-duration-chart="top"]'),
+        all: document.querySelector('[data-parser-duration-chart="all"]')
+      };
+      const parserDurationLegends = {
+        top: document.querySelector('[data-parser-duration-legend="top"]'),
+        all: document.querySelector('[data-parser-duration-legend="all"]')
+      };
+      const parserDurationSubtitles = {
+        top: document.querySelector('[data-parser-duration-subtitle="top"]'),
+        all: document.querySelector('[data-parser-duration-subtitle="all"]')
+      };
+      const hasParserDurationToggle = !!parserDurationToggle && !!parserDurationCharts.top && !!parserDurationCharts.all;
 
       const parseNumber = value => {
         const num = Number(value);
@@ -3802,6 +3938,10 @@ class MetricsDisplay {
       };
       const normalizeDirection = value => (value === 'asc' ? 'asc' : 'desc');
       const normalizeText = value => String(value || '').toLowerCase();
+      const toggleHidden = (element, shouldHide) => {
+        if (!element) return;
+        element.classList.toggle('is-hidden', shouldHide);
+      };
 
       const parserSortState = {
         key: body.getAttribute('data-parser-sort-key') || 'status',
@@ -3923,6 +4063,24 @@ class MetricsDisplay {
           aggregateToggle.classList.toggle('active', nextMode === 'percent');
           aggregateToggle.setAttribute('aria-pressed', nextMode === 'percent' ? 'true' : 'false');
         }
+      };
+
+      const setParserDurationView = mode => {
+        if (!hasParserDurationToggle) return;
+        const nextMode = mode === 'all' ? 'all' : 'top';
+        const showAll = nextMode === 'all';
+        toggleHidden(parserDurationCharts.top, showAll);
+        toggleHidden(parserDurationCharts.all, !showAll);
+        toggleHidden(parserDurationLegends.top, showAll);
+        toggleHidden(parserDurationLegends.all, !showAll);
+        toggleHidden(parserDurationSubtitles.top, showAll);
+        toggleHidden(parserDurationSubtitles.all, !showAll);
+        if (parserDurationToggle) {
+          parserDurationToggle.textContent = showAll ? 'Show top parsers' : 'Show all parsers';
+          parserDurationToggle.classList.toggle('active', showAll);
+          parserDurationToggle.setAttribute('aria-pressed', showAll ? 'true' : 'false');
+        }
+        body.setAttribute('data-parser-duration-view', nextMode);
       };
 
       const sortParserRows = () => {
@@ -4162,10 +4320,19 @@ class MetricsDisplay {
         });
       }
 
+      if (hasParserDurationToggle) {
+        parserDurationToggle.addEventListener('click', event => {
+          event.preventDefault();
+          const current = body.getAttribute('data-parser-duration-view') || 'top';
+          setParserDurationView(current === 'all' ? 'top' : 'all');
+        });
+      }
+
       const initialMode = body.getAttribute('data-view-mode') || 'dashboard';
       const initialParser = body.getAttribute('data-parser-name') || '';
       setActiveView(initialMode, initialParser);
       setAggregateDisplay(aggregateDisplayState.mode);
+      setParserDurationView(body.getAttribute('data-parser-duration-view') || 'top');
       updateSortButtons(parserSortButtons, parserSortState);
       updateSortButtons(aggregateSortButtons, aggregateSortState);
       updateSortButtons(runSortButtons, runSortState);
@@ -4425,6 +4592,35 @@ class MetricsDisplay {
       if (!record || (!record.ran && !hasAllTime && !hasHistory)) {
         this.addInfoRow(table, 'No parser metrics available.', 'Run the parser to collect metrics.');
       } else {
+        if (hasLastRun) {
+          this.addSectionHeader(table, 'Latest Run');
+          this.addInfoRow(
+            table,
+            `Last run: ${this.formatRelativeTime(record.lastRunAt)}`,
+            `Final events: ${this.formatNumber(record.finalBearEvents)}`
+          );
+          this.addInfoRow(table, `Duration: ${this.formatDuration(record.durationMs)}`, `Actions: ${this.formatActions(record.actions)}`);
+          if (record?.lastRunId) {
+            const linkRow = new UITableRow();
+            linkRow.backgroundColor = new Color(BRAND.secondary);
+            const linkCell = linkRow.addText('Open last run details', `Run ID: ${record.lastRunId}`);
+            linkCell.titleColor = new Color('#ffffff');
+            linkCell.subtitleColor = new Color('#ffffff');
+            linkCell.titleFont = Font.boldSystemFont(FONT_SIZES.app.label);
+            linkCell.subtitleFont = Font.systemFont(FONT_SIZES.app.small);
+            linkRow.onSelect = () => {
+              const url = this.buildScriptableUrl(DISPLAY_SAVED_RUN_SCRIPT, {
+                runId: record.lastRunId,
+                readOnly: true
+              });
+              Safari.open(url);
+            };
+            table.addRow(linkRow);
+          }
+        } else {
+          this.addInfoRow(table, 'No recent run data.', 'Only historical totals are available.');
+        }
+
         if (hasAllTime) {
           const totals = record.allTimeTotals || {};
           this.addMetricRow(table, this.formatNumber(totals.final_bear_events || 0), 'All Time Final Events');
@@ -4459,41 +4655,71 @@ class MetricsDisplay {
           this.addInfoRow(table, 'History summary unavailable.', 'Run the scraper to generate summary metrics.');
         }
 
-        if (hasLastRun) {
-          this.addSectionHeader(table, 'Latest Run');
-          this.addInfoRow(
-            table,
-            `Last run: ${this.formatRelativeTime(record.lastRunAt)}`,
-            `Final events: ${this.formatNumber(record.finalBearEvents)}`
-          );
-          this.addInfoRow(table, `Duration: ${this.formatDuration(record.durationMs)}`, `Actions: ${this.formatActions(record.actions)}`);
+        const series = this.getParserSeries(recentRecords, view.parserName);
+        if (series.length > 0) {
+          const parserAverage = this.getSeriesAverage(series);
+          const parserSeriesList = [
+            { label: view.parserName || 'Parser', values: series, color: CHART_STYLE.lineSecondary }
+          ];
+          if (Number.isFinite(parserAverage)) {
+            parserSeriesList.push({
+              label: 'Average',
+              values: new Array(series.length).fill(parserAverage),
+              color: CHART_STYLE.line
+            });
+          }
+          const parserChart = this.buildMultiLineChartImage(parserSeriesList, chartSize, {
+            lineWidth: CHART_STYLE.lineWidth
+          });
+          const parserLegend = parserSeriesList.map(item => item.label).filter(Boolean).join(' • ');
+          const avgLabel = Number.isFinite(parserAverage)
+            ? `Avg: ${this.formatNumber(Math.round(parserAverage))}`
+            : null;
+          const parserRunCount = series.length || 1;
+          this.addChartSection(table, `Events Per Run (Last ${parserRunCount} Parser Runs)`, parserChart, {
+            subtitle: avgLabel,
+            xLabel: CHART_AXIS_LABELS.runs,
+            yLabel: CHART_AXIS_LABELS.finalEvents,
+            legend: parserLegend ? `Legend: ${parserLegend}` : null
+          });
         } else {
-          this.addInfoRow(table, 'No recent run data.', 'Only historical totals are available.');
+          this.addInfoRow(table, 'No recent parser runs to chart.');
         }
 
-        const series = this.getParserSeries(recentRecords, view.parserName);
-        const parserChart = this.buildLineChartImage(series, chartSize, {
-          lineColor: new Color(CHART_STYLE.lineSecondary),
-          fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-        });
-        this.addChartSection(table, `Events Per Run (Last ${Math.max(recentRecords.length, 1)} Runs)`, parserChart, {
-          xLabel: CHART_AXIS_LABELS.runs,
-          yLabel: CHART_AXIS_LABELS.finalEvents
-        });
-
         const durationSeries = this.getParserDurationSeries(recentRecords, view.parserName);
-        const durationChart = this.buildLineChartImage(durationSeries, chartSize, {
-          lineColor: new Color(CHART_STYLE.line),
-          fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
-        });
-        const durationSubtitle = hasLastRun && record?.durationMs
-          ? `Latest: ${this.formatDuration(record.durationMs)}`
-          : null;
-        this.addChartSection(table, `Duration (Minutes, Last ${Math.max(recentRecords.length, 1)} Runs)`, durationChart, {
-          subtitle: durationSubtitle,
-          xLabel: CHART_AXIS_LABELS.runs,
-          yLabel: CHART_AXIS_LABELS.durationMinutes
-        });
+        if (durationSeries.length > 0) {
+          const durationAverage = this.getSeriesAverage(durationSeries);
+          const durationSeriesList = [
+            { label: view.parserName || 'Parser', values: durationSeries, color: CHART_STYLE.line }
+          ];
+          if (Number.isFinite(durationAverage)) {
+            durationSeriesList.push({
+              label: 'Average',
+              values: new Array(durationSeries.length).fill(durationAverage),
+              color: CHART_STYLE.lineSecondary
+            });
+          }
+          const durationChart = this.buildMultiLineChartImage(durationSeriesList, chartSize, {
+            lineWidth: CHART_STYLE.lineWidth
+          });
+          const durationLegend = durationSeriesList.map(item => item.label).filter(Boolean).join(' • ');
+          const avgDurationMs = Number.isFinite(durationAverage)
+            ? Math.round(durationAverage * 60000)
+            : null;
+          const durationSubtitleParts = [];
+          if (avgDurationMs !== null) durationSubtitleParts.push(`Avg: ${this.formatDuration(avgDurationMs)}`);
+          if (hasLastRun && record?.durationMs) durationSubtitleParts.push(`Latest: ${this.formatDuration(record.durationMs)}`);
+          const durationSubtitle = durationSubtitleParts.length ? durationSubtitleParts.join(' • ') : null;
+          const durationRunCount = durationSeries.length || 1;
+          this.addChartSection(table, `Duration (Minutes, Last ${durationRunCount} Parser Runs)`, durationChart, {
+            subtitle: durationSubtitle,
+            xLabel: CHART_AXIS_LABELS.runs,
+            yLabel: CHART_AXIS_LABELS.durationMinutes,
+            legend: durationLegend ? `Legend: ${durationLegend}` : null
+          });
+        } else {
+          this.addInfoRow(table, 'No recent parser runs to chart.');
+        }
       }
     } else {
       view.mode = 'dashboard';
