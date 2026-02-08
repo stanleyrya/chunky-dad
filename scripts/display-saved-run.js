@@ -130,14 +130,21 @@ class SavedRunDisplay {
             const jsonFiles = [];
             const fileErrors = [];
             for (const name of files) {
+                if (!name.endsWith('.json')) continue;
                 const filePath = fm.joinPath(runsDir, name);
                 try {
                     await fm.downloadFileFromiCloud(filePath);
-                    if (name.endsWith('.json') && !fm.isDirectory(filePath)) {
-                        jsonFiles.push(name);
-                    }
                 } catch (error) {
                     fileErrors.push({ file: name, error: error.message });
+                }
+                let isDir = false;
+                try {
+                    isDir = fm.isDirectory(filePath);
+                } catch (dirError) {
+                    fileErrors.push({ file: name, error: dirError.message });
+                }
+                if (!isDir) {
+                    jsonFiles.push(name);
                 }
             }
             

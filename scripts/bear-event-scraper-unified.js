@@ -334,8 +334,12 @@ class BearEventScraperOrchestrator {
         const results = await BearEventScraperOrchestrator.execute();
         console.log('🐻 Bear Event Scraper: Execution completed successfully');
     } catch (error) {
-    console.error(`🐻 Bear Event Scraper: Execution failed: ${error}`);
-}
+        console.error(`🐻 Bear Event Scraper: Execution failed: ${error}`);
+    } finally {
+        if (typeof Script !== 'undefined' && typeof Script.complete === 'function') {
+            Script.complete();
+        }
+    }
 })();
 
 // Export for manual execution if needed
