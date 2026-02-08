@@ -1157,13 +1157,17 @@ class MetricsDisplay {
     return series;
   }
 
-  getParserDurationSeries(records, parserName) {
+  getParserDurationSeries(records, parserName, options = {}) {
     if (!Array.isArray(records) || !parserName) return [];
+    const fillMissing = !!options.fillMissing;
     const series = [];
     records.forEach(record => {
       const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
       const match = parserRecords.find(item => item?.parser_name === parserName);
-      if (!match) return;
+      if (!match) {
+        if (fillMissing) series.push(0);
+        return;
+      }
       series.push(this.getDurationMinutes(match?.duration_ms));
     });
     return series;
@@ -2610,17 +2614,27 @@ class MetricsDisplay {
         const actions = item.actions || this.createActionCounts();
         const statusCounts = this.normalizeStatusCounts(item.statusCounts || this.createStatusCounts());
         const runs = item.runs || 0;
+        const actionTotal = this.sumDisplayActions(actions);
+        const addPercentValue = actionTotal > 0 ? ((actions.new || 0) / actionTotal) * 100 : 0;
+        const mergePercentValue = actionTotal > 0 ? ((actions.merge || 0) / actionTotal) * 100 : 0;
+        const conflictPercentValue = actionTotal > 0 ? ((actions.conflict || 0) / actionTotal) * 100 : 0;
         const successPercentValue = runs > 0 ? ((statusCounts.success || 0) / runs) * 100 : 0;
         const warningPercentValue = runs > 0 ? ((statusCounts.warning || 0) / runs) * 100 : 0;
         const failedPercentValue = runs > 0 ? ((statusCounts.failed || 0) / runs) * 100 : 0;
+        const addPercent = this.formatPercent(actions.new || 0, actionTotal);
+        const mergePercent = this.formatPercent(actions.merge || 0, actionTotal);
+        const conflictPercent = this.formatPercent(actions.conflict || 0, actionTotal);
         const successPercent = this.formatPercent(statusCounts.success || 0, runs);
         const warningPercent = this.formatPercent(statusCounts.warning || 0, runs);
         const failedPercent = this.formatPercent(statusCounts.failed || 0, runs);
         const rowAttrs = [
           `data-aggregate-name="${escapeHtml(item.name || '')}"`,
           `data-aggregate-new="${actions.new || 0}"`,
+          `data-aggregate-new-percent="${addPercentValue}"`,
           `data-aggregate-merge="${actions.merge || 0}"`,
+          `data-aggregate-merge-percent="${mergePercentValue}"`,
           `data-aggregate-conflict="${actions.conflict || 0}"`,
+          `data-aggregate-conflict-percent="${conflictPercentValue}"`,
           `data-aggregate-runs="${runs}"`,
           `data-aggregate-success="${statusCounts.success || 0}"`,
           `data-aggregate-success-percent="${successPercentValue}"`,
@@ -2637,13 +2651,22 @@ class MetricsDisplay {
               </div>
             </td>
             <td class="num tight">
-              <div class="cell-title">${escapeHtml(this.formatNumber(actions.new || 0))}</div>
+              <div class="cell-title">
+                <span class="value-count">${escapeHtml(this.formatNumber(actions.new || 0))}</span>
+                <span class="value-percent">${escapeHtml(addPercent)}</span>
+              </div>
             </td>
             <td class="num tight">
-              <div class="cell-title">${escapeHtml(this.formatNumber(actions.merge || 0))}</div>
+              <div class="cell-title">
+                <span class="value-count">${escapeHtml(this.formatNumber(actions.merge || 0))}</span>
+                <span class="value-percent">${escapeHtml(mergePercent)}</span>
+              </div>
             </td>
             <td class="num tight">
-              <div class="cell-title">${escapeHtml(this.formatNumber(actions.conflict || 0))}</div>
+              <div class="cell-title">
+                <span class="value-count">${escapeHtml(this.formatNumber(actions.conflict || 0))}</span>
+                <span class="value-percent">${escapeHtml(conflictPercent)}</span>
+              </div>
             </td>
             <td class="num">
               <div class="cell-title">${escapeHtml(this.formatNumber(runs))}</div>
@@ -2875,8 +2898,6 @@ class MetricsDisplay {
         const lastRun = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'Unknown';
         const latestErrors = Number.isFinite(latest?.errors_count) ? latest.errors_count : 0;
         const latestWarnings = this.getRunWarningCount(latest);
-        const totals = latest?.totals || {};
-        const finalEvents = totals.final_bear_events || 0;
         const historyCount = Math.max(recentRecords.length, 1);
         const parserCounts = this.getParserStatusCounts(parserItems);
         const runningCount = parserCounts.running;
@@ -2909,34 +2930,12 @@ class MetricsDisplay {
         }
         cards.push(buildSection('Parser Health (Latest)', parserTableHtml));
 
-        const finalSeries = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
-        const finalChart = this.buildLineChartImage(finalSeries, chartSize, {
-          lineColor: new Color(CHART_STYLE.line),
-          fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
-        });
-        const finalChartData = this.imageToDataUri(finalChart);
-        cards.push(buildChartCard(`Final Events (Last ${historyCount} Runs)`, finalChartData, `Latest: ${this.formatNumber(finalEvents)}`, {
-          xLabel: runAxisLabel,
-          yLabel: finalEventsAxisLabel
-        }));
-
-        const durationSeries = this.getSeries(recentRecords, record => this.getDurationMinutes(record?.duration_ms));
-        const durationChart = this.buildLineChartImage(durationSeries, chartSize, {
-          lineColor: new Color(CHART_STYLE.lineSecondary),
-          fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-        });
-        const durationChartData = this.imageToDataUri(durationChart);
-        cards.push(buildChartCard(`Duration (Minutes, Last ${historyCount} Runs)`, durationChartData, `Latest: ${this.formatDuration(latest?.duration_ms)}`, {
-          xLabel: runAxisLabel,
-          yLabel: durationAxisLabel
-        }));
-
         const durationParserNames = this.getParserNamesByRecentRuns(recentRecords, MAX_PARSER_DURATION_SERIES);
         const allDurationParserNames = this.getParserNamesByRecentRuns(recentRecords, 0);
         if (durationParserNames.length > 0) {
           const buildDurationSeries = names => names.map((name, index) => ({
             label: name,
-            values: this.getParserDurationSeries(recentRecords, name),
+            values: this.getParserDurationSeries(recentRecords, name, { fillMissing: true }),
             color: CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length]
           })).filter(series => Array.isArray(series.values) && series.values.length > 0);
           const parserDurationSeries = buildDurationSeries(durationParserNames);
@@ -3002,29 +3001,6 @@ class MetricsDisplay {
           }
         }
 
-        if (summary?.totals) {
-          const summaryTotals = summary.totals;
-          const statusCounts = this.normalizeStatusCounts(summaryTotals.statuses);
-          const actions = summaryTotals.actions || this.createActionCounts();
-          const runs = summaryTotals.runs || 0;
-          const parserCount = allTimeParserRows.length || parserItems.length;
-          const totalsGrid = `
-            <div class="metrics-grid">
-              ${buildMetric('Runs', this.formatNumber(runs))}
-              ${buildMetric('Parsers', this.formatNumber(parserCount))}
-            </div>
-            <div class="metrics-grid">
-              ${buildMetric('Success', this.formatNumber(statusCounts.success || 0), this.formatPercent(statusCounts.success || 0, runs))}
-              ${buildMetric('Warnings', this.formatNumber(statusCounts.warning || 0), this.formatPercent(statusCounts.warning || 0, runs))}
-              ${buildMetric('Failed', this.formatNumber(statusCounts.failed || 0), this.formatPercent(statusCounts.failed || 0, runs))}
-            </div>
-            <div class="metrics-grid">
-              ${buildMetric('Adds', this.formatNumber(actions.new || 0))}
-              ${buildMetric('Merges', this.formatNumber(actions.merge || 0))}
-              ${buildMetric('Conflicts', this.formatNumber(actions.conflict || 0))}
-            </div>`;
-          cards.push(buildSection('All Time Totals', totalsGrid));
-        }
       } else if (viewMode === 'runs') {
         if (!summary?.totals) {
           cards.push(buildEmptyCard('No summary metrics found.', 'Run the scraper to generate summary metrics.'));
@@ -3033,6 +3009,7 @@ class MetricsDisplay {
           const statusCounts = this.normalizeStatusCounts(totals.statuses);
           const actions = totals.actions || this.createActionCounts();
           const runs = totals.runs || 0;
+          const actionTotal = this.sumDisplayActions(actions);
           const parserCount = allTimeParserRows.length || parserItems.length;
           const totalsGrid = `
             <div class="metrics-grid">
@@ -3045,9 +3022,9 @@ class MetricsDisplay {
               ${buildMetric('Failed', this.formatNumber(statusCounts.failed || 0), this.formatPercent(statusCounts.failed || 0, runs))}
             </div>
             <div class="metrics-grid">
-              ${buildMetric('Adds', this.formatNumber(actions.new || 0))}
-              ${buildMetric('Merges', this.formatNumber(actions.merge || 0))}
-              ${buildMetric('Conflicts', this.formatNumber(actions.conflict || 0))}
+              ${buildMetric('Adds', this.formatNumber(actions.new || 0), this.formatPercent(actions.new || 0, actionTotal))}
+              ${buildMetric('Merges', this.formatNumber(actions.merge || 0), this.formatPercent(actions.merge || 0, actionTotal))}
+              ${buildMetric('Conflicts', this.formatNumber(actions.conflict || 0), this.formatPercent(actions.conflict || 0, actionTotal))}
             </div>`;
           cards.push(buildSection('All Time Totals', totalsGrid));
           const parserTotals = allTimeParserRows;
@@ -4093,11 +4070,17 @@ class MetricsDisplay {
           if (aggregateSortState.key === 'name') {
             diff = String(aData.aggregateName || '').localeCompare(String(bData.aggregateName || ''));
           } else if (aggregateSortState.key === 'new') {
-            diff = parseNumber(aData.aggregateNew) - parseNumber(bData.aggregateNew);
+            diff = usePercent
+              ? parseNumber(aData.aggregateNewPercent) - parseNumber(bData.aggregateNewPercent)
+              : parseNumber(aData.aggregateNew) - parseNumber(bData.aggregateNew);
           } else if (aggregateSortState.key === 'merge') {
-            diff = parseNumber(aData.aggregateMerge) - parseNumber(bData.aggregateMerge);
+            diff = usePercent
+              ? parseNumber(aData.aggregateMergePercent) - parseNumber(bData.aggregateMergePercent)
+              : parseNumber(aData.aggregateMerge) - parseNumber(bData.aggregateMerge);
           } else if (aggregateSortState.key === 'conflict') {
-            diff = parseNumber(aData.aggregateConflict) - parseNumber(bData.aggregateConflict);
+            diff = usePercent
+              ? parseNumber(aData.aggregateConflictPercent) - parseNumber(bData.aggregateConflictPercent)
+              : parseNumber(aData.aggregateConflict) - parseNumber(bData.aggregateConflict);
           } else if (aggregateSortState.key === 'runs') {
             diff = parseNumber(aData.aggregateRuns) - parseNumber(bData.aggregateRuns);
           } else if (aggregateSortState.key === 'success') {
@@ -4349,8 +4332,6 @@ class MetricsDisplay {
       const lastRun = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'Unknown';
       const latestErrors = Number.isFinite(latest?.errors_count) ? latest.errors_count : 0;
       const latestWarnings = this.getRunWarningCount(latest);
-      const totals = latest?.totals || {};
-      const finalEvents = totals.final_bear_events || 0;
       const historyCount = Math.max(recentRecords.length, 1);
       const parserCounts = this.getParserStatusCounts(parserHealth.items);
       const runningCount = parserCounts.running;
@@ -4387,33 +4368,11 @@ class MetricsDisplay {
         this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Showing top parsers by recent health.');
       }
 
-      const finalSeries = this.getSeries(recentRecords, record => record?.totals?.final_bear_events || 0);
-      const finalChart = this.buildLineChartImage(finalSeries, chartSize, {
-        lineColor: new Color(CHART_STYLE.line),
-        fillColor: new Color(CHART_STYLE.line, CHART_STYLE.fillOpacity)
-      });
-      this.addChartSection(table, `Final Events (Last ${historyCount} Runs)`, finalChart, {
-        subtitle: `Latest: ${this.formatNumber(finalEvents)}`,
-        xLabel: CHART_AXIS_LABELS.runs,
-        yLabel: CHART_AXIS_LABELS.finalEvents
-      });
-
-      const durationSeries = this.getSeries(recentRecords, record => this.getDurationMinutes(record?.duration_ms));
-      const durationChart = this.buildLineChartImage(durationSeries, chartSize, {
-        lineColor: new Color(CHART_STYLE.lineSecondary),
-        fillColor: new Color(CHART_STYLE.lineSecondary, CHART_STYLE.fillOpacity)
-      });
-      this.addChartSection(table, `Duration (Minutes, Last ${historyCount} Runs)`, durationChart, {
-        subtitle: `Latest: ${this.formatDuration(latest?.duration_ms)}`,
-        xLabel: CHART_AXIS_LABELS.runs,
-        yLabel: CHART_AXIS_LABELS.durationMinutes
-      });
-
       const durationParserNames = this.getParserNamesByRecentRuns(recentRecords, MAX_PARSER_DURATION_SERIES);
       if (durationParserNames.length > 0) {
         const parserDurationSeries = durationParserNames.map((name, index) => ({
           label: name,
-          values: this.getParserDurationSeries(recentRecords, name),
+          values: this.getParserDurationSeries(recentRecords, name, { fillMissing: true }),
           color: CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length]
         }));
         const parserDurationChart = this.buildMultiLineChartImage(parserDurationSeries, chartSize, {
@@ -4433,32 +4392,6 @@ class MetricsDisplay {
         }
       }
 
-      if (summary?.totals) {
-        this.addSectionHeader(table, 'All Time Totals');
-        const summaryTotals = summary.totals;
-        const statusCounts = this.normalizeStatusCounts(summaryTotals.statuses);
-        const actions = summaryTotals.actions || this.createActionCounts();
-        const runs = summaryTotals.runs || 0;
-        const parserCount = allTimeParserRows.length || (parserHealth?.items?.length || 0);
-        const successPercent = this.formatPercent(statusCounts.success || 0, runs);
-        const warningPercent = this.formatPercent(statusCounts.warning || 0, runs);
-        const failedPercent = this.formatPercent(statusCounts.failed || 0, runs);
-        this.addInfoRow(
-          table,
-          `Runs: ${this.formatNumber(runs)}`,
-          `Parsers: ${this.formatNumber(parserCount)}`
-        );
-        this.addInfoRow(
-          table,
-          `Success: ${this.formatNumber(statusCounts.success || 0)} (${successPercent})`,
-          `Warnings: ${this.formatNumber(statusCounts.warning || 0)} (${warningPercent}) • Failed: ${this.formatNumber(statusCounts.failed || 0)} (${failedPercent})`
-        );
-        this.addInfoRow(
-          table,
-          `Adds: ${this.formatNumber(actions.new || 0)} • Merges: ${this.formatNumber(actions.merge || 0)}`,
-          `Conflicts: ${this.formatNumber(actions.conflict || 0)}`
-        );
-      }
     } else if (isAllRunsView) {
       this.addSectionHeader(table, 'All Time Totals');
       if (!summary?.totals) {
@@ -4469,9 +4402,13 @@ class MetricsDisplay {
         const actions = totals.actions || this.createActionCounts();
         const runs = totals.runs || 0;
         const parserCount = allTimeParserRows.length || (parserHealth?.items?.length || 0);
+        const actionTotal = this.sumDisplayActions(actions);
         const successPercent = this.formatPercent(statusCounts.success || 0, runs);
         const warningPercent = this.formatPercent(statusCounts.warning || 0, runs);
         const failedPercent = this.formatPercent(statusCounts.failed || 0, runs);
+        const addPercent = this.formatPercent(actions.new || 0, actionTotal);
+        const mergePercent = this.formatPercent(actions.merge || 0, actionTotal);
+        const conflictPercent = this.formatPercent(actions.conflict || 0, actionTotal);
         this.addInfoRow(
           table,
           `Runs: ${this.formatNumber(runs)}`,
@@ -4484,8 +4421,8 @@ class MetricsDisplay {
         );
         this.addInfoRow(
           table,
-          `Adds: ${this.formatNumber(actions.new || 0)} • Merges: ${this.formatNumber(actions.merge || 0)}`,
-          `Conflicts: ${this.formatNumber(actions.conflict || 0)}`
+          `Adds: ${this.formatNumber(actions.new || 0)} (${addPercent}) • Merges: ${this.formatNumber(actions.merge || 0)} (${mergePercent})`,
+          `Conflicts: ${this.formatNumber(actions.conflict || 0)} (${conflictPercent})`
         );
 
         const parserRows = allTimeParserRows;
