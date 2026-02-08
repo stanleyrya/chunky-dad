@@ -18,7 +18,7 @@ const scraperConfig = {
       enabled: true,
       automation: {
         enabled: true,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+        days: ["mon"],
         timeWindow: { startHour: 4, endHour: 5 }
       },
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
@@ -50,11 +50,11 @@ const scraperConfig = {
     },
     {
       name: "Bear Happy Hour",
-      enabled: false,
+      enabled: true,
       automation: {
-        enabled: false,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        timeWindow: { startHour: 10, endHour: 11 }
+        enabled: true,
+        days: ["tue"],
+        timeWindow: { startHour: 4, endHour: 5 }
       },
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
@@ -81,11 +81,11 @@ const scraperConfig = {
     },
     {
       name: "Bearracuda Events",
-      enabled: false,
+      enabled: true,
       automation: {
-        enabled: false,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        timeWindow: { startHour: 9, endHour: 10 }
+        enabled: true,
+        days: ["wed"],
+        timeWindow: { startHour: 4, endHour: 5 }
       },
       urls: [
         "https://bearracuda.com/",
@@ -120,11 +120,11 @@ const scraperConfig = {
     },
     {
       name: "CHUNK",
-      enabled: false,
+      enabled: true,
       automation: {
-        enabled: false,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        timeWindow: { startHour: 8, endHour: 9 }
+        enabled: true,
+        days: ["thu"],
+        timeWindow: { startHour: 4, endHour: 5 }
       },
       urls: ["https://www.chunk-party.com"],
       alwaysBear: true,        // Chunk parties are always bear events
@@ -162,8 +162,8 @@ const scraperConfig = {
       enabled: false,
       automation: {
         enabled: false,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        timeWindow: { startHour: 12, endHour: 13 }
+        days: ["sun"],
+        timeWindow: { startHour: 5, endHour: 6 }
       },
       urls: [
         "https://www.furball.nyc"
@@ -200,8 +200,8 @@ const scraperConfig = {
       enabled: true,
       automation: {
         enabled: true,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        timeWindow: { startHour: 5, endHour: 6 }
+        days: ["fri"],
+        timeWindow: { startHour: 4, endHour: 5 }
       },
       urls: ["https://linktr.ee/cubhouse"],
       // parser: "linktree",    // Auto-detected from URL pattern
@@ -241,8 +241,8 @@ const scraperConfig = {
       enabled: true,
       automation: {
         enabled: true,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        timeWindow: { startHour: 6, endHour: 7 }
+        days: ["sat"],
+        timeWindow: { startHour: 4, endHour: 5 }
       },
       urls: ["https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25"],
       alwaysBear: true,        // Goldiloxx is a bear party
@@ -283,8 +283,8 @@ const scraperConfig = {
       enabled: true,
       automation: {
         enabled: true,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        timeWindow: { startHour: 7, endHour: 8 }
+        days: ["sun"],
+        timeWindow: { startHour: 4, endHour: 5 }
       },
       urls: ["https://www.eventbrite.com/o/nab-events-llc-51471535173"],
       alwaysBear: true,
@@ -315,11 +315,11 @@ const scraperConfig = {
     },
     {
       name: "Dallas Eagle",
-      enabled: false,
+      enabled: true,
       automation: {
-        enabled: false,
-        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        timeWindow: { startHour: 11, endHour: 12 }
+        enabled: true,
+        days: ["mon"],
+        timeWindow: { startHour: 5, endHour: 6 }
       },
       urls: ["https://www.eventbrite.com/o/77139864473"],
       alwaysBear: false,
