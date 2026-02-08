@@ -315,9 +315,9 @@ const scraperConfig = {
     },
     {
       name: "Dallas Eagle",
-      enabled: true,
+      enabled: false,
       automation: {
-        enabled: true,
+        enabled: false,
         days: ["mon"],
         timeWindow: { startHour: 5, endHour: 6 }
       },
