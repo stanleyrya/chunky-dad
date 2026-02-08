@@ -740,6 +740,54 @@ class ScriptableAdapter {
         };
     }
 
+    getParserNameOverride() {
+        const queryParameters = this.runtimeContext?.queryParameters || {};
+        if (!queryParameters || Object.keys(queryParameters).length === 0) {
+            return null;
+        }
+
+        const parserName = this.getQueryValue(queryParameters, [
+            'parserName', 'parser', 'parser_name'
+        ]);
+
+        if (!this.hasNonEmptyValue(parserName)) {
+            return null;
+        }
+
+        return String(parserName).trim();
+    }
+
+    normalizeParserName(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    buildParserNameOverrideConfig(parserName, config) {
+        if (!config || !Array.isArray(config.parsers)) {
+            throw new Error('Configuration missing parsers array');
+        }
+
+        const normalizedTarget = this.normalizeParserName(parserName);
+        const matchingParser = config.parsers.find(parser => {
+            const name = parser && parser.name ? parser.name : '';
+            return this.normalizeParserName(name) === normalizedTarget;
+        });
+
+        if (!matchingParser) {
+            const availableParsers = config.parsers
+                .map(parser => parser && parser.name ? parser.name : '')
+                .filter(name => this.hasNonEmptyValue(name));
+            const availableLabel = availableParsers.length > 0 ? availableParsers.join(', ') : '(none)';
+            throw new Error(`Parser "${parserName}" not found in scraper-input.js. Available parsers: ${availableLabel}`);
+        }
+
+        return {
+            parserConfig: {
+                ...matchingParser,
+                enabled: true
+            }
+        };
+    }
+
     parseUrlInputOptions(queryParameters) {
         const options = {};
 
@@ -816,7 +864,8 @@ class ScriptableAdapter {
         try {
             const fm = FileManager.iCloud();
             const scriptableDir = fm.documentsDirectory();
-            const urlInput = this.getUrlInputPayload();
+            const parserNameOverride = this.getParserNameOverride();
+            const urlInput = parserNameOverride ? null : this.getUrlInputPayload();
             
             const loadConfigFile = (fileName, moduleName, missingMessage, emptyMessage, options = {}) => {
                 const configPath = fm.joinPath(scriptableDir, fileName);
@@ -852,7 +901,7 @@ class ScriptableAdapter {
                 'scraper-input',
                 'Configuration file not found at iCloud Drive/Scriptable/scraper-input.js',
                 'Configuration file is empty',
-                { optional: Boolean(urlInput) }
+                { optional: Boolean(urlInput) && !parserNameOverride }
             );
 
             if (!config && urlInput) {
@@ -875,7 +924,11 @@ class ScriptableAdapter {
             
             config.cities = cities;
 
-            if (urlInput) {
+            if (parserNameOverride) {
+                const { parserConfig } = this.buildParserNameOverrideConfig(parserNameOverride, config);
+                config.parsers = [parserConfig];
+                console.log(`📱 Scriptable: Parser override detected - running "${parserConfig.name}"`);
+            } else if (urlInput) {
                 const { parserConfig, configOverrides } = this.buildUrlInputParserConfig(urlInput);
                 config.parsers = [parserConfig];
 
