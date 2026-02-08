@@ -1423,6 +1423,9 @@ class ScriptableAdapter {
     shouldSkipResultsUi(results) {
         const config = results?.config || {};
         const runContext = results?.runContext || this.resolveRunContext(results);
+        if (results?._isDisplayingSavedRun || runContext?.type === 'display') {
+            return false;
+        }
         const automationRun = Boolean(config?.runtime?.automationRun) || runContext?.type === 'automated';
         const hasAutomationParsers = Array.isArray(config?.parsers)
             && config.parsers.some(parser => parser?.automation?.enabled === true);
