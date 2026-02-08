@@ -125,6 +125,107 @@ class SharedCore {
         return 'generic';
     }
 
+    resolveAutomationContext(config) {
+        const runtime = config && typeof config === 'object'
+            ? (config.runtime || config.runContext || {})
+            : {};
+        const automationRun = runtime.automationRun === true || runtime.type === 'automated';
+        const filterParsers = automationRun && runtime.automationFilter !== false;
+        let now = runtime.now ? new Date(runtime.now) : new Date();
+        if (!(now instanceof Date) || isNaN(now.getTime())) {
+            now = new Date();
+        }
+        return {
+            automationRun,
+            filterParsers,
+            now
+        };
+    }
+
+    normalizeAutomationDayValue(value) {
+        if (value === null || value === undefined) {
+            return null;
+        }
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            const normalized = Math.floor(value);
+            return (normalized >= 0 && normalized <= 6) ? normalized : null;
+        }
+        const normalized = String(value).toLowerCase().trim();
+        if (!normalized) {
+            return null;
+        }
+        const dayMap = {
+            sun: 0, sunday: 0,
+            mon: 1, monday: 1,
+            tue: 2, tues: 2, tuesday: 2,
+            wed: 3, weds: 3, wednesday: 3,
+            thu: 4, thur: 4, thurs: 4, thursday: 4,
+            fri: 5, friday: 5,
+            sat: 6, saturday: 6
+        };
+        return Object.prototype.hasOwnProperty.call(dayMap, normalized)
+            ? dayMap[normalized]
+            : null;
+    }
+
+    isAutomationDayMatch(days, date) {
+        if (!Array.isArray(days) || days.length === 0) {
+            return true;
+        }
+        const dayIndex = date.getDay();
+        const normalizedDays = days
+            .map(day => this.normalizeAutomationDayValue(day))
+            .filter(day => day !== null);
+        if (normalizedDays.length === 0) {
+            return true;
+        }
+        return normalizedDays.includes(dayIndex);
+    }
+
+    isAutomationTimeMatch(timeWindow, date) {
+        if (!timeWindow || typeof timeWindow !== 'object') {
+            return true;
+        }
+        const startHour = Number(timeWindow.startHour);
+        const endHour = Number(timeWindow.endHour);
+        if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) {
+            return true;
+        }
+        const startMinute = Number.isFinite(Number(timeWindow.startMinute))
+            ? Number(timeWindow.startMinute)
+            : 0;
+        const endMinute = Number.isFinite(Number(timeWindow.endMinute))
+            ? Number(timeWindow.endMinute)
+            : 0;
+        const startTotal = (startHour * 60) + startMinute;
+        const endTotal = (endHour * 60) + endMinute;
+        const currentTotal = (date.getHours() * 60) + date.getMinutes();
+        if (startTotal === endTotal) {
+            return true;
+        }
+        if (endTotal < startTotal) {
+            return currentTotal >= startTotal || currentTotal < endTotal;
+        }
+        return currentTotal >= startTotal && currentTotal < endTotal;
+    }
+
+    evaluateAutomationForParser(parserConfig, automationContext) {
+        if (!automationContext || !automationContext.filterParsers) {
+            return { shouldRun: true, reason: null };
+        }
+        const automation = parserConfig ? parserConfig.automation : null;
+        if (!automation || automation.enabled !== true) {
+            return { shouldRun: false, reason: 'automation-disabled' };
+        }
+        if (!this.isAutomationDayMatch(automation.days, automationContext.now)) {
+            return { shouldRun: false, reason: 'day-mismatch' };
+        }
+        if (!this.isAutomationTimeMatch(automation.timeWindow, automationContext.now)) {
+            return { shouldRun: false, reason: 'time-mismatch' };
+        }
+        return { shouldRun: true, reason: null };
+    }
+
     // Pure business logic for processing events
     async processEvents(config, httpAdapter, displayAdapter, parsers) {
         const parserCount = config.parsers?.length || 0;
@@ -140,6 +241,8 @@ class SharedCore {
             allProcessedEvents: [] // All events ready for calendar
         };
         const disabledParsers = [];
+        const automationContext = this.resolveAutomationContext(config);
+        const automationSkipped = [];
 
         if (!config.parsers || config.parsers.length === 0) {
             await displayAdapter.logWarn('SYSTEM: No parser configurations found in config');
@@ -155,6 +258,13 @@ class SharedCore {
             // Check if parser is enabled (default to true if not specified)
             if (parserConfig.enabled === false) {
                 disabledParsers.push(parserConfig.name);
+                continue;
+            }
+
+            const automationDecision = this.evaluateAutomationForParser(parserConfig, automationContext);
+            if (!automationDecision.shouldRun) {
+                const reason = automationDecision.reason || 'unspecified';
+                automationSkipped.push({ name: parserConfig.name, reason });
                 continue;
             }
             
@@ -192,6 +302,18 @@ class SharedCore {
 
         if (disabledParsers.length > 0) {
             await displayAdapter.logInfo(`SYSTEM: Skipped disabled parsers: ${disabledParsers.join(', ')}`);
+        }
+
+        if (automationContext.filterParsers) {
+            if (automationSkipped.length > 0) {
+                const skippedLabel = automationSkipped
+                    .map(item => `${item.name} (${item.reason})`)
+                    .join(', ');
+                await displayAdapter.logInfo(`SYSTEM: Skipped parsers (automation): ${skippedLabel}`);
+            } else {
+                await displayAdapter.logInfo('SYSTEM: Automation schedule matched all enabled parsers');
+            }
+            results.automationSkippedParsers = automationSkipped;
         }
 
         const duplicateSummary = results.duplicatesRemoved > 0

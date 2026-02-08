@@ -254,8 +254,12 @@ class BearEventScraperOrchestrator {
                 results.deduplicatedEvents = deduplicatedEvents.length;
 
                 // Determine execution mode based on environment
-                const hasDisplay = this.isScriptable || this.isWeb;
+                const automationRun = Boolean(config?.runtime?.automationRun);
+                const hasDisplay = (this.isScriptable || this.isWeb) && !automationRun;
                 const isWidget = this.isScriptable && config.widgetParameter;
+                if (automationRun) {
+                    console.log('🐻 Orchestrator: Automation run detected - executing without UI prompt');
+                }
                 
                 if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function' && analyzedEvents) {
                     if (hasDisplay && !isWidget) {
