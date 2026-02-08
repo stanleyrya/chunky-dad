@@ -19,7 +19,7 @@ const scraperConfig = {
       automation: {
         enabled: true,
         days: ["mon"],
-        timeWindow: { startHour: 4, startMinute: 10, endHour: 4, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
@@ -54,7 +54,7 @@ const scraperConfig = {
       automation: {
         enabled: false,
         days: ["sun"],
-        timeWindow: { startHour: 4, startMinute: 10, endHour: 4, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
@@ -85,7 +85,7 @@ const scraperConfig = {
       automation: {
         enabled: false,
         days: ["sat"],
-        timeWindow: { startHour: 4, startMinute: 10, endHour: 4, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: [
         "https://bearracuda.com/",
@@ -124,7 +124,7 @@ const scraperConfig = {
       automation: {
         enabled: false,
         days: ["fri"],
-        timeWindow: { startHour: 4, startMinute: 10, endHour: 4, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: ["https://www.chunk-party.com"],
       alwaysBear: true,        // Chunk parties are always bear events
@@ -163,7 +163,7 @@ const scraperConfig = {
       automation: {
         enabled: false,
         days: ["tue"],
-        timeWindow: { startHour: 6, startMinute: 10, endHour: 6, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: [
         "https://www.furball.nyc"
@@ -201,7 +201,7 @@ const scraperConfig = {
       automation: {
         enabled: true,
         days: ["tue"],
-        timeWindow: { startHour: 4, startMinute: 10, endHour: 4, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: ["https://linktr.ee/cubhouse"],
       // parser: "linktree",    // Auto-detected from URL pattern
@@ -242,7 +242,7 @@ const scraperConfig = {
       automation: {
         enabled: true,
         days: ["wed"],
-        timeWindow: { startHour: 4, startMinute: 10, endHour: 4, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: ["https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25"],
       alwaysBear: true,        // Goldiloxx is a bear party
@@ -284,7 +284,7 @@ const scraperConfig = {
       automation: {
         enabled: true,
         days: ["thu"],
-        timeWindow: { startHour: 4, startMinute: 10, endHour: 4, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: ["https://www.eventbrite.com/o/nab-events-llc-51471535173"],
       alwaysBear: true,
@@ -319,7 +319,7 @@ const scraperConfig = {
       automation: {
         enabled: false,
         days: ["mon"],
-        timeWindow: { startHour: 5, startMinute: 10, endHour: 5, endMinute: 30 }
+        timeWindow: { startHour: 4, endHour: 7 }
       },
       urls: ["https://www.eventbrite.com/o/77139864473"],
       alwaysBear: false,
