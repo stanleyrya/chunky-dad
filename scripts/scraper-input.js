@@ -159,7 +159,7 @@ const scraperConfig = {
     ,
     {
       name: "Furball",
-      enabled: false,
+      enabled: true,
       automation: {
         enabled: false,
         days: ["sun"],
@@ -315,7 +315,7 @@ const scraperConfig = {
     },
     {
       name: "Dallas Eagle",
-      enabled: false,
+      enabled: true,
       automation: {
         enabled: false,
         days: ["mon"],
