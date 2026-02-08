@@ -2882,8 +2882,8 @@ class MetricsDisplay {
         const runningCount = parserCounts.running;
         const overallHealthValue = this.formatPercent(parserCounts.healthy, runningCount);
         const healthSummary = runningCount > 0
-          ? `Healthy ${this.formatNumber(parserCounts.healthy)}/${this.formatNumber(runningCount)} running • Warnings ${this.formatNumber(parserCounts.warning)} • Failed ${this.formatNumber(parserCounts.failed)} • Idle ${this.formatNumber(parserCounts.notRun)} • Total ${this.formatNumber(parserCounts.total)}`
-          : `Warnings ${this.formatNumber(parserCounts.warning)} • Failed ${this.formatNumber(parserCounts.failed)} • Idle ${this.formatNumber(parserCounts.notRun)} • Total ${this.formatNumber(parserCounts.total)}`;
+          ? `${this.formatNumber(runningCount)} running • ${this.formatNumber(parserCounts.notRun)} idle • ${this.formatNumber(parserCounts.warning)} warnings • ${this.formatNumber(parserCounts.failed)} failed • ${this.formatNumber(parserCounts.total)} total`
+          : `${this.formatNumber(parserCounts.notRun)} idle • ${this.formatNumber(parserCounts.warning)} warnings • ${this.formatNumber(parserCounts.failed)} failed • ${this.formatNumber(parserCounts.total)} total`;
         const runHealth = this.getRunHealthSummary(records);
         const failureStreak = runHealth.failureStreak || 0;
         const lastSuccessAt = runHealth.lastSuccessAt;
@@ -2896,7 +2896,7 @@ class MetricsDisplay {
         const latestRunSummary = `Status: ${latestStatusLabel} • Errors ${this.formatNumber(latestErrors)} • Warnings ${this.formatNumber(latestWarnings)}`;
         const dashboardBody = `
           <div class="metrics-grid">
-            ${buildMetric('Parser health', overallHealthValue, healthSummary)}
+            ${buildMetric('Health', overallHealthValue, healthSummary)}
             ${buildMetric('Issue streak', this.formatNumber(failureStreak), lastSuccessSummary)}
             ${buildMetric('Last run', lastRun, latestRunSummary)}
           </div>`;
@@ -4356,26 +4356,24 @@ class MetricsDisplay {
       const runningCount = parserCounts.running;
       const overallHealthValue = this.formatPercent(parserCounts.healthy, runningCount);
       const healthSummary = runningCount > 0
-        ? `H${this.formatNumber(parserCounts.healthy)}/${this.formatNumber(runningCount)} running • W${this.formatNumber(parserCounts.warning)} F${this.formatNumber(parserCounts.failed)} Idle ${this.formatNumber(parserCounts.notRun)}`
-        : `W${this.formatNumber(parserCounts.warning)} F${this.formatNumber(parserCounts.failed)} Idle ${this.formatNumber(parserCounts.notRun)}`;
+        ? `${this.formatNumber(runningCount)} running • ${this.formatNumber(parserCounts.notRun)} idle • ${this.formatNumber(parserCounts.warning)} warnings • ${this.formatNumber(parserCounts.failed)} failed`
+        : `${this.formatNumber(parserCounts.notRun)} idle • ${this.formatNumber(parserCounts.warning)} warnings • ${this.formatNumber(parserCounts.failed)} failed`;
       const runHealth = this.getRunHealthSummary(records);
       const failureStreak = runHealth.failureStreak || 0;
       const lastSuccessAt = runHealth.lastSuccessAt;
-      const daysSinceSuccess = this.getDaysSince(lastSuccessAt);
-      const daysSinceSuccessValue = Number.isFinite(daysSinceSuccess) ? `${daysSinceSuccess}d` : 'n/a';
       const lastSuccessLabel = lastSuccessAt ? this.formatRelativeTime(lastSuccessAt) : 'Never';
       const latestStatusLabel = this.formatStatusLabel(runHealth.latestStatus);
 
       const lastSuccessSummary = lastSuccessAt
-        ? `Last success: ${lastSuccessLabel} (${daysSinceSuccessValue})`
+        ? `Last success: ${lastSuccessLabel}`
         : 'Last success: Never';
       this.addSectionHeader(table, 'Parser Health Snapshot');
-      this.addMetricRow(table, overallHealthValue, 'Parser health');
+      this.addMetricRow(table, overallHealthValue, 'Health');
       this.addInfoRow(table, healthSummary, `Total parsers: ${this.formatNumber(parserCounts.total)}`);
       this.addInfoRow(
         table,
-        `Last run: ${lastRun} (${latestStatusLabel}) • Failures: ${this.formatNumber(failureStreak)}`,
-        `Issues: E${latestErrors} W${latestWarnings} • ${lastSuccessSummary}`
+        `Last run: ${lastRun} (${latestStatusLabel}) • Issue streak: ${this.formatNumber(failureStreak)}`,
+        `Errors ${this.formatNumber(latestErrors)} • Warnings ${this.formatNumber(latestWarnings)} • ${lastSuccessSummary}`
       );
 
       this.addSectionHeader(table, 'Parser Health (Latest)');
