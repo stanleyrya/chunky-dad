@@ -3965,24 +3965,6 @@ footer {
 }
 
 
-/* Hide non-selected events when in selection mode */
-.events-list.selection-mode .event-card:not(.selected) {
-    display: none;
-}
-
-/* Smooth transition for selection mode changes */
-.events-list.transitioning .event-card:not(.selected) {
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-}
-
-.events-list.transitioning .event-card.selected {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-}
-
 /* Removed highlightPulse animation - using persistent selection only */
 
 /* Enhanced Week View Styles */

@@ -527,19 +527,11 @@ class DynamicCalendarLoader extends CalendarCore {
             el.classList.remove('selected');
         });
         
-        // Get events list
-        const eventsList = document.querySelector('.events-list');
-        
         if (this.selectedEventSlug) {
             // Mark selected event card in list view
             const selectedCard = document.querySelector(`.event-card[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
             if (selectedCard) {
                 selectedCard.classList.add('selected');
-                
-                // Smoothly transition to selection mode
-                if (eventsList) {
-                    this.transitionToSelectionMode(eventsList, selectedCard);
-                }
             }
             
             // Mark selected event items in calendar views
@@ -562,11 +554,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 } : null
             });
         } else {
-            // Smoothly transition out of selection mode
-            if (eventsList) {
-                this.transitionOutOfSelectionMode(eventsList);
-            }
-            
             // Reset all markers to normal appearance
             this.resetAllMapMarkers();
             
@@ -590,39 +577,7 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
-    // Smoothly transition to selection mode
-    transitionToSelectionMode(eventsList, selectedCard) {
-        // Add transition class for smooth animation
-        eventsList.classList.add('transitioning');
-        
-        // Use requestAnimationFrame to ensure the transition class is applied
-        requestAnimationFrame(() => {
-            // Add selection mode class
-            eventsList.classList.add('selection-mode');
-            
-            // Remove transition class after animation completes
-            setTimeout(() => {
-                eventsList.classList.remove('transitioning');
-            }, 300); // Match CSS transition duration
-        });
-    }
-
-    // Smoothly transition out of selection mode
-    transitionOutOfSelectionMode(eventsList) {
-        // Add transition class for smooth animation
-        eventsList.classList.add('transitioning');
-        
-        // Use requestAnimationFrame to ensure the transition class is applied
-        requestAnimationFrame(() => {
-            // Remove selection mode class
-            eventsList.classList.remove('selection-mode');
-            
-            // Remove transition class after animation completes
-            setTimeout(() => {
-                eventsList.classList.remove('transitioning');
-            }, 300); // Match CSS transition duration
-        });
-    }
+    
 
     // Helper method to highlight a specific map marker
     highlightMapMarker(eventSlug) {
@@ -2852,17 +2807,10 @@ class DynamicCalendarLoader extends CalendarCore {
                         })
                             .addTo(map)
                             .on('click', () => {
-                                // Select the event and scroll to it
+                                // Select the event without changing page scroll
                                 const eventDateISO = event.date || this.formatDateToISO(this.currentDate);
                                 this.toggleEventSelection(event.slug, eventDateISO);
-                                
-                                const eventCard = document.querySelector(`.event-card[data-event-slug="${event.slug}"]`);
-                                if (eventCard) {
-                                    eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    logger.userInteraction('MAP', 'Marker clicked, event selected and scrolled to', { eventSlug: event.slug });
-                                } else {
-                                    logger.warn('MAP', 'Event card not found for marker click', { eventSlug: event.slug });
-                                }
+                                logger.userInteraction('MAP', 'Marker clicked, event selected', { eventSlug: event.slug });
                             });
                         markers.push(marker);
                         markersAdded++;
@@ -3096,23 +3044,6 @@ class DynamicCalendarLoader extends CalendarCore {
                     eventsList.innerHTML = '<div class="loading-message">Error displaying events. Please refresh the page.</div>';
                 }
 
-                // Deep-link: handle event selection from URL parameters
-                try {
-                    const url = new URL(window.location.href);
-                    const eventParam = url.searchParams.get('event') || (window.location.hash ? window.location.hash.replace('#','') : '');
-                    if (eventParam && this.selectedEventSlug === eventParam) {
-                        // Event is already selected from parseStateFromUrl, just scroll to it
-                        const selector = `.event-card[data-event-slug="${CSS && CSS.escape ? CSS.escape(eventParam) : eventParam}"]`;
-                        const target = document.querySelector(selector);
-                        if (target) {
-                            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            logger.debug('EVENT', `Deep-linked event scrolled to: ${eventParam}`);
-                        } else {
-                            logger.debug('EVENT', `Deep-linked event not found in current render: ${eventParam}`);
-                        }
-                    }
-                } catch (_) {}
-                
                 // Add share button event handlers
                 this.setupShareButtons();
                 
@@ -3380,14 +3311,6 @@ class DynamicCalendarLoader extends CalendarCore {
                             
                             // Toggle selection and sync URL
                             this.toggleEventSelection(eventSlug, dayISO);
-                            
-                            const eventCard = document.querySelector(`.event-card[data-event-slug="${eventSlug}"]`);
-                            if (eventCard) {
-                                eventCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                logger.debug('EVENT', `Scrolled to event card: ${eventSlug}`);
-                            } else {
-                                logger.warn('EVENT', `Event card not found for: ${eventSlug}`);
-                            }
                         } catch (clickError) {
                             logger.warn('EVENT', `Error handling event click`, { error: clickError.message, eventSlug: item.dataset.eventSlug });
                         }
