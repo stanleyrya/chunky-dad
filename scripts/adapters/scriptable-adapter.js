@@ -436,6 +436,23 @@ class ScriptableAdapter {
         return runtime;
     }
 
+    applyAutomationRunContext(runtimeContext, automationRun, automationOverride) {
+        const updated = { ...(runtimeContext || {}) };
+        if (automationRun) {
+            updated.type = 'automated';
+            if (!updated.trigger || updated.trigger === 'app' || updated.trigger === 'unknown') {
+                updated.trigger = automationOverride !== null ? 'shortcut' : updated.trigger;
+            }
+        } else if (automationOverride === false) {
+            updated.type = 'manual';
+        }
+        updated.automationRun = automationRun === true;
+        if (automationOverride !== null && automationOverride !== undefined) {
+            updated.automationOverride = automationOverride;
+        }
+        return updated;
+    }
+
     resolveRunContext(results) {
         const runtimeContext = this.runtimeContext || this.getScriptableRuntimeContext();
         const providedContext = results?.runContext || null;
@@ -866,6 +883,50 @@ class ScriptableAdapter {
         return null;
     }
 
+    parseAutomationMode(value) {
+        if (value === null || value === undefined || value === '') {
+            return null;
+        }
+        const parsedBoolean = this.parseBoolean(value);
+        if (parsedBoolean !== null) {
+            return parsedBoolean;
+        }
+        const normalized = String(value).toLowerCase().trim();
+        if (['auto', 'automated', 'automation', 'schedule', 'scheduled', 'cron'].includes(normalized)) {
+            return true;
+        }
+        if (['manual', 'interactive'].includes(normalized)) {
+            return false;
+        }
+        return null;
+    }
+
+    getAutomationFlagFromParams(queryParameters) {
+        if (!queryParameters || typeof queryParameters !== 'object') {
+            return null;
+        }
+        const automationValue = this.getQueryValue(queryParameters, [
+            'automation', 'automated', 'auto', 'runMode', 'run_mode', 'mode', 'schedule', 'scheduled'
+        ]);
+        return this.parseAutomationMode(automationValue);
+    }
+
+    getAutomationOverrideFromQuery() {
+        const queryParameters = this.runtimeContext?.queryParameters || {};
+        return this.getAutomationFlagFromParams(queryParameters);
+    }
+
+    getAutomationOverrideFromJson() {
+        const candidates = this.getJsonInputPayloadCandidates();
+        for (const candidate of candidates) {
+            const automationOverride = this.getAutomationFlagFromParams(candidate.queryParameters);
+            if (automationOverride !== null) {
+                return automationOverride;
+            }
+        }
+        return null;
+    }
+
     normalizeParserName(value) {
         return String(value || '').trim().toLowerCase();
     }
@@ -976,6 +1037,18 @@ class ScriptableAdapter {
             const parserNameFromQuery = this.getParserNameOverrideFromQuery();
             let parserNameOverride = parserNameFromQuery;
             let urlInput = null;
+            const automationOverrideFromQuery = this.getAutomationOverrideFromQuery();
+            const automationOverrideFromJson = automationOverrideFromQuery === null
+                ? this.getAutomationOverrideFromJson()
+                : null;
+            const automationOverride = automationOverrideFromQuery !== null
+                ? automationOverrideFromQuery
+                : automationOverrideFromJson;
+            const baseRuntimeContext = this.runtimeContext || this.getScriptableRuntimeContext();
+            const automationRun = typeof automationOverride === 'boolean'
+                ? automationOverride
+                : baseRuntimeContext.type === 'automated';
+            this.runtimeContext = this.applyAutomationRunContext(baseRuntimeContext, automationRun, automationOverride);
 
             if (!parserNameOverride) {
                 urlInput = this.getUrlInputPayload();
@@ -1080,6 +1153,18 @@ class ScriptableAdapter {
                 throw new Error('Configuration missing cities data');
             }
             
+            const automationFilter = automationRun && !parserNameOverride && !urlInput;
+            config.runtime = {
+                ...this.runtimeContext,
+                automationRun: automationRun === true,
+                automationOverride,
+                automationFilter
+            };
+            if (automationRun) {
+                const filterLabel = automationFilter ? 'enabled' : 'disabled';
+                console.log(`📱 Scriptable: Automation run detected (schedule ${filterLabel})`);
+            }
+
             this.applyLogConfig(config);
             
             return config;
@@ -1335,6 +1420,15 @@ class ScriptableAdapter {
         console.error(message);
     }
 
+    shouldSkipResultsUi(results) {
+        const config = results?.config || {};
+        const runContext = results?.runContext || this.resolveRunContext(results);
+        const automationRun = Boolean(config?.runtime?.automationRun) || runContext?.type === 'automated';
+        const hasAutomationParsers = Array.isArray(config?.parsers)
+            && config.parsers.some(parser => parser?.automation?.enabled === true);
+        return automationRun && hasAutomationParsers;
+    }
+
     // Results Display - Enhanced with calendar preview and comparison
     async displayResults(results) {
         try {
@@ -1411,8 +1505,13 @@ class ScriptableAdapter {
             
             console.log('\n' + '='.repeat(60));
             
-            // Present rich UI display (may update results.calendarEvents if user executes)
-            await this.presentRichResults(results);
+            const shouldSkipUi = this.shouldSkipResultsUi(results);
+            if (!shouldSkipUi) {
+                // Present rich UI display (may update results.calendarEvents if user executes)
+                await this.presentRichResults(results);
+            } else {
+                console.log('📱 Scriptable: Skipping results UI (automation run)');
+            }
 
             // Persist this run for later display (skip when showing saved runs)
             const hasAnalyzedEvents = Array.isArray(results?.analyzedEvents);
