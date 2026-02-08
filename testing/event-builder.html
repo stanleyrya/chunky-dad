@@ -446,6 +446,23 @@
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
 
+    .existing-event-panel .existing-date-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    .existing-event-panel .existing-date-grid .field-group {
+      gap: 0.25rem;
+    }
+
+    .existing-event-panel .existing-date-grid label {
+      font-size: 0.78rem;
+    }
+
+    .existing-event-panel .existing-date-grid input[type="date"] {
+      padding: 0.35rem 0.5rem;
+      font-size: 0.78rem;
+    }
 
     .existing-event-panel .existing-filter-input,
     .existing-event-panel select {
@@ -1204,6 +1221,10 @@
         grid-template-columns: 1fr;
       }
 
+      .existing-event-panel .existing-date-grid input[type="date"] {
+        font-size: 16px;
+      }
+
       .field-row.time-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -1648,7 +1669,7 @@
             <small>Optional. Match event name, venue, or notes.</small>
           </div>
         </div>
-        <div class="field-grid">
+        <div class="field-grid existing-date-grid">
           <div class="field-group">
             <label for="existing-date-start">Find events after this date</label>
             <input type="date" id="existing-date-start" class="existing-filter-input">
