@@ -8,14 +8,14 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20260222T050000Z
 DTEND:20260222T200000Z
-DTSTAMP:20260203T043358Z
+DTSTAMP:20260208T200421Z
 UID:88686A1C-DD82-4C9B-A917-74B3647FD814
 CREATED:20260117T210201Z
 DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
  address: 333 S Palm Canyon Dr Unit\, Palm Springs\, CA 92262\ntimezone: Ame
  rica/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/shiny-disco-balls
  -ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651\ncover: $16.84
-  - $43.15 (as of 2/2)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
+  - $43.15 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
  .com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?cr
  op=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-
  x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3\nshortName: MEGA-WOOF\nin
@@ -23,7 +23,7 @@ DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
  /megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=3
  3.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE\nkey: m
  egawoof|2026-02-22|palm springs
-LAST-MODIFIED:20260203T035804Z
+LAST-MODIFIED:20260208T200152Z
 LOCATION:33.8189101\, -116.5470896
 SEQUENCE:0
 STATUS:CONFIRMED
