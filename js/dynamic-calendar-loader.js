@@ -527,11 +527,17 @@ class DynamicCalendarLoader extends CalendarCore {
             el.classList.remove('selected');
         });
         
+        const eventsList = document.querySelector('.events-list');
+
         if (this.selectedEventSlug) {
             // Mark selected event card in list view
             const selectedCard = document.querySelector(`.event-card[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
             if (selectedCard) {
                 selectedCard.classList.add('selected');
+            }
+
+            if (eventsList) {
+                eventsList.classList.add('selection-mode');
             }
             
             // Mark selected event items in calendar views
@@ -554,6 +560,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 } : null
             });
         } else {
+            if (eventsList) {
+                eventsList.classList.remove('selection-mode');
+            }
+
             // Reset all markers to normal appearance
             this.resetAllMapMarkers();
             

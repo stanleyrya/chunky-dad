@@ -3965,6 +3965,11 @@ footer {
 }
 
 
+/* Hide non-selected events when in selection mode */
+.events-list.selection-mode .event-card:not(.selected) {
+    display: none;
+}
+
 /* Removed highlightPulse animation - using persistent selection only */
 
 /* Enhanced Week View Styles */
