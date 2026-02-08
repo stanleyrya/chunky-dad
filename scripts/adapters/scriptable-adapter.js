@@ -396,7 +396,9 @@ class ScriptableAdapter {
             runsWithSiri: false,
             widgetFamily: null,
             widgetParameter: null,
-            queryParameters: {}
+            queryParameters: {},
+            shortcutParameter: null,
+            plainTexts: []
         };
         
         try {
@@ -410,6 +412,8 @@ class ScriptableAdapter {
             if (typeof args !== 'undefined') {
                 runtime.widgetParameter = args.widgetParameter || null;
                 runtime.queryParameters = args.queryParameters || {};
+                runtime.shortcutParameter = args.shortcutParameter || null;
+                runtime.plainTexts = Array.isArray(args.plainTexts) ? args.plainTexts : [];
             }
         } catch (error) {
             console.log(`📱 Scriptable: Run context detection failed: ${error.message}`);
@@ -715,6 +719,13 @@ class ScriptableAdapter {
         if (!queryParameters || Object.keys(queryParameters).length === 0) {
             return null;
         }
+        return this.buildInputPayloadFromQuery(queryParameters, 'url-scheme');
+    }
+
+    buildInputPayloadFromQuery(queryParameters, source) {
+        if (!queryParameters || typeof queryParameters !== 'object') {
+            return null;
+        }
 
         const reservedKeys = new Set([
             'scriptname', 'script', 'action', 'callback', 'callbackurl',
@@ -736,7 +747,153 @@ class ScriptableAdapter {
         return {
             queryParameters,
             receivedAt: new Date().toISOString(),
-            source: 'url-scheme'
+            source: source || 'input'
+        };
+    }
+
+    parseJsonValue(rawValue) {
+        if (rawValue === null || rawValue === undefined) {
+            return null;
+        }
+        if (typeof rawValue === 'object') {
+            return rawValue;
+        }
+        if (typeof rawValue !== 'string') {
+            return null;
+        }
+        const trimmed = rawValue.trim();
+        if (!trimmed) {
+            return null;
+        }
+        try {
+            return JSON.parse(trimmed);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    extractQueryParametersFromJson(jsonValue) {
+        if (!jsonValue || typeof jsonValue !== 'object' || Array.isArray(jsonValue)) {
+            return null;
+        }
+
+        if (jsonValue.queryParameters && typeof jsonValue.queryParameters === 'object') {
+            return jsonValue.queryParameters;
+        }
+        if (jsonValue.query && typeof jsonValue.query === 'object') {
+            return jsonValue.query;
+        }
+        if (jsonValue.params && typeof jsonValue.params === 'object') {
+            return jsonValue.params;
+        }
+        if (jsonValue.event && typeof jsonValue.event === 'object') {
+            return jsonValue.event;
+        }
+
+        return jsonValue;
+    }
+
+    getJsonInputPayloadCandidates() {
+        const candidates = [];
+        const shortcutValue = this.runtimeContext?.shortcutParameter;
+        const shortcutParsed = this.parseJsonValue(shortcutValue);
+        const shortcutParameters = this.extractQueryParametersFromJson(shortcutParsed);
+        if (shortcutParameters) {
+            candidates.push({
+                queryParameters: shortcutParameters,
+                source: 'shortcutParameter'
+            });
+        }
+
+        const plainTexts = this.runtimeContext?.plainTexts;
+        if (Array.isArray(plainTexts)) {
+            for (const plainText of plainTexts) {
+                const parsed = this.parseJsonValue(plainText);
+                const queryParameters = this.extractQueryParametersFromJson(parsed);
+                if (queryParameters) {
+                    candidates.push({
+                        queryParameters,
+                        source: 'plainTexts'
+                    });
+                    break;
+                }
+            }
+        }
+
+        return candidates;
+    }
+
+    getJsonInputPayload() {
+        const candidates = this.getJsonInputPayloadCandidates();
+        for (const candidate of candidates) {
+            const payload = this.buildInputPayloadFromQuery(candidate.queryParameters, candidate.source);
+            if (payload) {
+                return payload;
+            }
+        }
+        return null;
+    }
+
+    getParserNameFromParams(queryParameters) {
+        if (!queryParameters || typeof queryParameters !== 'object') {
+            return null;
+        }
+
+        const parserName = this.getQueryValue(queryParameters, [
+            'parserName', 'parser', 'parser_name'
+        ]);
+
+        if (!this.hasNonEmptyValue(parserName)) {
+            return null;
+        }
+
+        return String(parserName).trim();
+    }
+
+    getParserNameOverrideFromQuery() {
+        const queryParameters = this.runtimeContext?.queryParameters || {};
+        return this.getParserNameFromParams(queryParameters);
+    }
+
+    getParserNameOverrideFromJson() {
+        const candidates = this.getJsonInputPayloadCandidates();
+        for (const candidate of candidates) {
+            const parserName = this.getParserNameFromParams(candidate.queryParameters);
+            if (parserName) {
+                return parserName;
+            }
+        }
+        return null;
+    }
+
+    normalizeParserName(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    buildParserNameOverrideConfig(parserName, config) {
+        if (!config || !Array.isArray(config.parsers)) {
+            throw new Error('Configuration missing parsers array');
+        }
+
+        const normalizedTarget = this.normalizeParserName(parserName);
+        const matchingParser = config.parsers.find(parser => {
+            const name = parser && parser.name ? parser.name : '';
+            return this.normalizeParserName(name) === normalizedTarget;
+        });
+
+        if (!matchingParser) {
+            const availableParsers = config.parsers
+                .map(parser => parser && parser.name ? parser.name : '')
+                .filter(name => this.hasNonEmptyValue(name));
+            const availableLabel = availableParsers.length > 0 ? availableParsers.join(', ') : '(none)';
+            throw new Error(`Parser "${parserName}" not found in scraper-input.js. Available parsers: ${availableLabel}`);
+        }
+
+        return {
+            parserConfig: {
+                ...matchingParser,
+                enabled: true
+            }
         };
     }
 
@@ -816,7 +973,21 @@ class ScriptableAdapter {
         try {
             const fm = FileManager.iCloud();
             const scriptableDir = fm.documentsDirectory();
-            const urlInput = this.getUrlInputPayload();
+            const parserNameFromQuery = this.getParserNameOverrideFromQuery();
+            let parserNameOverride = parserNameFromQuery;
+            let urlInput = null;
+
+            if (!parserNameOverride) {
+                urlInput = this.getUrlInputPayload();
+            }
+
+            if (!parserNameOverride && !urlInput) {
+                parserNameOverride = this.getParserNameOverrideFromJson();
+            }
+
+            if (!parserNameOverride && !urlInput) {
+                urlInput = this.getJsonInputPayload();
+            }
             
             const loadConfigFile = (fileName, moduleName, missingMessage, emptyMessage, options = {}) => {
                 const configPath = fm.joinPath(scriptableDir, fileName);
@@ -852,11 +1023,13 @@ class ScriptableAdapter {
                 'scraper-input',
                 'Configuration file not found at iCloud Drive/Scriptable/scraper-input.js',
                 'Configuration file is empty',
-                { optional: Boolean(urlInput) }
+                { optional: Boolean(urlInput) && !parserNameOverride }
             );
 
             if (!config && urlInput) {
-                console.log('📱 Scriptable: Using URL input without scraper-input.js');
+                const inputSource = urlInput.source || 'input';
+                const label = inputSource === 'url-scheme' ? 'URL' : inputSource;
+                console.log(`📱 Scriptable: Using ${label} input without scraper-input.js`);
                 config = {
                     config: {
                         dryRun: true,
@@ -875,7 +1048,11 @@ class ScriptableAdapter {
             
             config.cities = cities;
 
-            if (urlInput) {
+            if (parserNameOverride) {
+                const { parserConfig } = this.buildParserNameOverrideConfig(parserNameOverride, config);
+                config.parsers = [parserConfig];
+                console.log(`📱 Scriptable: Parser override detected - running "${parserConfig.name}"`);
+            } else if (urlInput) {
                 const { parserConfig, configOverrides } = this.buildUrlInputParserConfig(urlInput);
                 config.parsers = [parserConfig];
 
@@ -889,7 +1066,9 @@ class ScriptableAdapter {
                     config.config.daysToLookAhead = configOverrides.daysToLookAhead;
                 }
 
-                console.log('📱 Scriptable: URL input detected - using scriptable input parser');
+                const inputSource = urlInput.source || 'input';
+                const label = inputSource === 'url-scheme' ? 'URL' : inputSource;
+                console.log(`📱 Scriptable: ${label} input detected - using scriptable input parser`);
             }
             
             // Validate configuration structure
