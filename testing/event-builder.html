@@ -1067,6 +1067,29 @@
       margin-top: -0.3rem;
     }
 
+    .recurrence-toggle.is-locked,
+    .recurrence-builder.is-locked,
+    #recurrence-raw.is-locked,
+    .recurrence-summary.is-locked {
+      opacity: 0.5;
+    }
+
+    .recurrence-edit-lock {
+      display: grid;
+      gap: 0.45rem;
+      margin-top: 0.25rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 193, 7, 0.35);
+      background: rgba(255, 193, 7, 0.08);
+    }
+
+    .recurrence-edit-lock p {
+      margin: 0;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+    }
+
     .recurrence-builder .field-row:last-of-type {
       margin-bottom: 0;
     }
@@ -1413,7 +1436,7 @@
                 <span class="time-note" id="duration-note"><strong>Duration:</strong> Add start &amp; end</span>
               </div>
 
-              <div class="recurrence-toggle">
+              <div class="recurrence-toggle" id="recurrence-toggle">
                 <div class="field-group">
                   <label>Recurrence</label>
                 </div>
@@ -1524,6 +1547,10 @@
               </div>
 
               <p class="recurrence-summary" id="recurrence-summary">Does not repeat.</p>
+              <div class="recurrence-edit-lock is-hidden" id="recurrence-edit-lock">
+                <p id="recurrence-edit-lock-text">Editing one occurrence? Edit the base series instead?</p>
+                <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Edit base series instead?</button>
+              </div>
             </div>
           </details>
 
@@ -1753,6 +1780,7 @@
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'events@chunky.dad';
+      const EVENTS_ISSUES_EMAIL = 'events+issues@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
 
       const dom = {};
@@ -1821,6 +1849,7 @@
         updateRecurrenceUi();
         updateTimeNotes();
         updatePreviewCard();
+        updateActionButtonsState();
         updateUrl();
         updateCalendarSource(true);
         setupMessaging();
@@ -1850,6 +1879,7 @@
         dom.endInput = document.getElementById('event-end');
         dom.durationNote = document.getElementById('duration-note');
         dom.recurrenceModeButtons = document.querySelectorAll('[data-recurrence-mode]');
+        dom.recurrenceToggle = document.getElementById('recurrence-toggle');
         dom.recurrenceBuilder = document.getElementById('recurrence-builder');
         dom.recurrenceRaw = document.getElementById('recurrence-raw');
         dom.recurrenceFrequency = document.getElementById('recurrence-frequency');
@@ -1872,6 +1902,9 @@
         dom.recurrenceUntil = document.getElementById('recurrence-until');
         dom.recurrenceSummary = document.getElementById('recurrence-summary');
         dom.recurrenceInput = document.getElementById('event-recurrence');
+        dom.recurrenceEditLock = document.getElementById('recurrence-edit-lock');
+        dom.recurrenceEditLockText = document.getElementById('recurrence-edit-lock-text');
+        dom.recurrenceEditSeriesButton = document.getElementById('recurrence-edit-series-button');
         dom.websiteInput = document.getElementById('event-website');
         dom.ticketUrlInput = document.getElementById('event-ticket-url');
         dom.instagramInput = document.getElementById('event-instagram');
@@ -1938,6 +1971,7 @@
         if (dom.openScriptableButton) {
           dom.openScriptableButton.classList.toggle('is-hidden', !showDebug);
         }
+        updateActionButtonsState();
       }
 
       function setupStickyHeaderOffset() {
@@ -2300,7 +2334,10 @@
           }
           if ((pendingExistingSelectionId || pendingExistingOccurrenceId) && state && state.isEditingExisting) {
             const requestedMode = state.editingExistingMode === 'series' ? 'series' : 'occurrence';
-            if (requestedMode === 'series' && !selectedExistingResult.canEditSeries) {
+            const seriesBlocked = requestedMode === 'series'
+              && selectedExistingResult.canEditSeries
+              && Boolean(getSeriesEditBlockedReason(selectedExistingResult.baseEvent || selectedExistingResult.event));
+            if (requestedMode === 'series' && (!selectedExistingResult.canEditSeries || seriesBlocked)) {
               selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
             } else {
               selectedExistingMode = requestedMode;
@@ -2311,7 +2348,10 @@
             }
           } else if (pendingExistingSelectionId || pendingExistingOccurrenceId) {
             const requestedMode = selectedExistingMode === 'series' ? 'series' : 'occurrence';
-            if (requestedMode === 'series' && !selectedExistingResult.canEditSeries) {
+            const seriesBlocked = requestedMode === 'series'
+              && selectedExistingResult.canEditSeries
+              && Boolean(getSeriesEditBlockedReason(selectedExistingResult.baseEvent || selectedExistingResult.event));
+            if (requestedMode === 'series' && (!selectedExistingResult.canEditSeries || seriesBlocked)) {
               selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
             } else {
               selectedExistingMode = requestedMode;
@@ -2804,7 +2844,7 @@
           recurring: Boolean(event.recurrence),
           recurrenceId,
           recurrenceIdTimezone,
-          sequence: Number.isFinite(event.sequence) ? event.sequence : null,
+          sequence: parseIntegerValue(event.sequence),
           startDate,
           endDate,
           timeZone,
@@ -2884,6 +2924,105 @@
       function isOccurrenceResultId(id) {
         const parsed = parseResultId(id);
         return parsed.type === 'override' || parsed.type === 'occurrence';
+      }
+
+      function getEditingUidFromState() {
+        if (!state) return '';
+        const explicit = normalizeText(state.editingExistingUid || '');
+        if (explicit) return explicit;
+        if (!state.editingExistingId) return '';
+        return parseResultId(state.editingExistingId).uid;
+      }
+
+      function findBaseEventByUid(index, uid) {
+        if (!index || !uid) return null;
+        if (index.baseByUid && typeof index.baseByUid.get === 'function') {
+          const mapped = index.baseByUid.get(uid);
+          if (mapped) return mapped;
+        }
+        if (!Array.isArray(index.baseEvents)) return null;
+        return index.baseEvents.find(event => event && event.uid === uid) || null;
+      }
+
+      function getCachedCalendarIndexForCity(cityKey) {
+        if (!cityKey) return null;
+        if (existingCalendarIndex && existingCalendarIndex.cityKey === cityKey) {
+          return existingCalendarIndex;
+        }
+        if (Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) {
+          return calendarCache[cityKey] || null;
+        }
+        return null;
+      }
+
+      function getCachedEditingBaseEvent() {
+        const uid = getEditingUidFromState();
+        if (!uid || !state || !state.city) return null;
+        const index = getCachedCalendarIndexForCity(state.city);
+        return findBaseEventByUid(index, uid);
+      }
+
+      function getSeriesEditBlockedReason(baseEvent, index = existingCalendarIndex) {
+        if (!baseEvent || !baseEvent.uid || !index || !Array.isArray(index.overrides)) {
+          return '';
+        }
+        const hasOverride = index.overrides.some(override => override && override.uid === baseEvent.uid);
+        if (!hasOverride) return '';
+        return `This series already has event overrides. To edit the base series, contact ${EVENTS_ISSUES_EMAIL}.`;
+      }
+
+      function isEditingSeriesMode() {
+        return Boolean(state && state.isEditingExisting && state.editingExistingMode === 'series');
+      }
+
+      function isEditingOccurrenceOverrideMode() {
+        if (!state || !state.isEditingExisting || state.editingExistingMode !== 'occurrence') {
+          return false;
+        }
+        if (state.editingExistingOccurrenceId && isOccurrenceResultId(state.editingExistingOccurrenceId)) {
+          return true;
+        }
+        return Boolean(normalizeText(state.editingExistingRecurrenceId || ''));
+      }
+
+      function isRecurrenceEditingLocked() {
+        return isEditingOccurrenceOverrideMode();
+      }
+
+      function getEditingSeriesOverrideBlockReason() {
+        if (!isEditingSeriesMode() || !state) return '';
+        const uid = getEditingUidFromState();
+        if (!uid) return '';
+        const index = getCachedCalendarIndexForCity(state.city);
+        if (!index) return '';
+        const baseEvent = findBaseEventByUid(index, uid);
+        if (baseEvent) {
+          return getSeriesEditBlockedReason(baseEvent, index);
+        }
+        const hasOverride = Array.isArray(index.overrides)
+          && index.overrides.some(override => override && override.uid === uid);
+        if (!hasOverride) return '';
+        return `This series already has event overrides. To edit the base series, contact ${EVENTS_ISSUES_EMAIL}.`;
+      }
+
+      function getAddToCalendarDisabledReason() {
+        if (isEditingOccurrenceOverrideMode()) {
+          return 'Add to Calendar is disabled while editing one occurrence in a series.';
+        }
+        if (isEditingSeriesMode()) {
+          const blockedReason = getEditingSeriesOverrideBlockReason();
+          if (blockedReason) {
+            return `Add to Calendar is disabled for this base series because it has overrides. Contact ${EVENTS_ISSUES_EMAIL}.`;
+          }
+        }
+        return '';
+      }
+
+      function getScriptableDisabledReason() {
+        if (isEditingSeriesMode()) {
+          return 'Scriptable is disabled while editing a base series.';
+        }
+        return '';
       }
 
       function buildExistingRangeWindow(rangeStart, rangeEnd) {
@@ -3273,15 +3412,25 @@
 
       function getDefaultExistingMode(result) {
         if (!result || !result.canEditSeries) return 'occurrence';
+        const baseEvent = result.baseEvent || result.event;
+        if (getSeriesEditBlockedReason(baseEvent)) return 'occurrence';
         if (result.type === 'series') return 'series';
         if (result.occurrenceDate) return 'occurrence';
         return 'series';
       }
 
       function setExistingMode(mode) {
-        selectedExistingMode = mode === 'series' ? 'series' : 'occurrence';
+        const nextMode = mode === 'series' ? 'series' : 'occurrence';
+        selectedExistingMode = nextMode;
         updateExistingModeUi(selectedExistingResult);
         storeExistingPanelState();
+        if (nextMode === 'series' && selectedExistingResult) {
+          const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
+          const blockedReason = getSeriesEditBlockedReason(baseEvent);
+          if (blockedReason) {
+            showToast(blockedReason, 'warn');
+          }
+        }
       }
 
       function updateExistingModeUi(result) {
@@ -3296,17 +3445,33 @@
           updateExistingActionButtons();
           return;
         }
+        const baseEvent = result.baseEvent || result.event;
+        const seriesBlockedReason = getSeriesEditBlockedReason(baseEvent);
+        if (seriesBlockedReason && selectedExistingMode === 'series') {
+          selectedExistingMode = 'occurrence';
+        }
         dom.existingModeButtons.forEach(button => {
+          const isSeriesButton = button.dataset.editMode === 'series';
+          button.disabled = Boolean(isSeriesButton && seriesBlockedReason);
+          if (button.disabled) {
+            button.setAttribute('title', seriesBlockedReason);
+          } else {
+            button.removeAttribute('title');
+          }
           button.classList.toggle('is-active', button.dataset.editMode === selectedExistingMode);
         });
         if (dom.existingModeHint) {
           let hint = '';
-          if (selectedExistingMode === 'series') {
+          let isError = false;
+          if (seriesBlockedReason) {
+            hint = `${seriesBlockedReason} Edit an occurrence instead, or use Copy to New.`;
+            isError = true;
+          } else if (selectedExistingMode === 'series') {
             hint = 'Series keeps the RRULE and original start/end.';
           } else {
             hint = 'Occurrence edits one instance (creates an override) and clears the RRULE.';
           }
-          setFieldHint(dom.existingModeHint, hint, false);
+          setFieldHint(dom.existingModeHint, hint, isError);
         }
         refreshExistingOccurrenceOptions();
         updateExistingActionButtons();
@@ -3471,6 +3636,13 @@
           endDate = selectedExistingOccurrence.endDate || selectedExistingOccurrence.event.endDate;
         } else {
           recurrence = eventData.recurrence || '';
+        }
+
+        if (action === 'edit' && mode === 'series') {
+          const blockedReason = getSeriesEditBlockedReason(baseEvent);
+          if (blockedReason) {
+            return { error: blockedReason };
+          }
         }
 
         if (!startDate || !endDate || !(startDate instanceof Date) || !(endDate instanceof Date)
@@ -3657,9 +3829,12 @@
           : '';
         const candidateSequence = (() => {
           const summarySeq = summaryResult && summaryResult.event ? summaryResult.event.sequence : null;
-          if (Number.isFinite(summarySeq)) return summarySeq;
-          if (Number.isFinite(eventData && eventData.sequence)) return eventData.sequence;
-          if (Number.isFinite(baseEvent && baseEvent.sequence)) return baseEvent.sequence;
+          const normalizedSummary = parseIntegerValue(summarySeq);
+          if (normalizedSummary !== null) return normalizedSummary;
+          const normalizedEventData = parseIntegerValue(eventData && eventData.sequence);
+          if (normalizedEventData !== null) return normalizedEventData;
+          const normalizedBase = parseIntegerValue(baseEvent && baseEvent.sequence);
+          if (normalizedBase !== null) return normalizedBase;
           return null;
         })();
         state.editingExistingSequence = candidateSequence !== null ? String(candidateSequence) : '';
@@ -4011,6 +4186,9 @@
         state.editingExistingSequence = '';
         state.editingExistingSearchStartDate = '';
         state.editingExistingSearchEndDate = '';
+        updateRecurrenceUi();
+        updateRecurrenceSummary();
+        updateActionButtonsState();
       }
 
       function clearExistingSelection(options = {}) {
@@ -4559,6 +4737,11 @@
             handleOpenScriptable(dom.openScriptableButton);
           });
         }
+        if (dom.recurrenceEditSeriesButton) {
+          dom.recurrenceEditSeriesButton.addEventListener('click', () => {
+            handleSwapToSeriesEdit(dom.recurrenceEditSeriesButton);
+          });
+        }
         if (dom.editExistingButton) {
           dom.editExistingButton.addEventListener('click', () => {
             if (dom.existingPanel && dom.existingPanel.open) {
@@ -5003,6 +5186,11 @@
         return String(value).trim();
       }
 
+      function parseIntegerValue(value) {
+        const parsed = parseInt(String(value == null ? '' : value).trim(), 10);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
       function resetForm() {
         const preservedCity = state.city;
         state = createDefaultState();
@@ -5066,6 +5254,9 @@
 
       function setRecurrenceMode(mode, options = {}) {
         const nextMode = mode === 'raw' ? 'raw' : 'builder';
+        if (isRecurrenceEditingLocked() && !options.force) {
+          return;
+        }
         if (recurrenceMode === nextMode && !options.force) {
           return;
         }
@@ -5103,17 +5294,39 @@
         const showWeekly = frequency === 'weekly';
         const showMonthly = frequency === 'monthly';
         const showEnds = frequency !== 'none';
+        const recurrenceLocked = isRecurrenceEditingLocked();
         if (dom.recurrenceWeeklyRow) {
           dom.recurrenceWeeklyRow.classList.toggle('is-hidden', !showWeekly);
         }
         if (dom.recurrenceMonthlyRow) {
           dom.recurrenceMonthlyRow.classList.toggle('is-hidden', !showMonthly);
         }
+        if (dom.recurrenceToggle) {
+          dom.recurrenceToggle.classList.toggle('is-locked', recurrenceLocked);
+        }
         if (dom.recurrenceBuilder) {
           dom.recurrenceBuilder.classList.toggle('is-hidden', recurrenceMode !== 'builder');
+          dom.recurrenceBuilder.classList.toggle('is-locked', recurrenceLocked);
         }
         if (dom.recurrenceRaw) {
           dom.recurrenceRaw.classList.toggle('is-hidden', recurrenceMode !== 'raw');
+          dom.recurrenceRaw.classList.toggle('is-locked', recurrenceLocked);
+        }
+        if (dom.recurrenceSummary) {
+          dom.recurrenceSummary.classList.toggle('is-locked', recurrenceLocked);
+        }
+        if (dom.recurrenceModeButtons && dom.recurrenceModeButtons.length) {
+          dom.recurrenceModeButtons.forEach(button => {
+            button.disabled = recurrenceLocked;
+            if (recurrenceLocked) {
+              button.setAttribute('title', 'Recurrence is locked while editing one occurrence.');
+            } else {
+              button.removeAttribute('title');
+            }
+          });
+        }
+        if (dom.recurrenceFrequency) {
+          dom.recurrenceFrequency.disabled = recurrenceLocked;
         }
         if (dom.recurrenceIntervalLabel) {
           const label = frequency === 'daily'
@@ -5124,7 +5337,7 @@
           dom.recurrenceIntervalLabel.textContent = label;
         }
         if (dom.recurrenceInterval) {
-          dom.recurrenceInterval.disabled = frequency === 'none';
+          dom.recurrenceInterval.disabled = recurrenceLocked || frequency === 'none';
         }
         if (dom.recurrenceIntervalGroup) {
           dom.recurrenceIntervalGroup.classList.toggle('is-hidden', frequency === 'none');
@@ -5132,11 +5345,9 @@
         if (dom.recurrenceEndsRow) {
           dom.recurrenceEndsRow.classList.toggle('is-hidden', !showEnds);
         }
+        const endsValue = dom.recurrenceEnds ? (dom.recurrenceEnds.value || 'never') : 'never';
         if (dom.recurrenceEnds) {
-          dom.recurrenceEnds.disabled = !showEnds;
-        }
-        if (dom.recurrenceEnds) {
-          const endsValue = dom.recurrenceEnds.value || 'never';
+          dom.recurrenceEnds.disabled = recurrenceLocked || !showEnds;
           if (dom.recurrenceCountGroup) {
             dom.recurrenceCountGroup.classList.toggle('is-hidden', endsValue !== 'count');
           }
@@ -5144,20 +5355,56 @@
             dom.recurrenceUntilGroup.classList.toggle('is-hidden', endsValue !== 'until');
           }
         }
+        if (dom.recurrenceCount) {
+          dom.recurrenceCount.disabled = recurrenceLocked || endsValue !== 'count';
+        }
+        if (dom.recurrenceUntil) {
+          dom.recurrenceUntil.disabled = recurrenceLocked || endsValue !== 'until';
+        }
+        if (dom.recurrenceWeekdayButtons && dom.recurrenceWeekdayButtons.length) {
+          dom.recurrenceWeekdayButtons.forEach(button => {
+            button.disabled = recurrenceLocked;
+          });
+        }
         const monthlyMode = getSelectedMonthlyMode();
         if (dom.recurrenceMonthday) {
-          dom.recurrenceMonthday.disabled = monthlyMode !== 'monthday';
+          dom.recurrenceMonthday.disabled = recurrenceLocked || monthlyMode !== 'monthday';
         }
         if (dom.recurrenceWeekPos) {
-          dom.recurrenceWeekPos.disabled = monthlyMode !== 'weekday';
+          dom.recurrenceWeekPos.disabled = recurrenceLocked || monthlyMode !== 'weekday';
         }
         if (dom.recurrenceWeekday) {
-          dom.recurrenceWeekday.disabled = monthlyMode !== 'weekday';
+          dom.recurrenceWeekday.disabled = recurrenceLocked || monthlyMode !== 'weekday';
+        }
+        if (dom.recurrenceInput) {
+          dom.recurrenceInput.disabled = recurrenceLocked;
+        }
+        updateRecurrenceEditLockUi(recurrenceLocked);
+      }
+
+      function updateRecurrenceEditLockUi(isLocked) {
+        if (!dom.recurrenceEditLock) return;
+        dom.recurrenceEditLock.classList.toggle('is-hidden', !isLocked);
+        if (!isLocked) return;
+        const baseEvent = getCachedEditingBaseEvent();
+        const blockedReason = getSeriesEditBlockedReason(baseEvent);
+        if (dom.recurrenceEditLockText) {
+          dom.recurrenceEditLockText.textContent = blockedReason
+            ? `This series already has event overrides. Contact ${EVENTS_ISSUES_EMAIL}.`
+            : 'Edit the base series instead?';
+        }
+        if (dom.recurrenceEditSeriesButton) {
+          dom.recurrenceEditSeriesButton.disabled = Boolean(blockedReason);
+          if (blockedReason) {
+            dom.recurrenceEditSeriesButton.setAttribute('title', blockedReason);
+          } else {
+            dom.recurrenceEditSeriesButton.removeAttribute('title');
+          }
         }
       }
 
       function handleRecurrenceBuilderChange() {
-        if (recurrenceMode !== 'builder' || isRecurrenceSyncing) return;
+        if (isRecurrenceEditingLocked() || recurrenceMode !== 'builder' || isRecurrenceSyncing) return;
         isRecurrenceSyncing = true;
         const nextRule = buildRruleFromBuilder();
         state.recurrence = nextRule;
@@ -5353,6 +5600,10 @@
       function updateRecurrenceSummary() {
         if (!dom.recurrenceSummary) return;
         if (!state.recurrence) {
+          if (isRecurrenceEditingLocked()) {
+            dom.recurrenceSummary.textContent = 'Recurrence is inherited from the base series.';
+            return;
+          }
           dom.recurrenceSummary.textContent = 'Does not repeat.';
           return;
         }
@@ -5692,6 +5943,139 @@
         showToast('Email details copied. Paste into your mail app.', 'warn');
       }
 
+      async function loadEditingBaseEventForSwap() {
+        const uid = getEditingUidFromState();
+        if (!uid || !state || !state.city) {
+          return { baseEvent: null, index: null, error: null };
+        }
+        const cachedIndex = getCachedCalendarIndexForCity(state.city);
+        const cachedBaseEvent = findBaseEventByUid(cachedIndex, uid);
+        if (cachedBaseEvent) {
+          return { baseEvent: cachedBaseEvent, index: cachedIndex, error: null };
+        }
+        try {
+          const index = await fetchCalendarIndex(state.city);
+          if (state && state.city === index.cityKey) {
+            existingCalendarIndex = index;
+          }
+          return {
+            baseEvent: findBaseEventByUid(index, uid),
+            index,
+            error: null
+          };
+        } catch (error) {
+          logger.componentError('EVENT', 'Unable to load base series for occurrence edit swap', error);
+          return { baseEvent: null, index: cachedIndex, error };
+        }
+      }
+
+      function applySeriesEditingFromBaseEvent(baseEvent) {
+        if (!baseEvent || !state) return;
+        const previousSearchStartDate = state.editingExistingSearchStartDate || '';
+        const previousSearchEndDate = state.editingExistingSearchEndDate || '';
+        selectedBar = null;
+        state = buildExistingState(baseEvent, {
+          cityKey: baseEvent.city || state.city,
+          startDate: baseEvent.startDate,
+          endDate: baseEvent.endDate,
+          recurrence: baseEvent.recurrence || ''
+        });
+        state.isEditingExisting = true;
+        state.editingExistingId = buildResultId(baseEvent, 'series', null);
+        state.editingExistingMode = 'series';
+        state.editingExistingOccurrenceId = '';
+        state.editingExistingUid = baseEvent.uid || '';
+        state.editingExistingRecurrenceId = '';
+        state.editingExistingRecurrenceTimezone = '';
+        state.editingExistingSearchStartDate = previousSearchStartDate
+          || (isValidDateObject(baseEvent.startDate) ? baseEvent.startDate.toISOString() : '');
+        state.editingExistingSearchEndDate = previousSearchEndDate
+          || (isValidDateObject(baseEvent.endDate) ? baseEvent.endDate.toISOString() : '');
+        const baseSequence = parseIntegerValue(baseEvent.sequence);
+        state.editingExistingSequence = baseSequence !== null ? String(baseSequence) : '';
+        selectedExistingMode = 'series';
+        selectedExistingOccurrence = null;
+
+        applyStateToForm();
+        populateVenueOptions(state.city);
+        updateCalendarSource();
+        refreshUi();
+        scheduleEventPush();
+        syncExistingCitySelection();
+
+        const summaryText = buildExistingSelectionText(
+          {
+            event: baseEvent,
+            baseEvent,
+            type: 'series'
+          },
+          'series',
+          baseEvent.startDate,
+          baseEvent.endDate,
+          'edit'
+        );
+        setExistingSelectionSummary(summaryText, 'edit');
+      }
+
+      async function handleSwapToSeriesEdit(button) {
+        if (!isRecurrenceEditingLocked()) return;
+        if (button) {
+          button.disabled = true;
+        }
+        const { baseEvent, index, error } = await loadEditingBaseEventForSwap();
+        if (!baseEvent || !baseEvent.recurrence) {
+          showToast(
+            error
+              ? 'Could not load the base series right now.'
+              : 'Could not find the base series for this occurrence.',
+            'warn'
+          );
+          updateRecurrenceUi();
+          return;
+        }
+        const blockedReason = getSeriesEditBlockedReason(baseEvent, index || existingCalendarIndex);
+        if (blockedReason) {
+          showToast(blockedReason, 'warn');
+          updateRecurrenceUi();
+          return;
+        }
+        if (index) {
+          const futureOccurrences = buildOccurrenceResultsForEvent(index, baseEvent, {
+            now: new Date(),
+            maxCount: 1,
+            windowDays: OCCURRENCE_LOOKAHEAD_DAYS
+          });
+          if (!futureOccurrences.length) {
+            showToast('This series has already ended.', 'warn');
+            updateRecurrenceUi();
+            return;
+          }
+        }
+        applySeriesEditingFromBaseEvent(baseEvent);
+        showToast('Now editing the base series.', 'info');
+      }
+
+      function updateActionButtonsState() {
+        if (dom.addToCalendarButton) {
+          const addDisabledReason = getAddToCalendarDisabledReason();
+          dom.addToCalendarButton.disabled = Boolean(addDisabledReason);
+          if (addDisabledReason) {
+            dom.addToCalendarButton.setAttribute('title', addDisabledReason);
+          } else {
+            dom.addToCalendarButton.removeAttribute('title');
+          }
+        }
+        if (dom.openScriptableButton) {
+          const scriptableDisabledReason = getScriptableDisabledReason();
+          dom.openScriptableButton.disabled = Boolean(scriptableDisabledReason);
+          if (scriptableDisabledReason) {
+            dom.openScriptableButton.setAttribute('title', scriptableDisabledReason);
+          } else {
+            dom.openScriptableButton.removeAttribute('title');
+          }
+        }
+      }
+
       function refreshUi() {
         ensureDateOrder();
         updateTimeNotes();
@@ -5699,6 +6083,7 @@
         updateRecurrenceSummary();
         updatePreviewCard();
         updateCoordinatesFieldState();
+        updateActionButtonsState();
         scheduleUrlUpdate();
         scheduleEventPush();
       }
@@ -5749,8 +6134,8 @@
         const coordinates = parseCoordinates(locationValue);
         const timezone = state.timezone || browserTimezone;
         const rawRecurrence = (state.recurrence || '').trim();
-        const isOverride = state.isEditingExisting && state.editingExistingMode === 'occurrence';
-        const recurrence = isOverride ? '' : rawRecurrence;
+        const isOccurrenceOverride = isEditingOccurrenceOverrideMode();
+        const recurrence = isOccurrenceOverride ? '' : rawRecurrence;
         const recurring = Boolean(recurrence);
         let uid = '';
         if (state.isEditingExisting && state.editingExistingUid) {
@@ -5759,11 +6144,11 @@
           const parsedUid = parseResultId(state.editingExistingId);
           uid = parsedUid.uid || '';
         }
-        const recurrenceIdTimezone = isOverride
+        const recurrenceIdTimezone = isOccurrenceOverride
           ? (state.editingExistingRecurrenceTimezone || timezone)
           : '';
         let recurrenceId = null;
-        if (isOverride && state.editingExistingRecurrenceId) {
+        if (isOccurrenceOverride && state.editingExistingRecurrenceId) {
           recurrenceId = parseEditingRecurrenceId(state.editingExistingRecurrenceId, recurrenceIdTimezone || timezone);
         }
         return {
@@ -6186,6 +6571,11 @@
       }
 
       function handleAddToCalendar() {
+        const addDisabledReason = getAddToCalendarDisabledReason();
+        if (addDisabledReason) {
+          showToast(addDisabledReason, 'warn');
+          return;
+        }
         const event = buildEventPayload();
         if (!event.startDate || !event.endDate) {
           updateCalendarStatus('Add start & end times before exporting', 'warn');
@@ -6193,15 +6583,15 @@
         }
         const isEditingExisting = Boolean(state && state.isEditingExisting);
         const existingSequence = isEditingExisting
-          ? parseInt(String(state && state.editingExistingSequence ? state.editingExistingSequence : '').trim(), 10)
-          : NaN;
-        const nextSequence = Number.isFinite(existingSequence)
-          ? existingSequence + 1
+          ? parseIntegerValue(state && state.editingExistingSequence)
+          : null;
+        const nextSequence = isEditingExisting
+          ? Math.max(1, (existingSequence !== null ? existingSequence + 1 : 1))
           : null;
         const icsOptions = isEditingExisting
           ? {
               method: 'REQUEST',
-              ...(Number.isFinite(existingSequence) ? { sequence: nextSequence } : {}),
+              sequence: nextSequence,
               lastModified: new Date()
             }
           : null;
@@ -6212,8 +6602,8 @@
           hasRecurrenceId: Boolean(event.recurrenceId),
           timezone: event.timezone || browserTimezone,
           method: isEditingExisting ? 'REQUEST' : 'PUBLISH',
-          previousSequence: Number.isFinite(existingSequence) ? existingSequence : null,
-          nextSequence: Number.isFinite(existingSequence) ? nextSequence : null
+          previousSequence: existingSequence !== null ? existingSequence : null,
+          nextSequence: nextSequence !== null ? nextSequence : null
         });
         const filename = `${slugify(event.name || 'chunky-dad-event') || 'chunky-dad-event'}.ics`;
         const blob = new Blob([icsContent], { type: 'text/calendar' });
@@ -6225,10 +6615,19 @@
         link.click();
         document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(url), 1000);
+        if (isEditingExisting && nextSequence !== null) {
+          state.editingExistingSequence = String(nextSequence);
+          scheduleUrlUpdate();
+        }
         showTemporaryState(dom.addToCalendarButton, 'ICS ready!');
       }
 
       function handleOpenScriptable(button) {
+        const scriptableDisabledReason = getScriptableDisabledReason();
+        if (scriptableDisabledReason) {
+          showToast(scriptableDisabledReason, 'warn');
+          return;
+        }
         const name = String(state && state.name ? state.name : '').trim();
         const startValue = sanitizeDateTimeInput(state && state.start ? state.start : '');
         if (!name || !startValue) {
