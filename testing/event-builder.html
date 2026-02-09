@@ -2989,12 +2989,31 @@
         return isEditingOccurrenceOverrideMode();
       }
 
-      function getAddToCalendarDisabledReason() {
-        if (isEditingSeriesMode()) {
-          return 'Add to Calendar is disabled while editing a base series.';
+      function getEditingSeriesOverrideBlockReason() {
+        if (!isEditingSeriesMode() || !state) return '';
+        const uid = getEditingUidFromState();
+        if (!uid) return '';
+        const index = getCachedCalendarIndexForCity(state.city);
+        if (!index) return '';
+        const baseEvent = findBaseEventByUid(index, uid);
+        if (baseEvent) {
+          return getSeriesEditBlockedReason(baseEvent, index);
         }
+        const hasOverride = Array.isArray(index.overrides)
+          && index.overrides.some(override => override && override.uid === uid);
+        if (!hasOverride) return '';
+        return `This series already has event overrides. To edit the base series, contact ${EVENTS_ISSUES_EMAIL}.`;
+      }
+
+      function getAddToCalendarDisabledReason() {
         if (isEditingOccurrenceOverrideMode()) {
           return 'Add to Calendar is disabled while editing one occurrence in a series.';
+        }
+        if (isEditingSeriesMode()) {
+          const blockedReason = getEditingSeriesOverrideBlockReason();
+          if (blockedReason) {
+            return `Add to Calendar is disabled for this base series because it has overrides. Contact ${EVENTS_ISSUES_EMAIL}.`;
+          }
         }
         return '';
       }
@@ -3428,14 +3447,24 @@
         }
         const baseEvent = result.baseEvent || result.event;
         const seriesBlockedReason = getSeriesEditBlockedReason(baseEvent);
+        if (seriesBlockedReason && selectedExistingMode === 'series') {
+          selectedExistingMode = 'occurrence';
+        }
         dom.existingModeButtons.forEach(button => {
+          const isSeriesButton = button.dataset.editMode === 'series';
+          button.disabled = Boolean(isSeriesButton && seriesBlockedReason);
+          if (button.disabled) {
+            button.setAttribute('title', seriesBlockedReason);
+          } else {
+            button.removeAttribute('title');
+          }
           button.classList.toggle('is-active', button.dataset.editMode === selectedExistingMode);
         });
         if (dom.existingModeHint) {
           let hint = '';
           let isError = false;
-          if (selectedExistingMode === 'series' && seriesBlockedReason) {
-            hint = `${seriesBlockedReason} You can still use Copy to New.`;
+          if (seriesBlockedReason) {
+            hint = `${seriesBlockedReason} Edit an occurrence instead, or use Copy to New.`;
             isError = true;
           } else if (selectedExistingMode === 'series') {
             hint = 'Series keeps the RRULE and original start/end.';
