@@ -88,13 +88,9 @@ const PARSER_ICON_RULES = [
 ];
 
 const PARSER_FAVICON_RULES = [
-  { match: ['megawoof'], url: 'https://ugc.production.linktr.ee/YY9vP9AGQ9OTFY9iXiDi_hcmot5ynjOsfwPWJ?io=true&size=avatar-v3_0' },
-  { match: ['cubhouse'], url: 'https://ugc.production.linktr.ee/48e9facd-5c7d-41e3-a7d0-04752baa27f1_IMG-5519.jpeg?io=true&size=avatar-v3_0' },
+  { match: ['eventbrite'], url: 'https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64' },
   { match: ['bearracuda'], url: 'https://www.google.com/s2/favicons?domain=bearracuda.com&sz=64' },
-  { match: ['chunk', 'chunk-party'], url: 'https://www.google.com/s2/favicons?domain=www.chunk-party.com&sz=64' },
-  { match: ['furball'], url: 'https://www.google.com/s2/favicons?domain=www.furball.nyc&sz=64' },
-  { match: ['goldiloxx', 'redeyetickets'], url: 'https://www.google.com/s2/favicons?domain=redeyetickets.com&sz=64' },
-  { match: ['eventbrite', 'bear happy hour', 'twisted bear', 'dallas eagle'], url: 'https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64' },
+  { match: ['ticketleap'], url: 'https://www.google.com/s2/favicons?domain=ticketleap.com&sz=64' },
   { match: ['linktree', 'linktr.ee'], url: 'https://www.google.com/s2/favicons?domain=linktr.ee&sz=64' }
 ];
 
@@ -268,6 +264,7 @@ class MetricsDisplay {
     this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
     this.runtime = this.getRuntimeContext();
     this.iconCache = new Map();
+    this.parserIconOverrides = this.getParserIconOverrides();
   }
 
   getRuntimeContext() {
@@ -351,6 +348,9 @@ class MetricsDisplay {
     const parserName = String(item?.name || '').toLowerCase();
     const haystack = `${parserType} ${parserName}`.trim();
     if (!haystack) return null;
+    const overrides = this.parserIconOverrides || {};
+    const overrideUrl = overrides[parserName] || null;
+    if (overrideUrl) return overrideUrl;
     for (const rule of PARSER_FAVICON_RULES) {
       if (rule.match.some(match => haystack.includes(match))) {
         return rule.url;
@@ -494,6 +494,24 @@ class MetricsDisplay {
     } catch (error) {
       console.log(`Metrics: Could not load scraper-input: ${error.message}`);
       return [];
+    }
+  }
+
+  getParserIconOverrides() {
+    try {
+      const scraperConfig = importModule('scraper-input');
+      const parsers = Array.isArray(scraperConfig?.parsers) ? scraperConfig.parsers : [];
+      const overrides = {};
+      parsers.forEach(parser => {
+        const name = parser?.name ? String(parser.name).toLowerCase() : '';
+        const iconUrl = parser?.iconUrl || parser?.faviconUrl || null;
+        if (!name || !iconUrl) return;
+        overrides[name] = String(iconUrl);
+      });
+      return overrides;
+    } catch (error) {
+      console.log(`Metrics: Could not load parser icon overrides: ${error.message}`);
+      return {};
     }
   }
 
