@@ -1126,8 +1126,11 @@ class MetricsDisplay {
 
   getRecentRecords(records, limit) {
     if (!Array.isArray(records) || records.length === 0) return [];
-    if (!Number.isFinite(limit) || limit <= 0) return [...records];
-    return records.slice(-limit);
+    const ordered = [...records].sort((a, b) => (
+      this.getTimeValue(a?.finished_at || a?.finishedAt) - this.getTimeValue(b?.finished_at || b?.finishedAt)
+    ));
+    if (!Number.isFinite(limit) || limit <= 0) return ordered;
+    return ordered.slice(-limit);
   }
 
   getSeries(records, selector) {
@@ -1173,19 +1176,23 @@ class MetricsDisplay {
     return series;
   }
 
-  getParserNamesByRecentRuns(records, limit) {
+  getParserNamesByMaxDuration(records, limit) {
     if (!Array.isArray(records)) return [];
-    const counts = {};
+    const maxValues = {};
     records.forEach(record => {
       const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
       parserRecords.forEach(parserRecord => {
         const name = parserRecord?.parser_name;
         if (!name) return;
-        counts[name] = (counts[name] || 0) + 1;
+        const durationMinutes = this.getDurationMinutes(parserRecord?.duration_ms);
+        const currentMax = maxValues[name];
+        if (!Number.isFinite(currentMax) || durationMinutes > currentMax) {
+          maxValues[name] = durationMinutes;
+        }
       });
     });
-    const sorted = Object.keys(counts).sort((a, b) => {
-      const diff = (counts[b] || 0) - (counts[a] || 0);
+    const sorted = Object.keys(maxValues).sort((a, b) => {
+      const diff = (maxValues[b] || 0) - (maxValues[a] || 0);
       if (diff !== 0) return diff;
       return String(a).localeCompare(String(b));
     });
@@ -1229,6 +1236,9 @@ class MetricsDisplay {
         diff = (a?.durationMs || 0) - (b?.durationMs || 0);
       } else if (sortKey === 'status') {
         diff = this.getParserStatusRank(a) - this.getParserStatusRank(b);
+        if (diff === 0) {
+          diff = this.getTimeValue(a?.lastRunAt) - this.getTimeValue(b?.lastRunAt);
+        }
         if (diff === 0) {
           diff = this.sumDisplayActions(a?.actions) - this.sumDisplayActions(b?.actions);
         }
@@ -1824,7 +1834,7 @@ class MetricsDisplay {
     const family = this.runtime.widgetFamily || 'medium';
     if (family === 'small') return 3;
     if (family === 'large') return 8;
-    return 5;
+    return 3;
   }
 
   getCompactSortLabel(sortState) {
@@ -1972,6 +1982,7 @@ class MetricsDisplay {
       const row = widget.addStack();
       row.layoutHorizontally();
       row.spacing = WIDGET_STYLE.rowSpacing;
+      const isIncompleteRow = columns > 1 && (index + columns > items.length);
 
       for (let columnIndex = 0; columnIndex < columns; columnIndex += 1) {
         const item = items[index + columnIndex];
@@ -2006,7 +2017,11 @@ class MetricsDisplay {
         name.textColor = new Color(BRAND.text);
         name.lineLimit = 1;
 
-        header.addSpacer();
+        if (isIncompleteRow) {
+          header.addSpacer(4);
+        } else {
+          header.addSpacer();
+        }
 
         const statusIcon = this.buildStatusIcon(statusMeta, 11);
         if (statusIcon) {
@@ -2025,7 +2040,11 @@ class MetricsDisplay {
         summary.font = Font.systemFont(FONT_SIZES.widget.small);
         summary.textColor = new Color(BRAND.textMuted);
         summary.lineLimit = 1;
-        summaryRow.addSpacer();
+        if (isIncompleteRow) {
+          summaryRow.addSpacer(4);
+        } else {
+          summaryRow.addSpacer();
+        }
         const lastRun = summaryRow.addText(lastRunLabel);
         lastRun.font = Font.systemFont(FONT_SIZES.widget.small);
         lastRun.textColor = new Color(BRAND.textMuted);
@@ -2174,6 +2193,7 @@ class MetricsDisplay {
       const row = widget.addStack();
       row.layoutHorizontally();
       row.spacing = WIDGET_STYLE.rowSpacing;
+      const isIncompleteRow = columns > 1 && (index + columns > items.length);
 
       for (let columnIndex = 0; columnIndex < columns; columnIndex += 1) {
         const run = items[index + columnIndex];
@@ -2200,7 +2220,11 @@ class MetricsDisplay {
         titleLine.textColor = new Color(BRAND.text);
         titleLine.lineLimit = 1;
 
-        header.addSpacer();
+        if (isIncompleteRow) {
+          header.addSpacer(4);
+        } else {
+          header.addSpacer();
+        }
 
         const statusIcon = this.buildStatusIcon(statusMeta, 11);
         if (statusIcon) {
@@ -2930,8 +2954,8 @@ class MetricsDisplay {
         }
         cards.push(buildSection('Parser Health (Latest)', parserTableHtml));
 
-        const durationParserNames = this.getParserNamesByRecentRuns(recentRecords, MAX_PARSER_DURATION_SERIES);
-        const allDurationParserNames = this.getParserNamesByRecentRuns(recentRecords, 0);
+        const durationParserNames = this.getParserNamesByMaxDuration(recentRecords, MAX_PARSER_DURATION_SERIES);
+        const allDurationParserNames = this.getParserNamesByMaxDuration(recentRecords, 0);
         if (durationParserNames.length > 0) {
           const buildDurationSeries = names => names.map((name, index) => ({
             label: name,
@@ -2945,7 +2969,7 @@ class MetricsDisplay {
           const parserDurationData = parserDurationChart ? this.imageToDataUri(parserDurationChart) : null;
           const parserLegend = buildChartLegend(parserDurationSeries);
           const parserSubtitle = durationParserNames.length > 1
-            ? `Top ${durationParserNames.length} parsers by recent runs`
+            ? `Top ${durationParserNames.length} parsers by max duration`
             : `Parser duration over last ${historyCount} runs`;
 
           if (allDurationParserNames.length > durationParserNames.length) {
@@ -2955,7 +2979,7 @@ class MetricsDisplay {
             });
             const allDurationData = allDurationChart ? this.imageToDataUri(allDurationChart) : null;
             const allLegend = buildChartLegend(allDurationSeries);
-            const allSubtitle = `All ${allDurationParserNames.length} parsers by recent runs`;
+            const allSubtitle = `All ${allDurationParserNames.length} parsers by max duration`;
             if (parserDurationData && allDurationData) {
               const topLegendBlock = parserLegend ? `<div data-parser-duration-legend="top">${parserLegend}</div>` : '';
               const allLegendBlock = allLegend ? `<div class="is-hidden" data-parser-duration-legend="all">${allLegend}</div>` : '';
@@ -4368,7 +4392,7 @@ class MetricsDisplay {
         this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Showing top parsers by recent health.');
       }
 
-      const durationParserNames = this.getParserNamesByRecentRuns(recentRecords, MAX_PARSER_DURATION_SERIES);
+      const durationParserNames = this.getParserNamesByMaxDuration(recentRecords, MAX_PARSER_DURATION_SERIES);
       if (durationParserNames.length > 0) {
         const parserDurationSeries = durationParserNames.map((name, index) => ({
           label: name,
@@ -4381,7 +4405,7 @@ class MetricsDisplay {
         if (parserDurationChart) {
           const legend = `Parsers: ${durationParserNames.join(', ')}`;
           const subtitle = durationParserNames.length > 1
-            ? `Top ${durationParserNames.length} parsers by recent runs`
+            ? `Top ${durationParserNames.length} parsers by max duration`
             : `Parser duration over last ${historyCount} runs`;
           this.addChartSection(table, `Parser Durations (Minutes, Last ${historyCount} Runs)`, parserDurationChart, {
             subtitle,
