@@ -87,6 +87,19 @@ const PARSER_ICON_RULES = [
   { match: ['linktree', 'linktr.ee'], symbol: 'link' }
 ];
 
+const PARSER_FAVICON_RULES = [
+  { match: ['megawoof'], url: 'https://ugc.production.linktr.ee/YY9vP9AGQ9OTFY9iXiDi_hcmot5ynjOsfwPWJ?io=true&size=avatar-v3_0' },
+  { match: ['cubhouse'], url: 'https://ugc.production.linktr.ee/48e9facd-5c7d-41e3-a7d0-04752baa27f1_IMG-5519.jpeg?io=true&size=avatar-v3_0' },
+  { match: ['bearracuda'], url: 'https://www.google.com/s2/favicons?domain=bearracuda.com&sz=64' },
+  { match: ['chunk', 'chunk-party'], url: 'https://www.google.com/s2/favicons?domain=www.chunk-party.com&sz=64' },
+  { match: ['furball'], url: 'https://www.google.com/s2/favicons?domain=www.furball.nyc&sz=64' },
+  { match: ['goldiloxx', 'redeyetickets'], url: 'https://www.google.com/s2/favicons?domain=redeyetickets.com&sz=64' },
+  { match: ['eventbrite', 'bear happy hour', 'twisted bear', 'dallas eagle'], url: 'https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64' },
+  { match: ['linktree', 'linktr.ee'], url: 'https://www.google.com/s2/favicons?domain=linktr.ee&sz=64' }
+];
+
+const FAVICON_CACHE_TTL_DAYS = 14;
+
 const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const DISPLAY_METRICS_SCRIPT = 'display-run-metrics';
 const DISPLAY_SAVED_RUN_SCRIPT = 'display-saved-run';
@@ -254,6 +267,7 @@ class MetricsDisplay {
     this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
     this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
     this.runtime = this.getRuntimeContext();
+    this.iconCache = new Map();
   }
 
   getRuntimeContext() {
@@ -290,6 +304,76 @@ class MetricsDisplay {
     this.ensureDir(this.baseDir);
     this.ensureDir(this.metricsDir);
     this.ensureDir(this.cacheDir);
+  }
+
+  hashString(value) {
+    const input = String(value || '');
+    let hash = 0;
+    for (let i = 0; i < input.length; i += 1) {
+      hash = (hash << 5) - hash + input.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  getFaviconCachePath(url) {
+    const hash = this.hashString(url);
+    return this.fm.joinPath(this.cacheDir, `favicon-${hash}.png`);
+  }
+
+  async loadFaviconImage(url) {
+    if (!url) return null;
+    const cachePath = this.getFaviconCachePath(url);
+    try {
+      if (this.fm.fileExists(cachePath)) {
+        const mtime = this.fm.modificationDate(cachePath);
+        if (mtime && (Date.now() - mtime.getTime()) < (FAVICON_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000)) {
+          return Image.fromFile(cachePath);
+        }
+      }
+    } catch (error) {
+      console.log(`Metrics: Favicon cache read failed: ${error.message}`);
+    }
+
+    try {
+      const request = new Request(url);
+      const image = await request.loadImage();
+      this.fm.writeImage(cachePath, image);
+      return image;
+    } catch (error) {
+      console.log(`Metrics: Favicon download failed: ${error.message}`);
+      return null;
+    }
+  }
+
+  getParserFaviconUrl(item) {
+    const parserType = String(item?.parserType || '').toLowerCase();
+    const parserName = String(item?.name || '').toLowerCase();
+    const haystack = `${parserType} ${parserName}`.trim();
+    if (!haystack) return null;
+    for (const rule of PARSER_FAVICON_RULES) {
+      if (rule.match.some(match => haystack.includes(match))) {
+        return rule.url;
+      }
+    }
+    return null;
+  }
+
+  async getParserIconImage(item, size = 12, color = null) {
+    const faviconUrl = this.getParserFaviconUrl(item);
+    if (faviconUrl) {
+      const cacheKey = `favicon:${faviconUrl}`;
+      let image = null;
+      if (this.iconCache.has(cacheKey)) {
+        image = this.iconCache.get(cacheKey);
+      } else {
+        image = await this.loadFaviconImage(faviconUrl);
+        this.iconCache.set(cacheKey, image);
+      }
+      if (image) return image;
+    }
+    const symbol = this.getParserIconSymbol(item);
+    return symbol ? this.buildSymbolImage(symbol, size, color) : null;
   }
 
   async loadLogoImage() {
@@ -1964,7 +2048,7 @@ class MetricsDisplay {
     }
   }
 
-  renderWidgetParserHealth(widget, context) {
+  async renderWidgetParserHealth(widget, context) {
     const parserHealth = context.parserHealth;
     const sortState = context.sortState;
     const family = this.runtime.widgetFamily || 'medium';
@@ -2005,8 +2089,7 @@ class MetricsDisplay {
         header.centerAlignContent();
         header.spacing = 4;
 
-        const iconSymbol = this.getParserIconSymbol(item);
-        const iconImage = this.buildSymbolImage(iconSymbol, 11, new Color(BRAND.textSoft));
+        const iconImage = await this.getParserIconImage(item, 11, new Color(BRAND.textSoft));
         if (iconImage) {
           const icon = header.addImage(iconImage);
           icon.imageSize = new Size(11, 11);
@@ -2359,13 +2442,13 @@ class MetricsDisplay {
     };
 
     if (normalizedView.mode === 'parsers') {
-      this.renderWidgetParserHealth(widget, context);
+      await this.renderWidgetParserHealth(widget, context);
     } else if (normalizedView.mode === 'runs') {
       this.renderWidgetRuns(widget, context);
     } else if (normalizedView.mode === 'parser') {
       this.renderWidgetParserDetail(widget, context, normalizedView);
     } else {
-      this.renderWidgetParserHealth(widget, context);
+      await this.renderWidgetParserHealth(widget, context);
     }
 
     if (widgetUrl) widget.url = widgetUrl;
@@ -4385,9 +4468,9 @@ class MetricsDisplay {
       this.addParserTableHeader(table);
 
       const sortedItems = this.sortParserItems(parserHealth.items, parserSort).slice(0, 8);
-      sortedItems.forEach(item => {
-        this.addParserHealthRow(table, item);
-      });
+      for (const item of sortedItems) {
+        await this.addParserHealthRow(table, item);
+      }
       if (parserHealth.items.length > sortedItems.length) {
         this.addInfoRow(table, `+${parserHealth.items.length - sortedItems.length} more parsers`, 'Showing top parsers by recent health.');
       }
@@ -5041,12 +5124,11 @@ class MetricsDisplay {
     table.addRow(row);
   }
 
-  addParserHealthRow(table, item) {
+  async addParserHealthRow(table, item) {
     const row = new UITableRow();
     row.backgroundColor = new Color(BRAND.primary);
 
-    const iconSymbol = this.getParserIconSymbol(item);
-    const iconImage = this.buildSymbolImage(iconSymbol, 14, new Color(BRAND.text));
+    const iconImage = await this.getParserIconImage(item, 14, new Color(BRAND.text));
     let iconCell = null;
     if (iconImage) {
       iconCell = row.addImage(iconImage);
@@ -5108,8 +5190,8 @@ class MetricsDisplay {
     table.addRow(row);
   }
 
-  addParserRow(table, item) {
-    this.addParserHealthRow(table, item);
+  async addParserRow(table, item) {
+    await this.addParserHealthRow(table, item);
   }
 
   addSectionHeader(table, title) {
