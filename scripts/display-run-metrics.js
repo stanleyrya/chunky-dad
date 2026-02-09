@@ -87,13 +87,6 @@ const PARSER_ICON_RULES = [
   { match: ['linktree', 'linktr.ee'], symbol: 'link' }
 ];
 
-const PARSER_FAVICON_RULES = [
-  { match: ['eventbrite'], url: 'https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64' },
-  { match: ['bearracuda'], url: 'https://www.google.com/s2/favicons?domain=bearracuda.com&sz=64' },
-  { match: ['ticketleap'], url: 'https://www.google.com/s2/favicons?domain=ticketleap.com&sz=64' },
-  { match: ['linktree', 'linktr.ee'], url: 'https://www.google.com/s2/favicons?domain=linktr.ee&sz=64' }
-];
-
 const FAVICON_CACHE_TTL_DAYS = 14;
 
 const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
@@ -350,30 +343,21 @@ class MetricsDisplay {
     if (!haystack) return null;
     const overrides = this.parserIconOverrides || {};
     const overrideUrl = overrides[parserName] || null;
-    if (overrideUrl) return overrideUrl;
-    for (const rule of PARSER_FAVICON_RULES) {
-      if (rule.match.some(match => haystack.includes(match))) {
-        return rule.url;
-      }
-    }
-    return null;
+    return overrideUrl || null;
   }
 
   async getParserIconImage(item, size = 12, color = null) {
     const faviconUrl = this.getParserFaviconUrl(item);
-    if (faviconUrl) {
-      const cacheKey = `favicon:${faviconUrl}`;
-      let image = null;
-      if (this.iconCache.has(cacheKey)) {
-        image = this.iconCache.get(cacheKey);
-      } else {
-        image = await this.loadFaviconImage(faviconUrl);
-        this.iconCache.set(cacheKey, image);
-      }
-      if (image) return image;
+    if (!faviconUrl) return null;
+    const cacheKey = `favicon:${faviconUrl}`;
+    let image = null;
+    if (this.iconCache.has(cacheKey)) {
+      image = this.iconCache.get(cacheKey);
+    } else {
+      image = await this.loadFaviconImage(faviconUrl);
+      this.iconCache.set(cacheKey, image);
     }
-    const symbol = this.getParserIconSymbol(item);
-    return symbol ? this.buildSymbolImage(symbol, size, color) : null;
+    return image || null;
   }
 
   async loadLogoImage() {
