@@ -538,6 +538,35 @@
       color: var(--text-secondary);
     }
 
+    .series-override-warning {
+      display: grid;
+      gap: 0.35rem;
+      margin-top: 0.55rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 193, 7, 0.32);
+      background: rgba(255, 193, 7, 0.08);
+      color: var(--text-secondary);
+      font-size: 0.74rem;
+    }
+
+    .series-override-warning p {
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .series-override-warning-list {
+      margin: 0;
+      padding-left: 1rem;
+      display: grid;
+      gap: 0.2rem;
+      color: var(--text-primary);
+    }
+
+    .series-override-warning-list li {
+      line-height: 1.35;
+    }
+
     .existing-selection-summary strong {
       color: var(--text-primary);
     }
@@ -1217,6 +1246,10 @@
         padding: 1rem 1rem 0.4rem;
       }
 
+      .series-override-warning {
+        width: 100%;
+      }
+
       #event-form {
         padding: 0 0 1rem;
       }
@@ -1335,6 +1368,10 @@
                   <span>Clear</span>
                 </button>
               </div>
+            </div>
+            <div class="series-override-warning is-hidden" id="series-override-warning">
+              <p id="series-override-warning-text"></p>
+              <ul class="series-override-warning-list" id="series-override-warning-list"></ul>
             </div>
           </div>
         </div>
@@ -1780,13 +1817,13 @@
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'events@chunky.dad';
-      const EVENTS_ISSUES_EMAIL = 'events+issues@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
 
       const dom = {};
       let state;
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
+      let lastRecurrenceConstraintWarning = '';
       let calendarReady = false;
       let iframeLoaded = false;
       let sendTimeoutId = null;
@@ -1847,6 +1884,7 @@
         bindEvents();
         populateVenueOptions(state.city);
         updateRecurrenceUi();
+        updateSeriesOverrideWarningUi();
         updateTimeNotes();
         updatePreviewCard();
         updateActionButtonsState();
@@ -1945,6 +1983,9 @@
         dom.existingClearButton = document.getElementById('existing-clear');
         dom.existingSelectionSummary = document.getElementById('existing-selection-summary');
         dom.existingSelectionText = document.getElementById('existing-selection-text');
+        dom.seriesOverrideWarning = document.getElementById('series-override-warning');
+        dom.seriesOverrideWarningText = document.getElementById('series-override-warning-text');
+        dom.seriesOverrideWarningList = document.getElementById('series-override-warning-list');
         dom.existingChangeButton = document.getElementById('existing-change');
         dom.existingCopySummaryButton = document.getElementById('existing-copy-summary');
         dom.existingClearSummaryButton = document.getElementById('existing-clear-summary');
@@ -2334,10 +2375,7 @@
           }
           if ((pendingExistingSelectionId || pendingExistingOccurrenceId) && state && state.isEditingExisting) {
             const requestedMode = state.editingExistingMode === 'series' ? 'series' : 'occurrence';
-            const seriesBlocked = requestedMode === 'series'
-              && selectedExistingResult.canEditSeries
-              && Boolean(getSeriesEditBlockedReason(selectedExistingResult.baseEvent || selectedExistingResult.event));
-            if (requestedMode === 'series' && (!selectedExistingResult.canEditSeries || seriesBlocked)) {
+            if (requestedMode === 'series' && !selectedExistingResult.canEditSeries) {
               selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
             } else {
               selectedExistingMode = requestedMode;
@@ -2348,10 +2386,7 @@
             }
           } else if (pendingExistingSelectionId || pendingExistingOccurrenceId) {
             const requestedMode = selectedExistingMode === 'series' ? 'series' : 'occurrence';
-            const seriesBlocked = requestedMode === 'series'
-              && selectedExistingResult.canEditSeries
-              && Boolean(getSeriesEditBlockedReason(selectedExistingResult.baseEvent || selectedExistingResult.event));
-            if (requestedMode === 'series' && (!selectedExistingResult.canEditSeries || seriesBlocked)) {
+            if (requestedMode === 'series' && !selectedExistingResult.canEditSeries) {
               selectedExistingMode = getDefaultExistingMode(selectedExistingResult);
             } else {
               selectedExistingMode = requestedMode;
@@ -2955,20 +2990,61 @@
         return null;
       }
 
-      function getCachedEditingBaseEvent() {
-        const uid = getEditingUidFromState();
-        if (!uid || !state || !state.city) return null;
-        const index = getCachedCalendarIndexForCity(state.city);
-        return findBaseEventByUid(index, uid);
+      function getOverrideReferenceDate(override) {
+        if (!override) return null;
+        if (isValidDateObject(override.recurrenceId)) {
+          return new Date(override.recurrenceId.getTime());
+        }
+        if (isValidDateObject(override.startDate)) {
+          return new Date(override.startDate.getTime());
+        }
+        return null;
       }
 
-      function getSeriesEditBlockedReason(baseEvent, index = existingCalendarIndex) {
+      function getSeriesOverrideContextForBaseEvent(baseEvent, index = existingCalendarIndex) {
         if (!baseEvent || !baseEvent.uid || !index || !Array.isArray(index.overrides)) {
-          return '';
+          return {
+            baseEvent: baseEvent || null,
+            index,
+            overrides: [],
+            latestOverrideDate: null
+          };
         }
-        const hasOverride = index.overrides.some(override => override && override.uid === baseEvent.uid);
-        if (!hasOverride) return '';
-        return `This series already has event overrides. To edit the base series, contact ${EVENTS_ISSUES_EMAIL}.`;
+        const overrides = index.overrides
+          .filter(override => override && override.uid === baseEvent.uid);
+        const sortedOverrides = [...overrides].sort((a, b) => {
+          const dateA = getOverrideReferenceDate(a);
+          const dateB = getOverrideReferenceDate(b);
+          const timeA = dateA ? dateA.getTime() : 0;
+          const timeB = dateB ? dateB.getTime() : 0;
+          return timeA - timeB;
+        });
+        const latestOverride = sortedOverrides.length ? sortedOverrides[sortedOverrides.length - 1] : null;
+        return {
+          baseEvent,
+          index,
+          overrides: sortedOverrides,
+          latestOverrideDate: getOverrideReferenceDate(latestOverride)
+        };
+      }
+
+      function getEditingSeriesOverrideContext() {
+        if (!isEditingSeriesMode() || !state) return null;
+        const uid = getEditingUidFromState();
+        if (!uid) return null;
+        const index = getCachedCalendarIndexForCity(state.city);
+        if (!index) return null;
+        const baseEvent = findBaseEventByUid(index, uid);
+        if (!baseEvent) return null;
+        return getSeriesOverrideContextForBaseEvent(baseEvent, index);
+      }
+
+      function getSeriesRecurrenceLimitContext() {
+        const context = getEditingSeriesOverrideContext();
+        if (!context || !context.overrides.length || !context.latestOverrideDate) {
+          return null;
+        }
+        return context;
       }
 
       function isEditingSeriesMode() {
@@ -2989,31 +3065,9 @@
         return isEditingOccurrenceOverrideMode();
       }
 
-      function getEditingSeriesOverrideBlockReason() {
-        if (!isEditingSeriesMode() || !state) return '';
-        const uid = getEditingUidFromState();
-        if (!uid) return '';
-        const index = getCachedCalendarIndexForCity(state.city);
-        if (!index) return '';
-        const baseEvent = findBaseEventByUid(index, uid);
-        if (baseEvent) {
-          return getSeriesEditBlockedReason(baseEvent, index);
-        }
-        const hasOverride = Array.isArray(index.overrides)
-          && index.overrides.some(override => override && override.uid === uid);
-        if (!hasOverride) return '';
-        return `This series already has event overrides. To edit the base series, contact ${EVENTS_ISSUES_EMAIL}.`;
-      }
-
       function getAddToCalendarDisabledReason() {
         if (isEditingOccurrenceOverrideMode()) {
           return 'Add to Calendar is disabled while editing one occurrence in a series.';
-        }
-        if (isEditingSeriesMode()) {
-          const blockedReason = getEditingSeriesOverrideBlockReason();
-          if (blockedReason) {
-            return `Add to Calendar is disabled for this base series because it has overrides. Contact ${EVENTS_ISSUES_EMAIL}.`;
-          }
         }
         return '';
       }
@@ -3412,8 +3466,6 @@
 
       function getDefaultExistingMode(result) {
         if (!result || !result.canEditSeries) return 'occurrence';
-        const baseEvent = result.baseEvent || result.event;
-        if (getSeriesEditBlockedReason(baseEvent)) return 'occurrence';
         if (result.type === 'series') return 'series';
         if (result.occurrenceDate) return 'occurrence';
         return 'series';
@@ -3424,11 +3476,11 @@
         selectedExistingMode = nextMode;
         updateExistingModeUi(selectedExistingResult);
         storeExistingPanelState();
-        if (nextMode === 'series' && selectedExistingResult) {
+        if (nextMode === 'series' && selectedExistingResult && existingCalendarIndex) {
           const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
-          const blockedReason = getSeriesEditBlockedReason(baseEvent);
-          if (blockedReason) {
-            showToast(blockedReason, 'warn');
+          const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
+          if (overrideContext.overrides.length) {
+            showToast('Editing base series: existing overrides keep their own title/date/details.', 'warn');
           }
         }
       }
@@ -3445,33 +3497,30 @@
           updateExistingActionButtons();
           return;
         }
-        const baseEvent = result.baseEvent || result.event;
-        const seriesBlockedReason = getSeriesEditBlockedReason(baseEvent);
-        if (seriesBlockedReason && selectedExistingMode === 'series') {
-          selectedExistingMode = 'occurrence';
-        }
         dom.existingModeButtons.forEach(button => {
-          const isSeriesButton = button.dataset.editMode === 'series';
-          button.disabled = Boolean(isSeriesButton && seriesBlockedReason);
-          if (button.disabled) {
-            button.setAttribute('title', seriesBlockedReason);
-          } else {
-            button.removeAttribute('title');
-          }
+          button.disabled = false;
+          button.removeAttribute('title');
           button.classList.toggle('is-active', button.dataset.editMode === selectedExistingMode);
         });
         if (dom.existingModeHint) {
           let hint = '';
-          let isError = false;
-          if (seriesBlockedReason) {
-            hint = `${seriesBlockedReason} Edit an occurrence instead, or use Copy to New.`;
-            isError = true;
-          } else if (selectedExistingMode === 'series') {
-            hint = 'Series keeps the RRULE and original start/end.';
+          const baseEvent = result.baseEvent || result.event;
+          const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
+          if (selectedExistingMode === 'series') {
+            if (overrideContext.overrides.length) {
+              const latestLabel = overrideContext.latestOverrideDate
+                ? formatDateLabel(overrideContext.latestOverrideDate, baseEvent.timeZone)
+                : '';
+              hint = latestLabel
+                ? `Series keeps RRULE/start/end. ${overrideContext.overrides.length} override(s) stay independent. RRULE edits can only end on/after ${latestLabel}.`
+                : `Series keeps RRULE/start/end. ${overrideContext.overrides.length} override(s) stay independent.`;
+            } else {
+              hint = 'Series keeps the RRULE and original start/end.';
+            }
           } else {
             hint = 'Occurrence edits one instance (creates an override) and clears the RRULE.';
           }
-          setFieldHint(dom.existingModeHint, hint, isError);
+          setFieldHint(dom.existingModeHint, hint, false);
         }
         refreshExistingOccurrenceOptions();
         updateExistingActionButtons();
@@ -3636,13 +3685,6 @@
           endDate = selectedExistingOccurrence.endDate || selectedExistingOccurrence.event.endDate;
         } else {
           recurrence = eventData.recurrence || '';
-        }
-
-        if (action === 'edit' && mode === 'series') {
-          const blockedReason = getSeriesEditBlockedReason(baseEvent);
-          if (blockedReason) {
-            return { error: blockedReason };
-          }
         }
 
         if (!startDate || !endDate || !(startDate instanceof Date) || !(endDate instanceof Date)
@@ -4091,6 +4133,63 @@
         return eventData.recurrence;
       }
 
+      function formatSeriesOverrideListItem(override, baseEvent) {
+        if (!override) return '';
+        const name = normalizeText(override.name || (baseEvent && baseEvent.name) || 'Untitled override');
+        const zone = override.timeZone || (baseEvent && baseEvent.timeZone) || browserTimezone;
+        const startDate = isValidDateObject(override.startDate) ? override.startDate : getOverrideReferenceDate(override);
+        const endDate = isValidDateObject(override.endDate) ? override.endDate : null;
+        const dateLabel = startDate ? formatDateLabel(startDate, zone) : 'Date TBD';
+        const timeLabel = (startDate && endDate) ? formatTimeRange(startDate, endDate, zone) : '';
+        const venueLabel = normalizeText(override.bar || '');
+        const details = [dateLabel, timeLabel, venueLabel].filter(Boolean).join(' · ');
+        return details ? `${name} — ${details}` : name;
+      }
+
+      function updateSeriesOverrideWarningUi() {
+        if (!dom.seriesOverrideWarning || !dom.seriesOverrideWarningText || !dom.seriesOverrideWarningList) return;
+        const context = getEditingSeriesOverrideContext();
+        const shouldShow = Boolean(context && context.overrides.length);
+        dom.seriesOverrideWarning.classList.toggle('is-hidden', !shouldShow);
+        if (!shouldShow) {
+          dom.seriesOverrideWarningText.textContent = '';
+          dom.seriesOverrideWarningList.innerHTML = '';
+          return;
+        }
+        const { baseEvent, overrides, latestOverrideDate } = context;
+        const count = overrides.length;
+        const latestLabel = latestOverrideDate
+          ? formatDateLabel(latestOverrideDate, baseEvent ? baseEvent.timeZone : browserTimezone)
+          : '';
+        const recurrenceSuffix = latestLabel
+          ? ` RRULE edits can only set an end date on/after ${latestLabel}.`
+          : '';
+        dom.seriesOverrideWarningText.textContent = `This series has ${count} override${count === 1 ? '' : 's'}. Base edits (title/date/etc.) won't apply to these override events.${recurrenceSuffix}`;
+        const displayOverrides = [...overrides]
+          .sort((a, b) => {
+            const dateA = getOverrideReferenceDate(a);
+            const dateB = getOverrideReferenceDate(b);
+            const timeA = dateA ? dateA.getTime() : 0;
+            const timeB = dateB ? dateB.getTime() : 0;
+            return timeB - timeA;
+          })
+          .slice(0, 6);
+        dom.seriesOverrideWarningList.innerHTML = '';
+        displayOverrides.forEach(override => {
+          const itemText = formatSeriesOverrideListItem(override, baseEvent);
+          if (!itemText) return;
+          const item = document.createElement('li');
+          item.textContent = itemText;
+          dom.seriesOverrideWarningList.appendChild(item);
+        });
+        const remaining = overrides.length - displayOverrides.length;
+        if (remaining > 0) {
+          const moreItem = document.createElement('li');
+          moreItem.textContent = `+${remaining} more override${remaining === 1 ? '' : 's'}.`;
+          dom.seriesOverrideWarningList.appendChild(moreItem);
+        }
+      }
+
       function updateExistingSelectionSummary(text) {
         if (!dom.existingSelectionSummary || !dom.existingSelectionText) return;
         if (!text) {
@@ -4188,6 +4287,7 @@
         state.editingExistingSearchEndDate = '';
         updateRecurrenceUi();
         updateRecurrenceSummary();
+        updateSeriesOverrideWarningUi();
         updateActionButtonsState();
       }
 
@@ -5248,6 +5348,9 @@
           dom.recurrenceInput.value = state.recurrence || '';
         }
         setRecurrenceMode(recurrenceMode, { silent: true, force: true });
+        if (getSeriesRecurrenceLimitContext() && recurrenceMode !== 'builder') {
+          setRecurrenceMode('builder', { silent: true, force: true });
+        }
         updateRecurrenceUi();
         updateRecurrenceSummary();
       }
@@ -5255,6 +5358,15 @@
       function setRecurrenceMode(mode, options = {}) {
         const nextMode = mode === 'raw' ? 'raw' : 'builder';
         if (isRecurrenceEditingLocked() && !options.force) {
+          return;
+        }
+        const recurrenceLimitContext = getSeriesRecurrenceLimitContext();
+        if (recurrenceLimitContext && nextMode === 'raw' && !options.force) {
+          const latestLabel = formatDateLabel(
+            recurrenceLimitContext.latestOverrideDate,
+            recurrenceLimitContext.baseEvent.timeZone || browserTimezone
+          );
+          showToast(`Raw RRULE is locked. Set an end date on/after ${latestLabel}.`, 'warn');
           return;
         }
         if (recurrenceMode === nextMode && !options.force) {
@@ -5295,6 +5407,13 @@
         const showMonthly = frequency === 'monthly';
         const showEnds = frequency !== 'none';
         const recurrenceLocked = isRecurrenceEditingLocked();
+        const recurrenceLimitContext = getSeriesRecurrenceLimitContext();
+        const recurrenceLimitOnly = Boolean(recurrenceLimitContext);
+        const recurrencePatternLocked = recurrenceLocked || recurrenceLimitOnly;
+        if (recurrenceLimitOnly && recurrenceMode !== 'builder') {
+          recurrenceMode = 'builder';
+          state.recurrenceMode = recurrenceMode;
+        }
         if (dom.recurrenceWeeklyRow) {
           dom.recurrenceWeeklyRow.classList.toggle('is-hidden', !showWeekly);
         }
@@ -5302,31 +5421,33 @@
           dom.recurrenceMonthlyRow.classList.toggle('is-hidden', !showMonthly);
         }
         if (dom.recurrenceToggle) {
-          dom.recurrenceToggle.classList.toggle('is-locked', recurrenceLocked);
+          dom.recurrenceToggle.classList.toggle('is-locked', recurrencePatternLocked);
         }
         if (dom.recurrenceBuilder) {
           dom.recurrenceBuilder.classList.toggle('is-hidden', recurrenceMode !== 'builder');
-          dom.recurrenceBuilder.classList.toggle('is-locked', recurrenceLocked);
+          dom.recurrenceBuilder.classList.toggle('is-locked', recurrencePatternLocked);
         }
         if (dom.recurrenceRaw) {
           dom.recurrenceRaw.classList.toggle('is-hidden', recurrenceMode !== 'raw');
-          dom.recurrenceRaw.classList.toggle('is-locked', recurrenceLocked);
+          dom.recurrenceRaw.classList.toggle('is-locked', recurrencePatternLocked);
         }
         if (dom.recurrenceSummary) {
-          dom.recurrenceSummary.classList.toggle('is-locked', recurrenceLocked);
+          dom.recurrenceSummary.classList.toggle('is-locked', recurrencePatternLocked);
         }
         if (dom.recurrenceModeButtons && dom.recurrenceModeButtons.length) {
           dom.recurrenceModeButtons.forEach(button => {
-            button.disabled = recurrenceLocked;
+            button.disabled = recurrencePatternLocked;
             if (recurrenceLocked) {
               button.setAttribute('title', 'Recurrence is locked while editing one occurrence.');
+            } else if (recurrenceLimitOnly) {
+              button.setAttribute('title', 'Series has overrides. Only the recurrence end date can be edited.');
             } else {
               button.removeAttribute('title');
             }
           });
         }
         if (dom.recurrenceFrequency) {
-          dom.recurrenceFrequency.disabled = recurrenceLocked;
+          dom.recurrenceFrequency.disabled = recurrencePatternLocked;
         }
         if (dom.recurrenceIntervalLabel) {
           const label = frequency === 'daily'
@@ -5337,7 +5458,7 @@
           dom.recurrenceIntervalLabel.textContent = label;
         }
         if (dom.recurrenceInterval) {
-          dom.recurrenceInterval.disabled = recurrenceLocked || frequency === 'none';
+          dom.recurrenceInterval.disabled = recurrencePatternLocked || frequency === 'none';
         }
         if (dom.recurrenceIntervalGroup) {
           dom.recurrenceIntervalGroup.classList.toggle('is-hidden', frequency === 'none');
@@ -5348,6 +5469,15 @@
         const endsValue = dom.recurrenceEnds ? (dom.recurrenceEnds.value || 'never') : 'never';
         if (dom.recurrenceEnds) {
           dom.recurrenceEnds.disabled = recurrenceLocked || !showEnds;
+          const countOption = dom.recurrenceEnds.querySelector('option[value="count"]');
+          if (countOption) {
+            countOption.disabled = recurrenceLimitOnly;
+            if (recurrenceLimitOnly) {
+              countOption.setAttribute('title', 'Use an end date while series overrides exist.');
+            } else {
+              countOption.removeAttribute('title');
+            }
+          }
           if (dom.recurrenceCountGroup) {
             dom.recurrenceCountGroup.classList.toggle('is-hidden', endsValue !== 'count');
           }
@@ -5356,28 +5486,28 @@
           }
         }
         if (dom.recurrenceCount) {
-          dom.recurrenceCount.disabled = recurrenceLocked || endsValue !== 'count';
+          dom.recurrenceCount.disabled = recurrenceLocked || recurrenceLimitOnly || endsValue !== 'count';
         }
         if (dom.recurrenceUntil) {
           dom.recurrenceUntil.disabled = recurrenceLocked || endsValue !== 'until';
         }
         if (dom.recurrenceWeekdayButtons && dom.recurrenceWeekdayButtons.length) {
           dom.recurrenceWeekdayButtons.forEach(button => {
-            button.disabled = recurrenceLocked;
+            button.disabled = recurrencePatternLocked;
           });
         }
         const monthlyMode = getSelectedMonthlyMode();
         if (dom.recurrenceMonthday) {
-          dom.recurrenceMonthday.disabled = recurrenceLocked || monthlyMode !== 'monthday';
+          dom.recurrenceMonthday.disabled = recurrencePatternLocked || monthlyMode !== 'monthday';
         }
         if (dom.recurrenceWeekPos) {
-          dom.recurrenceWeekPos.disabled = recurrenceLocked || monthlyMode !== 'weekday';
+          dom.recurrenceWeekPos.disabled = recurrencePatternLocked || monthlyMode !== 'weekday';
         }
         if (dom.recurrenceWeekday) {
-          dom.recurrenceWeekday.disabled = recurrenceLocked || monthlyMode !== 'weekday';
+          dom.recurrenceWeekday.disabled = recurrencePatternLocked || monthlyMode !== 'weekday';
         }
         if (dom.recurrenceInput) {
-          dom.recurrenceInput.disabled = recurrenceLocked;
+          dom.recurrenceInput.disabled = recurrencePatternLocked;
         }
         updateRecurrenceEditLockUi(recurrenceLocked);
       }
@@ -5386,27 +5516,41 @@
         if (!dom.recurrenceEditLock) return;
         dom.recurrenceEditLock.classList.toggle('is-hidden', !isLocked);
         if (!isLocked) return;
-        const baseEvent = getCachedEditingBaseEvent();
-        const blockedReason = getSeriesEditBlockedReason(baseEvent);
         if (dom.recurrenceEditLockText) {
-          dom.recurrenceEditLockText.textContent = blockedReason
-            ? `This series already has event overrides. Contact ${EVENTS_ISSUES_EMAIL}.`
-            : 'Edit the base series instead?';
+          dom.recurrenceEditLockText.textContent = 'Edit the base series instead?';
         }
         if (dom.recurrenceEditSeriesButton) {
-          dom.recurrenceEditSeriesButton.disabled = Boolean(blockedReason);
-          if (blockedReason) {
-            dom.recurrenceEditSeriesButton.setAttribute('title', blockedReason);
-          } else {
-            dom.recurrenceEditSeriesButton.removeAttribute('title');
-          }
+          dom.recurrenceEditSeriesButton.disabled = false;
+          dom.recurrenceEditSeriesButton.removeAttribute('title');
         }
       }
 
       function handleRecurrenceBuilderChange() {
         if (isRecurrenceEditingLocked() || recurrenceMode !== 'builder' || isRecurrenceSyncing) return;
         isRecurrenceSyncing = true;
-        const nextRule = buildRruleFromBuilder();
+        const previousRule = state.recurrence || '';
+        const builtRule = buildRruleFromBuilder();
+        let nextRule = builtRule;
+        const enforced = enforceSeriesRecurrenceLimitRule(builtRule, previousRule);
+        if (enforced.warning) {
+          if (enforced.warning !== lastRecurrenceConstraintWarning) {
+            showToast(enforced.warning, 'warn');
+          }
+          lastRecurrenceConstraintWarning = enforced.warning;
+        } else {
+          lastRecurrenceConstraintWarning = '';
+        }
+        if (enforced.rule !== undefined && enforced.rule !== null) {
+          nextRule = enforced.rule;
+        }
+        if (nextRule !== builtRule) {
+          const startDate = parseLocalDateTime(state.start, state.timezone);
+          const fallback = getDefaultRecurrenceBuilder(startDate);
+          const parsed = nextRule ? parseRruleToBuilder(nextRule, fallback) : fallback;
+          if (parsed) {
+            applyRecurrenceBuilderState(parsed);
+          }
+        }
         state.recurrence = nextRule;
         if (dom.recurrenceInput) {
           dom.recurrenceInput.value = nextRule;
@@ -5470,6 +5614,163 @@
         if (dom.recurrenceEnds) dom.recurrenceEnds.value = builder.ends || 'never';
         if (dom.recurrenceCount) dom.recurrenceCount.value = builder.count || '';
         if (dom.recurrenceUntil) dom.recurrenceUntil.value = builder.until || '';
+      }
+
+      function normalizeByDayTokens(value) {
+        if (!Array.isArray(value)) return [];
+        const normalized = value
+          .map(item => String(item || '').trim().toUpperCase())
+          .filter(Boolean);
+        return [...new Set(normalized)].sort();
+      }
+
+      function areTokenListsEqual(listA, listB) {
+        if (listA.length !== listB.length) return false;
+        return listA.every((token, index) => token === listB[index]);
+      }
+
+      function doesRecurrencePatternMatch(baseBuilder, candidateBuilder) {
+        if (!baseBuilder || !candidateBuilder) return false;
+        if ((baseBuilder.frequency || 'none') !== (candidateBuilder.frequency || 'none')) return false;
+        const baseInterval = Math.max(1, parseInt(baseBuilder.interval || '1', 10) || 1);
+        const candidateInterval = Math.max(1, parseInt(candidateBuilder.interval || '1', 10) || 1);
+        if (baseInterval !== candidateInterval) return false;
+        if (baseBuilder.frequency === 'weekly') {
+          const baseByDay = normalizeByDayTokens(baseBuilder.byDay);
+          const candidateByDay = normalizeByDayTokens(candidateBuilder.byDay);
+          return areTokenListsEqual(baseByDay, candidateByDay);
+        }
+        if (baseBuilder.frequency === 'monthly') {
+          const baseMode = baseBuilder.monthlyMode || 'monthday';
+          const candidateMode = candidateBuilder.monthlyMode || 'monthday';
+          if (baseMode !== candidateMode) return false;
+          if (baseMode === 'weekday') {
+            const baseWeekPos = parseInt(baseBuilder.weekPos || '1', 10) || 1;
+            const candidateWeekPos = parseInt(candidateBuilder.weekPos || '1', 10) || 1;
+            const baseWeekDay = String(baseBuilder.weekDay || '').trim().toUpperCase();
+            const candidateWeekDay = String(candidateBuilder.weekDay || '').trim().toUpperCase();
+            return baseWeekPos === candidateWeekPos && baseWeekDay === candidateWeekDay;
+          }
+          const baseMonthDay = parseInt(baseBuilder.monthDay || '1', 10) || 1;
+          const candidateMonthDay = parseInt(candidateBuilder.monthDay || '1', 10) || 1;
+          return baseMonthDay === candidateMonthDay;
+        }
+        return true;
+      }
+
+      function buildRruleFromBuilderState(builder) {
+        if (!builder || !builder.frequency || builder.frequency === 'none') return '';
+        const frequency = String(builder.frequency).toLowerCase();
+        const parts = [`FREQ=${frequency.toUpperCase()}`];
+        const interval = Math.max(1, parseInt(builder.interval || '1', 10) || 1);
+        if (interval > 1) {
+          parts.push(`INTERVAL=${interval}`);
+        }
+        if (frequency === 'weekly') {
+          let byDay = normalizeByDayTokens(builder.byDay);
+          if (!byDay.length) {
+            const startDate = parseLocalDateTime(state.start, state.timezone);
+            byDay = [getDayCode(startDate || new Date())];
+          }
+          parts.push(`BYDAY=${byDay.join(',')}`);
+        }
+        if (frequency === 'monthly') {
+          const monthlyMode = builder.monthlyMode === 'weekday' ? 'weekday' : 'monthday';
+          if (monthlyMode === 'weekday') {
+            let weekPos = String(builder.weekPos || '1').trim();
+            if (!weekPos) weekPos = '1';
+            let weekDay = String(builder.weekDay || '').trim().toUpperCase();
+            if (!weekDay) {
+              const startDate = parseLocalDateTime(state.start, state.timezone);
+              weekDay = getDayCode(startDate || new Date());
+            }
+            parts.push(`BYDAY=${weekDay}`);
+            parts.push(`BYSETPOS=${weekPos}`);
+          } else {
+            let monthDay = parseInt(builder.monthDay || '', 10);
+            if (!monthDay) {
+              const startDate = parseLocalDateTime(state.start, state.timezone);
+              monthDay = startDate ? startDate.getDate() : 1;
+            }
+            monthDay = Math.min(31, Math.max(1, monthDay));
+            parts.push(`BYMONTHDAY=${monthDay}`);
+          }
+        }
+        if (builder.ends === 'count') {
+          const count = parseInt(builder.count || '', 10);
+          if (count) {
+            parts.push(`COUNT=${count}`);
+          }
+        }
+        if (builder.ends === 'until') {
+          const untilDate = formatUntilDate(builder.until || '');
+          if (untilDate) {
+            parts.push(`UNTIL=${untilDate}`);
+          }
+        }
+        return parts.join(';');
+      }
+
+      function enforceSeriesRecurrenceLimitRule(nextRule, previousRule) {
+        const context = getSeriesRecurrenceLimitContext();
+        if (!context) {
+          return { rule: nextRule, warning: '' };
+        }
+        const trimmedNext = normalizeText(nextRule || '');
+        const trimmedPrevious = normalizeText(previousRule || '');
+        if (!trimmedNext) {
+          return trimmedPrevious
+            ? {
+                rule: trimmedPrevious,
+                warning: 'Keep the existing RRULE pattern. Only set an end date for this series.'
+              }
+            : { rule: nextRule, warning: '' };
+        }
+        if (trimmedNext === trimmedPrevious) {
+          return { rule: nextRule, warning: '' };
+        }
+        const latestLabel = formatDateLabel(context.latestOverrideDate, context.baseEvent.timeZone || browserTimezone);
+        const fallback = getDefaultRecurrenceBuilder(context.baseEvent.startDate || parseLocalDateTime(state.start, state.timezone));
+        const baseBuilder = parseRruleToBuilder(context.baseEvent.recurrence || '', fallback);
+        const nextBuilder = parseRruleToBuilder(trimmedNext, fallback);
+        if (!baseBuilder || !nextBuilder) {
+          return {
+            rule: trimmedPrevious,
+            warning: 'Keep the existing RRULE pattern. Only set an end date for this series.'
+          };
+        }
+        if (!doesRecurrencePatternMatch(baseBuilder, nextBuilder)) {
+          return {
+            rule: trimmedPrevious,
+            warning: 'This series has overrides. Only update "Ends" to cap the recurrence.'
+          };
+        }
+        if (nextBuilder.ends === 'count') {
+          return {
+            rule: trimmedPrevious,
+            warning: 'Use "Ends: On date" for series with overrides.'
+          };
+        }
+        if (nextBuilder.ends !== 'until' || !nextBuilder.until) {
+          return {
+            rule: trimmedPrevious,
+            warning: `Set "Ends" to "On date" on/after ${latestLabel}.`
+          };
+        }
+        const minimumDateKey = formatDateKey(context.latestOverrideDate);
+        if (nextBuilder.until < minimumDateKey) {
+          nextBuilder.until = minimumDateKey;
+          nextBuilder.ends = 'until';
+          nextBuilder.count = '';
+          return {
+            rule: buildRruleFromBuilderState(nextBuilder),
+            warning: `End date adjusted to ${latestLabel} so overrides remain valid.`
+          };
+        }
+        return {
+          rule: buildRruleFromBuilderState(nextBuilder),
+          warning: ''
+        };
       }
 
       function buildRruleFromBuilder() {
@@ -6033,12 +6334,6 @@
           updateRecurrenceUi();
           return;
         }
-        const blockedReason = getSeriesEditBlockedReason(baseEvent, index || existingCalendarIndex);
-        if (blockedReason) {
-          showToast(blockedReason, 'warn');
-          updateRecurrenceUi();
-          return;
-        }
         if (index) {
           const futureOccurrences = buildOccurrenceResultsForEvent(index, baseEvent, {
             now: new Date(),
@@ -6081,6 +6376,7 @@
         updateTimeNotes();
         updateRecurrenceUi();
         updateRecurrenceSummary();
+        updateSeriesOverrideWarningUi();
         updatePreviewCard();
         updateCoordinatesFieldState();
         updateActionButtonsState();
