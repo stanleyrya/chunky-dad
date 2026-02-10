@@ -1464,7 +1464,7 @@ class ScriptableAdapter {
         }
         const automationRun = Boolean(config?.runtime?.automationRun) || runContext?.type === 'automated';
         const hasAutomationParsers = Array.isArray(config?.parsers)
-            && config.parsers.some(parser => parser?.automation?.enabled === true);
+            && config.parsers.some(parser => parser?.automation?.automationEnabled === true);
         return automationRun && hasAutomationParsers;
     }
 
@@ -1554,9 +1554,17 @@ class ScriptableAdapter {
 
             // Persist this run for later display (skip when showing saved runs)
             const hasAnalyzedEvents = Array.isArray(results?.analyzedEvents);
-            const enabledParsers = (results?.config?.parsers || []).filter(parser => parser.enabled !== false);
-            const hasEnabledParsers = enabledParsers.length > 0;
-            const shouldSaveRun = !results?._isDisplayingSavedRun && hasAnalyzedEvents && hasEnabledParsers;
+            const parserConfigs = results?.config?.parsers || [];
+            const runtimeForSave = results?.config?.runtime || results?.runContext || {};
+            const automationRunForSave = Boolean(runtimeForSave.automationRun) || runtimeForSave.type === 'automated';
+            const activeParsers = parserConfigs.filter(parser => {
+                if (automationRunForSave) {
+                    return parser?.automation?.automationEnabled === true;
+                }
+                return parser?.enabled !== false;
+            });
+            const hasActiveParsers = activeParsers.length > 0;
+            const shouldSaveRun = !results?._isDisplayingSavedRun && hasAnalyzedEvents && hasActiveParsers;
             const retentionDays = 30;
             if (shouldSaveRun) {
                 await this.ensureRelativeStorageDirs();
@@ -1573,8 +1581,8 @@ class ScriptableAdapter {
             } else {
                 const reason = results?._isDisplayingSavedRun
                     ? 'display mode'
-                    : !hasEnabledParsers
-                        ? 'no enabled parsers'
+                    : !hasActiveParsers
+                        ? automationRunForSave ? 'no automation-enabled parsers' : 'no enabled parsers'
                         : 'missing analyzed events';
                 console.log(`📱 Scriptable: Skipping run save (${reason})`);
             }

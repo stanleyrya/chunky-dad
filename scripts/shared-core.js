@@ -214,7 +214,7 @@ class SharedCore {
             return { shouldRun: true, reason: null };
         }
         const automation = parserConfig ? parserConfig.automation : null;
-        if (!automation || automation.enabled !== true) {
+        if (!automation || automation.automationEnabled !== true) {
             return { shouldRun: false, reason: 'automation-disabled' };
         }
         if (!this.isAutomationDayMatch(automation.days, automationContext.now)) {
@@ -255,8 +255,8 @@ class SharedCore {
         for (let i = 0; i < config.parsers.length; i++) {
             const parserConfig = config.parsers[i];
             
-            // Check if parser is enabled (default to true if not specified)
-            if (parserConfig.enabled === false) {
+            // "enabled" is for manual runs only; automation runs use automation.automationEnabled
+            if (!automationContext.filterParsers && parserConfig.enabled === false) {
                 disabledParsers.push(parserConfig.name);
                 continue;
             }
@@ -311,7 +311,7 @@ class SharedCore {
                     .join(', ');
                 await displayAdapter.logInfo(`SYSTEM: Skipped parsers (automation): ${skippedLabel}`);
             } else {
-                await displayAdapter.logInfo('SYSTEM: Automation schedule matched all enabled parsers');
+                await displayAdapter.logInfo('SYSTEM: Automation schedule matched all automation-enabled parsers');
             }
             results.automationSkippedParsers = automationSkipped;
         }
