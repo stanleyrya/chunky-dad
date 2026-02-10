@@ -1234,133 +1234,6 @@ class ScriptableAdapter {
             // Keep the tighter, multi-window logic scoped to identifier-based edits only.
             // For normal scraper runs, use the original single-window approach.
             if (!hasIdentifier) {
-                const hasWildcardMatchKey = typeof event.matchKey === 'string' && event.matchKey.includes('*');
-                if (hasWildcardMatchKey) {
-                    const timezone = (() => {
-                        if (event && typeof event.timezone === 'string' && event.timezone.trim()) {
-                            return event.timezone.trim();
-                        }
-                        if (event && typeof event.timeZone === 'string' && event.timeZone.trim()) {
-                            return event.timeZone.trim();
-                        }
-                        try {
-                            return this.getTimezoneForCity(event.city);
-                        } catch (timezoneError) {
-                            return null;
-                        }
-                    })();
-
-                    const resolveYearMonth = (date) => {
-                        if (!(date instanceof Date) || isNaN(date.getTime())) {
-                            return null;
-                        }
-
-                        if (timezone && typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
-                            try {
-                                const formatter = new Intl.DateTimeFormat('en-CA', {
-                                    timeZone: timezone,
-                                    year: 'numeric',
-                                    month: '2-digit'
-                                });
-                                const parts = formatter.formatToParts(date);
-                                const yearPart = parts.find(part => part.type === 'year');
-                                const monthPart = parts.find(part => part.type === 'month');
-                                const year = yearPart ? Number(yearPart.value) : NaN;
-                                const month = monthPart ? Number(monthPart.value) : NaN;
-                                if (Number.isFinite(year) && Number.isFinite(month)) {
-                                    return { year, month };
-                                }
-                            } catch (intlError) {
-                                console.log(`📱 Scriptable: Month window timezone parsing failed for "${timezone}": ${intlError.message}`);
-                            }
-                        }
-
-                        return {
-                            year: date.getFullYear(),
-                            month: date.getMonth() + 1
-                        };
-                    };
-
-                    const createMonthWindow = (year, month) => {
-                        const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-                        const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
-
-                        // Include small edge buffers to catch local-month events that spill over UTC boundaries.
-                        start.setUTCDate(start.getUTCDate() - 2);
-                        end.setUTCDate(end.getUTCDate() + 2);
-
-                        const label = `${year}-${String(month).padStart(2, '0')}`;
-                        return { start, end, label };
-                    };
-
-                    const monthWindows = [];
-                    const seenMonths = new Set();
-                    dateCandidates.forEach(date => {
-                        const yearMonth = resolveYearMonth(date);
-                        if (!yearMonth) return;
-                        const monthKey = `${yearMonth.year}-${String(yearMonth.month).padStart(2, '0')}`;
-                        if (seenMonths.has(monthKey)) return;
-                        seenMonths.add(monthKey);
-                        monthWindows.push(createMonthWindow(yearMonth.year, yearMonth.month));
-                    });
-
-                    if (monthWindows.length > 0) {
-                        const tzLabel = timezone || 'device-local';
-                        const monthLabels = monthWindows.map(window => window.label).join(', ');
-                        console.log(`📱 Scriptable: Wildcard month search windows=${monthWindows.length} months=${monthLabels} timezone="${tzLabel}"`);
-
-                        const allEvents = [];
-                        for (const window of monthWindows) {
-                            console.log(`📱 Scriptable: Month window ${window.label}: ${window.start.toISOString()} → ${window.end.toISOString()}`);
-                            const slice = await CalendarEvent.between(window.start, window.end, [calendar]);
-                            if (Array.isArray(slice) && slice.length > 0) {
-                                allEvents.push(...slice);
-                            }
-                        }
-
-                        const deduplicatedEvents = [];
-                        const seenEventKeys = new Set();
-                        allEvents.forEach(existingEvent => {
-                            if (!existingEvent) return;
-                            const identifier = existingEvent.identifier ? String(existingEvent.identifier) : '';
-                            const startMs = existingEvent.startDate instanceof Date ? existingEvent.startDate.getTime() : NaN;
-                            const endMs = existingEvent.endDate instanceof Date ? existingEvent.endDate.getTime() : NaN;
-                            const title = existingEvent.title ? String(existingEvent.title) : '';
-                            const eventKey = `${identifier}|${startMs}|${endMs}|${title}`;
-                            if (seenEventKeys.has(eventKey)) return;
-                            seenEventKeys.add(eventKey);
-                            deduplicatedEvents.push(existingEvent);
-                        });
-
-                        const matchHint = (() => {
-                            if (typeof event.matchKey === 'string' && event.matchKey.trim()) {
-                                const segment = event.matchKey.split('|')[0] || '';
-                                const cleaned = segment.replace(/\*/g, '').trim().toLowerCase();
-                                if (cleaned.length > 0) return cleaned;
-                            }
-                            const fallbackTitle = String(event.title || event.name || '').toLowerCase();
-                            const firstWord = fallbackTitle.split(/\s+/).find(Boolean) || '';
-                            return firstWord;
-                        })();
-
-                        const relatedEvents = matchHint
-                            ? deduplicatedEvents.filter(existing =>
-                                String(existing.title || '').toLowerCase().includes(matchHint)
-                            )
-                            : [];
-                        console.log(`📱 Scriptable: Existing events found=${deduplicatedEvents.length}${matchHint ? `; related("${matchHint}")=${relatedEvents.length}` : ''}`);
-                        if (relatedEvents.length > 0) {
-                            const samples = relatedEvents
-                                .slice(0, 3)
-                                .map(existing => `${existing.title} @ ${existing.startDate.toISOString()}`)
-                                .join(' | ');
-                            console.log(`📱 Scriptable: Related event sample(s): ${samples}`);
-                        }
-
-                        return deduplicatedEvents;
-                    }
-                }
-
                 const earliestTime = Math.min(...dateCandidates.map(date => date.getTime()));
                 const latestTime = Math.max(...dateCandidates.map(date => date.getTime()));
                 const searchStart = new Date(earliestTime);
@@ -1811,8 +1684,11 @@ class ScriptableAdapter {
                     new Date(event.endDate || event.startDate) : 
                     (event.endDate || event.startDate);
                 
-                const existingEvents = await this.getExistingEvents(event);
-                console.log(`📱 Scriptable: Calendar comparison fetched ${existingEvents.length} existing event(s) for ${event.title || event.name}`);
+                const searchStart = new Date(startDate);
+                const searchEnd = new Date(endDate);
+                searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
+                
+                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
                 
                 // Check for exact duplicates
                 const duplicates = existingEvents.filter(existing => {
