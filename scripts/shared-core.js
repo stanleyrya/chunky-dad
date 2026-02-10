@@ -1259,7 +1259,8 @@ class SharedCore {
             'image': 'image',
             'url': 'url',
             'timezone': 'timezone',
-            'key': 'key'
+            'key': 'key',
+            'matchkey': 'matchKey'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
@@ -2745,10 +2746,9 @@ class SharedCore {
             for (const { event, fields, computedKey, localComputedKey } of parsedEvents) {
                 const eventKey = fields.key || null;
                 const matchKey = fields.matchKey || null;
-                const hasDateShift = localComputedKey && computedKey && localComputedKey !== computedKey;
-                const candidates = hasDateShift
-                    ? [localComputedKey]
-                    : [localComputedKey, eventKey, matchKey, computedKey].filter(Boolean);
+                // Keep local-computed key first for month-aware matching, but also evaluate
+                // persisted key/matchKey values to support legacy keys and mixed-title merges.
+                const candidates = [...new Set([localComputedKey, eventKey, matchKey, computedKey].filter(Boolean))];
                 if (candidates.some(candidate => this.matchesKeyPattern(targetMatchKey, candidate))) {
                     const matchedKey = candidates.find(candidate => this.matchesKeyPattern(targetMatchKey, candidate));
                     return { event, matchedKey: matchedKey, matchType: 'wildcard' };
