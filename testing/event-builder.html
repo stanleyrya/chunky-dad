@@ -1821,6 +1821,7 @@
       const DEFAULT_DURATION_MINUTES = 240;
       const OCCURRENCE_LOOKAHEAD_DAYS = 365;
       const OCCURRENCE_MAX_COUNT = 18;
+      const LOGO_DEBUG_HOLD_MS = 3000;
       const URL_UPDATE_DELAY = 120;
       const EVENT_PUSH_DELAY = 200;
       const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
@@ -1854,6 +1855,8 @@
       let iframeLoaded = false;
       let sendTimeoutId = null;
       let urlTimeoutId = null;
+      let logoDebugHoldTimeoutId = null;
+      let logoDebugHoldTriggered = false;
       let lastPasteActionAt = 0;
       let currentCalendarCity = null;
       let barRequestId = 0;
@@ -1927,6 +1930,8 @@
       function cacheDom() {
         dom.form = document.getElementById('event-form');
         dom.toolHeader = document.querySelector('.tool-header');
+        dom.logoHomeLink = document.querySelector('.tool-nav .logo a');
+        dom.logoHead = dom.logoHomeLink ? dom.logoHomeLink.querySelector('.logo-img') : null;
         dom.nameInput = document.getElementById('event-name');
         dom.shortNameInput = document.getElementById('event-short-name');
         dom.citySelect = document.getElementById('event-city');
@@ -2039,6 +2044,54 @@
           dom.openScriptableButton.classList.toggle('is-hidden', !showDebug);
         }
         updateActionButtonsState();
+      }
+
+      function enableDebugMode(options = {}) {
+        if (!state) return;
+        const { silent = false } = options;
+        const wasEnabled = Boolean(state.debug);
+        state.debug = true;
+        applyDebugVisibility();
+        updateUrl();
+        if (!silent) {
+          showToast(
+            wasEnabled ? 'Debug mode is already enabled.' : 'Debug mode enabled (debug=1).',
+            'info'
+          );
+        }
+      }
+
+      function clearLogoDebugHoldTimer() {
+        if (!logoDebugHoldTimeoutId) return;
+        clearTimeout(logoDebugHoldTimeoutId);
+        logoDebugHoldTimeoutId = null;
+      }
+
+      function bindLogoDebugLongPress() {
+        if (!dom.logoHead || !dom.logoHomeLink) return;
+        const startHold = event => {
+          if (typeof event.button === 'number' && event.button !== 0) return;
+          clearLogoDebugHoldTimer();
+          logoDebugHoldTriggered = false;
+          logoDebugHoldTimeoutId = setTimeout(() => {
+            logoDebugHoldTimeoutId = null;
+            logoDebugHoldTriggered = true;
+            enableDebugMode();
+          }, LOGO_DEBUG_HOLD_MS);
+        };
+        const endHold = () => {
+          clearLogoDebugHoldTimer();
+        };
+        dom.logoHead.addEventListener('pointerdown', startHold);
+        dom.logoHead.addEventListener('pointerup', endHold);
+        dom.logoHead.addEventListener('pointerleave', endHold);
+        dom.logoHead.addEventListener('pointercancel', endHold);
+        dom.logoHomeLink.addEventListener('click', event => {
+          if (!logoDebugHoldTriggered) return;
+          event.preventDefault();
+          event.stopPropagation();
+          logoDebugHoldTriggered = false;
+        });
       }
 
       function setupStickyHeaderOffset() {
@@ -2329,16 +2382,19 @@
         if (dateFilter.isInvalid) {
           existingCalendarIndex = null;
           resetExistingResults('End date must be on or after start date.');
+          refreshEditingContextUi();
           return;
         }
         if (!cityKey) {
           existingCalendarIndex = null;
           resetExistingResults('Choose a calendar to load events.');
+          refreshEditingContextUi();
           return;
         }
         if (!calendarCore) {
           existingCalendarIndex = null;
           resetExistingResults('Calendar tools are unavailable here.');
+          refreshEditingContextUi();
           return;
         }
         setExistingResultsHint('Loading calendar events...', false);
@@ -2355,10 +2411,12 @@
           existingCalendarIndex = index;
           existingResults = results;
           renderExistingResults(results);
+          refreshEditingContextUi();
         } catch (error) {
           existingCalendarIndex = null;
           resetExistingResults('Unable to load that calendar.');
           showToast('Calendar data could not be loaded.', 'warn');
+          refreshEditingContextUi();
         }
       }
 
@@ -4143,6 +4201,39 @@
         return `${year}-${month}-${day}`;
       }
 
+      function formatDateKeyInTimezone(date, timeZone) {
+        if (!isValidDateObject(date)) return '';
+        const zone = timeZone || browserTimezone;
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: zone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).formatToParts(date);
+          const values = {};
+          parts.forEach(part => {
+            if (part.type !== 'literal') {
+              values[part.type] = part.value;
+            }
+          });
+          if (!values.year || !values.month || !values.day) {
+            return formatDateKey(date);
+          }
+          return `${values.year}-${values.month}-${values.day}`;
+        } catch (error) {
+          return formatDateKey(date);
+        }
+      }
+
+      function getSeriesRecurrenceMinimumDateKey(context) {
+        if (!context || !isValidDateObject(context.latestOverrideDate)) return '';
+        const zone = context.baseEvent && context.baseEvent.timeZone
+          ? context.baseEvent.timeZone
+          : browserTimezone;
+        return formatDateKeyInTimezone(context.latestOverrideDate, zone);
+      }
+
       function formatDateLabel(date, timeZone) {
         if (!date || !(date instanceof Date)) return '';
         try {
@@ -4227,6 +4318,13 @@
           moreItem.textContent = `+${remaining} more override${remaining === 1 ? '' : 's'}.`;
           dom.seriesOverrideWarningList.appendChild(moreItem);
         }
+      }
+
+      function refreshEditingContextUi() {
+        updateRecurrenceUi();
+        updateRecurrenceSummary();
+        updateSeriesOverrideWarningUi();
+        updateActionButtonsState();
       }
 
       function updateExistingSelectionSummary(text) {
@@ -4422,7 +4520,7 @@
         const overrides = {};
         let sawEditFlag = false;
         params.forEach((value, key) => {
-          if (value == null || value === '') return;
+          if (value == null) return;
           switch (key) {
             case 'name':
               overrides.name = value;
@@ -4647,6 +4745,7 @@
       }
 
       function bindEvents() {
+        bindLogoDebugLongPress();
         if (dom.form) {
           dom.form.addEventListener('submit', event => event.preventDefault());
         }
@@ -5537,8 +5636,9 @@
         const recurrenceLocked = isRecurrenceEditingLocked();
         const recurrenceLimitContext = getSeriesRecurrenceLimitContext();
         const recurrenceLimitOnly = Boolean(recurrenceLimitContext);
+        const minimumDateKey = getSeriesRecurrenceMinimumDateKey(recurrenceLimitContext);
         const hasLatestOverrideDate = Boolean(
-          recurrenceLimitContext && isValidDateObject(recurrenceLimitContext.latestOverrideDate)
+          minimumDateKey
         );
         const latestOverrideLabel = hasLatestOverrideDate
           ? formatDateLabel(
@@ -5652,10 +5752,16 @@
           dom.recurrenceCount.disabled = recurrenceLocked || recurrenceLimitOnly || endsValue !== 'count';
         }
         if (dom.recurrenceUntil) {
-          if (hasLatestOverrideDate) {
-            dom.recurrenceUntil.min = formatDateKey(recurrenceLimitContext.latestOverrideDate);
+          if (minimumDateKey) {
+            dom.recurrenceUntil.min = minimumDateKey;
           } else {
             dom.recurrenceUntil.removeAttribute('min');
+          }
+          if (endsValue === 'until' && minimumDateKey) {
+            const currentUntilValue = dom.recurrenceUntil.value || '';
+            if (!currentUntilValue || currentUntilValue < minimumDateKey) {
+              dom.recurrenceUntil.value = minimumDateKey;
+            }
           }
           dom.recurrenceUntil.disabled = recurrenceLocked || endsValue !== 'until';
           if (recurrenceLocked) {
@@ -5722,7 +5828,7 @@
         if (enforced.rule !== undefined && enforced.rule !== null) {
           nextRule = enforced.rule;
         }
-        if (nextRule !== builtRule) {
+        if (nextRule !== builtRule && !enforced.preserveBuilderState) {
           const startDate = parseLocalDateTime(state.start, state.timezone);
           const fallback = getDefaultRecurrenceBuilder(startDate);
           const parsed = nextRule ? parseRruleToBuilder(nextRule, fallback) : fallback;
@@ -5897,6 +6003,7 @@
         }
         const trimmedNext = normalizeText(nextRule || '');
         const trimmedPrevious = normalizeText(previousRule || '');
+        const minimumDateKey = getSeriesRecurrenceMinimumDateKey(context);
         const hasLatestOverrideDate = isValidDateObject(context.latestOverrideDate);
         const latestLabel = hasLatestOverrideDate
           ? formatDateLabel(context.latestOverrideDate, context.baseEvent.timeZone || browserTimezone)
@@ -5945,20 +6052,18 @@
             rule: trimmedPrevious,
             warning: hasLatestOverrideDate
               ? `Set "Ends" to "On date" on/after ${latestLabel}.`
-              : 'Set "Ends" to "On date" for this series.'
+              : 'Set "Ends" to "On date" for this series.',
+            preserveBuilderState: nextBuilder.ends === 'until'
           };
         }
-        if (hasLatestOverrideDate) {
-          const minimumDateKey = formatDateKey(context.latestOverrideDate);
-          if (nextBuilder.until < minimumDateKey) {
-            nextBuilder.until = minimumDateKey;
-            nextBuilder.ends = 'until';
-            nextBuilder.count = '';
-            return {
-              rule: buildRruleFromBuilderState(nextBuilder),
-              warning: `End date adjusted to ${latestLabel} so overrides remain valid.`
-            };
-          }
+        if (minimumDateKey && nextBuilder.until < minimumDateKey) {
+          nextBuilder.until = minimumDateKey;
+          nextBuilder.ends = 'until';
+          nextBuilder.count = '';
+          return {
+            rule: buildRruleFromBuilderState(nextBuilder),
+            warning: `End date adjusted to ${latestLabel} so overrides remain valid.`
+          };
         }
         return {
           rule: buildRruleFromBuilderState(nextBuilder),
@@ -6248,50 +6353,70 @@
 
       function buildShareUrl(options = {}) {
         const params = new URLSearchParams();
-        if (state.name) params.set('name', state.name);
-        if (state.shortName) params.set('short', state.shortName);
-        if (state.city) params.set('city', state.city);
+        const includeAllEditingFields = Boolean(state && state.isEditingExisting);
+        const setTextParam = (key, value) => {
+          const normalized = value == null ? '' : String(value);
+          if (includeAllEditingFields || normalized) {
+            params.set(key, normalized);
+          }
+        };
+        const setBooleanParam = (key, enabled) => {
+          if (includeAllEditingFields) {
+            params.set(key, enabled ? '1' : '0');
+            return;
+          }
+          if (enabled) {
+            params.set(key, '1');
+          }
+        };
+        setTextParam('name', state.name);
+        setTextParam('short', state.shortName);
+        setTextParam('city', state.city);
         const savedBarName = normalizeText(state.savedBar);
-        if (savedBarName) params.set('bar', savedBarName);
-        if (state.venue) params.set('venue', state.venue);
-        if (state.address) params.set('addr', state.address);
-        if (state.description) params.set('desc', state.description);
-        if (state.cover) params.set('cover', state.cover);
-        if (state.start) params.set('start', state.start);
-        if (state.end) params.set('end', state.end);
-        if (state.timezone) params.set('tz', state.timezone);
-        if (state.recurrence) params.set('rrule', state.recurrence);
-        if (state.recurrenceMode === 'raw') params.set('rmode', 'raw');
-        if (state.website) params.set('web', state.website);
-        if (state.ticketUrl) params.set('tickets', state.ticketUrl);
-        if (state.instagram) params.set('insta', state.instagram);
-        if (state.facebook) params.set('fb', state.facebook);
-        if (state.gmaps) params.set('gmaps', state.gmaps);
-        if (state.useVenueWebsite) params.set('vweb', '1');
-        if (state.useVenueInstagram) params.set('vinsta', '1');
-        if (state.useVenueFacebook) params.set('vfb', '1');
+        setTextParam('bar', savedBarName);
+        setTextParam('venue', state.venue);
+        setTextParam('addr', state.address);
+        setTextParam('desc', state.description);
+        setTextParam('cover', state.cover);
+        setTextParam('start', state.start);
+        setTextParam('end', state.end);
+        setTextParam('tz', state.timezone);
+        setTextParam('rrule', state.recurrence);
+        if (includeAllEditingFields) {
+          params.set('rmode', state.recurrenceMode === 'raw' ? 'raw' : 'builder');
+        } else if (state.recurrenceMode === 'raw') {
+          params.set('rmode', 'raw');
+        }
+        setTextParam('web', state.website);
+        setTextParam('tickets', state.ticketUrl);
+        setTextParam('insta', state.instagram);
+        setTextParam('fb', state.facebook);
+        setTextParam('gmaps', state.gmaps);
+        setBooleanParam('vweb', state.useVenueWebsite);
+        setBooleanParam('vinsta', state.useVenueInstagram);
+        setBooleanParam('vfb', state.useVenueFacebook);
         const summaryText = String(state.existingSelectionSummary || '').trim();
-        if (summaryText) params.set('esummary', summaryText);
-        if (state.existingSelectionAction) params.set('eaction', state.existingSelectionAction);
+        setTextParam('esummary', summaryText);
+        setTextParam('eaction', state.existingSelectionAction);
         if (state.isEditingExisting) {
           params.set('edit', '1');
-          if (state.editingExistingId) params.set('editid', state.editingExistingId);
-          if (state.editingExistingMode) params.set('emode', state.editingExistingMode);
-          if (state.editingExistingOccurrenceId) params.set('occid', state.editingExistingOccurrenceId);
-          if (state.editingExistingUid) params.set('euid', state.editingExistingUid);
-          if (state.editingExistingRecurrenceId) params.set('erid', state.editingExistingRecurrenceId);
-          if (state.editingExistingRecurrenceTimezone) params.set('ertz', state.editingExistingRecurrenceTimezone);
-          if (state.editingExistingSequence) params.set('eseq', state.editingExistingSequence);
-          if (state.editingExistingSearchStartDate) params.set('searchStartDate', state.editingExistingSearchStartDate);
-          if (state.editingExistingSearchEndDate) params.set('searchEndDate', state.editingExistingSearchEndDate);
+          setTextParam('editid', state.editingExistingId);
+          setTextParam('emode', state.editingExistingMode);
+          setTextParam('occid', state.editingExistingOccurrenceId);
+          setTextParam('euid', state.editingExistingUid);
+          setTextParam('erid', state.editingExistingRecurrenceId);
+          setTextParam('ertz', state.editingExistingRecurrenceTimezone);
+          setTextParam('eseq', state.editingExistingSequence);
+          setTextParam('searchStartDate', state.editingExistingSearchStartDate);
+          setTextParam('searchEndDate', state.editingExistingSearchEndDate);
         }
-        if (state.image) params.set('img', state.image);
+        setTextParam('img', state.image);
         const coordsValue = (state.location || '').trim();
-        if (coordsValue) params.set('coords', coordsValue);
+        setTextParam('coords', coordsValue);
         const includeDebug = typeof options.includeDebug === 'boolean'
           ? options.includeDebug
           : Boolean(state && state.debug);
-        if (includeDebug) params.set('debug', '1');
+        setBooleanParam('debug', includeDebug);
         const sorted = new URLSearchParams();
         [...params.keys()].sort().forEach(key => sorted.set(key, params.get(key)));
         const query = sorted.toString();
