@@ -2569,15 +2569,19 @@ class SharedCore {
             source = targetSource;
         }
         
+        const overrideDate = options.overrideDate instanceof Date
+            ? options.overrideDate
+            : this.parseDate(options.overrideDate);
+        const fallbackTimezone = options.fallbackTimezone || '';
         const bar = fields.bar || fields.venue || fields.location || existingEvent.location || '';
         const address = fields.address || '';
         const city = fields.city || existingEvent.city || '';
-        const timezone = fields.timezone || existingEvent.timezone || existingEvent.timeZone || '';
+        const timezone = fields.timezone || existingEvent.timezone || existingEvent.timeZone || fallbackTimezone || '';
         
         const computedEvent = {
             title: existingEvent.title,
             originalTitle: existingEvent.originalTitle || existingEvent.title,
-            startDate: existingEvent.startDate,
+            startDate: overrideDate || existingEvent.startDate,
             bar: bar,
             address: address,
             city: city,
@@ -2605,6 +2609,9 @@ class SharedCore {
         let targetSource = '';
         let targetKeyFormat = null;
         let targetIdentifier = null;
+        let targetTitle = '';
+        let targetStartDate = null;
+        let targetTimezone = '';
         
         if (typeof targetEventOrKey === 'string') {
             targetKey = targetEventOrKey;
@@ -2614,6 +2621,14 @@ class SharedCore {
             targetSource = targetEventOrKey.source || '';
             targetKeyFormat = targetEventOrKey._parserConfig?.keyTemplate || null;
             targetIdentifier = targetEventOrKey.identifier || targetEventOrKey.id || null;
+            targetTitle = String(targetEventOrKey.title || targetEventOrKey.name || '');
+            targetStartDate = targetEventOrKey.startDate instanceof Date
+                ? targetEventOrKey.startDate
+                : this.parseDate(targetEventOrKey.startDate);
+            targetTimezone = targetEventOrKey.timezone ||
+                targetEventOrKey.timeZone ||
+                (targetEventOrKey.city && this.cities[targetEventOrKey.city]?.timezone) ||
+                '';
             
             if (!targetSource && targetEventOrKey.url) {
                 const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
@@ -2752,6 +2767,32 @@ class SharedCore {
                 if (candidates.some(candidate => this.matchesKeyPattern(targetMatchKey, candidate))) {
                     const matchedKey = candidates.find(candidate => this.matchesKeyPattern(targetMatchKey, candidate));
                     return { event, matchedKey: matchedKey, matchType: 'wildcard' };
+                }
+            }
+        }
+        
+        // Sixth pass: wildcard fallback for recurring calendar series.
+        // Some calendar APIs return recurring series records without the occurrence date in startDate.
+        // Anchor a computed key to the target event date while preserving existing title/venue.
+        if (targetMatchKey && targetMatchKey.includes('*') && targetStartDate) {
+            const hasTargetTitle = targetTitle.trim().length > 0;
+            for (const { event, fields } of parsedEvents) {
+                if (hasTargetTitle && !this.areTitlesSimilar(event.title || '', targetTitle)) {
+                    continue;
+                }
+                const anchoredLocalKey = this.buildComputedKeyForExistingEvent(
+                    event,
+                    fields,
+                    targetSource,
+                    targetKeyFormat,
+                    {
+                        useLocalDate: true,
+                        overrideDate: targetStartDate,
+                        fallbackTimezone: targetTimezone
+                    }
+                );
+                if (anchoredLocalKey && this.matchesKeyPattern(targetMatchKey, anchoredLocalKey)) {
+                    return { event, matchedKey: anchoredLocalKey, matchType: 'wildcard' };
                 }
             }
         }

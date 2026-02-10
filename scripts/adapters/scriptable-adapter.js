@@ -1245,7 +1245,51 @@ class ScriptableAdapter {
                     searchEnd.setDate(searchEnd.getDate() + configuredRangeDays);
                 }
                 console.log(`📱 Scriptable: Existing event search window: ${searchStart.toISOString()} → ${searchEnd.toISOString()}`);
-                return await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+
+                const primaryEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                const hasWildcardMatchKey = typeof event.matchKey === 'string' && event.matchKey.includes('*');
+                if (!hasWildcardMatchKey) {
+                    return primaryEvents;
+                }
+
+                const wildcardLookbackConfig = Number(event._parserConfig?.calendarWildcardLookbackDays || 0);
+                const wildcardLookbackDays = Number.isFinite(wildcardLookbackConfig) && wildcardLookbackConfig > 0
+                    ? wildcardLookbackConfig
+                    : 400;
+
+                const wildcardSearchStart = new Date(searchStart);
+                wildcardSearchStart.setDate(wildcardSearchStart.getDate() - wildcardLookbackDays);
+
+                let wildcardEvents = [];
+                try {
+                    wildcardEvents = await CalendarEvent.between(wildcardSearchStart, searchEnd, [calendar]);
+                } catch (wildcardError) {
+                    console.log(`📱 Scriptable: Wildcard lookback search failed: ${wildcardError.message}`);
+                    return primaryEvents;
+                }
+
+                const deduplicatedEvents = [];
+                const seenEventKeys = new Set();
+                const allEvents = [
+                    ...(Array.isArray(primaryEvents) ? primaryEvents : []),
+                    ...(Array.isArray(wildcardEvents) ? wildcardEvents : [])
+                ];
+                allEvents.forEach(existingEvent => {
+                    if (!existingEvent) return;
+                    const identifier = existingEvent.identifier ? String(existingEvent.identifier) : '';
+                    const startMs = existingEvent.startDate instanceof Date ? existingEvent.startDate.getTime() : NaN;
+                    const endMs = existingEvent.endDate instanceof Date ? existingEvent.endDate.getTime() : NaN;
+                    const title = existingEvent.title ? String(existingEvent.title) : '';
+                    const eventKey = `${identifier}|${startMs}|${endMs}|${title}`;
+                    if (seenEventKeys.has(eventKey)) return;
+                    seenEventKeys.add(eventKey);
+                    deduplicatedEvents.push(existingEvent);
+                });
+
+                console.log(
+                    `📱 Scriptable: Wildcard search expanded existing events (${primaryEvents.length} primary + ${wildcardEvents.length} lookback -> ${deduplicatedEvents.length} unique)`
+                );
+                return deduplicatedEvents;
             }
 
             // Identifier edit: only use the old visible date (pre-edit).
