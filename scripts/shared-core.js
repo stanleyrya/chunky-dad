@@ -2743,12 +2743,19 @@ class SharedCore {
         
         // Fifth pass: wildcard matching using target matchKey against existing keys or computed key
         if (targetMatchKey && targetMatchKey.includes('*')) {
-            for (const { event, fields, computedKey, localComputedKey } of parsedEvents) {
+            // First, prefer timezone-aware local computed keys.
+            // This avoids UTC date rollover picking the wrong month instance.
+            for (const { event, localComputedKey } of parsedEvents) {
+                if (localComputedKey && this.matchesKeyPattern(targetMatchKey, localComputedKey)) {
+                    return { event, matchedKey: localComputedKey, matchType: 'wildcard' };
+                }
+            }
+
+            // Fallback to persisted/computed keys when no local-date match exists.
+            for (const { event, fields, computedKey } of parsedEvents) {
                 const eventKey = fields.key || null;
                 const matchKey = fields.matchKey || null;
-                // Keep local-computed key first for month-aware matching, but also evaluate
-                // persisted key/matchKey values to support legacy keys and mixed-title merges.
-                const candidates = [...new Set([localComputedKey, eventKey, matchKey, computedKey].filter(Boolean))];
+                const candidates = [...new Set([eventKey, matchKey, computedKey].filter(Boolean))];
                 if (candidates.some(candidate => this.matchesKeyPattern(targetMatchKey, candidate))) {
                     const matchedKey = candidates.find(candidate => this.matchesKeyPattern(targetMatchKey, candidate));
                     return { event, matchedKey: matchedKey, matchType: 'wildcard' };
