@@ -2105,6 +2105,12 @@ class SharedCore {
                 const metaValue = parserConfig.metadata[key];
                 if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
                     const priorityConfig = fieldPriorities[key];
+                    const logMatchKeyResolution = (resolvedValue) => {
+                        if (key !== 'matchKey') return;
+                        if (typeof metaValue.value !== 'string' || !metaValue.value.includes('${')) return;
+                        const titleLabel = String(event.title || event.name || '(untitled)').trim();
+                        console.log(`🔑 SharedCore: Resolved matchKey template for "${titleLabel}": "${metaValue.value}" -> "${resolvedValue}"`);
+                    };
                     
                     // Check if "static" has priority for this field
                     if (priorityConfig && priorityConfig.priority && priorityConfig.priority.includes('static')) {
@@ -2114,12 +2120,14 @@ class SharedCore {
                         // Mark this field as coming from static source
                         if (!event._staticFields) event._staticFields = {};
                         event._staticFields[key] = resolvedValue;
+                        logMatchKeyResolution(resolvedValue);
                     } else {
                         // Fallback: if no priority config, apply static value (backward compatibility)
                         const resolvedValue = this.applyMetadataTemplate(metaValue.value, event);
                         event[key] = resolvedValue;
                         if (!event._staticFields) event._staticFields = {};
                         event._staticFields[key] = resolvedValue;
+                        logMatchKeyResolution(resolvedValue);
                     }
                 }
             });
@@ -2572,7 +2580,8 @@ class SharedCore {
         const bar = fields.bar || fields.venue || fields.location || existingEvent.location || '';
         const address = fields.address || '';
         const city = fields.city || existingEvent.city || '';
-        const timezone = fields.timezone || existingEvent.timezone || existingEvent.timeZone || '';
+        const timezoneHint = options.timezoneHint || '';
+        const timezone = fields.timezone || existingEvent.timezone || existingEvent.timeZone || timezoneHint || '';
         
         const computedEvent = {
             title: existingEvent.title,
@@ -2605,6 +2614,8 @@ class SharedCore {
         let targetSource = '';
         let targetKeyFormat = null;
         let targetIdentifier = null;
+        let targetTimezoneHint = null;
+        let targetTitle = '';
         
         if (typeof targetEventOrKey === 'string') {
             targetKey = targetEventOrKey;
@@ -2614,6 +2625,9 @@ class SharedCore {
             targetSource = targetEventOrKey.source || '';
             targetKeyFormat = targetEventOrKey._parserConfig?.keyTemplate || null;
             targetIdentifier = targetEventOrKey.identifier || targetEventOrKey.id || null;
+            targetTitle = String(targetEventOrKey.title || targetEventOrKey.name || '').trim();
+            const targetCity = targetEventOrKey.city || '';
+            targetTimezoneHint = targetEventOrKey.timezone || (targetCity && this.cities[targetCity]?.timezone) || null;
             
             if (!targetSource && targetEventOrKey.url) {
                 const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
@@ -2655,10 +2669,20 @@ class SharedCore {
             const fields = this.parseNotesIntoFields(event.notes || '');
             const computedKey = this.buildComputedKeyForExistingEvent(event, fields, targetSource, targetKeyFormat);
             const localComputedKey = wantsWildcardMatch
-                ? this.buildComputedKeyForExistingEvent(event, fields, targetSource, targetKeyFormat, { useLocalDate: true })
+                ? this.buildComputedKeyForExistingEvent(event, fields, targetSource, targetKeyFormat, {
+                    useLocalDate: true,
+                    timezoneHint: targetTimezoneHint
+                })
                 : null;
             return { event, fields, computedKey, localComputedKey };
         });
+        
+        if (wantsWildcardMatch) {
+            const titleLabel = targetTitle || '(untitled)';
+            const keyLabel = targetKey || '(none)';
+            const timezoneLabel = targetTimezoneHint || '(none)';
+            console.log(`🔎 SharedCore: Wildcard search target="${titleLabel}" key="${keyLabel}" matchKey="${targetMatchKey}" timezoneHint="${timezoneLabel}" existingEvents=${parsedEvents.length}`);
+        }
         
         if (hasDirectIdentifier) {
             if (!targetSearchDate) {
@@ -2743,16 +2767,31 @@ class SharedCore {
         
         // Fifth pass: wildcard matching using target matchKey against existing keys or computed key
         if (targetMatchKey && targetMatchKey.includes('*')) {
+            const wildcardDebugCandidates = [];
             for (const { event, fields, computedKey, localComputedKey } of parsedEvents) {
                 const eventKey = fields.key || null;
                 const matchKey = fields.matchKey || null;
                 // Keep local-computed key first for month-aware matching, but also evaluate
                 // persisted key/matchKey values to support legacy keys and mixed-title merges.
                 const candidates = [...new Set([localComputedKey, eventKey, matchKey, computedKey].filter(Boolean))];
-                if (candidates.some(candidate => this.matchesKeyPattern(targetMatchKey, candidate))) {
-                    const matchedKey = candidates.find(candidate => this.matchesKeyPattern(targetMatchKey, candidate));
+                if (wildcardDebugCandidates.length < 3 && candidates.length > 0) {
+                    const titleLabel = String(event.title || '(no title)').trim();
+                    wildcardDebugCandidates.push(`"${titleLabel}" => ${candidates.join(' || ')}`);
+                }
+                const matchedKey = candidates.find(candidate => this.matchesKeyPattern(targetMatchKey, candidate));
+                if (matchedKey) {
+                    const matchedTitle = String(event.title || '(no title)').trim();
+                    console.log(`🔎 SharedCore: Wildcard match found target="${targetMatchKey}" candidate="${matchedKey}" title="${matchedTitle}"`);
                     return { event, matchedKey: matchedKey, matchType: 'wildcard' };
                 }
+            }
+            console.log(`🔎 SharedCore: Wildcard match not found target="${targetMatchKey}" checked=${parsedEvents.length}`);
+            if (wildcardDebugCandidates.length > 0) {
+                wildcardDebugCandidates.forEach((candidateLog, index) => {
+                    console.log(`🔎 SharedCore: Wildcard candidate[${index + 1}] ${candidateLog}`);
+                });
+            } else {
+                console.log('🔎 SharedCore: Wildcard candidate list is empty');
             }
         }
         
