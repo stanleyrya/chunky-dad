@@ -1585,8 +1585,8 @@
 
               <p class="recurrence-summary" id="recurrence-summary">Does not repeat.</p>
               <div class="recurrence-edit-lock is-hidden" id="recurrence-edit-lock">
-                <p id="recurrence-edit-lock-text">Editing one occurrence? Edit the base series instead?</p>
-                <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Edit base series instead?</button>
+                <p id="recurrence-edit-lock-text">Recurrence rules are locked while editing one occurrence.</p>
+                <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Switch to base series</button>
               </div>
             </div>
           </details>
@@ -3055,10 +3055,12 @@
         if (!state || !state.isEditingExisting || state.editingExistingMode !== 'occurrence') {
           return false;
         }
-        if (state.editingExistingOccurrenceId && isOccurrenceResultId(state.editingExistingOccurrenceId)) {
+        const occurrenceId = normalizeText(state.editingExistingOccurrenceId || '');
+        if (occurrenceId && isOccurrenceResultId(occurrenceId)) {
           return true;
         }
-        return Boolean(normalizeText(state.editingExistingRecurrenceId || ''));
+        const editingId = normalizeText(state.editingExistingId || '');
+        return Boolean(editingId && isOccurrenceResultId(editingId));
       }
 
       function isRecurrenceEditingLocked() {
@@ -3508,17 +3510,12 @@
           const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
           if (selectedExistingMode === 'series') {
             if (overrideContext.overrides.length) {
-              const latestLabel = overrideContext.latestOverrideDate
-                ? formatDateLabel(overrideContext.latestOverrideDate, baseEvent.timeZone)
-                : '';
-              hint = latestLabel
-                ? `Series keeps RRULE/start/end. ${overrideContext.overrides.length} override(s) stay independent. RRULE edits can only end on/after ${latestLabel}.`
-                : `Series keeps RRULE/start/end. ${overrideContext.overrides.length} override(s) stay independent.`;
+              hint = buildSeriesOverrideWarningText(overrideContext);
             } else {
-              hint = 'Series keeps the RRULE and original start/end.';
+              hint = 'Series keeps the recurrence rule and original start/end.';
             }
           } else {
-            hint = 'Occurrence edits one instance (creates an override) and clears the RRULE.';
+            hint = 'Occurrence edits one instance (creates an override) and clears the recurrence rule.';
           }
           setFieldHint(dom.existingModeHint, hint, false);
         }
@@ -3840,7 +3837,7 @@
         const editingUid = (baseEvent && baseEvent.uid) || eventData.uid || '';
         let editingRecurrenceDate = null;
         let editingRecurrenceTimezone = '';
-        if (mode === 'occurrence') {
+        if (mode === 'occurrence' && baseEvent && baseEvent.recurrence) {
           const recurrenceSource = (summaryResult && summaryResult.event && summaryResult.event.recurrenceId)
             || (summaryResult && summaryResult.startDate);
           if (recurrenceSource instanceof Date) {
@@ -4146,6 +4143,20 @@
         return details ? `${name} — ${details}` : name;
       }
 
+      function buildSeriesOverrideWarningText(context) {
+        if (!context || !Array.isArray(context.overrides) || !context.overrides.length) {
+          return '';
+        }
+        const { baseEvent, overrides, latestOverrideDate } = context;
+        const count = overrides.length;
+        const baseMessage = `This series has ${count} override${count === 1 ? '' : 's'}. Base edits (title/date/etc.) won't apply to these override events.`;
+        if (!latestOverrideDate) {
+          return baseMessage;
+        }
+        const latestLabel = formatDateLabel(latestOverrideDate, baseEvent ? baseEvent.timeZone : browserTimezone);
+        return `${baseMessage} Recurrence rule edits can only set an end date on/after ${latestLabel}.`;
+      }
+
       function updateSeriesOverrideWarningUi() {
         if (!dom.seriesOverrideWarning || !dom.seriesOverrideWarningText || !dom.seriesOverrideWarningList) return;
         const context = getEditingSeriesOverrideContext();
@@ -4156,15 +4167,8 @@
           dom.seriesOverrideWarningList.innerHTML = '';
           return;
         }
-        const { baseEvent, overrides, latestOverrideDate } = context;
-        const count = overrides.length;
-        const latestLabel = latestOverrideDate
-          ? formatDateLabel(latestOverrideDate, baseEvent ? baseEvent.timeZone : browserTimezone)
-          : '';
-        const recurrenceSuffix = latestLabel
-          ? ` RRULE edits can only set an end date on/after ${latestLabel}.`
-          : '';
-        dom.seriesOverrideWarningText.textContent = `This series has ${count} override${count === 1 ? '' : 's'}. Base edits (title/date/etc.) won't apply to these override events.${recurrenceSuffix}`;
+        const { baseEvent, overrides } = context;
+        dom.seriesOverrideWarningText.textContent = buildSeriesOverrideWarningText(context);
         const displayOverrides = [...overrides]
           .sort((a, b) => {
             const dateA = getOverrideReferenceDate(a);
@@ -5410,9 +5414,29 @@
         const recurrenceLimitContext = getSeriesRecurrenceLimitContext();
         const recurrenceLimitOnly = Boolean(recurrenceLimitContext);
         const recurrencePatternLocked = recurrenceLocked || recurrenceLimitOnly;
+        const timeEditingLocked = recurrenceLimitOnly;
+        const timeEditingLockTitle = timeEditingLocked
+          ? 'Date/time are locked while this series has overrides. Only the recurrence rule end date can be edited.'
+          : '';
         if (recurrenceLimitOnly && recurrenceMode !== 'builder') {
           recurrenceMode = 'builder';
           state.recurrenceMode = recurrenceMode;
+        }
+        if (dom.startInput) {
+          dom.startInput.disabled = timeEditingLocked;
+          if (timeEditingLockTitle) {
+            dom.startInput.setAttribute('title', timeEditingLockTitle);
+          } else {
+            dom.startInput.removeAttribute('title');
+          }
+        }
+        if (dom.endInput) {
+          dom.endInput.disabled = timeEditingLocked;
+          if (timeEditingLockTitle) {
+            dom.endInput.setAttribute('title', timeEditingLockTitle);
+          } else {
+            dom.endInput.removeAttribute('title');
+          }
         }
         if (dom.recurrenceWeeklyRow) {
           dom.recurrenceWeeklyRow.classList.toggle('is-hidden', !showWeekly);
@@ -5517,9 +5541,10 @@
         dom.recurrenceEditLock.classList.toggle('is-hidden', !isLocked);
         if (!isLocked) return;
         if (dom.recurrenceEditLockText) {
-          dom.recurrenceEditLockText.textContent = 'Edit the base series instead?';
+          dom.recurrenceEditLockText.textContent = 'Recurrence rules are locked while editing one occurrence.';
         }
         if (dom.recurrenceEditSeriesButton) {
+          dom.recurrenceEditSeriesButton.textContent = 'Switch to base series';
           dom.recurrenceEditSeriesButton.disabled = false;
           dom.recurrenceEditSeriesButton.removeAttribute('title');
         }
