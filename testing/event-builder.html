@@ -1145,6 +1145,15 @@
       color: var(--text-secondary);
     }
 
+    .recurrence-delete-override {
+      display: grid;
+      gap: 0.24rem;
+    }
+
+    .recurrence-delete-override .checkbox-label {
+      font-size: 0.78rem;
+    }
+
     .recurrence-builder .field-row:last-of-type {
       margin-bottom: 0;
     }
@@ -1377,7 +1386,7 @@
       <section class="panel form-panel">
         <div class="panel-header">
           <div>
-            <h2>Event Details</h2>
+            <h2 id="event-details-heading">Event Details</h2>
             <div class="existing-selection-summary is-hidden" id="existing-selection-summary">
               <div id="existing-selection-text"></div>
               <div class="existing-selection-actions">
@@ -1403,7 +1412,7 @@
         </div>
 
         <form id="event-form">
-          <details class="form-section" open>
+          <details class="form-section" open id="form-section-basics">
             <summary>Basics</summary>
             <div class="section-body">
               <div class="field-grid">
@@ -1440,7 +1449,7 @@
             </div>
           </details>
 
-          <details class="form-section">
+          <details class="form-section" id="form-section-venue">
             <summary>Venue</summary>
             <div class="section-body">
               <div class="field-grid">
@@ -1481,7 +1490,7 @@
             </div>
           </details>
 
-          <details class="form-section">
+          <details class="form-section" id="form-section-time-recurrence">
             <summary>Time &amp; Recurrence</summary>
             <div class="section-body">
               <div class="field-row time-row">
@@ -1612,12 +1621,19 @@
               <p class="recurrence-summary" id="recurrence-summary">Does not repeat.</p>
               <div class="recurrence-edit-lock is-hidden" id="recurrence-edit-lock">
                 <p id="recurrence-edit-lock-text">Recurrence rules are locked while editing one occurrence.</p>
+                <div class="recurrence-delete-override is-hidden" id="recurrence-delete-override-group">
+                  <label class="checkbox-label" for="recurrence-delete-override-toggle">
+                    <input type="checkbox" id="recurrence-delete-override-toggle">
+                    <span>Delete this existing override when exporting Add to Calendar</span>
+                  </label>
+                  <small id="recurrence-delete-override-hint">Exports this RECURRENCE-ID as CANCELLED using an increased sequence.</small>
+                </div>
                 <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Switch to base series</button>
               </div>
             </div>
           </details>
 
-          <details class="form-section">
+          <details class="form-section" id="form-section-links">
             <summary>Links</summary>
             <div class="section-body">
               <div class="field-grid">
@@ -1822,6 +1838,8 @@
       const OCCURRENCE_LOOKAHEAD_DAYS = 365;
       const OCCURRENCE_MAX_COUNT = 18;
       const LOGO_DEBUG_HOLD_MS = 3000;
+      const DEBUG_MULTI_TAP_COUNT = 5;
+      const DEBUG_MULTI_TAP_WINDOW_MS = 2600;
       const URL_UPDATE_DELAY = 120;
       const EVENT_PUSH_DELAY = 200;
       const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
@@ -1857,6 +1875,9 @@
       let urlTimeoutId = null;
       let logoDebugHoldTimeoutId = null;
       let logoDebugHoldTriggered = false;
+      let debugMultiTapTimeoutId = null;
+      let debugMultiTapCount = 0;
+      let lastSeriesOverrideSectionDefaultsKey = '';
       let lastPasteActionAt = 0;
       let currentCalendarCity = null;
       let barRequestId = 0;
@@ -1932,6 +1953,11 @@
         dom.toolHeader = document.querySelector('.tool-header');
         dom.logoHomeLink = document.querySelector('.tool-nav .logo a');
         dom.logoHead = dom.logoHomeLink ? dom.logoHomeLink.querySelector('.logo-img') : null;
+        dom.eventDetailsHeading = document.getElementById('event-details-heading');
+        dom.formSectionBasics = document.getElementById('form-section-basics');
+        dom.formSectionVenue = document.getElementById('form-section-venue');
+        dom.formSectionTimeRecurrence = document.getElementById('form-section-time-recurrence');
+        dom.formSectionLinks = document.getElementById('form-section-links');
         dom.nameInput = document.getElementById('event-name');
         dom.shortNameInput = document.getElementById('event-short-name');
         dom.citySelect = document.getElementById('event-city');
@@ -1973,6 +1999,9 @@
         dom.recurrenceInput = document.getElementById('event-recurrence');
         dom.recurrenceEditLock = document.getElementById('recurrence-edit-lock');
         dom.recurrenceEditLockText = document.getElementById('recurrence-edit-lock-text');
+        dom.recurrenceDeleteOverrideGroup = document.getElementById('recurrence-delete-override-group');
+        dom.recurrenceDeleteOverrideToggle = document.getElementById('recurrence-delete-override-toggle');
+        dom.recurrenceDeleteOverrideHint = document.getElementById('recurrence-delete-override-hint');
         dom.recurrenceEditSeriesButton = document.getElementById('recurrence-edit-series-button');
         dom.websiteInput = document.getElementById('event-website');
         dom.ticketUrlInput = document.getElementById('event-ticket-url');
@@ -2067,6 +2096,31 @@
         logoDebugHoldTimeoutId = null;
       }
 
+      function clearDebugMultiTapTimer() {
+        if (!debugMultiTapTimeoutId) return;
+        clearTimeout(debugMultiTapTimeoutId);
+        debugMultiTapTimeoutId = null;
+      }
+
+      function registerDebugMultiTap() {
+        debugMultiTapCount += 1;
+        clearDebugMultiTapTimer();
+        if (debugMultiTapCount >= DEBUG_MULTI_TAP_COUNT) {
+          debugMultiTapCount = 0;
+          enableDebugMode();
+          return;
+        }
+        debugMultiTapTimeoutId = setTimeout(() => {
+          debugMultiTapTimeoutId = null;
+          debugMultiTapCount = 0;
+        }, DEBUG_MULTI_TAP_WINDOW_MS);
+      }
+
+      function bindDebugMultiTapShortcut() {
+        if (!dom.eventDetailsHeading) return;
+        dom.eventDetailsHeading.addEventListener('click', registerDebugMultiTap);
+      }
+
       function bindLogoDebugLongPress() {
         if (!dom.logoHead || !dom.logoHomeLink) return;
         const startHold = event => {
@@ -2092,6 +2146,34 @@
           event.stopPropagation();
           logoDebugHoldTriggered = false;
         });
+      }
+
+      function setSectionOpen(section, isOpen) {
+        if (!section) return;
+        section.open = Boolean(isOpen);
+      }
+
+      function buildSeriesOverrideSectionDefaultsKey(context) {
+        if (!context || !context.baseEvent || !Array.isArray(context.overrides) || !context.overrides.length) {
+          return '';
+        }
+        const uid = normalizeText(context.baseEvent.uid || context.baseEvent.name || '');
+        const overrideCount = context.overrides.length;
+        return `${uid}::${overrideCount}`;
+      }
+
+      function applySeriesOverrideSectionDefaults(context) {
+        const nextKey = buildSeriesOverrideSectionDefaultsKey(context);
+        if (!nextKey) {
+          lastSeriesOverrideSectionDefaultsKey = '';
+          return;
+        }
+        if (lastSeriesOverrideSectionDefaultsKey === nextKey) return;
+        setSectionOpen(dom.formSectionBasics, false);
+        setSectionOpen(dom.formSectionVenue, false);
+        setSectionOpen(dom.formSectionTimeRecurrence, true);
+        setSectionOpen(dom.formSectionLinks, false);
+        lastSeriesOverrideSectionDefaultsKey = nextKey;
       }
 
       function setupStickyHeaderOffset() {
@@ -3040,6 +3122,11 @@
         };
       }
 
+      function isOverrideResultId(id) {
+        const parsed = parseResultId(id);
+        return parsed.type === 'override';
+      }
+
       function isOccurrenceResultId(id) {
         const parsed = parseResultId(id);
         return parsed.type === 'override' || parsed.type === 'occurrence';
@@ -3147,18 +3234,46 @@
         return Boolean(editingId && isOccurrenceResultId(editingId));
       }
 
+      function isEditingExistingOverrideMode() {
+        if (!state || !state.isEditingExisting || state.editingExistingMode !== 'occurrence') {
+          return false;
+        }
+        const occurrenceId = normalizeText(state.editingExistingOccurrenceId || '');
+        if (occurrenceId) {
+          return isOverrideResultId(occurrenceId);
+        }
+        const editingId = normalizeText(state.editingExistingId || '');
+        if (editingId) {
+          return isOverrideResultId(editingId);
+        }
+        return false;
+      }
+
+      function isDeletingExistingOverride() {
+        return Boolean(state && state.deleteOverride && isEditingExistingOverrideMode());
+      }
+
       function isRecurrenceEditingLocked() {
         return isEditingOccurrenceOverrideMode();
       }
 
       function getAddToCalendarDisabledReason() {
         if (isEditingOccurrenceOverrideMode()) {
-          return 'Add to Calendar is disabled while editing one occurrence in a series.';
+          if (isEditingExistingOverrideMode()) {
+            if (isDeletingExistingOverride()) {
+              return '';
+            }
+            return 'Enable delete override to export a cancellation for this occurrence.';
+          }
+          return 'Add to Calendar is disabled for brand-new occurrence overrides.';
         }
         return '';
       }
 
       function getScriptableDisabledReason() {
+        if (isDeletingExistingOverride()) {
+          return 'Scriptable is disabled while deleting an existing override.';
+        }
         if (isEditingSeriesMode()) {
           return 'Scriptable is disabled while editing a base series.';
         }
@@ -4049,6 +4164,7 @@
           useVenueInstagram: false,
           useVenueFacebook: false,
           image: normalizeText(eventData.image || ''),
+          deleteOverride: false,
           isEditingExisting: true
         };
       }
@@ -4286,6 +4402,7 @@
       function updateSeriesOverrideWarningUi() {
         if (!dom.seriesOverrideWarning || !dom.seriesOverrideWarningText || !dom.seriesOverrideWarningList) return;
         const context = getEditingSeriesOverrideContext();
+        applySeriesOverrideSectionDefaults(context);
         const shouldShow = Boolean(context && context.overrides.length);
         dom.seriesOverrideWarning.classList.toggle('is-hidden', !shouldShow);
         if (!shouldShow) {
@@ -4422,6 +4539,7 @@
         state.editingExistingSequence = '';
         state.editingExistingSearchStartDate = '';
         state.editingExistingSearchEndDate = '';
+        state.deleteOverride = false;
         updateRecurrenceUi();
         updateRecurrenceSummary();
         updateSeriesOverrideWarningUi();
@@ -4494,6 +4612,7 @@
           editingExistingSequence: '',
           editingExistingSearchStartDate: '',
           editingExistingSearchEndDate: '',
+          deleteOverride: false,
           existingSelectionSummary: '',
           existingSelectionAction: ''
         };
@@ -4509,9 +4628,11 @@
         return start;
       }
 
-      function parseBooleanParam(value) {
+      function parseBooleanParam(value, options = {}) {
+        const allowEmptyAsTrue = Boolean(options && options.allowEmptyAsTrue);
         if (value == null) return false;
         const normalized = String(value).trim().toLowerCase();
+        if (!normalized) return allowEmptyAsTrue;
         return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
       }
 
@@ -4650,6 +4771,11 @@
             case 'searchEndDate':
               overrides.editingExistingSearchEndDate = value;
               break;
+            case 'deloverride':
+            case 'deleteoverride':
+            case 'edel':
+              overrides.deleteOverride = parseBooleanParam(value, { allowEmptyAsTrue: true });
+              break;
             case 'editmode':
             case 'emode':
               overrides.editingExistingMode = value === 'series' ? 'series' : 'occurrence';
@@ -4660,7 +4786,7 @@
               break;
             case 'debug':
             case 'dbg':
-              overrides.debug = parseBooleanParam(value);
+              overrides.debug = parseBooleanParam(value, { allowEmptyAsTrue: true });
               break;
             default:
               break;
@@ -4688,6 +4814,7 @@
           overrides.editingExistingSequence = '';
           overrides.editingExistingSearchStartDate = '';
           overrides.editingExistingSearchEndDate = '';
+          overrides.deleteOverride = false;
         }
         if (overrides.isEditingExisting) {
           if (!overrides.editingExistingMode) {
@@ -4706,6 +4833,10 @@
           overrides.editingExistingSequence = '';
           overrides.editingExistingSearchStartDate = '';
           overrides.editingExistingSearchEndDate = '';
+          overrides.deleteOverride = false;
+        }
+        if (!overrides.isEditingExisting) {
+          overrides.deleteOverride = false;
         }
         if (!overrides.start) overrides.start = baseState.start;
         if (!overrides.end) overrides.end = baseState.end;
@@ -4737,6 +4868,9 @@
         if (dom.facebookInput) dom.facebookInput.value = state.facebook || '';
         if (dom.gmapsInput) dom.gmapsInput.value = state.gmaps || '';
         if (dom.imageInput) dom.imageInput.value = state.image || '';
+        if (dom.recurrenceDeleteOverrideToggle) {
+          dom.recurrenceDeleteOverrideToggle.checked = Boolean(state.deleteOverride);
+        }
         updateTimeNotes();
         applyRecurrenceStateToForm();
         syncLinkFieldStates();
@@ -4746,6 +4880,7 @@
 
       function bindEvents() {
         bindLogoDebugLongPress();
+        bindDebugMultiTapShortcut();
         if (dom.form) {
           dom.form.addEventListener('submit', event => event.preventDefault());
         }
@@ -4982,6 +5117,12 @@
         if (dom.recurrenceEditSeriesButton) {
           dom.recurrenceEditSeriesButton.addEventListener('click', () => {
             handleSwapToSeriesEdit(dom.recurrenceEditSeriesButton);
+          });
+        }
+        if (dom.recurrenceDeleteOverrideToggle) {
+          dom.recurrenceDeleteOverrideToggle.addEventListener('change', event => {
+            state.deleteOverride = Boolean(event.target.checked);
+            refreshUi();
           });
         }
         if (dom.editExistingButton) {
@@ -5647,6 +5788,7 @@
           )
           : '';
         const recurrencePatternLocked = recurrenceLocked || recurrenceLimitOnly;
+        const recurrenceVisualLock = recurrenceLocked;
         const timeEditingLocked = recurrenceLimitOnly;
         const timeEditingLockTitle = timeEditingLocked
           ? 'This base series has overrides. Only Recurrence > Ends > On date can be edited.'
@@ -5680,18 +5822,18 @@
           dom.recurrenceMonthlyRow.classList.toggle('is-hidden', !showMonthly);
         }
         if (dom.recurrenceToggle) {
-          dom.recurrenceToggle.classList.toggle('is-locked', recurrencePatternLocked);
+          dom.recurrenceToggle.classList.toggle('is-locked', recurrenceVisualLock);
         }
         if (dom.recurrenceBuilder) {
           dom.recurrenceBuilder.classList.toggle('is-hidden', recurrenceMode !== 'builder');
-          dom.recurrenceBuilder.classList.toggle('is-locked', recurrencePatternLocked);
+          dom.recurrenceBuilder.classList.toggle('is-locked', recurrenceVisualLock);
         }
         if (dom.recurrenceRaw) {
           dom.recurrenceRaw.classList.toggle('is-hidden', recurrenceMode !== 'raw');
-          dom.recurrenceRaw.classList.toggle('is-locked', recurrencePatternLocked);
+          dom.recurrenceRaw.classList.toggle('is-locked', recurrenceVisualLock);
         }
         if (dom.recurrenceSummary) {
-          dom.recurrenceSummary.classList.toggle('is-locked', recurrencePatternLocked);
+          dom.recurrenceSummary.classList.toggle('is-locked', recurrenceVisualLock);
         }
         if (dom.recurrenceModeButtons && dom.recurrenceModeButtons.length) {
           dom.recurrenceModeButtons.forEach(button => {
@@ -5798,10 +5940,28 @@
 
       function updateRecurrenceEditLockUi(isLocked) {
         if (!dom.recurrenceEditLock) return;
+        const canDeleteOverride = isLocked && isEditingExistingOverrideMode();
+        if (!canDeleteOverride && state && state.deleteOverride) {
+          state.deleteOverride = false;
+        }
+        if (dom.recurrenceDeleteOverrideGroup) {
+          dom.recurrenceDeleteOverrideGroup.classList.toggle('is-hidden', !canDeleteOverride);
+        }
+        if (dom.recurrenceDeleteOverrideToggle) {
+          dom.recurrenceDeleteOverrideToggle.checked = canDeleteOverride && Boolean(state && state.deleteOverride);
+          dom.recurrenceDeleteOverrideToggle.disabled = !canDeleteOverride;
+        }
+        if (dom.recurrenceDeleteOverrideHint) {
+          dom.recurrenceDeleteOverrideHint.textContent = canDeleteOverride
+            ? 'Exports this RECURRENCE-ID as CANCELLED using an increased sequence.'
+            : '';
+        }
         dom.recurrenceEditLock.classList.toggle('is-hidden', !isLocked);
         if (!isLocked) return;
         if (dom.recurrenceEditLockText) {
-          dom.recurrenceEditLockText.textContent = 'Recurrence rules are locked while editing one occurrence.';
+          dom.recurrenceEditLockText.textContent = canDeleteOverride
+            ? 'Recurrence rules are locked while editing one occurrence. This instance is already an override.'
+            : 'Recurrence rules are locked while editing one occurrence.';
         }
         if (dom.recurrenceEditSeriesButton) {
           dom.recurrenceEditSeriesButton.textContent = 'Switch to base series';
@@ -6407,6 +6567,7 @@
           setTextParam('erid', state.editingExistingRecurrenceId);
           setTextParam('ertz', state.editingExistingRecurrenceTimezone);
           setTextParam('eseq', state.editingExistingSequence);
+          setBooleanParam('deloverride', state.deleteOverride);
           setTextParam('searchStartDate', state.editingExistingSearchStartDate);
           setTextParam('searchEndDate', state.editingExistingSearchEndDate);
         }
@@ -7195,6 +7356,11 @@
           updateCalendarStatus('Add start & end times before exporting', 'warn');
           return;
         }
+        const deletingOverride = isDeletingExistingOverride();
+        if (deletingOverride && !event.recurrenceId) {
+          showToast('This override is missing RECURRENCE-ID data, so delete export is unavailable.', 'warn');
+          return;
+        }
         const isEditingExisting = Boolean(state && state.isEditingExisting);
         const existingSequence = isEditingExisting
           ? parseIntegerValue(state && state.editingExistingSequence)
@@ -7204,7 +7370,8 @@
           : null;
         const icsOptions = isEditingExisting
           ? {
-              method: 'REQUEST',
+              method: deletingOverride ? 'CANCEL' : 'REQUEST',
+              status: deletingOverride ? 'CANCELLED' : 'CONFIRMED',
               sequence: nextSequence,
               lastModified: new Date()
             }
@@ -7215,7 +7382,9 @@
           hasRecurrenceRule: Boolean(event.recurrence),
           hasRecurrenceId: Boolean(event.recurrenceId),
           timezone: event.timezone || browserTimezone,
-          method: isEditingExisting ? 'REQUEST' : 'PUBLISH',
+          method: isEditingExisting ? (deletingOverride ? 'CANCEL' : 'REQUEST') : 'PUBLISH',
+          status: deletingOverride ? 'CANCELLED' : 'CONFIRMED',
+          deletingOverride,
           previousSequence: existingSequence !== null ? existingSequence : null,
           nextSequence: nextSequence !== null ? nextSequence : null
         });
@@ -7233,7 +7402,7 @@
           state.editingExistingSequence = String(nextSequence);
           scheduleUrlUpdate();
         }
-        showTemporaryState(dom.addToCalendarButton, 'ICS ready!');
+        showTemporaryState(dom.addToCalendarButton, deletingOverride ? 'Cancel ICS ready!' : 'ICS ready!');
       }
 
       function handleOpenScriptable(button) {
@@ -7261,7 +7430,11 @@
         const settings = options && typeof options === 'object' ? options : {};
         const now = new Date();
         const rawMethod = typeof settings.method === 'string' ? settings.method.trim().toUpperCase() : '';
-        const method = (rawMethod === 'REQUEST' || rawMethod === 'PUBLISH') ? rawMethod : 'PUBLISH';
+        const method = (rawMethod === 'REQUEST' || rawMethod === 'PUBLISH' || rawMethod === 'CANCEL')
+          ? rawMethod
+          : 'PUBLISH';
+        const rawStatus = typeof settings.status === 'string' ? settings.status.trim().toUpperCase() : '';
+        const status = rawStatus === 'CANCELLED' ? 'CANCELLED' : 'CONFIRMED';
         const sequence = Number.isFinite(settings.sequence)
           ? Math.max(1, Math.floor(settings.sequence))
           : null;
@@ -7304,8 +7477,8 @@
         if (notes) {
           lines.push(`DESCRIPTION:${escapeICS(notes)}`);
         }
-        lines.push('STATUS:CONFIRMED');
-        lines.push('TRANSP:OPAQUE');
+        lines.push(`STATUS:${status}`);
+        lines.push(`TRANSP:${status === 'CANCELLED' ? 'TRANSPARENT' : 'OPAQUE'}`);
         if (event.recurrence && !event.recurrenceId) {
           lines.push(`RRULE:${event.recurrence}`);
         }
