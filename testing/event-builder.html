@@ -334,6 +334,32 @@
       color: var(--text-primary);
     }
 
+    input:disabled,
+    select:disabled,
+    textarea:disabled {
+      cursor: not-allowed;
+      color: var(--text-muted);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(10, 14, 24, 0.82);
+      box-shadow: none;
+    }
+
+    input:disabled::placeholder,
+    textarea:disabled::placeholder {
+      color: rgba(196, 200, 228, 0.45);
+    }
+
+    input[type="datetime-local"]:disabled::-webkit-datetime-edit,
+    input[type="date"]:disabled::-webkit-datetime-edit {
+      color: var(--text-muted);
+    }
+
+    input[type="datetime-local"]:disabled::-webkit-calendar-picker-indicator,
+    input[type="date"]:disabled::-webkit-calendar-picker-indicator {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
     input[type="datetime-local"] {
       width: 100%;
       min-width: 0;
@@ -3041,7 +3067,7 @@
 
       function getSeriesRecurrenceLimitContext() {
         const context = getEditingSeriesOverrideContext();
-        if (!context || !context.overrides.length || !context.latestOverrideDate) {
+        if (!context || !context.overrides.length) {
           return null;
         }
         return context;
@@ -3482,7 +3508,7 @@
           const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
           const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
           if (overrideContext.overrides.length) {
-            showToast('Editing base series: existing overrides keep their own title/date/details.', 'warn');
+            showToast('Editing base series with overrides: only Recurrence > Ends > On date can be edited.', 'warn');
           }
         }
       }
@@ -3887,7 +3913,16 @@
 
         const summaryText = buildExistingSelectionText(summaryResult, mode, startDate, endDate, 'edit');
         setExistingSelectionSummary(summaryText, 'edit');
-        showToast('Event loaded. Edit the form as usual.', 'info');
+        if (mode === 'series' && baseEvent && existingCalendarIndex) {
+          const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
+          if (overrideContext.overrides.length) {
+            showToast('Base series has overrides. Only Recurrence > Ends > On date can be edited.', 'warn');
+          } else {
+            showToast('Event loaded. Edit the form as usual.', 'info');
+          }
+        } else {
+          showToast('Event loaded. Edit the form as usual.', 'info');
+        }
         closeExistingPanel();
       }
 
@@ -4149,12 +4184,12 @@
         }
         const { baseEvent, overrides, latestOverrideDate } = context;
         const count = overrides.length;
-        const baseMessage = `This series has ${count} override${count === 1 ? '' : 's'}. Base edits (title/date/etc.) won't apply to these override events.`;
+        const baseMessage = `This series has ${count} override${count === 1 ? '' : 's'}. Base event fields are locked to avoid conflicts. You can only change Recurrence > Ends > On date.`;
         if (!latestOverrideDate) {
           return baseMessage;
         }
         const latestLabel = formatDateLabel(latestOverrideDate, baseEvent ? baseEvent.timeZone : browserTimezone);
-        return `${baseMessage} Recurrence rule edits can only set an end date on/after ${latestLabel}.`;
+        return `${baseMessage} Set the end date on/after ${latestLabel}.`;
       }
 
       function updateSeriesOverrideWarningUi() {
@@ -4805,14 +4840,18 @@
           });
         }
         if (dom.recurrenceCount) {
-          dom.recurrenceCount.addEventListener('input', () => {
+          const handler = () => {
             handleRecurrenceBuilderChange();
-          });
+          };
+          dom.recurrenceCount.addEventListener('input', handler);
+          dom.recurrenceCount.addEventListener('change', handler);
         }
         if (dom.recurrenceUntil) {
-          dom.recurrenceUntil.addEventListener('input', () => {
+          const handler = () => {
             handleRecurrenceBuilderChange();
-          });
+          };
+          dom.recurrenceUntil.addEventListener('input', handler);
+          dom.recurrenceUntil.addEventListener('change', handler);
         }
         bindLinkField(dom.websiteInput, 'website', 'website');
         bindLinkField(dom.ticketUrlInput, 'ticketUrl', 'tickets');
@@ -5111,6 +5150,7 @@
       function updateVenueLinkToggles(options = {}) {
         const { applyValues = false, preserveState = false } = options;
         if (!dom.venueLinkToggles || !dom.venueLinkToggles.length) return;
+        const lockBySeriesOverrides = Boolean(getSeriesRecurrenceLimitContext());
         dom.venueLinkToggles.forEach(toggle => {
           const linkType = toggle.dataset.venueToggle;
           const stateKey = getVenueToggleStateKey(linkType);
@@ -5126,8 +5166,8 @@
           }
           const isActive = Boolean(state[stateKey]) && hasValue;
           toggle.checked = isActive;
-          toggle.disabled = !hasValue;
-          toggle.setAttribute('aria-disabled', hasValue ? 'false' : 'true');
+          toggle.disabled = lockBySeriesOverrides || !hasValue;
+          toggle.setAttribute('aria-disabled', (lockBySeriesOverrides || !hasValue) ? 'true' : 'false');
           if (applyValues && isActive) {
             const target = getVenueLinkTarget(linkType);
             if (target) {
@@ -5135,6 +5175,8 @@
             }
           }
         });
+        updateSeriesOverrideFieldLockUi(lockBySeriesOverrides);
+        syncDisabledFieldGroupStyles();
       }
 
       function assumeVenueLinkTogglesFromState(bar) {
@@ -5366,11 +5408,16 @@
         }
         const recurrenceLimitContext = getSeriesRecurrenceLimitContext();
         if (recurrenceLimitContext && nextMode === 'raw' && !options.force) {
-          const latestLabel = formatDateLabel(
-            recurrenceLimitContext.latestOverrideDate,
-            recurrenceLimitContext.baseEvent.timeZone || browserTimezone
-          );
-          showToast(`Raw RRULE is locked. Set an end date on/after ${latestLabel}.`, 'warn');
+          const hasLatestOverrideDate = isValidDateObject(recurrenceLimitContext.latestOverrideDate);
+          if (hasLatestOverrideDate) {
+            const latestLabel = formatDateLabel(
+              recurrenceLimitContext.latestOverrideDate,
+              recurrenceLimitContext.baseEvent.timeZone || browserTimezone
+            );
+            showToast(`Raw RRULE is locked. Set an end date on/after ${latestLabel}.`, 'warn');
+          } else {
+            showToast('Raw RRULE is locked. Only Recurrence > Ends > On date can be edited.', 'warn');
+          }
           return;
         }
         if (recurrenceMode === nextMode && !options.force) {
@@ -5405,6 +5452,83 @@
         updateRecurrenceSummary();
       }
 
+      function setSeriesOverrideLockOnControl(control, isLocked, lockTitle = '') {
+        if (!control || !('disabled' in control)) return;
+        if (isLocked) {
+          if (control.dataset.seriesOverrideLockActive !== '1') {
+            control.dataset.seriesOverrideLockActive = '1';
+            control.dataset.seriesOverrideLockPrevDisabled = control.disabled ? '1' : '0';
+            control.dataset.seriesOverrideLockPrevTitle = control.getAttribute('title') || '';
+          }
+          control.disabled = true;
+          if (lockTitle) {
+            control.setAttribute('title', lockTitle);
+          }
+          return;
+        }
+        if (control.dataset.seriesOverrideLockActive !== '1') return;
+        control.disabled = control.dataset.seriesOverrideLockPrevDisabled === '1';
+        const previousTitle = control.dataset.seriesOverrideLockPrevTitle || '';
+        if (previousTitle) {
+          control.setAttribute('title', previousTitle);
+        } else {
+          control.removeAttribute('title');
+        }
+        delete control.dataset.seriesOverrideLockActive;
+        delete control.dataset.seriesOverrideLockPrevDisabled;
+        delete control.dataset.seriesOverrideLockPrevTitle;
+      }
+
+      function updateSeriesOverrideFieldLockUi(isLocked) {
+        const lockTitle = isLocked
+          ? 'This base series has overrides. Only Recurrence > Ends > On date can be edited.'
+          : '';
+        const lockControls = [
+          dom.nameInput,
+          dom.shortNameInput,
+          dom.coverInput,
+          dom.imageInput,
+          dom.descriptionInput,
+          dom.citySelect,
+          dom.venueSelect,
+          dom.venueInput,
+          dom.addressInput,
+          dom.coordinatesInput,
+          dom.gmapsInput,
+          dom.websiteInput,
+          dom.ticketUrlInput,
+          dom.instagramInput,
+          dom.facebookInput
+        ];
+        lockControls.forEach(control => {
+          setSeriesOverrideLockOnControl(control, isLocked, lockTitle);
+        });
+        if (dom.pasteButtons && dom.pasteButtons.length) {
+          dom.pasteButtons.forEach(button => {
+            setSeriesOverrideLockOnControl(button, isLocked, lockTitle);
+          });
+        }
+        if (dom.venueLinkToggles && dom.venueLinkToggles.length) {
+          dom.venueLinkToggles.forEach(toggle => {
+            setSeriesOverrideLockOnControl(toggle, isLocked, lockTitle);
+          });
+        }
+      }
+
+      function syncDisabledFieldGroupStyles() {
+        if (!dom.form) return;
+        const groups = dom.form.querySelectorAll('.field-group');
+        groups.forEach(group => {
+          const controls = group.querySelectorAll('input, select, textarea, button');
+          if (!controls.length) {
+            group.classList.remove('disabled');
+            return;
+          }
+          const hasEnabledControl = [...controls].some(control => !control.disabled);
+          group.classList.toggle('disabled', !hasEnabledControl);
+        });
+      }
+
       function updateRecurrenceUi() {
         const frequency = dom.recurrenceFrequency ? dom.recurrenceFrequency.value : 'none';
         const showWeekly = frequency === 'weekly';
@@ -5413,11 +5537,22 @@
         const recurrenceLocked = isRecurrenceEditingLocked();
         const recurrenceLimitContext = getSeriesRecurrenceLimitContext();
         const recurrenceLimitOnly = Boolean(recurrenceLimitContext);
+        const hasLatestOverrideDate = Boolean(
+          recurrenceLimitContext && isValidDateObject(recurrenceLimitContext.latestOverrideDate)
+        );
+        const latestOverrideLabel = hasLatestOverrideDate
+          ? formatDateLabel(
+            recurrenceLimitContext.latestOverrideDate,
+            recurrenceLimitContext.baseEvent.timeZone || browserTimezone
+          )
+          : '';
         const recurrencePatternLocked = recurrenceLocked || recurrenceLimitOnly;
         const timeEditingLocked = recurrenceLimitOnly;
         const timeEditingLockTitle = timeEditingLocked
-          ? 'Date/time are locked while this series has overrides. Only the recurrence rule end date can be edited.'
+          ? 'This base series has overrides. Only Recurrence > Ends > On date can be edited.'
           : '';
+        updateSeriesOverrideFieldLockUi(recurrenceLimitOnly);
+        updateVenueLinkToggles({ applyValues: false, preserveState: true });
         if (recurrenceLimitOnly && recurrenceMode !== 'builder') {
           recurrenceMode = 'builder';
           state.recurrenceMode = recurrenceMode;
@@ -5464,7 +5599,11 @@
             if (recurrenceLocked) {
               button.setAttribute('title', 'Recurrence is locked while editing one occurrence.');
             } else if (recurrenceLimitOnly) {
-              button.setAttribute('title', 'Series has overrides. Only the recurrence end date can be edited.');
+              if (hasLatestOverrideDate) {
+                button.setAttribute('title', `Series has overrides. Set Ends > On date on/after ${latestOverrideLabel}.`);
+              } else {
+                button.setAttribute('title', 'Series has overrides. Only Recurrence > Ends > On date can be edited.');
+              }
             } else {
               button.removeAttribute('title');
             }
@@ -5513,7 +5652,21 @@
           dom.recurrenceCount.disabled = recurrenceLocked || recurrenceLimitOnly || endsValue !== 'count';
         }
         if (dom.recurrenceUntil) {
+          if (hasLatestOverrideDate) {
+            dom.recurrenceUntil.min = formatDateKey(recurrenceLimitContext.latestOverrideDate);
+          } else {
+            dom.recurrenceUntil.removeAttribute('min');
+          }
           dom.recurrenceUntil.disabled = recurrenceLocked || endsValue !== 'until';
+          if (recurrenceLocked) {
+            dom.recurrenceUntil.setAttribute('title', 'Recurrence is locked while editing one occurrence.');
+          } else if (recurrenceLimitOnly && hasLatestOverrideDate) {
+            dom.recurrenceUntil.setAttribute('title', `Set end date on/after ${latestOverrideLabel}.`);
+          } else if (recurrenceLimitOnly) {
+            dom.recurrenceUntil.setAttribute('title', 'Set an end date for this series.');
+          } else {
+            dom.recurrenceUntil.removeAttribute('title');
+          }
         }
         if (dom.recurrenceWeekdayButtons && dom.recurrenceWeekdayButtons.length) {
           dom.recurrenceWeekdayButtons.forEach(button => {
@@ -5534,6 +5687,7 @@
           dom.recurrenceInput.disabled = recurrencePatternLocked;
         }
         updateRecurrenceEditLockUi(recurrenceLocked);
+        syncDisabledFieldGroupStyles();
       }
 
       function updateRecurrenceEditLockUi(isLocked) {
@@ -5743,6 +5897,10 @@
         }
         const trimmedNext = normalizeText(nextRule || '');
         const trimmedPrevious = normalizeText(previousRule || '');
+        const hasLatestOverrideDate = isValidDateObject(context.latestOverrideDate);
+        const latestLabel = hasLatestOverrideDate
+          ? formatDateLabel(context.latestOverrideDate, context.baseEvent.timeZone || browserTimezone)
+          : '';
         if (!trimmedNext) {
           return trimmedPrevious
             ? {
@@ -5754,9 +5912,15 @@
         if (trimmedNext === trimmedPrevious) {
           return { rule: nextRule, warning: '' };
         }
-        const latestLabel = formatDateLabel(context.latestOverrideDate, context.baseEvent.timeZone || browserTimezone);
-        const fallback = getDefaultRecurrenceBuilder(context.baseEvent.startDate || parseLocalDateTime(state.start, state.timezone));
-        const baseBuilder = parseRruleToBuilder(context.baseEvent.recurrence || '', fallback);
+        const fallback = getDefaultRecurrenceBuilder(
+          (context.baseEvent && context.baseEvent.startDate) || parseLocalDateTime(state.start, state.timezone)
+        );
+        const baseRule = normalizeText(
+          (context.baseEvent && context.baseEvent.recurrence)
+          || trimmedPrevious
+          || ''
+        );
+        const baseBuilder = parseRruleToBuilder(baseRule, fallback);
         const nextBuilder = parseRruleToBuilder(trimmedNext, fallback);
         if (!baseBuilder || !nextBuilder) {
           return {
@@ -5779,18 +5943,22 @@
         if (nextBuilder.ends !== 'until' || !nextBuilder.until) {
           return {
             rule: trimmedPrevious,
-            warning: `Set "Ends" to "On date" on/after ${latestLabel}.`
+            warning: hasLatestOverrideDate
+              ? `Set "Ends" to "On date" on/after ${latestLabel}.`
+              : 'Set "Ends" to "On date" for this series.'
           };
         }
-        const minimumDateKey = formatDateKey(context.latestOverrideDate);
-        if (nextBuilder.until < minimumDateKey) {
-          nextBuilder.until = minimumDateKey;
-          nextBuilder.ends = 'until';
-          nextBuilder.count = '';
-          return {
-            rule: buildRruleFromBuilderState(nextBuilder),
-            warning: `End date adjusted to ${latestLabel} so overrides remain valid.`
-          };
+        if (hasLatestOverrideDate) {
+          const minimumDateKey = formatDateKey(context.latestOverrideDate);
+          if (nextBuilder.until < minimumDateKey) {
+            nextBuilder.until = minimumDateKey;
+            nextBuilder.ends = 'until';
+            nextBuilder.count = '';
+            return {
+              rule: buildRruleFromBuilderState(nextBuilder),
+              warning: `End date adjusted to ${latestLabel} so overrides remain valid.`
+            };
+          }
         }
         return {
           rule: buildRruleFromBuilderState(nextBuilder),
