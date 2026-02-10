@@ -1377,7 +1377,7 @@
       <section class="panel form-panel">
         <div class="panel-header">
           <div>
-            <h2>Event Details</h2>
+            <h2 id="event-details-heading">Event Details</h2>
             <div class="existing-selection-summary is-hidden" id="existing-selection-summary">
               <div id="existing-selection-text"></div>
               <div class="existing-selection-actions">
@@ -1403,7 +1403,7 @@
         </div>
 
         <form id="event-form">
-          <details class="form-section" open>
+          <details class="form-section" open id="form-section-basics">
             <summary>Basics</summary>
             <div class="section-body">
               <div class="field-grid">
@@ -1440,7 +1440,7 @@
             </div>
           </details>
 
-          <details class="form-section">
+          <details class="form-section" id="form-section-venue">
             <summary>Venue</summary>
             <div class="section-body">
               <div class="field-grid">
@@ -1481,7 +1481,7 @@
             </div>
           </details>
 
-          <details class="form-section">
+          <details class="form-section" id="form-section-time-recurrence">
             <summary>Time &amp; Recurrence</summary>
             <div class="section-body">
               <div class="field-row time-row">
@@ -1617,7 +1617,7 @@
             </div>
           </details>
 
-          <details class="form-section">
+          <details class="form-section" id="form-section-links">
             <summary>Links</summary>
             <div class="section-body">
               <div class="field-grid">
@@ -1822,6 +1822,8 @@
       const OCCURRENCE_LOOKAHEAD_DAYS = 365;
       const OCCURRENCE_MAX_COUNT = 18;
       const LOGO_DEBUG_HOLD_MS = 3000;
+      const DEBUG_MULTI_TAP_COUNT = 5;
+      const DEBUG_MULTI_TAP_WINDOW_MS = 2600;
       const URL_UPDATE_DELAY = 120;
       const EVENT_PUSH_DELAY = 200;
       const browserTimezone = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
@@ -1857,6 +1859,9 @@
       let urlTimeoutId = null;
       let logoDebugHoldTimeoutId = null;
       let logoDebugHoldTriggered = false;
+      let debugMultiTapTimeoutId = null;
+      let debugMultiTapCount = 0;
+      let lastSeriesOverrideSectionDefaultsKey = '';
       let lastPasteActionAt = 0;
       let currentCalendarCity = null;
       let barRequestId = 0;
@@ -1932,6 +1937,11 @@
         dom.toolHeader = document.querySelector('.tool-header');
         dom.logoHomeLink = document.querySelector('.tool-nav .logo a');
         dom.logoHead = dom.logoHomeLink ? dom.logoHomeLink.querySelector('.logo-img') : null;
+        dom.eventDetailsHeading = document.getElementById('event-details-heading');
+        dom.formSectionBasics = document.getElementById('form-section-basics');
+        dom.formSectionVenue = document.getElementById('form-section-venue');
+        dom.formSectionTimeRecurrence = document.getElementById('form-section-time-recurrence');
+        dom.formSectionLinks = document.getElementById('form-section-links');
         dom.nameInput = document.getElementById('event-name');
         dom.shortNameInput = document.getElementById('event-short-name');
         dom.citySelect = document.getElementById('event-city');
@@ -2067,6 +2077,31 @@
         logoDebugHoldTimeoutId = null;
       }
 
+      function clearDebugMultiTapTimer() {
+        if (!debugMultiTapTimeoutId) return;
+        clearTimeout(debugMultiTapTimeoutId);
+        debugMultiTapTimeoutId = null;
+      }
+
+      function registerDebugMultiTap() {
+        debugMultiTapCount += 1;
+        clearDebugMultiTapTimer();
+        if (debugMultiTapCount >= DEBUG_MULTI_TAP_COUNT) {
+          debugMultiTapCount = 0;
+          enableDebugMode();
+          return;
+        }
+        debugMultiTapTimeoutId = setTimeout(() => {
+          debugMultiTapTimeoutId = null;
+          debugMultiTapCount = 0;
+        }, DEBUG_MULTI_TAP_WINDOW_MS);
+      }
+
+      function bindDebugMultiTapShortcut() {
+        if (!dom.eventDetailsHeading) return;
+        dom.eventDetailsHeading.addEventListener('click', registerDebugMultiTap);
+      }
+
       function bindLogoDebugLongPress() {
         if (!dom.logoHead || !dom.logoHomeLink) return;
         const startHold = event => {
@@ -2092,6 +2127,34 @@
           event.stopPropagation();
           logoDebugHoldTriggered = false;
         });
+      }
+
+      function setSectionOpen(section, isOpen) {
+        if (!section) return;
+        section.open = Boolean(isOpen);
+      }
+
+      function buildSeriesOverrideSectionDefaultsKey(context) {
+        if (!context || !context.baseEvent || !Array.isArray(context.overrides) || !context.overrides.length) {
+          return '';
+        }
+        const uid = normalizeText(context.baseEvent.uid || context.baseEvent.name || '');
+        const overrideCount = context.overrides.length;
+        return `${uid}::${overrideCount}`;
+      }
+
+      function applySeriesOverrideSectionDefaults(context) {
+        const nextKey = buildSeriesOverrideSectionDefaultsKey(context);
+        if (!nextKey) {
+          lastSeriesOverrideSectionDefaultsKey = '';
+          return;
+        }
+        if (lastSeriesOverrideSectionDefaultsKey === nextKey) return;
+        setSectionOpen(dom.formSectionBasics, false);
+        setSectionOpen(dom.formSectionVenue, false);
+        setSectionOpen(dom.formSectionTimeRecurrence, true);
+        setSectionOpen(dom.formSectionLinks, false);
+        lastSeriesOverrideSectionDefaultsKey = nextKey;
       }
 
       function setupStickyHeaderOffset() {
@@ -4286,6 +4349,7 @@
       function updateSeriesOverrideWarningUi() {
         if (!dom.seriesOverrideWarning || !dom.seriesOverrideWarningText || !dom.seriesOverrideWarningList) return;
         const context = getEditingSeriesOverrideContext();
+        applySeriesOverrideSectionDefaults(context);
         const shouldShow = Boolean(context && context.overrides.length);
         dom.seriesOverrideWarning.classList.toggle('is-hidden', !shouldShow);
         if (!shouldShow) {
@@ -4509,9 +4573,11 @@
         return start;
       }
 
-      function parseBooleanParam(value) {
+      function parseBooleanParam(value, options = {}) {
+        const allowEmptyAsTrue = Boolean(options && options.allowEmptyAsTrue);
         if (value == null) return false;
         const normalized = String(value).trim().toLowerCase();
+        if (!normalized) return allowEmptyAsTrue;
         return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
       }
 
@@ -4660,7 +4726,7 @@
               break;
             case 'debug':
             case 'dbg':
-              overrides.debug = parseBooleanParam(value);
+              overrides.debug = parseBooleanParam(value, { allowEmptyAsTrue: true });
               break;
             default:
               break;
@@ -4746,6 +4812,7 @@
 
       function bindEvents() {
         bindLogoDebugLongPress();
+        bindDebugMultiTapShortcut();
         if (dom.form) {
           dom.form.addEventListener('submit', event => event.preventDefault());
         }
@@ -5647,6 +5714,7 @@
           )
           : '';
         const recurrencePatternLocked = recurrenceLocked || recurrenceLimitOnly;
+        const recurrenceVisualLock = recurrenceLocked;
         const timeEditingLocked = recurrenceLimitOnly;
         const timeEditingLockTitle = timeEditingLocked
           ? 'This base series has overrides. Only Recurrence > Ends > On date can be edited.'
@@ -5680,18 +5748,18 @@
           dom.recurrenceMonthlyRow.classList.toggle('is-hidden', !showMonthly);
         }
         if (dom.recurrenceToggle) {
-          dom.recurrenceToggle.classList.toggle('is-locked', recurrencePatternLocked);
+          dom.recurrenceToggle.classList.toggle('is-locked', recurrenceVisualLock);
         }
         if (dom.recurrenceBuilder) {
           dom.recurrenceBuilder.classList.toggle('is-hidden', recurrenceMode !== 'builder');
-          dom.recurrenceBuilder.classList.toggle('is-locked', recurrencePatternLocked);
+          dom.recurrenceBuilder.classList.toggle('is-locked', recurrenceVisualLock);
         }
         if (dom.recurrenceRaw) {
           dom.recurrenceRaw.classList.toggle('is-hidden', recurrenceMode !== 'raw');
-          dom.recurrenceRaw.classList.toggle('is-locked', recurrencePatternLocked);
+          dom.recurrenceRaw.classList.toggle('is-locked', recurrenceVisualLock);
         }
         if (dom.recurrenceSummary) {
-          dom.recurrenceSummary.classList.toggle('is-locked', recurrencePatternLocked);
+          dom.recurrenceSummary.classList.toggle('is-locked', recurrenceVisualLock);
         }
         if (dom.recurrenceModeButtons && dom.recurrenceModeButtons.length) {
           dom.recurrenceModeButtons.forEach(button => {
