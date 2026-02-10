@@ -1215,6 +1215,16 @@ class ScriptableAdapter {
             
             const identifierLabel = identifierRaw || '(none)';
             console.log(`📱 Scriptable: Existing event search (hasIdentifier=${hasIdentifier}) identifier="${identifierLabel}"`);
+            const wildcardMatchKey = typeof event.matchKey === 'string' ? event.matchKey : '';
+            const hasWildcardMatchKey = wildcardMatchKey.includes('*');
+            const relatedHint = (() => {
+                if (!hasWildcardMatchKey) return '';
+                const fromMatchKey = wildcardMatchKey.split('|')[0].replace(/\*/g, '').trim().toLowerCase();
+                if (fromMatchKey) return fromMatchKey;
+                const fromTitle = String(event.title || event.name || '').toLowerCase().trim();
+                const firstWord = fromTitle.split(/\s+/).find(Boolean) || '';
+                return firstWord;
+            })();
 
             const configuredRangeDays = Number(event._parserConfig?.calendarSearchRangeDays || 0);
             const rangeDays = Number.isFinite(configuredRangeDays) && configuredRangeDays > 0
@@ -1245,7 +1255,21 @@ class ScriptableAdapter {
                     searchEnd.setDate(searchEnd.getDate() + configuredRangeDays);
                 }
                 console.log(`📱 Scriptable: Existing event search window: ${searchStart.toISOString()} → ${searchEnd.toISOString()}`);
-                return await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
+                console.log(`📱 Scriptable: Existing events found=${existingEvents.length}`);
+                if (relatedHint) {
+                    const relatedEvents = existingEvents.filter(existing =>
+                        String(existing.title || '').toLowerCase().includes(relatedHint)
+                    );
+                    console.log(`📱 Scriptable: Related existing titles for "${relatedHint}"=${relatedEvents.length}`);
+                    relatedEvents.slice(0, 3).forEach((existing, index) => {
+                        const startIso = existing.startDate instanceof Date && !isNaN(existing.startDate.getTime())
+                            ? existing.startDate.toISOString()
+                            : String(existing.startDate || '(no date)');
+                        console.log(`📱 Scriptable: Related[${index + 1}] "${existing.title || '(no title)'}" @ ${startIso}`);
+                    });
+                }
+                return existingEvents;
             }
 
             // Identifier edit: only use the old visible date (pre-edit).
@@ -1271,6 +1295,18 @@ class ScriptableAdapter {
                 }
             }
             console.log(`📱 Scriptable: Existing events found=${allEvents.length}`);
+            if (relatedHint) {
+                const relatedEvents = allEvents.filter(existing =>
+                    String(existing.title || '').toLowerCase().includes(relatedHint)
+                );
+                console.log(`📱 Scriptable: Related existing titles for "${relatedHint}"=${relatedEvents.length}`);
+                relatedEvents.slice(0, 3).forEach((existing, index) => {
+                    const startIso = existing.startDate instanceof Date && !isNaN(existing.startDate.getTime())
+                        ? existing.startDate.toISOString()
+                        : String(existing.startDate || '(no date)');
+                    console.log(`📱 Scriptable: Related[${index + 1}] "${existing.title || '(no title)'}" @ ${startIso}`);
+                });
+            }
             return allEvents;
             
         } catch (error) {
