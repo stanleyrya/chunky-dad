@@ -6,9 +6,60 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-portland
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
+DTSTART:20251116T050000Z
+DTEND:20251116T100000Z
+DTSTAMP:20260211T044359Z
+UID:CA92B055-AF3F-4794-BF90-54987559FE94
+CREATED:20250817T231652Z
+DESCRIPTION:description: Music & Entertainment\n• DJ Freddy King of Pants &
+ amp\; DJ Matt Stands\n• MC - CHRISTEENE\n• Show with Barbin\, Kharisma\, Mu
+ lan Alexander &amp\; Special Guests\nbar: Bossanova Ballroom\naddress: 722 
+ E Burnside\, Portland\, OR 97213\ntimezone: America/Los_Angeles\nurl: https
+ ://bearracuda.com/events/portland-50/\ncover: $24.89 - $30.54 (as of 10/1)\
+ nimage: https://bearracuda.com/wp-content/uploads/2025/08/bday2025.jpg\nfac
+ ebook: https://www.facebook.com/events/706971042315329\nticketUrl: https://
+ www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-155
+ 7485975479\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/b
+ earracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=45.522741
+ 5%2C-122.6580938&query_place_id=101715829\nkey: bearracuda-2025-11-16-portl
+ and
+LAST-MODIFIED:20251001T141838Z
+LOCATION:45.5227415\, -122.6580938
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda Portland - Saturday\, November 15th
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260124T230000Z
+DTEND:20260125T030000Z
+DTSTAMP:20260211T044359Z
+UID:2F092079-A18B-4B2D-B790-F9BB1BC5B388
+CREATED:20260123T030741Z
+DESCRIPTION:description: Treasure Trail returns to Portland!\n\nMusic & Ent
+ ertainment\n• Clothes Check Available\nbar: Sanctuary Club\naddress: 33 Nor
+ thwest 9th Avenue\, Portland\, OR 97209\ntimezone: America/Los_Angeles\nurl
+ : https://bearracuda.com/events/treasurepdx/\nimage: https://bearracuda.com
+ /wp-content/uploads/2025/11/1ttfuuuck.jpg\nfacebook: https://www.facebook.c
+ om/events/1185664703019614\nticketUrl: https://www.eventbrite.com/e/treasur
+ e-trail-portland-saturday-jan-24th-tickets-1976421422679\nshortName: Bear-r
+ ac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://map
+ s.google.com/?q=45.5235017\,-122.6802365\nkey: bearracuda-2026-01-24-portla
+ nd
+LAST-MODIFIED:20260123T030741Z
+LOCATION:45.5235017\, -122.6802365
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TREASURE TRAIL Portland: Saturday\, Jan. 24th!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20251108T050000Z
 DTEND:20251108T100000Z
-DTSTAMP:20260211T030235Z
+DTSTAMP:20260211T044359Z
 UID:E12CE81D-29DC-48FB-B1B3-DD5718366903
 CREATED:20250901T054019Z
 DESCRIPTION:description: We're BACK BACK BACK AGAIN! CHUNK Portland - THE R
@@ -34,26 +85,26 @@ TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260124T230000Z
-DTEND:20260125T030000Z
-DTSTAMP:20260211T030235Z
-UID:2F092079-A18B-4B2D-B790-F9BB1BC5B388
-CREATED:20260123T030741Z
-DESCRIPTION:description: Treasure Trail returns to Portland!\n\nMusic & Ent
- ertainment\n• Clothes Check Available\nbar: Sanctuary Club\naddress: 33 Nor
- thwest 9th Avenue\, Portland\, OR 97209\ntimezone: America/Los_Angeles\nurl
- : https://bearracuda.com/events/treasurepdx/\nimage: https://bearracuda.com
- /wp-content/uploads/2025/11/1ttfuuuck.jpg\nfacebook: https://www.facebook.c
- om/events/1185664703019614\nticketUrl: https://www.eventbrite.com/e/treasur
- e-trail-portland-saturday-jan-24th-tickets-1976421422679\nshortName: Bear-r
- ac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://map
- s.google.com/?q=45.5235017\,-122.6802365\nkey: bearracuda-2026-01-24-portla
- nd
-LAST-MODIFIED:20260123T030741Z
-LOCATION:45.5235017\, -122.6802365
+DTSTART:20251019T040000Z
+DTEND:20251019T090000Z
+DTSTAMP:20260211T044359Z
+UID:BC5FA8C9-8A54-4155-99F7-E782ADD15904
+CREATED:20250920T210913Z
+DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
+ am\nbar: Bossanova Ballroom\naddress: 722 E Burnside\, Portland\, OR 97213\
+ ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/pdx16/\n
+ cover: $16.81 - $36.19 (as of 10/1)\nimage: https://bearracuda.com/wp-conte
+ nt/uploads/2025/04/1portlandoct.jpg\nfacebook: https://www.facebook.com/eve
+ nts/1006781098176826\nticketUrl: https://www.eventbrite.com/e/bearracuda-po
+ rtland-the-great-blumpkin-tickets-1681430587149\nshortName: Bear-rac-uda\ni
+ nstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.c
+ om/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715
+ 829\nkey: bearracuda-2025-10-19-portland
+LAST-MODIFIED:20251001T224953Z
+LOCATION:45.5227415\, -122.6580938
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:TREASURE TRAIL Portland: Saturday\, Jan. 24th!
+SUMMARY:Bearracuda Portland: The Great Blumpkin!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -61,7 +112,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250914T040000Z
 DTEND:20250914T090000Z
-DTSTAMP:20260211T030235Z
+DTSTAMP:20260211T044359Z
 UID:E0BA6861-892D-456D-9D6E-B53C61A7BF4C
 CREATED:20250817T231651Z
 DESCRIPTION:description: 16 YEAR ANNIVERSARY\n\nMusic & Entertainment\n• DJ
@@ -85,34 +136,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251019T040000Z
-DTEND:20251019T090000Z
-DTSTAMP:20260211T030235Z
-UID:BC5FA8C9-8A54-4155-99F7-E782ADD15904
-CREATED:20250920T210913Z
-DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
- am\nbar: Bossanova Ballroom\naddress: 722 E Burnside\, Portland\, OR 97213\
- ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/pdx16/\n
- cover: $16.81 - $36.19 (as of 10/1)\nimage: https://bearracuda.com/wp-conte
- nt/uploads/2025/04/1portlandoct.jpg\nfacebook: https://www.facebook.com/eve
- nts/1006781098176826\nticketUrl: https://www.eventbrite.com/e/bearracuda-po
- rtland-the-great-blumpkin-tickets-1681430587149\nshortName: Bear-rac-uda\ni
- nstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.c
- om/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715
- 829\nkey: bearracuda-2025-10-19-portland
-LAST-MODIFIED:20251001T224953Z
-LOCATION:45.5227415\, -122.6580938
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda Portland: The Great Blumpkin!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260222T050000Z
 DTEND:20260222T100000Z
-DTSTAMP:20260211T030235Z
+DTSTAMP:20260211T044359Z
 UID:22C75FCB-8CF5-426C-A2B3-01EBE0EEBF62
 CREATED:20260123T030752Z
 DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
@@ -137,7 +163,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260315T040000Z
 DTEND:20260315T090000Z
-DTSTAMP:20260211T030235Z
+DTSTAMP:20260211T044359Z
 UID:385E4388-7978-4649-B234-5C44D1C6F954
 CREATED:20260117T205138Z
 DESCRIPTION:description: CHUNK PDX Presents E. FELD from Palm Springs DJ Co
@@ -165,35 +191,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251116T050000Z
-DTEND:20251116T100000Z
-DTSTAMP:20260211T030235Z
-UID:CA92B055-AF3F-4794-BF90-54987559FE94
-CREATED:20250817T231652Z
-DESCRIPTION:description: Music & Entertainment\n• DJ Freddy King of Pants &
- amp\; DJ Matt Stands\n• MC - CHRISTEENE\n• Show with Barbin\, Kharisma\, Mu
- lan Alexander &amp\; Special Guests\nbar: Bossanova Ballroom\naddress: 722 
- E Burnside\, Portland\, OR 97213\ntimezone: America/Los_Angeles\nurl: https
- ://bearracuda.com/events/portland-50/\ncover: $24.89 - $30.54 (as of 10/1)\
- nimage: https://bearracuda.com/wp-content/uploads/2025/08/bday2025.jpg\nfac
- ebook: https://www.facebook.com/events/706971042315329\nticketUrl: https://
- www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-155
- 7485975479\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/b
- earracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=45.522741
- 5%2C-122.6580938&query_place_id=101715829\nkey: bearracuda-2025-11-16-portl
- and
-LAST-MODIFIED:20251001T141838Z
-LOCATION:45.5227415\, -122.6580938
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda Portland - Saturday\, November 15th
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20251026T220000Z
 DTEND:20251027T030000Z
-DTSTAMP:20260211T030235Z
+DTSTAMP:20260211T044359Z
 UID:6C4ECC86-011F-4128-8CF0-9841CB2D8EED
 CREATED:20250829T235147Z
 DESCRIPTION:description: JP Hardy & Matt Bearracuda present TREASURE TRAIL 
