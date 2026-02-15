@@ -4178,8 +4178,14 @@ async function showMyLocation() {
                 fillColor: '#4285f4',
                 fillOpacity: 0.2,
                 radius: 500,
-                weight: 3
+                weight: 3,
+                pane: 'overlayPane'
             }).addTo(window.eventsMap).bindPopup(popupText);
+            
+            // Ensure location circle stays below selected markers
+            if (window.myLocationCircle._path) {
+                window.myLocationCircle._path.style.zIndex = '1000';
+            }
             
             // Calculate bounds that include both user location and all event markers
             const bounds = L.latLngBounds([[location.lat, location.lng]]);

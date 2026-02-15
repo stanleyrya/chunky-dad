@@ -2726,6 +2726,12 @@ body.index-page main {
     position: relative !important;
 }
 
+/* Ensure location button doesn't get marker-selected styling */
+#location-btn.marker-selected,
+.map-control-btn.marker-selected {
+    border-radius: 8px !important;
+}
+
 .leaflet-marker-icon.marker-dimmed {
     opacity: 0.6 !important;
     z-index: 1000 !important;
@@ -2763,6 +2769,9 @@ body.index-page main {
 }
 
 /* My Location Circle */
+.leaflet-interactive[stroke="#4285f4"] {
+    z-index: 1000 !important;
+}
 
 
 
