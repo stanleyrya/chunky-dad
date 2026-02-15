@@ -6,9 +6,35 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-san-diego
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
+DTSTART:20260207T050000Z
+DTEND:20260207T100000Z
+DTSTAMP:20260215T160529Z
+UID:72BA7733-05A0-4516-93E3-FCFD336AB92E
+CREATED:20260117T210202Z
+DESCRIPTION:description: MEGAWOOF SAN DIEGO - Feb 6th\nbar: The Rail\naddre
+ ss: 3796 Fifth Avenue\, San Diego\, CA 92103\ntimezone: America/Los_Angeles
+ \nticketUrl: https://www.eventbrite.com/e/megawoof-san-diego-feb-6th-ticket
+ s-1979742608435\ncover: $11.58 - $16.84 (as of 2/2)\nimage: https://img.evb
+ uc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1174012983%2F185013722403%2F1
+ %2Foriginal.20260105-163247?crop=focalpoint&fit=crop&h=230&w=460&auto=forma
+ t%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=ac5e775082450ea31daa858d2072
+ 0acc\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_a
+ merica\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.
+ com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJw
+ dJrt9pU2YARYuac9G61qQE\nkey: megawoof|2026-02-07|the rail
+LAST-MODIFIED:20260203T035759Z
+LOCATION:32.7468303\, -117.1607394
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20251101T040000Z
 DTEND:20251101T110000Z
-DTSTAMP:20260215T120646Z
+DTSTAMP:20260215T160529Z
 UID:192064B4-BCA8-491B-97A9-36BDF7A5A725
 CREATED:20251001T001000Z
 DESCRIPTION:description: MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTE
@@ -25,32 +51,6 @@ DESCRIPTION:description: MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTE
  _id=ChIJwdJrt9pU2YARYuac9G61qQE\nkey: megawoof|2025-11-01|the rail|eventbri
  te
 LAST-MODIFIED:20251002T003905Z
-LOCATION:32.7468303\, -117.1607394
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260207T050000Z
-DTEND:20260207T100000Z
-DTSTAMP:20260215T120646Z
-UID:72BA7733-05A0-4516-93E3-FCFD336AB92E
-CREATED:20260117T210202Z
-DESCRIPTION:description: MEGAWOOF SAN DIEGO - Feb 6th\nbar: The Rail\naddre
- ss: 3796 Fifth Avenue\, San Diego\, CA 92103\ntimezone: America/Los_Angeles
- \nticketUrl: https://www.eventbrite.com/e/megawoof-san-diego-feb-6th-ticket
- s-1979742608435\ncover: $11.58 - $16.84 (as of 2/2)\nimage: https://img.evb
- uc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1174012983%2F185013722403%2F1
- %2Foriginal.20260105-163247?crop=focalpoint&fit=crop&h=230&w=460&auto=forma
- t%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=ac5e775082450ea31daa858d2072
- 0acc\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_a
- merica\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.
- com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJw
- dJrt9pU2YARYuac9G61qQE\nkey: megawoof|2026-02-07|the rail
-LAST-MODIFIED:20260203T035759Z
 LOCATION:32.7468303\, -117.1607394
 SEQUENCE:0
 STATUS:CONFIRMED
