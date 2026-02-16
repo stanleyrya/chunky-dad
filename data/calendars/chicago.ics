@@ -42,35 +42,79 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
-DTSTART:20260215T030000Z
-DTEND:20260215T110000Z
-DTSTAMP:20260216T030140Z
-UID:0AD1679F-26DC-4355-ABDC-8F79B5C3552A
-CREATED:20260125T145932Z
-DESCRIPTION:description: This Valentine's Day Coach After Dark\\: The Sport
- s Gear Disco returns to Jackhammer in Chicago!\nbar: Jackhammer\naddress: 6
- 406 North Clark Street\, Chicago\, IL 60626\ntimezone: America/Chicago\ntic
- ketUrl: https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-19809
- 95304282\ncover: $20 - $30.65 (as of 1/28)\nimage: https://img.evbuc.com/ht
- tps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175333561%2F2198683436473%2F1%2Forigi
- nal.20260120-135628?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccomp
- ress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=70ef3f1bebb0d6754418e16fe06236bd\nin
- stagram: https://www.instagram.com/coachafterdark\ngmaps: https://www.googl
- e.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ4
- 4RAWrzRD4gRDGoLchD_2SI\nkey: coach-after-dark-chicago|2026-02-15|jackhammer
-LAST-MODIFIED:20260128T165141Z
-LOCATION:41.998402\, -87.6709808
+DTSTART:20250830T020000Z
+DTEND:20250830T090000Z
+DTSTAMP:20260216T044206Z
+UID:EA39ACFC-8AE4-4766-9C7C-C310633622D9
+CREATED:20250830T003603Z
+DESCRIPTION:description: Music & Entertainment\n• DJ Tim Arnold (Main Floor
+ )\n• REDUX (The HOLE)\nbar: The Jackhammer Complex\naddress: 6406 N Clark S
+ t\, Chicago\, IL 60626\ntimezone: America/Chicago\nurl: https://bearracuda.
+ com/events/chicagoaug/\ncover: $19.24 - $24.89 (as of 8/29)\nimage: https:/
+ /bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg\nfacebook: 
+ https://www.facebook.com/events/1227123952423945/\nticketUrl: https://www.e
+ ventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-141296
+ 3053529?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.
+ instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=41.99842\,-87.6
+ 7112\nkey: bearracuda-2025-08-30-chicago
+LAST-MODIFIED:20250830T015906Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Coach After Dark: Chicago
+SUMMARY:Bearracuda Chicago Jockstrap Party: Tix at the DOOR
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20250808T220000Z
+DTEND:20250809T030000Z
+DTSTAMP:20260216T044206Z
+UID:50pmdk0ccoramq9nd5615m8ueh@google.com
+CREATED:20250727T004326Z
+DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
+ ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
+ lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
+ s. Friday’s top artists are Saucy Santana and Monét X Change. See the websi
+ te for more artists and entry info.<br>Instagram: <a href="https://www.inst
+ agram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" target="_blank">https://
+ www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br
+ >Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc">https:/
+ /maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Be
+ lmont to Addison
+LAST-MODIFIED:20250727T015242Z
+LOCATION:41.9436009\, -87.6494458
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Market Day 1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250809T160000Z
+DTEND:20250810T030000Z
+DTSTAMP:20260216T044206Z
+UID:0nfdrio58lobhrsarq4dgge2p7@google.com
+CREATED:20250727T005047Z
+DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
+ ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
+ lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
+ s. Saturday’s top artists are Keke Palmer\, Keisha\, Same Star\, and Brooke
+  Eden. See the website for more artists and entry info.<br>Instagram: <a hr
+ ef="https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" targ
+ et="_blank">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 s
+ uggested donation<br>Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizM
+ eA?g_st=ipc" target="_blank">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st
+ =ipc</a><br>Bar: Halsted St. from Belmont to Addison
+LAST-MODIFIED:20250727T015247Z
+LOCATION:41.9436009\, -87.6494458
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Market Day 2
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20251012T020000Z
 DTEND:20251012T080000Z
-DTSTAMP:20260216T030140Z
+DTSTAMP:20260216T044206Z
 UID:8E2BF651-F6BA-4564-B5F9-7C014070614B
 CREATED:20250901T054019Z
 DESCRIPTION:description: BEEF\, DADS\, BBQ\, SAUSAGES\, WEINERS - WHATS NOT
@@ -96,56 +140,35 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250830T020000Z
-DTEND:20250830T090000Z
-DTSTAMP:20260216T030140Z
-UID:EA39ACFC-8AE4-4766-9C7C-C310633622D9
-CREATED:20250830T003603Z
-DESCRIPTION:description: Music & Entertainment\n• DJ Tim Arnold (Main Floor
- )\n• REDUX (The HOLE)\nbar: The Jackhammer Complex\naddress: 6406 N Clark S
- t\, Chicago\, IL 60626\ntimezone: America/Chicago\nurl: https://bearracuda.
- com/events/chicagoaug/\ncover: $19.24 - $24.89 (as of 8/29)\nimage: https:/
- /bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg\nfacebook: 
- https://www.facebook.com/events/1227123952423945/\nticketUrl: https://www.e
- ventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-141296
- 3053529?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.
- instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=41.99842\,-87.6
- 7112\nkey: bearracuda-2025-08-30-chicago
-LAST-MODIFIED:20250830T015906Z
+DTSTART:20260215T030000Z
+DTEND:20260215T110000Z
+DTSTAMP:20260216T044206Z
+UID:0AD1679F-26DC-4355-ABDC-8F79B5C3552A
+CREATED:20260125T145932Z
+DESCRIPTION:description: This Valentine's Day Coach After Dark\\: The Sport
+ s Gear Disco returns to Jackhammer in Chicago!\nbar: Jackhammer\naddress: 6
+ 406 North Clark Street\, Chicago\, IL 60626\ntimezone: America/Chicago\ntic
+ ketUrl: https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-19809
+ 95304282\ncover: $20 - $30.65 (as of 1/28)\nimage: https://img.evbuc.com/ht
+ tps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175333561%2F2198683436473%2F1%2Forigi
+ nal.20260120-135628?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccomp
+ ress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=70ef3f1bebb0d6754418e16fe06236bd\nin
+ stagram: https://www.instagram.com/coachafterdark\ngmaps: https://www.googl
+ e.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ4
+ 4RAWrzRD4gRDGoLchD_2SI\nkey: coach-after-dark-chicago|2026-02-15|jackhammer
+LAST-MODIFIED:20260128T165141Z
+LOCATION:41.998402\, -87.6709808
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bearracuda Chicago Jockstrap Party: Tix at the DOOR
+SUMMARY:Coach After Dark: Chicago
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250808T220000Z
-DTEND:20250809T030000Z
-DTSTAMP:20260216T030140Z
-UID:50pmdk0ccoramq9nd5615m8ueh@google.com
-CREATED:20250727T004326Z
-DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
- ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
- lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
- s. Friday’s top artists are Saucy Santana and Monét X Change. See the websi
- te for more artists and entry info.<br>Instagram: <a href="https://www.inst
- agram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" target="_blank">https://
- www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br
- >Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc">https:/
- /maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Be
- lmont to Addison
-LAST-MODIFIED:20250727T015242Z
-LOCATION:41.9436009\, -87.6494458
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Market Day 1
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250810T160000Z
 DTEND:20250811T030000Z
-DTSTAMP:20260216T030140Z
+DTSTAMP:20260216T044206Z
 UID:1bs4hde34sb2o62dtr2sl85ild@google.com
 CREATED:20250727T005144Z
 DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
@@ -168,7 +191,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250809T033000Z
 DTEND:20250809T090000Z
-DTSTAMP:20260216T030140Z
+DTSTAMP:20260216T044206Z
 UID:anpebtqveq4fqmniffj10p0j5o@google.com
 CREATED:20250727T015902Z
 DESCRIPTION:Google Maps: https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc
@@ -185,7 +208,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20250906T210000
 DTEND;TZID=America/New_York:20250907T050000
 RRULE:FREQ=MONTHLY;BYDAY=1SA
-DTSTAMP:20260216T030140Z
+DTSTAMP:20260216T044206Z
 UID:qo8nfeeu512fe74ng1o3jmoqt0@google.com
 CREATED:20250826T001223Z
 DESCRIPTION:url: https://jackhammerchicago.com/belly-up\ncover: Before 10pm
@@ -203,48 +226,9 @@ SUMMARY:Belly Up
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250809T160000Z
-DTEND:20250810T030000Z
-DTSTAMP:20260216T030140Z
-UID:0nfdrio58lobhrsarq4dgge2p7@google.com
-CREATED:20250727T005047Z
-DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
- ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
- lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
- s. Saturday’s top artists are Keke Palmer\, Keisha\, Same Star\, and Brooke
-  Eden. See the website for more artists and entry info.<br>Instagram: <a hr
- ef="https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" targ
- et="_blank">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 s
- uggested donation<br>Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizM
- eA?g_st=ipc" target="_blank">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st
- =ipc</a><br>Bar: Halsted St. from Belmont to Addison
-LAST-MODIFIED:20250727T015247Z
-LOCATION:41.9436009\, -87.6494458
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Market Day 2
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/North_Dakota/New_Salem:20250710T170000
-DTEND;TZID=America/North_Dakota/New_Salem:20250710T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260216T030140Z
-UID:gntkupiisd0hb2k7uptg7j855g@google.com
-CREATED:20250727T020550Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nInstagram: https://www.instagra
- m.com/bearhappyhourchi\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161121Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260322T020000Z
 DTEND:20260322T080000Z
-DTSTAMP:20260216T030140Z
+DTSTAMP:20260216T044206Z
 UID:9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8
 CREATED:20260205T185753Z
 DESCRIPTION:description: LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE 
@@ -267,5 +251,21 @@ SUMMARY:CHUNK CHICAGO presents SPRING THAW!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/North_Dakota/New_Salem:20250710T170000
+DTEND;TZID=America/North_Dakota/New_Salem:20250710T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260216T044206Z
+UID:gntkupiisd0hb2k7uptg7j855g@google.com
+CREATED:20250727T020550Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nInstagram: https://www.instagra
+ m.com/bearhappyhourchi\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161121Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
 END:VEVENT
 END:VCALENDAR
