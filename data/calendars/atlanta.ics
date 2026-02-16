@@ -6,9 +6,59 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-atlanta
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
+DTSTART:20250824T020000Z
+DTEND:20250824T070000Z
+DTSTAMP:20260216T062346Z
+UID:6603D191-FFD6-4D13-89CE-03BD5C0A3D4F
+CREATED:20250817T231653Z
+DESCRIPTION:description: 16 YEAR ANNIVERSARY\nwebsite: https://www.eventbri
+ te.com/e/bearracuda-atlanta-16-year-anniversary-tickets-1364601091599\ncove
+ r: $20.73 - $26.82 (as of 8/20)\nimage: https://img.evbuc.com/https%3A%2F%2
+ Fcdn.evbuc.com%2Fimages%2F1030030273%2F301420936599%2F1%2Foriginal.20250513
+ -190933?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sh
+ arp=10&fp-x=0.0142045454545&fp-y=0.478571428571&s=3ecb099cc8f9d16e98d8ea2b0
+ 78ddca7\ngmaps: https://www.google.com/maps/search/?api=1&query=33.81158%2C
+ -84.3554&query_place_id=ChIJHfQbk9cF9YgRffpBbinNqZk\nshortName: Bear-rac-ud
+ a\ninstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-2025-08
+ -24-atlanta\nurl: https://www.eventbrite.com/e/bearracuda-atlanta-16-year-a
+ nniversary-tickets-1364601091599
+LAST-MODIFIED:20250822T233746Z
+LOCATION:33.81158\, -84.3554
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda Atlanta 16 Year Anniversary!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251109T030000Z
+DTEND:20251109T080000Z
+DTSTAMP:20260216T062346Z
+UID:2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE
+CREATED:20250928T145258Z
+DESCRIPTION:description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00
+  am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE\, Atlanta\, GA 30324
+ \ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\
+ ncover: $20.73 - $26.82 (as of 10/1)\nimage: https://bearracuda.com/wp-cont
+ ent/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg\nfacebook: https://www.fa
+ cebook.com/events/645075138661917/\nticketUrl: https://www.eventbrite.com/e
+ /bearracuda-atlanta-bulges-jocks-tickets-1751306507909\nshortName: Bear-rac
+ -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.
+ google.com/?q=33.81158\,-84.3554\nkey: bearracuda-2025-11-09-atlanta
+LAST-MODIFIED:20251001T224959Z
+LOCATION:33.81158\, -84.3554
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda Atlanta: Bulges & Jocks
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260208T030000Z
 DTEND:20260208T080000Z
-DTSTAMP:20260216T030140Z
+DTSTAMP:20260216T062346Z
 UID:B66760F4-84C2-4D7B-88FA-86483970980A
 CREATED:20260123T030740Z
 DESCRIPTION:description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00
@@ -35,7 +85,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260426T010000Z
 DTEND:20260426T070000Z
-DTSTAMP:20260216T030140Z
+DTSTAMP:20260216T062346Z
 UID:26189CDE-B43B-4E65-9A46-35472A1B1374
 CREATED:20260123T030755Z
 DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 3\\:00 
@@ -53,56 +103,6 @@ LOCATION:33.81158\, -84.3554
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Bearracuda Atlanta Bear Pride 2026!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20251109T030000Z
-DTEND:20251109T080000Z
-DTSTAMP:20260216T030140Z
-UID:2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE
-CREATED:20250928T145258Z
-DESCRIPTION:description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00
-  am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE\, Atlanta\, GA 30324
- \ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\
- ncover: $20.73 - $26.82 (as of 10/1)\nimage: https://bearracuda.com/wp-cont
- ent/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg\nfacebook: https://www.fa
- cebook.com/events/645075138661917/\nticketUrl: https://www.eventbrite.com/e
- /bearracuda-atlanta-bulges-jocks-tickets-1751306507909\nshortName: Bear-rac
- -uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.
- google.com/?q=33.81158\,-84.3554\nkey: bearracuda-2025-11-09-atlanta
-LAST-MODIFIED:20251001T224959Z
-LOCATION:33.81158\, -84.3554
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda Atlanta: Bulges & Jocks
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250824T020000Z
-DTEND:20250824T070000Z
-DTSTAMP:20260216T030140Z
-UID:6603D191-FFD6-4D13-89CE-03BD5C0A3D4F
-CREATED:20250817T231653Z
-DESCRIPTION:description: 16 YEAR ANNIVERSARY\nwebsite: https://www.eventbri
- te.com/e/bearracuda-atlanta-16-year-anniversary-tickets-1364601091599\ncove
- r: $20.73 - $26.82 (as of 8/20)\nimage: https://img.evbuc.com/https%3A%2F%2
- Fcdn.evbuc.com%2Fimages%2F1030030273%2F301420936599%2F1%2Foriginal.20250513
- -190933?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sh
- arp=10&fp-x=0.0142045454545&fp-y=0.478571428571&s=3ecb099cc8f9d16e98d8ea2b0
- 78ddca7\ngmaps: https://www.google.com/maps/search/?api=1&query=33.81158%2C
- -84.3554&query_place_id=ChIJHfQbk9cF9YgRffpBbinNqZk\nshortName: Bear-rac-ud
- a\ninstagram: https://www.instagram.com/bearracuda\nkey: bearracuda-2025-08
- -24-atlanta\nurl: https://www.eventbrite.com/e/bearracuda-atlanta-16-year-a
- nniversary-tickets-1364601091599
-LAST-MODIFIED:20250822T233746Z
-LOCATION:33.81158\, -84.3554
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda Atlanta 16 Year Anniversary!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
