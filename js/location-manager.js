@@ -297,6 +297,61 @@ class LocationManager {
     }
 
     /**
+     * Smart location request that minimizes iOS permission prompts
+     * Only requests location if we don't have recent cached data
+     */
+    async getLocationSmart() {
+        try {
+            // First check if we have recent cached location
+            const cached = this.getCachedLocation();
+            if (cached && !cached.stale) {
+                this.logger.debug('LOCATION', 'Using recent cached location (smart)', { 
+                    age: Date.now() - cached.timestamp,
+                    accuracy: cached.accuracy
+                });
+                return {
+                    lat: cached.lat,
+                    lng: cached.lng,
+                    accuracy: cached.accuracy,
+                    source: 'cache',
+                    stale: false
+                };
+            }
+
+            // Check permission state before requesting
+            const permissionState = await this.checkPermissionState();
+            if (permissionState === 'denied') {
+                throw new Error('Location access has been denied. Please enable location permissions in your browser settings.');
+            }
+
+            // Only request if we have permission or it's the first time
+            if (permissionState === 'granted' || permissionState === 'prompt') {
+                this.logger.debug('LOCATION', 'Requesting location (smart)', { permissionState });
+                return await this.getCurrentLocation({}, false);
+            }
+
+            // If permission is unknown, try cached as fallback
+            if (cached) {
+                this.logger.debug('LOCATION', 'Using stale cache as fallback (smart)', { 
+                    age: Date.now() - cached.timestamp 
+                });
+                return {
+                    lat: cached.lat,
+                    lng: cached.lng,
+                    accuracy: cached.accuracy,
+                    source: 'cache_fallback',
+                    stale: true
+                };
+            }
+
+            throw new Error('Location not available');
+        } catch (error) {
+            this.logger.debug('LOCATION', 'Smart location request failed', { error: error.message });
+            throw error;
+        }
+    }
+
+    /**
      * Clear cached location
      */
     clearCache() {
@@ -330,34 +385,17 @@ class LocationManager {
      */
     async getLocationForFeatures() {
         try {
-            const status = await this.getLocationStatus();
-            
-            // If we have cached location, use it
-            if (status.hasCachedLocation) {
-                const cached = this.getCachedLocation();
-                this.logger.debug('LOCATION', 'Using cached location for features', { 
-                    lat: cached.lat, 
-                    lng: cached.lng,
-                    stale: cached.stale 
-                });
-                return cached;
-            }
-            
-            // If we have permission but no cache, request silently
-            if (status.supported && status.permissionState === 'granted') {
-                this.logger.debug('LOCATION', 'Requesting fresh location for features');
-                const location = await this.getCurrentLocation({}, false);
-                return location;
-            }
-            
-            // No permission or not supported
-            this.logger.debug('LOCATION', 'Location not available for features', { 
-                supported: status.supported, 
-                permissionState: status.permissionState 
+            // Use smart location request to minimize prompts
+            const location = await this.getLocationSmart();
+            this.logger.debug('LOCATION', 'Location available for features', { 
+                lat: location.lat, 
+                lng: location.lng,
+                source: location.source,
+                stale: location.stale 
             });
-            return null;
+            return location;
         } catch (error) {
-            this.logger.debug('LOCATION', 'Location request for features failed', { error: error.message });
+            this.logger.debug('LOCATION', 'Location not available for features', { error: error.message });
             return null;
         }
     }

@@ -676,6 +676,83 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
 
+    /**
+     * Initialize location features for the calendar
+     */
+    async initializeLocationFeatures() {
+        try {
+            if (!window.locationManager) {
+                window.locationManager = new LocationManager();
+            }
+            
+            const location = await window.locationManager.getLocationForFeatures();
+            
+            if (location) {
+                this.userLocation = location;
+                window.userLocation = location;
+                this.locationFeaturesEnabled = true;
+                
+                // Calculate distances for all events
+                this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, location);
+                
+                // Show user location on map
+                showMyLocation();
+                
+                logger.info('CALENDAR', 'Location features enabled', { 
+                    lat: location.lat, 
+                    lng: location.lng,
+                    source: location.source 
+                });
+            } else {
+                logger.debug('CALENDAR', 'No user location available for features');
+            }
+        } catch (error) {
+            logger.debug('CALENDAR', 'Location features initialization failed', { error: error.message });
+        }
+    }
+
+    /**
+     * Update location features when calendar view changes
+     * This ensures location-based features work consistently across view changes
+     */
+    async updateLocationFeatures() {
+        try {
+            // Only update if we already have location features enabled
+            if (!this.locationFeaturesEnabled || !window.locationManager) {
+                return;
+            }
+
+            // Check if we have a fresh location available
+            const location = await window.locationManager.getLocationForFeatures();
+            
+            if (location) {
+                // Update location if it's different or if we want to refresh
+                const locationChanged = !this.userLocation || 
+                    this.userLocation.lat !== location.lat || 
+                    this.userLocation.lng !== location.lng;
+
+                if (locationChanged) {
+                    this.userLocation = location;
+                    window.userLocation = location;
+                    
+                    // Recalculate distances for all events
+                    this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, location);
+                    
+                    // Re-render events to show updated distances
+                    this.renderEvents();
+                    
+                    logger.info('CALENDAR', 'Location features updated', { 
+                        lat: location.lat, 
+                        lng: location.lng,
+                        source: location.source 
+                    });
+                }
+            }
+        } catch (error) {
+            logger.debug('CALENDAR', 'Location features update failed', { error: error.message });
+        }
+    }
+
     // Set up city selector and populate with available cities
     setupCitySelector() {
         const availableCitiesList = document.getElementById('available-cities-list');
@@ -1325,6 +1402,8 @@ class DynamicCalendarLoader extends CalendarCore {
         // Only update display immediately if not part of a swipe animation
         if (skipAnimation) {
             await this.updateCalendarDisplay();
+            // Update location features when navigating periods
+            await this.updateLocationFeatures();
         }
     }
 
@@ -3095,35 +3174,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.updateSelectionVisualState();
                 
                 // Initialize location features after map is ready
-                try {
-                    if (!window.locationManager) {
-                        window.locationManager = new LocationManager();
-                    }
-                    
-                    const location = await window.locationManager.getLocationForFeatures();
-                    
-                    if (location) {
-                        this.userLocation = location;
-                        window.userLocation = location;
-                        this.locationFeaturesEnabled = true;
-                        
-                        // Calculate distances for all events
-                        this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, location);
-                        
-                        // Show user location on map
-                        showMyLocation();
-                        
-                        logger.info('CALENDAR', 'Location features enabled', { 
-                            lat: location.lat, 
-                            lng: location.lng,
-                            source: location.source 
-                        });
-                    } else {
-                        logger.debug('CALENDAR', 'No user location available for features');
-                    }
-                } catch (error) {
-                    logger.debug('CALENDAR', 'Location features initialization failed', { error: error.message });
-                }
+                await this.initializeLocationFeatures();
             } else if (hideEvents) {
                 logger.debug('CALENDAR', 'Skipping map initialization (hideEvents mode)');
             } else {
@@ -3173,6 +3224,8 @@ class DynamicCalendarLoader extends CalendarCore {
                     this.clearEventSelection();
                     this.updateCalendarDisplay();
                     this.syncUrl(true);
+                    // Update location features when changing views
+                    await this.updateLocationFeatures();
                 }
             });
         });
