@@ -95,10 +95,6 @@ html {
 
 /* Prevent all elements from overflowing on small screens */
 @media (max-width: 768px) {
-    body {
-        padding-top: 60px; /* Reduced header height */
-    }
-    
     header {
         height: 60px;
     }
@@ -2255,7 +2251,13 @@ body.index-page main {
     align-items: center;
     justify-content: center;
     position: relative;
-    top: 0px; /* Center icon properly in circle */
+    top: 1px; /* Center icon properly in circle */
+}
+
+/* Exclude share icons from the top adjustment */
+.share-event-btn .share-icon i,
+.share-intel-footer-btn i {
+    top: 0px;
 }
 
 .event-links a {
@@ -3230,10 +3232,6 @@ footer {
 }
 
 @media (max-width: 480px) {
-    body {
-        padding-top: 50px; /* Even smaller header height */
-    }
-    
     header {
         height: 50px;
     }
