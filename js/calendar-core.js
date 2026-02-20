@@ -358,7 +358,9 @@ class CalendarCore {
                 uid: calendarEvent.uid || null,
                 recurrenceId: calendarEvent.recurrenceId || null,
                 recurrenceIdTimezone: calendarEvent.recurrenceIdTimezone || null,
-                sequence: calendarEvent.sequence ?? null
+                sequence: calendarEvent.sequence ?? null,
+                // Mark override identity style for downstream edit/delete rules.
+                overrideIdentityType: calendarEvent.recurrenceId ? 'legacy' : null
             };
             
 
@@ -416,6 +418,7 @@ class CalendarCore {
                         eventData.recurring = false;
                         eventData.recurrence = null;
                         eventData.eventType = 'routine';
+                        eventData.overrideIdentityType = 'custom';
 
                         logger.info('CALENDAR', 'Applied custom description override identity', {
                             eventName: eventData.name,
