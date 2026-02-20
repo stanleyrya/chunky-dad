@@ -1626,7 +1626,7 @@
                     <input type="checkbox" id="recurrence-delete-override-toggle">
                     <span>Delete this existing override when exporting Add to Calendar</span>
                   </label>
-                  <small id="recurrence-delete-override-hint">Exports this RECURRENCE-ID as CANCELLED using an increased sequence.</small>
+                  <small id="recurrence-delete-override-hint">Occurrence edits export as standalone override events.</small>
                 </div>
                 <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Switch to base series</button>
               </div>
@@ -3234,46 +3234,42 @@
         return Boolean(editingId && isOccurrenceResultId(editingId));
       }
 
-      function isEditingExistingOverrideMode() {
-        if (!state || !state.isEditingExisting || state.editingExistingMode !== 'occurrence') {
-          return false;
-        }
-        const occurrenceId = normalizeText(state.editingExistingOccurrenceId || '');
-        if (occurrenceId) {
-          return isOverrideResultId(occurrenceId);
-        }
-        const editingId = normalizeText(state.editingExistingId || '');
-        if (editingId) {
-          return isOverrideResultId(editingId);
-        }
-        return false;
-      }
-
-      function isDeletingExistingOverride() {
-        return Boolean(state && state.deleteOverride && isEditingExistingOverrideMode());
-      }
-
       function isRecurrenceEditingLocked() {
         return isEditingOccurrenceOverrideMode();
       }
 
+      function buildOccurrenceOverrideIdentity(fallbackTimezone = '') {
+        if (!isEditingOccurrenceOverrideMode() || !state) return null;
+        const overrideUid = normalizeText(
+          state.editingExistingUid
+            || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '')
+        );
+        if (!overrideUid) return null;
+        const recurrenceTimezone = normalizeText(
+          state.editingExistingRecurrenceTimezone || fallbackTimezone || state.timezone || browserTimezone
+        );
+        const recurrenceDate = parseEditingRecurrenceId(state.editingExistingRecurrenceId, recurrenceTimezone || browserTimezone);
+        if (!isValidDateObject(recurrenceDate)) return null;
+        const recurrenceValue = formatICSDateInTimezone(recurrenceDate, recurrenceTimezone) || formatICSDate(recurrenceDate);
+        if (!recurrenceValue) return null;
+        return {
+          overrideUid,
+          overrideRecurrenceId: recurrenceTimezone
+            ? `TZID=${recurrenceTimezone}:${recurrenceValue}`
+            : recurrenceValue
+        };
+      }
+
       function getAddToCalendarDisabledReason() {
         if (isEditingOccurrenceOverrideMode()) {
-          if (isEditingExistingOverrideMode()) {
-            if (isDeletingExistingOverride()) {
-              return '';
-            }
-            return 'Enable delete override to export a cancellation for this occurrence.';
+          if (!buildOccurrenceOverrideIdentity()) {
+            return 'Occurrence edit is missing override UID or recurrence date.';
           }
-          return 'Add to Calendar is disabled for brand-new occurrence overrides.';
         }
         return '';
       }
 
       function getScriptableDisabledReason() {
-        if (isDeletingExistingOverride()) {
-          return 'Scriptable is disabled while deleting an existing override.';
-        }
         if (isEditingSeriesMode()) {
           return 'Scriptable is disabled while editing a base series.';
         }
@@ -5940,28 +5936,23 @@
 
       function updateRecurrenceEditLockUi(isLocked) {
         if (!dom.recurrenceEditLock) return;
-        const canDeleteOverride = isLocked && isEditingExistingOverrideMode();
-        if (!canDeleteOverride && state && state.deleteOverride) {
+        if (state && state.deleteOverride) {
           state.deleteOverride = false;
         }
         if (dom.recurrenceDeleteOverrideGroup) {
-          dom.recurrenceDeleteOverrideGroup.classList.toggle('is-hidden', !canDeleteOverride);
+          dom.recurrenceDeleteOverrideGroup.classList.add('is-hidden');
         }
         if (dom.recurrenceDeleteOverrideToggle) {
-          dom.recurrenceDeleteOverrideToggle.checked = canDeleteOverride && Boolean(state && state.deleteOverride);
-          dom.recurrenceDeleteOverrideToggle.disabled = !canDeleteOverride;
+          dom.recurrenceDeleteOverrideToggle.checked = false;
+          dom.recurrenceDeleteOverrideToggle.disabled = true;
         }
         if (dom.recurrenceDeleteOverrideHint) {
-          dom.recurrenceDeleteOverrideHint.textContent = canDeleteOverride
-            ? 'Exports this RECURRENCE-ID as CANCELLED using an increased sequence.'
-            : '';
+          dom.recurrenceDeleteOverrideHint.textContent = '';
         }
         dom.recurrenceEditLock.classList.toggle('is-hidden', !isLocked);
         if (!isLocked) return;
         if (dom.recurrenceEditLockText) {
-          dom.recurrenceEditLockText.textContent = canDeleteOverride
-            ? 'Recurrence rules are locked while editing one occurrence. This instance is already an override.'
-            : 'Recurrence rules are locked while editing one occurrence.';
+          dom.recurrenceEditLockText.textContent = 'Recurrence rules are locked while editing one occurrence.';
         }
         if (dom.recurrenceEditSeriesButton) {
           dom.recurrenceEditSeriesButton.textContent = 'Switch to base series';
@@ -6910,22 +6901,19 @@
         const timezone = state.timezone || browserTimezone;
         const rawRecurrence = (state.recurrence || '').trim();
         const isOccurrenceOverride = isEditingOccurrenceOverrideMode();
+        const occurrenceOverrideIdentity = isOccurrenceOverride
+          ? buildOccurrenceOverrideIdentity(timezone)
+          : null;
         const recurrence = isOccurrenceOverride ? '' : rawRecurrence;
         const recurring = Boolean(recurrence);
-        let uid = '';
+        let editingUid = '';
         if (state.isEditingExisting && state.editingExistingUid) {
-          uid = state.editingExistingUid;
+          editingUid = state.editingExistingUid;
         } else if (state.isEditingExisting && state.editingExistingId) {
           const parsedUid = parseResultId(state.editingExistingId);
-          uid = parsedUid.uid || '';
+          editingUid = parsedUid.uid || '';
         }
-        const recurrenceIdTimezone = isOccurrenceOverride
-          ? (state.editingExistingRecurrenceTimezone || timezone)
-          : '';
-        let recurrenceId = null;
-        if (isOccurrenceOverride && state.editingExistingRecurrenceId) {
-          recurrenceId = parseEditingRecurrenceId(state.editingExistingRecurrenceId, recurrenceIdTimezone || timezone);
-        }
+        const uid = isOccurrenceOverride ? '' : editingUid;
         return {
           name: (state.name || '').trim(),
           shortName: (state.shortName || '').trim(),
@@ -6942,8 +6930,10 @@
           endDate,
           timezone,
           uid,
-          recurrenceId,
-          recurrenceIdTimezone,
+          recurrenceId: null,
+          recurrenceIdTimezone: '',
+          overrideUid: occurrenceOverrideIdentity ? occurrenceOverrideIdentity.overrideUid : null,
+          overrideRecurrenceId: occurrenceOverrideIdentity ? occurrenceOverrideIdentity.overrideRecurrenceId : null,
           image: (state.image || '').trim() || null,
           website: (state.website || '').trim() || null,
           instagram: (state.instagram || '').trim() || null,
@@ -6983,6 +6973,8 @@
           uid: event.uid || null,
           recurrenceId: event.recurrenceId ? event.recurrenceId.toISOString() : null,
           recurrenceIdTimezone: event.recurrenceIdTimezone || null,
+          overrideUid: event.overrideUid || null,
+          overrideRecurrenceId: event.overrideRecurrenceId || null,
           durationMinutes: event.durationMinutes,
           image: event.image,
           website: event.website,
@@ -7356,35 +7348,35 @@
           updateCalendarStatus('Add start & end times before exporting', 'warn');
           return;
         }
-        const deletingOverride = isDeletingExistingOverride();
-        if (deletingOverride && !event.recurrenceId) {
-          showToast('This override is missing RECURRENCE-ID data, so delete export is unavailable.', 'warn');
-          return;
-        }
         const isEditingExisting = Boolean(state && state.isEditingExisting);
-        const existingSequence = isEditingExisting
+        const isOccurrenceOverride = isEditingOccurrenceOverrideMode();
+        const shouldIncrementSequence = isEditingExisting && !isOccurrenceOverride;
+        const existingSequence = shouldIncrementSequence
           ? parseIntegerValue(state && state.editingExistingSequence)
           : null;
-        const nextSequence = isEditingExisting
+        const nextSequence = shouldIncrementSequence
           ? Math.max(1, (existingSequence !== null ? existingSequence + 1 : 1))
           : null;
-        const icsOptions = isEditingExisting
+        const icsOptions = shouldIncrementSequence
           ? {
-              method: deletingOverride ? 'CANCEL' : 'REQUEST',
-              status: deletingOverride ? 'CANCELLED' : 'CONFIRMED',
+              method: 'REQUEST',
+              status: 'CONFIRMED',
               sequence: nextSequence,
               lastModified: new Date()
             }
           : null;
         const icsContent = generateICS(event, icsOptions);
+        const exportMethod = shouldIncrementSequence ? 'REQUEST' : 'PUBLISH';
         logger.info('EVENT', 'Generated ICS export', {
           uid: event.uid || '',
           hasRecurrenceRule: Boolean(event.recurrence),
           hasRecurrenceId: Boolean(event.recurrenceId),
+          hasOverrideIdentity: Boolean(event.overrideUid && event.overrideRecurrenceId),
+          overrideUid: event.overrideUid || null,
+          overrideRecurrenceId: event.overrideRecurrenceId || null,
           timezone: event.timezone || browserTimezone,
-          method: isEditingExisting ? (deletingOverride ? 'CANCEL' : 'REQUEST') : 'PUBLISH',
-          status: deletingOverride ? 'CANCELLED' : 'CONFIRMED',
-          deletingOverride,
+          method: exportMethod,
+          status: 'CONFIRMED',
           previousSequence: existingSequence !== null ? existingSequence : null,
           nextSequence: nextSequence !== null ? nextSequence : null
         });
@@ -7402,7 +7394,7 @@
           state.editingExistingSequence = String(nextSequence);
           scheduleUrlUpdate();
         }
-        showTemporaryState(dom.addToCalendarButton, deletingOverride ? 'Cancel ICS ready!' : 'ICS ready!');
+        showTemporaryState(dom.addToCalendarButton, 'ICS ready!');
       }
 
       function handleOpenScriptable(button) {
