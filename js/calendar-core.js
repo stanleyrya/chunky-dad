@@ -353,7 +353,8 @@ class CalendarCore {
                 calendarTimezone: this.calendarTimezone || null,
                 // Store whether the original time was in UTC format (for debugging)
                 wasUTC: calendarEvent.start?._wasUTC || false,
-                // Store UID and recurrence ID for event merging
+                // Store source/effective UID and recurrence ID for event merging
+                sourceUid: calendarEvent.uid || null,
                 uid: calendarEvent.uid || null,
                 recurrenceId: calendarEvent.recurrenceId || null,
                 recurrenceIdTimezone: calendarEvent.recurrenceIdTimezone || null,
@@ -391,6 +392,39 @@ class CalendarCore {
                     if (additionalData.type || additionalData.eventType) {
                         eventData.eventType = additionalData.type || additionalData.eventType;
                     }
+
+                    const customOverrideUid = typeof additionalData.overrideUid === 'string'
+                        ? additionalData.overrideUid.trim()
+                        : '';
+                    const customOverrideRecurrenceId = typeof additionalData.overrideRecurrenceId === 'string'
+                        ? additionalData.overrideRecurrenceId.trim()
+                        : '';
+
+                    if (customOverrideUid || customOverrideRecurrenceId) {
+                        if (!customOverrideUid || !customOverrideRecurrenceId) {
+                            throw new Error('Custom override metadata requires both "override uid" and "override recurrence id"');
+                        }
+
+                        const parsedOverrideRecurrence = this.parseCustomOverrideRecurrenceId(customOverrideRecurrenceId);
+                        if (!parsedOverrideRecurrence) {
+                            throw new Error(`Invalid custom override recurrence id: ${customOverrideRecurrenceId}`);
+                        }
+
+                        eventData.uid = customOverrideUid;
+                        eventData.recurrenceId = parsedOverrideRecurrence.recurrenceId;
+                        eventData.recurrenceIdTimezone = parsedOverrideRecurrence.recurrenceIdTimezone || null;
+                        eventData.recurring = false;
+                        eventData.recurrence = null;
+                        eventData.eventType = 'routine';
+
+                        logger.info('CALENDAR', 'Applied custom description override identity', {
+                            eventName: eventData.name,
+                            sourceUid: eventData.sourceUid,
+                            overrideUid: eventData.uid,
+                            overrideRecurrenceId: eventData.recurrenceId,
+                            overrideRecurrenceIdTimezone: eventData.recurrenceIdTimezone
+                        });
+                    }
                 }
             }
             
@@ -420,6 +454,38 @@ class CalendarCore {
             logger.componentError('CALENDAR', 'Failed to parse event data', error);
             return null;
         }
+    }
+
+    parseCustomOverrideRecurrenceId(rawRecurrenceId) {
+        if (!rawRecurrenceId || typeof rawRecurrenceId !== 'string') {
+            return null;
+        }
+
+        const trimmedValue = rawRecurrenceId.trim();
+        if (!trimmedValue) {
+            return null;
+        }
+
+        const withTimezoneMatch = trimmedValue.match(/^TZID=([^:]+):(\d{8}(?:T\d{4,6}Z?)?)$/);
+        if (withTimezoneMatch) {
+            const recurrenceIdTimezone = withTimezoneMatch[1].trim();
+            const recurrenceIdValue = withTimezoneMatch[2];
+            const recurrenceId = this.parseICalDate(`TZID=${recurrenceIdTimezone}:${recurrenceIdValue}`);
+            return {
+                recurrenceId,
+                recurrenceIdTimezone
+            };
+        }
+
+        const withoutTimezoneMatch = trimmedValue.match(/^(\d{8}(?:T\d{4,6}Z?)?)$/);
+        if (!withoutTimezoneMatch) {
+            return null;
+        }
+
+        return {
+            recurrenceId: this.parseICalDate(withoutTimezoneMatch[1]),
+            recurrenceIdTimezone: null
+        };
     }
 
     // ============================================================================
@@ -503,7 +569,9 @@ class CalendarCore {
             'gmaps': 'gmaps', 'google maps': 'gmaps',
             'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
             'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName',
-            'image': 'image'
+            'image': 'image',
+            'override uid': 'overrideUid', 'overrideuid': 'overrideUid',
+            'override recurrence id': 'overrideRecurrenceId', 'overriderecurrenceid': 'overrideRecurrenceId'
         };
 
         // Clean up any remaining carriage returns that might interfere with parsing
