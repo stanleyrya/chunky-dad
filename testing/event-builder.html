@@ -1626,7 +1626,7 @@
                     <input type="checkbox" id="recurrence-delete-override-toggle">
                     <span>Delete this existing override when exporting Add to Calendar</span>
                   </label>
-                  <small id="recurrence-delete-override-hint">Exports this RECURRENCE-ID as CANCELLED using an increased sequence.</small>
+                  <small id="recurrence-delete-override-hint">Occurrence edits export as standalone override events.</small>
                 </div>
                 <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Switch to base series</button>
               </div>
@@ -1863,6 +1863,8 @@
       const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'events@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
+      const LEGACY_OVERRIDE_HELP_MESSAGE = 'Legacy override detected. Use Tell Dad to email chunky dad for help with edits or deletion.';
+      const LEGACY_SERIES_BLOCK_MESSAGE = 'This series has legacy overrides. Series edits are blocked here. Use Tell Dad to email chunky dad.';
 
       const dom = {};
       let state;
@@ -3019,12 +3021,20 @@
         const startDate = event.startDate instanceof Date ? new Date(event.startDate) : (event.startDate ? new Date(event.startDate) : null);
         const endDate = event.endDate instanceof Date ? new Date(event.endDate) : (event.endDate ? new Date(event.endDate) : null);
         const recurrenceId = event.recurrenceId instanceof Date ? new Date(event.recurrenceId) : (event.recurrenceId ? new Date(event.recurrenceId) : null);
+        const sourceUid = normalizeText(event.sourceUid || event.uid || '');
+        const overrideIdentityType = normalizeOverrideIdentityType(event.overrideIdentityType, {
+          sourceUid,
+          uid: event.uid,
+          recurrenceId
+        });
         const coordinates = event.coordinates && typeof event.coordinates === 'object'
           ? event.coordinates
           : parseCoordinates(event.location || '');
         const location = normalizeCoordinatesValue(coordinates || event.location);
         const normalized = {
           uid: event.uid || '',
+          sourceUid,
+          overrideIdentityType,
           name: normalizeText(event.name || ''),
           shortName: normalizeText(event.shortName || ''),
           shorterName: normalizeText(event.shorterName || ''),
@@ -3055,6 +3065,23 @@
         };
         normalized.searchBlob = buildSearchBlob(normalized, null);
         return normalized;
+      }
+
+      function normalizeOverrideIdentityType(value, fallback = {}) {
+        const normalizedValue = normalizeText(value).toLowerCase();
+        if (normalizedValue === 'custom' || normalizedValue === 'legacy') {
+          return normalizedValue;
+        }
+        const recurrenceId = fallback && fallback.recurrenceId;
+        if (!isValidDateObject(recurrenceId)) {
+          return '';
+        }
+        const sourceUid = normalizeText(fallback && fallback.sourceUid);
+        const uid = normalizeText(fallback && fallback.uid);
+        if (sourceUid && uid && sourceUid !== uid) {
+          return 'custom';
+        }
+        return 'legacy';
       }
 
       function extractDescriptionValue(description, keys) {
@@ -3172,12 +3199,38 @@
         return null;
       }
 
+      function getOverrideIdentityType(event) {
+        if (!event || !isValidDateObject(event.recurrenceId)) return '';
+        const normalized = normalizeText(event.overrideIdentityType).toLowerCase();
+        if (normalized === 'custom' || normalized === 'legacy') {
+          return normalized;
+        }
+        const sourceUid = normalizeText(event.sourceUid || '');
+        const uid = normalizeText(event.uid || '');
+        if (sourceUid && uid && sourceUid !== uid) {
+          return 'custom';
+        }
+        return 'legacy';
+      }
+
+      function isCustomOverrideEvent(event) {
+        return getOverrideIdentityType(event) === 'custom';
+      }
+
+      function isLegacyOverrideEvent(event) {
+        return getOverrideIdentityType(event) === 'legacy';
+      }
+
       function getSeriesOverrideContextForBaseEvent(baseEvent, index = existingCalendarIndex) {
         if (!baseEvent || !baseEvent.uid || !index || !Array.isArray(index.overrides)) {
           return {
             baseEvent: baseEvent || null,
             index,
             overrides: [],
+            customOverrides: [],
+            legacyOverrides: [],
+            hasLegacyOverrides: false,
+            hasCustomOverrides: false,
             latestOverrideDate: null
           };
         }
@@ -3191,10 +3244,16 @@
           return timeA - timeB;
         });
         const latestOverride = sortedOverrides.length ? sortedOverrides[sortedOverrides.length - 1] : null;
+        const customOverrides = sortedOverrides.filter(isCustomOverrideEvent);
+        const legacyOverrides = sortedOverrides.filter(isLegacyOverrideEvent);
         return {
           baseEvent,
           index,
           overrides: sortedOverrides,
+          customOverrides,
+          legacyOverrides,
+          hasLegacyOverrides: legacyOverrides.length > 0,
+          hasCustomOverrides: customOverrides.length > 0,
           latestOverrideDate: getOverrideReferenceDate(latestOverride)
         };
       }
@@ -3216,6 +3275,21 @@
           return null;
         }
         return context;
+      }
+
+      function getSeriesLegacyOverrideContext() {
+        const context = getEditingSeriesOverrideContext();
+        if (!context || !context.hasLegacyOverrides) {
+          return null;
+        }
+        return context;
+      }
+
+      function getSeriesLegacyOverrideBlockReason(baseEvent, index = existingCalendarIndex) {
+        if (!baseEvent || !baseEvent.recurrence || !index) return '';
+        const context = getSeriesOverrideContextForBaseEvent(baseEvent, index);
+        if (!context || !context.hasLegacyOverrides) return '';
+        return LEGACY_SERIES_BLOCK_MESSAGE;
       }
 
       function isEditingSeriesMode() {
@@ -3249,30 +3323,88 @@
         return false;
       }
 
-      function isDeletingExistingOverride() {
-        return Boolean(state && state.deleteOverride && isEditingExistingOverrideMode());
+      function getEditingOverrideIdentityType() {
+        if (!isEditingExistingOverrideMode() || !state) return '';
+        const explicitType = normalizeText(state.editingExistingOverrideType).toLowerCase();
+        if (explicitType === 'custom' || explicitType === 'legacy') {
+          return explicitType;
+        }
+        const sourceUid = normalizeText(state.editingExistingSourceUid || '');
+        const uid = normalizeText(state.editingExistingUid || '');
+        if (sourceUid && uid && sourceUid !== uid) {
+          return 'custom';
+        }
+        return '';
+      }
+
+      function isEditingCustomOverrideMode() {
+        return getEditingOverrideIdentityType() === 'custom';
+      }
+
+      function isEditingLegacyOverrideMode() {
+        return getEditingOverrideIdentityType() === 'legacy';
+      }
+
+      function isDeletingExistingCustomOverride() {
+        return Boolean(state && state.deleteOverride && isEditingCustomOverrideMode());
       }
 
       function isRecurrenceEditingLocked() {
         return isEditingOccurrenceOverrideMode();
       }
 
+      function buildOccurrenceOverrideIdentity(fallbackTimezone = '') {
+        if (!isEditingOccurrenceOverrideMode() || !state) return null;
+        const overrideUid = normalizeText(
+          state.editingExistingUid
+            || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '')
+        );
+        if (!overrideUid) return null;
+        const recurrenceTimezone = normalizeText(
+          state.editingExistingRecurrenceTimezone || fallbackTimezone || state.timezone || browserTimezone
+        );
+        const recurrenceDate = parseEditingRecurrenceId(state.editingExistingRecurrenceId, recurrenceTimezone || browserTimezone);
+        if (!isValidDateObject(recurrenceDate)) return null;
+        const recurrenceValue = formatICSDateInTimezone(recurrenceDate, recurrenceTimezone) || formatICSDate(recurrenceDate);
+        if (!recurrenceValue) return null;
+        return {
+          overrideUid,
+          overrideRecurrenceId: recurrenceTimezone
+            ? `TZID=${recurrenceTimezone}:${recurrenceValue}`
+            : recurrenceValue
+        };
+      }
+
       function getAddToCalendarDisabledReason() {
-        if (isEditingOccurrenceOverrideMode()) {
-          if (isEditingExistingOverrideMode()) {
-            if (isDeletingExistingOverride()) {
-              return '';
-            }
-            return 'Enable delete override to export a cancellation for this occurrence.';
+        if (isEditingSeriesMode() && getSeriesLegacyOverrideContext()) {
+          return LEGACY_SERIES_BLOCK_MESSAGE;
+        }
+        if (isEditingLegacyOverrideMode()) {
+          return LEGACY_OVERRIDE_HELP_MESSAGE;
+        }
+        if (isEditingCustomOverrideMode()) {
+          const sourceUid = normalizeText(state && state.editingExistingSourceUid);
+          if (!sourceUid) {
+            return 'This override is missing its source UID, so export is blocked.';
           }
-          return 'Add to Calendar is disabled for brand-new occurrence overrides.';
+        }
+        if (isEditingOccurrenceOverrideMode()) {
+          if (isDeletingExistingCustomOverride()) {
+            return '';
+          }
+          if (!buildOccurrenceOverrideIdentity()) {
+            return 'Occurrence edit is missing override UID or recurrence date.';
+          }
         }
         return '';
       }
 
       function getScriptableDisabledReason() {
-        if (isDeletingExistingOverride()) {
-          return 'Scriptable is disabled while deleting an existing override.';
+        if (isEditingLegacyOverrideMode()) {
+          return LEGACY_OVERRIDE_HELP_MESSAGE;
+        }
+        if (isDeletingExistingCustomOverride()) {
+          return 'Scriptable is disabled while deleting an override.';
         }
         if (isEditingSeriesMode()) {
           return 'Scriptable is disabled while editing a base series.';
@@ -3637,7 +3769,7 @@
           : '';
         const detailParts = [dateLabel, timeLabel];
         if (result.type === 'override') {
-          detailParts.push('Override');
+          detailParts.push(isLegacyOverrideEvent(result.event) ? 'Legacy override' : 'Override');
         }
         const detail = detailParts.filter(Boolean).join(' · ');
         return detail ? `${name} — ${detail}` : name;
@@ -3667,6 +3799,9 @@
 
       function getDefaultExistingMode(result) {
         if (!result || !result.canEditSeries) return 'occurrence';
+        const baseEvent = result.baseEvent || result.event;
+        const seriesBlockedReason = getSeriesLegacyOverrideBlockReason(baseEvent, existingCalendarIndex);
+        if (seriesBlockedReason) return 'occurrence';
         if (result.type === 'series') return 'series';
         if (result.occurrenceDate) return 'occurrence';
         return 'series';
@@ -3674,14 +3809,27 @@
 
       function setExistingMode(mode) {
         const nextMode = mode === 'series' ? 'series' : 'occurrence';
+        if (nextMode === 'series' && selectedExistingResult) {
+          const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
+          const seriesBlockedReason = getSeriesLegacyOverrideBlockReason(baseEvent, existingCalendarIndex);
+          if (seriesBlockedReason) {
+            selectedExistingMode = 'occurrence';
+            updateExistingModeUi(selectedExistingResult);
+            storeExistingPanelState();
+            showToast(seriesBlockedReason, 'warn');
+            return;
+          }
+        }
         selectedExistingMode = nextMode;
         updateExistingModeUi(selectedExistingResult);
         storeExistingPanelState();
         if (nextMode === 'series' && selectedExistingResult && existingCalendarIndex) {
           const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
           const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
-          if (overrideContext.overrides.length) {
-            showToast('Editing base series with overrides: only Recurrence > Ends > On date can be edited.', 'warn');
+          if (overrideContext.hasLegacyOverrides) {
+            showToast(LEGACY_SERIES_BLOCK_MESSAGE, 'warn');
+          } else if (overrideContext.overrides.length) {
+            showToast('Series has overrides. Recurrence rules are locked while overrides exist.', 'warn');
           }
         }
       }
@@ -3698,23 +3846,43 @@
           updateExistingActionButtons();
           return;
         }
+        const baseEvent = result.baseEvent || result.event;
+        const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
+        const seriesBlockedReason = getSeriesLegacyOverrideBlockReason(baseEvent, existingCalendarIndex);
+        if (seriesBlockedReason && selectedExistingMode === 'series') {
+          selectedExistingMode = 'occurrence';
+        }
         dom.existingModeButtons.forEach(button => {
-          button.disabled = false;
-          button.removeAttribute('title');
+          const isSeriesButton = button.dataset.editMode === 'series';
+          const isBlocked = Boolean(isSeriesButton && seriesBlockedReason);
+          button.disabled = isBlocked;
+          if (isBlocked) {
+            button.setAttribute('title', seriesBlockedReason);
+          } else {
+            button.removeAttribute('title');
+          }
           button.classList.toggle('is-active', button.dataset.editMode === selectedExistingMode);
         });
         if (dom.existingModeHint) {
           let hint = '';
-          const baseEvent = result.baseEvent || result.event;
-          const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
           if (selectedExistingMode === 'series') {
-            if (overrideContext.overrides.length) {
+            if (overrideContext.hasLegacyOverrides) {
+              hint = seriesBlockedReason;
+            } else if (overrideContext.overrides.length) {
               hint = buildSeriesOverrideWarningText(overrideContext);
             } else {
               hint = 'Series keeps the recurrence rule and original start/end.';
             }
           } else {
-            hint = 'Occurrence edits one instance (creates an override) and clears the recurrence rule.';
+            const selectedOverride = selectedExistingOccurrence
+              && selectedExistingOccurrence.type === 'override'
+              ? selectedExistingOccurrence.event
+              : null;
+            if (selectedOverride && isLegacyOverrideEvent(selectedOverride)) {
+              hint = LEGACY_OVERRIDE_HELP_MESSAGE;
+            } else {
+              hint = 'Occurrence edits one instance (creates an override) and clears the recurrence rule.';
+            }
           }
           setFieldHint(dom.existingModeHint, hint, false);
         }
@@ -3863,6 +4031,10 @@
         let occurrenceId = '';
 
         if (mode === 'series' && baseEvent && baseEvent.recurrence) {
+          const legacySeriesReason = getSeriesLegacyOverrideBlockReason(baseEvent, existingCalendarIndex);
+          if (legacySeriesReason) {
+            return { error: legacySeriesReason };
+          }
           eventData = baseEvent;
           startDate = baseEvent.startDate;
           endDate = baseEvent.endDate;
@@ -3924,6 +4096,11 @@
         const now = new Date();
         if (editSelection.mode === 'series' && editSelection.baseEvent && editSelection.baseEvent.recurrence
           && existingCalendarIndex) {
+          const legacySeriesReason = getSeriesLegacyOverrideBlockReason(editSelection.baseEvent, existingCalendarIndex);
+          if (legacySeriesReason) {
+            status.editHint = legacySeriesReason;
+            return status;
+          }
           const futureOccurrences = buildOccurrenceResultsForEvent(existingCalendarIndex, editSelection.baseEvent, {
             now,
             maxCount: 1,
@@ -4006,8 +4183,22 @@
           occurrenceId
         } = selection;
         const now = new Date();
+        const selectedOverrideEvent = (mode === 'occurrence'
+          && summaryResult
+          && summaryResult.type === 'override')
+          ? summaryResult.event
+          : null;
+        const selectedOverrideType = selectedOverrideEvent ? getOverrideIdentityType(selectedOverrideEvent) : '';
+        const selectedOverrideSourceUid = selectedOverrideEvent
+          ? normalizeText(selectedOverrideEvent.sourceUid || '')
+          : '';
 
         if (mode === 'series' && baseEvent && baseEvent.recurrence && existingCalendarIndex) {
+          const legacySeriesReason = getSeriesLegacyOverrideBlockReason(baseEvent, existingCalendarIndex);
+          if (legacySeriesReason) {
+            showToast(legacySeriesReason, 'warn');
+            return;
+          }
           const futureOccurrences = buildOccurrenceResultsForEvent(existingCalendarIndex, baseEvent, {
             now,
             maxCount: 1,
@@ -4059,6 +4250,8 @@
           ? formatInputValueInTimezone(editingRecurrenceDate, editingRecurrenceTimezone || state.timezone || browserTimezone)
           : '';
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
+        state.editingExistingOverrideType = selectedOverrideType || '';
+        state.editingExistingSourceUid = selectedOverrideSourceUid || '';
         state.editingExistingSearchStartDate = (startDate && startDate instanceof Date && !Number.isNaN(startDate.getTime()))
           ? startDate.toISOString()
           : '';
@@ -4088,11 +4281,15 @@
         setExistingSelectionSummary(summaryText, 'edit');
         if (mode === 'series' && baseEvent && existingCalendarIndex) {
           const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
-          if (overrideContext.overrides.length) {
-            showToast('Base series has overrides. Only Recurrence > Ends > On date can be edited.', 'warn');
+          if (overrideContext.hasLegacyOverrides) {
+            showToast(LEGACY_SERIES_BLOCK_MESSAGE, 'warn');
+          } else if (overrideContext.overrides.length) {
+            showToast('Base series has overrides. Recurrence rules are locked while overrides exist.', 'warn');
           } else {
             showToast('Event loaded. Edit the form as usual.', 'info');
           }
+        } else if (selectedOverrideType === 'legacy') {
+          showToast(LEGACY_OVERRIDE_HELP_MESSAGE, 'warn');
         } else {
           showToast('Event loaded. Edit the form as usual.', 'info');
         }
@@ -4164,6 +4361,8 @@
           useVenueInstagram: false,
           useVenueFacebook: false,
           image: normalizeText(eventData.image || ''),
+          editingExistingOverrideType: '',
+          editingExistingSourceUid: '',
           deleteOverride: false,
           isEditingExisting: true
         };
@@ -4186,7 +4385,7 @@
           : '';
         const detailParts = ['Occurrence', dateLabel, timeLabel];
         if (result.type === 'override') {
-          detailParts.push('Override');
+          detailParts.push(isLegacyOverrideEvent(result.event) ? 'Legacy Override' : 'Override');
         }
         const detail = detailParts.filter(Boolean).join(' · ');
         pieces.push(`(${detail})`);
@@ -4381,7 +4580,8 @@
         const dateLabel = startDate ? formatDateLabel(startDate, zone) : 'Date TBD';
         const timeLabel = (startDate && endDate) ? formatTimeRange(startDate, endDate, zone) : '';
         const venueLabel = normalizeText(override.bar || '');
-        const details = [dateLabel, timeLabel, venueLabel].filter(Boolean).join(' · ');
+        const overrideTypeLabel = isLegacyOverrideEvent(override) ? 'Legacy override' : 'Override';
+        const details = [dateLabel, timeLabel, venueLabel, overrideTypeLabel].filter(Boolean).join(' · ');
         return details ? `${name} — ${details}` : name;
       }
 
@@ -4389,14 +4589,13 @@
         if (!context || !Array.isArray(context.overrides) || !context.overrides.length) {
           return '';
         }
-        const { baseEvent, overrides, latestOverrideDate } = context;
+        const { overrides, hasLegacyOverrides, legacyOverrides } = context;
         const count = overrides.length;
-        const baseMessage = `This series has ${count} override${count === 1 ? '' : 's'}. Base event fields are locked to avoid conflicts. You can only change Recurrence > Ends > On date.`;
-        if (!latestOverrideDate) {
-          return baseMessage;
+        if (hasLegacyOverrides) {
+          const legacyCount = legacyOverrides.length;
+          return `This series has ${count} override${count === 1 ? '' : 's'} (${legacyCount} legacy). Series editing is blocked here. Use Tell Dad to email chunky dad.`;
         }
-        const latestLabel = formatDateLabel(latestOverrideDate, baseEvent ? baseEvent.timeZone : browserTimezone);
-        return `${baseMessage} Set the end date on/after ${latestLabel}.`;
+        return `This series has ${count} custom override${count === 1 ? '' : 's'}. Recurrence rules are locked while overrides exist, but other fields can be edited.`;
       }
 
       function updateSeriesOverrideWarningUi() {
@@ -4536,6 +4735,8 @@
         state.editingExistingUid = '';
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
+        state.editingExistingOverrideType = '';
+        state.editingExistingSourceUid = '';
         state.editingExistingSequence = '';
         state.editingExistingSearchStartDate = '';
         state.editingExistingSearchEndDate = '';
@@ -4609,6 +4810,8 @@
           editingExistingUid: '',
           editingExistingRecurrenceId: '',
           editingExistingRecurrenceTimezone: '',
+          editingExistingOverrideType: '',
+          editingExistingSourceUid: '',
           editingExistingSequence: '',
           editingExistingSearchStartDate: '',
           editingExistingSearchEndDate: '',
@@ -4747,6 +4950,9 @@
             case 'euid':
               overrides.editingExistingUid = value;
               break;
+            case 'esuid':
+              overrides.editingExistingSourceUid = value;
+              break;
             case 'occid':
             case 'eocc':
             case 'editocc':
@@ -4757,6 +4963,9 @@
               break;
             case 'ertz':
               overrides.editingExistingRecurrenceTimezone = value;
+              break;
+            case 'eotype':
+              overrides.editingExistingOverrideType = value;
               break;
             case 'eseq':
             case 'editseq':
@@ -4796,8 +5005,10 @@
           || overrides.editingExistingMode
           || overrides.editingExistingOccurrenceId
           || overrides.editingExistingUid
+          || overrides.editingExistingSourceUid
           || overrides.editingExistingRecurrenceId
           || overrides.editingExistingRecurrenceTimezone
+          || overrides.editingExistingOverrideType
           || overrides.editingExistingSequence
           || overrides.editingExistingSearchStartDate
           || overrides.editingExistingSearchEndDate)) {
@@ -4811,6 +5022,8 @@
           overrides.editingExistingUid = '';
           overrides.editingExistingRecurrenceId = '';
           overrides.editingExistingRecurrenceTimezone = '';
+          overrides.editingExistingOverrideType = '';
+          overrides.editingExistingSourceUid = '';
           overrides.editingExistingSequence = '';
           overrides.editingExistingSearchStartDate = '';
           overrides.editingExistingSearchEndDate = '';
@@ -4830,6 +5043,8 @@
           overrides.editingExistingUid = '';
           overrides.editingExistingRecurrenceId = '';
           overrides.editingExistingRecurrenceTimezone = '';
+          overrides.editingExistingOverrideType = '';
+          overrides.editingExistingSourceUid = '';
           overrides.editingExistingSequence = '';
           overrides.editingExistingSearchStartDate = '';
           overrides.editingExistingSearchEndDate = '';
@@ -5390,7 +5605,7 @@
       function updateVenueLinkToggles(options = {}) {
         const { applyValues = false, preserveState = false } = options;
         if (!dom.venueLinkToggles || !dom.venueLinkToggles.length) return;
-        const lockBySeriesOverrides = Boolean(getSeriesRecurrenceLimitContext());
+        const lockByLegacySeriesOverrides = Boolean(getSeriesLegacyOverrideContext());
         dom.venueLinkToggles.forEach(toggle => {
           const linkType = toggle.dataset.venueToggle;
           const stateKey = getVenueToggleStateKey(linkType);
@@ -5406,8 +5621,8 @@
           }
           const isActive = Boolean(state[stateKey]) && hasValue;
           toggle.checked = isActive;
-          toggle.disabled = lockBySeriesOverrides || !hasValue;
-          toggle.setAttribute('aria-disabled', (lockBySeriesOverrides || !hasValue) ? 'true' : 'false');
+          toggle.disabled = lockByLegacySeriesOverrides || !hasValue;
+          toggle.setAttribute('aria-disabled', (lockByLegacySeriesOverrides || !hasValue) ? 'true' : 'false');
           if (applyValues && isActive) {
             const target = getVenueLinkTarget(linkType);
             if (target) {
@@ -5415,7 +5630,7 @@
             }
           }
         });
-        updateSeriesOverrideFieldLockUi(lockBySeriesOverrides);
+        updateSeriesOverrideFieldLockUi(lockByLegacySeriesOverrides);
         syncDisabledFieldGroupStyles();
       }
 
@@ -5647,16 +5862,11 @@
           return;
         }
         const recurrenceLimitContext = getSeriesRecurrenceLimitContext();
-        if (recurrenceLimitContext && nextMode === 'raw' && !options.force) {
-          const hasLatestOverrideDate = isValidDateObject(recurrenceLimitContext.latestOverrideDate);
-          if (hasLatestOverrideDate) {
-            const latestLabel = formatDateLabel(
-              recurrenceLimitContext.latestOverrideDate,
-              recurrenceLimitContext.baseEvent.timeZone || browserTimezone
-            );
-            showToast(`Raw RRULE is locked. Set an end date on/after ${latestLabel}.`, 'warn');
+        if (recurrenceLimitContext && !options.force) {
+          if (recurrenceLimitContext.hasLegacyOverrides) {
+            showToast(LEGACY_SERIES_BLOCK_MESSAGE, 'warn');
           } else {
-            showToast('Raw RRULE is locked. Only Recurrence > Ends > On date can be edited.', 'warn');
+            showToast('Recurrence rules are locked while this series has overrides.', 'warn');
           }
           return;
         }
@@ -5721,7 +5931,7 @@
 
       function updateSeriesOverrideFieldLockUi(isLocked) {
         const lockTitle = isLocked
-          ? 'This base series has overrides. Only Recurrence > Ends > On date can be edited.'
+          ? LEGACY_SERIES_BLOCK_MESSAGE
           : '';
         const lockControls = [
           dom.nameInput,
@@ -5777,23 +5987,14 @@
         const recurrenceLocked = isRecurrenceEditingLocked();
         const recurrenceLimitContext = getSeriesRecurrenceLimitContext();
         const recurrenceLimitOnly = Boolean(recurrenceLimitContext);
-        const minimumDateKey = getSeriesRecurrenceMinimumDateKey(recurrenceLimitContext);
-        const hasLatestOverrideDate = Boolean(
-          minimumDateKey
-        );
-        const latestOverrideLabel = hasLatestOverrideDate
-          ? formatDateLabel(
-            recurrenceLimitContext.latestOverrideDate,
-            recurrenceLimitContext.baseEvent.timeZone || browserTimezone
-          )
-          : '';
+        const hasLegacySeriesOverrides = Boolean(recurrenceLimitContext && recurrenceLimitContext.hasLegacyOverrides);
         const recurrencePatternLocked = recurrenceLocked || recurrenceLimitOnly;
-        const recurrenceVisualLock = recurrenceLocked;
-        const timeEditingLocked = recurrenceLimitOnly;
+        const recurrenceVisualLock = recurrenceLocked || recurrenceLimitOnly;
+        const timeEditingLocked = hasLegacySeriesOverrides;
         const timeEditingLockTitle = timeEditingLocked
-          ? 'This base series has overrides. Only Recurrence > Ends > On date can be edited.'
+          ? LEGACY_SERIES_BLOCK_MESSAGE
           : '';
-        updateSeriesOverrideFieldLockUi(recurrenceLimitOnly);
+        updateSeriesOverrideFieldLockUi(hasLegacySeriesOverrides);
         updateVenueLinkToggles({ applyValues: false, preserveState: true });
         if (recurrenceLimitOnly && recurrenceMode !== 'builder') {
           recurrenceMode = 'builder';
@@ -5841,11 +6042,12 @@
             if (recurrenceLocked) {
               button.setAttribute('title', 'Recurrence is locked while editing one occurrence.');
             } else if (recurrenceLimitOnly) {
-              if (hasLatestOverrideDate) {
-                button.setAttribute('title', `Series has overrides. Set Ends > On date on/after ${latestOverrideLabel}.`);
-              } else {
-                button.setAttribute('title', 'Series has overrides. Only Recurrence > Ends > On date can be edited.');
-              }
+              button.setAttribute(
+                'title',
+                hasLegacySeriesOverrides
+                  ? LEGACY_SERIES_BLOCK_MESSAGE
+                  : 'Recurrence rules are locked while this series has overrides.'
+              );
             } else {
               button.removeAttribute('title');
             }
@@ -5873,12 +6075,12 @@
         }
         const endsValue = dom.recurrenceEnds ? (dom.recurrenceEnds.value || 'never') : 'never';
         if (dom.recurrenceEnds) {
-          dom.recurrenceEnds.disabled = recurrenceLocked || !showEnds;
+          dom.recurrenceEnds.disabled = recurrencePatternLocked || !showEnds;
           const countOption = dom.recurrenceEnds.querySelector('option[value="count"]');
           if (countOption) {
             countOption.disabled = recurrenceLimitOnly;
             if (recurrenceLimitOnly) {
-              countOption.setAttribute('title', 'Use an end date while series overrides exist.');
+              countOption.setAttribute('title', 'Recurrence rules are locked while this series has overrides.');
             } else {
               countOption.removeAttribute('title');
             }
@@ -5891,27 +6093,15 @@
           }
         }
         if (dom.recurrenceCount) {
-          dom.recurrenceCount.disabled = recurrenceLocked || recurrenceLimitOnly || endsValue !== 'count';
+          dom.recurrenceCount.disabled = recurrencePatternLocked || endsValue !== 'count';
         }
         if (dom.recurrenceUntil) {
-          if (minimumDateKey) {
-            dom.recurrenceUntil.min = minimumDateKey;
-          } else {
-            dom.recurrenceUntil.removeAttribute('min');
-          }
-          if (endsValue === 'until' && minimumDateKey) {
-            const currentUntilValue = dom.recurrenceUntil.value || '';
-            if (!currentUntilValue || currentUntilValue < minimumDateKey) {
-              dom.recurrenceUntil.value = minimumDateKey;
-            }
-          }
-          dom.recurrenceUntil.disabled = recurrenceLocked || endsValue !== 'until';
+          dom.recurrenceUntil.removeAttribute('min');
+          dom.recurrenceUntil.disabled = recurrencePatternLocked || endsValue !== 'until';
           if (recurrenceLocked) {
             dom.recurrenceUntil.setAttribute('title', 'Recurrence is locked while editing one occurrence.');
-          } else if (recurrenceLimitOnly && hasLatestOverrideDate) {
-            dom.recurrenceUntil.setAttribute('title', `Set end date on/after ${latestOverrideLabel}.`);
           } else if (recurrenceLimitOnly) {
-            dom.recurrenceUntil.setAttribute('title', 'Set an end date for this series.');
+            dom.recurrenceUntil.setAttribute('title', 'Recurrence rules are locked while this series has overrides.');
           } else {
             dom.recurrenceUntil.removeAttribute('title');
           }
@@ -5940,7 +6130,8 @@
 
       function updateRecurrenceEditLockUi(isLocked) {
         if (!dom.recurrenceEditLock) return;
-        const canDeleteOverride = isLocked && isEditingExistingOverrideMode();
+        const canDeleteOverride = Boolean(isLocked && isEditingCustomOverrideMode());
+        const isLegacyOverride = Boolean(isLocked && isEditingLegacyOverrideMode());
         if (!canDeleteOverride && state && state.deleteOverride) {
           state.deleteOverride = false;
         }
@@ -5953,20 +6144,24 @@
         }
         if (dom.recurrenceDeleteOverrideHint) {
           dom.recurrenceDeleteOverrideHint.textContent = canDeleteOverride
-            ? 'Exports this RECURRENCE-ID as CANCELLED using an increased sequence.'
+            ? 'Exports this standalone override UID as CANCELLED using an increased sequence.'
             : '';
         }
         dom.recurrenceEditLock.classList.toggle('is-hidden', !isLocked);
         if (!isLocked) return;
         if (dom.recurrenceEditLockText) {
-          dom.recurrenceEditLockText.textContent = canDeleteOverride
-            ? 'Recurrence rules are locked while editing one occurrence. This instance is already an override.'
+          dom.recurrenceEditLockText.textContent = isLegacyOverride
+            ? LEGACY_OVERRIDE_HELP_MESSAGE
             : 'Recurrence rules are locked while editing one occurrence.';
         }
         if (dom.recurrenceEditSeriesButton) {
           dom.recurrenceEditSeriesButton.textContent = 'Switch to base series';
           dom.recurrenceEditSeriesButton.disabled = false;
-          dom.recurrenceEditSeriesButton.removeAttribute('title');
+          if (isLegacyOverride) {
+            dom.recurrenceEditSeriesButton.setAttribute('title', LEGACY_SERIES_BLOCK_MESSAGE);
+          } else {
+            dom.recurrenceEditSeriesButton.removeAttribute('title');
+          }
         }
       }
 
@@ -6163,71 +6358,14 @@
         }
         const trimmedNext = normalizeText(nextRule || '');
         const trimmedPrevious = normalizeText(previousRule || '');
-        const minimumDateKey = getSeriesRecurrenceMinimumDateKey(context);
-        const hasLatestOverrideDate = isValidDateObject(context.latestOverrideDate);
-        const latestLabel = hasLatestOverrideDate
-          ? formatDateLabel(context.latestOverrideDate, context.baseEvent.timeZone || browserTimezone)
-          : '';
-        if (!trimmedNext) {
-          return trimmedPrevious
-            ? {
-                rule: trimmedPrevious,
-                warning: 'Keep the existing RRULE pattern. Only set an end date for this series.'
-              }
-            : { rule: nextRule, warning: '' };
-        }
         if (trimmedNext === trimmedPrevious) {
           return { rule: nextRule, warning: '' };
         }
-        const fallback = getDefaultRecurrenceBuilder(
-          (context.baseEvent && context.baseEvent.startDate) || parseLocalDateTime(state.start, state.timezone)
-        );
-        const baseRule = normalizeText(
-          (context.baseEvent && context.baseEvent.recurrence)
-          || trimmedPrevious
-          || ''
-        );
-        const baseBuilder = parseRruleToBuilder(baseRule, fallback);
-        const nextBuilder = parseRruleToBuilder(trimmedNext, fallback);
-        if (!baseBuilder || !nextBuilder) {
-          return {
-            rule: trimmedPrevious,
-            warning: 'Keep the existing RRULE pattern. Only set an end date for this series.'
-          };
-        }
-        if (!doesRecurrencePatternMatch(baseBuilder, nextBuilder)) {
-          return {
-            rule: trimmedPrevious,
-            warning: 'This series has overrides. Only update "Ends" to cap the recurrence.'
-          };
-        }
-        if (nextBuilder.ends === 'count') {
-          return {
-            rule: trimmedPrevious,
-            warning: 'Use "Ends: On date" for series with overrides.'
-          };
-        }
-        if (nextBuilder.ends !== 'until' || !nextBuilder.until) {
-          return {
-            rule: trimmedPrevious,
-            warning: hasLatestOverrideDate
-              ? `Set "Ends" to "On date" on/after ${latestLabel}.`
-              : 'Set "Ends" to "On date" for this series.',
-            preserveBuilderState: nextBuilder.ends === 'until'
-          };
-        }
-        if (minimumDateKey && nextBuilder.until < minimumDateKey) {
-          nextBuilder.until = minimumDateKey;
-          nextBuilder.ends = 'until';
-          nextBuilder.count = '';
-          return {
-            rule: buildRruleFromBuilderState(nextBuilder),
-            warning: `End date adjusted to ${latestLabel} so overrides remain valid.`
-          };
-        }
         return {
-          rule: buildRruleFromBuilderState(nextBuilder),
-          warning: ''
+          rule: trimmedPrevious,
+          warning: context.hasLegacyOverrides
+            ? LEGACY_SERIES_BLOCK_MESSAGE
+            : 'Recurrence rules are locked while this series has overrides.'
         };
       }
 
@@ -6564,8 +6702,10 @@
           setTextParam('emode', state.editingExistingMode);
           setTextParam('occid', state.editingExistingOccurrenceId);
           setTextParam('euid', state.editingExistingUid);
+          setTextParam('esuid', state.editingExistingSourceUid);
           setTextParam('erid', state.editingExistingRecurrenceId);
           setTextParam('ertz', state.editingExistingRecurrenceTimezone);
+          setTextParam('eotype', state.editingExistingOverrideType);
           setTextParam('eseq', state.editingExistingSequence);
           setBooleanParam('deloverride', state.deleteOverride);
           setTextParam('searchStartDate', state.editingExistingSearchStartDate);
@@ -6654,7 +6794,8 @@
         const coordinates = parseCoordinates(state.location);
         setParam('lat', coordinates ? coordinates.lat : '');
         setParam('lng', coordinates ? coordinates.lng : '');
-        const identifier = state.editingExistingUid
+        const identifier = state.editingExistingSourceUid
+          || state.editingExistingUid
           || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '');
         if (identifier) {
           setParam('identifier', identifier);
@@ -6767,6 +6908,8 @@
         state.editingExistingUid = baseEvent.uid || '';
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
+        state.editingExistingOverrideType = '';
+        state.editingExistingSourceUid = '';
         state.editingExistingSearchStartDate = previousSearchStartDate
           || (isValidDateObject(baseEvent.startDate) ? baseEvent.startDate.toISOString() : '');
         state.editingExistingSearchEndDate = previousSearchEndDate
@@ -6814,6 +6957,12 @@
           return;
         }
         if (index) {
+          const legacySeriesReason = getSeriesLegacyOverrideBlockReason(baseEvent, index);
+          if (legacySeriesReason) {
+            showToast(legacySeriesReason, 'warn');
+            updateRecurrenceUi();
+            return;
+          }
           const futureOccurrences = buildOccurrenceResultsForEvent(index, baseEvent, {
             now: new Date(),
             maxCount: 1,
@@ -6910,21 +7059,27 @@
         const timezone = state.timezone || browserTimezone;
         const rawRecurrence = (state.recurrence || '').trim();
         const isOccurrenceOverride = isEditingOccurrenceOverrideMode();
+        const isEditingCustomOverride = isEditingCustomOverrideMode();
+        const deletingCustomOverride = isDeletingExistingCustomOverride();
+        const occurrenceOverrideIdentity = isOccurrenceOverride
+          ? buildOccurrenceOverrideIdentity(timezone)
+          : null;
+        const includeOverrideIdentity = isOccurrenceOverride && !deletingCustomOverride;
         const recurrence = isOccurrenceOverride ? '' : rawRecurrence;
         const recurring = Boolean(recurrence);
-        let uid = '';
+        let editingUid = '';
         if (state.isEditingExisting && state.editingExistingUid) {
-          uid = state.editingExistingUid;
+          editingUid = state.editingExistingUid;
         } else if (state.isEditingExisting && state.editingExistingId) {
           const parsedUid = parseResultId(state.editingExistingId);
-          uid = parsedUid.uid || '';
+          editingUid = parsedUid.uid || '';
         }
-        const recurrenceIdTimezone = isOccurrenceOverride
-          ? (state.editingExistingRecurrenceTimezone || timezone)
-          : '';
-        let recurrenceId = null;
-        if (isOccurrenceOverride && state.editingExistingRecurrenceId) {
-          recurrenceId = parseEditingRecurrenceId(state.editingExistingRecurrenceId, recurrenceIdTimezone || timezone);
+        const editingSourceUid = normalizeText(state && state.editingExistingSourceUid);
+        let uid = editingUid;
+        if (isOccurrenceOverride) {
+          uid = isEditingCustomOverride
+            ? (editingSourceUid || editingUid)
+            : '';
         }
         return {
           name: (state.name || '').trim(),
@@ -6942,8 +7097,15 @@
           endDate,
           timezone,
           uid,
-          recurrenceId,
-          recurrenceIdTimezone,
+          recurrenceId: null,
+          recurrenceIdTimezone: '',
+          overrideUid: (includeOverrideIdentity && occurrenceOverrideIdentity)
+            ? occurrenceOverrideIdentity.overrideUid
+            : null,
+          overrideRecurrenceId: (includeOverrideIdentity && occurrenceOverrideIdentity)
+            ? occurrenceOverrideIdentity.overrideRecurrenceId
+            : null,
+          isDeletingOverride: deletingCustomOverride,
           image: (state.image || '').trim() || null,
           website: (state.website || '').trim() || null,
           instagram: (state.instagram || '').trim() || null,
@@ -6983,6 +7145,8 @@
           uid: event.uid || null,
           recurrenceId: event.recurrenceId ? event.recurrenceId.toISOString() : null,
           recurrenceIdTimezone: event.recurrenceIdTimezone || null,
+          overrideUid: event.overrideUid || null,
+          overrideRecurrenceId: event.overrideRecurrenceId || null,
           durationMinutes: event.durationMinutes,
           image: event.image,
           website: event.website,
@@ -7356,35 +7520,41 @@
           updateCalendarStatus('Add start & end times before exporting', 'warn');
           return;
         }
-        const deletingOverride = isDeletingExistingOverride();
-        if (deletingOverride && !event.recurrenceId) {
-          showToast('This override is missing RECURRENCE-ID data, so delete export is unavailable.', 'warn');
-          return;
-        }
         const isEditingExisting = Boolean(state && state.isEditingExisting);
-        const existingSequence = isEditingExisting
+        const isOccurrenceOverride = isEditingOccurrenceOverrideMode();
+        const deletingCustomOverride = isDeletingExistingCustomOverride();
+        const shouldIncrementSequence = isEditingExisting
+          && (!isOccurrenceOverride || isEditingCustomOverrideMode());
+        const existingSequence = shouldIncrementSequence
           ? parseIntegerValue(state && state.editingExistingSequence)
           : null;
-        const nextSequence = isEditingExisting
+        const nextSequence = shouldIncrementSequence
           ? Math.max(1, (existingSequence !== null ? existingSequence + 1 : 1))
           : null;
-        const icsOptions = isEditingExisting
+        const icsOptions = shouldIncrementSequence
           ? {
-              method: deletingOverride ? 'CANCEL' : 'REQUEST',
-              status: deletingOverride ? 'CANCELLED' : 'CONFIRMED',
+              method: deletingCustomOverride ? 'CANCEL' : 'REQUEST',
+              status: deletingCustomOverride ? 'CANCELLED' : 'CONFIRMED',
               sequence: nextSequence,
               lastModified: new Date()
             }
           : null;
         const icsContent = generateICS(event, icsOptions);
+        const exportMethod = shouldIncrementSequence
+          ? (deletingCustomOverride ? 'CANCEL' : 'REQUEST')
+          : 'PUBLISH';
+        const exportStatus = deletingCustomOverride ? 'CANCELLED' : 'CONFIRMED';
         logger.info('EVENT', 'Generated ICS export', {
           uid: event.uid || '',
           hasRecurrenceRule: Boolean(event.recurrence),
           hasRecurrenceId: Boolean(event.recurrenceId),
+          hasOverrideIdentity: Boolean(event.overrideUid && event.overrideRecurrenceId),
+          overrideUid: event.overrideUid || null,
+          overrideRecurrenceId: event.overrideRecurrenceId || null,
           timezone: event.timezone || browserTimezone,
-          method: isEditingExisting ? (deletingOverride ? 'CANCEL' : 'REQUEST') : 'PUBLISH',
-          status: deletingOverride ? 'CANCELLED' : 'CONFIRMED',
-          deletingOverride,
+          method: exportMethod,
+          status: exportStatus,
+          deletingCustomOverride,
           previousSequence: existingSequence !== null ? existingSequence : null,
           nextSequence: nextSequence !== null ? nextSequence : null
         });
@@ -7402,7 +7572,7 @@
           state.editingExistingSequence = String(nextSequence);
           scheduleUrlUpdate();
         }
-        showTemporaryState(dom.addToCalendarButton, deletingOverride ? 'Cancel ICS ready!' : 'ICS ready!');
+        showTemporaryState(dom.addToCalendarButton, deletingCustomOverride ? 'Cancel ICS ready!' : 'ICS ready!');
       }
 
       function handleOpenScriptable(button) {
@@ -7499,7 +7669,7 @@
           '_original', '_mergeInfo', '_changes', '_mergeDiff',
           'originalTitle', 'name', 'links', 'durationMinutes',
           'time', 'day', 'recurring', 'recurrence', 'url',
-          'uid', 'recurrenceId', 'recurrenceIdTimezone'
+          'uid', 'recurrenceId', 'recurrenceIdTimezone', 'isDeletingOverride'
         ]);
         const notes = [];
         Object.keys(event).forEach(fieldName => {
