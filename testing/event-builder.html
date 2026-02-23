@@ -478,16 +478,109 @@
     }
 
     .existing-event-panel .existing-date-grid .field-group {
-      gap: 0.25rem;
+      gap: 0.3rem;
     }
 
     .existing-event-panel .existing-date-grid label {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
     }
 
-    .existing-event-panel .existing-date-grid input[type="date"] {
-      padding: 0.35rem 0.5rem;
+    .existing-date-control {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      min-width: 0;
+    }
+
+    .existing-date-trigger {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.45rem;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 9px;
+      background: #0d111a;
+      color: var(--text-primary);
+      padding: 0.4rem 0.55rem;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .existing-date-trigger-label {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .existing-date-trigger-value {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .existing-date-trigger.is-empty .existing-date-trigger-value {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .existing-date-trigger.is-invalid {
+      border-color: rgba(244, 67, 54, 0.6);
+      box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.12);
+    }
+
+    .existing-date-trigger:focus-visible {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.12);
+    }
+
+    .existing-date-clear {
+      flex: 0 0 auto;
+      padding: 0.3rem 0.55rem;
+    }
+
+    .existing-date-native {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      border: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      clip-path: inset(100%);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .existing-date-grid.is-native-fallback .existing-date-control {
+      display: none;
+    }
+
+    .existing-date-grid.is-native-fallback .existing-date-native {
+      position: static;
+      width: 100%;
+      height: auto;
+      margin: 0;
+      clip: auto;
+      clip-path: none;
+      overflow: visible;
+      pointer-events: auto;
+      opacity: 1;
       font-size: 0.78rem;
+      padding: 0.35rem 0.5rem;
     }
 
     .existing-event-panel .existing-filter-input,
@@ -501,6 +594,13 @@
 
     .existing-event-panel .field-actions {
       margin-top: 0.2rem;
+    }
+
+    .existing-mode-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.35rem;
     }
 
     .existing-modal {
@@ -1093,6 +1193,12 @@
       color: var(--text-primary);
     }
 
+    .toggle-button.is-blocked {
+      color: #ffcd8a;
+      border: 1px dashed rgba(255, 193, 7, 0.55);
+      background: rgba(255, 193, 7, 0.12);
+    }
+
     .day-toggle {
       display: flex;
       flex-wrap: wrap;
@@ -1143,6 +1249,19 @@
       margin: 0;
       font-size: 0.74rem;
       color: var(--text-secondary);
+    }
+
+    .recurrence-edit-lock-subtext {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .recurrence-edit-lock-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
     }
 
     .recurrence-delete-override {
@@ -1312,8 +1431,21 @@
         grid-template-columns: 1fr;
       }
 
-      .existing-event-panel .existing-date-grid input[type="date"] {
-        font-size: 16px;
+      .existing-event-panel .existing-date-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+      }
+
+      .existing-date-trigger {
+        padding: 0.42rem 0.5rem;
+      }
+
+      .existing-date-trigger-value {
+        font-size: 0.72rem;
+      }
+
+      .existing-date-clear {
+        padding: 0.28rem 0.5rem;
       }
 
       .field-row.time-row {
@@ -1621,6 +1753,7 @@
               <p class="recurrence-summary" id="recurrence-summary">Does not repeat.</p>
               <div class="recurrence-edit-lock is-hidden" id="recurrence-edit-lock">
                 <p id="recurrence-edit-lock-text">Recurrence rules are locked while editing one occurrence.</p>
+                <p class="recurrence-edit-lock-subtext" id="recurrence-edit-lock-subtext">Switch to the base series to edit recurrence rules, or tell dad for help.</p>
                 <div class="recurrence-delete-override is-hidden" id="recurrence-delete-override-group">
                   <label class="checkbox-label" for="recurrence-delete-override-toggle">
                     <input type="checkbox" id="recurrence-delete-override-toggle">
@@ -1628,7 +1761,13 @@
                   </label>
                   <small id="recurrence-delete-override-hint">Occurrence edits export as standalone override events.</small>
                 </div>
-                <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Switch to base series</button>
+                <div class="recurrence-edit-lock-actions">
+                  <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Edit base series</button>
+                  <button type="button" class="secondary-button action-button is-compact" id="recurrence-edit-lock-tell-dad">
+                    <i class="bi bi-send" aria-hidden="true"></i>
+                    <span>Tell Dad</span>
+                  </button>
+                </div>
               </div>
             </div>
           </details>
@@ -1777,13 +1916,43 @@
         </div>
         <div class="field-grid existing-date-grid">
           <div class="field-group">
-            <label for="existing-date-start">Find events after this date</label>
-            <input type="date" id="existing-date-start" class="existing-filter-input">
+            <label for="existing-date-start">Start date</label>
+            <div class="existing-date-control">
+              <button type="button"
+                      class="existing-date-trigger is-empty"
+                      id="existing-date-start-trigger"
+                      data-existing-date-trigger="start"
+                      aria-controls="existing-date-start"
+                      aria-label="Choose start date">
+                <span class="existing-date-trigger-label">Start</span>
+                <span class="existing-date-trigger-value" id="existing-date-start-display">Any date</span>
+              </button>
+              <button type="button"
+                      class="ghost-button action-button is-compact existing-date-clear"
+                      id="existing-date-start-clear"
+                      data-existing-date-clear="start">Clear</button>
+            </div>
+            <input type="date" id="existing-date-start" class="existing-filter-input existing-date-native" aria-label="Filter events after this date">
             <small class="field-hint" data-default="Defaults to today. Clear to show all dates.">Defaults to today. Clear to show all dates.</small>
           </div>
           <div class="field-group">
-            <label for="existing-date-end">Find events before this date</label>
-            <input type="date" id="existing-date-end" class="existing-filter-input">
+            <label for="existing-date-end">End date</label>
+            <div class="existing-date-control">
+              <button type="button"
+                      class="existing-date-trigger is-empty"
+                      id="existing-date-end-trigger"
+                      data-existing-date-trigger="end"
+                      aria-controls="existing-date-end"
+                      aria-label="Choose end date">
+                <span class="existing-date-trigger-label">End</span>
+                <span class="existing-date-trigger-value" id="existing-date-end-display">No end date</span>
+              </button>
+              <button type="button"
+                      class="ghost-button action-button is-compact existing-date-clear"
+                      id="existing-date-end-clear"
+                      data-existing-date-clear="end">Clear</button>
+            </div>
+            <input type="date" id="existing-date-end" class="existing-filter-input existing-date-native" aria-label="Filter events before this date">
             <small class="field-hint" id="existing-date-hint" data-default="Optional. Leave blank for an open-ended range.">Optional. Leave blank for an open-ended range.</small>
           </div>
         </div>
@@ -1797,10 +1966,16 @@
         <div class="field-group is-hidden" id="existing-mode-group">
           <label>Use as</label>
           <div class="toggle-buttons" role="group" aria-label="Use occurrence or series">
-            <button type="button" class="toggle-button is-active" data-edit-mode="occurrence">Occurrence</button>
-            <button type="button" class="toggle-button" data-edit-mode="series">Series</button>
+            <button type="button" class="toggle-button is-active" data-edit-mode="series">Series</button>
+            <button type="button" class="toggle-button" data-edit-mode="occurrence">Occurrence</button>
           </div>
           <small class="field-hint" id="existing-mode-hint" data-default=""></small>
+          <div class="existing-mode-actions is-hidden" id="existing-mode-actions">
+            <button type="button" class="secondary-button action-button is-compact" id="existing-mode-tell-dad">
+              <i class="bi bi-send" aria-hidden="true"></i>
+              <span>Tell Dad</span>
+            </button>
+          </div>
         </div>
 
         <div class="field-group is-hidden" id="existing-occurrence-group">
@@ -1893,7 +2068,7 @@
       let existingOccurrenceResults = [];
       let selectedExistingResult = null;
       let selectedExistingOccurrence = null;
-      let selectedExistingMode = 'occurrence';
+      let selectedExistingMode = 'series';
       let pendingExistingSelectionId = '';
       let pendingExistingOccurrenceId = '';
       let existingSearchTimeoutId = null;
@@ -1910,7 +2085,7 @@
         dateRangeEnd: '',
         resultId: '',
         occurrenceId: '',
-        mode: 'occurrence',
+        mode: 'series',
         hasState: false
       };
 
@@ -1918,6 +2093,7 @@
 
       function init() {
         cacheDom();
+        setupExistingDatePickerFallback();
         setupStickyHeaderOffset();
         populateCityOptions();
         const baseState = createDefaultState();
@@ -2001,10 +2177,12 @@
         dom.recurrenceInput = document.getElementById('event-recurrence');
         dom.recurrenceEditLock = document.getElementById('recurrence-edit-lock');
         dom.recurrenceEditLockText = document.getElementById('recurrence-edit-lock-text');
+        dom.recurrenceEditLockSubtext = document.getElementById('recurrence-edit-lock-subtext');
         dom.recurrenceDeleteOverrideGroup = document.getElementById('recurrence-delete-override-group');
         dom.recurrenceDeleteOverrideToggle = document.getElementById('recurrence-delete-override-toggle');
         dom.recurrenceDeleteOverrideHint = document.getElementById('recurrence-delete-override-hint');
         dom.recurrenceEditSeriesButton = document.getElementById('recurrence-edit-series-button');
+        dom.recurrenceEditLockTellDadButton = document.getElementById('recurrence-edit-lock-tell-dad');
         dom.websiteInput = document.getElementById('event-website');
         dom.ticketUrlInput = document.getElementById('event-ticket-url');
         dom.instagramInput = document.getElementById('event-instagram');
@@ -2022,6 +2200,12 @@
         dom.existingSearchInput = document.getElementById('existing-search');
         dom.existingDateStart = document.getElementById('existing-date-start');
         dom.existingDateEnd = document.getElementById('existing-date-end');
+        dom.existingDateStartDisplay = document.getElementById('existing-date-start-display');
+        dom.existingDateEndDisplay = document.getElementById('existing-date-end-display');
+        dom.existingDateStartTrigger = document.getElementById('existing-date-start-trigger');
+        dom.existingDateEndTrigger = document.getElementById('existing-date-end-trigger');
+        dom.existingDateStartClear = document.getElementById('existing-date-start-clear');
+        dom.existingDateEndClear = document.getElementById('existing-date-end-clear');
         dom.existingDateHint = document.getElementById('existing-date-hint');
         dom.existingCalendar = document.getElementById('existing-calendar');
         dom.existingCalendarGrid = document.getElementById('existing-calendar-grid');
@@ -2037,6 +2221,8 @@
         dom.existingModeGroup = document.getElementById('existing-mode-group');
         dom.existingModeButtons = document.querySelectorAll('[data-edit-mode]');
         dom.existingModeHint = document.getElementById('existing-mode-hint');
+        dom.existingModeActions = document.getElementById('existing-mode-actions');
+        dom.existingModeTellDadButton = document.getElementById('existing-mode-tell-dad');
         dom.existingOccurrenceGroup = document.getElementById('existing-occurrence-group');
         dom.existingOccurrenceSelect = document.getElementById('existing-occurrence');
         dom.existingOccurrenceHint = document.getElementById('existing-occurrence-hint');
@@ -2064,6 +2250,16 @@
         dom.previewCover = document.getElementById('preview-cover');
         dom.previewLinks = document.getElementById('preview-links');
         dom.toastContainer = document.getElementById('toast-container');
+      }
+
+      function setupExistingDatePickerFallback() {
+        if (!dom.existingDateStart || !dom.existingDateEnd) return;
+        const supportsShowPicker = typeof dom.existingDateStart.showPicker === 'function'
+          && typeof dom.existingDateEnd.showPicker === 'function';
+        if (supportsShowPicker) return;
+        const dateGrid = dom.existingDateStart.closest('.existing-date-grid');
+        if (!dateGrid) return;
+        dateGrid.classList.add('is-native-fallback');
       }
 
       function applyDebugVisibility() {
@@ -2611,6 +2807,65 @@
             setFieldHint(dom.existingDateHint, '', false);
           }
         }
+        updateExistingDateControlUi();
+      }
+
+      function updateExistingDateControlUi() {
+        const startDate = parseDateValue(existingDateRangeStart || '');
+        const endDate = parseDateValue(existingDateRangeEnd || '');
+        const dateFilter = getExistingDateFilter();
+        const isInvalid = Boolean(dateFilter && dateFilter.isInvalid);
+        if (dom.existingDateStartDisplay) {
+          dom.existingDateStartDisplay.textContent = startDate
+            ? formatCompactDateLabel(startDate)
+            : 'Any date';
+        }
+        if (dom.existingDateEndDisplay) {
+          dom.existingDateEndDisplay.textContent = endDate
+            ? formatCompactDateLabel(endDate)
+            : 'No end date';
+        }
+        if (dom.existingDateStartTrigger) {
+          dom.existingDateStartTrigger.classList.toggle('is-empty', !startDate);
+          dom.existingDateStartTrigger.classList.toggle('is-invalid', isInvalid);
+        }
+        if (dom.existingDateEndTrigger) {
+          dom.existingDateEndTrigger.classList.toggle('is-empty', !endDate);
+          dom.existingDateEndTrigger.classList.toggle('is-invalid', isInvalid);
+        }
+        if (dom.existingDateStartClear) {
+          dom.existingDateStartClear.disabled = !existingDateRangeStart;
+        }
+        if (dom.existingDateEndClear) {
+          dom.existingDateEndClear.disabled = !existingDateRangeEnd;
+        }
+      }
+
+      function formatCompactDateLabel(date) {
+        if (!isValidDateObject(date)) return '';
+        const options = { month: 'short', day: 'numeric' };
+        if (date.getFullYear() !== new Date().getFullYear()) {
+          options.year = 'numeric';
+        }
+        try {
+          return new Intl.DateTimeFormat('en-US', options).format(date);
+        } catch (error) {
+          return formatDateLabel(date, browserTimezone);
+        }
+      }
+
+      function openExistingDatePicker(which) {
+        const input = which === 'end' ? dom.existingDateEnd : dom.existingDateStart;
+        if (!input) return;
+        if (typeof input.showPicker === 'function') {
+          try {
+            input.showPicker();
+            return;
+          } catch (error) {
+          }
+        }
+        input.focus({ preventScroll: true });
+        input.click();
       }
 
       function applyExistingCalendarState(options = {}) {
@@ -3087,15 +3342,24 @@
       function extractDescriptionValue(description, keys) {
         if (!description) return '';
         const normalizedKeys = keys.map(key => key.toLowerCase().replace(/\s+/g, ''));
-        const lines = String(description).replace(/\r/g, '').split('\n');
-        for (const line of lines) {
+        const normalizedDescription = decodeHtmlEntities(String(description))
+          .replace(/\r/g, '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/\\r\\n/gi, '\n')
+          .replace(/\\n/gi, '\n')
+          .replace(/\\N/g, '\n');
+        const lines = normalizedDescription.split('\n');
+        for (const rawLine of lines) {
+          const line = String(rawLine || '').trim();
+          if (!line) continue;
           const separatorIndex = line.indexOf(':');
           if (separatorIndex === -1) continue;
           const rawKey = line.slice(0, separatorIndex).trim();
           const normalizedKey = rawKey.toLowerCase().replace(/\s+/g, '');
           if (!normalizedKeys.includes(normalizedKey)) continue;
-          const value = line.slice(separatorIndex + 1).trim();
-          return normalizeText(decodeHtmlEntities(value));
+          const rawValue = line.slice(separatorIndex + 1).trim();
+          const firstLineValue = rawValue.split(/\\[nN]/)[0].trim();
+          return normalizeText(decodeHtmlEntities(firstLineValue));
         }
         return '';
       }
@@ -3799,9 +4063,6 @@
 
       function getDefaultExistingMode(result) {
         if (!result || !result.canEditSeries) return 'occurrence';
-        const baseEvent = result.baseEvent || result.event;
-        const seriesBlockedReason = getSeriesLegacyOverrideBlockReason(baseEvent, existingCalendarIndex);
-        if (seriesBlockedReason) return 'occurrence';
         if (result.type === 'series') return 'series';
         if (result.occurrenceDate) return 'occurrence';
         return 'series';
@@ -3813,10 +4074,9 @@
           const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
           const seriesBlockedReason = getSeriesLegacyOverrideBlockReason(baseEvent, existingCalendarIndex);
           if (seriesBlockedReason) {
-            selectedExistingMode = 'occurrence';
+            selectedExistingMode = 'series';
             updateExistingModeUi(selectedExistingResult);
             storeExistingPanelState();
-            showToast(seriesBlockedReason, 'warn');
             return;
           }
         }
@@ -3826,9 +4086,7 @@
         if (nextMode === 'series' && selectedExistingResult && existingCalendarIndex) {
           const baseEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
           const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
-          if (overrideContext.hasLegacyOverrides) {
-            showToast(LEGACY_SERIES_BLOCK_MESSAGE, 'warn');
-          } else if (overrideContext.overrides.length) {
+          if (overrideContext.overrides.length) {
             showToast('Series has overrides. Recurrence rules are locked while overrides exist.', 'warn');
           }
         }
@@ -3842,6 +4100,13 @@
           if (dom.existingOccurrenceGroup) {
             dom.existingOccurrenceGroup.classList.add('is-hidden');
           }
+          if (dom.existingModeActions) {
+            dom.existingModeActions.classList.add('is-hidden');
+          }
+          if (dom.existingModeTellDadButton) {
+            dom.existingModeTellDadButton.dataset.reason = '';
+            dom.existingModeTellDadButton.dataset.requestLabel = '';
+          }
           resetExistingOccurrences('');
           updateExistingActionButtons();
           return;
@@ -3849,13 +4114,11 @@
         const baseEvent = result.baseEvent || result.event;
         const overrideContext = getSeriesOverrideContextForBaseEvent(baseEvent, existingCalendarIndex);
         const seriesBlockedReason = getSeriesLegacyOverrideBlockReason(baseEvent, existingCalendarIndex);
-        if (seriesBlockedReason && selectedExistingMode === 'series') {
-          selectedExistingMode = 'occurrence';
-        }
         dom.existingModeButtons.forEach(button => {
           const isSeriesButton = button.dataset.editMode === 'series';
           const isBlocked = Boolean(isSeriesButton && seriesBlockedReason);
-          button.disabled = isBlocked;
+          button.disabled = false;
+          button.classList.toggle('is-blocked', isBlocked);
           if (isBlocked) {
             button.setAttribute('title', seriesBlockedReason);
           } else {
@@ -3866,8 +4129,8 @@
         if (dom.existingModeHint) {
           let hint = '';
           if (selectedExistingMode === 'series') {
-            if (overrideContext.hasLegacyOverrides) {
-              hint = seriesBlockedReason;
+            if (seriesBlockedReason) {
+              hint = `${seriesBlockedReason} Switch to Occurrence to edit one date, or Tell Dad for series-level updates.`;
             } else if (overrideContext.overrides.length) {
               hint = buildSeriesOverrideWarningText(overrideContext);
             } else {
@@ -3880,11 +4143,22 @@
               : null;
             if (selectedOverride && isLegacyOverrideEvent(selectedOverride)) {
               hint = LEGACY_OVERRIDE_HELP_MESSAGE;
+            } else if (seriesBlockedReason) {
+              hint = 'Series mode is blocked by legacy overrides. Occurrence edits are still available.';
             } else {
               hint = 'Occurrence edits one instance (creates an override) and clears the recurrence rule.';
             }
           }
           setFieldHint(dom.existingModeHint, hint, false);
+        }
+        const showSeriesBlockHelp = Boolean(seriesBlockedReason && selectedExistingMode === 'series');
+        if (dom.existingModeActions) {
+          dom.existingModeActions.classList.toggle('is-hidden', !showSeriesBlockHelp);
+        }
+        if (dom.existingModeTellDadButton) {
+          dom.existingModeTellDadButton.disabled = !showSeriesBlockHelp;
+          dom.existingModeTellDadButton.dataset.reason = seriesBlockedReason || '';
+          dom.existingModeTellDadButton.dataset.requestLabel = 'Legacy series edit blocked';
         }
         refreshExistingOccurrenceOptions();
         updateExistingActionButtons();
@@ -4730,7 +5004,7 @@
         if (!state) return;
         state.isEditingExisting = false;
         state.editingExistingId = '';
-        state.editingExistingMode = 'occurrence';
+        state.editingExistingMode = 'series';
         state.editingExistingOccurrenceId = '';
         state.editingExistingUid = '';
         state.editingExistingRecurrenceId = '';
@@ -4805,7 +5079,7 @@
           image: '',
           isEditingExisting: false,
           editingExistingId: '',
-          editingExistingMode: 'occurrence',
+          editingExistingMode: 'series',
           editingExistingOccurrenceId: '',
           editingExistingUid: '',
           editingExistingRecurrenceId: '',
@@ -5334,6 +5608,13 @@
             handleSwapToSeriesEdit(dom.recurrenceEditSeriesButton);
           });
         }
+        if (dom.recurrenceEditLockTellDadButton) {
+          dom.recurrenceEditLockTellDadButton.addEventListener('click', () => {
+            const reason = dom.recurrenceEditLockTellDadButton.dataset.reason || LEGACY_OVERRIDE_HELP_MESSAGE;
+            const requestLabel = dom.recurrenceEditLockTellDadButton.dataset.requestLabel || 'Need help with locked recurrence edit';
+            openTellDadEmail(dom.recurrenceEditLockTellDadButton, { requestLabel, reason });
+          });
+        }
         if (dom.recurrenceDeleteOverrideToggle) {
           dom.recurrenceDeleteOverrideToggle.addEventListener('change', event => {
             state.deleteOverride = Boolean(event.target.checked);
@@ -5374,6 +5655,32 @@
             scheduleExistingResultsUpdate();
           });
         }
+        if (dom.existingDateStartTrigger) {
+          dom.existingDateStartTrigger.addEventListener('click', () => {
+            openExistingDatePicker('start');
+          });
+        }
+        if (dom.existingDateEndTrigger) {
+          dom.existingDateEndTrigger.addEventListener('click', () => {
+            openExistingDatePicker('end');
+          });
+        }
+        if (dom.existingDateStartClear) {
+          dom.existingDateStartClear.addEventListener('click', () => {
+            existingDateRangeStart = '';
+            updateExistingDateFilterUi(getExistingDateFilter());
+            storeExistingPanelState();
+            scheduleExistingResultsUpdate();
+          });
+        }
+        if (dom.existingDateEndClear) {
+          dom.existingDateEndClear.addEventListener('click', () => {
+            existingDateRangeEnd = '';
+            updateExistingDateFilterUi(getExistingDateFilter());
+            storeExistingPanelState();
+            scheduleExistingResultsUpdate();
+          });
+        }
         if (dom.existingDateStart) {
           dom.existingDateStart.addEventListener('input', () => {
             existingDateRangeStart = dom.existingDateStart.value || '';
@@ -5402,6 +5709,13 @@
               const mode = button.dataset.editMode || 'occurrence';
               setExistingMode(mode);
             });
+          });
+        }
+        if (dom.existingModeTellDadButton) {
+          dom.existingModeTellDadButton.addEventListener('click', () => {
+            const reason = dom.existingModeTellDadButton.dataset.reason || LEGACY_SERIES_BLOCK_MESSAGE;
+            const requestLabel = dom.existingModeTellDadButton.dataset.requestLabel || 'Legacy series edit blocked';
+            openTellDadEmail(dom.existingModeTellDadButton, { requestLabel, reason });
           });
         }
         if (dom.existingLoadButton) {
@@ -6148,20 +6462,46 @@
             : '';
         }
         dom.recurrenceEditLock.classList.toggle('is-hidden', !isLocked);
-        if (!isLocked) return;
+        if (!isLocked) {
+          if (dom.recurrenceEditLockSubtext) {
+            dom.recurrenceEditLockSubtext.textContent = '';
+          }
+          if (dom.recurrenceEditLockTellDadButton) {
+            dom.recurrenceEditLockTellDadButton.dataset.reason = '';
+            dom.recurrenceEditLockTellDadButton.dataset.requestLabel = '';
+          }
+          return;
+        }
         if (dom.recurrenceEditLockText) {
           dom.recurrenceEditLockText.textContent = isLegacyOverride
-            ? LEGACY_OVERRIDE_HELP_MESSAGE
-            : 'Recurrence rules are locked while editing one occurrence.';
+            ? 'Legacy override detected for this occurrence.'
+            : 'You are editing one occurrence.';
+        }
+        if (dom.recurrenceEditLockSubtext) {
+          dom.recurrenceEditLockSubtext.textContent = isLegacyOverride
+            ? 'Series-level recurrence edits are blocked for legacy overrides in this tool. Use Tell Dad with this event pre-filled.'
+            : 'Recurrence rules stay locked in occurrence mode. Switch to the base series to edit recurrence, or Tell Dad for help.';
         }
         if (dom.recurrenceEditSeriesButton) {
-          dom.recurrenceEditSeriesButton.textContent = 'Switch to base series';
-          dom.recurrenceEditSeriesButton.disabled = false;
-          if (isLegacyOverride) {
+          const canSwitchToSeries = !isLegacyOverride;
+          dom.recurrenceEditSeriesButton.textContent = canSwitchToSeries
+            ? 'Edit base series'
+            : 'Base series unavailable here';
+          dom.recurrenceEditSeriesButton.disabled = !canSwitchToSeries;
+          if (!canSwitchToSeries) {
             dom.recurrenceEditSeriesButton.setAttribute('title', LEGACY_SERIES_BLOCK_MESSAGE);
           } else {
             dom.recurrenceEditSeriesButton.removeAttribute('title');
           }
+        }
+        if (dom.recurrenceEditLockTellDadButton) {
+          dom.recurrenceEditLockTellDadButton.disabled = false;
+          dom.recurrenceEditLockTellDadButton.dataset.reason = isLegacyOverride
+            ? LEGACY_SERIES_BLOCK_MESSAGE
+            : 'Recurrence rules are locked while editing one occurrence.';
+          dom.recurrenceEditLockTellDadButton.dataset.requestLabel = isLegacyOverride
+            ? 'Legacy override edit help'
+            : 'Need help editing base series';
         }
       }
 
@@ -6815,22 +7155,33 @@
         return `scriptable:///run/${encodedScriptName}?${params.toString()}`;
       }
 
-      function buildTellDadMessage() {
+      function buildTellDadMessage(options = {}) {
         const shareUrl = getShareUrl({ includeDebug: true, skipHistory: !state || !state.debug });
         const scriptableUrl = buildScriptableCallbackUrl();
         const eventName = (state.name || '').trim();
         const cityLabel = getCityDisplayName(state.city);
+        const requestLabel = normalizeText(options.requestLabel || '');
+        const reason = normalizeText(options.reason || '');
+        const selectionSummary = normalizeText(state && state.existingSelectionSummary);
         const subjectParts = ['Event Builder'];
         if (eventName) subjectParts.push(eventName);
         if (cityLabel) subjectParts.push(cityLabel);
+        if (requestLabel) subjectParts.push(requestLabel);
         const subject = subjectParts.join(' - ');
-        const bodyTextLines = [
-          'Hey Dad, here is the event link:',
-          '',
-          '',
-          '',
-          shareUrl
-        ];
+        const bodyTextLines = ['Hey Dad, here is the event link:'];
+        if (requestLabel) {
+          bodyTextLines.push('', `Request: ${requestLabel}`);
+        }
+        if (reason) {
+          bodyTextLines.push(`Reason: ${reason}`);
+        }
+        if (selectionSummary) {
+          bodyTextLines.push(`Current selection: ${selectionSummary}`);
+        }
+        bodyTextLines.push('', shareUrl);
+        if (scriptableUrl) {
+          bodyTextLines.push('', 'Scriptable callback:', scriptableUrl);
+        }
         const bodyText = bodyTextLines.join('\n');
         return {
           shareUrl,
@@ -6847,8 +7198,8 @@
         return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(body)}`;
       }
 
-      function openTellDadEmail(button) {
-        const message = buildTellDadMessage();
+      function openTellDadEmail(button, options = {}) {
+        const message = buildTellDadMessage(options);
         if (!message.shareUrl) return;
         const fallbackBody = message.bodyText || message.body || '';
         const fallbackText = `To: ${DAD_EMAIL}\nSubject: ${message.subject}\n\n${fallbackBody}`;
