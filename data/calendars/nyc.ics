@@ -24,45 +24,28 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250705T220000
-DTEND;TZID=America/New_York:20250706T040000
-RRULE:FREQ=MONTHLY;BYDAY=1SA
-DTSTAMP:20260225T081427Z
-UID:suljenhlak65mplsbrft5rgcd0@google.com
-CREATED:20250720T011008Z
-DESCRIPTION:Tea: Go-Go Bears\, Cubs and LOTS of other fun things to grab on
- to!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https:/
- /www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBU
- pQjekPZUW4u7\nBar: Rockbar\nShorter: BNO
-LAST-MODIFIED:20250723T045844Z
+DTSTART;TZID=America/New_York:20250704T220000
+DTEND;TZID=America/New_York:20250705T040000
+RRULE:FREQ=MONTHLY;BYDAY=1FR
+DTSTAMP:20260225T101839Z
+UID:bdstnukmpv6keg7pon3fram2qg@google.com
+CREATED:20250719T041643Z
+DESCRIPTION:Tea: Jockstraps encouraged\, clothes check available!\nCover: $
+ 10 entry\, $1 clothes check\nInstagram: https://www.instagram.com/rockbarny
+ \nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nNickname: Rock-st
+ rap\nBar: Rockbar\nShorter: RBR
+LAST-MODIFIED:20250723T045823Z
 LOCATION:40.7326824\, -74.0097099
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:Bears Night Out
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250710T170000
-DTEND;TZID=America/New_York:20250710T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260225T081427Z
-UID:6thhos5ct3pllq5kmvsp7infd8@google.com
-CREATED:20250712T180243Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week in Manhattan.\nInstagram: https:/
- /www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/b
- earhappyhour
-LAST-MODIFIED:20251012T161111Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
+SUMMARY:Rockstrap
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20250718T220000
 DTEND;TZID=America/New_York:20250719T040000
 RRULE:FREQ=MONTHLY;BYDAY=FR;BYSETPOS=3
-DTSTAMP:20260225T081427Z
+DTSTAMP:20260225T101839Z
 UID:dqepj75ddmjn7gqihe482s8kqs@google.com
 CREATED:20250719T040756Z
 DESCRIPTION:bar: Nowhere Bar\naddress: 322 E 14th St\, New York\, NY 10003\
@@ -77,54 +60,29 @@ SUMMARY:Fat Fuc
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250710T190000
-DTEND;TZID=America/New_York:20250710T220000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260225T081427Z
-UID:v12lqkpglh2iupk54ttds6pcmg@google.com
-CREATED:20250712T180243Z
-DESCRIPTION:Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww
- w.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/Xvrwk
- XqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for t
- hose that want to go out in Brooklyn. Patio space and goes a bit later.
-LAST-MODIFIED:20260121T231021Z
-LOCATION:40.71739735291992\, -73.94930680925715
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Bears Are Animals
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260215T033000Z
-DTEND:20260215T090000Z
-DTSTAMP:20260225T081427Z
-UID:6DD23624-8818-401B-9BC1-13BB87366576
-CREATED:20260210T040939Z
-DESCRIPTION:description: CHUNK returns to NY - Saturday February 14th // fe
- aturing DJs RON LIKE HELL (Wrecked) & residents DICAP & MR PICKLES // HOT G
- OGO BEARS // C'MON EVERYBODY - 325 Franklin Ave - 10\\:30pm - 4am\nbar: Bro
- oklyn\naddress: 325 Franklin Ave\, Brooklyn\, NY 11238\, USA\ntimezone: Ame
- rica/New_York\nurl: https://www.chunk-party.com/event-details/chunk-brookly
- n-the-return\nticketUrl: https://www.chunk-party.com/event-details/chunk-br
- ooklyn-the-return\ncover: $15.38 - $25.63\nimage: https://static.wixstatic.
- com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg/v1/fill/w_1344\,h
- _1345\,al_c\,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg\nshortNam
- e: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://w
- ww.google.com/maps/search/?api=1&query=325%20Franklin%20Ave%2C%20Brooklyn%2
- C%20NY%2011238%2C%20USA\nkey: chunk-brooklyn-the-return|2026-02-15|brooklyn
-LAST-MODIFIED:20260210T040940Z
-LOCATION:40.68830519999999\, -73.9569221
+DTSTART;TZID=America/New_York:20250726T210000
+DTEND;TZID=America/New_York:20250727T040000
+RRULE:FREQ=MONTHLY;BYDAY=-1SA
+DTSTAMP:20260225T101839Z
+UID:5bplfm82e6efkbdo6i52v22ri4@google.com
+CREATED:20260210T152540Z
+DESCRIPTION:Cover: Varies\, ~$25 tickets\nInstagram: https://www.instagram.
+ com/goldiloxx__\nGoogle Maps: https://maps.app.goo.gl/EWAtZea7ZZukum1K9\nde
+ scription: The party has two floors with two different vibes. Upstairs is f
+ lirty/dance/mingle. Downstairs is… \;)\;)\;) Sexy Beefy Gogos all night\nba
+ r: Red Eye NY & The Cockpit\naddress: 355 W 41st St #2FL\, New York\, NY 10
+ 036\nshortName: GOLDI-LOXX\nshorterName: GLX
+LAST-MODIFIED:20260210T152640Z
+LOCATION:40.75775322645565\, -73.99257438113817
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:CHUNK BROOKLYN - The Return!
+SUMMARY:GOLDILOXX
 TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20260214T210000
 DTEND;TZID=America/New_York:20260215T040000
-DTSTAMP:20260225T081427Z
+DTSTAMP:20260225T101839Z
 UID:5bplfm82e6efkbdo6i52v22ri4@google.com
 RECURRENCE-ID;TZID=America/New_York:20260228T210000
 CREATED:20260210T152540Z
@@ -161,30 +119,28 @@ TRIGGER;VALUE=DATE-TIME:19760401T005545Z
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250726T210000
-DTEND;TZID=America/New_York:20250727T040000
-RRULE:FREQ=MONTHLY;BYDAY=-1SA
-DTSTAMP:20260225T081427Z
-UID:5bplfm82e6efkbdo6i52v22ri4@google.com
-CREATED:20260210T152540Z
-DESCRIPTION:Cover: Varies\, ~$25 tickets\nInstagram: https://www.instagram.
- com/goldiloxx__\nGoogle Maps: https://maps.app.goo.gl/EWAtZea7ZZukum1K9\nde
- scription: The party has two floors with two different vibes. Upstairs is f
- lirty/dance/mingle. Downstairs is… \;)\;)\;) Sexy Beefy Gogos all night\nba
- r: Red Eye NY & The Cockpit\naddress: 355 W 41st St #2FL\, New York\, NY 10
- 036\nshortName: GOLDI-LOXX\nshorterName: GLX
-LAST-MODIFIED:20260210T152640Z
-LOCATION:40.75775322645565\, -73.99257438113817
-SEQUENCE:0
+DTSTART;TZID=America/New_York:20250710T190000
+DTEND;TZID=America/New_York:20250710T220000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260225T101839Z
+UID:v12lqkpglh2iupk54ttds6pcmg@google.com
+CREATED:20250712T180243Z
+DESCRIPTION:Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww
+ w.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/Xvrwk
+ XqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for t
+ hose that want to go out in Brooklyn. Patio space and goes a bit later.
+LAST-MODIFIED:20260121T231021Z
+LOCATION:40.71739735291992\, -73.94930680925715
+SEQUENCE:1
 STATUS:CONFIRMED
-SUMMARY:GOLDILOXX
+SUMMARY:Bears Are Animals
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20250706T170000
 DTEND;TZID=America/New_York:20250707T040000
 RRULE:FREQ=WEEKLY
-DTSTAMP:20260225T081427Z
+DTSTAMP:20260225T101839Z
 UID:96d0b400rgfpagk14sc2bd1aks@google.com
 CREATED:20250712T180243Z
 DESCRIPTION:Name: Beer Blast\nBar: Eagle NYC \nCover: No cover till 9PM\, $
@@ -198,21 +154,65 @@ SUMMARY:Beer Blast
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250704T220000
-DTEND;TZID=America/New_York:20250705T040000
-RRULE:FREQ=MONTHLY;BYDAY=1FR
-DTSTAMP:20260225T081427Z
-UID:bdstnukmpv6keg7pon3fram2qg@google.com
-CREATED:20250719T041643Z
-DESCRIPTION:Tea: Jockstraps encouraged\, clothes check available!\nCover: $
- 10 entry\, $1 clothes check\nInstagram: https://www.instagram.com/rockbarny
- \nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nNickname: Rock-st
- rap\nBar: Rockbar\nShorter: RBR
-LAST-MODIFIED:20250723T045823Z
+DTSTART;TZID=America/New_York:20250705T220000
+DTEND;TZID=America/New_York:20250706T040000
+RRULE:FREQ=MONTHLY;BYDAY=1SA
+DTSTAMP:20260225T101839Z
+UID:suljenhlak65mplsbrft5rgcd0@google.com
+CREATED:20250720T011008Z
+DESCRIPTION:Tea: Go-Go Bears\, Cubs and LOTS of other fun things to grab on
+ to!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https:/
+ /www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBU
+ pQjekPZUW4u7\nBar: Rockbar\nShorter: BNO
+LAST-MODIFIED:20250723T045844Z
 LOCATION:40.7326824\, -74.0097099
+SEQUENCE:2
+STATUS:CONFIRMED
+SUMMARY:Bears Night Out
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260215T033000Z
+DTEND:20260215T090000Z
+DTSTAMP:20260225T101839Z
+UID:6DD23624-8818-401B-9BC1-13BB87366576
+CREATED:20260210T040939Z
+DESCRIPTION:description: CHUNK returns to NY - Saturday February 14th // fe
+ aturing DJs RON LIKE HELL (Wrecked) & residents DICAP & MR PICKLES // HOT G
+ OGO BEARS // C'MON EVERYBODY - 325 Franklin Ave - 10\\:30pm - 4am\nbar: Bro
+ oklyn\naddress: 325 Franklin Ave\, Brooklyn\, NY 11238\, USA\ntimezone: Ame
+ rica/New_York\nurl: https://www.chunk-party.com/event-details/chunk-brookly
+ n-the-return\nticketUrl: https://www.chunk-party.com/event-details/chunk-br
+ ooklyn-the-return\ncover: $15.38 - $25.63\nimage: https://static.wixstatic.
+ com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg/v1/fill/w_1344\,h
+ _1345\,al_c\,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg\nshortNam
+ e: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://w
+ ww.google.com/maps/search/?api=1&query=325%20Franklin%20Ave%2C%20Brooklyn%2
+ C%20NY%2011238%2C%20USA\nkey: chunk-brooklyn-the-return|2026-02-15|brooklyn
+LAST-MODIFIED:20260210T040940Z
+LOCATION:40.68830519999999\, -73.9569221
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Rockstrap
+SUMMARY:CHUNK BROOKLYN - The Return!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250710T170000
+DTEND;TZID=America/New_York:20250710T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260225T101839Z
+UID:6thhos5ct3pllq5kmvsp7infd8@google.com
+CREATED:20250712T180243Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week in Manhattan.\nInstagram: https:/
+ /www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/b
+ earhappyhour
+LAST-MODIFIED:20251012T161111Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
 TRANSP:OPAQUE
 END:VEVENT
 END:VCALENDAR
