@@ -6,9 +6,36 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-vegas
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
+DTSTART:20251102T040000Z
+DTEND:20251102T110000Z
+DTSTAMP:20260226T161839Z
+UID:CD1401F3-1C01-4716-8C0D-4BCDC8CB458C
+CREATED:20250830T012218Z
+DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL 
+ HALLOWOOF  LAS VEGAS. FULL DETAILS COMING SOON\nbar: Dust Las Vegas\naddres
+ s: 855 East Twain Avenue\, Las Vegas\, NV 89169\ntimezone: America/Los_Ange
+ les\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventb
+ rite.com/e/megawoof-10-year-us-anniversary-international-hallowoof-las-vega
+ s-tickets-1636556246789\ncover: $14.73 - $32.63 (as of 10/1)\nimage: https:
+ //img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1119746233%2F1850137
+ 22403%2F1%2Foriginal.20250910-090426?crop=focalpoint&fit=crop&h=230&w=460&a
+ uto=format%2Ccompress&q=75&sharp=10&fp-x=0.00562374813779&fp-y=0.0039299610
+ 8949&s=b5b7632d3b98e604c53a0466d40046ce\nshortName: MEGA-WOOF\ninstagram: h
+ ttps://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_F
+ yIARvHYdOaAV7t8\nkey: megawoof|2025-11-02|dust las vegas|eventbrite
+LAST-MODIFIED:20251002T003901Z
+LOCATION:36.1214368\, -115.144945
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20260226T081351Z
+DTSTAMP:20260226T161839Z
 UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
 CREATED:20250823T205551Z
 DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :
@@ -33,32 +60,5 @@ SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20251102T040000Z
-DTEND:20251102T110000Z
-DTSTAMP:20260226T081351Z
-UID:CD1401F3-1C01-4716-8C0D-4BCDC8CB458C
-CREATED:20250830T012218Z
-DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL 
- HALLOWOOF  LAS VEGAS. FULL DETAILS COMING SOON\nbar: Dust Las Vegas\naddres
- s: 855 East Twain Avenue\, Las Vegas\, NV 89169\ntimezone: America/Los_Ange
- les\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventb
- rite.com/e/megawoof-10-year-us-anniversary-international-hallowoof-las-vega
- s-tickets-1636556246789\ncover: $14.73 - $32.63 (as of 10/1)\nimage: https:
- //img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1119746233%2F1850137
- 22403%2F1%2Foriginal.20250910-090426?crop=focalpoint&fit=crop&h=230&w=460&a
- uto=format%2Ccompress&q=75&sharp=10&fp-x=0.00562374813779&fp-y=0.0039299610
- 8949&s=b5b7632d3b98e604c53a0466d40046ce\nshortName: MEGA-WOOF\ninstagram: h
- ttps://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/ma
- ps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_F
- yIARvHYdOaAV7t8\nkey: megawoof|2025-11-02|dust las vegas|eventbrite
-LAST-MODIFIED:20251002T003901Z
-LOCATION:36.1214368\, -115.144945
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 END:VEVENT
 END:VCALENDAR
