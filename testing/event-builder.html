@@ -481,9 +481,19 @@
       gap: 0.3rem;
     }
 
+    .existing-event-panel .existing-date-range-heading {
+      gap: 0.2rem;
+    }
+
+    .existing-event-panel .existing-date-range-heading label {
+      font-size: 0.82rem;
+      color: var(--text-primary);
+    }
+
     .existing-event-panel .existing-date-grid label {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
     }
 
     .existing-date-control {
@@ -1914,6 +1924,10 @@
             <small>Optional. Match event name, venue, or notes.</small>
           </div>
         </div>
+        <div class="field-group existing-date-range-heading">
+          <label>Date range</label>
+          <small>Optional. Use start/end dates to narrow the event list.</small>
+        </div>
         <div class="field-grid existing-date-grid">
           <div class="field-group">
             <label for="existing-date-start">Start date</label>
@@ -1933,7 +1947,7 @@
                       data-existing-date-clear="start">Clear</button>
             </div>
             <input type="date" id="existing-date-start" class="existing-filter-input existing-date-native" aria-label="Filter events after this date">
-            <small class="field-hint" data-default="Defaults to today. Clear to show all dates.">Defaults to today. Clear to show all dates.</small>
+            <small class="field-hint" data-default="Defaults to today. Clear to include past events.">Defaults to today. Clear to include past events.</small>
           </div>
           <div class="field-group">
             <label for="existing-date-end">End date</label>
@@ -2038,8 +2052,9 @@
       const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'events@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
-      const LEGACY_OVERRIDE_HELP_MESSAGE = 'Legacy override detected. Use Tell Dad to email chunky dad for help with edits or deletion.';
-      const LEGACY_SERIES_BLOCK_MESSAGE = 'This series has legacy overrides. Series edits are blocked here. Use Tell Dad to email chunky dad.';
+      const LEGACY_OVERRIDE_HELP_MESSAGE = 'Legacy override detected. Edits are limited in this tool. Use Tell Dad and describe what you are trying to change.';
+      const LEGACY_SERIES_BLOCK_MESSAGE = 'This series has legacy overrides, so series edits are blocked in this tool.';
+      const LEGACY_TELL_DAD_PROMPT = 'Use Tell Dad and tell us exactly what you are trying to change.';
 
       const dom = {};
       let state;
@@ -2252,14 +2267,19 @@
         dom.toastContainer = document.getElementById('toast-container');
       }
 
+      function enableExistingDateNativeFallback() {
+        if (!dom.existingDateStart) return;
+        const dateGrid = dom.existingDateStart.closest('.existing-date-grid');
+        if (!dateGrid) return;
+        dateGrid.classList.add('is-native-fallback');
+      }
+
       function setupExistingDatePickerFallback() {
         if (!dom.existingDateStart || !dom.existingDateEnd) return;
         const supportsShowPicker = typeof dom.existingDateStart.showPicker === 'function'
           && typeof dom.existingDateEnd.showPicker === 'function';
         if (supportsShowPicker) return;
-        const dateGrid = dom.existingDateStart.closest('.existing-date-grid');
-        if (!dateGrid) return;
-        dateGrid.classList.add('is-native-fallback');
+        enableExistingDateNativeFallback();
       }
 
       function applyDebugVisibility() {
@@ -2857,14 +2877,31 @@
       function openExistingDatePicker(which) {
         const input = which === 'end' ? dom.existingDateEnd : dom.existingDateStart;
         if (!input) return;
+        input.focus({ preventScroll: true });
         if (typeof input.showPicker === 'function') {
           try {
             input.showPicker();
             return;
           } catch (error) {
+            logger.warn('EVENT', 'Date picker trigger failed; enabling native input fallback', {
+              target: which,
+              error: error && error.message ? error.message : String(error)
+            });
+            enableExistingDateNativeFallback();
+            requestAnimationFrame(() => {
+              input.focus({ preventScroll: true });
+              if (typeof input.showPicker === 'function') {
+                try {
+                  input.showPicker();
+                  return;
+                } catch (innerError) {
+                }
+              }
+              input.click();
+            });
+            return;
           }
         }
-        input.focus({ preventScroll: true });
         input.click();
       }
 
@@ -4077,6 +4114,10 @@
             selectedExistingMode = 'series';
             updateExistingModeUi(selectedExistingResult);
             storeExistingPanelState();
+            showToast(
+              'Series edits are blocked by legacy overrides. Switch to Occurrence for one date, or use Tell Dad for series-level updates.',
+              'warn'
+            );
             return;
           }
         }
@@ -4106,6 +4147,7 @@
           if (dom.existingModeTellDadButton) {
             dom.existingModeTellDadButton.dataset.reason = '';
             dom.existingModeTellDadButton.dataset.requestLabel = '';
+            dom.existingModeTellDadButton.dataset.requestedAction = '';
           }
           resetExistingOccurrences('');
           updateExistingActionButtons();
@@ -4130,7 +4172,7 @@
           let hint = '';
           if (selectedExistingMode === 'series') {
             if (seriesBlockedReason) {
-              hint = `${seriesBlockedReason} Switch to Occurrence to edit one date, or Tell Dad for series-level updates.`;
+              hint = `${seriesBlockedReason} Switch to Occurrence to edit one date. ${LEGACY_TELL_DAD_PROMPT}`;
             } else if (overrideContext.overrides.length) {
               hint = buildSeriesOverrideWarningText(overrideContext);
             } else {
@@ -4144,7 +4186,7 @@
             if (selectedOverride && isLegacyOverrideEvent(selectedOverride)) {
               hint = LEGACY_OVERRIDE_HELP_MESSAGE;
             } else if (seriesBlockedReason) {
-              hint = 'Series mode is blocked by legacy overrides. Occurrence edits are still available.';
+              hint = `Series mode is blocked by legacy overrides. Occurrence edits are still available. ${LEGACY_TELL_DAD_PROMPT}`;
             } else {
               hint = 'Occurrence edits one instance (creates an override) and clears the recurrence rule.';
             }
@@ -4157,8 +4199,11 @@
         }
         if (dom.existingModeTellDadButton) {
           dom.existingModeTellDadButton.disabled = !showSeriesBlockHelp;
-          dom.existingModeTellDadButton.dataset.reason = seriesBlockedReason || '';
-          dom.existingModeTellDadButton.dataset.requestLabel = 'Legacy series edit blocked';
+          dom.existingModeTellDadButton.dataset.reason = seriesBlockedReason
+            ? `${seriesBlockedReason} ${LEGACY_TELL_DAD_PROMPT}`
+            : '';
+          dom.existingModeTellDadButton.dataset.requestLabel = 'Series edit blocked by legacy overrides';
+          dom.existingModeTellDadButton.dataset.requestedAction = 'Edit the base series from the existing event picker';
         }
         refreshExistingOccurrenceOptions();
         updateExistingActionButtons();
@@ -4867,7 +4912,7 @@
         const count = overrides.length;
         if (hasLegacyOverrides) {
           const legacyCount = legacyOverrides.length;
-          return `This series has ${count} override${count === 1 ? '' : 's'} (${legacyCount} legacy). Series editing is blocked here. Use Tell Dad to email chunky dad.`;
+          return `This series has ${count} override${count === 1 ? '' : 's'} (${legacyCount} legacy). Series editing is blocked in this tool. ${LEGACY_TELL_DAD_PROMPT}`;
         }
         return `This series has ${count} custom override${count === 1 ? '' : 's'}. Recurrence rules are locked while overrides exist, but other fields can be edited.`;
       }
@@ -5611,8 +5656,9 @@
         if (dom.recurrenceEditLockTellDadButton) {
           dom.recurrenceEditLockTellDadButton.addEventListener('click', () => {
             const reason = dom.recurrenceEditLockTellDadButton.dataset.reason || LEGACY_OVERRIDE_HELP_MESSAGE;
-            const requestLabel = dom.recurrenceEditLockTellDadButton.dataset.requestLabel || 'Need help with locked recurrence edit';
-            openTellDadEmail(dom.recurrenceEditLockTellDadButton, { requestLabel, reason });
+            const requestLabel = dom.recurrenceEditLockTellDadButton.dataset.requestLabel || 'Need help with a legacy override';
+            const requestedAction = dom.recurrenceEditLockTellDadButton.dataset.requestedAction || '';
+            openTellDadEmail(dom.recurrenceEditLockTellDadButton, { requestLabel, reason, requestedAction });
           });
         }
         if (dom.recurrenceDeleteOverrideToggle) {
@@ -5682,20 +5728,24 @@
           });
         }
         if (dom.existingDateStart) {
-          dom.existingDateStart.addEventListener('input', () => {
+          const startDateHandler = () => {
             existingDateRangeStart = dom.existingDateStart.value || '';
             updateExistingDateFilterUi(getExistingDateFilter());
             storeExistingPanelState();
             scheduleExistingResultsUpdate();
-          });
+          };
+          dom.existingDateStart.addEventListener('input', startDateHandler);
+          dom.existingDateStart.addEventListener('change', startDateHandler);
         }
         if (dom.existingDateEnd) {
-          dom.existingDateEnd.addEventListener('input', () => {
+          const endDateHandler = () => {
             existingDateRangeEnd = dom.existingDateEnd.value || '';
             updateExistingDateFilterUi(getExistingDateFilter());
             storeExistingPanelState();
             scheduleExistingResultsUpdate();
-          });
+          };
+          dom.existingDateEnd.addEventListener('input', endDateHandler);
+          dom.existingDateEnd.addEventListener('change', endDateHandler);
         }
         if (dom.existingResultsSelect) {
           dom.existingResultsSelect.addEventListener('change', handleExistingResultChange);
@@ -5713,9 +5763,10 @@
         }
         if (dom.existingModeTellDadButton) {
           dom.existingModeTellDadButton.addEventListener('click', () => {
-            const reason = dom.existingModeTellDadButton.dataset.reason || LEGACY_SERIES_BLOCK_MESSAGE;
-            const requestLabel = dom.existingModeTellDadButton.dataset.requestLabel || 'Legacy series edit blocked';
-            openTellDadEmail(dom.existingModeTellDadButton, { requestLabel, reason });
+            const reason = dom.existingModeTellDadButton.dataset.reason || `${LEGACY_SERIES_BLOCK_MESSAGE} ${LEGACY_TELL_DAD_PROMPT}`;
+            const requestLabel = dom.existingModeTellDadButton.dataset.requestLabel || 'Series edit blocked by legacy overrides';
+            const requestedAction = dom.existingModeTellDadButton.dataset.requestedAction || '';
+            openTellDadEmail(dom.existingModeTellDadButton, { requestLabel, reason, requestedAction });
           });
         }
         if (dom.existingLoadButton) {
@@ -6469,6 +6520,7 @@
           if (dom.recurrenceEditLockTellDadButton) {
             dom.recurrenceEditLockTellDadButton.dataset.reason = '';
             dom.recurrenceEditLockTellDadButton.dataset.requestLabel = '';
+            dom.recurrenceEditLockTellDadButton.dataset.requestedAction = '';
           }
           return;
         }
@@ -6479,17 +6531,17 @@
         }
         if (dom.recurrenceEditLockSubtext) {
           dom.recurrenceEditLockSubtext.textContent = isLegacyOverride
-            ? 'Series-level recurrence edits are blocked for legacy overrides in this tool. Use Tell Dad with this event pre-filled.'
+            ? 'Series-level edits are blocked by legacy overrides in this tool. Switch to Occurrence for one date, or use Tell Dad and describe what you want changed.'
             : 'Recurrence rules stay locked in occurrence mode. Switch to the base series to edit recurrence, or Tell Dad for help.';
         }
         if (dom.recurrenceEditSeriesButton) {
           const canSwitchToSeries = !isLegacyOverride;
           dom.recurrenceEditSeriesButton.textContent = canSwitchToSeries
             ? 'Edit base series'
-            : 'Base series unavailable here';
+            : 'Series edits blocked (legacy overrides)';
           dom.recurrenceEditSeriesButton.disabled = !canSwitchToSeries;
           if (!canSwitchToSeries) {
-            dom.recurrenceEditSeriesButton.setAttribute('title', LEGACY_SERIES_BLOCK_MESSAGE);
+            dom.recurrenceEditSeriesButton.setAttribute('title', `${LEGACY_SERIES_BLOCK_MESSAGE} ${LEGACY_TELL_DAD_PROMPT}`);
           } else {
             dom.recurrenceEditSeriesButton.removeAttribute('title');
           }
@@ -6497,11 +6549,14 @@
         if (dom.recurrenceEditLockTellDadButton) {
           dom.recurrenceEditLockTellDadButton.disabled = false;
           dom.recurrenceEditLockTellDadButton.dataset.reason = isLegacyOverride
-            ? LEGACY_SERIES_BLOCK_MESSAGE
+            ? `${LEGACY_SERIES_BLOCK_MESSAGE} ${LEGACY_TELL_DAD_PROMPT}`
             : 'Recurrence rules are locked while editing one occurrence.';
           dom.recurrenceEditLockTellDadButton.dataset.requestLabel = isLegacyOverride
-            ? 'Legacy override edit help'
+            ? 'Series edit blocked by legacy overrides'
             : 'Need help editing base series';
+          dom.recurrenceEditLockTellDadButton.dataset.requestedAction = isLegacyOverride
+            ? 'Switch this occurrence edit to base-series editing'
+            : 'Edit recurrence while in occurrence mode';
         }
       }
 
@@ -7162,25 +7217,74 @@
         const cityLabel = getCityDisplayName(state.city);
         const requestLabel = normalizeText(options.requestLabel || '');
         const reason = normalizeText(options.reason || '');
+        const requestedAction = normalizeText(options.requestedAction || '');
         const selectionSummary = normalizeText(state && state.existingSelectionSummary);
+        const modeLabel = state && state.isEditingExisting
+          ? (state.editingExistingMode === 'series' ? 'Series' : 'Occurrence')
+          : 'New event';
+        const uid = normalizeText(
+          (state && (state.editingExistingSourceUid || state.editingExistingUid))
+          || (state && state.editingExistingId ? parseResultId(state.editingExistingId).uid : '')
+        );
+        const occurrenceId = normalizeText(state && state.editingExistingOccurrenceId);
+        const recurrenceId = normalizeText(state && state.editingExistingRecurrenceId);
+        const overrideType = normalizeText(state && state.editingExistingOverrideType);
+        const sequence = normalizeText(state && state.editingExistingSequence);
+        const searchStartDate = normalizeText(state && state.editingExistingSearchStartDate);
+        const searchEndDate = normalizeText(state && state.editingExistingSearchEndDate);
+        const timezone = normalizeText((state && state.timezone) || browserTimezone);
+        const isLegacyContext = (typeof isEditingLegacyOverrideMode === 'function' && isEditingLegacyOverrideMode())
+          ? 'Yes'
+          : 'No';
+        const startValue = sanitizeDateTimeInput(state && state.start);
+        const endValue = sanitizeDateTimeInput(state && state.end);
         const subjectParts = ['Event Builder'];
         if (eventName) subjectParts.push(eventName);
         if (cityLabel) subjectParts.push(cityLabel);
         if (requestLabel) subjectParts.push(requestLabel);
         const subject = subjectParts.join(' - ');
-        const bodyTextLines = ['Hey Dad, here is the event link:'];
+        const bodyTextLines = [
+          'Hey Dad,',
+          '',
+          'I need help with this Event Builder item.'
+        ];
         if (requestLabel) {
           bodyTextLines.push('', `Request: ${requestLabel}`);
         }
+        if (requestedAction) {
+          bodyTextLines.push(`Trying to do: ${requestedAction}`);
+        } else {
+          bodyTextLines.push('Trying to do: <please add what I was trying to change>');
+        }
         if (reason) {
-          bodyTextLines.push(`Reason: ${reason}`);
+          bodyTextLines.push(`Blocked because: ${reason}`);
         }
         if (selectionSummary) {
           bodyTextLines.push(`Current selection: ${selectionSummary}`);
         }
-        bodyTextLines.push('', shareUrl);
+        const contextLines = [];
+        if (eventName) contextLines.push(`- Event: ${eventName}`);
+        if (cityLabel) contextLines.push(`- City: ${cityLabel}`);
+        contextLines.push(`- Editing mode: ${modeLabel}`);
+        contextLines.push(`- Legacy override context: ${isLegacyContext}`);
+        if (uid) contextLines.push(`- UID: ${uid}`);
+        if (occurrenceId) contextLines.push(`- Occurrence ID: ${occurrenceId}`);
+        if (recurrenceId) contextLines.push(`- Recurrence ID: ${recurrenceId}`);
+        if (overrideType) contextLines.push(`- Override type: ${overrideType}`);
+        if (sequence) contextLines.push(`- Sequence: ${sequence}`);
+        if (startValue || endValue) {
+          contextLines.push(`- Start / End: ${startValue || 'n/a'} -> ${endValue || 'n/a'}`);
+        }
+        if (searchStartDate || searchEndDate) {
+          contextLines.push(`- Search range used: ${searchStartDate || 'none'} -> ${searchEndDate || 'none'}`);
+        }
+        if (timezone) contextLines.push(`- Timezone: ${timezone}`);
+        if (contextLines.length) {
+          bodyTextLines.push('', 'Context:', ...contextLines);
+        }
+        bodyTextLines.push('', 'Event Builder link:', shareUrl);
         if (scriptableUrl) {
-          bodyTextLines.push('', 'Scriptable callback:', scriptableUrl);
+          bodyTextLines.push('', 'Scriptable callback link:', scriptableUrl);
         }
         const bodyText = bodyTextLines.join('\n');
         return {
@@ -7310,7 +7414,15 @@
         if (index) {
           const legacySeriesReason = getSeriesLegacyOverrideBlockReason(baseEvent, index);
           if (legacySeriesReason) {
-            showToast(legacySeriesReason, 'warn');
+            if (dom.recurrenceEditLockTellDadButton) {
+              dom.recurrenceEditLockTellDadButton.dataset.reason = `${legacySeriesReason} ${LEGACY_TELL_DAD_PROMPT}`;
+              dom.recurrenceEditLockTellDadButton.dataset.requestLabel = 'Series edit blocked by legacy overrides';
+              dom.recurrenceEditLockTellDadButton.dataset.requestedAction = 'Switch this occurrence edit to base-series editing';
+            }
+            showToast(
+              'Series edits are blocked by legacy overrides. Use Tell Dad and describe the series change you need.',
+              'warn'
+            );
             updateRecurrenceUi();
             return;
           }
