@@ -7216,8 +7216,14 @@
         const eventName = (state.name || '').trim();
         const cityLabel = getCityDisplayName(state.city);
         const requestLabel = normalizeText(options.requestLabel || '');
-        const reason = normalizeText(options.reason || '');
+        const reason = normalizeText(options.reason || '')
+          .split(LEGACY_TELL_DAD_PROMPT).join(' ')
+          .split('Use Tell Dad and describe what you are trying to change.').join(' ')
+          .replace(/\s+/g, ' ')
+          .replace(/\s+([.,;:!?])/g, '$1')
+          .trim();
         const requestedAction = normalizeText(options.requestedAction || '');
+        const requestedOutcome = normalizeText(options.requestedOutcome || options.userRequest || '');
         const selectionSummary = normalizeText(state && state.existingSelectionSummary);
         const modeLabel = state && state.isEditingExisting
           ? (state.editingExistingMode === 'series' ? 'Series' : 'Occurrence')
@@ -7246,45 +7252,54 @@
         const bodyTextLines = [
           'Hey Dad,',
           '',
-          'I need help with this Event Builder item.'
+          'I need help with this Event Builder item.',
+          '',
+          'What I want changed:',
+          `- ${requestedOutcome || '<please fill in the exact change you want>'}`,
+          '',
+          'Issue details:'
         ];
         if (requestLabel) {
-          bodyTextLines.push('', `Request: ${requestLabel}`);
+          bodyTextLines.push(`- Request: ${requestLabel}`);
         }
         if (requestedAction) {
-          bodyTextLines.push(`Trying to do: ${requestedAction}`);
+          bodyTextLines.push(`- Trying to do: ${requestedAction}`);
         } else {
-          bodyTextLines.push('Trying to do: <please add what I was trying to change>');
+          bodyTextLines.push('- Trying to do: <please add what I was trying to change>');
         }
         if (reason) {
-          bodyTextLines.push(`Blocked because: ${reason}`);
+          bodyTextLines.push(`- Blocked because: ${reason}`);
         }
         if (selectionSummary) {
-          bodyTextLines.push(`Current selection: ${selectionSummary}`);
+          bodyTextLines.push(`- Current selection: ${selectionSummary}`);
         }
         const contextLines = [];
         if (eventName) contextLines.push(`- Event: ${eventName}`);
         if (cityLabel) contextLines.push(`- City: ${cityLabel}`);
         contextLines.push(`- Editing mode: ${modeLabel}`);
         contextLines.push(`- Legacy override context: ${isLegacyContext}`);
-        if (uid) contextLines.push(`- UID: ${uid}`);
-        if (occurrenceId) contextLines.push(`- Occurrence ID: ${occurrenceId}`);
-        if (recurrenceId) contextLines.push(`- Recurrence ID: ${recurrenceId}`);
-        if (overrideType) contextLines.push(`- Override type: ${overrideType}`);
-        if (sequence) contextLines.push(`- Sequence: ${sequence}`);
         if (startValue || endValue) {
           contextLines.push(`- Start / End: ${startValue || 'n/a'} -> ${endValue || 'n/a'}`);
-        }
-        if (searchStartDate || searchEndDate) {
-          contextLines.push(`- Search range used: ${searchStartDate || 'none'} -> ${searchEndDate || 'none'}`);
         }
         if (timezone) contextLines.push(`- Timezone: ${timezone}`);
         if (contextLines.length) {
           bodyTextLines.push('', 'Context:', ...contextLines);
         }
-        bodyTextLines.push('', 'Event Builder link:', shareUrl);
+        const technicalLines = [];
+        if (uid) technicalLines.push(`- UID: ${uid}`);
+        if (occurrenceId) technicalLines.push(`- Occurrence ID: ${occurrenceId}`);
+        if (recurrenceId) technicalLines.push(`- Recurrence ID: ${recurrenceId}`);
+        if (overrideType) technicalLines.push(`- Override type: ${overrideType}`);
+        if (sequence) technicalLines.push(`- Sequence: ${sequence}`);
+        if (searchStartDate || searchEndDate) {
+          technicalLines.push(`- Search range used: ${searchStartDate || 'none'} -> ${searchEndDate || 'none'}`);
+        }
+        if (technicalLines.length) {
+          bodyTextLines.push('', 'Technical details:', ...technicalLines);
+        }
+        bodyTextLines.push('', 'Links:', '- Event Builder link:', `  ${shareUrl}`);
         if (scriptableUrl) {
-          bodyTextLines.push('', 'Scriptable callback link:', scriptableUrl);
+          bodyTextLines.push('- Scriptable callback link:', `  ${scriptableUrl}`);
         }
         const bodyText = bodyTextLines.join('\n');
         return {
@@ -7298,7 +7313,8 @@
 
       function buildTellDadMailto(message = buildTellDadMessage()) {
         if (!message || !message.shareUrl) return '';
-        const body = message.bodyHtml || message.bodyText || message.body || '';
+        const rawBody = message.bodyHtml || message.bodyText || message.body || '';
+        const body = String(rawBody).replace(/\r?\n/g, '\r\n');
         return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(body)}`;
       }
 
