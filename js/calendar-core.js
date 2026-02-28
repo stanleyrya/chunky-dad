@@ -322,7 +322,7 @@ class CalendarCore {
                    line.startsWith('INTERVAL:') || line.startsWith('BYSECOND:') || line.startsWith('BYMINUTE:') ||
                    line.startsWith('BYHOUR:') || line.startsWith('BYDAY:') || line.startsWith('BYMONTHDAY:') ||
                    line.startsWith('BYYEARDAY:') || line.startsWith('BYWEEKNO:') || line.startsWith('BYMONTH:') ||
-                   line.startsWith('BYSETPOS:') || line.startsWith('WKST:') || line.trim() === '') {
+                   line.startsWith('BYSETPOS:') || line.startsWith('WKST:') || line.startsWith('X-') || line.trim() === '') {
             // These are known iCalendar properties that we don't need to parse but are valid
             parsed = true;
         } else {

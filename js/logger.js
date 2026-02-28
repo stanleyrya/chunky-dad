@@ -23,6 +23,7 @@ class ChunkyLogger {
             'WARN': 2,
             'ERROR': 3
         };
+        this.activeTimers = new Set();
         
         this.init();
     }
@@ -203,14 +204,21 @@ class ChunkyLogger {
     // Timing utilities
     time(component, label) {
         if (this.shouldLog('DEBUG')) {
-            console.time(`${component}: ${label}`);
+            const timerLabel = `${component}: ${label}`;
+            if (this.activeTimers.has(timerLabel)) {
+                console.timeEnd(timerLabel);
+                this.activeTimers.delete(timerLabel);
+            }
+            console.time(timerLabel);
+            this.activeTimers.add(timerLabel);
         }
     }
 
     timeEnd(component, label) {
-        if (this.shouldLog('DEBUG')) {
-            console.timeEnd(`${component}: ${label}`);
-        }
+        const timerLabel = `${component}: ${label}`;
+        if (!this.activeTimers.has(timerLabel)) return;
+        console.timeEnd(timerLabel);
+        this.activeTimers.delete(timerLabel);
     }
 
     // Debug mode control
