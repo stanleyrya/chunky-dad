@@ -4233,9 +4233,7 @@ footer {
 
 /* For larger tablets, show both but make buttons smaller */
 @media (min-width: 769px) and (max-width: 1024px) {
-    .calendar-grid.week-view-grid {
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    }
+    /* Removed calendar-grid.week-view-grid styling to keep single-column layout */
 
     .calendar-day.week-view {
         min-height: 180px;
