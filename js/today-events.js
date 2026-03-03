@@ -16,6 +16,10 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
         return;
       }
 
+      // Store events for re-sorting
+      this.allTodayEvents = null;
+      this.currentSortMode = 'time'; // 'time' or 'location'
+
       const cities = (window.getAvailableCities ? getAvailableCities() : []).filter(c => hasCityCalendar(c.key));
       const selectedCities = cities.slice(0, this.maxCities);
 
@@ -38,9 +42,45 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
       });
 
       const deduped = this.dedupeBySlug(todayEvents);
-      const sorted = deduped.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      this.allTodayEvents = deduped; // Store for re-sorting
+      
+      // Try to get user location for sorting
+      let sorted = deduped.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      
+      try {
+        if (!window.locationManager) {
+          window.locationManager = new LocationManager();
+        }
+        
+        const userLocation = await window.locationManager.getLocationForFeatures();
+        if (userLocation) {
+          // Calculate distances and sort by distance, then by time
+          const eventsWithDistance = window.locationManager.calculateEventDistances(deduped, userLocation);
+          sorted = eventsWithDistance.sort((a, b) => {
+            // If both have distances, sort by distance first
+            if (a.distanceFromUser !== undefined && b.distanceFromUser !== undefined) {
+              const distanceDiff = a.distanceFromUser - b.distanceFromUser;
+              if (Math.abs(distanceDiff) > 0.1) { // Only sort by distance if significantly different
+                return distanceDiff;
+              }
+            }
+            // Otherwise sort by time
+            return new Date(a.startDate) - new Date(b.startDate);
+          });
+          
+          this.currentSortMode = 'location';
+          logger.info('CALENDAR', 'Today events sorted by location', { 
+            userLat: userLocation.lat, 
+            userLng: userLocation.lng,
+            eventsWithDistance: sorted.filter(e => e.distanceFromUser !== undefined).length
+          });
+        }
+      } catch (error) {
+        logger.debug('CALENDAR', 'Location-based sorting failed, using time-based sorting', { error: error.message });
+      }
 
       this.renderTodayEvents(sorted);
+      this.setupLocationSortButton();
       logger.componentLoad('CALENDAR', 'TodayEventsAggregator completed', { total: sorted.length });
     } catch (error) {
       logger.componentError('CALENDAR', 'TodayEventsAggregator failed', error);
@@ -266,6 +306,21 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
     cityRow.appendChild(cityValue);
     details.appendChild(cityRow);
 
+    // Distance information (if available)
+    if (ev.distanceFromUser !== undefined) {
+      const distanceRow = document.createElement('div');
+      distanceRow.className = 'detail-row';
+      const distanceLabel = document.createElement('span');
+      distanceLabel.className = 'label';
+      distanceLabel.textContent = 'Distance:';
+      const distanceValue = document.createElement('span');
+      distanceValue.className = 'value';
+      distanceValue.textContent = `${ev.distanceFromUser} mi away`;
+      distanceRow.appendChild(distanceLabel);
+      distanceRow.appendChild(distanceValue);
+      details.appendChild(distanceRow);
+    }
+
     card.appendChild(details);
 
     // Add link functionality - link directly to the specific event
@@ -341,6 +396,100 @@ class TodayEventsAggregator extends DynamicCalendarLoader {
     spacer.style.maxWidth = '1rem';
     spacer.setAttribute('aria-hidden', 'true');
     return spacer;
+  }
+
+  setupLocationSortButton() {
+    const sortBtn = document.getElementById('location-sort-btn');
+    if (!sortBtn) {
+      logger.debug('CALENDAR', 'Location sort button not found');
+      return;
+    }
+
+    // Update button text based on current sort mode
+    this.updateSortButtonText();
+
+    sortBtn.addEventListener('click', async () => {
+      try {
+        logger.userInteraction('CALENDAR', 'Location sort button clicked', { currentMode: this.currentSortMode });
+        
+        if (this.currentSortMode === 'time') {
+          // Switch to location sorting
+          await this.sortByLocation();
+        } else {
+          // Switch to time sorting
+          this.sortByTime();
+        }
+      } catch (error) {
+        logger.componentError('CALENDAR', 'Location sort failed', error);
+      }
+    });
+  }
+
+  updateSortButtonText() {
+    const sortBtn = document.getElementById('location-sort-btn');
+    if (!sortBtn) return;
+
+    if (this.currentSortMode === 'location') {
+      sortBtn.innerHTML = '<i class="bi bi-clock"></i> Sort by Time';
+      sortBtn.title = 'Sort events by time';
+    } else {
+      sortBtn.innerHTML = '<i class="bi bi-geo-alt"></i> Sort by Location';
+      sortBtn.title = 'Sort events by distance from your location';
+    }
+  }
+
+  async sortByLocation() {
+    if (!this.allTodayEvents) return;
+
+    try {
+      if (!window.locationManager) {
+        window.locationManager = new LocationManager();
+      }
+
+      // Request location permission
+      const userLocation = await window.locationManager.getCurrentLocation({}, false);
+      
+      if (userLocation) {
+        // Calculate distances and sort by distance, then by time
+        const eventsWithDistance = window.locationManager.calculateEventDistances(this.allTodayEvents, userLocation);
+        const sorted = eventsWithDistance.sort((a, b) => {
+          // If both have distances, sort by distance first
+          if (a.distanceFromUser !== undefined && b.distanceFromUser !== undefined) {
+            const distanceDiff = a.distanceFromUser - b.distanceFromUser;
+            if (Math.abs(distanceDiff) > 0.1) { // Only sort by distance if significantly different
+              return distanceDiff;
+            }
+          }
+          // Otherwise sort by time
+          return new Date(a.startDate) - new Date(b.startDate);
+        });
+
+        this.currentSortMode = 'location';
+        this.updateSortButtonText();
+        this.renderTodayEvents(sorted);
+        
+        logger.info('CALENDAR', 'Events sorted by location', { 
+          userLat: userLocation.lat, 
+          userLng: userLocation.lng,
+          eventsWithDistance: sorted.filter(e => e.distanceFromUser !== undefined).length
+        });
+      }
+    } catch (error) {
+      logger.warn('CALENDAR', 'Location sort failed', { error: error.message });
+      // Show user-friendly error message
+      alert('Unable to get your location. Please check your browser permissions and try again.');
+    }
+  }
+
+  sortByTime() {
+    if (!this.allTodayEvents) return;
+
+    const sorted = [...this.allTodayEvents].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    this.currentSortMode = 'time';
+    this.updateSortButtonText();
+    this.renderTodayEvents(sorted);
+    
+    logger.info('CALENDAR', 'Events sorted by time', { total: sorted.length });
   }
 
 }
