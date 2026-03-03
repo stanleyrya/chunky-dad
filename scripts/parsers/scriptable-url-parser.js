@@ -112,6 +112,16 @@ class ScriptableUrlParser {
             return null;
         }
 
+        const hasOverrideUid = this.hasNonEmptyValue(event.overrideUid);
+        const hasOverrideRecurrenceId = this.hasNonEmptyValue(event.overrideRecurrenceId);
+        if (hasOverrideUid !== hasOverrideRecurrenceId) {
+            throw new Error('URL input override identity requires both overrideUid and overrideRecurrenceId');
+        }
+        if (hasOverrideUid) {
+            event.overrideUid = String(event.overrideUid).trim();
+            event.overrideRecurrenceId = String(event.overrideRecurrenceId).trim();
+        }
+
         if (!event.bar && event.location && !this.isCoordinateString(event.location)) {
             event.bar = event.location;
             if (inputFields.has('location')) {
@@ -233,6 +243,9 @@ class ScriptableUrlParser {
 
             'identifier': 'identifier',
             'id': 'identifier',
+
+            'overrideuid': 'overrideUid',
+            'overriderecurrenceid': 'overrideRecurrenceId',
 
             'recurrenceid': 'recurrenceId',
             'searchstartdate': 'searchStartDate',
@@ -419,6 +432,8 @@ class ScriptableUrlParser {
             'key',
             'matchKey',
             'identifier',
+            'overrideUid',
+            'overrideRecurrenceId',
             'recurrence',
             'recurrenceId',
             'recurrenceIdTimezone',

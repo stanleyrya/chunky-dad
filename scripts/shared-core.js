@@ -1260,7 +1260,9 @@ class SharedCore {
             'url': 'url',
             'timezone': 'timezone',
             'key': 'key',
-            'matchkey': 'matchKey'
+            'matchkey': 'matchKey',
+            'overrideuid': 'overrideUid',
+            'overriderecurrenceid': 'overrideRecurrenceId'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
@@ -1598,6 +1600,86 @@ class SharedCore {
             uid: uid && uid.length > 0 ? uid : null,
             recurrenceDate
         };
+    }
+
+    normalizeOverrideUid(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).trim();
+    }
+
+    normalizeOverrideRecurrenceId(value) {
+        if (value === null || value === undefined) return '';
+        const trimmed = String(value).trim();
+        if (!trimmed) return '';
+
+        const withTimezoneMatch = trimmed.match(/^TZID=([^:]+):(\d{8}(?:T\d{4,6}Z?)?)$/i);
+        if (withTimezoneMatch) {
+            const timezone = withTimezoneMatch[1].trim();
+            const recurrenceValue = withTimezoneMatch[2].toUpperCase();
+            if (!timezone) return '';
+            return `TZID=${timezone}:${recurrenceValue}`;
+        }
+
+        const withoutTimezoneMatch = trimmed.match(/^(\d{8}(?:T\d{4,6}Z?)?)$/i);
+        if (withoutTimezoneMatch) {
+            return withoutTimezoneMatch[1].toUpperCase();
+        }
+
+        return '';
+    }
+
+    buildOverrideIdentityKey(overrideUid, overrideRecurrenceId) {
+        const normalizedUid = this.normalizeOverrideUid(overrideUid).toLowerCase();
+        const normalizedRecurrenceId = this.normalizeOverrideRecurrenceId(overrideRecurrenceId);
+        if (!normalizedUid || !normalizedRecurrenceId) return null;
+        return `${normalizedUid}::${normalizedRecurrenceId}`;
+    }
+
+    getOverrideIdentity(event, contextLabel = 'Event') {
+        if (!event || typeof event !== 'object') return null;
+        const overrideUid = this.normalizeOverrideUid(event.overrideUid);
+        const overrideRecurrenceId = this.normalizeOverrideRecurrenceId(event.overrideRecurrenceId);
+
+        if (!overrideUid && !overrideRecurrenceId) {
+            return null;
+        }
+
+        if (!overrideUid || !overrideRecurrenceId) {
+            throw new Error(`${contextLabel} override identity requires both overrideUid and overrideRecurrenceId`);
+        }
+
+        const key = this.buildOverrideIdentityKey(overrideUid, overrideRecurrenceId);
+        if (!key) {
+            throw new Error(`${contextLabel} override identity is invalid`);
+        }
+
+        return {
+            overrideUid,
+            overrideRecurrenceId,
+            key
+        };
+    }
+
+    findExistingOverrideMatch(existingEvents, overrideIdentity) {
+        if (!Array.isArray(existingEvents) || !overrideIdentity || !overrideIdentity.key) {
+            return null;
+        }
+
+        for (const existingEvent of existingEvents) {
+            const fields = this.parseNotesIntoFields(existingEvent.notes || '');
+            const label = existingEvent && existingEvent.title
+                ? `Existing event "${existingEvent.title}"`
+                : 'Existing event';
+            const existingOverrideIdentity = this.getOverrideIdentity(fields, label);
+            if (!existingOverrideIdentity) {
+                continue;
+            }
+            if (existingOverrideIdentity.key === overrideIdentity.key) {
+                return existingEvent;
+            }
+        }
+
+        return null;
     }
 
     formatDateForCalendar(date) {
@@ -2352,6 +2434,23 @@ class SharedCore {
     
     // Analyze a single event against existing events
     analyzeEventAction(event, existingEventsData, mergeMode = 'upsert') {
+        const overrideIdentity = this.getOverrideIdentity(event, 'Incoming event');
+        if (overrideIdentity) {
+            if (!existingEventsData || existingEventsData.length === 0) {
+                return { action: 'new', reason: 'Override match not found' };
+            }
+            const existingOverrideEvent = this.findExistingOverrideMatch(existingEventsData, overrideIdentity);
+            if (existingOverrideEvent) {
+                return {
+                    action: 'merge',
+                    reason: 'Override match found',
+                    existingEvent: existingOverrideEvent,
+                    existingKey: overrideIdentity.key
+                };
+            }
+            return { action: 'new', reason: 'Override match not found' };
+        }
+
         const hasIdentifier = Boolean(event && (event.identifier || event.id));
         
         if (hasIdentifier) {

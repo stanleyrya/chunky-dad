@@ -1193,7 +1193,13 @@ class ScriptableAdapter {
             };
 
             const identifierRaw = event && (event.identifier || event.id) ? String(event.identifier || event.id).trim() : '';
-            const hasIdentifier = Boolean(identifierRaw);
+            const overrideUidRaw = event && event.overrideUid ? String(event.overrideUid).trim() : '';
+            const overrideRecurrenceIdRaw = event && event.overrideRecurrenceId ? String(event.overrideRecurrenceId).trim() : '';
+            const hasOverrideIdentity = Boolean(overrideUidRaw || overrideRecurrenceIdRaw);
+            if (hasOverrideIdentity && (!overrideUidRaw || !overrideRecurrenceIdRaw)) {
+                throw new Error('Override identity requires both overrideUid and overrideRecurrenceId');
+            }
+            const hasIdentifier = !hasOverrideIdentity && Boolean(identifierRaw);
             
             // Parse dates from formatted event
             const startDate = coerceDate(event.startDate);
@@ -1214,7 +1220,7 @@ class ScriptableAdapter {
             }
             
             const identifierLabel = identifierRaw || '(none)';
-            console.log(`📱 Scriptable: Existing event search (hasIdentifier=${hasIdentifier}) identifier="${identifierLabel}"`);
+            console.log(`📱 Scriptable: Existing event search (hasIdentifier=${hasIdentifier} hasOverride=${hasOverrideIdentity}) identifier="${identifierLabel}"`);
             const wildcardMatchKey = typeof event.matchKey === 'string' ? event.matchKey : '';
             const hasWildcardMatchKey = wildcardMatchKey.includes('*');
             const relatedHint = (() => {
