@@ -7189,10 +7189,20 @@
         const coordinates = parseCoordinates(state.location);
         setParam('lat', coordinates ? coordinates.lat : '');
         setParam('lng', coordinates ? coordinates.lng : '');
+        const isOccurrenceEdit = isEditingOccurrenceOverrideMode();
+        const isExistingOverrideEdit = isEditingExistingOverrideMode();
+        const occurrenceOverrideIdentity = isOccurrenceEdit
+          ? buildOccurrenceOverrideIdentity(state.timezone || browserTimezone)
+          : null;
+        if (occurrenceOverrideIdentity) {
+          setParam('overrideUid', occurrenceOverrideIdentity.overrideUid);
+          setParam('overrideRecurrenceId', occurrenceOverrideIdentity.overrideRecurrenceId);
+        }
         const identifier = state.editingExistingSourceUid
           || state.editingExistingUid
           || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '');
-        if (identifier) {
+        const shouldSendIdentifier = !isOccurrenceEdit || isExistingOverrideEdit;
+        if (shouldSendIdentifier && identifier) {
           setParam('identifier', identifier);
         }
         if (state.isEditingExisting && state.editingExistingSearchStartDate) {
