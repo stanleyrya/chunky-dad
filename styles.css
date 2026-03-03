@@ -1583,7 +1583,128 @@ body.index-page main {
     background: var(--solid-light);
 }
 
+/* Desktop/Tablet Layout - Map on right, content on left */
+@media (min-width: 768px) {
+    .city-page {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: 
+            "calendar map"
+            "events map";
+        gap: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        min-height: 100vh;
+    }
+    
+    .weekly-calendar {
+        grid-area: calendar;
+        padding: 0;
+    }
+    
+    .events {
+        grid-area: events;
+        padding: 0;
+    }
+    
+    .events-map-section {
+        grid-area: map;
+        padding: 0;
+        position: sticky;
+        top: 2rem;
+        height: fit-content;
+        max-height: calc(100vh - 4rem);
+        overflow: hidden;
+        background: transparent;
+    }
+    
+    .events-map-section::before {
+        display: none;
+    }
+    
+    .events-map-section .container {
+        padding: 0;
+        height: 100%;
+    }
+    
+    .map-container {
+        height: 100%;
+        min-height: 500px;
+    }
+    
+    #events-map {
+        height: 100%;
+        min-height: 500px;
+    }
+    
+    /* Ensure proper spacing for left column content */
+    .weekly-calendar .container {
+        padding: 0;
+    }
+    
+    .events .container {
+        padding: 0;
+    }
+    
+    /* Adjust calendar header for desktop layout */
+    .calendar-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .calendar-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    /* Ensure events list has proper spacing */
+    .events-list {
+        margin-top: 1rem;
+    }
+    
+    /* Style the map section for desktop layout */
+    .events-map-section h2 {
+        text-align: left;
+        margin-bottom: 1rem;
+        font-size: 1.8rem;
+        color: var(--text-primary);
+    }
+    
+    .events-map-section p {
+        text-align: left;
+        margin-bottom: 1.5rem;
+        font-size: 1rem;
+        max-width: none;
+        margin-left: 0;
+        margin-right: 0;
+        padding: 0;
+    }
+}
 
+/* Large desktop screens - optimize layout further */
+@media (min-width: 1200px) {
+    .city-page {
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 3rem;
+        padding: 3rem;
+    }
+    
+    .events-map-section {
+        top: 3rem;
+        max-height: calc(100vh - 6rem);
+    }
+    
+    .map-container {
+        min-height: 600px;
+    }
+    
+    #events-map {
+        min-height: 600px;
+    }
+}
 
 /* Smooth content reveal for sections */
 .content-hidden {
