@@ -1628,6 +1628,84 @@ class SharedCore {
         return '';
     }
 
+    parseOverrideRecurrenceDate(value) {
+        const normalized = this.normalizeOverrideRecurrenceId(value);
+        if (!normalized) return null;
+
+        const rawValue = normalized.startsWith('TZID=')
+            ? normalized.split(':').slice(1).join(':')
+            : normalized;
+        const match = rawValue.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?Z?$/);
+        if (!match) return null;
+
+        const year = Number(match[1]);
+        const month = Number(match[2]) - 1;
+        const day = Number(match[3]);
+        const hour = Number(match[4] || 0);
+        const minute = Number(match[5] || 0);
+        const second = Number(match[6] || 0);
+        const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    findOverrideSourceEvent(existingEventsData, overrideUid, overrideRecurrenceId) {
+        if (!Array.isArray(existingEventsData) || existingEventsData.length === 0) {
+            return null;
+        }
+
+        const normalizeIdentifier = (value) => {
+            if (value === null || value === undefined) return null;
+            const normalized = String(value).trim();
+            return normalized.length > 0 ? normalized : null;
+        };
+
+        const targetUid = this.normalizeOverrideUid(overrideUid);
+        if (!targetUid) return null;
+        const targetDate = this.parseOverrideRecurrenceDate(overrideRecurrenceId);
+        const targetDateKey = targetDate ? this.normalizeEventDate(targetDate) : null;
+        let fallbackUidMatch = null;
+
+        for (const existingEvent of existingEventsData) {
+            const fields = this.parseNotesIntoFields(existingEvent.notes || '');
+            const existingOverrideUid = this.normalizeOverrideUid(fields.overrideUid);
+            const existingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(fields.overrideRecurrenceId);
+            if (existingOverrideUid && existingOverrideRecurrenceId) {
+                continue;
+            }
+
+            const eventIdentifierRaw = normalizeIdentifier(existingEvent.identifier || '');
+            const eventIdentifierInfo = this.parseScriptableIdentifier(eventIdentifierRaw);
+            const notesIdentifierRaw = normalizeIdentifier(fields.uid || fields.identifier || fields.id || '');
+            const notesIdentifierInfo = this.parseScriptableIdentifier(notesIdentifierRaw);
+            const eventUid = eventIdentifierInfo.uid || notesIdentifierInfo.uid || notesIdentifierRaw || null;
+            if (!eventUid || eventUid !== targetUid) {
+                continue;
+            }
+
+            if (!fallbackUidMatch) {
+                fallbackUidMatch = existingEvent;
+            }
+
+            if (!targetDateKey) {
+                continue;
+            }
+
+            const eventStartDate = existingEvent.startDate instanceof Date
+                ? existingEvent.startDate
+                : this.parseDate(existingEvent.startDate);
+            if (!eventStartDate) {
+                continue;
+            }
+
+            const eventDateKey = this.normalizeEventDate(eventStartDate);
+            if (eventDateKey && eventDateKey === targetDateKey) {
+                return existingEvent;
+            }
+        }
+
+        return fallbackUidMatch;
+    }
+
     formatDateForCalendar(date) {
         if (!date) return null;
         if (typeof date === 'string') date = new Date(date);
@@ -2325,6 +2403,10 @@ class SharedCore {
                         }
                     }
                 });
+            } else if (analysis.action === 'new' && analysis.sourceEvent) {
+                analyzedEvent = this.createFinalEventObject(analysis.sourceEvent, event);
+                delete analyzedEvent._existingEvent;
+                analyzedEvent._action = 'new';
             } else if (analysis.existingEvent) {
                 analyzedEvent._existingEvent = analysis.existingEvent;
             }
@@ -2412,7 +2494,21 @@ class SharedCore {
                 }
             }
 
-            return { action: 'new', reason: 'Override match not found' };
+            const sourceEvent = this.findOverrideSourceEvent(
+                existingEventsData,
+                incomingOverrideUid,
+                incomingOverrideRecurrenceId
+            );
+            if (sourceEvent) {
+                return {
+                    action: 'new',
+                    reason: 'Override source match found',
+                    sourceEvent,
+                    existingKey: targetOverrideKey
+                };
+            }
+
+            return { action: 'new', reason: 'Override match not found', existingKey: targetOverrideKey };
         }
 
         if (hasIdentifier) {
