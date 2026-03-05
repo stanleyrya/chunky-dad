@@ -1391,8 +1391,57 @@ class SharedCore {
         // Description field is now saved and read literally - no normalization
         // We could normalize other text fields here if needed in the future
         // For example: title, bar, address, etc.
+
+        // Allow source descriptions to carry override identity metadata.
+        // This keeps website-sourced override events aligned with URL-input behavior.
+        this.applyDescriptionOverrideIdentity(normalizedEvent);
         
         return normalizedEvent;
+    }
+
+    applyDescriptionOverrideIdentity(event) {
+        if (!event || typeof event !== 'object') {
+            return event;
+        }
+
+        const explicitOverrideUid = this.normalizeOverrideUid(event.overrideUid);
+        const explicitOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(event.overrideRecurrenceId);
+        const hasExplicitOverrideUid = Boolean(explicitOverrideUid);
+        const hasExplicitOverrideRecurrenceId = Boolean(explicitOverrideRecurrenceId);
+
+        if (hasExplicitOverrideUid !== hasExplicitOverrideRecurrenceId) {
+            throw new Error('Event override identity requires both overrideUid and overrideRecurrenceId');
+        }
+
+        let resolvedOverrideUid = explicitOverrideUid;
+        let resolvedOverrideRecurrenceId = explicitOverrideRecurrenceId;
+
+        if (!resolvedOverrideUid && !resolvedOverrideRecurrenceId) {
+            const description = typeof event.description === 'string' ? event.description.trim() : '';
+            if (description) {
+                const descriptionFields = this.parseNotesIntoFields(description);
+                const descriptionOverrideUid = this.normalizeOverrideUid(descriptionFields.overrideUid);
+                const descriptionOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(descriptionFields.overrideRecurrenceId);
+                const hasDescriptionOverrideUid = Boolean(descriptionOverrideUid);
+                const hasDescriptionOverrideRecurrenceId = Boolean(descriptionOverrideRecurrenceId);
+
+                if (hasDescriptionOverrideUid !== hasDescriptionOverrideRecurrenceId) {
+                    throw new Error('Description override identity requires both override uid and override recurrence id');
+                }
+
+                if (hasDescriptionOverrideUid && hasDescriptionOverrideRecurrenceId) {
+                    resolvedOverrideUid = descriptionOverrideUid;
+                    resolvedOverrideRecurrenceId = descriptionOverrideRecurrenceId;
+                }
+            }
+        }
+
+        if (resolvedOverrideUid && resolvedOverrideRecurrenceId) {
+            event.overrideUid = resolvedOverrideUid;
+            event.overrideRecurrenceId = resolvedOverrideRecurrenceId;
+        }
+
+        return event;
     }
 
     // Helper method to normalize event dates for consistent comparison across timezones
@@ -2466,7 +2515,7 @@ class SharedCore {
         const incomingOverrideUid = this.normalizeOverrideUid(event && event.overrideUid);
         const incomingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(event && event.overrideRecurrenceId);
         const hasOverrideIdentity = Boolean(incomingOverrideUid || incomingOverrideRecurrenceId);
-        if (hasOverrideIdentity && !hasIdentifier) {
+        if (hasOverrideIdentity) {
             if (!incomingOverrideUid || !incomingOverrideRecurrenceId) {
                 throw new Error('Incoming event override identity requires both overrideUid and overrideRecurrenceId');
             }

@@ -1337,6 +1337,29 @@ class ScriptableAdapter {
                     
                     switch (event._action) {
                         case 'merge': {
+                            const overrideUid = typeof event.overrideUid === 'string' ? event.overrideUid.trim() : '';
+                            const overrideRecurrenceId = typeof event.overrideRecurrenceId === 'string' ? event.overrideRecurrenceId.trim() : '';
+                            const hasOverrideUid = overrideUid.length > 0;
+                            const hasOverrideRecurrenceId = overrideRecurrenceId.length > 0;
+
+                            if (hasOverrideUid !== hasOverrideRecurrenceId) {
+                                throw new Error('Override identity requires both overrideUid and overrideRecurrenceId');
+                            }
+
+                            if (hasOverrideUid && hasOverrideRecurrenceId) {
+                                const targetOverrideKey = `${overrideUid.toLowerCase()}::${overrideRecurrenceId}`;
+                                const existingKey = typeof event._existingKey === 'string' ? event._existingKey : '';
+                                const overrideMergeAllowed = existingKey === targetOverrideKey;
+                                if (!overrideMergeAllowed) {
+                                    const keyLabel = existingKey || 'none';
+                                    console.log(`📱 Scriptable: Prevented override merge "${event.title}" (existingKey=${keyLabel}) - creating new override`);
+                                    actionCounts.create.push(event.title);
+                                    await this.createCalendarEvent(event, calendar);
+                                    processedCount++;
+                                    break;
+                                }
+                            }
+
                             actionCounts.merge.push(event.title);
                             const targetEvent = event._existingEvent;
                             
