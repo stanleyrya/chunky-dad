@@ -1651,6 +1651,149 @@ class SharedCore {
         };
     }
 
+    formatOverrideRecurrenceIdFromDate(date) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+            return '';
+        }
+        const year = String(date.getUTCFullYear());
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        const hour = String(date.getUTCHours()).padStart(2, '0');
+        const minute = String(date.getUTCMinutes()).padStart(2, '0');
+        const second = String(date.getUTCSeconds()).padStart(2, '0');
+        return `${year}${month}${day}T${hour}${minute}${second}Z`;
+    }
+
+    findEventByOverrideKey(existingEventsData, overrideUid, overrideRecurrenceId) {
+        if (!Array.isArray(existingEventsData) || existingEventsData.length === 0) {
+            return null;
+        }
+        const normalizedUid = this.normalizeOverrideUid(overrideUid);
+        const normalizedRecurrenceId = this.normalizeOverrideRecurrenceId(overrideRecurrenceId);
+        if (!normalizedUid || !normalizedRecurrenceId) {
+            return null;
+        }
+        const targetOverrideKey = `${normalizedUid.toLowerCase()}::${normalizedRecurrenceId}`;
+        for (const existingEvent of existingEventsData) {
+            const fields = this.parseNotesIntoFields(existingEvent.notes || '');
+            const existingOverrideUid = this.normalizeOverrideUid(fields.overrideUid);
+            const existingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(fields.overrideRecurrenceId);
+            if (!existingOverrideUid || !existingOverrideRecurrenceId) {
+                continue;
+            }
+            const existingOverrideKey = `${existingOverrideUid.toLowerCase()}::${existingOverrideRecurrenceId}`;
+            if (existingOverrideKey === targetOverrideKey) {
+                return {
+                    event: existingEvent,
+                    existingKey: targetOverrideKey
+                };
+            }
+        }
+        return null;
+    }
+
+    deriveOverrideIdentityFromSourceEvent(existingEvent) {
+        if (!existingEvent || typeof existingEvent !== 'object') {
+            return null;
+        }
+        const fields = this.parseNotesIntoFields(existingEvent.notes || '');
+        const normalizeIdentifier = (value) => {
+            if (value === null || value === undefined) return null;
+            const normalized = String(value).trim();
+            return normalized.length > 0 ? normalized : null;
+        };
+        const eventIdentifierRaw = normalizeIdentifier(existingEvent.identifier || '');
+        const eventIdentifierInfo = this.parseScriptableIdentifier(eventIdentifierRaw);
+        const notesIdentifierRaw = normalizeIdentifier(fields.uid || fields.identifier || fields.id || '');
+        const notesIdentifierInfo = this.parseScriptableIdentifier(notesIdentifierRaw);
+        const uid = eventIdentifierInfo.uid || notesIdentifierInfo.uid || notesIdentifierRaw || null;
+        if (!uid) {
+            return null;
+        }
+
+        const recurrenceDate = eventIdentifierInfo.recurrenceDate ||
+            notesIdentifierInfo.recurrenceDate ||
+            (existingEvent.startDate instanceof Date ? existingEvent.startDate : this.parseDate(existingEvent.startDate));
+        const overrideRecurrenceId = this.normalizeOverrideRecurrenceId(this.formatOverrideRecurrenceIdFromDate(recurrenceDate));
+        if (!overrideRecurrenceId) {
+            return null;
+        }
+
+        return {
+            overrideUid: uid,
+            overrideRecurrenceId: overrideRecurrenceId
+        };
+    }
+
+    shouldCreateOverrideFromRecurringMatch(existingEvent) {
+        if (!existingEvent || typeof existingEvent !== 'object') {
+            return false;
+        }
+        const fields = this.parseNotesIntoFields(existingEvent.notes || '');
+        const existingOverrideUid = this.normalizeOverrideUid(fields.overrideUid);
+        const existingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(fields.overrideRecurrenceId);
+        if (existingOverrideUid && existingOverrideRecurrenceId) {
+            // Existing event is already an override event - merge should remain allowed.
+            return false;
+        }
+
+        const normalizeIdentifier = (value) => {
+            if (value === null || value === undefined) return null;
+            const normalized = String(value).trim();
+            return normalized.length > 0 ? normalized : null;
+        };
+        const eventIdentifierRaw = normalizeIdentifier(existingEvent.identifier || '');
+        const eventIdentifierInfo = this.parseScriptableIdentifier(eventIdentifierRaw);
+        if (eventIdentifierInfo.recurrenceDate) {
+            return true;
+        }
+        const notesIdentifierRaw = normalizeIdentifier(fields.uid || fields.identifier || fields.id || '');
+        const notesIdentifierInfo = this.parseScriptableIdentifier(notesIdentifierRaw);
+        if (notesIdentifierInfo.recurrenceDate) {
+            return true;
+        }
+        const recurrenceRule = fields.recurrence || existingEvent.recurrence;
+        return Boolean(recurrenceRule);
+    }
+
+    resolveRecurringMergeCandidate(existingEventsData, existingEvent) {
+        if (!this.shouldCreateOverrideFromRecurringMatch(existingEvent)) {
+            return null;
+        }
+
+        const overrideIdentity = this.deriveOverrideIdentityFromSourceEvent(existingEvent);
+        if (!overrideIdentity) {
+            return {
+                action: 'new',
+                reason: 'Recurring source match found - creating standalone event',
+                sourceEvent: existingEvent
+            };
+        }
+
+        const existingOverrideMatch = this.findEventByOverrideKey(
+            existingEventsData,
+            overrideIdentity.overrideUid,
+            overrideIdentity.overrideRecurrenceId
+        );
+        if (existingOverrideMatch) {
+            return {
+                action: 'merge',
+                reason: 'Recurring source mapped to existing override',
+                existingEvent: existingOverrideMatch.event,
+                existingKey: existingOverrideMatch.existingKey
+            };
+        }
+
+        const overrideKey = `${overrideIdentity.overrideUid.toLowerCase()}::${overrideIdentity.overrideRecurrenceId}`;
+        return {
+            action: 'new',
+            reason: 'Recurring source match found - creating override',
+            sourceEvent: existingEvent,
+            existingKey: overrideKey,
+            overrideIdentity: overrideIdentity
+        };
+    }
+
     normalizeOverrideUid(value) {
         if (value === null || value === undefined) return '';
         return String(value).trim();
@@ -2453,7 +2596,10 @@ class SharedCore {
                     }
                 });
             } else if (analysis.action === 'new' && analysis.sourceEvent) {
-                analyzedEvent = this.createFinalEventObject(analysis.sourceEvent, event);
+                const sourceMergeEvent = analysis.overrideIdentity
+                    ? { ...event, ...analysis.overrideIdentity }
+                    : event;
+                analyzedEvent = this.createFinalEventObject(analysis.sourceEvent, sourceMergeEvent);
                 delete analyzedEvent._existingEvent;
                 analyzedEvent._action = 'new';
             } else if (analysis.existingEvent) {
@@ -2524,23 +2670,18 @@ class SharedCore {
                 return { action: 'new', reason: 'Override match not found' };
             }
 
-            const targetOverrideKey = `${incomingOverrideUid.toLowerCase()}::${incomingOverrideRecurrenceId}`;
-            for (const existingEvent of existingEventsData) {
-                const fields = this.parseNotesIntoFields(existingEvent.notes || '');
-                const existingOverrideUid = this.normalizeOverrideUid(fields.overrideUid);
-                const existingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(fields.overrideRecurrenceId);
-                if (!existingOverrideUid || !existingOverrideRecurrenceId) {
-                    continue;
-                }
-                const existingOverrideKey = `${existingOverrideUid.toLowerCase()}::${existingOverrideRecurrenceId}`;
-                if (existingOverrideKey === targetOverrideKey) {
-                    return {
-                        action: 'merge',
-                        reason: 'Override match found',
-                        existingEvent: existingEvent,
-                        existingKey: targetOverrideKey
-                    };
-                }
+            const existingOverrideMatch = this.findEventByOverrideKey(
+                existingEventsData,
+                incomingOverrideUid,
+                incomingOverrideRecurrenceId
+            );
+            if (existingOverrideMatch) {
+                return {
+                    action: 'merge',
+                    reason: 'Override match found',
+                    existingEvent: existingOverrideMatch.event,
+                    existingKey: existingOverrideMatch.existingKey
+                };
             }
 
             const sourceEvent = this.findOverrideSourceEvent(
@@ -2548,6 +2689,7 @@ class SharedCore {
                 incomingOverrideUid,
                 incomingOverrideRecurrenceId
             );
+            const targetOverrideKey = `${incomingOverrideUid.toLowerCase()}::${incomingOverrideRecurrenceId}`;
             if (sourceEvent) {
                 return {
                     action: 'new',
@@ -2588,6 +2730,10 @@ class SharedCore {
         if (keyMatch) {
             const existingEvent = keyMatch.event;
             const matchedKey = keyMatch.matchedKey || null;
+            const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existingEvent);
+            if (recurringMergeDecision) {
+                return recurringMergeDecision;
+            }
             
             if (keyMatch.matchType === 'exact') {
                 return {
@@ -2615,6 +2761,10 @@ class SharedCore {
         );
         
         if (exactMatch) {
+            const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, exactMatch);
+            if (recurringMergeDecision) {
+                return recurringMergeDecision;
+            }
             return {
                 action: 'merge',
                 reason: 'Similar event found',
@@ -2648,6 +2798,10 @@ class SharedCore {
             );
             
             if (mergeableConflict) {
+                const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, mergeableConflict);
+                if (recurringMergeDecision) {
+                    return recurringMergeDecision;
+                }
                 return {
                     action: 'merge',
                     reason: 'Mergeable overlap detected',
