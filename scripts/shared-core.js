@@ -1260,7 +1260,9 @@ class SharedCore {
             'url': 'url',
             'timezone': 'timezone',
             'key': 'key',
-            'matchkey': 'matchKey'
+            'matchkey': 'matchKey',
+            'overrideuid': 'overrideUid',
+            'overriderecurrenceid': 'overrideRecurrenceId'
         };
         
         const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
@@ -1598,6 +1600,110 @@ class SharedCore {
             uid: uid && uid.length > 0 ? uid : null,
             recurrenceDate
         };
+    }
+
+    normalizeOverrideUid(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).trim();
+    }
+
+    normalizeOverrideRecurrenceId(value) {
+        if (value === null || value === undefined) return '';
+        const trimmed = String(value).trim();
+        if (!trimmed) return '';
+
+        const withTimezoneMatch = trimmed.match(/^TZID=([^:]+):(\d{8}(?:T\d{4,6}Z?)?)$/i);
+        if (withTimezoneMatch) {
+            const timezone = withTimezoneMatch[1].trim();
+            const recurrenceValue = withTimezoneMatch[2].toUpperCase();
+            if (!timezone) return '';
+            return `TZID=${timezone}:${recurrenceValue}`;
+        }
+
+        const withoutTimezoneMatch = trimmed.match(/^(\d{8}(?:T\d{4,6}Z?)?)$/i);
+        if (withoutTimezoneMatch) {
+            return withoutTimezoneMatch[1].toUpperCase();
+        }
+
+        return '';
+    }
+
+    parseOverrideRecurrenceDate(value) {
+        const normalized = this.normalizeOverrideRecurrenceId(value);
+        if (!normalized) return null;
+
+        const rawValue = normalized.startsWith('TZID=')
+            ? normalized.split(':').slice(1).join(':')
+            : normalized;
+        const match = rawValue.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?Z?$/);
+        if (!match) return null;
+
+        const year = Number(match[1]);
+        const month = Number(match[2]) - 1;
+        const day = Number(match[3]);
+        const hour = Number(match[4] || 0);
+        const minute = Number(match[5] || 0);
+        const second = Number(match[6] || 0);
+        const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    findOverrideSourceEvent(existingEventsData, overrideUid, overrideRecurrenceId) {
+        if (!Array.isArray(existingEventsData) || existingEventsData.length === 0) {
+            return null;
+        }
+
+        const normalizeIdentifier = (value) => {
+            if (value === null || value === undefined) return null;
+            const normalized = String(value).trim();
+            return normalized.length > 0 ? normalized : null;
+        };
+
+        const targetUid = this.normalizeOverrideUid(overrideUid);
+        if (!targetUid) return null;
+        const targetDate = this.parseOverrideRecurrenceDate(overrideRecurrenceId);
+        const targetDateKey = targetDate ? this.normalizeEventDate(targetDate) : null;
+        let fallbackUidMatch = null;
+
+        for (const existingEvent of existingEventsData) {
+            const fields = this.parseNotesIntoFields(existingEvent.notes || '');
+            const existingOverrideUid = this.normalizeOverrideUid(fields.overrideUid);
+            const existingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(fields.overrideRecurrenceId);
+            if (existingOverrideUid && existingOverrideRecurrenceId) {
+                continue;
+            }
+
+            const eventIdentifierRaw = normalizeIdentifier(existingEvent.identifier || '');
+            const eventIdentifierInfo = this.parseScriptableIdentifier(eventIdentifierRaw);
+            const notesIdentifierRaw = normalizeIdentifier(fields.uid || fields.identifier || fields.id || '');
+            const notesIdentifierInfo = this.parseScriptableIdentifier(notesIdentifierRaw);
+            const eventUid = eventIdentifierInfo.uid || notesIdentifierInfo.uid || notesIdentifierRaw || null;
+            if (!eventUid || eventUid !== targetUid) {
+                continue;
+            }
+
+            if (!fallbackUidMatch) {
+                fallbackUidMatch = existingEvent;
+            }
+
+            if (!targetDateKey) {
+                continue;
+            }
+
+            const eventStartDate = existingEvent.startDate instanceof Date
+                ? existingEvent.startDate
+                : this.parseDate(existingEvent.startDate);
+            if (!eventStartDate) {
+                continue;
+            }
+
+            const eventDateKey = this.normalizeEventDate(eventStartDate);
+            if (eventDateKey && eventDateKey === targetDateKey) {
+                return existingEvent;
+            }
+        }
+
+        return fallbackUidMatch;
     }
 
     formatDateForCalendar(date) {
@@ -2297,6 +2403,10 @@ class SharedCore {
                         }
                     }
                 });
+            } else if (analysis.action === 'new' && analysis.sourceEvent) {
+                analyzedEvent = this.createFinalEventObject(analysis.sourceEvent, event);
+                delete analyzedEvent._existingEvent;
+                analyzedEvent._action = 'new';
             } else if (analysis.existingEvent) {
                 analyzedEvent._existingEvent = analysis.existingEvent;
             }
@@ -2353,7 +2463,54 @@ class SharedCore {
     // Analyze a single event against existing events
     analyzeEventAction(event, existingEventsData, mergeMode = 'upsert') {
         const hasIdentifier = Boolean(event && (event.identifier || event.id));
-        
+        const incomingOverrideUid = this.normalizeOverrideUid(event && event.overrideUid);
+        const incomingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(event && event.overrideRecurrenceId);
+        const hasOverrideIdentity = Boolean(incomingOverrideUid || incomingOverrideRecurrenceId);
+        if (hasOverrideIdentity && !hasIdentifier) {
+            if (!incomingOverrideUid || !incomingOverrideRecurrenceId) {
+                throw new Error('Incoming event override identity requires both overrideUid and overrideRecurrenceId');
+            }
+
+            if (!existingEventsData || existingEventsData.length === 0) {
+                return { action: 'new', reason: 'Override match not found' };
+            }
+
+            const targetOverrideKey = `${incomingOverrideUid.toLowerCase()}::${incomingOverrideRecurrenceId}`;
+            for (const existingEvent of existingEventsData) {
+                const fields = this.parseNotesIntoFields(existingEvent.notes || '');
+                const existingOverrideUid = this.normalizeOverrideUid(fields.overrideUid);
+                const existingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(fields.overrideRecurrenceId);
+                if (!existingOverrideUid || !existingOverrideRecurrenceId) {
+                    continue;
+                }
+                const existingOverrideKey = `${existingOverrideUid.toLowerCase()}::${existingOverrideRecurrenceId}`;
+                if (existingOverrideKey === targetOverrideKey) {
+                    return {
+                        action: 'merge',
+                        reason: 'Override match found',
+                        existingEvent: existingEvent,
+                        existingKey: targetOverrideKey
+                    };
+                }
+            }
+
+            const sourceEvent = this.findOverrideSourceEvent(
+                existingEventsData,
+                incomingOverrideUid,
+                incomingOverrideRecurrenceId
+            );
+            if (sourceEvent) {
+                return {
+                    action: 'new',
+                    reason: 'Override source match found',
+                    sourceEvent,
+                    existingKey: targetOverrideKey
+                };
+            }
+
+            return { action: 'new', reason: 'Override match not found', existingKey: targetOverrideKey };
+        }
+
         if (hasIdentifier) {
             if (!existingEventsData || existingEventsData.length === 0) {
                 return { action: 'conflict', reason: 'Identifier match not found' };
