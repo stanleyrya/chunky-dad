@@ -383,6 +383,7 @@ class ScriptableAdapter {
         this.runtimeContext = this.getScriptableRuntimeContext();
         this.runStartedAt = new Date();
         this.warnCount = 0;
+        this.lastExecutionActionCounts = null;
     }
 
     getScriptableRuntimeContext() {
@@ -1319,6 +1320,14 @@ class ScriptableAdapter {
     async executeCalendarActions(analyzedEvents, config) {
         if (!analyzedEvents || analyzedEvents.length === 0) {
             console.log('📱 Scriptable: No events to process');
+            this.lastExecutionActionCounts = {
+                create: 0,
+                update: 0,
+                skip: 0,
+                failed: 0,
+                processed: 0,
+                analyzed: 0
+            };
             return 0;
         }
 
@@ -1410,9 +1419,19 @@ class ScriptableAdapter {
                 console.log(`📱 Scriptable: First error: ${failedEvents[0].error}`);
             }
 
+            this.lastExecutionActionCounts = {
+                create: actionCounts.create.length,
+                update: actionCounts.merge.length,
+                skip: actionCounts.skip.length,
+                failed: failedEvents.length,
+                processed: processedCount,
+                analyzed: analyzedEvents.length
+            };
+
             return processedCount;
             
         } catch (error) {
+            this.lastExecutionActionCounts = null;
             console.log(`📱 Scriptable: ✗ Calendar execution error: ${error.message}`);
             throw new Error(`Calendar execution failed: ${error.message}`);
         }
@@ -5345,11 +5364,40 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         };
     }
 
+    createMetricsCalendarActionCounts() {
+        return {
+            create: 0,
+            update: 0,
+            skip: 0,
+            failed: 0,
+            other: 0
+        };
+    }
+
+    normalizeMetricsIntentAction(event) {
+        const action = String(event?._action || '').toLowerCase();
+        if (!action) return null;
+        if (action !== 'new') return action;
+
+        const overrideUid = typeof event?.overrideUid === 'string' ? event.overrideUid.trim() : '';
+        const overrideRecurrenceId = typeof event?.overrideRecurrenceId === 'string' ? event.overrideRecurrenceId.trim() : '';
+        const hasOverrideIdentity = Boolean(overrideUid && overrideRecurrenceId);
+        const hasSourceEvent = Boolean(event?._analysis?.sourceEvent);
+        const reason = String(event?._analysis?.reason || '').toLowerCase();
+        const reasonSuggestsOverride = reason.includes('override');
+
+        if (hasOverrideIdentity || hasSourceEvent || reasonSuggestsOverride) {
+            // Override creates are merge intent, even though calendar operation is "create".
+            return 'merge';
+        }
+        return 'new';
+    }
+
     countMetricsActions(events) {
         const counts = this.createMetricsActionCounts();
         if (!Array.isArray(events)) return counts;
         events.forEach(event => {
-            const action = (event?._action || '').toLowerCase();
+            const action = this.normalizeMetricsIntentAction(event);
             if (!action) return;
             if (Object.prototype.hasOwnProperty.call(counts, action)) {
                 counts[action] += 1;
@@ -5369,12 +5417,56 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (!countsByParser[parserName]) {
                 countsByParser[parserName] = this.createMetricsActionCounts();
             }
-            const action = (event?._action || '').toLowerCase();
+            const action = this.normalizeMetricsIntentAction(event);
             if (!action) return;
             if (Object.prototype.hasOwnProperty.call(countsByParser[parserName], action)) {
                 countsByParser[parserName][action] += 1;
             } else {
                 countsByParser[parserName].other += 1;
+            }
+        });
+        return countsByParser;
+    }
+
+    countMetricsCalendarActions(events) {
+        const counts = this.createMetricsCalendarActionCounts();
+        if (!Array.isArray(events)) return counts;
+        events.forEach(event => {
+            const action = String(event?._action || '').toLowerCase();
+            if (!action) return;
+            if (action === 'new') {
+                counts.create += 1;
+            } else if (action === 'merge') {
+                counts.update += 1;
+            } else if (action === 'conflict' || action === 'missing_calendar') {
+                counts.skip += 1;
+            } else {
+                counts.other += 1;
+            }
+        });
+        return counts;
+    }
+
+    countMetricsCalendarActionsByParser(events) {
+        const countsByParser = {};
+        if (!Array.isArray(events)) return countsByParser;
+        events.forEach(event => {
+            const parserName = event?._parserConfig?.name || null;
+            if (!parserName) return;
+            if (!countsByParser[parserName]) {
+                countsByParser[parserName] = this.createMetricsCalendarActionCounts();
+            }
+            const counts = countsByParser[parserName];
+            const action = String(event?._action || '').toLowerCase();
+            if (!action) return;
+            if (action === 'new') {
+                counts.create += 1;
+            } else if (action === 'merge') {
+                counts.update += 1;
+            } else if (action === 'conflict' || action === 'missing_calendar') {
+                counts.skip += 1;
+            } else {
+                counts.other += 1;
             }
         });
         return countsByParser;
@@ -5408,6 +5500,25 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const triggerType = (runContext?.type === 'manual' || runContext?.type === 'automated') ? runContext.type : 'unknown';
         const actions = this.countMetricsActions(analyzedEvents);
         const actionsByParser = this.countMetricsActionsByParser(analyzedEvents);
+        const plannedCalendarActions = this.countMetricsCalendarActions(analyzedEvents);
+        const plannedCalendarActionsByParser = this.countMetricsCalendarActionsByParser(analyzedEvents);
+        const allowExecutedCalendarActions = results?.config?.config?.dryRun === false;
+        const rawExecutionCounts = allowExecutedCalendarActions ? this.lastExecutionActionCounts : null;
+        const hasExecutionCounts = Boolean(
+            rawExecutionCounts &&
+            Number.isFinite(rawExecutionCounts.analyzed) &&
+            rawExecutionCounts.analyzed === analyzedEvents.length
+        );
+        const calendarActions = hasExecutionCounts
+            ? {
+                create: rawExecutionCounts.create || 0,
+                update: rawExecutionCounts.update || 0,
+                skip: rawExecutionCounts.skip || 0,
+                failed: rawExecutionCounts.failed || 0,
+                other: 0
+            }
+            : plannedCalendarActions;
+        const calendarActionsMode = hasExecutionCounts ? 'executed' : 'planned';
         const warningActionsCount = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
         const warningsCount = (this.warnCount || 0) + warningActionsCount;
 
@@ -5431,6 +5542,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const parserActions = parserName && actionsByParser[parserName]
                 ? actionsByParser[parserName]
                 : this.createMetricsActionCounts();
+            const parserCalendarActions = parserName && plannedCalendarActionsByParser[parserName]
+                ? plannedCalendarActionsByParser[parserName]
+                : this.createMetricsCalendarActionCounts();
             return {
                 parser_name: parserName,
                 parser_type: parserType,
@@ -5440,12 +5554,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 final_bear_events: result?.bearEvents || 0,
                 duplicates_removed: result?.duplicatesRemoved || 0,
                 duration_ms: Number.isFinite(result?.durationMs) ? result.durationMs : null,
-                actions: parserActions
+                actions: parserActions,
+                calendar_actions: parserCalendarActions
             };
         });
 
         return {
-            schema_version: 1,
+            schema_version: 2,
             run_id: runId,
             started_at: startedAt ? startedAt.toISOString() : null,
             finished_at: finishedAt.toISOString(),
@@ -5463,6 +5578,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             warnings_count: warningsCount,
             totals,
             actions,
+            calendar_actions: calendarActions,
+            calendar_actions_mode: calendarActionsMode,
             merge_diff_fields_updated: mergeDiffFieldsUpdated,
             parsers
         };
@@ -5516,6 +5633,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 calendar_events: 0
             },
             actions: this.createMetricsActionCounts(),
+            calendar_actions: this.createMetricsCalendarActionCounts(),
             merge_diff_fields_updated: 0
         };
     }
@@ -5531,7 +5649,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 final_bear_events: 0,
                 duplicates_removed: 0
             },
-            actions: this.createMetricsActionCounts()
+            actions: this.createMetricsActionCounts(),
+            calendar_actions: this.createMetricsCalendarActionCounts()
         };
     }
 
@@ -5559,6 +5678,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         Object.keys(bucket.actions).forEach(key => {
             bucket.actions[key] += record.actions?.[key] || 0;
         });
+        if (!bucket.calendar_actions) {
+            bucket.calendar_actions = this.createMetricsCalendarActionCounts();
+        }
+        Object.keys(bucket.calendar_actions).forEach(key => {
+            bucket.calendar_actions[key] += record.calendar_actions?.[key] || 0;
+        });
 
         bucket.merge_diff_fields_updated += record.merge_diff_fields_updated || 0;
     }
@@ -5581,6 +5706,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         Object.keys(bucket.actions).forEach(key => {
             bucket.actions[key] += parserRecord.actions?.[key] || 0;
         });
+        if (!bucket.calendar_actions) {
+            bucket.calendar_actions = this.createMetricsCalendarActionCounts();
+        }
+        Object.keys(bucket.calendar_actions).forEach(key => {
+            bucket.calendar_actions[key] += parserRecord.calendar_actions?.[key] || 0;
+        });
     }
 
     async updateMetricsSummary(record) {
@@ -5597,7 +5728,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
         } else {
             summary = {
-                version: 1,
+                version: 2,
                 updated_at: null,
                 totals: this.createMetricsSummaryBucket(),
                 by_day: {},
