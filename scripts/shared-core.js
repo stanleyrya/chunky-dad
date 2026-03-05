@@ -2530,7 +2530,9 @@ class SharedCore {
             // Add analysis to the new event object
             analyzedEvent._analysis = {
                 action: analysis.action,
-                reason: analysis.reason
+                reason: analysis.reason,
+                sourceEvent: Boolean(analysis.sourceEvent),
+                hasOverrideIdentity: Boolean(analysis.overrideIdentity)
             };
             analyzedEvent._action = analysis.action;
             
