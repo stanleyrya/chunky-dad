@@ -2494,7 +2494,11 @@ class SharedCore {
             // Coordinate helpers that duplicate location data
             'lat', 'lng',
             // Location-specific fields that shouldn't be in notes (used internally)
-            'placeId'
+            'placeId',
+            // Keep timezone configuration out of notes; calendar/city config owns this
+            'timezone',
+            // Keep wildcard matching key internal; persist canonical key only
+            'matchKey'
         ]);
         
         // Add all fields that have values (merge logic has already determined correct values)
