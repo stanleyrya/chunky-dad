@@ -509,6 +509,16 @@ class MetricsDisplay {
     };
   }
 
+  createCalendarActionCounts() {
+    return {
+      create: 0,
+      update: 0,
+      skip: 0,
+      failed: 0,
+      other: 0
+    };
+  }
+
   createParserTotals() {
     return {
       total_events: 0,
@@ -559,7 +569,25 @@ class MetricsDisplay {
     const errorsCount = Number.isFinite(record.errors_count) ? record.errors_count : 0;
     const warningsCount = this.getRunWarningCount(record);
     const status = this.getRunStatusFromCounts(errorsCount, warningsCount, record.status);
-    return { ...record, warnings_count: warningsCount, status };
+    const calendarActions = {
+      ...this.createCalendarActionCounts(),
+      ...(record?.calendar_actions || {})
+    };
+    const parsers = Array.isArray(record?.parsers)
+      ? record.parsers.map(parser => ({
+          ...parser,
+          actions: { ...this.createActionCounts(), ...(parser?.actions || {}) },
+          calendar_actions: { ...this.createCalendarActionCounts(), ...(parser?.calendar_actions || {}) }
+        }))
+      : [];
+    return {
+      ...record,
+      warnings_count: warningsCount,
+      status,
+      actions: { ...this.createActionCounts(), ...(record?.actions || {}) },
+      calendar_actions: calendarActions,
+      parsers
+    };
   }
 
   sumActions(actions) {
@@ -602,6 +630,7 @@ class MetricsDisplay {
             runs: 0,
             totals: this.createParserTotals(),
             actions: this.createActionCounts(),
+            calendarActions: this.createCalendarActionCounts(),
             durationMsTotal: 0,
             statusCounts: this.createStatusCounts()
           };
@@ -616,6 +645,10 @@ class MetricsDisplay {
         const actions = parserRecord?.actions || {};
         Object.keys(bucket.actions).forEach(key => {
           bucket.actions[key] += actions[key] || 0;
+        });
+        const calendarActions = parserRecord?.calendar_actions || {};
+        Object.keys(bucket.calendarActions).forEach(key => {
+          bucket.calendarActions[key] += calendarActions[key] || 0;
         });
         const statusKey = this.getRunStatusBucketKey(record?.status);
         if (statusKey && bucket.statusCounts) {
@@ -670,14 +703,17 @@ class MetricsDisplay {
       const lastRun = lastRuns[name] || null;
       const record = lastRun?.parser || null;
       const actions = record?.actions ? record.actions : this.createActionCounts();
+      const calendarActions = record?.calendar_actions ? record.calendar_actions : this.createCalendarActionCounts();
       const totalEvents = record?.total_events || 0;
       const summaryTotals = summaryParsers?.[name]?.totals || null;
       const allTimeRuns = summaryTotals?.runs || 0;
       const allTimeTotals = summaryTotals?.totals || this.createParserTotals();
       const allTimeActions = summaryTotals?.actions || this.createActionCounts();
+      const allTimeCalendarActions = summaryTotals?.calendar_actions || this.createCalendarActionCounts();
       const allTimeDurationMs = summaryTotals?.duration_ms_total || 0;
       const historyTotals = historyByParser?.[name]?.totals || this.createParserTotals();
       const historyActions = historyByParser?.[name]?.actions || this.createActionCounts();
+      const historyCalendarActions = historyByParser?.[name]?.calendarActions || this.createCalendarActionCounts();
       const historyRuns = historyByParser?.[name]?.runs || 0;
       const historyDurationMs = historyByParser?.[name]?.durationMsTotal || 0;
       const ran = !!record || allTimeRuns > 0 || historyRuns > 0;
@@ -694,6 +730,7 @@ class MetricsDisplay {
         finalBearEvents: record?.final_bear_events || 0,
         durationMs: record?.duration_ms || null,
         actions,
+        calendarActions,
         warningCount,
         lastRunAt: lastRun?.record?.finished_at || null,
         lastRunId: lastRun?.record?.run_id || null,
@@ -701,10 +738,12 @@ class MetricsDisplay {
         allTimeRuns,
         allTimeTotals,
         allTimeActions,
+        allTimeCalendarActions,
         allTimeDurationMs,
         historyRuns,
         historyTotals,
         historyActions,
+        historyCalendarActions,
         historyDurationMs
       };
     });
@@ -728,6 +767,7 @@ class MetricsDisplay {
       const summaryTotals = summaryParsers?.[name]?.totals || null;
       const historyTotals = historyByParser?.[name] || null;
       const actions = summaryTotals?.actions || historyTotals?.actions || this.createActionCounts();
+      const calendarActions = summaryTotals?.calendar_actions || historyTotals?.calendarActions || this.createCalendarActionCounts();
       const runs = Number.isFinite(summaryTotals?.runs) ? summaryTotals.runs : (historyTotals?.runs || 0);
       const statusCounts = this.normalizeStatusCounts(
         summaryTotals?.statuses || historyTotals?.statusCounts || this.createStatusCounts()
@@ -735,6 +775,7 @@ class MetricsDisplay {
       return {
         name,
         actions,
+        calendarActions,
         runs,
         statusCounts
       };
@@ -783,6 +824,16 @@ class MetricsDisplay {
     if (actions.new) parts.push(`adds ${actions.new}`);
     if (actions.merge) parts.push(`merges ${actions.merge}`);
     if (actions.conflict) parts.push(`conflicts ${actions.conflict}`);
+    if (parts.length === 0) return 'none';
+    return parts.join(', ');
+  }
+
+  formatCalendarActions(actions) {
+    if (!actions) return 'n/a';
+    const parts = [];
+    if (actions.create) parts.push(`create ${actions.create}`);
+    if (actions.update) parts.push(`update ${actions.update}`);
+    if (actions.skip) parts.push(`skip ${actions.skip}`);
     if (parts.length === 0) return 'none';
     return parts.join(', ');
   }
@@ -880,6 +931,7 @@ class MetricsDisplay {
         errorsCount: record?.errors_count || 0,
         warningsCount,
         actions: record?.actions ? record.actions : this.createActionCounts(),
+        calendarActions: record?.calendar_actions ? record.calendar_actions : this.createCalendarActionCounts(),
         totals: record?.totals || {},
         finalEvents: record?.totals?.final_bear_events || 0,
         totalEvents: record?.totals?.total_events || 0,
@@ -888,6 +940,12 @@ class MetricsDisplay {
         parserNames
       };
     });
+  }
+
+  getRunActionSources(run) {
+    const intentActions = run?.actions || this.createActionCounts();
+    const writeActions = run?.calendarActions || this.createCalendarActionCounts();
+    return { intentActions, writeActions };
   }
 
   normalizeRunStatusFilter(value) {
@@ -2230,9 +2288,15 @@ class MetricsDisplay {
       const actionSource = hasLastRun
         ? record.actions
         : (hasAllTime ? record.allTimeActions : record.historyActions);
-      const actions = widget.addText(`Actions: ${this.formatActions(actionSource)}`);
+      const calendarActionSource = hasLastRun
+        ? record.calendarActions
+        : (hasAllTime ? record.allTimeCalendarActions : record.historyCalendarActions);
+      const actions = widget.addText(`Intent: ${this.formatActions(actionSource)}`);
       actions.font = Font.systemFont(FONT_SIZES.widget.small);
       actions.textColor = new Color(BRAND.textMuted);
+      const writeActions = widget.addText(`Writes: ${this.formatCalendarActions(calendarActionSource)}`);
+      writeActions.font = Font.systemFont(FONT_SIZES.widget.small);
+      writeActions.textColor = new Color(BRAND.textMuted);
     }
   }
 
@@ -2365,6 +2429,7 @@ class MetricsDisplay {
     const totals = summary.totals;
     const statusCounts = this.normalizeStatusCounts(totals.statuses);
     const actions = totals.actions || this.createActionCounts();
+    const calendarActions = totals.calendar_actions || this.createCalendarActionCounts();
     const runs = totals.runs || 0;
     const parserCount = Array.isArray(context?.parserHealth?.items) ? context.parserHealth.items.length : 0;
     const successPercent = this.formatPercent(statusCounts.success || 0, runs);
@@ -2388,6 +2453,10 @@ class MetricsDisplay {
     const actionsText = widget.addText(actionsLine);
     actionsText.font = Font.systemFont(FONT_SIZES.widget.small);
     actionsText.textColor = new Color(BRAND.textMuted);
+    const writesLine = `Writes Create ${this.formatNumber(calendarActions.create || 0)} • Update ${this.formatNumber(calendarActions.update || 0)} • Skip ${this.formatNumber(calendarActions.skip || 0)}`;
+    const writesText = widget.addText(writesLine);
+    writesText.font = Font.systemFont(FONT_SIZES.widget.small);
+    writesText.textColor = new Color(BRAND.textMuted);
   }
 
   async renderWidget(data, view) {
@@ -3117,6 +3186,7 @@ class MetricsDisplay {
           const totals = summary.totals;
           const statusCounts = this.normalizeStatusCounts(totals.statuses);
           const actions = totals.actions || this.createActionCounts();
+          const calendarActions = totals.calendar_actions || this.createCalendarActionCounts();
           const runs = totals.runs || 0;
           const actionTotal = this.sumDisplayActions(actions);
           const parserCount = allTimeParserRows.length || parserItems.length;
@@ -3134,6 +3204,11 @@ class MetricsDisplay {
               ${buildMetric('Adds', this.formatNumber(actions.new || 0), this.formatPercent(actions.new || 0, actionTotal))}
               ${buildMetric('Merges', this.formatNumber(actions.merge || 0), this.formatPercent(actions.merge || 0, actionTotal))}
               ${buildMetric('Conflicts', this.formatNumber(actions.conflict || 0), this.formatPercent(actions.conflict || 0, actionTotal))}
+            </div>
+            <div class="metrics-grid">
+              ${buildMetric('Create writes', this.formatNumber(calendarActions.create || 0))}
+              ${buildMetric('Update writes', this.formatNumber(calendarActions.update || 0))}
+              ${buildMetric('Skip writes', this.formatNumber(calendarActions.skip || 0))}
             </div>`;
           cards.push(buildSection('All Time Totals', totalsGrid));
           const parserTotals = allTimeParserRows;
@@ -3187,7 +3262,13 @@ class MetricsDisplay {
               <div class="metrics-grid">
                 ${buildMetric('Final events', this.formatNumber(record.finalBearEvents || 0))}
                 ${buildMetric('Duration', this.formatDuration(record.durationMs))}
-                ${buildMetric('Actions', this.formatActions(record.actions))}
+                ${buildMetric('Intent actions', this.formatActions(record.actions))}
+              </div>
+              <div class="meta-row">
+                <div class="meta-item">
+                  <span class="meta-label">Calendar writes</span>
+                  <span class="meta-value">${escapeHtml(this.formatCalendarActions(record.calendarActions))}</span>
+                </div>
               </div>
               ${lastRunAction}`;
             const lastRunSubtitle = `Last run ${this.formatRelativeTime(record.lastRunAt)}`;
@@ -3200,6 +3281,7 @@ class MetricsDisplay {
             const totals = hasAllTime ? (record.allTimeTotals || {}) : (record.historyTotals || {});
             const runsCount = hasAllTime ? record.allTimeRuns : record.historyRuns;
             const actions = hasAllTime ? record.allTimeActions : record.historyActions;
+            const calendarActions = hasAllTime ? record.allTimeCalendarActions : record.historyCalendarActions;
             const avgDurationMs = runsCount > 0
               ? Math.round((hasAllTime ? record.allTimeDurationMs : record.historyDurationMs) / runsCount)
               : null;
@@ -3212,8 +3294,12 @@ class MetricsDisplay {
               </div>
               <div class="meta-row">
                 <div class="meta-item">
-                  <span class="meta-label">Actions</span>
+                  <span class="meta-label">Intent actions</span>
                   <span class="meta-value">${escapeHtml(this.formatActions(actions))}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Calendar writes</span>
+                  <span class="meta-value">${escapeHtml(this.formatCalendarActions(calendarActions))}</span>
                 </div>
               </div>`;
             cards.push(buildSection(hasAllTime ? 'All Time Totals' : 'Recent Totals', metricsGrid));
@@ -4509,6 +4595,7 @@ class MetricsDisplay {
         const totals = summary.totals;
         const statusCounts = this.normalizeStatusCounts(totals.statuses);
         const actions = totals.actions || this.createActionCounts();
+        const calendarActions = totals.calendar_actions || this.createCalendarActionCounts();
         const runs = totals.runs || 0;
         const parserCount = allTimeParserRows.length || (parserHealth?.items?.length || 0);
         const actionTotal = this.sumDisplayActions(actions);
@@ -4533,6 +4620,11 @@ class MetricsDisplay {
           `Adds: ${this.formatNumber(actions.new || 0)} (${addPercent}) • Merges: ${this.formatNumber(actions.merge || 0)} (${mergePercent})`,
           `Conflicts: ${this.formatNumber(actions.conflict || 0)} (${conflictPercent})`
         );
+        this.addInfoRow(
+          table,
+          `Calendar writes: ${this.formatCalendarActions(calendarActions)}`,
+          `Create ${this.formatNumber(calendarActions.create || 0)} • Update ${this.formatNumber(calendarActions.update || 0)} • Skip ${this.formatNumber(calendarActions.skip || 0)}`
+        );
 
         const parserRows = allTimeParserRows;
         if (parserRows.length > 0) {
@@ -4545,10 +4637,10 @@ class MetricsDisplay {
             const rowSuccessPercent = this.formatPercent(rowStatuses.success || 0, rowRuns);
             const rowWarningPercent = this.formatPercent(rowStatuses.warning || 0, rowRuns);
             const rowFailedPercent = this.formatPercent(rowStatuses.failed || 0, rowRuns);
+            const rowCalendarActions = row.calendarActions || this.createCalendarActionCounts();
             const summaryLine = [
-              `Adds ${this.formatNumber(rowActions.new || 0)}`,
-              `Merges ${this.formatNumber(rowActions.merge || 0)}`,
-              `Conflicts ${this.formatNumber(rowActions.conflict || 0)}`,
+              `Intent ${this.formatActions(rowActions)}`,
+              `Writes ${this.formatCalendarActions(rowCalendarActions)}`,
               `Success ${this.formatNumber(rowStatuses.success || 0)} (${rowSuccessPercent})`,
               `Warnings ${this.formatNumber(rowStatuses.warning || 0)} (${rowWarningPercent})`,
               `Failed ${this.formatNumber(rowStatuses.failed || 0)} (${rowFailedPercent})`
@@ -4588,7 +4680,8 @@ class MetricsDisplay {
             `Last run: ${this.formatRelativeTime(record.lastRunAt)}`,
             `Final events: ${this.formatNumber(record.finalBearEvents)}`
           );
-          this.addInfoRow(table, `Duration: ${this.formatDuration(record.durationMs)}`, `Actions: ${this.formatActions(record.actions)}`);
+          this.addInfoRow(table, `Duration: ${this.formatDuration(record.durationMs)}`, `Intent actions: ${this.formatActions(record.actions)}`);
+          this.addInfoRow(table, 'Calendar writes', this.formatCalendarActions(record.calendarActions));
           if (record?.lastRunId) {
             const linkRow = new UITableRow();
             linkRow.backgroundColor = new Color(BRAND.secondary);
@@ -4618,7 +4711,8 @@ class MetricsDisplay {
             `Runs: ${this.formatNumber(record.allTimeRuns || 0)}`,
             `Total events: ${this.formatNumber(totals.total_events || 0)}`
           );
-          this.addInfoRow(table, 'All Time Actions', this.formatActions(record.allTimeActions));
+          this.addInfoRow(table, 'All Time Intent Actions', this.formatActions(record.allTimeActions));
+          this.addInfoRow(table, 'All Time Calendar Writes', this.formatCalendarActions(record.allTimeCalendarActions));
           const avgDurationMs = record.allTimeRuns > 0
             ? Math.round(record.allTimeDurationMs / record.allTimeRuns)
             : null;
@@ -4633,7 +4727,8 @@ class MetricsDisplay {
             `Runs: ${this.formatNumber(record.historyRuns || 0)}`,
             `Total events: ${this.formatNumber(totals.total_events || 0)}`
           );
-          this.addInfoRow(table, 'Recent Actions', this.formatActions(record.historyActions));
+          this.addInfoRow(table, 'Recent Intent Actions', this.formatActions(record.historyActions));
+          this.addInfoRow(table, 'Recent Calendar Writes', this.formatCalendarActions(record.historyCalendarActions));
           const avgDurationMs = record.historyRuns > 0
             ? Math.round(record.historyDurationMs / record.historyRuns)
             : null;
