@@ -2504,8 +2504,7 @@ class SharedCore {
         // Add all fields that have values (merge logic has already determined correct values)
         let savedFieldCount = 0;
         Object.keys(event).forEach(fieldName => {
-            if (!excludeFields.has(fieldName) &&
-                !this.shouldSkipFieldInNotes(fieldName, event) &&
+            if (!excludeFields.has(fieldName) && 
                 event[fieldName] !== undefined && 
                 event[fieldName] !== null && 
                 event[fieldName] !== '') {
@@ -2522,18 +2521,6 @@ class SharedCore {
         });
         
         return notes.join('\n');
-    }
-
-    // Skip redundant note fields while keeping canonical metadata.
-    shouldSkipFieldInNotes(fieldName, event) {
-        if (fieldName !== 'url') {
-            return false;
-        }
-
-        const url = typeof event.url === 'string' ? event.url.trim() : '';
-        const ticketUrl = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
-
-        return Boolean(url && ticketUrl && url === ticketUrl);
     }
 
     // Determine if a field/value should be treated as URL-like (no colon escaping)

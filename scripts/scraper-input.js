@@ -268,7 +268,9 @@ const scraperConfig = {
         address: { priority: ["redeyetickets"], merge: "clobber" },
         startDate: { priority: ["redeyetickets"], merge: "clobber" },
         endDate: { priority: ["redeyetickets"], merge: "clobber" },
-        url: { priority: ["redeyetickets"], merge: "clobber" },
+        // Goldiloxx should only persist ticketUrl metadata.
+        // Keep url empty so it is not saved to notes/calendar metadata.
+        url: { priority: ["static"], merge: "clobber" },
         location: { priority: ["redeyetickets"], merge: "upsert" },
         gmaps: { priority: ["redeyetickets"], merge: "clobber" },
         image: { priority: ["redeyetickets"], merge: "clobber" },
@@ -282,6 +284,7 @@ const scraperConfig = {
         shortName: { value: "GOLDI-LOXX" },
         shorterName: { value: "GLX" },
         instagram: { value: "https://www.instagram.com/goldiloxx__" },
+        url: { value: "" },
         matchKey: { value: "goldiloxx*|${year}-${month}-*|*" }
       }
     },
