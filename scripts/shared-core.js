@@ -1725,7 +1725,7 @@ class SharedCore {
         };
     }
 
-    shouldCreateOverrideFromRecurringMatch(existingEvent) {
+    shouldCreateOverrideFromRecurringMatch(existingEvent, existingEventsData = null) {
         if (!existingEvent || typeof existingEvent !== 'object') {
             return false;
         }
@@ -1753,11 +1753,55 @@ class SharedCore {
             return true;
         }
         const recurrenceRule = fields.recurrence || existingEvent.recurrence;
-        return Boolean(recurrenceRule);
+        if (recurrenceRule) {
+            return true;
+        }
+
+        // Scriptable can return recurring instances without explicit recurrence fields.
+        // If multiple events in the current candidate set share a UID on different dates,
+        // treat this as recurring so edits create overrides instead of mutating originals.
+        const sourceUid = eventIdentifierInfo.uid || notesIdentifierInfo.uid || notesIdentifierRaw || null;
+        const normalizedSourceUid = this.normalizeOverrideUid(sourceUid);
+        if (!normalizedSourceUid || !Array.isArray(existingEventsData) || existingEventsData.length === 0) {
+            return false;
+        }
+
+        const sourceStartDate = existingEvent.startDate instanceof Date
+            ? existingEvent.startDate
+            : this.parseDate(existingEvent.startDate);
+        const sourceDateKey = sourceStartDate ? this.normalizeEventDate(sourceStartDate) : '';
+        for (const candidateEvent of existingEventsData) {
+            if (!candidateEvent || candidateEvent === existingEvent) {
+                continue;
+            }
+            const candidateFields = this.parseNotesIntoFields(candidateEvent.notes || '');
+            const candidateIdentifierRaw = normalizeIdentifier(candidateEvent.identifier || '');
+            const candidateIdentifierInfo = this.parseScriptableIdentifier(candidateIdentifierRaw);
+            const candidateNotesIdentifierRaw = normalizeIdentifier(
+                candidateFields.uid || candidateFields.identifier || candidateFields.id || ''
+            );
+            const candidateNotesIdentifierInfo = this.parseScriptableIdentifier(candidateNotesIdentifierRaw);
+            const candidateUid = this.normalizeOverrideUid(
+                candidateIdentifierInfo.uid || candidateNotesIdentifierInfo.uid || candidateNotesIdentifierRaw || ''
+            );
+            if (!candidateUid || candidateUid !== normalizedSourceUid) {
+                continue;
+            }
+
+            const candidateStartDate = candidateEvent.startDate instanceof Date
+                ? candidateEvent.startDate
+                : this.parseDate(candidateEvent.startDate);
+            const candidateDateKey = candidateStartDate ? this.normalizeEventDate(candidateStartDate) : '';
+            if (!sourceDateKey || !candidateDateKey || candidateDateKey !== sourceDateKey) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     resolveRecurringMergeCandidate(existingEventsData, existingEvent) {
-        if (!this.shouldCreateOverrideFromRecurringMatch(existingEvent)) {
+        if (!this.shouldCreateOverrideFromRecurringMatch(existingEvent, existingEventsData)) {
             return null;
         }
 
@@ -2712,6 +2756,10 @@ class SharedCore {
             if (keyMatch && keyMatch.matchType === 'identifier') {
                 const existingEvent = keyMatch.event;
                 const matchedKey = keyMatch.matchedKey || null;
+                const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existingEvent);
+                if (recurringMergeDecision) {
+                    return recurringMergeDecision;
+                }
                 return {
                     action: 'merge',
                     reason: 'Identifier match found',
