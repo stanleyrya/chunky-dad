@@ -1692,6 +1692,57 @@ class SharedCore {
         return null;
     }
 
+    buildOverrideKey(overrideUid, overrideRecurrenceId) {
+        const normalizedUid = this.normalizeOverrideUid(overrideUid);
+        const normalizedRecurrenceId = this.normalizeOverrideRecurrenceId(overrideRecurrenceId);
+        if (!normalizedUid || !normalizedRecurrenceId) {
+            return '';
+        }
+        return `${normalizedUid.toLowerCase()}::${normalizedRecurrenceId}`;
+    }
+
+    getOverrideIdentityFromEvent(existingEvent) {
+        if (!existingEvent || typeof existingEvent !== 'object') {
+            return null;
+        }
+        const fields = this.parseNotesIntoFields(existingEvent.notes || '');
+        const overrideUid = this.normalizeOverrideUid(
+            fields.overrideUid || existingEvent.overrideUid || ''
+        );
+        const overrideRecurrenceId = this.normalizeOverrideRecurrenceId(
+            fields.overrideRecurrenceId || existingEvent.overrideRecurrenceId || ''
+        );
+        if (!overrideUid || !overrideRecurrenceId) {
+            return null;
+        }
+        return {
+            overrideUid,
+            overrideRecurrenceId,
+            overrideKey: this.buildOverrideKey(overrideUid, overrideRecurrenceId)
+        };
+    }
+
+    finalizeAnalysisResult(event, analysis) {
+        const result = analysis && typeof analysis === 'object'
+            ? { ...analysis }
+            : { action: 'conflict', reason: 'Invalid analysis result' };
+
+        const existingOverrideIdentity = this.getOverrideIdentityFromEvent(result.existingEvent);
+
+        if (existingOverrideIdentity && existingOverrideIdentity.overrideKey) {
+            result.existingKey = existingOverrideIdentity.overrideKey;
+        } else if (typeof result.existingKey === 'string' && result.existingKey.includes('::')) {
+            const [rawUid, ...rawRecurrenceParts] = result.existingKey.split('::');
+            const rawRecurrenceId = rawRecurrenceParts.join('::');
+            const normalizedExistingOverrideKey = this.buildOverrideKey(rawUid, rawRecurrenceId);
+            if (normalizedExistingOverrideKey) {
+                result.existingKey = normalizedExistingOverrideKey;
+            }
+        }
+
+        return result;
+    }
+
     deriveOverrideIdentityFromSourceEvent(existingEvent) {
         if (!existingEvent || typeof existingEvent !== 'object') {
             return null;
@@ -2707,6 +2758,7 @@ class SharedCore {
     
     // Analyze a single event against existing events
     analyzeEventAction(event, existingEventsData, mergeMode = 'upsert') {
+        const finalize = (result) => this.finalizeAnalysisResult(event, result);
         const hasIdentifier = Boolean(event && (event.identifier || event.id));
         const incomingOverrideUid = this.normalizeOverrideUid(event && event.overrideUid);
         const incomingOverrideRecurrenceId = this.normalizeOverrideRecurrenceId(event && event.overrideRecurrenceId);
@@ -2717,7 +2769,7 @@ class SharedCore {
             }
 
             if (!existingEventsData || existingEventsData.length === 0) {
-                return { action: 'new', reason: 'Override match not found' };
+                return finalize({ action: 'new', reason: 'Override match not found' });
             }
 
             const existingOverrideMatch = this.findEventByOverrideKey(
@@ -2726,12 +2778,12 @@ class SharedCore {
                 incomingOverrideRecurrenceId
             );
             if (existingOverrideMatch) {
-                return {
+                return finalize({
                     action: 'merge',
                     reason: 'Override match found',
                     existingEvent: existingOverrideMatch.event,
                     existingKey: existingOverrideMatch.existingKey
-                };
+                });
             }
 
             const sourceEvent = this.findOverrideSourceEvent(
@@ -2741,20 +2793,20 @@ class SharedCore {
             );
             const targetOverrideKey = `${incomingOverrideUid.toLowerCase()}::${incomingOverrideRecurrenceId}`;
             if (sourceEvent) {
-                return {
+                return finalize({
                     action: 'new',
                     reason: 'Override source match found',
                     sourceEvent,
                     existingKey: targetOverrideKey
-                };
+                });
             }
 
-            return { action: 'new', reason: 'Override match not found', existingKey: targetOverrideKey };
+            return finalize({ action: 'new', reason: 'Override match not found', existingKey: targetOverrideKey });
         }
 
         if (hasIdentifier) {
             if (!existingEventsData || existingEventsData.length === 0) {
-                return { action: 'conflict', reason: 'Identifier match not found' };
+                return finalize({ action: 'conflict', reason: 'Identifier match not found' });
             }
             const keyMatch = this.findEventByKey(existingEventsData, event);
             if (keyMatch && keyMatch.matchType === 'identifier') {
@@ -2762,20 +2814,20 @@ class SharedCore {
                 const matchedKey = keyMatch.matchedKey || null;
                 const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existingEvent);
                 if (recurringMergeDecision) {
-                    return recurringMergeDecision;
+                    return finalize(recurringMergeDecision);
                 }
-                return {
+                return finalize({
                     action: 'merge',
                     reason: 'Identifier match found',
                     existingEvent: existingEvent,
                     existingKey: matchedKey
-                };
+                });
             }
-            return { action: 'conflict', reason: 'Identifier match not found' };
+            return finalize({ action: 'conflict', reason: 'Identifier match not found' });
         }
         
         if (!existingEventsData || existingEventsData.length === 0) {
-            return { action: 'new', reason: 'No existing events found' };
+            return finalize({ action: 'new', reason: 'No existing events found' });
         }
         
         // Check for key-based merging first (exact or wildcard)
@@ -2786,25 +2838,25 @@ class SharedCore {
             const matchedKey = keyMatch.matchedKey || null;
             const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existingEvent);
             if (recurringMergeDecision) {
-                return recurringMergeDecision;
+                return finalize(recurringMergeDecision);
             }
             
             if (keyMatch.matchType === 'exact') {
-                return {
+                return finalize({
                     action: 'merge',
                     reason: 'Key match found',
                     existingEvent: existingEvent,
                     existingKey: matchedKey
-                };
+                });
             }
             
             if (keyMatch.matchType === 'wildcard') {
-                return {
+                return finalize({
                     action: 'merge',
                     reason: 'Wildcard key match found',
                     existingEvent: existingEvent,
                     existingKey: matchedKey
-                };
+                });
             }
         }
         
@@ -2817,13 +2869,13 @@ class SharedCore {
         if (exactMatch) {
             const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, exactMatch);
             if (recurringMergeDecision) {
-                return recurringMergeDecision;
+                return finalize(recurringMergeDecision);
             }
-            return {
+            return finalize({
                 action: 'merge',
                 reason: 'Similar event found',
                 existingEvent: exactMatch
-            };
+            });
         }
         
         // Check for overlapping events - only merge when time and title/venue are similar
@@ -2854,22 +2906,22 @@ class SharedCore {
             if (mergeableConflict) {
                 const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, mergeableConflict);
                 if (recurringMergeDecision) {
-                    return recurringMergeDecision;
+                    return finalize(recurringMergeDecision);
                 }
-                return {
+                return finalize({
                     action: 'merge',
                     reason: 'Mergeable overlap detected',
                     existingEvent: mergeableConflict
-                };
+                });
             }
             
-            return {
+            return finalize({
                 action: 'new',
                 reason: 'Overlapping event with different title/venue'
-            };
+            });
         }
         
-        return { action: 'new', reason: 'No conflicts found' };
+        return finalize({ action: 'new', reason: 'No conflicts found' });
     }
     
     // Check if a key matches a pattern with simple wildcards (pure logic)
