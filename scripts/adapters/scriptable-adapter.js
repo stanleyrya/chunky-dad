@@ -1242,6 +1242,65 @@ class ScriptableAdapter {
                 return { start, end };
             };
 
+            const dedupeEventsByIdentifier = (events) => {
+                const list = Array.isArray(events) ? events : [];
+                if (list.length === 0) return [];
+                const seen = new Set();
+                const deduped = [];
+                list.forEach(existingEvent => {
+                    if (!existingEvent) return;
+                    const identifier = this.getEventIdentifier(existingEvent);
+                    if (identifier && seen.has(identifier)) {
+                        return;
+                    }
+                    if (identifier) {
+                        seen.add(identifier);
+                    }
+                    deduped.push(existingEvent);
+                });
+                return deduped;
+            };
+
+            const classifyEventsForMatching = (events) => {
+                const list = Array.isArray(events) ? events : [];
+                const eventMetadata = list.map(existingEvent => {
+                    if (!existingEvent) return null;
+                    const identity = this.getEventOverrideIdentity(existingEvent);
+                    const sourceUid = this.normalizeOverrideUid(identity.sourceUid || this.getEventUid(existingEvent));
+                    const startDate = existingEvent.startDate instanceof Date
+                        ? existingEvent.startDate
+                        : new Date(existingEvent.startDate || 0);
+                    const eventDateKey = this.normalizeEventDate(startDate);
+                    const overrideDateKey = identity.recurrenceDateKey || eventDateKey;
+                    return {
+                        event: existingEvent,
+                        sourceUid,
+                        eventDateKey,
+                        isOverride: Boolean(identity.overrideKey),
+                        overrideDateKey
+                    };
+                }).filter(Boolean);
+
+                const overridesByUidDate = new Set();
+                eventMetadata.forEach(item => {
+                    if (!item.isOverride || !item.sourceUid || !item.overrideDateKey) {
+                        return;
+                    }
+                    overridesByUidDate.add(`${item.sourceUid.toLowerCase()}::${item.overrideDateKey}`);
+                });
+
+                // Flatten by shadowing source events when an override exists for same uid+date.
+                // Keep all unrelated occurrences so recurring series can still match non-overridden dates.
+                const flattened = eventMetadata.filter(item => {
+                    if (item.isOverride) return true;
+                    if (!item.sourceUid || !item.eventDateKey) return true;
+                    const shadowKey = `${item.sourceUid.toLowerCase()}::${item.eventDateKey}`;
+                    return !overridesByUidDate.has(shadowKey);
+                }).map(item => item.event);
+
+                return dedupeEventsByIdentifier(flattened);
+            };
+
             // Keep the tighter, multi-window logic scoped to identifier-based edits only.
             // For normal scraper runs, use the original single-window approach.
             if (!hasIdentifier) {
@@ -1270,7 +1329,9 @@ class ScriptableAdapter {
                         console.log(`📱 Scriptable: Related[${index + 1}] "${existing.title || '(no title)'}" @ ${startIso}`);
                     });
                 }
-                return existingEvents;
+                const flattenedEvents = classifyEventsForMatching(existingEvents);
+                console.log(`📱 Scriptable: Existing events flattened=${flattenedEvents.length} (raw=${existingEvents.length})`);
+                return flattenedEvents;
             }
 
             // Identifier edit: only use the old visible date (pre-edit).
@@ -1308,12 +1369,185 @@ class ScriptableAdapter {
                     console.log(`📱 Scriptable: Related[${index + 1}] "${existing.title || '(no title)'}" @ ${startIso}`);
                 });
             }
-            return allEvents;
+            const flattenedEvents = classifyEventsForMatching(allEvents);
+            console.log(`📱 Scriptable: Existing events flattened=${flattenedEvents.length} (raw=${allEvents.length})`);
+            return flattenedEvents;
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);
             return [];
         }
+    }
+
+    isEventRecurring(event) {
+        if (!event || typeof event !== 'object') return false;
+        if (typeof event.isRecurring === 'boolean') {
+            return event.isRecurring;
+        }
+        if (typeof event.recurrenceRule === 'string' && event.recurrenceRule.trim().length > 0) {
+            return true;
+        }
+        if (Array.isArray(event.recurrenceRules) && event.recurrenceRules.length > 0) {
+            return true;
+        }
+        const notes = String(event.notes || '').toLowerCase();
+        if (notes.includes('recurrence:') || notes.includes('rrule')) {
+            return true;
+        }
+        return false;
+    }
+
+    getEventIdentifier(event) {
+        if (!event || typeof event !== 'object') return '';
+        const uid = this.getEventUid(event);
+        const startDate = event.startDate instanceof Date
+            ? event.startDate
+            : new Date(event.startDate || 0);
+        const startIso = startDate instanceof Date && !isNaN(startDate.getTime())
+            ? startDate.toISOString()
+            : '';
+        const title = String(event.title || '').trim().toLowerCase();
+        return [uid, startIso, title].join('|');
+    }
+
+    normalizeOverrideUid(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).trim();
+    }
+
+    normalizeOverrideRecurrenceId(value) {
+        if (value === null || value === undefined) return '';
+        const trimmed = String(value).trim();
+        if (!trimmed) return '';
+        const withTimezoneMatch = trimmed.match(/^TZID=([^:]+):(\d{8}(?:T\d{4,6}Z?)?)$/i);
+        if (withTimezoneMatch) {
+            const timezone = withTimezoneMatch[1].trim();
+            const recurrenceValue = withTimezoneMatch[2].toUpperCase();
+            if (!timezone) return '';
+            return `TZID=${timezone}:${recurrenceValue}`;
+        }
+        const withoutTimezoneMatch = trimmed.match(/^(\d{8}(?:T\d{4,6}Z?)?)$/i);
+        if (withoutTimezoneMatch) {
+            return withoutTimezoneMatch[1].toUpperCase();
+        }
+        return '';
+    }
+
+    normalizeEventDate(dateInput) {
+        if (!dateInput) return '';
+        const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+        if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    buildOverrideKey(overrideUid, overrideRecurrenceId) {
+        const uid = this.normalizeOverrideUid(overrideUid);
+        const recurrenceId = this.normalizeOverrideRecurrenceId(overrideRecurrenceId);
+        if (!uid || !recurrenceId) return '';
+        return `${uid.toLowerCase()}::${recurrenceId}`;
+    }
+
+    parseScriptableIdentifier(value) {
+        if (!value) return { uid: null, recurrenceDate: null };
+        const raw = String(value).trim();
+        if (!raw) return { uid: null, recurrenceDate: null };
+        const colonIndex = raw.indexOf(':');
+        const afterColon = colonIndex >= 0 ? raw.slice(colonIndex + 1) : raw;
+        const ridMatch = afterColon.match(/\/RID=(\d+)/i);
+        const uid = ridMatch ? afterColon.slice(0, ridMatch.index) : afterColon;
+        return {
+            uid: uid && uid.length > 0 ? uid : null,
+            recurrenceDate: null
+        };
+    }
+
+    parseNotesIntoFields(notes) {
+        const fields = {};
+        if (!notes || typeof notes !== 'string') return fields;
+        const lines = notes.split('\n');
+        const aliasToCanonical = {
+            'overrideuid': 'overrideUid',
+            'overriderecurrenceid': 'overrideRecurrenceId',
+            'uid': 'uid',
+            'identifier': 'identifier',
+            'id': 'id',
+            'recurrence': 'recurrence'
+        };
+        const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
+        let currentKey = null;
+        let currentValue = '';
+        lines.forEach((line, index) => {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > 0) {
+                if (currentKey && currentValue) {
+                    const normalizedKey = normalize(currentKey);
+                    const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
+                        ? aliasToCanonical[normalizedKey]
+                        : currentKey;
+                    fields[canonicalKey] = currentValue;
+                }
+                const rawKey = line.substring(0, colonIndex).trim();
+                const rawValue = line.substring(colonIndex + 1).trim();
+                if (rawKey) {
+                    currentKey = rawKey;
+                    currentValue = rawValue;
+                }
+            } else if (currentKey && line.trim()) {
+                currentValue += `\n${line.trim()}`;
+            }
+            if (index === lines.length - 1 && currentKey && currentValue) {
+                const normalizedKey = normalize(currentKey);
+                const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
+                    ? aliasToCanonical[normalizedKey]
+                    : currentKey;
+                fields[canonicalKey] = currentValue;
+            }
+        });
+        return fields;
+    }
+
+    getEventUid(event) {
+        if (!event || typeof event !== 'object') return '';
+        const fields = this.parseNotesIntoFields(event.notes || '');
+        const identifierInfo = this.parseScriptableIdentifier(event.identifier || '');
+        const uid = identifierInfo.uid ||
+            this.normalizeOverrideUid(fields.uid || fields.identifier || fields.id || '');
+        return uid || '';
+    }
+
+    getEventOverrideIdentity(event) {
+        if (!event || typeof event !== 'object') {
+            return { overrideUid: '', overrideRecurrenceId: '', overrideKey: '', sourceUid: '', recurrenceDateKey: '' };
+        }
+        const fields = this.parseNotesIntoFields(event.notes || '');
+        const parsedIdentifier = this.parseScriptableIdentifier(event.identifier || '');
+        const sourceUid = this.normalizeOverrideUid(
+            fields.uid ||
+            fields.identifier ||
+            fields.id ||
+            parsedIdentifier.uid ||
+            ''
+        );
+        const overrideUid = this.normalizeOverrideUid(fields.overrideUid || event.overrideUid || '');
+        const overrideRecurrenceId = this.normalizeOverrideRecurrenceId(
+            fields.overrideRecurrenceId || event.overrideRecurrenceId || ''
+        );
+        const recurrenceDate = event.startDate instanceof Date
+            ? event.startDate
+            : new Date(event.startDate || 0);
+        const recurrenceDateKey = recurrenceDate instanceof Date && !isNaN(recurrenceDate.getTime())
+            ? this.normalizeEventDate(recurrenceDate)
+            : '';
+        return {
+            overrideUid,
+            overrideRecurrenceId,
+            overrideKey: this.buildOverrideKey(overrideUid, overrideRecurrenceId),
+            sourceUid,
+            recurrenceDateKey
+        };
     }
     
     // Execute calendar actions determined by shared-core
@@ -1350,22 +1584,24 @@ class ScriptableAdapter {
                             const overrideRecurrenceId = typeof event.overrideRecurrenceId === 'string' ? event.overrideRecurrenceId.trim() : '';
                             const hasOverrideUid = overrideUid.length > 0;
                             const hasOverrideRecurrenceId = overrideRecurrenceId.length > 0;
+                            const writeAction = String(event._writeAction || '').toLowerCase() || 'update';
 
                             if (hasOverrideUid !== hasOverrideRecurrenceId) {
                                 throw new Error('Override identity requires both overrideUid and overrideRecurrenceId');
                             }
 
+                            if (writeAction === 'create') {
+                                actionCounts.create.push(event.title);
+                                await this.createCalendarEvent(event, calendar);
+                                processedCount++;
+                                break;
+                            }
+
                             if (hasOverrideUid && hasOverrideRecurrenceId) {
-                                const targetOverrideKey = `${overrideUid.toLowerCase()}::${overrideRecurrenceId}`;
-                                const existingKey = typeof event._existingKey === 'string' ? event._existingKey : '';
-                                const overrideMergeAllowed = existingKey === targetOverrideKey;
-                                if (!overrideMergeAllowed) {
-                                    const keyLabel = existingKey || 'none';
-                                    console.log(`📱 Scriptable: Prevented override merge "${event.title}" (existingKey=${keyLabel}) - creating new override`);
-                                    actionCounts.create.push(event.title);
-                                    await this.createCalendarEvent(event, calendar);
-                                    processedCount++;
-                                    break;
+                                const targetOverrideKey = this.buildOverrideKey(overrideUid, overrideRecurrenceId);
+                                const existingKey = this.normalizeOverrideUid(event._existingKey || '');
+                                if (existingKey && existingKey !== targetOverrideKey) {
+                                    console.log(`📱 Scriptable: Override key mismatch "${event.title}" existing=${existingKey} target=${targetOverrideKey}`);
                                 }
                             }
 
@@ -5377,6 +5613,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     normalizeWriteAction(event) {
+        const explicitWriteAction = String(event?._writeAction || '').toLowerCase().trim();
+        if (explicitWriteAction === 'update') return 'merge';
+        if (explicitWriteAction === 'create') return 'new';
+        if (explicitWriteAction === 'skip') return 'conflict';
         const action = String(event?._action || '').toLowerCase();
         if (!action) return null;
         if (action === 'key_conflict' || action === 'time_conflict') return 'conflict';
