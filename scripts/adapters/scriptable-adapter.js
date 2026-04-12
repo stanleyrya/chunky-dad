@@ -1584,17 +1584,9 @@ class ScriptableAdapter {
                             const overrideRecurrenceId = typeof event.overrideRecurrenceId === 'string' ? event.overrideRecurrenceId.trim() : '';
                             const hasOverrideUid = overrideUid.length > 0;
                             const hasOverrideRecurrenceId = overrideRecurrenceId.length > 0;
-                            const writeAction = String(event._writeAction || '').toLowerCase() || 'update';
 
                             if (hasOverrideUid !== hasOverrideRecurrenceId) {
                                 throw new Error('Override identity requires both overrideUid and overrideRecurrenceId');
-                            }
-
-                            if (writeAction === 'create') {
-                                actionCounts.create.push(event.title);
-                                await this.createCalendarEvent(event, calendar);
-                                processedCount++;
-                                break;
                             }
 
                             if (hasOverrideUid && hasOverrideRecurrenceId) {
@@ -5613,10 +5605,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
     }
 
     normalizeWriteAction(event) {
-        const explicitWriteAction = String(event?._writeAction || '').toLowerCase().trim();
-        if (explicitWriteAction === 'update') return 'merge';
-        if (explicitWriteAction === 'create') return 'new';
-        if (explicitWriteAction === 'skip') return 'conflict';
         const action = String(event?._action || '').toLowerCase();
         if (!action) return null;
         if (action === 'key_conflict' || action === 'time_conflict') return 'conflict';

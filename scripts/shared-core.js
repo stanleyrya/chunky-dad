@@ -1722,15 +1722,6 @@ class SharedCore {
         };
     }
 
-    determineWriteActionForAnalysis(analysis) {
-        const action = String(analysis && analysis.action ? analysis.action : '').toLowerCase();
-        if (!action) return null;
-        if (action === 'merge') return 'update';
-        if (action === 'new') return 'create';
-        if (action === 'conflict') return 'skip';
-        return 'other';
-    }
-
     finalizeAnalysisResult(event, analysis) {
         const result = analysis && typeof analysis === 'object'
             ? { ...analysis }
@@ -1749,7 +1740,6 @@ class SharedCore {
             }
         }
 
-        result.writeAction = this.determineWriteActionForAnalysis(result);
         return result;
     }
 
@@ -2542,7 +2532,7 @@ class SharedCore {
         const excludeFields = new Set([
             'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
             'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_writeAction', '_conflicts', '_parserConfig', '_fieldPriorities',
+            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
             '_original', '_mergeInfo', '_changes', '_mergeDiff',
             'originalTitle', 'name', // These are usually duplicates of title
             // Scriptable-specific properties that shouldn't be in notes
@@ -2641,11 +2631,9 @@ class SharedCore {
                 action: analysis.action,
                 reason: analysis.reason,
                 sourceEvent: Boolean(analysis.sourceEvent),
-                hasOverrideIdentity: Boolean(analysis.overrideIdentity),
-                writeAction: analysis.writeAction || this.determineWriteActionForAnalysis(analysis)
+                hasOverrideIdentity: Boolean(analysis.overrideIdentity)
             };
             analyzedEvent._action = analysis.action;
-            analyzedEvent._writeAction = analysis.writeAction || this.determineWriteActionForAnalysis(analysis);
             
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
