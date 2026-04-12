@@ -1545,32 +1545,26 @@ class ScriptableAdapter {
             // Show event actions summary if available
             const allEvents = this.getAllEventsFromResults(results);
             if (allEvents && allEvents.length > 0) {
-                const actionsCount = {
-                    new: 0, add: 0, merge: 0, conflict: 0, enriched: 0
-                };
-                
-                let hasActions = false;
-                allEvents.forEach(event => {
-                    if (event._action) {
-                        hasActions = true;
-                        const action = event._action.toLowerCase();
-                        if (actionsCount.hasOwnProperty(action)) {
-                            actionsCount[action]++;
-                        }
-                    }
-                });
-                
-                if (hasActions) {
-                    console.log('\n🎯 Event Actions:');
-                    Object.entries(actionsCount).forEach(([action, count]) => {
-                        if (count > 0) {
-                            const actionIcon = {
-                                'new': '➕', 'add': '➕', 'merge': '🔄',
-                                'conflict': '⚠️', 'enriched': '✨'
-                            }[action] || '❓';
-                            console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count}`);
-                        }
-                    });
+                const intentCounts = this.countMetricsActions(allEvents);
+                const writeCounts = this.countMetricsCalendarActions(allEvents);
+                const hasIntentCounts = Object.values(intentCounts).some(count => count > 0);
+                const hasWriteCounts = Object.values(writeCounts).some(count => count > 0);
+
+                if (hasIntentCounts) {
+                    console.log('\n🎯 Intent Actions:');
+                    if (intentCounts.new > 0) console.log(`   ➕ NEW: ${intentCounts.new}`);
+                    if (intentCounts.merge > 0) console.log(`   🔄 MERGE: ${intentCounts.merge}`);
+                    if (intentCounts.conflict > 0) console.log(`   ⚠️ CONFLICT: ${intentCounts.conflict}`);
+                    if (intentCounts.missing_calendar > 0) console.log(`   ❌ MISSING_CALENDAR: ${intentCounts.missing_calendar}`);
+                    if (intentCounts.other > 0) console.log(`   ❓ OTHER: ${intentCounts.other}`);
+                }
+
+                if (hasWriteCounts) {
+                    console.log('\n📝 Calendar Write Plan:');
+                    if (writeCounts.create > 0) console.log(`   ➕ CREATE: ${writeCounts.create}`);
+                    if (writeCounts.update > 0) console.log(`   🔄 UPDATE: ${writeCounts.update}`);
+                    if (writeCounts.skip > 0) console.log(`   ⏭️ SKIP: ${writeCounts.skip}`);
+                    if (writeCounts.other > 0) console.log(`   ❓ OTHER: ${writeCounts.other}`);
                 }
             }
             
@@ -1904,16 +1898,17 @@ class ScriptableAdapter {
             return;
         }
         
-        // Group events by action type
+        // Group events by intent action type (display intent can differ from write action)
         const eventsByAction = {
             new: [],
             merge: [],
             conflict: [],
+            missing_calendar: [],
             other: []
         };
         
         allEvents.forEach(event => {
-            const action = event._action || 'other';
+            const action = this.normalizeIntentAction(event) || 'other';
             if (eventsByAction[action]) {
                 eventsByAction[action].push(event);
             } else {
@@ -1926,6 +1921,7 @@ class ScriptableAdapter {
         console.log(`   ➕ New: ${eventsByAction.new.length} events`);
         console.log(`   🔀 Merge: ${eventsByAction.merge.length} events`);
         console.log(`   ⚠️  Conflict: ${eventsByAction.conflict.length} events`);
+        console.log(`   ❌ Missing Calendar: ${eventsByAction.missing_calendar.length} events`);
         if (eventsByAction.other.length > 0) {
             console.log(`   ❓ Other: ${eventsByAction.other.length} events`);
         }
@@ -1946,6 +1942,7 @@ class ScriptableAdapter {
             const event = events[0];
             console.log(`• ${event.title || event.name}`);
             console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
+            console.log(`  🎯 Intent: ${this.formatIntentActionLabel(this.normalizeIntentAction(event))} | 📝 Write: ${this.formatWriteActionLabel(this.getWriteActionFromEvent(event))}`);
             const eventDateForDisplay = new Date(event.startDate);
             // Get timezone from city configuration instead of expecting it on the event
             const timezone = this.getTimezoneForCity(event.city);
@@ -2008,23 +2005,21 @@ class ScriptableAdapter {
         // Show action breakdown if events have been analyzed
         const actionsCount = {
             new: 0,
-            add: 0,
             merge: 0,
             conflict: 0,
-            enriched: 0,
-            unknown: 0
+            missing_calendar: 0,
+            other: 0
         };
         
         let hasActions = false;
         allEvents.forEach(event => {
-            if (event._action) {
-                hasActions = true;
-                const action = event._action.toLowerCase();
-                if (actionsCount.hasOwnProperty(action)) {
-                    actionsCount[action]++;
-                } else {
-                    actionsCount.unknown++;
-                }
+            const action = this.normalizeIntentAction(event);
+            if (!action) return;
+            hasActions = true;
+            if (actionsCount.hasOwnProperty(action)) {
+                actionsCount[action]++;
+            } else {
+                actionsCount.other++;
             }
         });
         
@@ -2034,11 +2029,10 @@ class ScriptableAdapter {
                 if (count > 0) {
                     const actionIcon = {
                         'new': '➕',
-                        'add': '➕',
                         'merge': '🔄',
                         'conflict': '⚠️',
-                        'enriched': '✨',
-                        'unknown': '❓'
+                        'missing_calendar': '❌',
+                        'other': '❓'
                     }[action] || '❓';
                     
                     console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count} events`);
@@ -2206,14 +2200,13 @@ class ScriptableAdapter {
         const headerLogoData = await this.loadHeaderLogoData();
         const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
         
-        // Group events by their pre-analyzed actions (set by shared-core)
+        // Group events by intent actions (intent can differ from write action for overrides)
         const newEvents = [];
         const mergeEvents = [];
         const conflictEvents = [];
         
         for (const event of allEvents) {
-            // Events should already have _action set by shared-core
-            switch (event._action) {
+            switch (this.normalizeIntentAction(event)) {
                 case 'new':
                     newEvents.push(event);
                     break;
@@ -2221,8 +2214,6 @@ class ScriptableAdapter {
                     mergeEvents.push(event);
                     break;
                 case 'conflict':
-                case 'key_conflict':
-                case 'time_conflict':
                 case 'missing_calendar':
                     conflictEvents.push(event);
                     break;
@@ -2639,6 +2630,12 @@ class ScriptableAdapter {
         
         .badge-error::before {
             content: "❌ ";
+        }
+
+        .write-action-note {
+            margin: -4px 0 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
         }
         
         .conflict-info {
@@ -3782,12 +3779,15 @@ class ScriptableAdapter {
     
     // Generate HTML for individual event card
     generateEventCard(event) {
+        const intentAction = this.normalizeIntentAction(event) || 'other';
+        const writeAction = this.getWriteActionFromEvent(event);
         const actionBadge = {
             'new': '<span class="action-badge badge-new">NEW</span>',
             'merge': '<span class="action-badge badge-merge">MERGE</span>',
             'conflict': '<span class="action-badge badge-warning">CONFLICT</span>',
             'missing_calendar': '<span class="action-badge badge-error">MISSING CALENDAR</span>'
-        }[event._action] || '';
+        }[intentAction] || '<span class="action-badge badge-warning">OTHER</span>';
+        const actionNote = `<div class="write-action-note">Intent: ${this.formatIntentActionLabel(intentAction)} • Write: ${this.formatWriteActionLabel(writeAction)}</div>`;
         
         const eventDate = new Date(event.startDate);
         const endDate = event.endDate ? new Date(event.endDate) : null;
@@ -3833,6 +3833,7 @@ class ScriptableAdapter {
         let html = `
         <div class="event-card">
             ${actionBadge}
+            ${actionNote}
             <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
             
             <!-- Main Event Info -->
@@ -3967,7 +3968,7 @@ class ScriptableAdapter {
             </div>
             
             <!-- Show comparison for all non-new events with original data -->
-            ${event._original && event._action !== 'new' ? (() => {
+            ${event._original && this.normalizeIntentAction(event) !== 'new' ? (() => {
                 const hasDifferences = this.hasEventDifferences(event);
                 const eventId = event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
                 // Decode HTML entities before creating safe ID
@@ -5024,18 +5025,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const alert = new Alert();
         alert.title = "Execute Calendar Actions?";
         
-        // Count actions by type
-        const actionCounts = {};
-        analyzedEvents.forEach(event => {
-            const action = event._action || 'unknown';
-            actionCounts[action] = (actionCounts[action] || 0) + 1;
-        });
+        // Count actions by type (intent and write)
+        const intentCounts = this.countMetricsActions(analyzedEvents);
+        const writeCounts = this.countMetricsCalendarActions(analyzedEvents);
         
         let message = "Ready to execute the following calendar actions:\n\n";
-        if (actionCounts.new) message += `➕ Create ${actionCounts.new} new events\n`;
-        if (actionCounts.merge) message += `🔄 Merge ${actionCounts.merge} events\n`;
-        if (actionCounts.conflict) message += `⚠️ Skip ${actionCounts.conflict} conflicted events\n`;
-        if (actionCounts.missing_calendar) message += `❌ Skip ${actionCounts.missing_calendar} events (missing calendars)\n`;
+        if (intentCounts.new) message += `🎯 Intent NEW: ${intentCounts.new} events\n`;
+        if (intentCounts.merge) message += `🎯 Intent MERGE: ${intentCounts.merge} events\n`;
+        if (intentCounts.conflict) message += `🎯 Intent CONFLICT: ${intentCounts.conflict} events\n`;
+        if (intentCounts.new || intentCounts.merge || intentCounts.conflict) message += `\n`;
+        if (writeCounts.create) message += `➕ Create ${writeCounts.create} events\n`;
+        if (writeCounts.update) message += `🔄 Update ${writeCounts.update} events\n`;
+        if (writeCounts.skip) message += `⚠️ Skip ${writeCounts.skip} events\n`;
+        if (writeCounts.other) message += `❓ Other write actions: ${writeCounts.other}\n`;
         
         alert.message = message;
         alert.addAction("Execute");
@@ -5374,8 +5376,41 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         };
     }
 
-    normalizeMetricsIntentAction(event) {
+    normalizeWriteAction(event) {
         const action = String(event?._action || '').toLowerCase();
+        if (!action) return null;
+        if (action === 'key_conflict' || action === 'time_conflict') return 'conflict';
+        return action;
+    }
+
+    getWriteActionFromEvent(event) {
+        const action = this.normalizeWriteAction(event);
+        if (!action) return null;
+        if (action === 'new') return 'create';
+        if (action === 'merge') return 'update';
+        if (action === 'conflict' || action === 'missing_calendar') return 'skip';
+        return 'other';
+    }
+
+    formatIntentActionLabel(action) {
+        const normalized = String(action || '').toLowerCase();
+        if (normalized === 'merge') return 'MERGE';
+        if (normalized === 'new') return 'NEW';
+        if (normalized === 'conflict') return 'CONFLICT';
+        if (normalized === 'missing_calendar') return 'MISSING_CALENDAR';
+        return 'OTHER';
+    }
+
+    formatWriteActionLabel(action) {
+        const normalized = String(action || '').toLowerCase();
+        if (normalized === 'create') return 'CREATE';
+        if (normalized === 'update') return 'UPDATE';
+        if (normalized === 'skip') return 'SKIP';
+        return 'OTHER';
+    }
+
+    normalizeIntentAction(event) {
+        const action = this.normalizeWriteAction(event);
         if (!action) return null;
         if (action !== 'new') return action;
 
@@ -5391,6 +5426,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             return 'merge';
         }
         return 'new';
+    }
+
+    normalizeMetricsIntentAction(event) {
+        return this.normalizeIntentAction(event);
     }
 
     countMetricsActions(events) {
@@ -5432,7 +5471,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const counts = this.createMetricsCalendarActionCounts();
         if (!Array.isArray(events)) return counts;
         events.forEach(event => {
-            const action = String(event?._action || '').toLowerCase();
+            const action = this.normalizeWriteAction(event);
             if (!action) return;
             if (action === 'new') {
                 counts.create += 1;
@@ -5457,7 +5496,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 countsByParser[parserName] = this.createMetricsCalendarActionCounts();
             }
             const counts = countsByParser[parserName];
-            const action = String(event?._action || '').toLowerCase();
+            const action = this.normalizeWriteAction(event);
             if (!action) return;
             if (action === 'new') {
                 counts.create += 1;
