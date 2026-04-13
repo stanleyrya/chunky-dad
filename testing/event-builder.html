@@ -703,6 +703,30 @@
       line-height: 1.35;
     }
 
+    .series-override-warning-list button {
+      border: none;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      padding: 0;
+      text-align: left;
+      font: inherit;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 2px;
+    }
+
+    .series-override-warning-list button:hover:not(:disabled) {
+      color: var(--accent);
+      text-decoration-style: solid;
+    }
+
+    .series-override-warning-list button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      text-decoration: none;
+    }
+
     .existing-selection-summary strong {
       color: var(--text-primary);
     }
@@ -711,6 +735,16 @@
       display: inline-flex;
       gap: 0.4rem;
       flex-wrap: wrap;
+    }
+
+    .existing-selection-actions .action-button.is-toggle-active {
+      background: rgba(183, 28, 28, 0.35);
+      border-color: rgba(255, 120, 120, 0.65);
+      color: #ffe4e4;
+    }
+
+    .existing-selection-actions .action-button.is-toggle-active:hover:not(:disabled) {
+      background: rgba(183, 28, 28, 0.48);
     }
 
     .action-button.is-compact {
@@ -1274,13 +1308,8 @@
       align-items: center;
     }
 
-    .recurrence-delete-override {
-      display: grid;
-      gap: 0.24rem;
-    }
-
-    .recurrence-delete-override .checkbox-label {
-      font-size: 0.78rem;
+    .recurrence-override-warning {
+      margin-top: 0.55rem;
     }
 
     .recurrence-builder .field-row:last-of-type {
@@ -1536,6 +1565,10 @@
                   <i class="bi bi-search" aria-hidden="true"></i>
                   <span>Change</span>
                 </button>
+                <button type="button" class="ghost-button action-button is-compact is-hidden" id="existing-delete-override-summary">
+                  <i class="bi bi-calendar-x" aria-hidden="true"></i>
+                  <span>Delete override on Add</span>
+                </button>
                 <button type="button" class="ghost-button action-button is-compact" id="existing-copy-summary">
                   <i class="bi bi-files" aria-hidden="true"></i>
                   <span>Copy to New</span>
@@ -1761,16 +1794,13 @@
               </div>
 
               <p class="recurrence-summary" id="recurrence-summary">Does not repeat.</p>
+              <div class="series-override-warning recurrence-override-warning is-hidden" id="recurrence-override-warning">
+                <p id="recurrence-override-warning-text"></p>
+                <ul class="series-override-warning-list" id="recurrence-override-warning-list"></ul>
+              </div>
               <div class="recurrence-edit-lock is-hidden" id="recurrence-edit-lock">
                 <p id="recurrence-edit-lock-text">Recurrence rules are locked while editing one occurrence.</p>
                 <p class="recurrence-edit-lock-subtext" id="recurrence-edit-lock-subtext">Switch to the base series to edit recurrence rules, or tell dad for help.</p>
-                <div class="recurrence-delete-override is-hidden" id="recurrence-delete-override-group">
-                  <label class="checkbox-label" for="recurrence-delete-override-toggle">
-                    <input type="checkbox" id="recurrence-delete-override-toggle">
-                    <span>Delete this existing override when exporting Add to Calendar</span>
-                  </label>
-                  <small id="recurrence-delete-override-hint">Occurrence edits export as standalone override events.</small>
-                </div>
                 <div class="recurrence-edit-lock-actions">
                   <button type="button" class="ghost-button action-button is-compact" id="recurrence-edit-series-button">Edit base series</button>
                   <button type="button" class="secondary-button action-button is-compact" id="recurrence-edit-lock-tell-dad">
@@ -2193,9 +2223,6 @@
         dom.recurrenceEditLock = document.getElementById('recurrence-edit-lock');
         dom.recurrenceEditLockText = document.getElementById('recurrence-edit-lock-text');
         dom.recurrenceEditLockSubtext = document.getElementById('recurrence-edit-lock-subtext');
-        dom.recurrenceDeleteOverrideGroup = document.getElementById('recurrence-delete-override-group');
-        dom.recurrenceDeleteOverrideToggle = document.getElementById('recurrence-delete-override-toggle');
-        dom.recurrenceDeleteOverrideHint = document.getElementById('recurrence-delete-override-hint');
         dom.recurrenceEditSeriesButton = document.getElementById('recurrence-edit-series-button');
         dom.recurrenceEditLockTellDadButton = document.getElementById('recurrence-edit-lock-tell-dad');
         dom.websiteInput = document.getElementById('event-website');
@@ -2246,9 +2273,13 @@
         dom.existingClearButton = document.getElementById('existing-clear');
         dom.existingSelectionSummary = document.getElementById('existing-selection-summary');
         dom.existingSelectionText = document.getElementById('existing-selection-text');
+        dom.existingDeleteOverrideSummaryButton = document.getElementById('existing-delete-override-summary');
         dom.seriesOverrideWarning = document.getElementById('series-override-warning');
         dom.seriesOverrideWarningText = document.getElementById('series-override-warning-text');
         dom.seriesOverrideWarningList = document.getElementById('series-override-warning-list');
+        dom.recurrenceOverrideWarning = document.getElementById('recurrence-override-warning');
+        dom.recurrenceOverrideWarningText = document.getElementById('recurrence-override-warning-text');
+        dom.recurrenceOverrideWarningList = document.getElementById('recurrence-override-warning-list');
         dom.existingChangeButton = document.getElementById('existing-change');
         dom.existingCopySummaryButton = document.getElementById('existing-copy-summary');
         dom.existingClearSummaryButton = document.getElementById('existing-clear-summary');
@@ -4904,6 +4935,101 @@
         return details ? `${name} — ${details}` : name;
       }
 
+      function isSameOverrideReferenceDate(dateA, dateB) {
+        if (!isValidDateObject(dateA) || !isValidDateObject(dateB)) return false;
+        return formatDateKey(dateA) === formatDateKey(dateB);
+      }
+
+      function findMatchingOccurrenceResult(baseEvent, override, index) {
+        if (!baseEvent || !override || !index) return null;
+        const overrideDate = getOverrideReferenceDate(override);
+        const occurrenceResults = buildOccurrenceResultsForEvent(index, baseEvent, {
+          includePast: true,
+          maxCount: OCCURRENCE_LOOKAHEAD_DAYS,
+          windowDays: OCCURRENCE_LOOKAHEAD_DAYS * 2
+        });
+        return occurrenceResults.find(result => {
+          if (!result || result.type !== 'override') return false;
+          if (normalizeText(result.event && result.event.uid) !== normalizeText(override.uid)) return false;
+          const resultDate = getOverrideReferenceDate(result.event);
+          return isSameOverrideReferenceDate(resultDate, overrideDate);
+        }) || null;
+      }
+
+      function jumpToOverrideOccurrenceEdit(override) {
+        if (!override || !state || !state.city) return;
+        const index = getCachedCalendarIndexForCity(state.city);
+        if (!index) {
+          showToast('Load this city calendar before editing overrides.', 'warn');
+          return;
+        }
+        const overrideUid = normalizeText(override.uid || '');
+        const baseEvent = findBaseEventByUid(index, overrideUid);
+        if (!baseEvent) {
+          showToast('Could not find the base series for this override.', 'warn');
+          return;
+        }
+        const seriesResult = buildResultEntry({
+          event: baseEvent,
+          baseEvent,
+          type: 'series'
+        });
+        const occurrenceResult = findMatchingOccurrenceResult(baseEvent, override, index) || buildResultEntry({
+          event: override,
+          baseEvent,
+          type: 'override',
+          occurrenceDate: override.recurrenceId || override.startDate,
+          startDate: override.startDate,
+          endDate: override.endDate
+        });
+        if (!seriesResult || !occurrenceResult) {
+          showToast('Could not load this override for editing.', 'warn');
+          return;
+        }
+        selectedExistingResult = seriesResult;
+        selectedExistingOccurrence = occurrenceResult;
+        selectedExistingMode = 'occurrence';
+        pendingExistingSelectionId = '';
+        pendingExistingOccurrenceId = '';
+        applyExistingSelection();
+      }
+
+      function renderSeriesOverrideWarningList(listElement, context) {
+        if (!listElement) return;
+        listElement.innerHTML = '';
+        if (!context || !Array.isArray(context.overrides) || !context.overrides.length) return;
+        const { baseEvent, overrides } = context;
+        const displayOverrides = [...overrides]
+          .sort((a, b) => {
+            const dateA = getOverrideReferenceDate(a);
+            const dateB = getOverrideReferenceDate(b);
+            const timeA = dateA ? dateA.getTime() : 0;
+            const timeB = dateB ? dateB.getTime() : 0;
+            return timeB - timeA;
+          })
+          .slice(0, 6);
+        displayOverrides.forEach(override => {
+          const itemText = formatSeriesOverrideListItem(override, baseEvent);
+          if (!itemText) return;
+          const item = document.createElement('li');
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = itemText;
+          button.setAttribute('aria-label', `Edit override occurrence: ${itemText}`);
+          button.addEventListener('click', () => {
+            jumpToOverrideOccurrenceEdit(override);
+          });
+          item.appendChild(button);
+          listElement.appendChild(item);
+        });
+        const remaining = overrides.length - displayOverrides.length;
+        if (remaining > 0) {
+          const moreItem = document.createElement('li');
+          moreItem.textContent = `+${remaining} more override${remaining === 1 ? '' : 's'}.`;
+          listElement.appendChild(moreItem);
+        }
+      }
+
       function buildSeriesOverrideWarningText(context) {
         if (!context || !Array.isArray(context.overrides) || !context.overrides.length) {
           return '';
@@ -4918,41 +5044,25 @@
       }
 
       function updateSeriesOverrideWarningUi() {
-        if (!dom.seriesOverrideWarning || !dom.seriesOverrideWarningText || !dom.seriesOverrideWarningList) return;
+        if (!dom.seriesOverrideWarning || !dom.seriesOverrideWarningText || !dom.seriesOverrideWarningList
+          || !dom.recurrenceOverrideWarning || !dom.recurrenceOverrideWarningText || !dom.recurrenceOverrideWarningList) return;
         const context = getEditingSeriesOverrideContext();
         applySeriesOverrideSectionDefaults(context);
         const shouldShow = Boolean(context && context.overrides.length);
         dom.seriesOverrideWarning.classList.toggle('is-hidden', !shouldShow);
+        dom.recurrenceOverrideWarning.classList.toggle('is-hidden', !shouldShow);
         if (!shouldShow) {
           dom.seriesOverrideWarningText.textContent = '';
           dom.seriesOverrideWarningList.innerHTML = '';
+          dom.recurrenceOverrideWarningText.textContent = '';
+          dom.recurrenceOverrideWarningList.innerHTML = '';
           return;
         }
-        const { baseEvent, overrides } = context;
-        dom.seriesOverrideWarningText.textContent = buildSeriesOverrideWarningText(context);
-        const displayOverrides = [...overrides]
-          .sort((a, b) => {
-            const dateA = getOverrideReferenceDate(a);
-            const dateB = getOverrideReferenceDate(b);
-            const timeA = dateA ? dateA.getTime() : 0;
-            const timeB = dateB ? dateB.getTime() : 0;
-            return timeB - timeA;
-          })
-          .slice(0, 6);
-        dom.seriesOverrideWarningList.innerHTML = '';
-        displayOverrides.forEach(override => {
-          const itemText = formatSeriesOverrideListItem(override, baseEvent);
-          if (!itemText) return;
-          const item = document.createElement('li');
-          item.textContent = itemText;
-          dom.seriesOverrideWarningList.appendChild(item);
-        });
-        const remaining = overrides.length - displayOverrides.length;
-        if (remaining > 0) {
-          const moreItem = document.createElement('li');
-          moreItem.textContent = `+${remaining} more override${remaining === 1 ? '' : 's'}.`;
-          dom.seriesOverrideWarningList.appendChild(moreItem);
-        }
+        const warningText = buildSeriesOverrideWarningText(context);
+        dom.seriesOverrideWarningText.textContent = warningText;
+        dom.recurrenceOverrideWarningText.textContent = warningText;
+        renderSeriesOverrideWarningList(dom.seriesOverrideWarningList, context);
+        renderSeriesOverrideWarningList(dom.recurrenceOverrideWarningList, context);
       }
 
       function refreshEditingContextUi() {
@@ -5402,9 +5512,6 @@
         if (dom.facebookInput) dom.facebookInput.value = state.facebook || '';
         if (dom.gmapsInput) dom.gmapsInput.value = state.gmaps || '';
         if (dom.imageInput) dom.imageInput.value = state.image || '';
-        if (dom.recurrenceDeleteOverrideToggle) {
-          dom.recurrenceDeleteOverrideToggle.checked = Boolean(state.deleteOverride);
-        }
         updateTimeNotes();
         applyRecurrenceStateToForm();
         syncLinkFieldStates();
@@ -5661,9 +5768,13 @@
             openTellDadEmail(dom.recurrenceEditLockTellDadButton, { requestLabel, reason, requestedAction });
           });
         }
-        if (dom.recurrenceDeleteOverrideToggle) {
-          dom.recurrenceDeleteOverrideToggle.addEventListener('change', event => {
-            state.deleteOverride = Boolean(event.target.checked);
+        if (dom.existingDeleteOverrideSummaryButton) {
+          dom.existingDeleteOverrideSummaryButton.addEventListener('click', () => {
+            if (!isEditingCustomOverrideMode()) {
+              showToast('Select a custom override occurrence first.', 'warn');
+              return;
+            }
+            state.deleteOverride = !Boolean(state.deleteOverride);
             refreshUi();
           });
         }
@@ -6500,18 +6611,7 @@
         if (!canDeleteOverride && state && state.deleteOverride) {
           state.deleteOverride = false;
         }
-        if (dom.recurrenceDeleteOverrideGroup) {
-          dom.recurrenceDeleteOverrideGroup.classList.toggle('is-hidden', !canDeleteOverride);
-        }
-        if (dom.recurrenceDeleteOverrideToggle) {
-          dom.recurrenceDeleteOverrideToggle.checked = canDeleteOverride && Boolean(state && state.deleteOverride);
-          dom.recurrenceDeleteOverrideToggle.disabled = !canDeleteOverride;
-        }
-        if (dom.recurrenceDeleteOverrideHint) {
-          dom.recurrenceDeleteOverrideHint.textContent = canDeleteOverride
-            ? 'Exports this standalone override UID as CANCELLED using an increased sequence.'
-            : '';
-        }
+        updateOccurrenceSummaryDeleteAction(canDeleteOverride);
         dom.recurrenceEditLock.classList.toggle('is-hidden', !isLocked);
         if (!isLocked) {
           if (dom.recurrenceEditLockSubtext) {
@@ -7467,7 +7567,26 @@
         showToast('Now editing the base series.', 'info');
       }
 
+      function updateOccurrenceSummaryDeleteAction(canDeleteOverride = isEditingCustomOverrideMode()) {
+        if (!dom.existingDeleteOverrideSummaryButton) return;
+        dom.existingDeleteOverrideSummaryButton.classList.toggle('is-hidden', !canDeleteOverride);
+        dom.existingDeleteOverrideSummaryButton.disabled = !canDeleteOverride;
+        const isDeletingOverride = Boolean(canDeleteOverride && state && state.deleteOverride);
+        const label = isDeletingOverride ? 'Keep override on Add' : 'Delete override on Add';
+        dom.existingDeleteOverrideSummaryButton.innerHTML = `<i class="bi bi-calendar-x" aria-hidden="true"></i><span>${label}</span>`;
+        dom.existingDeleteOverrideSummaryButton.classList.toggle('is-toggle-active', isDeletingOverride);
+        if (isDeletingOverride) {
+          dom.existingDeleteOverrideSummaryButton.setAttribute(
+            'title',
+            'Add exports this standalone override UID as CANCELLED with an increased sequence.'
+          );
+        } else {
+          dom.existingDeleteOverrideSummaryButton.removeAttribute('title');
+        }
+      }
+
       function updateActionButtonsState() {
+        updateOccurrenceSummaryDeleteAction();
         if (dom.addToCalendarButton) {
           const addDisabledReason = getAddToCalendarDisabledReason();
           dom.addToCalendarButton.disabled = Boolean(addDisabledReason);
