@@ -624,6 +624,7 @@
             console.info('📦 Testing module availability...');
             
             const requiredModules = {
+                'EventSchema': typeof EventSchema !== 'undefined',
                 'SharedCore': typeof SharedCore !== 'undefined',
                 'WebAdapter': typeof WebAdapter !== 'undefined',
                 'EventbriteParser': typeof EventbriteParser !== 'undefined',
@@ -659,7 +660,12 @@
             // Test basic functionality of loaded modules
             if (typeof SharedCore !== 'undefined') {
                 try {
-                    const sharedCore = new SharedCore();
+                    const testCities = (window.scraperConfig && window.scraperConfig.cities)
+                        ? window.scraperConfig.cities
+                        : { test: { patterns: ['test'] } };
+                    const sharedCore = new SharedCore(testCities, {
+                        eventSchema: EventSchema
+                    });
                     console.success('✅ SharedCore instantiated successfully');
                 } catch (error) {
                     console.error(`❌ SharedCore instantiation failed: ${error.message}`);

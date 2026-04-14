@@ -18,16 +18,16 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
-const schemaHelpers = typeof EventSchema !== 'undefined'
-    ? EventSchema
-    : null;
-
 class ScriptableUrlParser {
-    constructor(config = {}) {
+    constructor(config = {}, options = {}) {
         this.config = {
             source: 'scriptable-input',
             ...config
         };
+        if (!options.eventSchema || typeof options.eventSchema.canonicalizeEventKey !== 'function') {
+            throw new Error('ScriptableUrlParser requires eventSchema dependency');
+        }
+        this.eventSchema = options.eventSchema;
     }
 
     parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -177,10 +177,7 @@ class ScriptableUrlParser {
     }
 
     getCanonicalKey(key) {
-        if (schemaHelpers && typeof schemaHelpers.canonicalizeEventKey === 'function') {
-            return schemaHelpers.canonicalizeEventKey(key);
-        }
-        return key;
+        return this.eventSchema.canonicalizeEventKey(key);
     }
 
     normalizeValue(value) {
