@@ -356,10 +356,7 @@ logger.captureConsole();
 const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
 const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const eventSchemaModule = importModule('event-schema');
-const SharedEventSchema = eventSchemaModule && eventSchemaModule.EventSchema
-    ? eventSchemaModule.EventSchema
-    : null;
+const { EventSchema: SharedEventSchema } = importModule('event-schema');
 
 if (!SharedEventSchema || typeof SharedEventSchema.parseNotesIntoFields !== 'function') {
     throw new Error('ScriptableAdapter requires EventSchema to be loaded before adapter initialization');
@@ -1473,10 +1470,7 @@ class ScriptableAdapter {
     }
 
     parseNotesIntoFields(notes) {
-        if (SharedEventSchema && typeof SharedEventSchema.parseNotesIntoFields === 'function') {
-            return SharedEventSchema.parseNotesIntoFields(notes);
-        }
-        return {};
+        return SharedEventSchema.parseNotesIntoFields(notes);
     }
 
     getEventUid(event) {
