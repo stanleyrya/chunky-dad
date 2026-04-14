@@ -133,6 +133,27 @@ const DEFAULT_NOTES_EXCLUDED_FIELDS = new Set([
     'isDeletingOverride'
 ]);
 
+const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
+    title: 'name',
+    shortName: 'shortName',
+    city: 'city',
+    bar: 'savedBar',
+    address: 'address',
+    location: 'location',
+    description: 'description',
+    cover: 'cover',
+    startDate: 'start',
+    endDate: 'end',
+    timezone: 'timezone',
+    recurrence: 'recurrence',
+    website: 'website',
+    ticketUrl: 'ticketUrl',
+    instagram: 'instagram',
+    facebook: 'facebook',
+    gmaps: 'gmaps',
+    image: 'image'
+});
+
 function normalizeAliasKey(key) {
     return String(key || '').toLowerCase().replace(/[\s\-_]/g, '');
 }
@@ -269,10 +290,22 @@ function formatEventNotes(event, options = {}) {
     return notes.join('\n');
 }
 
+function getEventBuilderStateKey(paramKey) {
+    if (paramKey === null || paramKey === undefined) {
+        return null;
+    }
+    const canonicalKey = canonicalizeEventKey(paramKey);
+    return Object.prototype.hasOwnProperty.call(EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY, canonicalKey)
+        ? EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY[canonicalKey]
+        : null;
+}
+
 const EventSchema = {
     EVENT_KEY_ALIASES,
     URL_LIKE_FIELDS,
     DEFAULT_NOTES_EXCLUDED_FIELDS,
+    EVENT_PARAM_MAP: EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
+    EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
     normalizeAliasKey,
     canonicalizeEventKey,
     findUnescaped,
@@ -281,7 +314,8 @@ const EventSchema = {
     isValidMetadataKey,
     isUrlLikeField,
     parseNotesIntoFields,
-    formatEventNotes
+    formatEventNotes,
+    getEventBuilderStateKey
 };
 
 if (typeof module !== 'undefined' && module.exports) {

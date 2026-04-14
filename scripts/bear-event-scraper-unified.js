@@ -100,6 +100,7 @@ class BearEventScraperOrchestrator {
                     'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser
                 }
             };
+            this.validateLoadedModules('Scriptable');
         } catch (error) {
             console.error(`📱 ✗ Failed to load Scriptable modules: ${error}`);
             throw new Error(`Scriptable module loading failed: ${error.message}`);
@@ -143,6 +144,7 @@ class BearEventScraperOrchestrator {
                     'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser
                 }
             };
+            this.validateLoadedModules('Node.js');
         } catch (error) {
             console.error(`🟢 ✗ Failed to load Node.js modules: ${error}`);
             throw new Error(`Node.js module loading failed: ${error.message}`);
@@ -187,9 +189,33 @@ class BearEventScraperOrchestrator {
                 adapter: window.WebAdapter,
                 parsers
             };
+            this.validateLoadedModules('Web');
         } catch (error) {
             console.error(`🌐 ✗ Failed to load web modules: ${error}`);
             throw new Error(`Web module loading failed: ${error.message}`);
+        }
+    }
+
+    validateLoadedModules(environmentName) {
+        const schema = this.modules && this.modules.EventSchema;
+        if (!schema) {
+            throw new Error(`${environmentName} modules missing EventSchema`);
+        }
+        const requiredSchemaFns = [
+            'canonicalizeEventKey',
+            'parseNotesIntoFields',
+            'formatEventNotes',
+            'findUnescaped',
+            'unescapeText',
+            'isValidMetadataKey'
+        ];
+        requiredSchemaFns.forEach(fnName => {
+            if (typeof schema[fnName] !== 'function') {
+                throw new Error(`${environmentName} EventSchema missing required function: ${fnName}`);
+            }
+        });
+        if (!schema.DEFAULT_NOTES_EXCLUDED_FIELDS || typeof schema.DEFAULT_NOTES_EXCLUDED_FIELDS.has !== 'function') {
+            throw new Error(`${environmentName} EventSchema missing DEFAULT_NOTES_EXCLUDED_FIELDS Set`);
         }
     }
 
