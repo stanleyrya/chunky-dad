@@ -30,8 +30,26 @@ class SharedCore {
         if (!cities || typeof cities !== 'object') {
             throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-cities.js');
         }
-        if (!options.eventSchema || typeof options.eventSchema.parseNotesIntoFields !== 'function' || typeof options.eventSchema.formatEventNotes !== 'function') {
-            throw new Error('SharedCore requires eventSchema dependency with parseNotesIntoFields and formatEventNotes');
+        const schema = options.eventSchema;
+        if (!schema) {
+            throw new Error('SharedCore requires eventSchema dependency');
+        }
+        const requiredSchemaFunctions = [
+            'parseNotesIntoFields',
+            'formatEventNotes',
+            'findUnescaped',
+            'unescapeText',
+            'escapeText',
+            'isValidMetadataKey',
+            'isUrlLikeField'
+        ];
+        requiredSchemaFunctions.forEach(fnName => {
+            if (typeof schema[fnName] !== 'function') {
+                throw new Error(`SharedCore requires eventSchema.${fnName} function`);
+            }
+        });
+        if (!schema.DEFAULT_NOTES_EXCLUDED_FIELDS || typeof schema.DEFAULT_NOTES_EXCLUDED_FIELDS.has !== 'function') {
+            throw new Error('SharedCore requires eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS Set');
         }
 
         this.visitedUrls = new Set();
@@ -43,7 +61,7 @@ class SharedCore {
         
         // Store cities config for timezone assignment
         this.cities = cities;
-        this.eventSchema = options.eventSchema;
+        this.eventSchema = schema;
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
             ...SHARED_CORE_SCRIPTABLE_NOTES_EXCLUDED_FIELDS

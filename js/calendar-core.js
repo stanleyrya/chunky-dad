@@ -15,10 +15,10 @@ class CalendarCore {
     }
 
     getEventSchema() {
-        if (typeof EventSchema !== 'undefined' && EventSchema) {
-            return EventSchema;
+        if (typeof EventSchema === 'undefined' || !EventSchema) {
+            throw new Error('EventSchema is required before CalendarCore initialization');
         }
-        return null;
+        return EventSchema;
     }
 
     // Parse iCal data and extract events
@@ -525,50 +525,28 @@ class CalendarCore {
     // Find first unescaped occurrence of a character in text
     findUnescaped(text, char, startIndex = 0) {
         const schema = this.getEventSchema();
-        if (schema && typeof schema.findUnescaped === 'function') {
-            return schema.findUnescaped(text, char, startIndex);
+        if (typeof schema.findUnescaped !== 'function') {
+            throw new Error('EventSchema.findUnescaped is required');
         }
-        for (let i = startIndex; i < text.length; i++) {
-            if (text[i] === char) {
-                let backslashCount = 0;
-                for (let j = i - 1; j >= 0 && text[j] === '\\'; j--) {
-                    backslashCount++;
-                }
-                if (backslashCount % 2 === 0) {
-                    return i;
-                }
-            }
-        }
-        return -1;
+        return schema.findUnescaped(text, char, startIndex);
     }
     
     // Remove escape characters from text
     unescapeText(text) {
         const schema = this.getEventSchema();
-        if (schema && typeof schema.unescapeText === 'function') {
-            return schema.unescapeText(text);
+        if (typeof schema.unescapeText !== 'function') {
+            throw new Error('EventSchema.unescapeText is required');
         }
-        if (!text || typeof text !== 'string') {
-            return text;
-        }
-        return text
-            .replace(/\\:/g, ':')
-            .replace(/\\\\/g, '\\');
+        return schema.unescapeText(text);
     }
     
     // Check if a key is valid for metadata (words with spaces allowed, reasonable length)
     isValidMetadataKey(key) {
         const schema = this.getEventSchema();
-        if (schema && typeof schema.isValidMetadataKey === 'function') {
-            return schema.isValidMetadataKey(key);
+        if (typeof schema.isValidMetadataKey !== 'function') {
+            throw new Error('EventSchema.isValidMetadataKey is required');
         }
-        if (!key || typeof key !== 'string') {
-            return false;
-        }
-        const trimmedKey = key.trim();
-        return /^[a-zA-Z][a-zA-Z0-9\s]*[a-zA-Z0-9]$/.test(trimmedKey) &&
-               trimmedKey.length >= 2 &&
-               trimmedKey.length <= 30;
+        return schema.isValidMetadataKey(key);
     }
 
     // Parse description for key-value pairs
@@ -648,9 +626,10 @@ class CalendarCore {
                 if (this.isValidMetadataKey(unescapedKey)) {
                     const key = unescapedKey.toLowerCase();
                     const value = unescapedValue;
-                    const mappedKey = schema && typeof schema.canonicalizeEventKey === 'function'
-                        ? schema.canonicalizeEventKey(key, { context: 'notes' })
-                        : key;
+                    if (typeof schema.canonicalizeEventKey !== 'function') {
+                        throw new Error('EventSchema.canonicalizeEventKey is required');
+                    }
+                    const mappedKey = schema.canonicalizeEventKey(key, { context: 'notes' });
                     
                     
                     // Additional validation for URLs

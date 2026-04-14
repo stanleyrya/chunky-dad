@@ -5269,37 +5269,27 @@
         return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
       }
 
+      function getRequiredEventSchema() {
+        if (typeof EventSchema === 'undefined' || !EventSchema) {
+          throw new Error('Event builder requires EventSchema to be loaded before initialization');
+        }
+        if (typeof EventSchema.canonicalizeEventKey !== 'function' ||
+            typeof EventSchema.formatEventNotes !== 'function' ||
+            typeof EventSchema.getEventBuilderStateKey !== 'function') {
+          throw new Error('Event builder requires complete EventSchema helpers (canonicalizeEventKey, formatEventNotes, getEventBuilderStateKey)');
+        }
+        return EventSchema;
+      }
+
       function loadStateFromUrl(baseState) {
+        const schema = getRequiredEventSchema();
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
         let sawEditFlag = false;
-        const eventParamMap = {
-          title: 'name',
-          shortName: 'shortName',
-          city: 'city',
-          bar: 'savedBar',
-          address: 'address',
-          location: 'location',
-          description: 'description',
-          cover: 'cover',
-          startDate: 'start',
-          endDate: 'end',
-          timezone: 'timezone',
-          recurrence: 'recurrence',
-          website: 'website',
-          ticketUrl: 'ticketUrl',
-          instagram: 'instagram',
-          facebook: 'facebook',
-          gmaps: 'gmaps',
-          image: 'image'
-        };
         params.forEach((value, key) => {
           if (value == null) return;
-          const canonicalKey = (typeof EventSchema !== 'undefined' && EventSchema)
-            ? EventSchema.canonicalizeEventKey(key)
-            : key;
-          if (Object.prototype.hasOwnProperty.call(eventParamMap, canonicalKey)) {
-            const stateKey = eventParamMap[canonicalKey];
+          const stateKey = schema.getEventBuilderStateKey(key);
+          if (stateKey) {
             if (stateKey === 'start' || stateKey === 'end') {
               const sanitized = sanitizeDateTimeInput(value);
               if (sanitized) overrides[stateKey] = sanitized;
@@ -8242,10 +8232,7 @@
 
       function formatEventNotes(event) {
         if (!event || typeof event !== 'object') return '';
-        if (typeof EventSchema !== 'undefined' && EventSchema && typeof EventSchema.formatEventNotes === 'function') {
-          return EventSchema.formatEventNotes(event);
-        }
-        return '';
+        return getRequiredEventSchema().formatEventNotes(event);
       }
 
       function formatICSDateInTimezone(date, timeZone) {
