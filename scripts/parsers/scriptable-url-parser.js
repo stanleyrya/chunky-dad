@@ -18,6 +18,10 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+const schemaHelpers = typeof EventSchema !== 'undefined'
+    ? EventSchema
+    : null;
+
 class ScriptableUrlParser {
     constructor(config = {}) {
         this.config = {
@@ -173,100 +177,9 @@ class ScriptableUrlParser {
     }
 
     getCanonicalKey(key) {
-        const normalized = String(key).toLowerCase().replace(/[\s\-_]/g, '');
-        const aliasMap = {
-            'title': 'title',
-            'name': 'title',
-            'summary': 'title',
-            'eventname': 'title',
-
-            'description': 'description',
-            'desc': 'description',
-            'details': 'description',
-
-            'startdate': 'startDate',
-            'start': 'startDate',
-            'starttime': 'startTime',
-
-            'enddate': 'endDate',
-            'end': 'endDate',
-            'endtime': 'endTime',
-
-            'date': 'date',
-            'eventdate': 'date',
-
-            'venue': 'bar',
-            'bar': 'bar',
-            'host': 'bar',
-
-            'location': 'location',
-            'address': 'address',
-
-            'city': 'city',
-            'timezone': 'timezone',
-            'timezoneid': 'timezone',
-            'tz': 'timezone',
-
-            'url': 'url',
-            'link': 'url',
-            'eventurl': 'url',
-            'eventlink': 'url',
-
-            'ticketurl': 'ticketUrl',
-            'ticketlink': 'ticketUrl',
-            'ticket': 'ticketUrl',
-            'tickets': 'ticketUrl',
-
-            'gmaps': 'gmaps',
-            'googlemaps': 'gmaps',
-            'map': 'gmaps',
-
-            'image': 'image',
-            'photo': 'image',
-            'cover': 'cover',
-
-            'shortname': 'shortName',
-            'shorttitle': 'shortName',
-            'shortername': 'shorterName',
-
-            'instagram': 'instagram',
-            'facebook': 'facebook',
-            'website': 'website',
-            'twitter': 'twitter',
-
-            'key': 'key',
-            'matchkey': 'matchKey',
-
-            'identifier': 'identifier',
-            'id': 'identifier',
-
-            'overrideuid': 'overrideUid',
-            'overriderecurrenceid': 'overrideRecurrenceId',
-
-            'recurrenceid': 'recurrenceId',
-            'searchstartdate': 'searchStartDate',
-            'searchenddate': 'searchEndDate',
-            'sequence': 'sequence',
-            'sequenced': 'sequence',
-            'seq': 'sequence',
-
-            'coordinates': 'coordinates',
-            'latitude': 'lat',
-            'longitude': 'lng',
-            'lat': 'lat',
-            'lng': 'lng',
-
-            'durationminutes': 'durationMinutes',
-            'durationmins': 'durationMinutes',
-            'durationmin': 'durationMinutes',
-            'durationhours': 'durationHours',
-            'duration': 'durationMinutes'
-        };
-
-        if (aliasMap.hasOwnProperty(normalized)) {
-            return aliasMap[normalized];
+        if (schemaHelpers && typeof schemaHelpers.canonicalizeEventKey === 'function') {
+            return schemaHelpers.canonicalizeEventKey(key);
         }
-
         return key;
     }
 

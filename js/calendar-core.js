@@ -14,6 +14,13 @@ class CalendarCore {
         logger.componentInit('CALENDAR', 'Calendar core initialized');
     }
 
+    getEventSchema() {
+        if (typeof EventSchema !== 'undefined' && EventSchema) {
+            return EventSchema;
+        }
+        return null;
+    }
+
     // Parse iCal data and extract events
     parseICalData(icalText) {
         logger.time('CALENDAR', 'iCal parsing');
@@ -517,15 +524,16 @@ class CalendarCore {
     
     // Find first unescaped occurrence of a character in text
     findUnescaped(text, char, startIndex = 0) {
+        const schema = this.getEventSchema();
+        if (schema && typeof schema.findUnescaped === 'function') {
+            return schema.findUnescaped(text, char, startIndex);
+        }
         for (let i = startIndex; i < text.length; i++) {
             if (text[i] === char) {
-                // Count preceding backslashes to determine if this character is escaped
                 let backslashCount = 0;
                 for (let j = i - 1; j >= 0 && text[j] === '\\'; j--) {
                     backslashCount++;
                 }
-                
-                // If even number of backslashes (including 0), the character is not escaped
                 if (backslashCount % 2 === 0) {
                     return i;
                 }
@@ -536,46 +544,37 @@ class CalendarCore {
     
     // Remove escape characters from text
     unescapeText(text) {
+        const schema = this.getEventSchema();
+        if (schema && typeof schema.unescapeText === 'function') {
+            return schema.unescapeText(text);
+        }
         if (!text || typeof text !== 'string') {
             return text;
         }
-        
         return text
-            .replace(/\\:/g, ':')      // Unescape colons (\: -> :)
-            .replace(/\\\\/g, '\\');   // Unescape backslashes (\\ -> \)
+            .replace(/\\:/g, ':')
+            .replace(/\\\\/g, '\\');
     }
     
     // Check if a key is valid for metadata (words with spaces allowed, reasonable length)
     isValidMetadataKey(key) {
+        const schema = this.getEventSchema();
+        if (schema && typeof schema.isValidMetadataKey === 'function') {
+            return schema.isValidMetadataKey(key);
+        }
         if (!key || typeof key !== 'string') {
             return false;
         }
-        
         const trimmedKey = key.trim();
-        
-        // Must be words (spaces allowed between words) and reasonable length
-        return /^[a-zA-Z][a-zA-Z0-9\s]*[a-zA-Z0-9]$/.test(trimmedKey) && 
-               trimmedKey.length >= 2 && 
+        return /^[a-zA-Z][a-zA-Z0-9\s]*[a-zA-Z0-9]$/.test(trimmedKey) &&
+               trimmedKey.length >= 2 &&
                trimmedKey.length <= 30;
     }
 
     // Parse description for key-value pairs
     parseKeyValueDescription(description) {
         const data = {};
-        const keyMap = {
-            'bar': 'bar', 'location': 'bar', 'host': 'bar',
-            'cover': 'cover', 'cost': 'cover', 'price': 'cover',
-            'tea': 'tea', 'info': 'tea', 'description': 'tea',
-            'website': 'website', 'url': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
-            'ticketurl': 'ticketUrl', 'ticket url': 'ticketUrl', 'tickets': 'ticketUrl', 'ticket': 'ticketUrl',
-            'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
-            'gmaps': 'gmaps', 'google maps': 'gmaps',
-            'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
-            'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName',
-            'image': 'image',
-            'override uid': 'overrideUid', 'overrideuid': 'overrideUid',
-            'override recurrence id': 'overrideRecurrenceId', 'overriderecurrenceid': 'overrideRecurrenceId'
-        };
+        const schema = this.getEventSchema();
 
         // Clean up any remaining carriage returns that might interfere with parsing
         const carriageReturnCount = (description.match(/\r/g) || []).length;
@@ -649,8 +648,9 @@ class CalendarCore {
                 if (this.isValidMetadataKey(unescapedKey)) {
                     const key = unescapedKey.toLowerCase();
                     const value = unescapedValue;
-                    // Use case-insensitive lookup in keyMap
-                    const mappedKey = keyMap[key] || key;
+                    const mappedKey = schema && typeof schema.canonicalizeEventKey === 'function'
+                        ? schema.canonicalizeEventKey(key, { context: 'notes' })
+                        : key;
                     
                     
                     // Additional validation for URLs
@@ -663,7 +663,11 @@ class CalendarCore {
                             logger.warn('CALENDAR', `Invalid URL format for ${mappedKey}: ${value}`);
                         }
                     } else {
-                        data[mappedKey] = value;
+                        if (mappedKey === 'description') {
+                            data.tea = value;
+                        } else {
+                            data[mappedKey] = value;
+                        }
                         logger.debug('CALENDAR', `Extracted metadata: ${mappedKey} = ${value}`);
                     }
                 } else {

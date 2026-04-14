@@ -2049,6 +2049,7 @@
   <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="../js/logger.js"></script>
+  <script src="../js/event-schema.js"></script>
   <script src="../js/calendar-core.js"></script>
   <script src="../js/city-config.js"></script>
   <script>
@@ -5272,74 +5273,48 @@
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
         let sawEditFlag = false;
+        const eventParamMap = {
+          title: 'name',
+          shortName: 'shortName',
+          city: 'city',
+          bar: 'savedBar',
+          address: 'address',
+          location: 'location',
+          description: 'description',
+          cover: 'cover',
+          startDate: 'start',
+          endDate: 'end',
+          timezone: 'timezone',
+          recurrence: 'recurrence',
+          website: 'website',
+          ticketUrl: 'ticketUrl',
+          instagram: 'instagram',
+          facebook: 'facebook',
+          gmaps: 'gmaps',
+          image: 'image'
+        };
         params.forEach((value, key) => {
           if (value == null) return;
-          switch (key) {
-            case 'name':
-              overrides.name = value;
-              break;
-            case 'short':
-              overrides.shortName = value;
-              break;
-            case 'city':
-              overrides.city = value;
-              break;
-            case 'bar':
-            case 'savedbar':
-              overrides.savedBar = value;
-              break;
+          const canonicalKey = (typeof EventSchema !== 'undefined' && EventSchema)
+            ? EventSchema.canonicalizeEventKey(key)
+            : key;
+          if (Object.prototype.hasOwnProperty.call(eventParamMap, canonicalKey)) {
+            const stateKey = eventParamMap[canonicalKey];
+            if (stateKey === 'start' || stateKey === 'end') {
+              const sanitized = sanitizeDateTimeInput(value);
+              if (sanitized) overrides[stateKey] = sanitized;
+              return;
+            }
+            overrides[stateKey] = value;
+            return;
+          }
+
+          switch (String(key).toLowerCase()) {
             case 'venue':
               overrides.venue = value;
               break;
-            case 'addr':
-              overrides.address = value;
-              break;
-            case 'coords':
-            case 'loc':
-            case 'location':
-              overrides.location = value;
-              break;
-            case 'desc':
-              overrides.description = value;
-              break;
-            case 'cover':
-              overrides.cover = value;
-              break;
-            case 'start': {
-              const sanitized = sanitizeDateTimeInput(value);
-              if (sanitized) overrides.start = sanitized;
-              break;
-            }
-            case 'end': {
-              const sanitizedEnd = sanitizeDateTimeInput(value);
-              if (sanitizedEnd) overrides.end = sanitizedEnd;
-              break;
-            }
-            case 'tz':
-            case 'timezone':
-              overrides.timezone = value;
-              break;
-            case 'rrule':
-              overrides.recurrence = value;
-              break;
-            case 'web':
-              overrides.website = value;
-              break;
-            case 'tickets':
-            case 'ticket':
-              overrides.ticketUrl = value;
-              break;
-            case 'insta':
-            case 'instagram':
-              overrides.instagram = value;
-              break;
-            case 'fb':
-            case 'facebook':
-              overrides.facebook = value;
-              break;
-            case 'gmaps':
-            case 'map':
-              overrides.gmaps = value;
+            case 'savedbar':
+              overrides.savedBar = value;
               break;
             case 'vweb':
             case 'usevenuewebsite':
@@ -5352,9 +5327,6 @@
             case 'vfb':
             case 'usevenuefacebook':
               overrides.useVenueFacebook = parseBooleanParam(value);
-              break;
-            case 'img':
-              overrides.image = value;
               break;
             case 'esummary':
             case 'esum':
@@ -5402,12 +5374,12 @@
               overrides.editingExistingSequence = value;
               break;
             case 'searchstartdate':
-            case 'searchStartDate':
-              overrides.editingExistingSearchStartDate = value;
-              break;
             case 'searchenddate':
-            case 'searchEndDate':
-              overrides.editingExistingSearchEndDate = value;
+              if (String(key).toLowerCase() === 'searchstartdate') {
+                overrides.editingExistingSearchStartDate = value;
+              } else {
+                overrides.editingExistingSearchEndDate = value;
+              }
               break;
             case 'deloverride':
             case 'deleteoverride':
@@ -8270,50 +8242,10 @@
 
       function formatEventNotes(event) {
         if (!event || typeof event !== 'object') return '';
-        const excludeFields = new Set([
-          'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
-          'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action',
-          '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
-          '_original', '_mergeInfo', '_changes', '_mergeDiff',
-          'originalTitle', 'name', 'links', 'durationMinutes',
-          'time', 'day', 'recurring', 'recurrence', 'url',
-          'uid', 'recurrenceId', 'recurrenceIdTimezone', 'isDeletingOverride'
-        ]);
-        const notes = [];
-        Object.keys(event).forEach(fieldName => {
-          if (excludeFields.has(fieldName)) return;
-          const value = event[fieldName];
-          if (value === undefined || value === null || value === '') return;
-          const valueString = String(value);
-          const valueForNotes = isUrlLikeField(fieldName, valueString)
-            ? valueString
-            : escapeText(valueString);
-          notes.push(`${fieldName}: ${valueForNotes}`);
-        });
-        return notes.join('\n');
-      }
-
-      function isUrlLikeField(fieldName, valueString) {
-        const urlFields = new Set([
-          'url', 'ticketUrl', 'gmaps', 'website', 'facebook', 'instagram', 'twitter', 'image'
-        ]);
-        if (urlFields.has(fieldName)) return true;
-        if (!valueString || typeof valueString !== 'string') return false;
-        const lower = valueString.trim().toLowerCase();
-        return lower.startsWith('http://') ||
-          lower.startsWith('https://') ||
-          lower.startsWith('mailto:') ||
-          lower.startsWith('tel:') ||
-          lower.startsWith('sms:');
-      }
-
-      function escapeText(text) {
-        if (!text || typeof text !== 'string') {
-          return text;
+        if (typeof EventSchema !== 'undefined' && EventSchema && typeof EventSchema.formatEventNotes === 'function') {
+          return EventSchema.formatEventNotes(event);
         }
-        return text
-          .replace(/\\/g, '\\\\')
-          .replace(/:/g, '\\:');
+        return '';
       }
 
       function formatICSDateInTimezone(date, timeZone) {
