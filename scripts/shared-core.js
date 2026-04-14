@@ -19,44 +19,19 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
-let SharedEventSchema = null;
-if (typeof module !== 'undefined' && module.exports) {
-    try {
-        const eventSchemaModule = require('./event-schema');
-        SharedEventSchema = eventSchemaModule && eventSchemaModule.EventSchema
-            ? eventSchemaModule.EventSchema
-            : null;
-    } catch (error) {
-        SharedEventSchema = null;
-    }
-}
-if (!SharedEventSchema && typeof EventSchema !== 'undefined') {
-    SharedEventSchema = EventSchema;
-}
-if (!SharedEventSchema && typeof globalThis !== 'undefined' && globalThis.EventSchema) {
-    SharedEventSchema = globalThis.EventSchema;
-}
-
-const SHARED_CORE_NOTES_EXCLUDED_FIELDS = new Set([
-    'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
-    'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action',
-    '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
-    '_original', '_mergeInfo', '_changes', '_mergeDiff',
-    'originalTitle', 'name',
+const SHARED_CORE_SCRIPTABLE_NOTES_EXCLUDED_FIELDS = new Set([
     'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
     'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
-    'recurrenceId', 'recurrenceIdTimezone', 'sequence',
-    'searchStartDate', 'searchEndDate',
-    'lat', 'lng',
-    'placeId',
-    'timezone',
-    'matchKey'
+    'searchStartDate', 'searchEndDate'
 ]);
 
 class SharedCore {
-    constructor(cities) {
+    constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
             throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-cities.js');
+        }
+        if (!options.eventSchema || typeof options.eventSchema.parseNotesIntoFields !== 'function' || typeof options.eventSchema.formatEventNotes !== 'function') {
+            throw new Error('SharedCore requires eventSchema dependency with parseNotesIntoFields and formatEventNotes');
         }
 
         this.visitedUrls = new Set();
@@ -68,6 +43,11 @@ class SharedCore {
         
         // Store cities config for timezone assignment
         this.cities = cities;
+        this.eventSchema = options.eventSchema;
+        this.notesExcludedFields = new Set([
+            ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
+            ...SHARED_CORE_SCRIPTABLE_NOTES_EXCLUDED_FIELDS
+        ]);
         
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
@@ -1166,49 +1146,32 @@ class SharedCore {
     
     // Find first unescaped occurrence of a character in text
     findUnescaped(text, char, startIndex = 0) {
-        if (SharedEventSchema && typeof SharedEventSchema.findUnescaped === 'function') {
-            return SharedEventSchema.findUnescaped(text, char, startIndex);
-        }
-        return -1;
+        return this.eventSchema.findUnescaped(text, char, startIndex);
     }
     
     // Remove escape characters from text
     unescapeText(text) {
-        if (SharedEventSchema && typeof SharedEventSchema.unescapeText === 'function') {
-            return SharedEventSchema.unescapeText(text);
-        }
-        return text;
+        return this.eventSchema.unescapeText(text);
     }
     
     // Add escape characters to text to prevent parsing issues
     escapeText(text) {
-        if (SharedEventSchema && typeof SharedEventSchema.escapeText === 'function') {
-            return SharedEventSchema.escapeText(text);
-        }
-        return text;
+        return this.eventSchema.escapeText(text);
     }
     
     // Check if a key is valid for metadata (words with spaces allowed, reasonable length)
     isValidMetadataKey(key) {
-        if (SharedEventSchema && typeof SharedEventSchema.isValidMetadataKey === 'function') {
-            return SharedEventSchema.isValidMetadataKey(key);
-        }
-        return false;
+        return this.eventSchema.isValidMetadataKey(key);
     }
     
     // Parse notes back into field/value pairs
     parseNotesIntoFields(notes) {
-        if (SharedEventSchema && typeof SharedEventSchema.parseNotesIntoFields === 'function') {
-            return SharedEventSchema.parseNotesIntoFields(notes);
-        }
-        return {};
+        return this.eventSchema.parseNotesIntoFields(notes);
     }
     
     // Build notes from field/value pairs
     buildNotesFromFields(fields) {
-        if (!SharedEventSchema) {
-            return '';
-        }
+        if (!fields || typeof fields !== 'object') return '';
         const lines = [];
         
         // Just add all fields that have values
@@ -1217,9 +1180,9 @@ class SharedCore {
             if (value !== undefined && value !== null && value !== '') {
                 // Escape selectively: do not escape URL-like fields
                 const valueString = String(value);
-                const valueForNotes = SharedEventSchema.isUrlLikeField(key, valueString)
+                const valueForNotes = this.eventSchema.isUrlLikeField(key, valueString)
                     ? valueString
-                    : SharedEventSchema.escapeText(valueString);
+                    : this.eventSchema.escapeText(valueString);
                 lines.push(`${key}: ${valueForNotes}`);
             }
         });
@@ -2398,10 +2361,9 @@ class SharedCore {
     
     // Format event notes with all metadata in key-value format
     formatEventNotes(event) {
-        if (SharedEventSchema && typeof SharedEventSchema.formatEventNotes === 'function') {
-            return SharedEventSchema.formatEventNotes(event);
-        }
-        return '';
+        return this.eventSchema.formatEventNotes(event, {
+            excludeFields: this.notesExcludedFields
+        });
     }
 
     // Get event date ranges with optional expansion
