@@ -5269,6 +5269,123 @@
         return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
       }
 
+      const URL_DIRECT_PARAM_TO_STATE_KEY = Object.freeze({
+        venue: 'venue',
+        savedbar: 'savedBar',
+        esummary: 'existingSelectionSummary',
+        esum: 'existingSelectionSummary',
+        editid: 'editingExistingId',
+        eid: 'editingExistingId',
+        euid: 'editingExistingUid',
+        esuid: 'editingExistingSourceUid',
+        occid: 'editingExistingOccurrenceId',
+        eocc: 'editingExistingOccurrenceId',
+        editocc: 'editingExistingOccurrenceId',
+        erid: 'editingExistingRecurrenceId',
+        ertz: 'editingExistingRecurrenceTimezone',
+        eotype: 'editingExistingOverrideType',
+        eseq: 'editingExistingSequence',
+        editseq: 'editingExistingSequence',
+        editsequence: 'editingExistingSequence'
+      });
+
+      const URL_BOOLEAN_PARAM_TO_STATE_KEY = Object.freeze({
+        vweb: 'useVenueWebsite',
+        usevenuewebsite: 'useVenueWebsite',
+        vinsta: 'useVenueInstagram',
+        usevenueinstagram: 'useVenueInstagram',
+        vfb: 'useVenueFacebook',
+        usevenuefacebook: 'useVenueFacebook'
+      });
+
+      function hasEditingContextOverride(overrides) {
+        return Boolean(
+          overrides.editingExistingId
+          || overrides.editingExistingMode
+          || overrides.editingExistingOccurrenceId
+          || overrides.editingExistingUid
+          || overrides.editingExistingSourceUid
+          || overrides.editingExistingRecurrenceId
+          || overrides.editingExistingRecurrenceTimezone
+          || overrides.editingExistingOverrideType
+          || overrides.editingExistingSequence
+          || overrides.editingExistingSearchStartDate
+          || overrides.editingExistingSearchEndDate
+        );
+      }
+
+      function resetEditingOverrides(overrides, baseState) {
+        overrides.editingExistingId = '';
+        overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
+        overrides.editingExistingOccurrenceId = '';
+        overrides.editingExistingUid = '';
+        overrides.editingExistingRecurrenceId = '';
+        overrides.editingExistingRecurrenceTimezone = '';
+        overrides.editingExistingOverrideType = '';
+        overrides.editingExistingSourceUid = '';
+        overrides.editingExistingSequence = '';
+        overrides.editingExistingSearchStartDate = '';
+        overrides.editingExistingSearchEndDate = '';
+        overrides.deleteOverride = false;
+      }
+
+      function parseExistingSelectionAction(value) {
+        const normalized = String(value).trim().toLowerCase();
+        if (normalized === 'copy') return 'copy';
+        if (normalized === 'edit') return 'edit';
+        return '';
+      }
+
+      function applyBuilderUrlControlParam(overrides, rawKey, value, context) {
+        const key = String(rawKey).toLowerCase();
+
+        if (Object.prototype.hasOwnProperty.call(URL_DIRECT_PARAM_TO_STATE_KEY, key)) {
+          overrides[URL_DIRECT_PARAM_TO_STATE_KEY[key]] = value;
+          return;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(URL_BOOLEAN_PARAM_TO_STATE_KEY, key)) {
+          overrides[URL_BOOLEAN_PARAM_TO_STATE_KEY[key]] = parseBooleanParam(value);
+          return;
+        }
+
+        switch (key) {
+          case 'eaction':
+            overrides.existingSelectionAction = parseExistingSelectionAction(value);
+            return;
+          case 'edit':
+          case 'editing':
+            overrides.isEditingExisting = parseBooleanParam(value);
+            context.sawEditFlag = true;
+            return;
+          case 'searchstartdate':
+            overrides.editingExistingSearchStartDate = value;
+            return;
+          case 'searchenddate':
+            overrides.editingExistingSearchEndDate = value;
+            return;
+          case 'deloverride':
+          case 'deleteoverride':
+          case 'edel':
+            overrides.deleteOverride = parseBooleanParam(value, { allowEmptyAsTrue: true });
+            return;
+          case 'editmode':
+          case 'emode':
+            overrides.editingExistingMode = value === 'series' ? 'series' : 'occurrence';
+            return;
+          case 'rmode':
+          case 'recurrencemode':
+            overrides.recurrenceMode = value === 'raw' ? 'raw' : 'builder';
+            return;
+          case 'debug':
+          case 'dbg':
+            overrides.debug = parseBooleanParam(value, { allowEmptyAsTrue: true });
+            return;
+          default:
+            return;
+        }
+      }
+
       function getRequiredEventSchema() {
         if (typeof EventSchema === 'undefined' || !EventSchema) {
           throw new Error('Event builder requires EventSchema to be loaded before initialization');
@@ -5285,7 +5402,7 @@
         const schema = getRequiredEventSchema();
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
-        let sawEditFlag = false;
+        const parseContext = { sawEditFlag: false };
         params.forEach((value, key) => {
           if (value == null) return;
           const stateKey = schema.getEventBuilderStateKey(key);
@@ -5298,127 +5415,14 @@
             overrides[stateKey] = value;
             return;
           }
-
-          switch (String(key).toLowerCase()) {
-            case 'venue':
-              overrides.venue = value;
-              break;
-            case 'savedbar':
-              overrides.savedBar = value;
-              break;
-            case 'vweb':
-            case 'usevenuewebsite':
-              overrides.useVenueWebsite = parseBooleanParam(value);
-              break;
-            case 'vinsta':
-            case 'usevenueinstagram':
-              overrides.useVenueInstagram = parseBooleanParam(value);
-              break;
-            case 'vfb':
-            case 'usevenuefacebook':
-              overrides.useVenueFacebook = parseBooleanParam(value);
-              break;
-            case 'esummary':
-            case 'esum':
-              overrides.existingSelectionSummary = value;
-              break;
-            case 'eaction': {
-              const normalized = String(value).trim().toLowerCase();
-              overrides.existingSelectionAction = normalized === 'copy'
-                ? 'copy'
-                : (normalized === 'edit' ? 'edit' : '');
-              break;
-            }
-            case 'edit':
-            case 'editing':
-              overrides.isEditingExisting = parseBooleanParam(value);
-              sawEditFlag = true;
-              break;
-            case 'editid':
-            case 'eid':
-              overrides.editingExistingId = value;
-              break;
-            case 'euid':
-              overrides.editingExistingUid = value;
-              break;
-            case 'esuid':
-              overrides.editingExistingSourceUid = value;
-              break;
-            case 'occid':
-            case 'eocc':
-            case 'editocc':
-              overrides.editingExistingOccurrenceId = value;
-              break;
-            case 'erid':
-              overrides.editingExistingRecurrenceId = value;
-              break;
-            case 'ertz':
-              overrides.editingExistingRecurrenceTimezone = value;
-              break;
-            case 'eotype':
-              overrides.editingExistingOverrideType = value;
-              break;
-            case 'eseq':
-            case 'editseq':
-            case 'editsequence':
-              overrides.editingExistingSequence = value;
-              break;
-            case 'searchstartdate':
-            case 'searchenddate':
-              if (String(key).toLowerCase() === 'searchstartdate') {
-                overrides.editingExistingSearchStartDate = value;
-              } else {
-                overrides.editingExistingSearchEndDate = value;
-              }
-              break;
-            case 'deloverride':
-            case 'deleteoverride':
-            case 'edel':
-              overrides.deleteOverride = parseBooleanParam(value, { allowEmptyAsTrue: true });
-              break;
-            case 'editmode':
-            case 'emode':
-              overrides.editingExistingMode = value === 'series' ? 'series' : 'occurrence';
-              break;
-            case 'rmode':
-            case 'recurrencemode':
-              overrides.recurrenceMode = value === 'raw' ? 'raw' : 'builder';
-              break;
-            case 'debug':
-            case 'dbg':
-              overrides.debug = parseBooleanParam(value, { allowEmptyAsTrue: true });
-              break;
-            default:
-              break;
-          }
+          applyBuilderUrlControlParam(overrides, key, value, parseContext);
         });
-        if (!sawEditFlag && (overrides.editingExistingId
-          || overrides.editingExistingMode
-          || overrides.editingExistingOccurrenceId
-          || overrides.editingExistingUid
-          || overrides.editingExistingSourceUid
-          || overrides.editingExistingRecurrenceId
-          || overrides.editingExistingRecurrenceTimezone
-          || overrides.editingExistingOverrideType
-          || overrides.editingExistingSequence
-          || overrides.editingExistingSearchStartDate
-          || overrides.editingExistingSearchEndDate)) {
+        if (!parseContext.sawEditFlag && hasEditingContextOverride(overrides)) {
           overrides.isEditingExisting = true;
         }
         if (overrides.existingSelectionAction === 'copy') {
           overrides.isEditingExisting = false;
-          overrides.editingExistingId = '';
-          overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
-          overrides.editingExistingOccurrenceId = '';
-          overrides.editingExistingUid = '';
-          overrides.editingExistingRecurrenceId = '';
-          overrides.editingExistingRecurrenceTimezone = '';
-          overrides.editingExistingOverrideType = '';
-          overrides.editingExistingSourceUid = '';
-          overrides.editingExistingSequence = '';
-          overrides.editingExistingSearchStartDate = '';
-          overrides.editingExistingSearchEndDate = '';
-          overrides.deleteOverride = false;
+          resetEditingOverrides(overrides, baseState);
         }
         if (overrides.isEditingExisting) {
           if (!overrides.editingExistingMode) {
@@ -5428,18 +5432,7 @@
             overrides.editingExistingOccurrenceId = '';
           }
         } else if (overrides.isEditingExisting === false) {
-          overrides.editingExistingId = '';
-          overrides.editingExistingMode = baseState.editingExistingMode || 'occurrence';
-          overrides.editingExistingOccurrenceId = '';
-          overrides.editingExistingUid = '';
-          overrides.editingExistingRecurrenceId = '';
-          overrides.editingExistingRecurrenceTimezone = '';
-          overrides.editingExistingOverrideType = '';
-          overrides.editingExistingSourceUid = '';
-          overrides.editingExistingSequence = '';
-          overrides.editingExistingSearchStartDate = '';
-          overrides.editingExistingSearchEndDate = '';
-          overrides.deleteOverride = false;
+          resetEditingOverrides(overrides, baseState);
         }
         if (!overrides.isEditingExisting) {
           overrides.deleteOverride = false;
