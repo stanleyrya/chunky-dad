@@ -14,6 +14,13 @@ class CalendarCore {
         logger.componentInit('CALENDAR', 'Calendar core initialized');
     }
 
+    getEventSchema() {
+        if (typeof EventSchema === 'undefined' || !EventSchema) {
+            throw new Error('EventSchema is required before CalendarCore initialization');
+        }
+        return EventSchema;
+    }
+
     // Parse iCal data and extract events
     parseICalData(icalText) {
         logger.time('CALENDAR', 'iCal parsing');
@@ -517,65 +524,35 @@ class CalendarCore {
     
     // Find first unescaped occurrence of a character in text
     findUnescaped(text, char, startIndex = 0) {
-        for (let i = startIndex; i < text.length; i++) {
-            if (text[i] === char) {
-                // Count preceding backslashes to determine if this character is escaped
-                let backslashCount = 0;
-                for (let j = i - 1; j >= 0 && text[j] === '\\'; j--) {
-                    backslashCount++;
-                }
-                
-                // If even number of backslashes (including 0), the character is not escaped
-                if (backslashCount % 2 === 0) {
-                    return i;
-                }
-            }
+        const schema = this.getEventSchema();
+        if (typeof schema.findUnescaped !== 'function') {
+            throw new Error('EventSchema.findUnescaped is required');
         }
-        return -1;
+        return schema.findUnescaped(text, char, startIndex);
     }
     
     // Remove escape characters from text
     unescapeText(text) {
-        if (!text || typeof text !== 'string') {
-            return text;
+        const schema = this.getEventSchema();
+        if (typeof schema.unescapeText !== 'function') {
+            throw new Error('EventSchema.unescapeText is required');
         }
-        
-        return text
-            .replace(/\\:/g, ':')      // Unescape colons (\: -> :)
-            .replace(/\\\\/g, '\\');   // Unescape backslashes (\\ -> \)
+        return schema.unescapeText(text);
     }
     
     // Check if a key is valid for metadata (words with spaces allowed, reasonable length)
     isValidMetadataKey(key) {
-        if (!key || typeof key !== 'string') {
-            return false;
+        const schema = this.getEventSchema();
+        if (typeof schema.isValidMetadataKey !== 'function') {
+            throw new Error('EventSchema.isValidMetadataKey is required');
         }
-        
-        const trimmedKey = key.trim();
-        
-        // Must be words (spaces allowed between words) and reasonable length
-        return /^[a-zA-Z][a-zA-Z0-9\s]*[a-zA-Z0-9]$/.test(trimmedKey) && 
-               trimmedKey.length >= 2 && 
-               trimmedKey.length <= 30;
+        return schema.isValidMetadataKey(key);
     }
 
     // Parse description for key-value pairs
     parseKeyValueDescription(description) {
         const data = {};
-        const keyMap = {
-            'bar': 'bar', 'location': 'bar', 'host': 'bar',
-            'cover': 'cover', 'cost': 'cover', 'price': 'cover',
-            'tea': 'tea', 'info': 'tea', 'description': 'tea',
-            'website': 'website', 'url': 'website', 'instagram': 'instagram', 'facebook': 'facebook',
-            'ticketurl': 'ticketUrl', 'ticket url': 'ticketUrl', 'tickets': 'ticketUrl', 'ticket': 'ticketUrl',
-            'type': 'type', 'eventtype': 'type', 'recurring': 'recurring',
-            'gmaps': 'gmaps', 'google maps': 'gmaps',
-            'shortname': 'shortName', 'short name': 'shortName', 'short': 'shortName', 'nickname': 'shortName', 'nick name': 'shortName', 'nick': 'shortName',
-            'shortername': 'shorterName', 'shorter name': 'shorterName', 'shorter': 'shorterName',
-            'image': 'image',
-            'override uid': 'overrideUid', 'overrideuid': 'overrideUid',
-            'override recurrence id': 'overrideRecurrenceId', 'overriderecurrenceid': 'overrideRecurrenceId'
-        };
+        const schema = this.getEventSchema();
 
         // Clean up any remaining carriage returns that might interfere with parsing
         const carriageReturnCount = (description.match(/\r/g) || []).length;
@@ -649,8 +626,10 @@ class CalendarCore {
                 if (this.isValidMetadataKey(unescapedKey)) {
                     const key = unescapedKey.toLowerCase();
                     const value = unescapedValue;
-                    // Use case-insensitive lookup in keyMap
-                    const mappedKey = keyMap[key] || key;
+                    if (typeof schema.canonicalizeEventKey !== 'function') {
+                        throw new Error('EventSchema.canonicalizeEventKey is required');
+                    }
+                    const mappedKey = schema.canonicalizeEventKey(key, { context: 'notes' });
                     
                     
                     // Additional validation for URLs
@@ -663,7 +642,11 @@ class CalendarCore {
                             logger.warn('CALENDAR', `Invalid URL format for ${mappedKey}: ${value}`);
                         }
                     } else {
-                        data[mappedKey] = value;
+                        if (mappedKey === 'description') {
+                            data.tea = value;
+                        } else {
+                            data[mappedKey] = value;
+                        }
                         logger.debug('CALENDAR', `Extracted metadata: ${mappedKey} = ${value}`);
                     }
                 } else {

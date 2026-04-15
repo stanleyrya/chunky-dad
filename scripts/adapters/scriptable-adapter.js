@@ -356,6 +356,11 @@ logger.captureConsole();
 const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
 const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const { EventSchema: SharedEventSchema } = importModule('event-schema');
+
+if (!SharedEventSchema || typeof SharedEventSchema.parseNotesIntoFields !== 'function') {
+    throw new Error('ScriptableAdapter requires EventSchema to be loaded before adapter initialization');
+}
 
 class ScriptableAdapter {
     constructor(config = {}) {
@@ -1465,48 +1470,7 @@ class ScriptableAdapter {
     }
 
     parseNotesIntoFields(notes) {
-        const fields = {};
-        if (!notes || typeof notes !== 'string') return fields;
-        const lines = notes.split('\n');
-        const aliasToCanonical = {
-            'overrideuid': 'overrideUid',
-            'overriderecurrenceid': 'overrideRecurrenceId',
-            'uid': 'uid',
-            'identifier': 'identifier',
-            'id': 'id',
-            'recurrence': 'recurrence'
-        };
-        const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
-        let currentKey = null;
-        let currentValue = '';
-        lines.forEach((line, index) => {
-            const colonIndex = line.indexOf(':');
-            if (colonIndex > 0) {
-                if (currentKey && currentValue) {
-                    const normalizedKey = normalize(currentKey);
-                    const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
-                        ? aliasToCanonical[normalizedKey]
-                        : currentKey;
-                    fields[canonicalKey] = currentValue;
-                }
-                const rawKey = line.substring(0, colonIndex).trim();
-                const rawValue = line.substring(colonIndex + 1).trim();
-                if (rawKey) {
-                    currentKey = rawKey;
-                    currentValue = rawValue;
-                }
-            } else if (currentKey && line.trim()) {
-                currentValue += `\n${line.trim()}`;
-            }
-            if (index === lines.length - 1 && currentKey && currentValue) {
-                const normalizedKey = normalize(currentKey);
-                const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
-                    ? aliasToCanonical[normalizedKey]
-                    : currentKey;
-                fields[canonicalKey] = currentValue;
-            }
-        });
-        return fields;
+        return SharedEventSchema.parseNotesIntoFields(notes);
     }
 
     getEventUid(event) {

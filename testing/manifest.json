@@ -2,7 +2,7 @@
   "files": [
     {
       "name": "event-builder.html",
-      "size": 330609,
+      "size": 327504,
       "icon": "🛠️",
       "description": "Build chunky.dad calendar events and preview them instantly."
     },
@@ -32,7 +32,7 @@
     },
     {
       "name": "test-unified-scraper.html",
-      "size": 40485,
+      "size": 40952,
       "icon": "🪛",
       "description": "Scraper Tool - Extract that data, nice and smooth"
     },
