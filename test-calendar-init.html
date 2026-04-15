@@ -17,6 +17,7 @@
     <!-- Load all required scripts in the same order as city.html -->
     <script src="js/logger.js"></script>
     <script src="js/city-config.js"></script>
+    <script src="js/event-schema.js"></script>
     <script src="js/calendar-core.js"></script>
     <script src="js/dynamic-calendar-loader.js"></script>
 
@@ -28,7 +29,6 @@
             div.className = `log ${type}`;
             div.innerHTML = `<pre>${message}</pre>`;
             logs.appendChild(div);
-            console.log(message);
         }
 
         async function testCalendarInit() {
