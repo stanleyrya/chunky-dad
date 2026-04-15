@@ -14,7 +14,7 @@
     },
     {
       "name": "test-calendar-logging.html",
-      "size": 68665,
+      "size": 68767,
       "icon": "🔍",
       "description": "Debug Scope - Look deep inside calendar processing (magnify those logs)"
     },
@@ -26,7 +26,7 @@
     },
     {
       "name": "test-og-event-layouts-calendar.html",
-      "size": 65521,
+      "size": 65619,
       "icon": "📅",
       "description": "Old School Blueprint - Classic event layouts, tried and true"
     },

@@ -45,6 +45,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Location features
         this.userLocation = null;
         this.locationFeaturesEnabled = false;
+        this.hasWarnedMissingFilenameUtils = false;
         
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
@@ -1494,17 +1495,34 @@ class DynamicCalendarLoader extends CalendarCore {
     
     // Convert external image URL to local path for cached data
     convertImageUrlToLocal(imageUrl, eventData) {
+        const filenameUtils = window.FilenameUtils;
+        if (!filenameUtils || typeof filenameUtils.convertImageUrlToLocalPath !== 'function') {
+            if (!this.hasWarnedMissingFilenameUtils) {
+                this.hasWarnedMissingFilenameUtils = true;
+                logger.warn('CALENDAR', 'FilenameUtils unavailable; using image URL as-is', {
+                    city: this.currentCity,
+                    dataSource: this.dataSource
+                });
+            }
+            return imageUrl;
+        }
+
         const eventInfo = {
             name: eventData.name,
             startDate: eventData.startDate,
             recurring: eventData.recurring
         };
-        
-        return window.FilenameUtils.convertImageUrlToLocalPath(
-            imageUrl,
-            eventInfo,
-            'img/events'
-        );
+
+        try {
+            return filenameUtils.convertImageUrlToLocalPath(
+                imageUrl,
+                eventInfo,
+                'img/events'
+            );
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Failed converting cached image URL; using original URL', error);
+            return imageUrl;
+        }
     }
 
 
