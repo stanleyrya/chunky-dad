@@ -16,6 +16,7 @@ const EVENT_KEY_ALIASES = {
     info: 'description',
 
     venue: 'bar',
+    savedbar: 'bar',
     locationname: 'bar',
     host: 'bar',
     bar: 'bar',
