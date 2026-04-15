@@ -499,6 +499,7 @@
     </div>
     
     <!-- Load all required modules in correct order -->
+    <script src="../scripts/event-schema.js" onerror="handleScriptError('event-schema.js', event)"></script>
     <script src="../scripts/shared-core.js" onerror="handleScriptError('shared-core.js', event)"></script>
     <script src="../scripts/adapters/web-adapter.js" onerror="handleScriptError('web-adapter.js', event)"></script>
     <script src="../scripts/parsers/eventbrite-parser.js" onerror="handleScriptError('eventbrite-parser.js', event)"></script>
@@ -623,6 +624,7 @@
             console.info('📦 Testing module availability...');
             
             const requiredModules = {
+                'EventSchema': typeof EventSchema !== 'undefined',
                 'SharedCore': typeof SharedCore !== 'undefined',
                 'WebAdapter': typeof WebAdapter !== 'undefined',
                 'EventbriteParser': typeof EventbriteParser !== 'undefined',
@@ -658,7 +660,12 @@
             // Test basic functionality of loaded modules
             if (typeof SharedCore !== 'undefined') {
                 try {
-                    const sharedCore = new SharedCore();
+                    const testCities = (window.scraperConfig && window.scraperConfig.cities)
+                        ? window.scraperConfig.cities
+                        : { test: { patterns: ['test'] } };
+                    const sharedCore = new SharedCore(testCities, {
+                        eventSchema: EventSchema
+                    });
                     console.success('✅ SharedCore instantiated successfully');
                 } catch (error) {
                     console.error(`❌ SharedCore instantiation failed: ${error.message}`);

@@ -19,10 +19,37 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+const SHARED_CORE_SCRIPTABLE_NOTES_EXCLUDED_FIELDS = new Set([
+    'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+    'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
+    'searchStartDate', 'searchEndDate'
+]);
+
 class SharedCore {
-    constructor(cities) {
+    constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
             throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-cities.js');
+        }
+        const schema = options.eventSchema;
+        if (!schema) {
+            throw new Error('SharedCore requires eventSchema dependency');
+        }
+        const requiredSchemaFunctions = [
+            'parseNotesIntoFields',
+            'formatEventNotes',
+            'findUnescaped',
+            'unescapeText',
+            'escapeText',
+            'isValidMetadataKey',
+            'isUrlLikeField'
+        ];
+        requiredSchemaFunctions.forEach(fnName => {
+            if (typeof schema[fnName] !== 'function') {
+                throw new Error(`SharedCore requires eventSchema.${fnName} function`);
+            }
+        });
+        if (!schema.DEFAULT_NOTES_EXCLUDED_FIELDS || typeof schema.DEFAULT_NOTES_EXCLUDED_FIELDS.has !== 'function') {
+            throw new Error('SharedCore requires eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS Set');
         }
 
         this.visitedUrls = new Set();
@@ -34,6 +61,11 @@ class SharedCore {
         
         // Store cities config for timezone assignment
         this.cities = cities;
+        this.eventSchema = schema;
+        this.notesExcludedFields = new Set([
+            ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
+            ...SHARED_CORE_SCRIPTABLE_NOTES_EXCLUDED_FIELDS
+        ]);
         
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
@@ -1132,211 +1164,32 @@ class SharedCore {
     
     // Find first unescaped occurrence of a character in text
     findUnescaped(text, char, startIndex = 0) {
-        for (let i = startIndex; i < text.length; i++) {
-            if (text[i] === char) {
-                // Count preceding backslashes to determine if this character is escaped
-                let backslashCount = 0;
-                for (let j = i - 1; j >= 0 && text[j] === '\\'; j--) {
-                    backslashCount++;
-                }
-                
-                // If even number of backslashes (including 0), the character is not escaped
-                if (backslashCount % 2 === 0) {
-                    return i;
-                }
-            }
-        }
-        return -1;
+        return this.eventSchema.findUnescaped(text, char, startIndex);
     }
     
     // Remove escape characters from text
     unescapeText(text) {
-        if (!text || typeof text !== 'string') {
-            return text;
-        }
-        
-        return text
-            .replace(/\\:/g, ':')      // Unescape colons (\: -> :)
-            .replace(/\\\\/g, '\\');   // Unescape backslashes (\\ -> \)
+        return this.eventSchema.unescapeText(text);
     }
     
     // Add escape characters to text to prevent parsing issues
     escapeText(text) {
-        if (!text || typeof text !== 'string') {
-            return text;
-        }
-        
-        return text
-            .replace(/\\/g, '\\\\')    // Escape backslashes (\ -> \\)
-            .replace(/:/g, '\\:');     // Escape colons (: -> \:)
+        return this.eventSchema.escapeText(text);
     }
     
     // Check if a key is valid for metadata (words with spaces allowed, reasonable length)
     isValidMetadataKey(key) {
-        if (!key || typeof key !== 'string') {
-            return false;
-        }
-        
-        const trimmedKey = key.trim();
-        
-        // Must be words (spaces allowed between words) and reasonable length
-        return /^[a-zA-Z][a-zA-Z0-9\s]*[a-zA-Z0-9]$/.test(trimmedKey) && 
-               trimmedKey.length >= 2 && 
-               trimmedKey.length <= 30;
+        return this.eventSchema.isValidMetadataKey(key);
     }
     
     // Parse notes back into field/value pairs
     parseNotesIntoFields(notes) {
-        const fields = {};
-        
-        // Handle undefined or null notes
-        if (!notes) {
-            return fields;
-        }
-        
-        const lines = notes.split('\n');
-        
-        // Map of normalized aliases (lowercased, spaces removed) to canonical field names
-        const aliasToCanonical = {
-            // Description aliases
-            'tea': 'description',
-            'info': 'description',
-            'description': 'description',
-            
-            // Venue/location aliases
-            'venue': 'bar',
-            'location': 'bar',
-            'host': 'bar',
-            'bar': 'bar',
-            
-            // Price aliases
-            'price': 'cover',
-            'cost': 'cover',
-            'cover': 'cover',
-            
-            // Name aliases
-            'shortname': 'shortName',
-            'shortername': 'shorterName',
-            'shorter name': 'shorterName',
-            'shorter': 'shorterName',
-            'short title': 'shortName',
-            'shorttitle': 'shortName',
-            'nickname': 'shortName',
-            
-            // Social/web aliases (canonicalize case and common variants)
-            'instagram': 'instagram',
-            'ig': 'instagram',
-            'facebook': 'facebook',
-            'fb': 'facebook',
-            'website': 'website',
-            'site': 'website',
-
-            'twitter': 'twitter',
-            'xtwitter': 'twitter',
-            'x': 'twitter',
-            'email': 'email',
-            'e-mail': 'email',
-            'phone': 'phone',
-            'phonenumber': 'phone',
-            'phone number': 'phone',
-            
-            // Social/web aliases
-            'googleMapsLink': 'gmaps',
-            'googlemaps': 'gmaps',
-            'googlemapslink': 'gmaps',
-            'google maps': 'gmaps',
-            'gmaps': 'gmaps',
-            
-            // Ticket/purchase aliases
-            'ticketurl': 'ticketUrl',
-            'ticket url': 'ticketUrl',
-            'tickets': 'ticketUrl',
-            'ticket': 'ticketUrl',
-            'ticketUrl': 'ticketUrl',
-            
-            // Other common fields
-            'description': 'description',
-            'image': 'image',
-            'url': 'url',
-            'timezone': 'timezone',
-            'key': 'key',
-            'matchkey': 'matchKey',
-            'overrideuid': 'overrideUid',
-            'overriderecurrenceid': 'overrideRecurrenceId'
-        };
-        
-        const normalize = (str) => (str || '').toLowerCase().replace(/\s+/g, '');
-        
-        let currentKey = null;
-        let currentValue = '';
-        
-        lines.forEach((line, index) => {
-            // Use escape-aware parsing to find the first unescaped colon
-            const colonIndex = this.findUnescaped(line, ':');
-            
-            // A valid metadata line has an unescaped colon that's not at the start
-            if (colonIndex > 0) {
-                // Save previous field if we have one
-                if (currentKey && currentValue) {
-                    const normalizedKey = normalize(currentKey);
-                    const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
-                        ? aliasToCanonical[normalizedKey]
-                        : currentKey;
-                    // Description field is now saved and read literally - no normalization
-                    fields[canonicalKey] = this.unescapeText(currentValue);
-                }
-                
-                // Extract key and value, then unescape them
-                const rawKey = line.substring(0, colonIndex).trim();
-                const rawValue = line.substring(colonIndex + 1).trim();
-                
-                const unescapedKey = this.unescapeText(rawKey);
-                const unescapedValue = this.unescapeText(rawValue);
-                
-                // Only accept valid metadata keys (single word, reasonable length)
-                if (unescapedKey && this.isValidMetadataKey(unescapedKey)) {
-                    currentKey = unescapedKey;
-                    currentValue = unescapedValue;
-                } else {
-                    // Invalid key - treat this line as continuation of previous field or ignore
-                    if (currentKey && line.trim()) {
-                        // Add as continuation line for current field
-                        if (currentValue) {
-                            currentValue += '\n' + this.unescapeText(line);
-                        } else {
-                            currentValue = this.unescapeText(line);
-                        }
-                    }
-                    // If no current key, ignore this line (it's not valid metadata)
-                }
-            } else if (currentKey && line.trim()) {
-                // This is a continuation line for the current field
-                // Add it to the current value with a newline, unescaping the text
-                const unescapedLine = this.unescapeText(line);
-                if (currentValue) {
-                    currentValue += '\n' + unescapedLine;
-                } else {
-                    currentValue = unescapedLine;
-                }
-            }
-            
-            // Handle the last field
-            if (index === lines.length - 1 && currentKey && currentValue) {
-                const normalizedKey = normalize(currentKey);
-                const canonicalKey = aliasToCanonical.hasOwnProperty(normalizedKey)
-                    ? aliasToCanonical[normalizedKey]
-                    : currentKey;
-                // Description field is now saved and read literally - no normalization
-                // Value is already unescaped from the parsing logic above
-                fields[canonicalKey] = currentValue;
-            }
-        });
-        
-        return fields;
+        return this.eventSchema.parseNotesIntoFields(notes);
     }
     
     // Build notes from field/value pairs
     buildNotesFromFields(fields) {
+        if (!fields || typeof fields !== 'object') return '';
         const lines = [];
         
         // Just add all fields that have values
@@ -1345,9 +1198,9 @@ class SharedCore {
             if (value !== undefined && value !== null && value !== '') {
                 // Escape selectively: do not escape URL-like fields
                 const valueString = String(value);
-                const valueForNotes = this.isUrlLikeField(key, valueString)
+                const valueForNotes = this.eventSchema.isUrlLikeField(key, valueString)
                     ? valueString
-                    : this.escapeText(valueString);
+                    : this.eventSchema.escapeText(valueString);
                 lines.push(`${key}: ${valueForNotes}`);
             }
         });
@@ -2526,70 +2379,11 @@ class SharedCore {
     
     // Format event notes with all metadata in key-value format
     formatEventNotes(event) {
-        const notes = [];
-        
-        // Fields to exclude from notes (core calendar fields, internal metadata, and Scriptable-specific properties)
-        const excludeFields = new Set([
-            'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
-            'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
-            '_original', '_mergeInfo', '_changes', '_mergeDiff',
-            'originalTitle', 'name', // These are usually duplicates of title
-            // Scriptable-specific properties that shouldn't be in notes
-            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
-            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
-            // Recurrence metadata used for matching, not for notes storage
-            'recurrenceId', 'recurrenceIdTimezone', 'sequence',
-            // Scriptable adapter helper fields (used only for searching existing calendar data)
-            'searchStartDate', 'searchEndDate',
-            // Coordinate helpers that duplicate location data
-            'lat', 'lng',
-            // Location-specific fields that shouldn't be in notes (used internally)
-            'placeId',
-            // Keep timezone configuration out of notes; calendar/city config owns this
-            'timezone',
-            // Keep wildcard matching key internal; persist canonical key only
-            'matchKey'
-        ]);
-        
-        // Add all fields that have values (merge logic has already determined correct values)
-        let savedFieldCount = 0;
-        Object.keys(event).forEach(fieldName => {
-            if (!excludeFields.has(fieldName) && 
-                event[fieldName] !== undefined && 
-                event[fieldName] !== null && 
-                event[fieldName] !== '') {
-                // Description field is now saved and read literally - no normalization
-                const value = event[fieldName];
-                const valueString = String(value);
-                // Escape selectively: do not escape URL-like fields
-                const valueForNotes = this.isUrlLikeField(fieldName, valueString)
-                    ? valueString
-                    : this.escapeText(valueString);
-                notes.push(`${fieldName}: ${valueForNotes}`);
-                savedFieldCount++;
-            }
+        return this.eventSchema.formatEventNotes(event, {
+            excludeFields: this.notesExcludedFields
         });
-        
-        return notes.join('\n');
     }
 
-    // Determine if a field/value should be treated as URL-like (no colon escaping)
-    isUrlLikeField(fieldName, valueString) {
-        // Known URL-bearing fields
-        const urlFields = new Set([
-            'url', 'ticketUrl', 'gmaps', 'website', 'facebook', 'instagram', 'twitter', 'image'
-        ]);
-        if (urlFields.has(fieldName)) return true;
-        if (!valueString || typeof valueString !== 'string') return false;
-        const lower = valueString.trim().toLowerCase();
-        return lower.startsWith('http://') ||
-               lower.startsWith('https://') ||
-               lower.startsWith('mailto:') ||
-               lower.startsWith('tel:') ||
-               lower.startsWith('sms:');
-    }
-    
     // Get event date ranges with optional expansion
     getEventDateRange(event, expandRange = false) {
         const startDate = event.startDate;
