@@ -40,7 +40,7 @@ jobs:
           
           // Function to normalize iCal data by removing timestamps that change on every fetch
           function normalizeICalData(icalData) {
-            return icalData
+            let normalized = icalData
               // Remove DTSTAMP lines (these change on every fetch)
               .replace(/^DTSTAMP:.*$/gm, '')
               // Remove X-WR-CALNAME if it contains timestamps
@@ -52,6 +52,21 @@ jobs:
               .replace(/\r/g, '\n')
               // Remove empty lines created by removing timestamps
               .replace(/\n\n+/g, '\n');
+            
+            // Sort VEVENT blocks by UID so reordering doesn't count as a change
+            const veventRegex = /BEGIN:VEVENT[\s\S]*?END:VEVENT/g;
+            const vevents = normalized.match(veventRegex) || [];
+            if (vevents.length > 0) {
+              vevents.sort((a, b) => {
+                const uidA = (a.match(/^UID:(.*)$/m) || ['', ''])[1].trim();
+                const uidB = (b.match(/^UID:(.*)$/m) || ['', ''])[1].trim();
+                return uidA.localeCompare(uidB);
+              });
+              let eventIndex = 0;
+              normalized = normalized.replace(veventRegex, () => vevents[eventIndex++]);
+            }
+            
+            return normalized;
           }
           
           // Function to generate content hash for comparison
@@ -152,8 +167,11 @@ jobs:
               // Only update summary if there were actual changes
               const changedResults = results.filter(r => r.hasChanged);
               
-              if (changedResults.length === 0 && !results.some(r => r.error)) {
-                console.log(`\n🎯 No content changes detected across all calendars - skipping update`);
+              if (!hasActualChanges) {
+                console.log(`\n🎯 No content changes detected across all calendars - skipping update-summary.json`);
+                if (results.some(r => r.error)) {
+                  console.log(`\n⚠️  Some calendar fetches failed, but no ICS files changed.`);
+                }
                 process.exit(0);
               }
               
@@ -229,6 +247,7 @@ jobs:
           fi
       
       - name: Generate event pages
+        if: env.CALENDAR_CHANGED == 'true'
         env:
           EVENT_STUB_DAYS: '240'
           EVENT_STUB_PAST_DAYS: '7'
@@ -247,10 +266,12 @@ jobs:
           fi
 
       - name: Install Node dependencies
+        if: env.CALENDAR_CHANGED == 'true'
         run: |
           npm install --no-audit --no-fund --prefer-offline
 
       - name: Download event images and high-quality favicons
+        if: env.CALENDAR_CHANGED == 'true'
         run: |
           node tools/download-images.js
           git add -A img/favicons/ img/events/ 2>/dev/null || true
@@ -265,6 +286,7 @@ jobs:
           fi
 
       - name: Generate OG images for events
+        if: env.CALENDAR_CHANGED == 'true'
         run: |
           node tools/generate-og-images.js
           git add -A img/og/ 2>/dev/null || true
