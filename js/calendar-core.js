@@ -1070,6 +1070,76 @@ class CalendarCore {
         return dates;
     }
 
+    getDateTimePartsInTimezone(date, timeZone) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime()) || !timeZone) {
+            return null;
+        }
+
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).formatToParts(date);
+            const values = {};
+            parts.forEach(part => {
+                if (part.type !== 'literal') {
+                    values[part.type] = part.value;
+                }
+            });
+            if (!values.year || !values.month || !values.day || !values.hour || !values.minute) {
+                return null;
+            }
+            return {
+                year: parseInt(values.year, 10),
+                month: parseInt(values.month, 10),
+                day: parseInt(values.day, 10),
+                hour: parseInt(values.hour, 10),
+                minute: parseInt(values.minute, 10),
+                second: parseInt(values.second || '0', 10)
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    createDateFromWallTimeInTimezone(year, month, day, hour, minute, second, timeZone) {
+        if (!timeZone) {
+            return new Date(year, month - 1, day, hour, minute, second);
+        }
+
+        const targetUtcMs = Date.UTC(year, month - 1, day, hour, minute, second);
+        let candidateUtcMs = targetUtcMs;
+
+        // Iterate to resolve the wall time against timezone offset changes (DST boundaries).
+        for (let attempt = 0; attempt < 4; attempt++) {
+            const parts = this.getDateTimePartsInTimezone(new Date(candidateUtcMs), timeZone);
+            if (!parts) {
+                return new Date(year, month - 1, day, hour, minute, second);
+            }
+            const renderedUtcMs = Date.UTC(
+                parts.year,
+                parts.month - 1,
+                parts.day,
+                parts.hour,
+                parts.minute,
+                parts.second
+            );
+            const delta = targetUtcMs - renderedUtcMs;
+            if (delta === 0) {
+                return new Date(candidateUtcMs);
+            }
+            candidateUtcMs += delta;
+        }
+
+        return new Date(candidateUtcMs);
+    }
+
     parseICalDate(icalDate) {
         if (!icalDate) return new Date();
         
@@ -1196,16 +1266,18 @@ class CalendarCore {
                         });
                     }
                 } else {
-                    // Non-UTC time - this is already in the calendar's timezone, create as local date
-                    date = new Date(year, month - 1, day, hour, minute, second);
+                    // Non-UTC time with TZID should be treated as wall time in that timezone.
+                    date = this.createDateFromWallTimeInTimezone(year, month, day, hour, minute, second, timezone);
                     
-                    // No conversion needed - JavaScript will display this correctly in user's local timezone
-                    logger.debug('CALENDAR', 'Calendar timezone time (created as local date object)', {
+                    logger.debug('CALENDAR', 'Calendar timezone wall time converted to absolute date', {
                         calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
                         timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
                         localDisplay: date.toLocaleString(),
                         resultDate: date.toString(),
-                        note: 'Time is in calendar timezone, created as local date for correct display'
+                        resultISO: date.toISOString(),
+                        note: timezone
+                            ? 'TZID wall time resolved against timezone rules'
+                            : 'Floating time parsed in local timezone'
                     });
                 }
                 
