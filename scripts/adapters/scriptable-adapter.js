@@ -2697,6 +2697,25 @@ class ScriptableAdapter {
             font-weight: 600;
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
+
+        .log-copy-btn {
+            margin-left: 10px;
+            padding: 4px 10px;
+            font-size: 12px;
+            background: var(--primary-color);
+            color: var(--text-inverse);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .log-copy-btn:hover {
+            transform: translateY(-1px);
+        }
         
         .event-card {
             background: var(--background-primary);
@@ -3976,7 +3995,7 @@ class ScriptableAdapter {
             <span class="section-icon">LOG</span>
             <span class="section-title">Run Logs</span>
             <span class="section-count">${totalLines}</span>
-            <button onclick="copyLogs(this)" style="margin-left: 10px; padding: 4px 10px; font-size: 12px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">📋 Copy</button>
+            <button onclick="copyLogs(this)" class="log-copy-btn">📋 Copy</button>
         </div>
         <details class="log-details">
             <summary>${this.escapeHtml(summaryLabel)}</summary>
