@@ -7228,6 +7228,8 @@
         const tz = state.timezone || browserTimezone;
         const startDateObj = parseLocalDateTime(state.start, tz);
         const endDateObj = parseLocalDateTime(state.end, tz);
+        if (!startDateObj) logger.warn('EVENT', 'buildScriptableCallbackUrl: could not parse start date', { start: state.start, tz });
+        if (!endDateObj) logger.warn('EVENT', 'buildScriptableCallbackUrl: could not parse end date', { end: state.end, tz });
         const startValue = startDateObj ? startDateObj.toISOString() : '';
         const endValue = endDateObj ? endDateObj.toISOString() : '';
         setParam('title', state.name);
