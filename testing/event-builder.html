@@ -1565,7 +1565,7 @@
                   <i class="bi bi-search" aria-hidden="true"></i>
                   <span>Change</span>
                 </button>
-                <button type="button" class="ghost-button action-button is-compact is-hidden" id="existing-delete-override-summary">
+                <button type="button" class="ghost-button action-button is-compact is-hidden" id="existing-delete-override-summary" aria-label="Delete this override">
                   <i class="bi bi-calendar-x" aria-hidden="true"></i>
                   <span>Delete override</span>
                 </button>
@@ -5764,9 +5764,12 @@
             const confirmed = confirm(`Delete the override for "${eventName || 'this event'}"?\n\nThis will export a CANCEL ICS to remove it from calendars.`);
             if (!confirmed) return;
             state.deleteOverride = true;
-            handleAddToCalendar();
-            state.deleteOverride = false;
-            refreshUi();
+            try {
+              handleAddToCalendar();
+            } finally {
+              state.deleteOverride = false;
+              refreshUi();
+            }
           });
         }
         if (dom.editExistingButton) {
