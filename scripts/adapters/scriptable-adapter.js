@@ -3910,7 +3910,12 @@ class ScriptableAdapter {
             const section = button.closest('.log-section');
             const pre = section ? section.querySelector('.log-output') : null;
             const text = pre ? pre.textContent : '';
-            if (!text) return;
+            if (!text) {
+                const originalText = button.innerHTML;
+                button.innerHTML = '⚠️ No logs';
+                setTimeout(() => { button.innerHTML = originalText; }, 2000);
+                return;
+            }
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
                     showCopySuccess(button);
