@@ -3614,6 +3614,22 @@ class ScriptableAdapter {
             }
         }
         
+        function copyLogOutput(button, logId) {
+            const pre = document.getElementById(logId);
+            const logText = pre ? pre.textContent : '';
+            if (!logText) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(logText).then(() => {
+                    showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(logText, button);
+                });
+            } else {
+                copyToClipboardFallback(logText, button);
+            }
+        }
+
         function copyRawOutput() {
             // Get all event cards
             const eventCards = document.querySelectorAll('.event-card');
@@ -3954,6 +3970,8 @@ class ScriptableAdapter {
             : `Showing ${totalLines} lines`;
         const logText = logInfo.text || '';
 
+        const logId = `log-output-${Math.random().toString(36).slice(2, 9)}`;
+
         return `
     <div class="section log-section">
         <div class="section-header">
@@ -3962,8 +3980,25 @@ class ScriptableAdapter {
             <span class="section-count">${totalLines}</span>
         </div>
         <details class="log-details">
-            <summary>${this.escapeHtml(summaryLabel)}</summary>
-            <pre class="log-output">${this.escapeHtml(logText)}</pre>
+            <summary style="display: flex; align-items: center; justify-content: space-between;">
+                <span>${this.escapeHtml(summaryLabel)}</span>
+                <button onclick="event.stopPropagation(); copyLogOutput(this, '${logId}')" style="
+                    padding: 4px 10px;
+                    background: var(--primary-color);
+                    color: var(--text-inverse);
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+                    font-family: 'Poppins', sans-serif;
+                    flex-shrink: 0;
+                    margin-left: 8px;
+                ">📋 Copy</button>
+            </summary>
+            <pre class="log-output" id="${logId}">${this.escapeHtml(logText)}</pre>
         </details>
     </div>
         `;
