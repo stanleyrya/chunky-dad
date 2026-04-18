@@ -2580,6 +2580,26 @@ class SharedCore {
                 });
             }
 
+            // If the incoming event has a Scriptable identifier, find the calendar event
+            // it references and check whether it is recurring. Non-recurring events are
+            // always safe to merge directly — do not trust the input; scan to verify.
+            if (hasIdentifier) {
+                const keyMatch = this.findEventByKey(existingEventsData, event);
+                if (keyMatch && keyMatch.matchType === 'identifier') {
+                    const identifierMatchedEvent = keyMatch.event;
+                    const recurringDecision = this.resolveRecurringMergeCandidate(existingEventsData, identifierMatchedEvent);
+                    if (recurringDecision) {
+                        return finalize(recurringDecision);
+                    }
+                    return finalize({
+                        action: 'merge',
+                        reason: 'Override target found by identifier (non-recurring)',
+                        existingEvent: identifierMatchedEvent,
+                        existingKey: keyMatch.matchedKey || null
+                    });
+                }
+            }
+
             const sourceEvent = this.findOverrideSourceEvent(
                 existingEventsData,
                 incomingOverrideUid,

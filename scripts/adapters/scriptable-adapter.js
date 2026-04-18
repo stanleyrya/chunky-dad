@@ -3614,6 +3614,22 @@ class ScriptableAdapter {
             }
         }
         
+        function copyLogs(button) {
+            const logPre = document.querySelector('.log-output');
+            const logText = logPre ? logPre.textContent : '';
+            if (!logText) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(logText).then(() => {
+                    showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(logText, button);
+                });
+            } else {
+                copyToClipboardFallback(logText, button);
+            }
+        }
+
         function copyRawOutput() {
             // Get all event cards
             const eventCards = document.querySelectorAll('.event-card');
@@ -3960,6 +3976,7 @@ class ScriptableAdapter {
             <span class="section-icon">LOG</span>
             <span class="section-title">Run Logs</span>
             <span class="section-count">${totalLines}</span>
+            <button onclick="copyLogs(this)" style="margin-left: 10px; padding: 4px 10px; font-size: 12px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">📋 Copy</button>
         </div>
         <details class="log-details">
             <summary>${this.escapeHtml(summaryLabel)}</summary>
