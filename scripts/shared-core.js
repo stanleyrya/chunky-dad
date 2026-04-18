@@ -1545,6 +1545,35 @@ class SharedCore {
         return null;
     }
 
+    // Find all existing events with a matching identifier UID, regardless of date.
+    // Used as a fallback when findEventByKey fails due to a date mismatch — for example
+    // when an existing override event was saved with a user-edited start time that differs
+    // from the searchStartDate derived from the original recurring occurrence.
+    findEventsByIdentifier(existingEvents, identifier) {
+        if (!Array.isArray(existingEvents) || existingEvents.length === 0) return [];
+        if (!identifier) return [];
+        const normalizedIdentifier = String(identifier).trim();
+        if (!normalizedIdentifier) return [];
+        const targetInfo = this.parseScriptableIdentifier(normalizedIdentifier);
+        const targetUid = targetInfo.uid || normalizedIdentifier;
+        if (!targetUid) return [];
+        const normalizeValue = (value) => {
+            if (value === null || value === undefined) return null;
+            const normalized = String(value).trim();
+            return normalized.length > 0 ? normalized : null;
+        };
+        return existingEvents.filter(event => {
+            if (!event) return false;
+            const fields = this.parseNotesIntoFields(event.notes || '');
+            const eventIdentifierRaw = normalizeValue(event.identifier || '');
+            const eventIdentifierInfo = this.parseScriptableIdentifier(eventIdentifierRaw || '');
+            const notesIdentifierRaw = normalizeValue(fields.uid || fields.identifier || fields.id || '');
+            const notesIdentifierInfo = this.parseScriptableIdentifier(notesIdentifierRaw || '');
+            const eventUid = eventIdentifierInfo.uid || notesIdentifierInfo.uid || notesIdentifierRaw || null;
+            return Boolean(eventUid && eventUid === targetUid);
+        });
+    }
+
     buildOverrideKey(overrideUid, overrideRecurrenceId) {
         const normalizedUid = this.normalizeOverrideUid(overrideUid);
         const normalizedRecurrenceId = this.normalizeOverrideRecurrenceId(overrideRecurrenceId);
@@ -2497,6 +2526,31 @@ class SharedCore {
                 analyzedEvent = this.createFinalEventObject(analysis.sourceEvent, sourceMergeEvent);
                 delete analyzedEvent._existingEvent;
                 analyzedEvent._action = 'new';
+
+                // Compute a merge diff comparing the base recurring event to the new override
+                // being created. This enables diff display for intent:merge + action:new cases.
+                const originalFields = this.parseNotesIntoFields(analysis.sourceEvent.notes || '');
+                const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes || '');
+                analyzedEvent._mergeDiff = {
+                    preserved: [],
+                    added: [],
+                    updated: [],
+                    removed: []
+                };
+                Object.keys(originalFields).forEach(key => {
+                    if (mergedFields[key] === originalFields[key]) {
+                        analyzedEvent._mergeDiff.preserved.push(key);
+                    } else if (!mergedFields[key]) {
+                        analyzedEvent._mergeDiff.removed.push({ key, value: originalFields[key] });
+                    } else {
+                        analyzedEvent._mergeDiff.updated.push({ key, from: originalFields[key], to: mergedFields[key] });
+                    }
+                });
+                Object.keys(mergedFields).forEach(key => {
+                    if (!originalFields[key]) {
+                        analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                    }
+                });
             } else if (analysis.existingEvent) {
                 analyzedEvent._existingEvent = analysis.existingEvent;
             }
@@ -2596,6 +2650,25 @@ class SharedCore {
                         reason: 'Override target found by identifier (non-recurring)',
                         existingEvent: identifierMatchedEvent,
                         existingKey: keyMatch.matchedKey || null
+                    });
+                }
+                // Fallback: the identifier date comparison may fail when an existing override
+                // event was saved with a user-edited start time that differs from the original
+                // occurrence time used as searchStartDate. Scan all candidate events with the
+                // same UID (ignoring date) to determine recursiveness, as instructed.
+                const identifierCandidates = this.findEventsByIdentifier(existingEventsData, event.identifier || event.id);
+                if (identifierCandidates.length > 0) {
+                    const candidate = identifierCandidates[0];
+                    const recurringDecision = this.resolveRecurringMergeCandidate(existingEventsData, candidate);
+                    if (recurringDecision) {
+                        return finalize(recurringDecision);
+                    }
+                    // Non-recurring — always safe to merge directly.
+                    return finalize({
+                        action: 'merge',
+                        reason: 'Override target found by identifier scan (non-recurring)',
+                        existingEvent: candidate,
+                        existingKey: event.identifier || event.id || null
                     });
                 }
             }
