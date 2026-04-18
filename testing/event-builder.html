@@ -4687,6 +4687,10 @@
         const timezone = eventData.timeZone || browserTimezone;
         const startDate = options.startDate || eventData.startDate || new Date();
         const endDate = options.endDate || eventData.endDate || new Date(startDate.getTime() + DEFAULT_DURATION_MINUTES * 60000);
+        // calendar-core creates Date objects using new Date(year, month, day, hour, ...) with the
+        // calendar timezone's wall-clock components stored as browser-local time. Using
+        // formatInputValue (browser-local) preserves those components correctly regardless of
+        // where the user is browsing. formatInputValueInTimezone would double-apply the offset.
         return {
           ...state,
           name: normalizeText(eventData.name || ''),
@@ -4698,8 +4702,8 @@
           location: normalizeCoordinatesValue(eventData.coordinates || eventData.location),
           description: normalizeText(eventData.tea || eventData.description || ''),
           cover: normalizeText(eventData.cover || ''),
-          start: formatInputValueInTimezone(startDate, timezone),
-          end: formatInputValueInTimezone(endDate, timezone),
+          start: formatInputValue(startDate),
+          end: formatInputValue(endDate),
           timezone,
           recurrence: normalizeText(options.recurrence || ''),
           recurrenceMode: 'builder',
@@ -7219,8 +7223,15 @@
           const trimmed = String(normalized).trim();
           params.set(key, trimmed);
         };
-        const startValue = sanitizeDateTimeInput(state.start);
-        const endValue = sanitizeDateTimeInput(state.end);
+        // Convert the local datetime strings to UTC ISO so Scriptable can parse them
+        // correctly regardless of the device's timezone.
+        const tz = state.timezone || browserTimezone;
+        const startDateObj = parseLocalDateTime(state.start, tz);
+        const endDateObj = parseLocalDateTime(state.end, tz);
+        if (!startDateObj) logger.warn('EVENT', 'buildScriptableCallbackUrl: could not parse start date', { start: state.start, tz });
+        if (!endDateObj) logger.warn('EVENT', 'buildScriptableCallbackUrl: could not parse end date', { end: state.end, tz });
+        const startValue = startDateObj ? startDateObj.toISOString() : '';
+        const endValue = endDateObj ? endDateObj.toISOString() : '';
         setParam('title', state.name);
         setParam('shortName', state.shortName);
         setParam('description', state.description);
