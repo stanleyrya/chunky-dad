@@ -2580,6 +2580,24 @@ class SharedCore {
                 });
             }
 
+            // If the incoming event has an identifier, check for a direct identifier match.
+            // This handles override events that already exist in the calendar but were not
+            // created by this system (so they lack overrideUid/overrideRecurrenceId in notes).
+            const incomingIdentifier = event && String(event.identifier || event.id || '').trim();
+            if (incomingIdentifier) {
+                const identifierMatchEvent = existingEventsData.find(
+                    existing => String(existing.identifier || existing.id || '').trim() === incomingIdentifier
+                );
+                if (identifierMatchEvent) {
+                    return finalize({
+                        action: 'merge',
+                        reason: 'Override event matched by identifier',
+                        existingEvent: identifierMatchEvent,
+                        existingKey: `${incomingOverrideUid.toLowerCase()}::${incomingOverrideRecurrenceId}`
+                    });
+                }
+            }
+
             const sourceEvent = this.findOverrideSourceEvent(
                 existingEventsData,
                 incomingOverrideUid,

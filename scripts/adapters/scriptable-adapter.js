@@ -3906,6 +3906,23 @@ class ScriptableAdapter {
             });
         }
         
+        function copyLogText(button) {
+            const section = button.closest('.log-section');
+            const pre = section ? section.querySelector('.log-output') : null;
+            const text = pre ? pre.textContent : '';
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(text, button);
+                });
+            } else {
+                copyToClipboardFallback(text, button);
+            }
+        }
+        
         // Initialize image display state on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleImages();
@@ -3960,6 +3977,22 @@ class ScriptableAdapter {
             <span class="section-icon">LOG</span>
             <span class="section-title">Run Logs</span>
             <span class="section-count">${totalLines}</span>
+            <button onclick="copyLogText(this)" style="
+                margin-left: 12px;
+                padding: 4px 12px;
+                background: var(--primary-color);
+                color: var(--text-inverse);
+                border: none;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-family: 'Poppins', sans-serif;
+            " onmouseover="this.style.background='var(--accent-color)'; this.style.transform='translateY(-1px)'"
+               onmouseout="this.style.background='var(--primary-color)'; this.style.transform='translateY(0)'">
+                📋 Copy Logs
+            </button>
         </div>
         <details class="log-details">
             <summary>${this.escapeHtml(summaryLabel)}</summary>
