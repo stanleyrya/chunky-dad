@@ -1565,9 +1565,9 @@
                   <i class="bi bi-search" aria-hidden="true"></i>
                   <span>Change</span>
                 </button>
-                <button type="button" class="ghost-button action-button is-compact is-hidden" id="existing-delete-override-summary">
+                <button type="button" class="ghost-button action-button is-compact is-hidden" id="existing-delete-override-summary" aria-label="Delete this override">
                   <i class="bi bi-calendar-x" aria-hidden="true"></i>
-                  <span>Delete override on Add</span>
+                  <span>Delete override</span>
                 </button>
                 <button type="button" class="ghost-button action-button is-compact" id="existing-copy-summary">
                   <i class="bi bi-files" aria-hidden="true"></i>
@@ -3693,6 +3693,15 @@
             || (state.editingExistingId ? parseResultId(state.editingExistingId).uid : '')
         );
         if (!overrideUid) return null;
+        // When editing an existing custom override, use the preserved original overrideRecurrenceId
+        // string to prevent format changes (e.g. UTC → TZID) that would cause unintended clobbers
+        // in Scriptable's merge logic.
+        if (isEditingExistingOverrideMode()) {
+          const preserved = normalizeText(state.editingExistingOverrideRecurrenceId || '');
+          if (preserved) {
+            return { overrideUid, overrideRecurrenceId: preserved };
+          }
+        }
         const recurrenceTimezone = normalizeText(
           state.editingExistingRecurrenceTimezone || fallbackTimezone || state.timezone || browserTimezone
         );
@@ -4603,6 +4612,20 @@
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
         state.editingExistingOverrideType = selectedOverrideType || '';
         state.editingExistingSourceUid = selectedOverrideSourceUid || '';
+        // Preserve the original overrideRecurrenceId string format for existing custom overrides.
+        // This prevents format changes (e.g. UTC → TZID) when editingExistingRecurrenceTimezone
+        // falls back to the event timezone rather than the override's own recurrenceIdTimezone.
+        let editingExistingOverrideRecurrenceId = '';
+        if (selectedOverrideEvent && selectedOverrideType === 'custom') {
+          const ovRid = selectedOverrideEvent.recurrenceId;
+          const ovTz = selectedOverrideEvent.recurrenceIdTimezone || '';
+          if (ovRid instanceof Date && !isNaN(ovRid.getTime())) {
+            editingExistingOverrideRecurrenceId = ovTz
+              ? `TZID=${ovTz}:${formatICSDateInTimezone(ovRid, ovTz) || formatICSDate(ovRid)}`
+              : formatICSDate(ovRid);
+          }
+        }
+        state.editingExistingOverrideRecurrenceId = editingExistingOverrideRecurrenceId;
         state.editingExistingSearchStartDate = (startDate && startDate instanceof Date && !Number.isNaN(startDate.getTime()))
           ? startDate.toISOString()
           : '';
@@ -4718,6 +4741,7 @@
           image: normalizeText(eventData.image || ''),
           editingExistingOverrideType: '',
           editingExistingSourceUid: '',
+          editingExistingOverrideRecurrenceId: '',
           deleteOverride: false,
           isEditingExisting: true
         };
@@ -5171,6 +5195,7 @@
         state.editingExistingRecurrenceTimezone = '';
         state.editingExistingOverrideType = '';
         state.editingExistingSourceUid = '';
+        state.editingExistingOverrideRecurrenceId = '';
         state.editingExistingSequence = '';
         state.editingExistingSearchStartDate = '';
         state.editingExistingSearchEndDate = '';
@@ -5246,6 +5271,7 @@
           editingExistingRecurrenceTimezone: '',
           editingExistingOverrideType: '',
           editingExistingSourceUid: '',
+          editingExistingOverrideRecurrenceId: '',
           editingExistingSequence: '',
           editingExistingSearchStartDate: '',
           editingExistingSearchEndDate: '',
@@ -5286,6 +5312,7 @@
         erid: 'editingExistingRecurrenceId',
         ertz: 'editingExistingRecurrenceTimezone',
         eotype: 'editingExistingOverrideType',
+        eovrid: 'editingExistingOverrideRecurrenceId',
         eseq: 'editingExistingSequence',
         editseq: 'editingExistingSequence',
         editsequence: 'editingExistingSequence'
@@ -5310,6 +5337,7 @@
           || overrides.editingExistingRecurrenceId
           || overrides.editingExistingRecurrenceTimezone
           || overrides.editingExistingOverrideType
+          || overrides.editingExistingOverrideRecurrenceId
           || overrides.editingExistingSequence
           || overrides.editingExistingSearchStartDate
           || overrides.editingExistingSearchEndDate
@@ -5325,6 +5353,7 @@
         overrides.editingExistingRecurrenceTimezone = '';
         overrides.editingExistingOverrideType = '';
         overrides.editingExistingSourceUid = '';
+        overrides.editingExistingOverrideRecurrenceId = '';
         overrides.editingExistingSequence = '';
         overrides.editingExistingSearchStartDate = '';
         overrides.editingExistingSearchEndDate = '';
@@ -5731,8 +5760,16 @@
               showToast('Select a custom override occurrence first.', 'warn');
               return;
             }
-            state.deleteOverride = !Boolean(state.deleteOverride);
-            refreshUi();
+            const eventName = (state && state.name || '').trim();
+            const confirmed = confirm(`Delete the override for "${eventName || 'this event'}"?\n\nThis will export a CANCEL ICS to remove it from calendars.`);
+            if (!confirmed) return;
+            state.deleteOverride = true;
+            try {
+              handleAddToCalendar();
+            } finally {
+              state.deleteOverride = false;
+              refreshUi();
+            }
           });
         }
         if (dom.editExistingButton) {
@@ -7158,6 +7195,7 @@
           setTextParam('erid', state.editingExistingRecurrenceId);
           setTextParam('ertz', state.editingExistingRecurrenceTimezone);
           setTextParam('eotype', state.editingExistingOverrideType);
+          setTextParam('eovrid', state.editingExistingOverrideRecurrenceId);
           setTextParam('eseq', state.editingExistingSequence);
           setBooleanParam('deloverride', state.deleteOverride);
           setTextParam('searchStartDate', state.editingExistingSearchStartDate);
@@ -7535,18 +7573,9 @@
         if (!dom.existingDeleteOverrideSummaryButton) return;
         dom.existingDeleteOverrideSummaryButton.classList.toggle('is-hidden', !canDeleteOverride);
         dom.existingDeleteOverrideSummaryButton.disabled = !canDeleteOverride;
-        const isDeletingOverride = Boolean(canDeleteOverride && state && state.deleteOverride);
-        const label = isDeletingOverride ? 'Keep override on Add' : 'Delete override on Add';
-        dom.existingDeleteOverrideSummaryButton.innerHTML = `<i class="bi bi-calendar-x" aria-hidden="true"></i><span>${label}</span>`;
-        dom.existingDeleteOverrideSummaryButton.classList.toggle('is-toggle-active', isDeletingOverride);
-        if (isDeletingOverride) {
-          dom.existingDeleteOverrideSummaryButton.setAttribute(
-            'title',
-            'Add exports this standalone override UID as CANCELLED with an increased sequence.'
-          );
-        } else {
-          dom.existingDeleteOverrideSummaryButton.removeAttribute('title');
-        }
+        dom.existingDeleteOverrideSummaryButton.innerHTML = `<i class="bi bi-calendar-x" aria-hidden="true"></i><span>Delete override</span>`;
+        dom.existingDeleteOverrideSummaryButton.classList.remove('is-toggle-active');
+        dom.existingDeleteOverrideSummaryButton.removeAttribute('title');
       }
 
       function updateActionButtonsState() {
