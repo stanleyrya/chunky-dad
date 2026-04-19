@@ -4615,13 +4615,16 @@
         // Preserve the original overrideRecurrenceId string format for existing custom overrides.
         // This prevents format changes (e.g. UTC → TZID) when editingExistingRecurrenceTimezone
         // falls back to the event timezone rather than the override's own recurrenceIdTimezone.
+        // calendar-core stores TZID wall-clock components as browser-local time, so we use
+        // formatICSDateFromLocal() (local-component extraction) instead of formatICSDateInTimezone()
+        // to avoid a double-offset when the user's browser timezone differs from the event's TZID.
         let editingExistingOverrideRecurrenceId = '';
         if (selectedOverrideEvent && selectedOverrideType === 'custom') {
           const ovRid = selectedOverrideEvent.recurrenceId;
           const ovTz = selectedOverrideEvent.recurrenceIdTimezone || '';
           if (ovRid instanceof Date && !isNaN(ovRid.getTime())) {
             editingExistingOverrideRecurrenceId = ovTz
-              ? `TZID=${ovTz}:${formatICSDateInTimezone(ovRid, ovTz) || formatICSDate(ovRid)}`
+              ? `TZID=${ovTz}:${formatICSDateFromLocal(ovRid) || formatICSDate(ovRid)}`
               : formatICSDate(ovRid);
           }
         }
@@ -8300,6 +8303,22 @@
 
       function formatICSDate(date) {
         return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      }
+
+      // Extract local time components from a Date and format as an ICS datetime string.
+      // calendar-core stores TZID wall-clock components as browser-local time (via
+      // new Date(year, month, day, hour, ...)). Using .getHours() etc. instead of
+      // formatICSDateInTimezone() avoids a double-offset error when the user's browser
+      // is in a different timezone than the event's TZID timezone.
+      function formatICSDateFromLocal(date) {
+        if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}${month}${day}T${hours}${minutes}${seconds}`;
       }
 
       function escapeICS(value) {
