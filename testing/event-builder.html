@@ -5439,6 +5439,12 @@
         const parseContext = { sawEditFlag: false };
         params.forEach((value, key) => {
           if (value == null) return;
+          // 'venue' and 'addr' are builder-specific URL params that need direct state key
+          // mapping before schema canonicalization. 'venue' would otherwise map to
+          // savedBar (via the alias chain venue → bar → savedBar), and 'addr' has no
+          // alias entry and would be silently dropped.
+          if (key === 'venue') { overrides.venue = value; return; }
+          if (key === 'addr') { overrides.address = value; return; }
           const stateKey = schema.getEventBuilderStateKey(key);
           if (stateKey) {
             if (stateKey === 'start' || stateKey === 'end') {
