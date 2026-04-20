@@ -3358,6 +3358,7 @@
         const location = normalizeCoordinatesValue(coordinates || event.location);
         const normalized = {
           uid: event.uid || '',
+          slug: event.slug || '',
           sourceUid,
           overrideIdentityType,
           name: normalizeText(event.name || ''),
@@ -3782,7 +3783,7 @@
         const hasRangeFilter = Boolean(rangeStart || rangeEnd);
         const rangeWindow = hasRangeFilter ? buildExistingRangeWindow(rangeStart, rangeEnd) : null;
         const now = filters.now instanceof Date ? filters.now : new Date();
-        const includePast = Boolean(textFilter || dateValue || hasRangeFilter);
+        const includePast = true;
 
         const addIfMatches = result => {
           if (!result) return;
@@ -4116,7 +4117,7 @@
       }
 
       function buildResultId(event, type, occurrenceDate) {
-        const uid = event.uid || event.name || 'event';
+        const uid = event.uid || event.slug || event.name || 'event';
         const dateKey = occurrenceDate ? formatDateKey(occurrenceDate) : (event.recurrenceDateKey || event.dateKey || '');
         return `${uid}::${type}::${dateKey}`;
       }
@@ -4475,7 +4476,6 @@
           return status;
         }
 
-        const now = new Date();
         if (editSelection.mode === 'series' && editSelection.baseEvent && editSelection.baseEvent.recurrence
           && existingCalendarIndex) {
           const legacySeriesReason = getSeriesLegacyOverrideBlockReason(editSelection.baseEvent, existingCalendarIndex);
@@ -4483,18 +4483,6 @@
             status.editHint = legacySeriesReason;
             return status;
           }
-          const futureOccurrences = buildOccurrenceResultsForEvent(existingCalendarIndex, editSelection.baseEvent, {
-            now,
-            maxCount: 1,
-            windowDays: OCCURRENCE_LOOKAHEAD_DAYS
-          });
-          if (!futureOccurrences.length) {
-            status.editHint = 'This series has already ended.';
-            return status;
-          }
-        } else if (editSelection.mode !== 'series' && !isEndDateEditable(editSelection.endDate, now)) {
-          status.editHint = 'Past events cannot be edited.';
-          return status;
         }
 
         status.canEdit = true;
@@ -4564,7 +4552,6 @@
           summaryResult,
           occurrenceId
         } = selection;
-        const now = new Date();
         const selectedOverrideEvent = (mode === 'occurrence'
           && summaryResult
           && summaryResult.type === 'override')
@@ -4581,18 +4568,6 @@
             showToast(legacySeriesReason, 'warn');
             return;
           }
-          const futureOccurrences = buildOccurrenceResultsForEvent(existingCalendarIndex, baseEvent, {
-            now,
-            maxCount: 1,
-            windowDays: OCCURRENCE_LOOKAHEAD_DAYS
-          });
-          if (!futureOccurrences.length) {
-            showToast('This series has already ended.', 'warn');
-            return;
-          }
-        } else if (mode !== 'series' && !isEndDateEditable(endDate, now)) {
-          showToast('Past events cannot be edited.', 'warn');
-          return;
         }
 
         selectedBar = null;
@@ -5059,7 +5034,7 @@
             const dateB = getOverrideReferenceDate(b);
             const timeA = dateA ? dateA.getTime() : 0;
             const timeB = dateB ? dateB.getTime() : 0;
-            return timeB - timeA;
+            return timeA - timeB;
           })
           .slice(0, 6);
         displayOverrides.forEach(override => {
