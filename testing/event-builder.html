@@ -4307,7 +4307,7 @@
           return;
         }
         const dateFilter = getExistingDateFilter();
-        const includePast = Boolean(dateFilter.hasSelection);
+        const includePast = true;
         const results = buildOccurrenceResultsForEvent(existingCalendarIndex, baseEvent, {
           dateValue: dateFilter.dateValue,
           rangeStart: dateFilter.rangeStart,
