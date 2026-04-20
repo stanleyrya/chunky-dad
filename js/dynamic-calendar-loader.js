@@ -3875,7 +3875,24 @@ class DynamicCalendarLoader extends CalendarCore {
         const timezone = testEventData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         const testUid = testEventData.uid ? String(testEventData.uid).trim() : '';
         const testRecurrenceId = toDate(testEventData.recurrenceId);
-        const isOverride = Boolean(testRecurrenceId);
+        // Parse overrideUid/overrideRecurrenceId for occurrence override previews.
+        // When the event builder creates an override, recurrenceId is null but overrideUid and
+        // overrideRecurrenceId identify which base-series occurrence to suppress in the preview.
+        const testOverrideUid = testEventData.overrideUid ? String(testEventData.overrideUid).trim() : '';
+        let testOverrideRecurrenceId = null;
+        if (testEventData.overrideRecurrenceId) {
+            try {
+                testOverrideRecurrenceId = this.parseICalDate(String(testEventData.overrideRecurrenceId));
+                if (Number.isNaN(testOverrideRecurrenceId.getTime())) {
+                    testOverrideRecurrenceId = null;
+                }
+            } catch (_) {
+                testOverrideRecurrenceId = null;
+            }
+        }
+        const effectiveUid = testUid || testOverrideUid;
+        const effectiveRecurrenceId = testRecurrenceId || testOverrideRecurrenceId;
+        const isOverride = Boolean(effectiveRecurrenceId);
         
         const formatTimeComponent = (date) => {
             const options = { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: timezone };
@@ -3974,8 +3991,8 @@ class DynamicCalendarLoader extends CalendarCore {
             website: testEventData.website || null,
             tickets: testEventData.tickets || null,
             links: normalizedLinks,
-            uid: testUid || null,
-            recurrenceId: testRecurrenceId || null,
+            uid: effectiveUid || null,
+            recurrenceId: effectiveRecurrenceId || null,
             recurring: isOverride ? false : Boolean(testEventData.recurring),
             recurrence: isOverride ? null : (testEventData.recurrence || null),
             coordinates: testEventData.coordinates || null,
@@ -3991,19 +4008,19 @@ class DynamicCalendarLoader extends CalendarCore {
             if (event.slug && event.slug.startsWith('test-event-')) {
                 return true;
             }
-            if (!testUid) {
+            if (!effectiveUid) {
                 return false;
             }
             const eventUid = event.uid || event.slug || event.name;
-            if (!eventUid || eventUid !== testUid) {
+            if (!eventUid || eventUid !== effectiveUid) {
                 return false;
             }
             const eventRecurrenceId = toDate(event.recurrenceId);
             if (isOverride) {
-                if (!eventRecurrenceId || !testRecurrenceId) {
+                if (!eventRecurrenceId || !effectiveRecurrenceId) {
                     return false;
                 }
-                return eventRecurrenceId.getTime() === testRecurrenceId.getTime();
+                return eventRecurrenceId.getTime() === effectiveRecurrenceId.getTime();
             }
             return !eventRecurrenceId;
         };
