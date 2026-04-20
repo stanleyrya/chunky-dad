@@ -3948,8 +3948,12 @@
         const added = new Set();
         const now = options.now instanceof Date ? options.now : new Date();
         const dateValue = options.dateValue || '';
-        const rangeStart = options.rangeStart instanceof Date ? startOfDay(options.rangeStart) : null;
-        const rangeEnd = options.rangeEnd instanceof Date ? startOfDay(options.rangeEnd) : null;
+        const rawRangeStart = options.rangeStart instanceof Date ? startOfDay(options.rangeStart) : null;
+        const rawRangeEnd = options.rangeEnd instanceof Date ? startOfDay(options.rangeEnd) : null;
+        const hasRangeInput = Boolean(rawRangeStart || rawRangeEnd);
+        const rangeWindow = hasRangeInput ? buildExistingRangeWindow(rawRangeStart, rawRangeEnd) : null;
+        const rangeStart = rangeWindow ? rangeWindow.start : null;
+        const rangeEnd = rangeWindow ? rangeWindow.end : null;
         const hasRange = Boolean(rangeStart && rangeEnd);
         const maxCount = Number.isFinite(options.maxCount) ? options.maxCount : OCCURRENCE_MAX_COUNT;
         const windowDays = Number.isFinite(options.windowDays) ? options.windowDays : OCCURRENCE_LOOKAHEAD_DAYS;
@@ -4053,17 +4057,18 @@
           overrides.forEach(addOverrideResult);
         }
 
-        // Remove occurrence entries that have a corresponding override for the same date
-        const overrideOccurrenceDateKeys = new Set(
+        // Remove occurrence entries superseded by an override, matched by recurrenceDateKey
+        // (recurrenceId-based, not startDate-based, since an override's startDate can change)
+        const overriddenDateKeys = new Set(
           results
-            .filter(r => r.type === 'override' && r.occurrenceDate)
-            .map(r => formatDateKey(r.occurrenceDate))
+            .filter(r => r.type === 'override')
+            .map(r => r.event.recurrenceDateKey)
             .filter(Boolean)
         );
-        if (overrideOccurrenceDateKeys.size) {
+        if (overriddenDateKeys.size) {
           for (let i = results.length - 1; i >= 0; i--) {
             const r = results[i];
-            if (r.type === 'occurrence' && r.occurrenceDate && overrideOccurrenceDateKeys.has(formatDateKey(r.occurrenceDate))) {
+            if (r.type === 'occurrence' && r.occurrenceDate && overriddenDateKeys.has(formatDateKey(r.occurrenceDate))) {
               results.splice(i, 1);
             }
           }
@@ -4302,7 +4307,7 @@
           return;
         }
         const dateFilter = getExistingDateFilter();
-        const includePast = Boolean(dateFilter.dateValue || dateFilter.hasSelection);
+        const includePast = Boolean(dateFilter.hasSelection);
         const results = buildOccurrenceResultsForEvent(existingCalendarIndex, baseEvent, {
           dateValue: dateFilter.dateValue,
           rangeStart: dateFilter.rangeStart,
