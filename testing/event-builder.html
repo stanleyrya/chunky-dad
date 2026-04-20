@@ -2082,6 +2082,7 @@
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
       const DAD_EMAIL = 'events@chunky.dad';
+      const ISSUES_EMAIL = 'events+issues@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
       const LEGACY_OVERRIDE_HELP_MESSAGE = 'Legacy override detected. Edits are limited in this tool. Use Tell Dad and describe what you are trying to change.';
       const LEGACY_SERIES_BLOCK_MESSAGE = 'This series has legacy overrides, so series edits are blocked in this tool.';
@@ -4052,6 +4053,22 @@
           overrides.forEach(addOverrideResult);
         }
 
+        // Remove occurrence entries that have a corresponding override for the same date
+        const overrideOccurrenceDateKeys = new Set(
+          results
+            .filter(r => r.type === 'override' && r.occurrenceDate)
+            .map(r => formatDateKey(r.occurrenceDate))
+            .filter(Boolean)
+        );
+        if (overrideOccurrenceDateKeys.size) {
+          for (let i = results.length - 1; i >= 0; i--) {
+            const r = results[i];
+            if (r.type === 'occurrence' && r.occurrenceDate && overrideOccurrenceDateKeys.has(formatDateKey(r.occurrenceDate))) {
+              results.splice(i, 1);
+            }
+          }
+        }
+
         results.sort((a, b) => {
           const dateSort = (a.startDate && b.startDate) ? a.startDate - b.startDate : 0;
           if (dateSort !== 0) return dateSort;
@@ -4285,7 +4302,7 @@
           return;
         }
         const dateFilter = getExistingDateFilter();
-        const includePast = Boolean(dateFilter.dateValue || (dateFilter.rangeStart && dateFilter.rangeEnd));
+        const includePast = Boolean(dateFilter.dateValue || dateFilter.hasSelection);
         const results = buildOccurrenceResultsForEvent(existingCalendarIndex, baseEvent, {
           dateValue: dateFilter.dateValue,
           rangeStart: dateFilter.rangeStart,
@@ -5754,7 +5771,7 @@
             const reason = dom.recurrenceEditLockTellDadButton.dataset.reason || LEGACY_OVERRIDE_HELP_MESSAGE;
             const requestLabel = dom.recurrenceEditLockTellDadButton.dataset.requestLabel || 'Need help with a legacy override';
             const requestedAction = dom.recurrenceEditLockTellDadButton.dataset.requestedAction || '';
-            openTellDadEmail(dom.recurrenceEditLockTellDadButton, { requestLabel, reason, requestedAction });
+            openTellDadEmail(dom.recurrenceEditLockTellDadButton, { requestLabel, reason, requestedAction, isIssue: true });
           });
         }
         if (dom.existingDeleteOverrideSummaryButton) {
@@ -5874,7 +5891,7 @@
             const reason = dom.existingModeTellDadButton.dataset.reason || `${LEGACY_SERIES_BLOCK_MESSAGE} ${LEGACY_TELL_DAD_PROMPT}`;
             const requestLabel = dom.existingModeTellDadButton.dataset.requestLabel || 'Series edit blocked by legacy overrides';
             const requestedAction = dom.existingModeTellDadButton.dataset.requestedAction || '';
-            openTellDadEmail(dom.existingModeTellDadButton, { requestLabel, reason, requestedAction });
+            openTellDadEmail(dom.existingModeTellDadButton, { requestLabel, reason, requestedAction, isIssue: true });
           });
         }
         if (dom.existingLoadButton) {
@@ -7426,19 +7443,20 @@
         };
       }
 
-      function buildTellDadMailto(message = buildTellDadMessage()) {
+      function buildTellDadMailto(message = buildTellDadMessage(), email = DAD_EMAIL) {
         if (!message || !message.shareUrl) return '';
         const rawBody = message.bodyHtml || message.bodyText || message.body || '';
         const body = String(rawBody).replace(/\r?\n/g, '\r\n');
-        return `mailto:${DAD_EMAIL}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(body)}`;
+        return `mailto:${email}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(body)}`;
       }
 
       function openTellDadEmail(button, options = {}) {
+        const email = options.isIssue ? ISSUES_EMAIL : DAD_EMAIL;
         const message = buildTellDadMessage(options);
         if (!message.shareUrl) return;
         const fallbackBody = message.bodyText || message.body || '';
-        const fallbackText = `To: ${DAD_EMAIL}\nSubject: ${message.subject}\n\n${fallbackBody}`;
-        const mailtoUrl = buildTellDadMailto(message);
+        const fallbackText = `To: ${email}\nSubject: ${message.subject}\n\n${fallbackBody}`;
+        const mailtoUrl = buildTellDadMailto(message, email);
         if (mailtoUrl) {
           window.location.href = mailtoUrl;
           showTemporaryState(button, 'Email ready!');
