@@ -22,6 +22,7 @@ const EVENT_KEY_ALIASES = {
     bar: 'bar',
 
     address: 'address',
+    addr: 'address',
     loc: 'location',
     coords: 'location',
     coordinates: 'location',
@@ -138,6 +139,7 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
     title: 'name',
     shortName: 'shortName',
     city: 'city',
+    venue: 'venue',
     bar: 'savedBar',
     address: 'address',
     location: 'location',
@@ -294,6 +296,10 @@ function formatEventNotes(event, options = {}) {
 function getEventBuilderStateKey(paramKey) {
     if (paramKey === null || paramKey === undefined) {
         return null;
+    }
+    const normalized = normalizeAliasKey(paramKey);
+    if (Object.prototype.hasOwnProperty.call(EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY, normalized)) {
+        return EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY[normalized];
     }
     const canonicalKey = canonicalizeEventKey(paramKey);
     return Object.prototype.hasOwnProperty.call(EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY, canonicalKey)
