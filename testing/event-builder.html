@@ -2327,7 +2327,12 @@
         }
         if (dom.addToGoogleCalendarButton) {
           const isEditing = Boolean(state && state.isEditingExisting);
-          dom.addToGoogleCalendarButton.classList.toggle('is-hidden', !showDebug || isEditing);
+          dom.addToGoogleCalendarButton.classList.toggle('is-hidden', !showDebug);
+          dom.addToGoogleCalendarButton.classList.toggle('primary-button', !isEditing);
+          dom.addToGoogleCalendarButton.classList.toggle('secondary-button', isEditing);
+          const labelSpan = dom.addToGoogleCalendarButton.querySelector('span');
+          if (labelSpan) labelSpan.textContent = isEditing ? 'Google (Ref)' : 'Google';
+          dom.addToGoogleCalendarButton.setAttribute('aria-label', isEditing ? 'Open existing event in Google Calendar' : 'Add to Google Calendar');
         }
         if (dom.openScriptableButton) {
           dom.openScriptableButton.classList.toggle('is-hidden', !showDebug);
@@ -7609,7 +7614,10 @@
           }
         }
         if (dom.addToGoogleCalendarButton) {
-          const googleDisabledReason = getAddToCalendarDisabledReason();
+          const isEditing = Boolean(state && state.isEditingExisting);
+          const googleDisabledReason = isEditing
+            ? getGoogleRefDisabledReason()
+            : getAddToCalendarDisabledReason();
           dom.addToGoogleCalendarButton.disabled = Boolean(googleDisabledReason);
           if (googleDisabledReason) {
             dom.addToGoogleCalendarButton.setAttribute('title', googleDisabledReason);
@@ -8231,6 +8239,29 @@
       }
 
       function handleAddToGoogleCalendar() {
+        const isEditing = Boolean(state && state.isEditingExisting);
+        if (isEditing) {
+          const disabledReason = getGoogleRefDisabledReason();
+          if (disabledReason) {
+            showToast(disabledReason, 'warn');
+            return;
+          }
+          const uid = getEditingUidFromState();
+          const event = buildEventPayload();
+          const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
+            ? CITY_CONFIG[event.city]
+            : null;
+          if (!cityConfig || !cityConfig.calendarId) {
+            showToast('No calendar ID found for this city.', 'warn');
+            return;
+          }
+          const url = getEventEditUrl(uid, cityConfig.calendarId);
+          window.open(url, '_blank', 'noopener,noreferrer');
+          if (dom.addToGoogleCalendarButton) {
+            showTemporaryState(dom.addToGoogleCalendarButton, 'Opening Google...');
+          }
+          return;
+        }
         const addDisabledReason = getAddToCalendarDisabledReason();
         if (addDisabledReason) {
           showToast(addDisabledReason, 'warn');
@@ -8250,6 +8281,29 @@
         if (dom.addToGoogleCalendarButton) {
           showTemporaryState(dom.addToGoogleCalendarButton, 'Opening Google...');
         }
+      }
+
+      function getGoogleRefDisabledReason() {
+        const uid = getEditingUidFromState();
+        if (!uid) return 'No event UID found to open in Google Calendar.';
+        const event = buildEventPayload();
+        const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
+          ? CITY_CONFIG[event.city]
+          : null;
+        if (!cityConfig || !cityConfig.calendarId) return 'No calendar ID found for this city.';
+        return '';
+      }
+
+      // Generates a direct Google Calendar view link for an existing event.
+      // Google Calendar encodes the event reference as base64("eventId calendarId").
+      // The eventId in iCal format may include "@google.com" — stripping it matches
+      // the format Google expects in the eid parameter.
+      function getEventEditUrl(eventId, calendarId) {
+        // Strip "@google.com" suffix if present (iCal UID format vs Google's internal ID)
+        const cleanEventId = eventId.split('@')[0];
+        // calendarId and eventId are always ASCII (hex hashes + email addresses)
+        const eid = btoa(cleanEventId + ' ' + calendarId);
+        return `https://calendar.google.com/calendar/event?eid=${eid}`;
       }
 
       // Google Calendar URL parameter reference:
