@@ -225,11 +225,38 @@ function isUrlLikeField(fieldName, valueString) {
         lower.startsWith('sms:');
 }
 
+function normalizeHtmlNotes(notes) {
+    if (!notes || typeof notes !== 'string') return notes;
+    if (!/<|&nbsp;|&amp;|&lt;|&gt;|&quot;/i.test(notes)) return notes;
+
+    let text = notes;
+    // Extract URLs from anchor tags that have an href attribute
+    text = text.replace(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>[\s\S]*?<\/a>/gi, '$1');
+    // Strip remaining anchor tags but keep their text content
+    text = text.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1');
+    // Replace <br> variants with newlines
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    // Strip remaining HTML tags
+    text = text.replace(/<[^>]+>/g, '');
+    // Decode common HTML entities
+    text = text.replace(/&nbsp;/gi, ' ');
+    text = text.replace(/&amp;/gi, '&');
+    text = text.replace(/&lt;/gi, '<');
+    text = text.replace(/&gt;/gi, '>');
+    text = text.replace(/&quot;/gi, '"');
+    text = text.replace(/&#39;/gi, "'");
+    text = text.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+    // Trim trailing whitespace on each line
+    text = text.split('\n').map(line => line.trimEnd()).join('\n');
+    return text;
+}
+
 function parseNotesIntoFields(notes) {
     const fields = {};
     if (!notes || typeof notes !== 'string') return fields;
 
-    const lines = notes.split('\n');
+    const normalizedNotes = normalizeHtmlNotes(notes);
+    const lines = normalizedNotes.split('\n');
     let currentKey = null;
     let currentValue = '';
 
