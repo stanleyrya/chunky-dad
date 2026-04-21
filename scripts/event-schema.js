@@ -249,7 +249,7 @@ function normalizeHtmlNotes(notes) {
     text = text.replace(/&#39;/gi, "'");
     text = text.replace(/&#(\d+);/g, (_, n) => {
         const code = Number(n);
-        return (code >= 0 && code <= 0x10FFFF) ? String.fromCharCode(code) : '';
+        return (code >= 0 && code <= 0x10FFFF) ? String.fromCodePoint(code) : '';
     });
     text = text.replace(/&amp;/gi, '&');
     // Trim trailing whitespace on each line
