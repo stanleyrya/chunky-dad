@@ -2,6 +2,11 @@
 // EVENT SCHEMA - SHARED EVENT FIELD CANONICALIZATION + NOTES CODEC
 // ============================================================================
 // Pure JavaScript helpers shared by website + Scriptable runtimes.
+//
+// IMPORTANT: This file exists in two locations that must be kept in sync:
+//   - scripts/event-schema.js  (used by Scriptable and test-unified-scraper.html)
+//   - js/event-schema.js       (used by event-builder.html and the website)
+// When making changes, update BOTH files.
 
 const EVENT_KEY_ALIASES = {
     title: 'title',
@@ -57,10 +62,10 @@ const EVENT_KEY_ALIASES = {
     website: 'website',
     web: 'website',
     site: 'website',
-    url: 'url',
-    link: 'url',
-    eventurl: 'url',
-    eventlink: 'url',
+    url: 'website',
+    link: 'website',
+    eventurl: 'website',
+    eventlink: 'website',
     ticketurl: 'ticketUrl',
     ticketlink: 'ticketUrl',
     ticket: 'ticketUrl',
