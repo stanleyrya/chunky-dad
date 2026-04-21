@@ -2326,7 +2326,8 @@
           dom.addToCalendarButton.classList.toggle('is-hidden', !showDebug);
         }
         if (dom.addToGoogleCalendarButton) {
-          dom.addToGoogleCalendarButton.classList.toggle('is-hidden', !showDebug);
+          const isEditing = Boolean(state && state.isEditingExisting);
+          dom.addToGoogleCalendarButton.classList.toggle('is-hidden', !showDebug || isEditing);
         }
         if (dom.openScriptableButton) {
           dom.openScriptableButton.classList.toggle('is-hidden', !showDebug);
@@ -8251,6 +8252,8 @@
         }
       }
 
+      // Google Calendar URL parameter reference:
+      // https://raw.githubusercontent.com/InteractionDesignFoundation/add-event-to-calendar-docs/refs/heads/main/services/google.md
       function buildGoogleCalendarUrl(event) {
         if (!event || !event.startDate || !event.endDate || !event.name) return null;
         const timezone = event.timezone || browserTimezone;
@@ -8263,15 +8266,24 @@
         params.set('text', event.name);
         params.set('dates', `${startStr}/${endStr}`);
         if (timezone) params.set('ctz', timezone);
-        const details = (event.tea || event.description || '').trim(); // 'tea' is the event description/gossip field
-        if (details) params.set('details', details);
-        const locationParts = [event.bar, event.address].filter(Boolean);
-        if (locationParts.length) params.set('location', locationParts.join(', '));
+        // Use the full key:value notes format (same as ICS description) so all
+        // event fields are included in the Google Calendar event description.
+        const notes = formatEventNotes(event);
+        if (notes) params.set('details', notes);
+        // Use coordinates (lat,lng) for location so it pins precisely on Google Maps.
+        // Fall back to venue name + address if no coordinates are available.
+        if (event.location && parseCoordinates(event.location)) {
+          params.set('location', event.location);
+        } else {
+          const locationParts = [event.bar, event.address].filter(Boolean);
+          if (locationParts.length) params.set('location', locationParts.join(', '));
+        }
+        // Use src to add the event to a shared/group calendar rather than the user's default.
         const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
           ? CITY_CONFIG[event.city]
           : null;
         if (cityConfig && cityConfig.calendarId) {
-          params.set('add', cityConfig.calendarId);
+          params.set('src', cityConfig.calendarId);
         }
         return `https://calendar.google.com/calendar/render?${params.toString()}`;
       }
