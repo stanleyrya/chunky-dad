@@ -1130,9 +1130,10 @@ class SharedCore {
         if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
         if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
-        // url and website are equivalent aliases - treat as unchanged if the new url value
-        // matches the existing website from notes (handles http vs https, www differences)
-        if (finalEvent.url !== existingEvent.url && !this.urlsAreEquivalent(finalEvent.url, calendarObject.website)) changes.push('url');
+        // url may be an alias for another canonical field (e.g. website) - use canonical key to look
+        // up the existing value so this check works for all aliases without hardcoding field names
+        const canonUrlKey = this.eventSchema.canonicalizeEventKey('url');
+        if (finalEvent.url !== existingEvent.url && !this.urlsAreEquivalent(finalEvent.url, calendarObject[canonUrlKey])) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
         
         finalEvent._changes = changes;
@@ -2476,8 +2477,6 @@ class SharedCore {
             analyzedEvent._action = analysis.action;
             
             // Handle merge action by creating complete final event object
-            // url and website are equivalent aliases - used in both merge and new action diff calculations
-            const URL_FIELD_ALIASES = { url: 'website', website: 'url' };
             if (analysis.action === 'merge' && analysis.existingEvent) {
                 // Create final merged event that represents exactly what will be saved
                 analyzedEvent = this.createFinalEventObject(analysis.existingEvent, event);
@@ -2520,27 +2519,34 @@ class SharedCore {
                     }
                 });
                 
-                // Check for added fields - but handle preserve strategy correctly
-                // Also treat url/website as equivalent aliases to avoid false "added" signals
+                // Check for added fields - normalize to canonical keys before comparing so that
+                // aliases defined in EVENT_KEY_ALIASES are handled automatically for all fields
+                const originalFieldsByCanonicalKey = {};
+                Object.keys(originalFields).forEach(k => {
+                    originalFieldsByCanonicalKey[this.eventSchema.canonicalizeEventKey(k)] = k;
+                });
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
-                        // Check if this field has preserve strategy and should be treated as preserved
-                        const fieldPriorities = analyzedEvent._fieldPriorities || {};
-                        const priorityConfig = fieldPriorities[key];
-                        const mergeStrategy = priorityConfig?.merge || 'preserve';
-                        
-                        // url and website are equivalent: if the alias field already existed with
-                        // an equivalent value, don't mark this field as newly added
-                        const aliasKey = URL_FIELD_ALIASES[key];
-                        if (aliasKey && originalFields[aliasKey] && this.urlsAreEquivalent(mergedFields[key], originalFields[aliasKey])) {
-                            analyzedEvent._mergeDiff.preserved.push(key);
-                        } else if (mergeStrategy === 'preserve') {
-                            // For preserve strategy, if the field wasn't in original notes but is now present,
-                            // it should be marked as preserved (the undefined existing value was preserved)
+                        // Normalize both to canonical keys before checking if the field already existed
+                        const canonKey = this.eventSchema.canonicalizeEventKey(key);
+                        if (originalFieldsByCanonicalKey[canonKey]) {
+                            // Field already existed in original under a canonical alias → preserved
                             analyzedEvent._mergeDiff.preserved.push(key);
                         } else {
-                            // For other strategies (clobber, upsert), it's truly added
-                            analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                            // Check if this field has preserve strategy and should be treated as preserved
+                            const fieldPriorities = analyzedEvent._fieldPriorities || {};
+                            const priorityConfig = fieldPriorities[key];
+                            const mergeStrategy = priorityConfig?.merge || 'preserve';
+
+                            if (mergeStrategy === 'preserve') {
+                                // For preserve strategy, if the field wasn't in original notes but is now
+                                // present, it should be marked as preserved (the undefined existing value
+                                // was preserved)
+                                analyzedEvent._mergeDiff.preserved.push(key);
+                            } else {
+                                // For other strategies (clobber, upsert), it's truly added
+                                analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                            }
                         }
                     }
                 });
@@ -2571,12 +2577,18 @@ class SharedCore {
                         analyzedEvent._mergeDiff.updated.push({ key, from: originalFields[key], to: mergedFields[key] });
                     }
                 });
+                // Build canonical key map for original fields then check merged fields for additions.
+                // Normalizing to canonical keys means any alias defined in EVENT_KEY_ALIASES is
+                // handled automatically without hardcoding specific field-name pairs here.
+                const originalFieldsByCanonicalKey = {};
+                Object.keys(originalFields).forEach(k => {
+                    originalFieldsByCanonicalKey[this.eventSchema.canonicalizeEventKey(k)] = k;
+                });
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
-                        // url and website are equivalent: if the alias field already existed with
-                        // an equivalent value, don't mark this field as newly added
-                        const aliasKey = URL_FIELD_ALIASES[key];
-                        if (aliasKey && originalFields[aliasKey] && this.urlsAreEquivalent(mergedFields[key], originalFields[aliasKey])) {
+                        const canonKey = this.eventSchema.canonicalizeEventKey(key);
+                        if (originalFieldsByCanonicalKey[canonKey]) {
+                            // Field already existed under a canonical alias → preserved
                             analyzedEvent._mergeDiff.preserved.push(key);
                         } else {
                             analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
