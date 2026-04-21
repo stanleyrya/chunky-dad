@@ -1471,9 +1471,13 @@ class SharedCore {
         return normalize(url1) === normalize(url2);
     }
 
-    // Returns the Set of canonical keys present in a parsed-notes fields object.
-    // Used by _mergeDiff to detect whether a merged field already existed in the
-    // original notes under a different alias (e.g. "url" vs "website").
+    /**
+     * Returns the Set of canonical keys present in a parsed-notes fields object.
+     * Used by _mergeDiff to detect whether a merged field already existed in the
+     * original notes under a different alias (e.g. "url" vs "website").
+     * @param {Object} fields - Key/value map as returned by parseNotesIntoFields
+     * @returns {Set<string>} Set of canonical key strings
+     */
     getOriginalCanonicalKeySet(fields) {
         const canonicalKeys = new Set();
         Object.keys(fields).forEach(k => {
@@ -2587,6 +2591,8 @@ class SharedCore {
                 // Build canonical key set for original fields then check merged fields for additions.
                 // Normalizing to canonical keys means any alias defined in EVENT_KEY_ALIASES is
                 // handled automatically without hardcoding specific field-name pairs here.
+                // (Note: this is a separate 'new' action branch with its own originalFields derived
+                // from analysis.sourceEvent.notes, so the set is intentionally re-built here.)
                 const originalCanonicalKeys = this.getOriginalCanonicalKeySet(originalFields);
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
