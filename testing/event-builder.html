@@ -8253,12 +8253,16 @@
 
       function buildGoogleCalendarUrl(event) {
         if (!event || !event.startDate || !event.endDate || !event.name) return null;
-        const startStr = event.startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-        const endStr = event.endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const timezone = event.timezone || browserTimezone;
+        // Use local datetime format with ctz so Google Calendar shows the event in
+        // the event's intended timezone rather than the viewer's local timezone.
+        const startStr = formatICSDateInTimezone(event.startDate, timezone) || formatICSDate(event.startDate);
+        const endStr = formatICSDateInTimezone(event.endDate, timezone) || formatICSDate(event.endDate);
         const params = new URLSearchParams();
         params.set('action', 'TEMPLATE');
         params.set('text', event.name);
         params.set('dates', `${startStr}/${endStr}`);
+        if (timezone) params.set('ctz', timezone);
         const details = (event.tea || '').trim();
         if (details) params.set('details', details);
         const locationParts = [event.bar, event.address].filter(Boolean);
@@ -8271,6 +8275,8 @@
         }
         return `https://calendar.google.com/calendar/render?${params.toString()}`;
       }
+
+      function generateICS(event, options = {}) {
         const settings = options && typeof options === 'object' ? options : {};
         const now = new Date();
         const rawMethod = typeof settings.method === 'string' ? settings.method.trim().toUpperCase() : '';
