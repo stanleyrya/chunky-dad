@@ -236,16 +236,22 @@ function normalizeHtmlNotes(notes) {
     text = text.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1');
     // Replace <br> variants with newlines
     text = text.replace(/<br\s*\/?>/gi, '\n');
-    // Strip remaining HTML tags
+    // Strip remaining HTML tags (run twice to handle self-closing or malformed tags)
     text = text.replace(/<[^>]+>/g, '');
-    // Decode common HTML entities
+    text = text.replace(/<[^>]+>/g, '');
+    // Remove any remaining lone angle brackets from malformed HTML
+    text = text.replace(/</g, '').replace(/>/g, '');
+    // Decode common HTML entities (&amp; last to avoid double-unescaping)
     text = text.replace(/&nbsp;/gi, ' ');
-    text = text.replace(/&amp;/gi, '&');
     text = text.replace(/&lt;/gi, '<');
     text = text.replace(/&gt;/gi, '>');
     text = text.replace(/&quot;/gi, '"');
     text = text.replace(/&#39;/gi, "'");
-    text = text.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+    text = text.replace(/&#(\d+);/g, (_, n) => {
+        const code = Number(n);
+        return (code >= 0 && code <= 0x10FFFF) ? String.fromCharCode(code) : '';
+    });
+    text = text.replace(/&amp;/gi, '&');
     // Trim trailing whitespace on each line
     text = text.split('\n').map(line => line.trimEnd()).join('\n');
     return text;
