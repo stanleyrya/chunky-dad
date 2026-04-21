@@ -1471,6 +1471,17 @@ class SharedCore {
         return normalize(url1) === normalize(url2);
     }
 
+    // Returns the Set of canonical keys present in a parsed-notes fields object.
+    // Used by _mergeDiff to detect whether a merged field already existed in the
+    // original notes under a different alias (e.g. "url" vs "website").
+    getOriginalCanonicalKeySet(fields) {
+        const canonicalKeys = new Set();
+        Object.keys(fields).forEach(k => {
+            canonicalKeys.add(this.eventSchema.canonicalizeEventKey(k));
+        });
+        return canonicalKeys;
+    }
+
     // Date utilities
     parseDate(dateString) {
         if (!dateString) return null;
@@ -2521,15 +2532,11 @@ class SharedCore {
                 
                 // Check for added fields - normalize to canonical keys before comparing so that
                 // aliases defined in EVENT_KEY_ALIASES are handled automatically for all fields
-                const originalFieldsByCanonicalKey = {};
-                Object.keys(originalFields).forEach(k => {
-                    originalFieldsByCanonicalKey[this.eventSchema.canonicalizeEventKey(k)] = k;
-                });
+                const originalCanonicalKeys = this.getOriginalCanonicalKeySet(originalFields);
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
                         // Normalize both to canonical keys before checking if the field already existed
-                        const canonKey = this.eventSchema.canonicalizeEventKey(key);
-                        if (originalFieldsByCanonicalKey[canonKey]) {
+                        if (originalCanonicalKeys.has(this.eventSchema.canonicalizeEventKey(key))) {
                             // Field already existed in original under a canonical alias → preserved
                             analyzedEvent._mergeDiff.preserved.push(key);
                         } else {
@@ -2577,17 +2584,13 @@ class SharedCore {
                         analyzedEvent._mergeDiff.updated.push({ key, from: originalFields[key], to: mergedFields[key] });
                     }
                 });
-                // Build canonical key map for original fields then check merged fields for additions.
+                // Build canonical key set for original fields then check merged fields for additions.
                 // Normalizing to canonical keys means any alias defined in EVENT_KEY_ALIASES is
                 // handled automatically without hardcoding specific field-name pairs here.
-                const originalFieldsByCanonicalKey = {};
-                Object.keys(originalFields).forEach(k => {
-                    originalFieldsByCanonicalKey[this.eventSchema.canonicalizeEventKey(k)] = k;
-                });
+                const originalCanonicalKeys = this.getOriginalCanonicalKeySet(originalFields);
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
-                        const canonKey = this.eventSchema.canonicalizeEventKey(key);
-                        if (originalFieldsByCanonicalKey[canonKey]) {
+                        if (originalCanonicalKeys.has(this.eventSchema.canonicalizeEventKey(key))) {
                             // Field already existed under a canonical alias → preserved
                             analyzedEvent._mergeDiff.preserved.push(key);
                         } else {
