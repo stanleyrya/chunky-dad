@@ -1130,7 +1130,9 @@ class SharedCore {
         if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
         if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
-        if (finalEvent.url !== existingEvent.url) changes.push('url');
+        // url and website are equivalent aliases - treat as unchanged if the new url value
+        // matches the existing website from notes (handles http vs https, www differences)
+        if (finalEvent.url !== existingEvent.url && !this.urlsAreEquivalent(finalEvent.url, calendarObject.website)) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
         
         finalEvent._changes = changes;
@@ -1451,6 +1453,21 @@ class SharedCore {
         
         const parsed = this.parseUrl(url);
         return parsed !== null;
+    }
+
+    // Returns true if two URLs refer to the same resource, ignoring protocol (http/https) and www prefix
+    urlsAreEquivalent(url1, url2) {
+        if (!url1 && !url2) return true;
+        if (!url1 || !url2) return false;
+        if (url1 === url2) return true;
+        const normalize = (url) => {
+            const parsed = this.parseUrl(url);
+            if (!parsed) return url.toLowerCase().trim();
+            const host = (parsed.hostname || '').replace(/^www\./i, '').toLowerCase();
+            const path = (parsed.pathname || '/').replace(/\/+$/, '').toLowerCase();
+            return host + path;
+        };
+        return normalize(url1) === normalize(url2);
     }
 
     // Date utilities
@@ -2502,6 +2519,8 @@ class SharedCore {
                 });
                 
                 // Check for added fields - but handle preserve strategy correctly
+                // Also treat url/website as equivalent aliases to avoid false "added" signals
+                const URL_FIELD_ALIASES = { url: 'website', website: 'url' };
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
                         // Check if this field has preserve strategy and should be treated as preserved
@@ -2509,7 +2528,12 @@ class SharedCore {
                         const priorityConfig = fieldPriorities[key];
                         const mergeStrategy = priorityConfig?.merge || 'preserve';
                         
-                        if (mergeStrategy === 'preserve') {
+                        // url and website are equivalent: if the alias field already existed with
+                        // an equivalent value, don't mark this field as newly added
+                        const aliasKey = URL_FIELD_ALIASES[key];
+                        if (aliasKey && originalFields[aliasKey] && this.urlsAreEquivalent(mergedFields[key], originalFields[aliasKey])) {
+                            analyzedEvent._mergeDiff.preserved.push(key);
+                        } else if (mergeStrategy === 'preserve') {
                             // For preserve strategy, if the field wasn't in original notes but is now present,
                             // it should be marked as preserved (the undefined existing value was preserved)
                             analyzedEvent._mergeDiff.preserved.push(key);
@@ -2548,7 +2572,15 @@ class SharedCore {
                 });
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
-                        analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                        // url and website are equivalent: if the alias field already existed with
+                        // an equivalent value, don't mark this field as newly added
+                        const URL_FIELD_ALIASES = { url: 'website', website: 'url' };
+                        const aliasKey = URL_FIELD_ALIASES[key];
+                        if (aliasKey && originalFields[aliasKey] && this.urlsAreEquivalent(mergedFields[key], originalFields[aliasKey])) {
+                            analyzedEvent._mergeDiff.preserved.push(key);
+                        } else {
+                            analyzedEvent._mergeDiff.added.push({ key, value: mergedFields[key] });
+                        }
                     }
                 });
             } else if (analysis.existingEvent) {
