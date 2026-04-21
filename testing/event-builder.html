@@ -1542,6 +1542,10 @@
               <i class="bi bi-calendar-plus" aria-hidden="true"></i>
               <span>Add</span>
             </button>
+            <button type="button" class="primary-button action-button is-hidden" id="add-to-google-calendar" aria-label="Add to Google Calendar">
+              <i class="bi bi-google" aria-hidden="true"></i>
+              <span>Google</span>
+            </button>
             <button type="button" class="primary-button action-button is-hidden" id="open-scriptable" aria-label="Open Scriptable">
               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
               <span>Scriptable</span>
@@ -2235,6 +2239,7 @@
         dom.imageInput = document.getElementById('event-image');
         dom.resetButton = document.getElementById('reset-form');
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
+        dom.addToGoogleCalendarButton = document.getElementById('add-to-google-calendar');
         dom.openScriptableButton = document.getElementById('open-scriptable');
         dom.copyShareButton = document.getElementById('copy-link');
         dom.editExistingButton = document.getElementById('edit-existing');
@@ -2319,6 +2324,9 @@
         const showDebug = Boolean(state && state.debug);
         if (dom.addToCalendarButton) {
           dom.addToCalendarButton.classList.toggle('is-hidden', !showDebug);
+        }
+        if (dom.addToGoogleCalendarButton) {
+          dom.addToGoogleCalendarButton.classList.toggle('is-hidden', !showDebug);
         }
         if (dom.openScriptableButton) {
           dom.openScriptableButton.classList.toggle('is-hidden', !showDebug);
@@ -4596,15 +4604,21 @@
             }
           }
           editingRecurrenceTimezone = (summaryResult && summaryResult.event && summaryResult.event.recurrenceIdTimezone)
-            || (summaryResult && summaryResult.event && summaryResult.event.timeZone)
-            || (baseEvent && baseEvent.timeZone)
-            || (eventData && eventData.timeZone)
+            || (summaryResult && summaryResult.event && summaryResult.event.startTimezone)
+            || (summaryResult && summaryResult.event && summaryResult.event.calendarTimezone)
+            || (baseEvent && baseEvent.startTimezone)
+            || (baseEvent && baseEvent.calendarTimezone)
+            || (eventData && eventData.startTimezone)
+            || (eventData && eventData.calendarTimezone)
             || state.timezone
             || browserTimezone;
         }
         state.editingExistingUid = editingUid;
+        // calendar-core stores timezone wall-clock components as browser-local time via
+        // new Date(year, month, day, hour, ...). Use formatInputValue (browser-local) to
+        // preserve those components correctly without double-applying a timezone offset.
         state.editingExistingRecurrenceId = editingRecurrenceDate
-          ? formatInputValueInTimezone(editingRecurrenceDate, editingRecurrenceTimezone || state.timezone || browserTimezone)
+          ? formatInputValue(editingRecurrenceDate)
           : '';
         state.editingExistingRecurrenceTimezone = editingRecurrenceTimezone || '';
         state.editingExistingOverrideType = selectedOverrideType || '';
@@ -4707,7 +4721,7 @@
       }
 
       function buildExistingState(eventData, options = {}) {
-        const timezone = eventData.timeZone || browserTimezone;
+        const timezone = eventData.startTimezone || eventData.calendarTimezone || eventData.timeZone || browserTimezone;
         const startDate = options.startDate || eventData.startDate || new Date();
         const endDate = options.endDate || eventData.endDate || new Date(startDate.getTime() + DEFAULT_DURATION_MINUTES * 60000);
         // calendar-core creates Date objects using new Date(year, month, day, hour, ...) with the
@@ -5736,6 +5750,9 @@
         if (dom.addToCalendarButton) {
           dom.addToCalendarButton.addEventListener('click', handleAddToCalendar);
         }
+        if (dom.addToGoogleCalendarButton) {
+          dom.addToGoogleCalendarButton.addEventListener('click', handleAddToGoogleCalendar);
+        }
         if (dom.openScriptableButton) {
           dom.openScriptableButton.addEventListener('click', () => {
             handleOpenScriptable(dom.openScriptableButton);
@@ -5761,7 +5778,7 @@
               return;
             }
             const eventName = (state && state.name || '').trim();
-            const confirmed = confirm(`Delete the override for "${eventName || 'this event'}"?\n\nThis will export a CANCEL ICS to remove it from calendars.`);
+            const confirmed = confirm(`Delete the override for "${eventName || 'this event'}"?\n\nThis will export a CANCEL ICS to remove it from calendars.\n\nAfter opening the downloaded ICS, click "Update" then "Remove" in the calendar app pop-up to fully delete the event.`);
             if (!confirmed) return;
             state.deleteOverride = true;
             try {
@@ -7590,6 +7607,15 @@
             dom.addToCalendarButton.removeAttribute('title');
           }
         }
+        if (dom.addToGoogleCalendarButton) {
+          const googleDisabledReason = getAddToCalendarDisabledReason();
+          dom.addToGoogleCalendarButton.disabled = Boolean(googleDisabledReason);
+          if (googleDisabledReason) {
+            dom.addToGoogleCalendarButton.setAttribute('title', googleDisabledReason);
+          } else {
+            dom.addToGoogleCalendarButton.removeAttribute('title');
+          }
+        }
         if (dom.openScriptableButton) {
           const scriptableDisabledReason = getScriptableDisabledReason();
           dom.openScriptableButton.disabled = Boolean(scriptableDisabledReason);
@@ -8133,14 +8159,19 @@
         const nextSequence = shouldIncrementSequence
           ? Math.max(1, (existingSequence !== null ? existingSequence + 1 : 1))
           : null;
+        const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
+          ? CITY_CONFIG[event.city]
+          : null;
+        const calendarName = (cityConfig && cityConfig.calendar) ? cityConfig.calendar : '';
         const icsOptions = shouldIncrementSequence
           ? {
               method: deletingCustomOverride ? 'CANCEL' : 'REQUEST',
               status: deletingCustomOverride ? 'CANCELLED' : 'CONFIRMED',
               sequence: nextSequence,
-              lastModified: new Date()
+              lastModified: new Date(),
+              calendarName
             }
-          : null;
+          : { calendarName };
         const icsContent = generateICS(event, icsOptions);
         const exportMethod = shouldIncrementSequence
           ? (deletingCustomOverride ? 'CANCEL' : 'REQUEST')
@@ -8198,7 +8229,48 @@
         showTemporaryState(button, 'Opening...');
       }
 
-      function generateICS(event, options = {}) {
+      function handleAddToGoogleCalendar() {
+        const addDisabledReason = getAddToCalendarDisabledReason();
+        if (addDisabledReason) {
+          showToast(addDisabledReason, 'warn');
+          return;
+        }
+        const event = buildEventPayload();
+        if (!event.startDate || !event.endDate) {
+          showToast('Add start & end times first.', 'warn');
+          return;
+        }
+        const url = buildGoogleCalendarUrl(event);
+        if (!url) {
+          showToast('Could not build Google Calendar link.', 'warn');
+          return;
+        }
+        window.open(url, '_blank', 'noopener,noreferrer');
+        if (dom.addToGoogleCalendarButton) {
+          showTemporaryState(dom.addToGoogleCalendarButton, 'Opening Google...');
+        }
+      }
+
+      function buildGoogleCalendarUrl(event) {
+        if (!event || !event.startDate || !event.endDate || !event.name) return null;
+        const startStr = event.startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const endStr = event.endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const params = new URLSearchParams();
+        params.set('action', 'TEMPLATE');
+        params.set('text', event.name);
+        params.set('dates', `${startStr}/${endStr}`);
+        const details = (event.tea || '').trim();
+        if (details) params.set('details', details);
+        const locationParts = [event.bar, event.address].filter(Boolean);
+        if (locationParts.length) params.set('location', locationParts.join(', '));
+        const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
+          ? CITY_CONFIG[event.city]
+          : null;
+        if (cityConfig && cityConfig.calendarId) {
+          params.set('add', cityConfig.calendarId);
+        }
+        return `https://calendar.google.com/calendar/render?${params.toString()}`;
+      }
         const settings = options && typeof options === 'object' ? options : {};
         const now = new Date();
         const rawMethod = typeof settings.method === 'string' ? settings.method.trim().toUpperCase() : '';
@@ -8218,9 +8290,13 @@
           'VERSION:2.0',
           'PRODID:-//chunky.dad//Event Builder//EN',
           'CALSCALE:GREGORIAN',
-          `METHOD:${method}`,
-          'BEGIN:VEVENT'
+          `METHOD:${method}`
         ];
+        const calendarName = typeof settings.calendarName === 'string' ? settings.calendarName.trim() : '';
+        if (calendarName) {
+          lines.push(`X-WR-CALNAME:${calendarName}`);
+        }
+        lines.push('BEGIN:VEVENT');
         const uidValue = String(event.uid || '').trim()
           || `${slugify(event.name || 'chunky-dad')}-${formatICSDate(new Date())}@chunky.dad`;
         const timezone = event.timezone || browserTimezone;
