@@ -8270,14 +8270,8 @@
         // event fields are included in the Google Calendar event description.
         const notes = formatEventNotes(event);
         if (notes) params.set('details', notes);
-        // Use coordinates (lat,lng) for location so it pins precisely on Google Maps.
-        // Fall back to venue name + address if no coordinates are available.
-        if (event.location && parseCoordinates(event.location)) {
-          params.set('location', event.location);
-        } else {
-          const locationParts = [event.bar, event.address].filter(Boolean);
-          if (locationParts.length) params.set('location', locationParts.join(', '));
-        }
+        // location is always coordinates (lat,lng); bar and address are in details via formatEventNotes.
+        if (event.location) params.set('location', event.location);
         // Use src to add the event to a shared/group calendar rather than the user's default.
         const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
           ? CITY_CONFIG[event.city]
