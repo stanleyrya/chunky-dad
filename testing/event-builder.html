@@ -8263,7 +8263,7 @@
         params.set('text', event.name);
         params.set('dates', `${startStr}/${endStr}`);
         if (timezone) params.set('ctz', timezone);
-        const details = (event.tea || '').trim();
+        const details = (event.tea || event.description || '').trim(); // 'tea' is the event description/gossip field
         if (details) params.set('details', details);
         const locationParts = [event.bar, event.address].filter(Boolean);
         if (locationParts.length) params.set('location', locationParts.join(', '));
@@ -8300,7 +8300,7 @@
         ];
         const calendarName = typeof settings.calendarName === 'string' ? settings.calendarName.trim() : '';
         if (calendarName) {
-          lines.push(`X-WR-CALNAME:${calendarName}`);
+          lines.push(`X-WR-CALNAME:${escapeICS(calendarName)}`);
         }
         lines.push('BEGIN:VEVENT');
         const uidValue = String(event.uid || '').trim()
