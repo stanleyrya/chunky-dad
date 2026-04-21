@@ -2476,6 +2476,8 @@ class SharedCore {
             analyzedEvent._action = analysis.action;
             
             // Handle merge action by creating complete final event object
+            // url and website are equivalent aliases - used in both merge and new action diff calculations
+            const URL_FIELD_ALIASES = { url: 'website', website: 'url' };
             if (analysis.action === 'merge' && analysis.existingEvent) {
                 // Create final merged event that represents exactly what will be saved
                 analyzedEvent = this.createFinalEventObject(analysis.existingEvent, event);
@@ -2520,7 +2522,6 @@ class SharedCore {
                 
                 // Check for added fields - but handle preserve strategy correctly
                 // Also treat url/website as equivalent aliases to avoid false "added" signals
-                const URL_FIELD_ALIASES = { url: 'website', website: 'url' };
                 Object.keys(mergedFields).forEach(key => {
                     if (!originalFields[key]) {
                         // Check if this field has preserve strategy and should be treated as preserved
@@ -2574,7 +2575,6 @@ class SharedCore {
                     if (!originalFields[key]) {
                         // url and website are equivalent: if the alias field already existed with
                         // an equivalent value, don't mark this field as newly added
-                        const URL_FIELD_ALIASES = { url: 'website', website: 'url' };
                         const aliasKey = URL_FIELD_ALIASES[key];
                         if (aliasKey && originalFields[aliasKey] && this.urlsAreEquivalent(mergedFields[key], originalFields[aliasKey])) {
                             analyzedEvent._mergeDiff.preserved.push(key);
