@@ -2169,7 +2169,6 @@
         updateRecurrenceUi();
         updateSeriesOverrideWarningUi();
         updateTimeNotes();
-        updateGoogleRefNote();
         updatePreviewCard();
         updateActionButtonsState();
         updateUrl();
@@ -2338,6 +2337,7 @@
           dom.openScriptableButton.classList.toggle('is-hidden', !showDebug);
         }
         updateActionButtonsState();
+        updateGoogleRefNote();
       }
 
       function enableDebugMode(options = {}) {
@@ -7122,7 +7122,8 @@
 
       function updateGoogleRefNote() {
         if (dom.googleRefLink) {
-          const refUrl = getGoogleRefUrl();
+          const showDebug = Boolean(state && state.debug);
+          const refUrl = showDebug ? getGoogleRefUrl() : '';
           dom.googleRefLink.classList.toggle('is-hidden', !refUrl);
           if (refUrl) {
             dom.googleRefLink.href = refUrl;
