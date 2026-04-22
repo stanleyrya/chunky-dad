@@ -126,6 +126,7 @@ const URL_LIKE_FIELDS = new Set([
 
 const DEFAULT_NOTES_EXCLUDED_FIELDS = new Set([
     'title', 'startDate', 'endDate', 'location', 'coordinates', 'notes',
+    'url',
     'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action',
     '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
     '_original', '_mergeInfo', '_changes', '_mergeDiff',
