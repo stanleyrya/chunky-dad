@@ -257,6 +257,8 @@ class CalendarCore {
             currentEvent.description = line.substring(12).replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\:/g, ':');
         } else if (line.startsWith('LOCATION:')) {
             currentEvent.location = line.substring(9).replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\:/g, ':');
+        } else if (line.startsWith('URL:')) {
+            currentEvent.url = line.substring(4).trim();
         } else if (line.startsWith('DTSTART')) {
             // Handle DTSTART with potential timezone information
             // Examples: DTSTART:20240315T190000Z or DTSTART;TZID=America/New_York:20240315T190000
@@ -438,6 +440,9 @@ class CalendarCore {
                 }
             }
             
+            // Prefer native URL field over notes-parsed website
+            eventData.website = calendarEvent.url || eventData.website || null;
+
             // Parse coordinates
             if (calendarEvent.location) {
                 const latlong = calendarEvent.location.split(",");

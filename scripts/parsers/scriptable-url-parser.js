@@ -91,7 +91,6 @@ class ScriptableUrlParser {
         });
 
         this.applyCoordinateFallbacks(fields, inputFields);
-        this.normalizeUrlFields(fields, inputFields);
         const orderedFields = this.orderFields(fields);
 
         const dateInfo = this.resolveEventDates(orderedFields);
@@ -291,21 +290,6 @@ class ScriptableUrlParser {
 
         const normalized = `${encodedBase}?${normalizedParams}`;
         return hash ? `${normalized}#${hash}` : normalized;
-    }
-
-    normalizeUrlFields(fields, inputFields) {
-        if (!fields || typeof fields !== 'object') {
-            return;
-        }
-        const urlProvided = inputFields && inputFields.has('url');
-        if (!urlProvided && this.hasNonEmptyValue(fields.website)) {
-            fields.url = fields.website;
-            if (inputFields) {
-                inputFields.add('url');
-                inputFields.delete('website');
-            }
-            delete fields.website;
-        }
     }
 
     orderFields(fields) {

@@ -4134,16 +4134,10 @@ class ScriptableAdapter {
                         <span><a href="${this.escapeHtml(event.ticketUrl)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Tickets</a></span>
                     </div>
                 ` : ''}
-                ${event.website ? `
+                ${event.url || event.website ? `
                     <div class="event-detail">
                         <span>🌐</span>
-                        <span><a href="${this.escapeHtml(event.website)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Website</a></span>
-                    </div>
-                ` : ''}
-                ${event.url && event.url !== event.website ? `
-                    <div class="event-detail">
-                        <span>🔗</span>
-                        <span><a href="${this.escapeHtml(event.url)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Event Link</a></span>
+                        <span><a href="${this.escapeHtml(event.url || event.website)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Website</a></span>
                     </div>
                 ` : ''}
                 ${event.googleMapsLink ? `
@@ -4870,7 +4864,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             
             // Contact/Social fields
             'website': 30,
-            'url': 38,             // main event URL (separate from website)
+            'url': 38,             // native iOS calendar URL field (same concept as website)
             'facebook': 31,
             'instagram': 32,
             'twitter': 33,
