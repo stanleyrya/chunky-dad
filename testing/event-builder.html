@@ -1581,6 +1581,10 @@
                   <i class="bi bi-x-circle" aria-hidden="true"></i>
                   <span>Clear</span>
                 </button>
+                <a class="ghost-button action-button is-compact is-hidden" id="google-ref-link" target="_blank" rel="noopener noreferrer" aria-label="View in Google Calendar">
+                  <i class="bi bi-google" aria-hidden="true"></i>
+                  <span>Google Ref</span>
+                </a>
               </div>
             </div>
             <div class="series-override-warning is-hidden" id="series-override-warning">
@@ -1685,7 +1689,6 @@
 
               <div class="time-notes">
                 <span class="time-note" id="duration-note"><strong>Duration:</strong> Add start &amp; end</span>
-                <span class="time-note is-hidden" id="google-ref-note"><strong>Ref:</strong> <a id="google-ref-link" target="_blank" rel="noopener noreferrer">Google Calendar</a></span>
               </div>
 
               <div class="recurrence-toggle" id="recurrence-toggle">
@@ -2166,6 +2169,7 @@
         updateRecurrenceUi();
         updateSeriesOverrideWarningUi();
         updateTimeNotes();
+        updateGoogleRefNote();
         updatePreviewCard();
         updateActionButtonsState();
         updateUrl();
@@ -2203,7 +2207,6 @@
         dom.startInput = document.getElementById('event-start');
         dom.endInput = document.getElementById('event-end');
         dom.durationNote = document.getElementById('duration-note');
-        dom.googleRefNote = document.getElementById('google-ref-note');
         dom.googleRefLink = document.getElementById('google-ref-link');
         dom.recurrenceModeButtons = document.querySelectorAll('[data-recurrence-mode]');
         dom.recurrenceToggle = document.getElementById('recurrence-toggle');
@@ -5116,6 +5119,7 @@
         updateRecurrenceSummary();
         updateSeriesOverrideWarningUi();
         updateActionButtonsState();
+        updateGoogleRefNote();
       }
 
       function updateExistingSelectionSummary(text) {
@@ -7114,9 +7118,12 @@
             dom.durationNote.innerHTML = `<strong>Duration:</strong> ${label}`;
           }
         }
-        if (dom.googleRefNote && dom.googleRefLink) {
+      }
+
+      function updateGoogleRefNote() {
+        if (dom.googleRefLink) {
           const refUrl = getGoogleRefUrl();
-          dom.googleRefNote.classList.toggle('is-hidden', !refUrl);
+          dom.googleRefLink.classList.toggle('is-hidden', !refUrl);
           if (refUrl) {
             dom.googleRefLink.href = refUrl;
           } else {
@@ -7662,6 +7669,7 @@
         updatePreviewCard();
         updateCoordinatesFieldState();
         updateActionButtonsState();
+        updateGoogleRefNote();
         scheduleUrlUpdate();
         scheduleEventPush();
       }
