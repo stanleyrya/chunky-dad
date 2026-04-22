@@ -1085,6 +1085,15 @@ class SharedCore {
         // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
         // The merge strategy above has already chosen the correct gmaps URL
         
+        // Resolve url/website alias: url and website are the same concept.
+        // url is the iOS calendar URL field; website is the canonical notes field.
+        // If only one is present after the merge, ensure both are set consistently.
+        // url is excluded from notes (DEFAULT_NOTES_EXCLUDED_FIELDS), so notes always
+        // use website, preventing duplicate url/website entries in notes.
+        if (!mergedObject.url && mergedObject.website) {
+            mergedObject.url = mergedObject.website;
+        }
+        
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);
         
@@ -1096,7 +1105,7 @@ class SharedCore {
             endDate: mergedObject.endDate || calendarObject.endDate,
             location: mergedObject.location || calendarObject.location,
             notes: newNotes,
-            url: mergedObject.url || calendarObject.url,
+            url: mergedObject.url || calendarObject.url || calendarObject.website,
             
             // Copy all merged fields to final event
             ...mergedObject,
@@ -1130,7 +1139,9 @@ class SharedCore {
         if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
         if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
-        if (finalEvent.url !== existingEvent.url) changes.push('url');
+        // url and website are aliases - treat existingEvent.url and calendarObject.website as the same
+        const existingUrl = existingEvent.url || calendarObject.website;
+        if (finalEvent.url !== existingUrl) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
         
         finalEvent._changes = changes;
