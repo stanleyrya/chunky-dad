@@ -660,6 +660,91 @@
       justify-content: center;
     }
 
+    .ai-modal {
+      margin: auto;
+      width: min(460px, calc(100vw - 2rem));
+      max-width: calc(100vw - 2rem);
+      border: none;
+      border-radius: 16px;
+      padding: 0;
+      background: var(--panel-bg);
+      color: var(--text-primary);
+      box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
+      max-height: 85vh;
+      overflow-x: hidden;
+    }
+
+    .ai-modal::backdrop {
+      background: rgba(8, 10, 16, 0.75);
+      backdrop-filter: blur(4px);
+    }
+
+    .ai-modal__content {
+      display: grid;
+      gap: 1rem;
+      padding: 1.2rem;
+      max-height: 85vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .ai-modal__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .ai-modal__header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--text-primary);
+    }
+
+    .ai-modal__close {
+      padding: 0.35rem 0.55rem;
+      min-width: 36px;
+      justify-content: center;
+    }
+
+    .ai-agent-list {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .ai-agent-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    }
+
+    .ai-agent-link:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.22);
+      transform: translateY(-1px);
+    }
+
+    .ai-agent-link i {
+      font-size: 1rem;
+      flex-shrink: 0;
+      color: var(--text-secondary);
+    }
+
+    .ai-agent-link .ai-agent-arrow {
+      margin-left: auto;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
     .existing-selection-summary {
       display: flex;
       flex-wrap: wrap;
@@ -1428,6 +1513,16 @@
         max-height: 90vh;
       }
 
+      .ai-modal {
+        width: min(460px, calc(100vw - 2rem));
+        max-width: calc(100vw - 2rem);
+      }
+
+      .ai-modal__content {
+        padding: 1rem;
+        max-height: 90vh;
+      }
+
       .page-wrapper {
         padding: calc(1.6rem + var(--sticky-header-offset)) 0 2.6rem;
       }
@@ -1531,6 +1626,10 @@
             <button type="button" class="secondary-button action-button" id="reset-form" aria-label="Reset form">
               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
               <span>Reset</span>
+            </button>
+            <button type="button" class="secondary-button action-button" id="parse-with-ai" aria-label="Parse event with AI" aria-expanded="false" aria-controls="ai-parse-panel" aria-haspopup="dialog">
+              <i class="bi bi-stars" aria-hidden="true"></i>
+              <span>Parse w/AI</span>
             </button>
             <button type="button" class="secondary-button action-button" id="edit-existing" aria-label="Edit or copy existing event" aria-expanded="false" aria-controls="existing-event-panel" aria-haspopup="dialog">
               <i class="bi bi-pencil-square" aria-hidden="true"></i>
@@ -2056,6 +2155,22 @@
     </div>
   </dialog>
 
+  <dialog class="ai-modal" id="ai-parse-panel" aria-labelledby="ai-modal-title">
+    <div class="ai-modal__content">
+      <div class="ai-modal__header">
+        <div>
+          <h2 id="ai-modal-title">Parse with AI</h2>
+          <p class="panel-subtitle">Open an AI assistant with the event-builder prompt pre-loaded. Paste your event info to get a ready-to-use URL.</p>
+        </div>
+        <button type="button" class="ghost-button action-button ai-modal__close" id="ai-modal-close" aria-label="Close AI parse dialog">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="ai-agent-list" id="ai-agent-list">
+      </div>
+    </div>
+  </dialog>
+
   <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="../js/logger.js"></script>
@@ -2251,6 +2366,10 @@
         dom.copyShareButton = document.getElementById('copy-link');
         dom.editExistingButton = document.getElementById('edit-existing');
         dom.existingPanel = document.getElementById('existing-event-panel');
+        dom.aiParseButton = document.getElementById('parse-with-ai');
+        dom.aiParsePanel = document.getElementById('ai-parse-panel');
+        dom.aiModalClose = document.getElementById('ai-modal-close');
+        dom.aiAgentList = document.getElementById('ai-agent-list');
         dom.existingModalClose = document.getElementById('existing-modal-close');
         dom.existingCitySelect = document.getElementById('existing-city');
         dom.existingSearchInput = document.getElementById('existing-search');
@@ -5207,6 +5326,92 @@
         setExistingPanelExpanded(false);
       }
 
+      const AI_PARSE_PROMPT = `You are an assistant that builds event URLs for the chunky.dad event-builder page.
+
+Given information about a bear community event (from a website, flyer, image, or text), construct a URL using the base:
+  https://chunky.dad/testing/event-builder.html
+
+Append URL parameters for every field you can confidently extract. Do not guess or fabricate values — only include fields you can source from the provided content.
+
+PARAMETERS:
+  name       - Full event title
+  short      - Shorter reference title. Use a dash (-) as a breakable hyphen for long words (e.g. MEGA-WOOF). Use \\- for a hyphen that always appears. Omit if the name is already short.
+  desc       - Event description or tagline
+  city       - City key. Must be one of: nyc, seattle, la, toronto, london, chicago, berlin, palm-springs, denver, dallas, dc, vegas, atlanta, nola, sf, portland, sitges, boston, phoenix, ptown, san-diego, philly, miami, pv, austin, houston, sacramento
+  venue      - Name of the venue or bar
+  addr       - Street address
+  coords     - Coordinates in "lat,lng" format — ONLY include if explicitly found in the source, never estimate
+  start      - Start datetime in local time: YYYY-MM-DDTHH:MM (e.g. 2025-06-21T21:00)
+  end        - End datetime in local time: YYYY-MM-DDTHH:MM
+  tz         - IANA timezone (e.g. America/New_York, America/Los_Angeles, America/Chicago, Europe/London). Match the city's local timezone.
+  rrule      - Recurrence rule in RRULE format (e.g. FREQ=WEEKLY;BYDAY=FR) — only if recurring
+  web        - Event or organizer website URL
+  tickets    - Ticket purchase URL
+  insta      - Instagram handle (e.g. @bearracuda) or full Instagram URL
+  fb         - Facebook event or page URL
+  gmaps      - Google Maps link
+  img        - Direct URL to a promo image or flyer
+  cover      - Cover charge info (e.g. Free, $15, Cover TBD)
+
+RULES:
+- URL-encode all parameter values.
+- Omit any parameter you cannot reliably source from the provided content.
+- Never fabricate coordinates, dates, or URLs.
+- If the event is in a city not on the list, omit the city parameter.
+- For recurring events, set rrule using standard RRULE syntax.
+
+Return only the complete URL, with no explanation unless asked.`;
+
+      const AI_AGENTS = [
+        { name: 'ChatGPT', base: 'https://chat.openai.com/?q=', icon: 'bi-chat-dots' },
+        { name: 'Claude', base: 'https://claude.ai/new?q=', icon: 'bi-stars' },
+        { name: 'Perplexity', base: 'https://www.perplexity.ai/search/new?q=', icon: 'bi-search' },
+        { name: 'Gemini', base: 'https://www.google.com/search?udm=50&aep=11&q=', icon: 'bi-google' },
+        { name: 'Grok', base: 'https://x.com/i/grok?text=', icon: 'bi-twitter-x' }
+      ];
+
+      function populateAiAgentList() {
+        if (!dom.aiAgentList) return;
+        const encoded = encodeURIComponent(AI_PARSE_PROMPT);
+        dom.aiAgentList.innerHTML = '';
+        AI_AGENTS.forEach(agent => {
+          const a = document.createElement('a');
+          a.href = agent.base + encoded;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.className = 'ai-agent-link';
+          a.innerHTML = `<i class="bi ${agent.icon}" aria-hidden="true"></i><span>${agent.name}</span><i class="bi bi-box-arrow-up-right ai-agent-arrow" aria-hidden="true"></i>`;
+          dom.aiAgentList.appendChild(a);
+        });
+      }
+
+      function openAiParsePanel() {
+        if (!dom.aiParsePanel) return;
+        populateAiAgentList();
+        if (!dom.aiParsePanel.open) {
+          if (typeof dom.aiParsePanel.showModal === 'function') {
+            dom.aiParsePanel.showModal();
+          } else {
+            dom.aiParsePanel.setAttribute('open', '');
+          }
+        }
+        if (dom.aiParseButton) {
+          dom.aiParseButton.setAttribute('aria-expanded', 'true');
+        }
+      }
+
+      function closeAiParsePanel() {
+        if (!dom.aiParsePanel || !dom.aiParsePanel.open) return;
+        if (typeof dom.aiParsePanel.close === 'function') {
+          dom.aiParsePanel.close();
+        } else {
+          dom.aiParsePanel.removeAttribute('open');
+        }
+        if (dom.aiParseButton) {
+          dom.aiParseButton.setAttribute('aria-expanded', 'false');
+        }
+      }
+
       function clearEditingState() {
         if (!state) return;
         state.isEditingExisting = false;
@@ -5819,6 +6024,30 @@
         }
         if (dom.existingModalClose) {
           dom.existingModalClose.addEventListener('click', closeExistingPanel);
+        }
+        if (dom.aiParseButton) {
+          dom.aiParseButton.addEventListener('click', () => {
+            if (dom.aiParsePanel && dom.aiParsePanel.open) {
+              closeAiParsePanel();
+              return;
+            }
+            openAiParsePanel();
+          });
+        }
+        if (dom.aiParsePanel) {
+          dom.aiParsePanel.addEventListener('close', () => {
+            if (dom.aiParseButton) {
+              dom.aiParseButton.setAttribute('aria-expanded', 'false');
+            }
+          });
+          dom.aiParsePanel.addEventListener('click', event => {
+            if (event.target === dom.aiParsePanel) {
+              closeAiParsePanel();
+            }
+          });
+        }
+        if (dom.aiModalClose) {
+          dom.aiModalClose.addEventListener('click', closeAiParsePanel);
         }
         if (dom.existingCitySelect) {
           dom.existingCitySelect.addEventListener('change', () => {
