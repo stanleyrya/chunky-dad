@@ -1685,6 +1685,7 @@
 
               <div class="time-notes">
                 <span class="time-note" id="duration-note"><strong>Duration:</strong> Add start &amp; end</span>
+                <span class="time-note is-hidden" id="google-ref-note"><strong>Ref:</strong> <a id="google-ref-link" target="_blank" rel="noopener noreferrer">Google Calendar</a></span>
               </div>
 
               <div class="recurrence-toggle" id="recurrence-toggle">
@@ -2202,6 +2203,8 @@
         dom.startInput = document.getElementById('event-start');
         dom.endInput = document.getElementById('event-end');
         dom.durationNote = document.getElementById('duration-note');
+        dom.googleRefNote = document.getElementById('google-ref-note');
+        dom.googleRefLink = document.getElementById('google-ref-link');
         dom.recurrenceModeButtons = document.querySelectorAll('[data-recurrence-mode]');
         dom.recurrenceToggle = document.getElementById('recurrence-toggle');
         dom.recurrenceBuilder = document.getElementById('recurrence-builder');
@@ -2326,13 +2329,7 @@
           dom.addToCalendarButton.classList.toggle('is-hidden', !showDebug);
         }
         if (dom.addToGoogleCalendarButton) {
-          const isEditing = Boolean(state && state.isEditingExisting);
           dom.addToGoogleCalendarButton.classList.toggle('is-hidden', !showDebug);
-          dom.addToGoogleCalendarButton.classList.toggle('primary-button', !isEditing);
-          dom.addToGoogleCalendarButton.classList.toggle('secondary-button', isEditing);
-          const labelSpan = dom.addToGoogleCalendarButton.querySelector('span');
-          if (labelSpan) labelSpan.textContent = isEditing ? 'Google (Ref)' : 'Google';
-          dom.addToGoogleCalendarButton.setAttribute('aria-label', isEditing ? 'Open existing event in Google Calendar' : 'Add to Google Calendar');
         }
         if (dom.openScriptableButton) {
           dom.openScriptableButton.classList.toggle('is-hidden', !showDebug);
@@ -7093,6 +7090,18 @@
         }
       }
 
+      function getGoogleRefUrl() {
+        if (!state || !state.isEditingExisting) return '';
+        const uid = getEditingUidFromState();
+        if (!uid) return '';
+        const event = buildEventPayload();
+        const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
+          ? CITY_CONFIG[event.city]
+          : null;
+        if (!cityConfig || !cityConfig.calendarId) return '';
+        return getEventEditUrl(uid, cityConfig.calendarId);
+      }
+
       function updateTimeNotes() {
         if (dom.durationNote) {
           const startDate = parseLocalDateTime(state.start, state.timezone);
@@ -7103,6 +7112,15 @@
             const minutes = Math.max(0, Math.round((endDate - startDate) / 60000));
             const label = minutes ? formatDurationLabel(minutes) : 'TBD';
             dom.durationNote.innerHTML = `<strong>Duration:</strong> ${label}`;
+          }
+        }
+        if (dom.googleRefNote && dom.googleRefLink) {
+          const refUrl = getGoogleRefUrl();
+          dom.googleRefNote.classList.toggle('is-hidden', !refUrl);
+          if (refUrl) {
+            dom.googleRefLink.href = refUrl;
+          } else {
+            dom.googleRefLink.removeAttribute('href');
           }
         }
       }
@@ -7614,9 +7632,8 @@
           }
         }
         if (dom.addToGoogleCalendarButton) {
-          const isEditing = Boolean(state && state.isEditingExisting);
-          const googleDisabledReason = isEditing
-            ? getGoogleRefDisabledReason()
+          const googleDisabledReason = isEditingSeriesMode()
+            ? 'Google Calendar is not available while editing a series.'
             : getAddToCalendarDisabledReason();
           dom.addToGoogleCalendarButton.disabled = Boolean(googleDisabledReason);
           if (googleDisabledReason) {
@@ -8239,29 +8256,6 @@
       }
 
       function handleAddToGoogleCalendar() {
-        const isEditing = Boolean(state && state.isEditingExisting);
-        if (isEditing) {
-          const disabledReason = getGoogleRefDisabledReason();
-          if (disabledReason) {
-            showToast(disabledReason, 'warn');
-            return;
-          }
-          const uid = getEditingUidFromState();
-          const event = buildEventPayload();
-          const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
-            ? CITY_CONFIG[event.city]
-            : null;
-          if (!cityConfig || !cityConfig.calendarId) {
-            showToast('No calendar ID found for this city.', 'warn');
-            return;
-          }
-          const url = getEventEditUrl(uid, cityConfig.calendarId);
-          window.open(url, '_blank', 'noopener,noreferrer');
-          if (dom.addToGoogleCalendarButton) {
-            showTemporaryState(dom.addToGoogleCalendarButton, 'Opening Google...');
-          }
-          return;
-        }
         const addDisabledReason = getAddToCalendarDisabledReason();
         if (addDisabledReason) {
           showToast(addDisabledReason, 'warn');
@@ -8281,17 +8275,6 @@
         if (dom.addToGoogleCalendarButton) {
           showTemporaryState(dom.addToGoogleCalendarButton, 'Opening Google...');
         }
-      }
-
-      function getGoogleRefDisabledReason() {
-        const uid = getEditingUidFromState();
-        if (!uid) return 'No event UID found to open in Google Calendar.';
-        const event = buildEventPayload();
-        const cityConfig = (event.city && typeof CITY_CONFIG === 'object' && CITY_CONFIG)
-          ? CITY_CONFIG[event.city]
-          : null;
-        if (!cityConfig || !cityConfig.calendarId) return 'No calendar ID found for this city.';
-        return '';
       }
 
       // Generates a direct Google Calendar view link for an existing event.
