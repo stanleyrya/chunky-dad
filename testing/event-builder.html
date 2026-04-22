@@ -880,6 +880,8 @@
       color: var(--text-secondary);
       border: 1px solid rgba(255, 162, 74, 0.2);
       padding-inline: 0.75rem;
+      border-radius: 9px;
+      text-decoration: none;
     }
 
     .ghost-button:hover:not(:disabled) {
@@ -1581,9 +1583,9 @@
                   <i class="bi bi-x-circle" aria-hidden="true"></i>
                   <span>Clear</span>
                 </button>
-                <a class="ghost-button action-button is-compact is-hidden" id="google-ref-link" target="_blank" rel="noopener noreferrer" aria-label="View in Google Calendar">
+                <a class="ghost-button action-button is-compact is-hidden" id="google-ref-link" target="_blank" rel="noopener noreferrer" aria-label="Open in Google Calendar">
                   <i class="bi bi-google" aria-hidden="true"></i>
-                  <span>Google Ref</span>
+                  <span>Open in Google</span>
                 </a>
               </div>
             </div>
@@ -7103,7 +7105,8 @@
           ? CITY_CONFIG[event.city]
           : null;
         if (!cityConfig || !cityConfig.calendarId) return '';
-        return getEventEditUrl(uid, cityConfig.calendarId);
+        const calendarUrl = getEventEditUrl(uid, cityConfig.calendarId);
+        return `https://accounts.google.com/AccountChooser?continue=${encodeURIComponent(calendarUrl)}`;
       }
 
       function updateTimeNotes() {
@@ -8275,11 +8278,12 @@
           showToast('Add start & end times first.', 'warn');
           return;
         }
-        const url = buildGoogleCalendarUrl(event);
-        if (!url) {
+        const calendarUrl = buildGoogleCalendarUrl(event);
+        if (!calendarUrl) {
           showToast('Could not build Google Calendar link.', 'warn');
           return;
         }
+        const url = `https://accounts.google.com/AccountChooser?continue=${encodeURIComponent(calendarUrl)}`;
         window.open(url, '_blank', 'noopener,noreferrer');
         if (dom.addToGoogleCalendarButton) {
           showTemporaryState(dom.addToGoogleCalendarButton, 'Opening Google...');
