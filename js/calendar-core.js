@@ -1201,17 +1201,65 @@ class CalendarCore {
                         });
                     }
                 } else {
-                    // Non-UTC time - this is already in the calendar's timezone, create as local date
-                    date = new Date(year, month - 1, day, hour, minute, second);
-                    
-                    // No conversion needed - JavaScript will display this correctly in user's local timezone
-                    logger.debug('CALENDAR', 'Calendar timezone time (created as local date object)', {
-                        calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-                        timezone: timezone || this.calendarTimezone || 'Floating (no timezone)',
-                        localDisplay: date.toLocaleString(),
-                        resultDate: date.toString(),
-                        note: 'Time is in calendar timezone, created as local date for correct display'
-                    });
+                    // Non-UTC time
+                    if (timezone) {
+                        // TZID specified - convert from the given timezone to a proper UTC-based Date
+                        try {
+                            // Create a provisional UTC date by treating the time components as if they were UTC
+                            const provisionalUTC = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+                            
+                            // See what this provisional UTC corresponds to in the target timezone
+                            const formatter = new Intl.DateTimeFormat('en-CA', {
+                                timeZone: timezone,
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            });
+                            
+                            const parts = formatter.formatToParts(provisionalUTC);
+                            const tzYear = parseInt(parts.find(p => p.type === 'year')?.value);
+                            const tzMonth = parseInt(parts.find(p => p.type === 'month')?.value) - 1;
+                            const tzDay = parseInt(parts.find(p => p.type === 'day')?.value);
+                            const tzHour = parseInt(parts.find(p => p.type === 'hour')?.value);
+                            const tzMinute = parseInt(parts.find(p => p.type === 'minute')?.value);
+                            const tzSecond = parseInt(parts.find(p => p.type === 'second')?.value);
+                            
+                            // Compute offset: difference between provisional UTC and what the timezone reports
+                            const tzProvisionDate = new Date(Date.UTC(tzYear, tzMonth, tzDay, tzHour, tzMinute, tzSecond));
+                            const offsetMs = provisionalUTC.getTime() - tzProvisionDate.getTime();
+                            
+                            // Apply the offset to get the actual UTC time
+                            date = new Date(provisionalUTC.getTime() + offsetMs);
+                            
+                            logger.debug('CALENDAR', 'Converted TZID time to UTC using Intl API', {
+                                calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                                timezone: timezone,
+                                resultUTC: date.toISOString(),
+                                resultDate: date.toString(),
+                                note: 'Converted from TZID timezone to proper UTC-based Date for correct local display'
+                            });
+                        } catch (error) {
+                            logger.warn('CALENDAR', 'Failed to convert TZID timezone using Intl API, using floating time', {
+                                error: error.message,
+                                timezone: timezone
+                            });
+                            date = new Date(year, month - 1, day, hour, minute, second);
+                        }
+                    } else {
+                        // Floating time (no TZID) - create as local date
+                        date = new Date(year, month - 1, day, hour, minute, second);
+                        
+                        logger.debug('CALENDAR', 'Floating time (no TZID), created as local date object', {
+                            calendarTime: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+                            localDisplay: date.toLocaleString(),
+                            resultDate: date.toString(),
+                            note: 'Floating time (no TZID specified), created as local date'
+                        });
+                    }
                 }
                 
                 // Store wasUTC flag on the date object for debugging
