@@ -1021,14 +1021,15 @@ class SharedCore {
         
         // STEP 2: Build calendar object using calendar data
         const calendarObject = {
+            // Parse existing notes first so native fields below take precedence
+            ...this.parseNotesIntoFields(existingEvent.notes || ''),
+            // Native calendar fields override any notes-parsed equivalents
             title: existingEvent.title,
             startDate: existingEvent.startDate,
             endDate: existingEvent.endDate,
             location: existingEvent.location,
             notes: existingEvent.notes,
             url: existingEvent.url,
-            // Parse existing notes to get all stored field data
-            ...this.parseNotesIntoFields(existingEvent.notes || '')
         };
         
         // STEP 3: Simple merge - respect merge logic, grab from correct object
@@ -1950,7 +1951,13 @@ class SharedCore {
     // Enrich event with Google Maps links and city information
     enrichEventLocation(event) {
         if (!event) return event;
-        
+
+        // Sync url/website: url is the native iOS calendar URL field; website is the canonical
+        // notes field. They represent the same concept. Always prefer/write native (url).
+        if (!event.url && event.website) {
+            event.url = event.website;
+        }
+
         // DEBUG: Check URL field before enrichment
         const hadUrlBefore = 'url' in event;
         const urlValueBefore = event.url;
