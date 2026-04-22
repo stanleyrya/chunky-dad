@@ -5326,7 +5326,11 @@
         setExistingPanelExpanded(false);
       }
 
-      const AI_PARSE_PROMPT = `You are an assistant that builds event URLs for the chunky.dad event-builder page.
+      function buildAiParsePrompt() {
+        const cityKeys = (typeof CITY_CONFIG === 'object' && CITY_CONFIG)
+          ? Object.keys(CITY_CONFIG).join(', ')
+          : 'nyc, seattle, la, toronto, london, chicago, berlin, palm-springs, denver, dallas, dc, vegas, atlanta, nola, sf, portland, sitges, boston, phoenix, ptown, san-diego, philly, miami, pv, austin, houston, sacramento';
+        return `You are an assistant that builds event URLs for the chunky.dad event-builder page.
 
 Given information about a bear community event (from a website, flyer, image, or text), construct a URL using the base:
   https://chunky.dad/testing/event-builder.html
@@ -5337,7 +5341,7 @@ PARAMETERS:
   name       - Full event title
   short      - Shorter reference title. Use a dash (-) as a breakable hyphen for long words (e.g. MEGA-WOOF). Use \\- for a hyphen that always appears. Omit if the name is already short.
   desc       - Event description or tagline
-  city       - City key. Must be one of: nyc, seattle, la, toronto, london, chicago, berlin, palm-springs, denver, dallas, dc, vegas, atlanta, nola, sf, portland, sitges, boston, phoenix, ptown, san-diego, philly, miami, pv, austin, houston, sacramento
+  city       - City key. Must be one of: ${cityKeys}
   venue      - Name of the venue or bar
   addr       - Street address
   coords     - Coordinates in "lat,lng" format — ONLY include if explicitly found in the source, never estimate
@@ -5361,6 +5365,7 @@ RULES:
 - For recurring events, set rrule using standard RRULE syntax.
 
 Return only the complete URL, with no explanation unless asked.`;
+      }
 
       const AI_AGENTS = [
         { name: 'ChatGPT', base: 'https://chat.openai.com/?q=', icon: 'bi-chat-dots' },
@@ -5372,7 +5377,7 @@ Return only the complete URL, with no explanation unless asked.`;
 
       function populateAiAgentList() {
         if (!dom.aiAgentList) return;
-        const encoded = encodeURIComponent(AI_PARSE_PROMPT);
+        const encoded = encodeURIComponent(buildAiParsePrompt());
         dom.aiAgentList.innerHTML = '';
         AI_AGENTS.forEach(agent => {
           const a = document.createElement('a');
