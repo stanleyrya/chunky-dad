@@ -7342,9 +7342,12 @@ Return only the complete URL, with no explanation unless asked.`;
         // For pure occurrences (not overrides) of a recurring series, include the
         // instance timestamp so Google Calendar opens the specific occurrence instead
         // of the base series. Overrides already have their own event entry in Google.
+        // For the base series itself, also include the series start timestamp — Google
+        // Calendar cannot resolve a recurring event without a timestamp in the eid.
         const isPureOccurrence = state.editingExistingMode === 'occurrence'
           && !isEditingExistingOverrideMode();
-        const instanceTimestamp = isPureOccurrence && event.startDate
+        const isBaseSeries = state.editingExistingMode === 'series';
+        const instanceTimestamp = (isPureOccurrence || isBaseSeries) && event.startDate
           ? formatICSDate(event.startDate)
           : '';
         const calendarUrl = getEventEditUrl(uid, cityConfig.calendarId, instanceTimestamp);
