@@ -237,14 +237,11 @@ class BearEventScraperOrchestrator {
                 eventSchema: this.modules.EventSchema
             });
             
-            // Create adapter with cities configuration
-            let finalAdapter = adapter;
-            if (config.cities) {
-                finalAdapter = new this.modules.adapter({
-                    cities: config.cities,
-                    ...this.config
-                });
-            }
+            // Create adapter with cities configuration - always create new instance with cities
+            const finalAdapter = new this.modules.adapter({
+                cities: config.cities,
+                ...this.config
+            });
 
             // Create parser instances
             const parsers = {};
@@ -347,7 +344,8 @@ class BearEventScraperOrchestrator {
             // Try to show user-friendly error
             if (this.modules?.adapter) {
                 try {
-                    const adapter = new this.modules.adapter();
+                    // Create adapter with minimal config for error display
+                    const adapter = new this.modules.adapter({ cities: {} });
                     const errorName = error.name || 'Unknown Error';
                     const errorMessage = error.message || 'An unexpected error occurred';
                     await adapter.showError('Bear Event Scraper Error', `${errorName}: ${errorMessage}\n\nCheck console for full details.`);
