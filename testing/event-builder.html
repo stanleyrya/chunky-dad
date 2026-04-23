@@ -816,6 +816,10 @@
       color: var(--text-primary);
     }
 
+    .existing-diff-text {
+      flex-basis: 100%;
+      opacity: 0.75;
+    }
     .existing-selection-actions {
       display: inline-flex;
       gap: 0.4rem;
@@ -1665,6 +1669,7 @@
             <h2 id="event-details-heading">Event Details</h2>
             <div class="existing-selection-summary is-hidden" id="existing-selection-summary">
               <div id="existing-selection-text"></div>
+              <div id="existing-diff-text" class="existing-diff-text"></div>
               <div class="existing-selection-actions">
                 <button type="button" class="ghost-button action-button is-compact" id="existing-change" aria-controls="existing-event-panel" aria-haspopup="dialog">
                   <i class="bi bi-search" aria-hidden="true"></i>
@@ -2213,9 +2218,17 @@
       const LEGACY_OVERRIDE_HELP_MESSAGE = 'Legacy override detected. Edits are limited in this tool. Use Tell Dad and describe what you are trying to change.';
       const LEGACY_SERIES_BLOCK_MESSAGE = 'This series has legacy overrides, so series edits are blocked in this tool.';
       const LEGACY_TELL_DAD_PROMPT = 'Use Tell Dad and tell us exactly what you are trying to change.';
+      const DIFF_FIELD_LABELS = {
+        name: 'Name', shortName: 'Short name', city: 'City', venue: 'Venue',
+        address: 'Address', location: 'Coordinates', description: 'Description',
+        cover: 'Cover', start: 'Start', end: 'End', recurrence: 'Recurrence',
+        website: 'Website', ticketUrl: 'Tickets', instagram: 'Instagram',
+        facebook: 'Facebook', gmaps: 'Google Maps', image: 'Image'
+      };
 
       const dom = {};
       let state;
+      let existingSnapshot = null;
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
       let lastRecurrenceConstraintWarning = '';
@@ -2409,6 +2422,7 @@
         dom.existingClearButton = document.getElementById('existing-clear');
         dom.existingSelectionSummary = document.getElementById('existing-selection-summary');
         dom.existingSelectionText = document.getElementById('existing-selection-text');
+        dom.existingDiffText = document.getElementById('existing-diff-text');
         dom.existingDeleteOverrideSummaryButton = document.getElementById('existing-delete-override-summary');
         dom.seriesOverrideWarning = document.getElementById('series-override-warning');
         dom.seriesOverrideWarningText = document.getElementById('series-override-warning-text');
@@ -4710,6 +4724,7 @@
           recurrence
         });
         state.isEditingExisting = true;
+        existingSnapshot = snapshotFormFields(state);
         state.editingExistingId = selectedExistingResult.id;
         state.editingExistingMode = mode;
         state.editingExistingOccurrenceId = occurrenceId;
@@ -5145,6 +5160,26 @@
         updateGoogleRefNote();
       }
 
+      function snapshotFormFields(s) {
+        return Object.fromEntries(
+          Object.keys(DIFF_FIELD_LABELS).map(f => [f, s[f] || ''])
+        );
+      }
+
+      function updateExistingDiff() {
+        if (!dom.existingDiffText) return;
+        if (!state || !state.isEditingExisting || !existingSnapshot) {
+          dom.existingDiffText.textContent = '';
+          return;
+        }
+        const changed = Object.keys(DIFF_FIELD_LABELS).filter(
+          f => (state[f] || '') !== (existingSnapshot[f] || '')
+        );
+        dom.existingDiffText.textContent = changed.length
+          ? 'Changes: ' + changed.map(f => DIFF_FIELD_LABELS[f]).join(' · ')
+          : '';
+      }
+
       function updateExistingSelectionSummary(text) {
         if (!dom.existingSelectionSummary || !dom.existingSelectionText) return;
         if (!text) {
@@ -5322,6 +5357,7 @@ Return only the complete URL, with no explanation unless asked.`;
       function clearEditingState() {
         if (!state) return;
         state.isEditingExisting = false;
+        existingSnapshot = null;
         state.editingExistingId = '';
         state.editingExistingMode = 'series';
         state.editingExistingOccurrenceId = '';
@@ -7821,6 +7857,7 @@ Return only the complete URL, with no explanation unless asked.`;
         updateCoordinatesFieldState();
         updateActionButtonsState();
         updateGoogleRefNote();
+        updateExistingDiff();
         scheduleUrlUpdate();
         scheduleEventPush();
       }
