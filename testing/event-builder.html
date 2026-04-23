@@ -2177,6 +2177,7 @@
   <script src="../js/event-schema.js"></script>
   <script src="../js/calendar-core.js"></script>
   <script src="../js/city-config.js"></script>
+  <script src="../scripts/shared-core.js"></script>
   <script>
     (() => {
       const DEFAULT_DURATION_MINUTES = 240;
@@ -2235,6 +2236,7 @@
       const barCache = {};
       const calendarCache = {};
       const calendarCore = new CalendarCore();
+      const sharedCore = new SharedCore(CITY_CONFIG, { eventSchema: EventSchema });
       let existingCalendarIndex = null;
       let existingResults = [];
       let existingOccurrenceResults = [];
