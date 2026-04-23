@@ -4849,10 +4849,11 @@
 
       function buildExistingState(eventData, options = {}) {
         const cityKey = options.cityKey || eventData.city;
-        const cityTimezone = (typeof CITY_CONFIG === 'object' && CITY_CONFIG && cityKey && CITY_CONFIG[cityKey])
-          ? CITY_CONFIG[cityKey].timezone
-          : null;
-        const timezone = cityTimezone || eventData.startTimezone || eventData.calendarTimezone || eventData.timeZone || browserTimezone;
+        const cityConfig = (typeof CITY_CONFIG === 'object' && CITY_CONFIG && cityKey) ? CITY_CONFIG[cityKey] : null;
+        if (!cityConfig || !cityConfig.timezone) {
+          logger.componentError('EVENT', 'buildExistingState: city config or timezone missing', { cityKey });
+        }
+        const timezone = (cityConfig && cityConfig.timezone) || browserTimezone;
         const startDate = options.startDate || eventData.startDate || new Date();
         const endDate = options.endDate || eventData.endDate || new Date(startDate.getTime() + DEFAULT_DURATION_MINUTES * 60000);
         // calendar-core creates Date objects using new Date(year, month, day, hour, ...) with the
