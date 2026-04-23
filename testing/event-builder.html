@@ -2236,6 +2236,7 @@
       const barCache = {};
       const calendarCache = {};
       const calendarCore = new CalendarCore();
+      // sharedCore will be used for merge/diff logic in subsequent phases.
       const sharedCore = new SharedCore(CITY_CONFIG, { eventSchema: EventSchema });
       let existingCalendarIndex = null;
       let existingResults = [];
