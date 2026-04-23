@@ -6205,5 +6205,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
 
 }
 
+// Scriptable-specific CalendarEvent fields that must not be written to notes.
+// Passed to SharedCore via options.additionalExcludedFields so that shared-core.js
+// stays free of iOS-only API knowledge.
+ScriptableAdapter.NOTES_EXCLUDED_FIELDS = new Set([
+    'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
+    'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
+    'searchStartDate', 'searchEndDate'
+]);
+
 // Export for Scriptable environment
 module.exports = { ScriptableAdapter };
