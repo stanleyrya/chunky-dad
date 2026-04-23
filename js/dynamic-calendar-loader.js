@@ -2151,7 +2151,7 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Check each day in the period
         while (current <= end) {
-            if (this.isEventOccurringOnDate(event, current)) {
+            if (this.doesRecurringEventOccurOnDate(event, current)) {
                 occurrences.push(new Date(current));
             }
             current.setDate(current.getDate() + 1);
@@ -2167,113 +2167,10 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Check each day in the period
         while (current <= end) {
-            if (this.isEventOccurringOnDate(event, current)) {
+            if (this.doesRecurringEventOccurOnDate(event, current)) {
                 return true;
             }
             current.setDate(current.getDate() + 1);
-        }
-        
-        return false;
-    }
-
-    // Helper function to determine if a recurring event occurs on a specific date
-    isEventOccurringOnDate(event, date) {
-        if (!event.recurring || !event.startDate) return false;
-        
-        const eventDate = new Date(event.startDate);
-        const checkDate = new Date(date);
-        
-        // Normalize dates to compare only date parts, not time
-        eventDate.setHours(0, 0, 0, 0);
-        checkDate.setHours(0, 0, 0, 0);
-        
-        // Make sure we're not checking before the event started
-        if (checkDate < eventDate) return false;
-        
-        // Parse the recurrence rule to determine the pattern
-        const recurrence = event.recurrence || '';
-        const pattern = this.parseRecurrencePattern(recurrence);
-        if (!pattern || !pattern.frequency) return false;
-        
-        const interval = pattern.interval || 1;
-        const daysSinceStart = this.getDayDifference(eventDate, checkDate);
-        if (daysSinceStart < 0) return false;
-        
-        if (pattern.frequency === 'DAILY') {
-            // Daily events: occur every interval days
-            return daysSinceStart % interval === 0;
-        } else if (pattern.frequency === 'WEEKLY') {
-            // Weekly events: occur on matching weekdays, respecting interval
-            const targetDays = pattern.byDay && pattern.byDay.length > 0
-                ? pattern.byDay
-                    .map(dayCode => this.getDayIndexFromCode(dayCode))
-                    .filter(dayIndex => dayIndex !== -1)
-                : [eventDate.getDay()];
-            
-            if (targetDays.length === 0) {
-                return false;
-            }
-            
-            if (!targetDays.includes(checkDate.getDay())) return false;
-            
-            const weeksSinceStart = Math.floor(daysSinceStart / 7);
-            return weeksSinceStart % interval === 0;
-        } else if (pattern.frequency === 'MONTHLY') {
-            const monthsSinceStart = (checkDate.getFullYear() - eventDate.getFullYear()) * 12 +
-                (checkDate.getMonth() - eventDate.getMonth());
-            if (monthsSinceStart < 0 || monthsSinceStart % interval !== 0) return false;
-            
-            // Monthly events: handle both BYMONTHDAY and BYDAY patterns
-            if (recurrence.includes('BYMONTHDAY=')) {
-                const dayMatch = recurrence.match(/BYMONTHDAY=(\d+)/);
-                if (dayMatch) {
-                    const targetDay = parseInt(dayMatch[1]);
-                    // Check if this month has that many days
-                    const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
-                    return checkDate.getDate() === Math.min(targetDay, lastDayOfMonth);
-                }
-            } else if (recurrence.includes('BYDAY=')) {
-                // Handle BYDAY patterns like BYDAY=3TH (third Thursday) or BYDAY=-1SA (last Saturday)
-                const dayMatch = recurrence.match(/BYDAY=(-?\d+)([A-Z]{2})/);
-                if (dayMatch) {
-                    const occurrence = parseInt(dayMatch[1]); // 3 or -1 (negative means from end of month)
-                    const dayCode = dayMatch[2]; // TH, SA, etc.
-                    
-                    // Convert day code to day number (0 = Sunday, 6 = Saturday)
-                    const dayCodeToDayNumber = {
-                        'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6
-                    };
-                    
-                    const targetDayOfWeek = dayCodeToDayNumber[dayCode];
-                    if (targetDayOfWeek === undefined) return false;
-                    
-                    // Check if the check date is the correct day of the week
-                    if (checkDate.getDay() !== targetDayOfWeek) return false;
-                    
-                    // Calculate the target date for this occurrence
-                    const targetDate = this.calculateByDayOccurrence(
-                        checkDate.getFullYear(), 
-                        checkDate.getMonth(), 
-                        occurrence, 
-                        targetDayOfWeek
-                    );
-                    
-                    return targetDate && checkDate.getTime() === targetDate.getTime();
-                }
-            }
-            
-            // Fallback: same day of month as original event, but handle month lengths
-            const originalDay = eventDate.getDate();
-            const lastDayOfMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
-            const targetDay = Math.min(originalDay, lastDayOfMonth);
-            return checkDate.getDate() === targetDay;
-        } else if (pattern.frequency === 'YEARLY') {
-            const yearsSinceStart = checkDate.getFullYear() - eventDate.getFullYear();
-            if (yearsSinceStart < 0 || yearsSinceStart % interval !== 0) return false;
-            
-            // Yearly events: same month and day
-            return eventDate.getMonth() === checkDate.getMonth() && 
-                   eventDate.getDate() === checkDate.getDate();
         }
         
         return false;
@@ -2430,57 +2327,6 @@ class DynamicCalendarLoader extends CalendarCore {
         return `${year}-${month}-${day}`;
     }
 
-    // Helper function to calculate the specific occurrence of a day in a month
-    // occurrence: positive number (1-5) for nth occurrence, negative (-1) for last occurrence
-    // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
-    calculateByDayOccurrence(year, month, occurrence, dayOfWeek) {
-        try {
-            if (occurrence > 0) {
-                // Find the nth occurrence of the day (e.g., 3rd Thursday)
-                const firstOfMonth = new Date(year, month, 1);
-                const firstDayOfWeek = firstOfMonth.getDay();
-                
-                // Calculate days to add to get to the first occurrence of the target day
-                let daysToAdd = (dayOfWeek - firstDayOfWeek + 7) % 7;
-                
-                // Add weeks to get to the nth occurrence
-                daysToAdd += (occurrence - 1) * 7;
-                
-                const targetDate = new Date(year, month, 1 + daysToAdd);
-                
-                // Verify it's still in the same month
-                if (targetDate.getMonth() !== month) {
-                    return null;
-                }
-                
-                return targetDate;
-            } else if (occurrence === -1) {
-                // Find the last occurrence of the day (e.g., last Saturday)
-                const lastOfMonth = new Date(year, month + 1, 0);
-                const lastDayOfWeek = lastOfMonth.getDay();
-                
-                // Calculate days to subtract to get to the last occurrence of the target day
-                let daysToSubtract = (lastDayOfWeek - dayOfWeek + 7) % 7;
-                
-                const targetDate = new Date(year, month + 1, 0 - daysToSubtract);
-                
-                // Verify it's still in the same month
-                if (targetDate.getMonth() !== month) {
-                    return null;
-                }
-                
-                return targetDate;
-            }
-            
-            return null;
-        } catch (error) {
-            logger.componentError('CALENDAR', 'Error calculating BYDAY occurrence', {
-                year, month, occurrence, dayOfWeek, error
-            });
-            return null;
-        }
-    }
-
     // Generate calendar events (enhanced for week/month/calendar view)
     generateCalendarEvents(events, hideEvents = false) {
         const { start, end } = this.getCurrentPeriodBounds();
@@ -2527,7 +2373,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 // For non-expanded recurring events, use the occurrence check
                 if (event.recurring) {
-                    return this.isEventOccurringOnDate(event, day);
+                    return this.doesRecurringEventOccurOnDate(event, day);
                 }
                 
                 // For non-recurring events, check exact date match
@@ -2645,7 +2491,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 // For non-expanded recurring events, use the occurrence check
                 if (event.recurring) {
-                    const matches = this.isEventOccurringOnDate(event, day);
+                    const matches = this.doesRecurringEventOccurOnDate(event, day);
                     if (matches) {
                         logger.debug('CALENDAR', 'Month view: Non-expanded recurring event matches day', {
                             eventName: event.name,

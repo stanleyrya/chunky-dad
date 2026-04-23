@@ -1304,23 +1304,7 @@ class SharedCore {
 
     // Helper method to normalize event dates for consistent comparison across timezones
     normalizeEventDate(dateInput) {
-        if (!dateInput) return '';
-        
-        try {
-            const date = new Date(dateInput);
-            if (isNaN(date.getTime())) return '';
-            
-            // Use UTC date components to ensure consistent keys regardless of timezone
-            // This prevents keys from changing based on when/where the script is run
-            const year = date.getUTCFullYear();
-            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(date.getUTCDate()).padStart(2, '0');
-            
-            return `${year}-${month}-${day}`;
-        } catch (error) {
-            console.warn(`⚠️ SharedCore: Failed to normalize date: ${dateInput}`);
-            return '';
-        }
+        return SharedCore.normalizeEventDate(dateInput);
     }
     
     // Normalize event date using local or specified timezone
@@ -1580,12 +1564,7 @@ class SharedCore {
     }
 
     buildOverrideKey(overrideUid, overrideRecurrenceId) {
-        const normalizedUid = this.normalizeOverrideUid(overrideUid);
-        const normalizedRecurrenceId = this.normalizeOverrideRecurrenceId(overrideRecurrenceId);
-        if (!normalizedUid || !normalizedRecurrenceId) {
-            return '';
-        }
-        return `${normalizedUid.toLowerCase()}::${normalizedRecurrenceId}`;
+        return SharedCore.buildOverrideKey(overrideUid, overrideRecurrenceId);
     }
 
     getOverrideIdentityFromEvent(existingEvent) {
@@ -1777,11 +1756,25 @@ class SharedCore {
     }
 
     normalizeOverrideUid(value) {
+        return SharedCore.normalizeOverrideUid(value);
+    }
+
+    normalizeOverrideRecurrenceId(value) {
+        return SharedCore.normalizeOverrideRecurrenceId(value);
+    }
+
+    // -------------------------------------------------------------------------
+    // Static utility methods — pure functions with no instance state.
+    // These are also used by ScriptableAdapter (which delegates to them) so that
+    // business logic lives in exactly one place.
+    // -------------------------------------------------------------------------
+
+    static normalizeOverrideUid(value) {
         if (value === null || value === undefined) return '';
         return String(value).trim();
     }
 
-    normalizeOverrideRecurrenceId(value) {
+    static normalizeOverrideRecurrenceId(value) {
         if (value === null || value === undefined) return '';
         const trimmed = String(value).trim();
         if (!trimmed) return '';
@@ -1800,6 +1793,29 @@ class SharedCore {
         }
 
         return '';
+    }
+
+    static buildOverrideKey(overrideUid, overrideRecurrenceId) {
+        const normalizedUid = SharedCore.normalizeOverrideUid(overrideUid);
+        const normalizedRecurrenceId = SharedCore.normalizeOverrideRecurrenceId(overrideRecurrenceId);
+        if (!normalizedUid || !normalizedRecurrenceId) {
+            return '';
+        }
+        return `${normalizedUid.toLowerCase()}::${normalizedRecurrenceId}`;
+    }
+
+    static normalizeEventDate(dateInput) {
+        if (!dateInput) return '';
+        try {
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        } catch (error) {
+            return '';
+        }
     }
 
     parseOverrideRecurrenceDate(value) {

@@ -871,6 +871,89 @@ class CalendarCore {
         return Math.floor((endUTC - startUTC) / 86400000);
     }
 
+    // Returns true when `date` falls on the occurrence of a weekday described by `dayCode`
+    // (e.g. "2TU" = 2nd Tuesday, "-1SA" = last Saturday, "MO" = any Monday).
+    // Handles positive (1–5), zero (any), and negative (from end-of-month) occurrences.
+    matchesMonthlyByDay(dayCode, date) {
+        const dayIndex = this.getDayIndexFromCode(dayCode);
+        if (dayIndex !== date.getDay()) return false;
+        const occurrence = this.getOccurrenceFromDayCode(dayCode);
+        if (!occurrence) return true; // no qualifier — any occurrence of this weekday matches
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        if (occurrence > 0) {
+            const firstOfMonth = new Date(year, month, 1);
+            const offset = (dayIndex - firstOfMonth.getDay() + 7) % 7;
+            const targetDay = 1 + offset + (occurrence - 1) * 7;
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            if (targetDay > lastDay) return false; // occurrence would spill into next month
+            return date.getDate() === targetDay;
+        }
+        // Negative occurrence: -1 = last, -2 = second-to-last, etc.
+        const lastOfMonth = new Date(year, month + 1, 0);
+        const offset = (lastOfMonth.getDay() - dayIndex + 7) % 7;
+        const lastOccurrence = lastOfMonth.getDate() - offset;
+        const targetDay = lastOccurrence + (occurrence + 1) * 7;
+        return date.getDate() === targetDay;
+    }
+
+    // Canonical recurring-event occurrence check.
+    // Returns true when `event` (with a `recurrence` RRULE string and a `startDate`) recurs
+    // on `targetDate`.  Handles DAILY, WEEKLY, MONTHLY (BYMONTHDAY / BYDAY), and YEARLY.
+    doesRecurringEventOccurOnDate(event, targetDate) {
+        if (!event || !event.recurrence || !event.startDate || !targetDate) return false;
+        const pattern = this.parseRecurrencePattern(event.recurrence);
+        if (!pattern || !pattern.frequency) return false;
+
+        // Normalise both sides to local midnight so comparisons are day-only
+        const eventStart = new Date(event.startDate);
+        eventStart.setHours(0, 0, 0, 0);
+        const checkDate = new Date(targetDate);
+        checkDate.setHours(0, 0, 0, 0);
+
+        if (checkDate < eventStart) return false;
+
+        const interval = pattern.interval || 1;
+        const daysSinceStart = this.getDayDifference(eventStart, checkDate);
+
+        switch (pattern.frequency) {
+            case 'DAILY':
+                return daysSinceStart % interval === 0;
+
+            case 'WEEKLY': {
+                const dayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+                const byDay = pattern.byDay && pattern.byDay.length
+                    ? pattern.byDay
+                    : [dayCodes[eventStart.getDay()]];
+                if (!byDay.some(code => this.getDayIndexFromCode(code) === checkDate.getDay())) return false;
+                return Math.floor(daysSinceStart / 7) % interval === 0;
+            }
+
+            case 'MONTHLY': {
+                const monthDiff = (checkDate.getFullYear() - eventStart.getFullYear()) * 12
+                    + (checkDate.getMonth() - eventStart.getMonth());
+                if (monthDiff % interval !== 0) return false;
+                if (pattern.byMonthDay && pattern.byMonthDay.length) {
+                    return pattern.byMonthDay.includes(checkDate.getDate());
+                }
+                if (pattern.byDay && pattern.byDay.length) {
+                    return pattern.byDay.some(code => this.matchesMonthlyByDay(code, checkDate));
+                }
+                return checkDate.getDate() === eventStart.getDate();
+            }
+
+            case 'YEARLY': {
+                const yearDiff = checkDate.getFullYear() - eventStart.getFullYear();
+                if (yearDiff < 0 || yearDiff % interval !== 0) return false;
+                return eventStart.getMonth() === checkDate.getMonth()
+                    && eventStart.getDate() === checkDate.getDate();
+            }
+
+            default:
+                return false;
+        }
+    }
+
 
     // Enhanced day/time formatting with context - always uses pattern-first approach
     getEnhancedDayTimeDisplay(event, calendarView = 'week', calendarPeriod = null) {
