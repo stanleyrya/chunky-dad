@@ -357,6 +357,7 @@ const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
 const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const { EventSchema: SharedEventSchema } = importModule('event-schema');
+const { SharedCore } = importModule('shared-core');
 
 if (!SharedEventSchema || typeof SharedEventSchema.parseNotesIntoFields !== 'function') {
     throw new Error('ScriptableAdapter requires EventSchema to be loaded before adapter initialization');
@@ -1416,43 +1417,19 @@ class ScriptableAdapter {
     }
 
     normalizeOverrideUid(value) {
-        if (value === null || value === undefined) return '';
-        return String(value).trim();
+        return SharedCore.normalizeOverrideUid(value);
     }
 
     normalizeOverrideRecurrenceId(value) {
-        if (value === null || value === undefined) return '';
-        const trimmed = String(value).trim();
-        if (!trimmed) return '';
-        const withTimezoneMatch = trimmed.match(/^TZID=([^:]+):(\d{8}(?:T\d{4,6}Z?)?)$/i);
-        if (withTimezoneMatch) {
-            const timezone = withTimezoneMatch[1].trim();
-            const recurrenceValue = withTimezoneMatch[2].toUpperCase();
-            if (!timezone) return '';
-            return `TZID=${timezone}:${recurrenceValue}`;
-        }
-        const withoutTimezoneMatch = trimmed.match(/^(\d{8}(?:T\d{4,6}Z?)?)$/i);
-        if (withoutTimezoneMatch) {
-            return withoutTimezoneMatch[1].toUpperCase();
-        }
-        return '';
+        return SharedCore.normalizeOverrideRecurrenceId(value);
     }
 
     normalizeEventDate(dateInput) {
-        if (!dateInput) return '';
-        const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
-        if (!(date instanceof Date) || isNaN(date.getTime())) return '';
-        const year = date.getUTCFullYear();
-        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(date.getUTCDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return SharedCore.normalizeEventDate(dateInput);
     }
 
     buildOverrideKey(overrideUid, overrideRecurrenceId) {
-        const uid = this.normalizeOverrideUid(overrideUid);
-        const recurrenceId = this.normalizeOverrideRecurrenceId(overrideRecurrenceId);
-        if (!uid || !recurrenceId) return '';
-        return `${uid.toLowerCase()}::${recurrenceId}`;
+        return SharedCore.buildOverrideKey(overrideUid, overrideRecurrenceId);
     }
 
     parseScriptableIdentifier(value) {

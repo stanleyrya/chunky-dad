@@ -4060,7 +4060,7 @@
             }
             continue;
           }
-          if (!doesRecurringEventMatchDate(baseEvent, cursor)) {
+          if (!calendarCore.doesRecurringEventOccurOnDate(baseEvent, cursor)) {
             continue;
           }
           const occurrenceDates = buildOccurrenceDates(baseEvent, cursor);
@@ -4129,7 +4129,7 @@
           }
           if (override) {
             addOverrideResult(override);
-          } else if (doesRecurringEventMatchDate(baseEvent, targetDate)) {
+          } else if (calendarCore.doesRecurringEventOccurOnDate(baseEvent, targetDate)) {
             addOccurrenceResult(targetDate);
           }
         } else if (hasRange) {
@@ -4156,7 +4156,7 @@
               addOverrideResult(override);
               continue;
             }
-            if (!doesRecurringEventMatchDate(baseEvent, cursor)) {
+            if (!calendarCore.doesRecurringEventOccurOnDate(baseEvent, cursor)) {
               continue;
             }
             addOccurrenceResult(new Date(cursor));
@@ -4169,7 +4169,7 @@
             for (let dayOffset = 0; dayOffset < windowDays; dayOffset += 1) {
               const targetDate = new Date(cursor);
               targetDate.setDate(cursor.getDate() + dayOffset);
-              if (!doesRecurringEventMatchDate(baseEvent, targetDate)) continue;
+              if (!calendarCore.doesRecurringEventOccurOnDate(baseEvent, targetDate)) continue;
               const dateKey = formatDateKey(targetDate);
               const override = baseEvent.uid
                 ? index.overridesByUidDateKey.get(`${baseEvent.uid}::${dateKey}`)
@@ -4923,86 +4923,11 @@
         return { start, end };
       }
 
-      function doesRecurringEventMatchDate(baseEvent, targetDate) {
-        if (!baseEvent || !baseEvent.recurrence || !targetDate) return false;
-        const pattern = parseRecurrencePattern(baseEvent.recurrence);
-        if (!pattern || !baseEvent.startDate) return false;
-        if (!(baseEvent.startDate instanceof Date) || Number.isNaN(baseEvent.startDate.getTime())) return false;
-        const eventStart = parseDateValue(formatDateKey(baseEvent.startDate));
-        if (!eventStart || targetDate < eventStart) return false;
-        const interval = pattern.interval || 1;
-        switch (pattern.frequency) {
-          case 'DAILY': {
-            const diffDays = Math.floor((targetDate - eventStart) / 86400000);
-            return diffDays % interval === 0;
-          }
-          case 'WEEKLY': {
-            const diffDays = Math.floor((targetDate - eventStart) / 86400000);
-            const diffWeeks = Math.floor(diffDays / 7);
-            if (diffWeeks % interval !== 0) return false;
-            const dayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-            const byDay = (pattern.byDay && pattern.byDay.length)
-              ? pattern.byDay
-              : [dayCodes[baseEvent.startDate.getDay()]];
-            return byDay.some(code => getDayIndexFromCode(code) === targetDate.getDay());
-          }
-          case 'MONTHLY': {
-            const monthDiff = (targetDate.getFullYear() - eventStart.getFullYear()) * 12
-              + (targetDate.getMonth() - eventStart.getMonth());
-            if (monthDiff % interval !== 0) return false;
-            if (pattern.byMonthDay && pattern.byMonthDay.length) {
-              return pattern.byMonthDay.includes(targetDate.getDate());
-            }
-            if (pattern.byDay && pattern.byDay.length) {
-              return pattern.byDay.some(code => matchesMonthlyByDay(code, targetDate));
-            }
-            return targetDate.getDate() === eventStart.getDate();
-          }
-          default:
-            return false;
-        }
-      }
-
       function parseDateValue(value) {
         if (!value) return null;
         const parts = value.split('-').map(Number);
         if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return null;
         return new Date(parts[0], parts[1] - 1, parts[2]);
-      }
-
-      function parseRecurrencePattern(recurrence) {
-        if (!recurrence) return null;
-        return calendarCore.parseRecurrencePattern(recurrence);
-      }
-
-      function getDayIndexFromCode(code) {
-        return calendarCore.getDayIndexFromCode(code);
-      }
-
-      function getOccurrenceFromDayCode(code) {
-        return calendarCore.getOccurrenceFromDayCode(code);
-      }
-
-      function matchesMonthlyByDay(code, date) {
-        const dayIndex = getDayIndexFromCode(code);
-        if (dayIndex !== date.getDay()) return false;
-        const occurrence = getOccurrenceFromDayCode(code);
-        if (!occurrence) return true;
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        if (occurrence > 0) {
-          const firstOfMonth = new Date(year, month, 1);
-          const firstDayIndex = firstOfMonth.getDay();
-          const offset = (dayIndex - firstDayIndex + 7) % 7;
-          const targetDate = 1 + offset + (occurrence - 1) * 7;
-          return date.getDate() === targetDate;
-        }
-        const lastOfMonth = new Date(year, month + 1, 0);
-        const lastDayIndex = lastOfMonth.getDay();
-        const offset = (lastDayIndex - dayIndex + 7) % 7;
-        const lastOccurrence = lastOfMonth.getDate() - offset;
-        const targetDate = lastOccurrence + (occurrence + 1) * 7;
-        return date.getDate() === targetDate;
       }
 
       function formatDateKey(date) {
