@@ -1087,10 +1087,9 @@ class SharedCore {
         // The merge strategy above has already chosen the correct gmaps URL
         
         // Resolve url/website alias: url and website are the same concept.
-        // url is the iOS calendar URL field; website is the canonical notes field.
-        // If only one is present after the merge, ensure both are set consistently.
-        // url is excluded from notes (DEFAULT_NOTES_EXCLUDED_FIELDS), so notes always
-        // use website, preventing duplicate url/website entries in notes.
+        // url is the native iOS calendar URL field. Both url and website are excluded
+        // from notes so the value lives only in the native url field, not duplicated
+        // in notes. Reading still handles old notes that contain "website:" for compat.
         if (!mergedObject.url && mergedObject.website) {
             mergedObject.url = mergedObject.website;
         }
@@ -1952,8 +1951,8 @@ class SharedCore {
     enrichEventLocation(event) {
         if (!event) return event;
 
-        // Sync url/website: url is the native iOS calendar URL field; website is the canonical
-        // notes field. They represent the same concept. Always prefer/write native (url).
+        // Sync url/website: url is the native iOS calendar URL field; website is the same
+        // concept read from notes (for backward compat). Always prefer/write native (url).
         if (!event.url && event.website) {
             event.url = event.website;
         }
