@@ -2234,7 +2234,7 @@
       let selectedBar = null;
       const barCache = {};
       const calendarCache = {};
-      const calendarCore = typeof CalendarCore === 'function' ? new CalendarCore() : null;
+      const calendarCore = new CalendarCore();
       let existingCalendarIndex = null;
       let existingResults = [];
       let existingOccurrenceResults = [];
@@ -2856,12 +2856,6 @@
         if (!cityKey) {
           existingCalendarIndex = null;
           resetExistingResults('Choose a calendar to load events.');
-          refreshEditingContextUi();
-          return;
-        }
-        if (!calendarCore) {
-          existingCalendarIndex = null;
-          resetExistingResults('Calendar tools are unavailable here.');
           refreshEditingContextUi();
           return;
         }
@@ -4978,37 +4972,15 @@
 
       function parseRecurrencePattern(recurrence) {
         if (!recurrence) return null;
-        if (calendarCore && typeof calendarCore.parseRecurrencePattern === 'function') {
-          return calendarCore.parseRecurrencePattern(recurrence);
-        }
-        const rules = {};
-        recurrence.split(';').forEach(rule => {
-          const [key, value] = rule.split('=');
-          rules[key] = value;
-        });
-        return {
-          frequency: rules.FREQ || null,
-          interval: parseInt(rules.INTERVAL, 10) || 1,
-          byDay: rules.BYDAY ? rules.BYDAY.split(',') : null,
-          byMonthDay: rules.BYMONTHDAY ? rules.BYMONTHDAY.split(',').map(day => parseInt(day, 10)) : null
-        };
+        return calendarCore.parseRecurrencePattern(recurrence);
       }
 
       function getDayIndexFromCode(code) {
-        if (calendarCore && typeof calendarCore.getDayIndexFromCode === 'function') {
-          return calendarCore.getDayIndexFromCode(code);
-        }
-        const dayMap = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
-        const dayPart = String(code || '').replace(/^-?\d+/, '');
-        return dayMap[dayPart] ?? -1;
+        return calendarCore.getDayIndexFromCode(code);
       }
 
       function getOccurrenceFromDayCode(code) {
-        if (calendarCore && typeof calendarCore.getOccurrenceFromDayCode === 'function') {
-          return calendarCore.getOccurrenceFromDayCode(code);
-        }
-        const match = String(code || '').match(/^(-?\d+)([A-Z]{2})$/);
-        return match ? parseInt(match[1], 10) : 0;
+        return calendarCore.getOccurrenceFromDayCode(code);
       }
 
       function matchesMonthlyByDay(code, date) {
@@ -5090,10 +5062,7 @@
 
       function formatRecurrenceLabel(eventData) {
         if (!eventData || !eventData.recurrence) return '';
-        if (calendarCore && typeof calendarCore.getRecurrenceDescription === 'function') {
-          return calendarCore.getRecurrenceDescription(eventData.recurrence, eventData.startDate);
-        }
-        return eventData.recurrence;
+        return calendarCore.getRecurrenceDescription(eventData.recurrence, eventData.startDate);
       }
 
       function formatSeriesOverrideListItem(override, baseEvent) {

@@ -19,12 +19,6 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
-const SHARED_CORE_SCRIPTABLE_NOTES_EXCLUDED_FIELDS = new Set([
-    'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
-    'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
-    'searchStartDate', 'searchEndDate'
-]);
-
 class SharedCore {
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
@@ -64,7 +58,7 @@ class SharedCore {
         this.eventSchema = schema;
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
-            ...SHARED_CORE_SCRIPTABLE_NOTES_EXCLUDED_FIELDS
+            ...(options.additionalExcludedFields || [])
         ]);
         
         // Initialize city mappings from centralized cities config
