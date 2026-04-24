@@ -391,6 +391,7 @@ class CalendarCore {
                         eventData.image = additionalData.image;
                     }
                     eventData.tea = additionalData.tea || additionalData.description;
+                    eventData.address = additionalData.address || null;
                     eventData.website = additionalData.website;
                     eventData.instagram = additionalData.instagram;
                     eventData.facebook = additionalData.facebook;

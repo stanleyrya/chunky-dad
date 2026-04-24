@@ -816,6 +816,10 @@
       color: var(--text-primary);
     }
 
+    .existing-diff-text {
+      flex-basis: 100%;
+      opacity: 0.75;
+    }
     .existing-selection-actions {
       display: inline-flex;
       gap: 0.4rem;
@@ -1665,6 +1669,7 @@
             <h2 id="event-details-heading">Event Details</h2>
             <div class="existing-selection-summary is-hidden" id="existing-selection-summary">
               <div id="existing-selection-text"></div>
+              <div id="existing-diff-text" class="existing-diff-text"></div>
               <div class="existing-selection-actions">
                 <button type="button" class="ghost-button action-button is-compact" id="existing-change" aria-controls="existing-event-panel" aria-haspopup="dialog">
                   <i class="bi bi-search" aria-hidden="true"></i>
@@ -2177,6 +2182,7 @@
   <script src="../js/event-schema.js"></script>
   <script src="../js/calendar-core.js"></script>
   <script src="../js/city-config.js"></script>
+  <script src="../scripts/shared-core.js"></script>
   <script>
     (() => {
       const DEFAULT_DURATION_MINUTES = 240;
@@ -2215,6 +2221,7 @@
 
       const dom = {};
       let state;
+      let existingSnapshot = null;
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
       let lastRecurrenceConstraintWarning = '';
@@ -2235,6 +2242,8 @@
       const barCache = {};
       const calendarCache = {};
       const calendarCore = new CalendarCore();
+      // sharedCore will be used for merge/diff logic in subsequent phases.
+      const sharedCore = new SharedCore(CITY_CONFIG, { eventSchema: EventSchema });
       let existingCalendarIndex = null;
       let existingResults = [];
       let existingOccurrenceResults = [];
@@ -2406,6 +2415,7 @@
         dom.existingClearButton = document.getElementById('existing-clear');
         dom.existingSelectionSummary = document.getElementById('existing-selection-summary');
         dom.existingSelectionText = document.getElementById('existing-selection-text');
+        dom.existingDiffText = document.getElementById('existing-diff-text');
         dom.existingDeleteOverrideSummaryButton = document.getElementById('existing-delete-override-summary');
         dom.seriesOverrideWarning = document.getElementById('series-override-warning');
         dom.seriesOverrideWarningText = document.getElementById('series-override-warning-text');
@@ -3467,10 +3477,7 @@
 
       function normalizeExistingEvent(event, cityKey) {
         if (!event || typeof event !== 'object') return null;
-        const description = event.unprocessedDescription || '';
-        const address = extractDescriptionValue(description, ['address', 'addr']);
-        const timezoneFromDescription = extractDescriptionValue(description, ['timezone', 'tz']);
-        const timeZone = event.startTimezone || timezoneFromDescription || event.calendarTimezone || browserTimezone;
+        const timeZone = event.startTimezone || event.calendarTimezone || browserTimezone;
         const recurrenceIdTimezone = event.recurrenceIdTimezone || timeZone;
         const startDate = event.startDate instanceof Date ? new Date(event.startDate) : (event.startDate ? new Date(event.startDate) : null);
         const endDate = event.endDate instanceof Date ? new Date(event.endDate) : (event.endDate ? new Date(event.endDate) : null);
@@ -3494,7 +3501,7 @@
           shortName: normalizeText(event.shortName || ''),
           shorterName: normalizeText(event.shorterName || ''),
           bar: normalizeText(event.bar || event.venue || ''),
-          address: normalizeText(address || ''),
+          address: normalizeText(event.address || ''),
           location,
           coordinates,
           tea: normalizeText(event.tea || event.description || ''),
@@ -3537,38 +3544,6 @@
           return 'custom';
         }
         return 'legacy';
-      }
-
-      function extractDescriptionValue(description, keys) {
-        if (!description) return '';
-        const normalizedKeys = keys.map(key => key.toLowerCase().replace(/\s+/g, ''));
-        const normalizedDescription = decodeHtmlEntities(String(description))
-          .replace(/\r/g, '')
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/\\r\\n/gi, '\n')
-          .replace(/\\n/gi, '\n')
-          .replace(/\\N/g, '\n');
-        const lines = normalizedDescription.split('\n');
-        for (const rawLine of lines) {
-          const line = String(rawLine || '').trim();
-          if (!line) continue;
-          const separatorIndex = line.indexOf(':');
-          if (separatorIndex === -1) continue;
-          const rawKey = line.slice(0, separatorIndex).trim();
-          const normalizedKey = rawKey.toLowerCase().replace(/\s+/g, '');
-          if (!normalizedKeys.includes(normalizedKey)) continue;
-          const rawValue = line.slice(separatorIndex + 1).trim();
-          const firstLineValue = rawValue.split(/\\[nN]/)[0].trim();
-          return normalizeText(decodeHtmlEntities(firstLineValue));
-        }
-        return '';
-      }
-
-      function decodeHtmlEntities(value) {
-        if (!value || typeof value !== 'string' || !value.includes('&')) return value;
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = value;
-        return textarea.value;
       }
 
       function buildSearchBlob(event, baseEvent) {
@@ -4707,6 +4682,7 @@
           recurrence
         });
         state.isEditingExisting = true;
+        existingSnapshot = snapshotFormFields(state);
         state.editingExistingId = selectedExistingResult.id;
         state.editingExistingMode = mode;
         state.editingExistingOccurrenceId = occurrenceId;
@@ -5142,6 +5118,46 @@
         updateGoogleRefNote();
       }
 
+      const DIFF_FIELD_LABELS = Object.freeze({
+        name: 'Name',
+        shortName: 'Short name',
+        city: 'City',
+        venue: 'Venue',
+        address: 'Address',
+        location: 'Coordinates',
+        description: 'Description',
+        cover: 'Cover',
+        start: 'Start',
+        end: 'End',
+        recurrence: 'Recurrence',
+        website: 'Website',
+        ticketUrl: 'Tickets',
+        instagram: 'Instagram',
+        facebook: 'Facebook',
+        gmaps: 'Google Maps',
+        image: 'Image'
+      });
+
+      function snapshotFormFields(s) {
+        return Object.fromEntries(
+          Object.keys(DIFF_FIELD_LABELS).map(f => [f, s[f] || ''])
+        );
+      }
+
+      function updateExistingDiff() {
+        if (!dom.existingDiffText) return;
+        if (!state || !state.isEditingExisting || !existingSnapshot) {
+          dom.existingDiffText.textContent = '';
+          return;
+        }
+        const changed = Object.keys(DIFF_FIELD_LABELS).filter(
+          f => (state[f] || '') !== (existingSnapshot[f] || '')
+        );
+        dom.existingDiffText.textContent = changed.length
+          ? 'Changes: ' + changed.map(f => DIFF_FIELD_LABELS[f]).join(' · ')
+          : '';
+      }
+
       function updateExistingSelectionSummary(text) {
         if (!dom.existingSelectionSummary || !dom.existingSelectionText) return;
         if (!text) {
@@ -5319,6 +5335,7 @@ Return only the complete URL, with no explanation unless asked.`;
       function clearEditingState() {
         if (!state) return;
         state.isEditingExisting = false;
+        existingSnapshot = null;
         state.editingExistingId = '';
         state.editingExistingMode = 'series';
         state.editingExistingOccurrenceId = '';
@@ -7818,6 +7835,7 @@ Return only the complete URL, with no explanation unless asked.`;
         updateCoordinatesFieldState();
         updateActionButtonsState();
         updateGoogleRefNote();
+        updateExistingDiff();
         scheduleUrlUpdate();
         scheduleEventPush();
       }
