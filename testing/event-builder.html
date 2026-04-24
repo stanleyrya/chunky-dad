@@ -5118,9 +5118,29 @@
         updateGoogleRefNote();
       }
 
+      const DIFF_FIELD_LABELS = Object.freeze({
+        name: 'Name',
+        shortName: 'Short name',
+        city: 'City',
+        venue: 'Venue',
+        address: 'Address',
+        location: 'Coordinates',
+        description: 'Description',
+        cover: 'Cover',
+        start: 'Start',
+        end: 'End',
+        recurrence: 'Recurrence',
+        website: 'Website',
+        ticketUrl: 'Tickets',
+        instagram: 'Instagram',
+        facebook: 'Facebook',
+        gmaps: 'Google Maps',
+        image: 'Image'
+      });
+
       function snapshotFormFields(s) {
         return Object.fromEntries(
-          Object.keys(EventSchema.EVENT_BUILDER_STATE_LABELS).map(f => [f, s[f] || ''])
+          Object.keys(DIFF_FIELD_LABELS).map(f => [f, s[f] || ''])
         );
       }
 
@@ -5130,11 +5150,11 @@
           dom.existingDiffText.textContent = '';
           return;
         }
-        const changed = Object.keys(EventSchema.EVENT_BUILDER_STATE_LABELS).filter(
+        const changed = Object.keys(DIFF_FIELD_LABELS).filter(
           f => (state[f] || '') !== (existingSnapshot[f] || '')
         );
         dom.existingDiffText.textContent = changed.length
-          ? 'Changes: ' + changed.map(f => EventSchema.EVENT_BUILDER_STATE_LABELS[f]).join(' · ')
+          ? 'Changes: ' + changed.map(f => DIFF_FIELD_LABELS[f]).join(' · ')
           : '';
       }
 
