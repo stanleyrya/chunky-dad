@@ -707,6 +707,186 @@
       justify-content: center;
     }
 
+    .diff-modal {
+      margin: auto;
+      width: min(560px, calc(100vw - 2rem));
+      max-width: calc(100vw - 2rem);
+      border: none;
+      border-radius: 16px;
+      padding: 0;
+      background: var(--panel-bg);
+      color: var(--text-primary);
+      box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
+      max-height: 85vh;
+      overflow-x: hidden;
+    }
+
+    .diff-modal::backdrop {
+      background: rgba(8, 10, 16, 0.75);
+      backdrop-filter: blur(4px);
+    }
+
+    .diff-modal__content {
+      display: grid;
+      gap: 1rem;
+      padding: 1.2rem;
+      max-height: 85vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .diff-modal__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .diff-modal__header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--text-primary);
+    }
+
+    .diff-modal__close {
+      padding: 0.35rem 0.55rem;
+      min-width: 36px;
+      justify-content: center;
+    }
+
+    .diff-modal__header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .diff-no-changes {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 0.5rem 0;
+    }
+
+    .diff-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .diff-table th {
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 0.3rem 0.5rem;
+      border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    }
+
+    .diff-table td {
+      padding: 0.35rem 0.5rem;
+      vertical-align: top;
+      border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.07));
+      word-break: break-word;
+    }
+
+    .diff-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .diff-field-label {
+      font-weight: 600;
+      white-space: nowrap;
+      color: var(--text-primary);
+    }
+
+    .diff-value-old {
+      color: #ff8a80;
+      text-decoration: line-through;
+      opacity: 0.8;
+    }
+
+    .diff-value-new {
+      color: #69f0ae;
+    }
+
+    .diff-value-empty {
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .diff-view-toggle {
+      display: inline-flex;
+      gap: 0.25rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 0.2rem;
+    }
+
+    .diff-view-toggle button {
+      padding: 0.25rem 0.6rem;
+      font-size: 0.78rem;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .diff-view-toggle button.is-active {
+      background: var(--panel-bg, #1a1d2e);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .diff-line-view {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.8rem;
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .diff-line-field {
+      border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .diff-line-field-label {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.6rem;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+    }
+
+    .diff-line-removed {
+      padding: 0.3rem 0.6rem;
+      color: #ff8a80;
+      background: rgba(255,138,128,0.08);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .diff-line-added {
+      padding: 0.3rem 0.6rem;
+      color: #69f0ae;
+      background: rgba(105,240,174,0.08);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .diff-line-prefix {
+      opacity: 0.6;
+      user-select: none;
+      margin-right: 0.4rem;
+    }
+
     .ai-agent-list {
       display: grid;
       gap: 0.5rem;
@@ -1527,6 +1707,16 @@
         max-height: 90vh;
       }
 
+      .diff-modal {
+        width: min(560px, calc(100vw - 2rem));
+        max-width: calc(100vw - 2rem);
+      }
+
+      .diff-modal__content {
+        padding: 1rem;
+        max-height: 90vh;
+      }
+
       .page-wrapper {
         padding: calc(1.6rem + var(--sticky-header-offset)) 0 2.6rem;
       }
@@ -1638,6 +1828,10 @@
             <button type="button" class="secondary-button action-button" id="edit-existing" aria-label="Edit or copy existing event" aria-expanded="false" aria-controls="existing-event-panel" aria-haspopup="dialog">
               <i class="bi bi-pencil-square" aria-hidden="true"></i>
               <span>Edit Existing</span>
+            </button>
+            <button type="button" class="secondary-button action-button" id="show-diff" aria-label="Show changes vs. existing event" aria-expanded="false" aria-controls="diff-panel" aria-haspopup="dialog" disabled>
+              <i class="bi bi-subtract" aria-hidden="true"></i>
+              <span>Diff</span>
             </button>
             <button type="button" class="primary-button action-button" id="copy-link" aria-label="Tell dad">
               <i class="bi bi-send" aria-hidden="true"></i>
@@ -2176,6 +2370,33 @@
     </div>
   </dialog>
 
+  <dialog class="diff-modal" id="diff-panel" aria-labelledby="diff-modal-title">
+    <div class="diff-modal__content">
+      <div class="diff-modal__header">
+        <div>
+          <h2 id="diff-modal-title">Changes vs. Existing Event</h2>
+          <p class="panel-subtitle">Fields changed since loading the existing event.</p>
+        </div>
+        <div class="diff-modal__header-controls">
+          <div class="diff-view-toggle" id="diff-view-toggle" aria-label="Diff view layout">
+            <button type="button" id="diff-view-side" class="is-active" aria-pressed="true" title="Side by side">
+              <i class="bi bi-layout-split" aria-hidden="true"></i>
+              <span>Side by side</span>
+            </button>
+            <button type="button" id="diff-view-stacked" aria-pressed="false" title="Stacked">
+              <i class="bi bi-layout-stack" aria-hidden="true"></i>
+              <span>Stacked</span>
+            </button>
+          </div>
+          <button type="button" class="ghost-button action-button diff-modal__close" id="diff-modal-close" aria-label="Close diff dialog">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div id="diff-modal-body"></div>
+    </div>
+  </dialog>
+
   <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="../js/logger.js"></script>
@@ -2222,6 +2443,7 @@
       const dom = {};
       let state;
       let existingSnapshot = null;
+      let diffViewMode = 'side'; // 'side' or 'stacked'
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
       let lastRecurrenceConstraintWarning = '';
@@ -2416,6 +2638,12 @@
         dom.existingSelectionSummary = document.getElementById('existing-selection-summary');
         dom.existingSelectionText = document.getElementById('existing-selection-text');
         dom.existingDiffText = document.getElementById('existing-diff-text');
+        dom.diffButton = document.getElementById('show-diff');
+        dom.diffPanel = document.getElementById('diff-panel');
+        dom.diffModalClose = document.getElementById('diff-modal-close');
+        dom.diffModalBody = document.getElementById('diff-modal-body');
+        dom.diffViewSideButton = document.getElementById('diff-view-side');
+        dom.diffViewStackedButton = document.getElementById('diff-view-stacked');
         dom.existingDeleteOverrideSummaryButton = document.getElementById('existing-delete-override-summary');
         dom.seriesOverrideWarning = document.getElementById('series-override-warning');
         dom.seriesOverrideWarningText = document.getElementById('series-override-warning-text');
@@ -5332,6 +5560,109 @@ Return only the complete URL, with no explanation unless asked.`;
         }
       }
 
+      function escapeDiffHtml(str) {
+        return str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function setDiffViewMode(mode) {
+        diffViewMode = mode === 'stacked' ? 'stacked' : 'side';
+        if (dom.diffViewSideButton) {
+          dom.diffViewSideButton.classList.toggle('is-active', diffViewMode === 'side');
+          dom.diffViewSideButton.setAttribute('aria-pressed', String(diffViewMode === 'side'));
+        }
+        if (dom.diffViewStackedButton) {
+          dom.diffViewStackedButton.classList.toggle('is-active', diffViewMode === 'stacked');
+          dom.diffViewStackedButton.setAttribute('aria-pressed', String(diffViewMode === 'stacked'));
+        }
+        buildDiffModalContent();
+      }
+
+      function buildDiffModalContent() {
+        if (!dom.diffModalBody) return;
+        if (!state || !state.isEditingExisting || !existingSnapshot) {
+          dom.diffModalBody.innerHTML = '<p class="diff-no-changes">No existing event loaded.</p>';
+          return;
+        }
+        const changed = Object.keys(DIFF_FIELD_LABELS).filter(
+          f => (state[f] || '') !== (existingSnapshot[f] || '')
+        );
+        if (!changed.length) {
+          dom.diffModalBody.innerHTML = '<p class="diff-no-changes">No changes detected.</p>';
+          return;
+        }
+        if (diffViewMode === 'stacked') {
+          const fields = changed.map(f => {
+            const label = DIFF_FIELD_LABELS[f];
+            const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
+            const newVal = escapeDiffHtml(state[f] || '');
+            const removedLine = oldVal
+              ? `<div class="diff-line-removed"><span class="diff-line-prefix">−</span>${oldVal}</div>`
+              : '';
+            const addedLine = newVal
+              ? `<div class="diff-line-added"><span class="diff-line-prefix">+</span>${newVal}</div>`
+              : '';
+            return `<div class="diff-line-field">
+              <div class="diff-line-field-label">${label}</div>
+              ${removedLine}${addedLine}
+            </div>`;
+          }).join('');
+          dom.diffModalBody.innerHTML = `<div class="diff-line-view">${fields}</div>`;
+        } else {
+          const rows = changed.map(f => {
+            const label = DIFF_FIELD_LABELS[f];
+            const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
+            const newVal = escapeDiffHtml(state[f] || '');
+            const oldCell = oldVal
+              ? `<span class="diff-value-old">${oldVal}</span>`
+              : `<span class="diff-value-empty">(empty)</span>`;
+            const newCell = newVal
+              ? `<span class="diff-value-new">${newVal}</span>`
+              : `<span class="diff-value-empty">(empty)</span>`;
+            return `<tr>
+              <td class="diff-field-label">${label}</td>
+              <td>${oldCell}</td>
+              <td>${newCell}</td>
+            </tr>`;
+          }).join('');
+          dom.diffModalBody.innerHTML = `<table class="diff-table">
+            <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+        }
+      }
+
+      function openDiffPanel() {
+        if (!dom.diffPanel) return;
+        buildDiffModalContent();
+        if (!dom.diffPanel.open) {
+          if (typeof dom.diffPanel.showModal === 'function') {
+            dom.diffPanel.showModal();
+          } else {
+            dom.diffPanel.setAttribute('open', '');
+          }
+        }
+        if (dom.diffButton) {
+          dom.diffButton.setAttribute('aria-expanded', 'true');
+        }
+      }
+
+      function closeDiffPanel() {
+        if (!dom.diffPanel || !dom.diffPanel.open) return;
+        if (typeof dom.diffPanel.close === 'function') {
+          dom.diffPanel.close();
+        } else {
+          dom.diffPanel.removeAttribute('open');
+        }
+        if (dom.diffButton) {
+          dom.diffButton.setAttribute('aria-expanded', 'false');
+        }
+      }
+
       function clearEditingState() {
         if (!state) return;
         state.isEditingExisting = false;
@@ -5969,6 +6300,36 @@ Return only the complete URL, with no explanation unless asked.`;
         }
         if (dom.aiModalClose) {
           dom.aiModalClose.addEventListener('click', closeAiParsePanel);
+        }
+        if (dom.diffButton) {
+          dom.diffButton.addEventListener('click', () => {
+            if (dom.diffPanel && dom.diffPanel.open) {
+              closeDiffPanel();
+              return;
+            }
+            openDiffPanel();
+          });
+        }
+        if (dom.diffPanel) {
+          dom.diffPanel.addEventListener('close', () => {
+            if (dom.diffButton) {
+              dom.diffButton.setAttribute('aria-expanded', 'false');
+            }
+          });
+          dom.diffPanel.addEventListener('click', event => {
+            if (event.target === dom.diffPanel) {
+              closeDiffPanel();
+            }
+          });
+        }
+        if (dom.diffModalClose) {
+          dom.diffModalClose.addEventListener('click', closeDiffPanel);
+        }
+        if (dom.diffViewSideButton) {
+          dom.diffViewSideButton.addEventListener('click', () => setDiffViewMode('side'));
+        }
+        if (dom.diffViewStackedButton) {
+          dom.diffViewStackedButton.addEventListener('click', () => setDiffViewMode('stacked'));
         }
         if (dom.existingCitySelect) {
           dom.existingCitySelect.addEventListener('change', () => {
@@ -7821,6 +8182,15 @@ Return only the complete URL, with no explanation unless asked.`;
             dom.openScriptableButton.setAttribute('title', scriptableDisabledReason);
           } else {
             dom.openScriptableButton.removeAttribute('title');
+          }
+        }
+        if (dom.diffButton) {
+          const hasDiffTarget = Boolean(state && state.isEditingExisting && existingSnapshot);
+          dom.diffButton.disabled = !hasDiffTarget;
+          if (hasDiffTarget) {
+            dom.diffButton.removeAttribute('title');
+          } else {
+            dom.diffButton.setAttribute('title', 'Load an existing event first');
           }
         }
       }
