@@ -2218,13 +2218,6 @@
       const LEGACY_OVERRIDE_HELP_MESSAGE = 'Legacy override detected. Edits are limited in this tool. Use Tell Dad and describe what you are trying to change.';
       const LEGACY_SERIES_BLOCK_MESSAGE = 'This series has legacy overrides, so series edits are blocked in this tool.';
       const LEGACY_TELL_DAD_PROMPT = 'Use Tell Dad and tell us exactly what you are trying to change.';
-      const DIFF_FIELD_LABELS = {
-        name: 'Name', shortName: 'Short name', city: 'City', venue: 'Venue',
-        address: 'Address', location: 'Coordinates', description: 'Description',
-        cover: 'Cover', start: 'Start', end: 'End', recurrence: 'Recurrence',
-        website: 'Website', ticketUrl: 'Tickets', instagram: 'Instagram',
-        facebook: 'Facebook', gmaps: 'Google Maps', image: 'Image'
-      };
 
       const dom = {};
       let state;
@@ -3484,11 +3477,7 @@
 
       function normalizeExistingEvent(event, cityKey) {
         if (!event || typeof event !== 'object') return null;
-        const description = event.unprocessedDescription || '';
-        const descFields = EventSchema.parseNotesIntoFields(description);
-        const address = descFields.address || '';
-        const timezoneFromDescription = descFields.timezone || '';
-        const timeZone = event.startTimezone || timezoneFromDescription || event.calendarTimezone || browserTimezone;
+        const timeZone = event.startTimezone || event.timezone || event.calendarTimezone || browserTimezone;
         const recurrenceIdTimezone = event.recurrenceIdTimezone || timeZone;
         const startDate = event.startDate instanceof Date ? new Date(event.startDate) : (event.startDate ? new Date(event.startDate) : null);
         const endDate = event.endDate instanceof Date ? new Date(event.endDate) : (event.endDate ? new Date(event.endDate) : null);
@@ -3512,7 +3501,7 @@
           shortName: normalizeText(event.shortName || ''),
           shorterName: normalizeText(event.shorterName || ''),
           bar: normalizeText(event.bar || event.venue || ''),
-          address: normalizeText(address || ''),
+          address: normalizeText(event.address || ''),
           location,
           coordinates,
           tea: normalizeText(event.tea || event.description || ''),
@@ -5131,7 +5120,7 @@
 
       function snapshotFormFields(s) {
         return Object.fromEntries(
-          Object.keys(DIFF_FIELD_LABELS).map(f => [f, s[f] || ''])
+          Object.keys(EventSchema.EVENT_BUILDER_STATE_LABELS).map(f => [f, s[f] || ''])
         );
       }
 
@@ -5141,11 +5130,11 @@
           dom.existingDiffText.textContent = '';
           return;
         }
-        const changed = Object.keys(DIFF_FIELD_LABELS).filter(
+        const changed = Object.keys(EventSchema.EVENT_BUILDER_STATE_LABELS).filter(
           f => (state[f] || '') !== (existingSnapshot[f] || '')
         );
         dom.existingDiffText.textContent = changed.length
-          ? 'Changes: ' + changed.map(f => DIFF_FIELD_LABELS[f]).join(' · ')
+          ? 'Changes: ' + changed.map(f => EventSchema.EVENT_BUILDER_STATE_LABELS[f]).join(' · ')
           : '';
       }
 

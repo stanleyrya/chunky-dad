@@ -163,6 +163,26 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
     image: 'image'
 });
 
+const EVENT_BUILDER_STATE_LABELS = Object.freeze({
+    name: 'Name',
+    shortName: 'Short name',
+    city: 'City',
+    venue: 'Venue',
+    address: 'Address',
+    location: 'Coordinates',
+    description: 'Description',
+    cover: 'Cover',
+    start: 'Start',
+    end: 'End',
+    recurrence: 'Recurrence',
+    website: 'Website',
+    ticketUrl: 'Tickets',
+    instagram: 'Instagram',
+    facebook: 'Facebook',
+    gmaps: 'Google Maps',
+    image: 'Image'
+});
+
 function normalizeAliasKey(key) {
     return String(key || '').toLowerCase().replace(/[\s\-_]/g, '');
 }
@@ -355,6 +375,7 @@ const EventSchema = {
     DEFAULT_NOTES_EXCLUDED_FIELDS,
     EVENT_PARAM_MAP: EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
     EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
+    EVENT_BUILDER_STATE_LABELS,
     normalizeAliasKey,
     canonicalizeEventKey,
     findUnescaped,
