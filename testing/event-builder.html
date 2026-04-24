@@ -3477,8 +3477,7 @@
 
       function normalizeExistingEvent(event, cityKey) {
         if (!event || typeof event !== 'object') return null;
-        // startTimezone: from DTSTART;TZID= in iCal; timezone: from "timezone:" key in description notes
-        const timeZone = event.startTimezone || event.timezone || event.calendarTimezone || browserTimezone;
+        const timeZone = event.startTimezone || event.calendarTimezone || browserTimezone;
         const recurrenceIdTimezone = event.recurrenceIdTimezone || timeZone;
         const startDate = event.startDate instanceof Date ? new Date(event.startDate) : (event.startDate ? new Date(event.startDate) : null);
         const endDate = event.endDate instanceof Date ? new Date(event.endDate) : (event.endDate ? new Date(event.endDate) : null);

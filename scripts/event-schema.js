@@ -33,9 +33,6 @@ const EVENT_KEY_ALIASES = {
     coordinates: 'location',
 
     city: 'city',
-    timezone: 'timezone',
-    timezoneid: 'timezone',
-    tz: 'timezone',
 
     startdate: 'startDate',
     start: 'startDate',
@@ -153,7 +150,6 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
     cover: 'cover',
     startDate: 'start',
     endDate: 'end',
-    timezone: 'timezone',
     recurrence: 'recurrence',
     website: 'website',
     ticketUrl: 'ticketUrl',

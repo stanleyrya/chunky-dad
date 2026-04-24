@@ -2952,7 +2952,7 @@ class SharedCore {
         const bar = fields.bar || fields.venue || fields.location || existingEvent.location || '';
         const address = fields.address || '';
         const city = fields.city || existingEvent.city || '';
-        const timezone = fields.timezone || existingEvent.timezone || existingEvent.timeZone || '';
+        const timezone = existingEvent.timezone || existingEvent.timeZone || '';
         
         const computedEvent = {
             title: existingEvent.title,
