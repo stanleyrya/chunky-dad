@@ -754,6 +754,13 @@
       justify-content: center;
     }
 
+    .diff-modal__header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
     .diff-no-changes {
       color: var(--text-secondary);
       font-size: 0.9rem;
@@ -2370,7 +2377,7 @@
           <h2 id="diff-modal-title">Changes vs. Existing Event</h2>
           <p class="panel-subtitle">Fields changed since loading the existing event.</p>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+        <div class="diff-modal__header-controls">
           <div class="diff-view-toggle" id="diff-view-toggle" aria-label="Diff view layout">
             <button type="button" id="diff-view-side" class="is-active" aria-pressed="true" title="Side by side">
               <i class="bi bi-layout-split" aria-hidden="true"></i>
@@ -5590,7 +5597,7 @@ Return only the complete URL, with no explanation unless asked.`;
         }
         if (diffViewMode === 'stacked') {
           const fields = changed.map(f => {
-            const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
+            const label = DIFF_FIELD_LABELS[f];
             const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
             const newVal = escapeDiffHtml(state[f] || '');
             const removedLine = oldVal
@@ -5607,7 +5614,7 @@ Return only the complete URL, with no explanation unless asked.`;
           dom.diffModalBody.innerHTML = `<div class="diff-line-view">${fields}</div>`;
         } else {
           const rows = changed.map(f => {
-            const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
+            const label = DIFF_FIELD_LABELS[f];
             const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
             const newVal = escapeDiffHtml(state[f] || '');
             const oldCell = oldVal
