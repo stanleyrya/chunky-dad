@@ -807,6 +807,79 @@
       font-style: italic;
     }
 
+    .diff-view-toggle {
+      display: inline-flex;
+      gap: 0.25rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 0.2rem;
+    }
+
+    .diff-view-toggle button {
+      padding: 0.25rem 0.6rem;
+      font-size: 0.78rem;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .diff-view-toggle button.is-active {
+      background: var(--panel-bg, #1a1d2e);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .diff-line-view {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.8rem;
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .diff-line-field {
+      border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .diff-line-field-label {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.6rem;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+    }
+
+    .diff-line-removed {
+      padding: 0.3rem 0.6rem;
+      color: #ff8a80;
+      background: rgba(255,138,128,0.08);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .diff-line-added {
+      padding: 0.3rem 0.6rem;
+      color: #69f0ae;
+      background: rgba(105,240,174,0.08);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .diff-line-prefix {
+      opacity: 0.6;
+      user-select: none;
+      margin-right: 0.4rem;
+    }
+
     .ai-agent-list {
       display: grid;
       gap: 0.5rem;
@@ -2297,9 +2370,21 @@
           <h2 id="diff-modal-title">Changes vs. Existing Event</h2>
           <p class="panel-subtitle">Fields changed since loading the existing event.</p>
         </div>
-        <button type="button" class="ghost-button action-button diff-modal__close" id="diff-modal-close" aria-label="Close diff dialog">
-          <i class="bi bi-x-lg" aria-hidden="true"></i>
-        </button>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+          <div class="diff-view-toggle" id="diff-view-toggle" aria-label="Diff view layout">
+            <button type="button" id="diff-view-side" class="is-active" aria-pressed="true" title="Side by side">
+              <i class="bi bi-layout-split" aria-hidden="true"></i>
+              <span>Side by side</span>
+            </button>
+            <button type="button" id="diff-view-stacked" aria-pressed="false" title="Stacked">
+              <i class="bi bi-layout-stack" aria-hidden="true"></i>
+              <span>Stacked</span>
+            </button>
+          </div>
+          <button type="button" class="ghost-button action-button diff-modal__close" id="diff-modal-close" aria-label="Close diff dialog">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
       <div id="diff-modal-body"></div>
     </div>
@@ -2351,6 +2436,7 @@
       const dom = {};
       let state;
       let existingSnapshot = null;
+      let diffViewMode = 'side'; // 'side' or 'stacked'
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
       let lastRecurrenceConstraintWarning = '';
@@ -2549,6 +2635,8 @@
         dom.diffPanel = document.getElementById('diff-panel');
         dom.diffModalClose = document.getElementById('diff-modal-close');
         dom.diffModalBody = document.getElementById('diff-modal-body');
+        dom.diffViewSideButton = document.getElementById('diff-view-side');
+        dom.diffViewStackedButton = document.getElementById('diff-view-stacked');
         dom.existingDeleteOverrideSummaryButton = document.getElementById('existing-delete-override-summary');
         dom.seriesOverrideWarning = document.getElementById('series-override-warning');
         dom.seriesOverrideWarningText = document.getElementById('series-override-warning-text');
@@ -5474,6 +5562,19 @@ Return only the complete URL, with no explanation unless asked.`;
           .replace(/'/g, '&#39;');
       }
 
+      function setDiffViewMode(mode) {
+        diffViewMode = mode === 'stacked' ? 'stacked' : 'side';
+        if (dom.diffViewSideButton) {
+          dom.diffViewSideButton.classList.toggle('is-active', diffViewMode === 'side');
+          dom.diffViewSideButton.setAttribute('aria-pressed', String(diffViewMode === 'side'));
+        }
+        if (dom.diffViewStackedButton) {
+          dom.diffViewStackedButton.classList.toggle('is-active', diffViewMode === 'stacked');
+          dom.diffViewStackedButton.setAttribute('aria-pressed', String(diffViewMode === 'stacked'));
+        }
+        buildDiffModalContent();
+      }
+
       function buildDiffModalContent() {
         if (!dom.diffModalBody) return;
         if (!state || !state.isEditingExisting || !existingSnapshot) {
@@ -5487,26 +5588,45 @@ Return only the complete URL, with no explanation unless asked.`;
           dom.diffModalBody.innerHTML = '<p class="diff-no-changes">No changes detected.</p>';
           return;
         }
-        const rows = changed.map(f => {
-          const label = DIFF_FIELD_LABELS[f];
-          const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
-          const newVal = escapeDiffHtml(state[f] || '');
-          const oldCell = oldVal
-            ? `<span class="diff-value-old">${oldVal}</span>`
-            : `<span class="diff-value-empty">(empty)</span>`;
-          const newCell = newVal
-            ? `<span class="diff-value-new">${newVal}</span>`
-            : `<span class="diff-value-empty">(empty)</span>`;
-          return `<tr>
-            <td class="diff-field-label">${label}</td>
-            <td>${oldCell}</td>
-            <td>${newCell}</td>
-          </tr>`;
-        }).join('');
-        dom.diffModalBody.innerHTML = `<table class="diff-table">
-          <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+        if (diffViewMode === 'stacked') {
+          const fields = changed.map(f => {
+            const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
+            const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
+            const newVal = escapeDiffHtml(state[f] || '');
+            const removedLine = oldVal
+              ? `<div class="diff-line-removed"><span class="diff-line-prefix">−</span>${oldVal}</div>`
+              : '';
+            const addedLine = newVal
+              ? `<div class="diff-line-added"><span class="diff-line-prefix">+</span>${newVal}</div>`
+              : '';
+            return `<div class="diff-line-field">
+              <div class="diff-line-field-label">${label}</div>
+              ${removedLine}${addedLine}
+            </div>`;
+          }).join('');
+          dom.diffModalBody.innerHTML = `<div class="diff-line-view">${fields}</div>`;
+        } else {
+          const rows = changed.map(f => {
+            const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
+            const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
+            const newVal = escapeDiffHtml(state[f] || '');
+            const oldCell = oldVal
+              ? `<span class="diff-value-old">${oldVal}</span>`
+              : `<span class="diff-value-empty">(empty)</span>`;
+            const newCell = newVal
+              ? `<span class="diff-value-new">${newVal}</span>`
+              : `<span class="diff-value-empty">(empty)</span>`;
+            return `<tr>
+              <td class="diff-field-label">${label}</td>
+              <td>${oldCell}</td>
+              <td>${newCell}</td>
+            </tr>`;
+          }).join('');
+          dom.diffModalBody.innerHTML = `<table class="diff-table">
+            <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+        }
       }
 
       function openDiffPanel() {
@@ -6197,6 +6317,12 @@ Return only the complete URL, with no explanation unless asked.`;
         }
         if (dom.diffModalClose) {
           dom.diffModalClose.addEventListener('click', closeDiffPanel);
+        }
+        if (dom.diffViewSideButton) {
+          dom.diffViewSideButton.addEventListener('click', () => setDiffViewMode('side'));
+        }
+        if (dom.diffViewStackedButton) {
+          dom.diffViewStackedButton.addEventListener('click', () => setDiffViewMode('stacked'));
         }
         if (dom.existingCitySelect) {
           dom.existingCitySelect.addEventListener('change', () => {
