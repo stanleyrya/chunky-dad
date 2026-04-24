@@ -5465,6 +5465,15 @@ Return only the complete URL, with no explanation unless asked.`;
         }
       }
 
+      function escapeDiffHtml(str) {
+        return str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
       function buildDiffModalContent() {
         if (!dom.diffModalBody) return;
         if (!state || !state.isEditingExisting || !existingSnapshot) {
@@ -5480,8 +5489,8 @@ Return only the complete URL, with no explanation unless asked.`;
         }
         const rows = changed.map(f => {
           const label = DIFF_FIELD_LABELS[f];
-          const oldVal = existingSnapshot[f] || '';
-          const newVal = state[f] || '';
+          const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
+          const newVal = escapeDiffHtml(state[f] || '');
           const oldCell = oldVal
             ? `<span class="diff-value-old">${oldVal}</span>`
             : `<span class="diff-value-empty">(empty)</span>`;
