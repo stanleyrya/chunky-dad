@@ -1016,6 +1016,29 @@
       background: rgba(183, 28, 28, 0.48);
     }
 
+    .stale-data-warning {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-basis: 100%;
+      margin-top: 0.3rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 193, 7, 0.32);
+      background: rgba(255, 193, 7, 0.08);
+      color: var(--text-secondary);
+      font-size: 0.74rem;
+    }
+
+    .stale-data-warning i {
+      flex-shrink: 0;
+      color: rgba(255, 193, 7, 0.8);
+    }
+
+    .stale-data-warning span {
+      flex: 1;
+    }
+
     .action-button.is-compact {
       font-size: 0.72rem;
       padding: 0.35rem 0.6rem;
@@ -1734,6 +1757,10 @@
         width: 100%;
       }
 
+      .stale-data-warning {
+        width: 100%;
+      }
+
       #event-form {
         padding: 0 0 1rem;
       }
@@ -1885,6 +1912,14 @@
                   <i class="bi bi-google" aria-hidden="true"></i>
                   <span>Open in Google</span>
                 </a>
+              </div>
+              <div class="stale-data-warning is-hidden" id="stale-data-warning">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <span id="stale-data-warning-text">Calendar data may be outdated.</span>
+                <button type="button" class="ghost-button action-button is-compact" id="stale-data-refresh" aria-label="Refresh calendar data">
+                  <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                  <span>Refresh</span>
+                </button>
               </div>
             </div>
             <div class="series-override-warning is-hidden" id="series-override-warning">
@@ -2433,6 +2468,7 @@
       };
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
+      const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
       const DAD_EMAIL = 'events@chunky.dad';
       const ISSUES_EMAIL = 'events+issues@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
@@ -2463,6 +2499,7 @@
       let selectedBar = null;
       const barCache = {};
       const calendarCache = {};
+      const calendarCacheTime = {}; // cityKey -> Date.now() at time of fetch
       const calendarCore = new CalendarCore();
       // sharedCore will be used for merge/diff logic in subsequent phases.
       const sharedCore = new SharedCore(CITY_CONFIG, { eventSchema: EventSchema });
@@ -2516,11 +2553,13 @@
         populateVenueOptions(state.city);
         updateRecurrenceUi();
         updateSeriesOverrideWarningUi();
+        updateStaleDataWarning();
         updateTimeNotes();
         updatePreviewCard();
         updateActionButtonsState();
         updateUrl();
         updateCalendarSource(true);
+        prefetchCalendarInBackground(state.city);
         setupMessaging();
         scheduleEventPush();
         logger.componentInit('EVENT', 'Event builder initialized', {
@@ -2651,6 +2690,9 @@
         dom.recurrenceOverrideWarning = document.getElementById('recurrence-override-warning');
         dom.recurrenceOverrideWarningText = document.getElementById('recurrence-override-warning-text');
         dom.recurrenceOverrideWarningList = document.getElementById('recurrence-override-warning-list');
+        dom.staleDataWarning = document.getElementById('stale-data-warning');
+        dom.staleDataWarningText = document.getElementById('stale-data-warning-text');
+        dom.staleDataRefreshButton = document.getElementById('stale-data-refresh');
         dom.existingChangeButton = document.getElementById('existing-change');
         dom.existingCopySummaryButton = document.getElementById('existing-copy-summary');
         dom.existingClearSummaryButton = document.getElementById('existing-clear-summary');
@@ -3645,11 +3687,11 @@
         return `${baseLabel}, no matches`;
       }
 
-      async function fetchCalendarIndex(cityKey) {
+      async function fetchCalendarIndex(cityKey, { force = false } = {}) {
         if (!cityKey) {
           return buildCalendarIndex([], cityKey);
         }
-        if (Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) {
+        if (!force && Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) {
           return calendarCache[cityKey];
         }
         const response = await fetch(`${CALENDAR_DATA_PATH}/${cityKey}.ics`, { cache: 'no-store' });
@@ -3660,7 +3702,18 @@
         const events = calendarCore.parseICalData(text) || [];
         const index = buildCalendarIndex(events, cityKey);
         calendarCache[cityKey] = index;
+        calendarCacheTime[cityKey] = Date.now();
         return index;
+      }
+
+      function isCalendarDataStale(cityKey) {
+        if (!cityKey || !Object.prototype.hasOwnProperty.call(calendarCacheTime, cityKey)) return false;
+        return (Date.now() - calendarCacheTime[cityKey]) > STALE_THRESHOLD_MS;
+      }
+
+      function prefetchCalendarInBackground(cityKey) {
+        if (!cityKey || Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) return;
+        fetchCalendarIndex(cityKey).catch(() => {});
       }
 
       function buildCalendarIndex(events, cityKey) {
@@ -5338,10 +5391,26 @@
         renderSeriesOverrideWarningList(dom.recurrenceOverrideWarningList, context);
       }
 
+      function updateStaleDataWarning() {
+        if (!dom.staleDataWarning || !dom.staleDataWarningText) return;
+        const isEditing = Boolean(state && state.isEditingExisting);
+        const cityKey = state && state.city;
+        const stale = isEditing && isCalendarDataStale(cityKey);
+        dom.staleDataWarning.classList.toggle('is-hidden', !stale);
+        if (stale && dom.staleDataWarningText) {
+          const fetchedAt = calendarCacheTime[cityKey];
+          const minutesAgo = fetchedAt ? Math.round((Date.now() - fetchedAt) / 60000) : 0;
+          dom.staleDataWarningText.textContent = minutesAgo > 0
+            ? `Calendar data is ${minutesAgo} min old and may be outdated.`
+            : 'Calendar data may be outdated.';
+        }
+      }
+
       function refreshEditingContextUi() {
         updateRecurrenceUi();
         updateRecurrenceSummary();
         updateSeriesOverrideWarningUi();
+        updateStaleDataWarning();
         updateActionButtonsState();
         updateGoogleRefNote();
       }
@@ -6012,6 +6081,7 @@ Return only the complete URL, with no explanation unless asked.`;
             populateVenueOptions(newCity);
             updateCalendarSource();
             syncExistingCitySelection({ refresh: dom.existingPanel && dom.existingPanel.open });
+            prefetchCalendarInBackground(newCity);
             refreshUi();
           });
         }
@@ -6330,6 +6400,24 @@ Return only the complete URL, with no explanation unless asked.`;
         }
         if (dom.diffViewStackedButton) {
           dom.diffViewStackedButton.addEventListener('click', () => setDiffViewMode('stacked'));
+        }
+        if (dom.staleDataRefreshButton) {
+          dom.staleDataRefreshButton.addEventListener('click', async () => {
+            const cityKey = state && state.city;
+            if (!cityKey) return;
+            dom.staleDataRefreshButton.disabled = true;
+            if (dom.staleDataWarningText) dom.staleDataWarningText.textContent = 'Refreshing calendar data…';
+            try {
+              const index = await fetchCalendarIndex(cityKey, { force: true });
+              existingCalendarIndex = index;
+              updateStaleDataWarning();
+              showToast('Calendar data refreshed.', 'info');
+            } catch (error) {
+              if (dom.staleDataWarningText) dom.staleDataWarningText.textContent = 'Could not refresh. Please try again.';
+            } finally {
+              dom.staleDataRefreshButton.disabled = false;
+            }
+          });
         }
         if (dom.existingCitySelect) {
           dom.existingCitySelect.addEventListener('change', () => {
