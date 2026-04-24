@@ -1916,7 +1916,7 @@
               <div class="stale-data-warning is-hidden" id="stale-data-warning">
                 <i class="bi bi-clock-history" aria-hidden="true"></i>
                 <span id="stale-data-warning-text">Calendar data may be outdated.</span>
-                <button type="button" class="ghost-button action-button is-compact" id="stale-data-refresh" aria-label="Refresh calendar data">
+                <button type="button" class="ghost-button action-button is-compact" id="stale-data-refresh">
                   <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                   <span>Refresh</span>
                 </button>
@@ -3707,13 +3707,15 @@
       }
 
       function isCalendarDataStale(cityKey) {
-        if (!cityKey || !Object.prototype.hasOwnProperty.call(calendarCacheTime, cityKey)) return false;
+        if (!cityKey || !(cityKey in calendarCacheTime)) return false;
         return (Date.now() - calendarCacheTime[cityKey]) > STALE_THRESHOLD_MS;
       }
 
       function prefetchCalendarInBackground(cityKey) {
         if (!cityKey || Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) return;
-        fetchCalendarIndex(cityKey).catch(() => {});
+        fetchCalendarIndex(cityKey).catch(error => {
+          logger.debug('EVENT', 'Background calendar prefetch failed (non-blocking)', { cityKey, error: error && error.message });
+        });
       }
 
       function buildCalendarIndex(events, cityKey) {
