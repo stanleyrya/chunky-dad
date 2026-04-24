@@ -3485,8 +3485,9 @@
       function normalizeExistingEvent(event, cityKey) {
         if (!event || typeof event !== 'object') return null;
         const description = event.unprocessedDescription || '';
-        const address = extractDescriptionValue(description, ['address', 'addr']);
-        const timezoneFromDescription = extractDescriptionValue(description, ['timezone', 'tz']);
+        const descFields = EventSchema.parseNotesIntoFields(description);
+        const address = descFields.address || '';
+        const timezoneFromDescription = descFields.timezone || '';
         const timeZone = event.startTimezone || timezoneFromDescription || event.calendarTimezone || browserTimezone;
         const recurrenceIdTimezone = event.recurrenceIdTimezone || timeZone;
         const startDate = event.startDate instanceof Date ? new Date(event.startDate) : (event.startDate ? new Date(event.startDate) : null);
@@ -3554,38 +3555,6 @@
           return 'custom';
         }
         return 'legacy';
-      }
-
-      function extractDescriptionValue(description, keys) {
-        if (!description) return '';
-        const normalizedKeys = keys.map(key => key.toLowerCase().replace(/\s+/g, ''));
-        const normalizedDescription = decodeHtmlEntities(String(description))
-          .replace(/\r/g, '')
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/\\r\\n/gi, '\n')
-          .replace(/\\n/gi, '\n')
-          .replace(/\\N/g, '\n');
-        const lines = normalizedDescription.split('\n');
-        for (const rawLine of lines) {
-          const line = String(rawLine || '').trim();
-          if (!line) continue;
-          const separatorIndex = line.indexOf(':');
-          if (separatorIndex === -1) continue;
-          const rawKey = line.slice(0, separatorIndex).trim();
-          const normalizedKey = rawKey.toLowerCase().replace(/\s+/g, '');
-          if (!normalizedKeys.includes(normalizedKey)) continue;
-          const rawValue = line.slice(separatorIndex + 1).trim();
-          const firstLineValue = rawValue.split(/\\[nN]/)[0].trim();
-          return normalizeText(decodeHtmlEntities(firstLineValue));
-        }
-        return '';
-      }
-
-      function decodeHtmlEntities(value) {
-        if (!value || typeof value !== 'string' || !value.includes('&')) return value;
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = value;
-        return textarea.value;
       }
 
       function buildSearchBlob(event, baseEvent) {
