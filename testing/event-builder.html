@@ -5935,7 +5935,7 @@ Return only the complete URL, with no explanation unless asked.`;
         gcalDiffLiveSnap = snapshotEventForComparison(liveEvent);
         // Current form state snapshot (same keys as gcalDiffLiveSnap)
         const formSnap = {};
-        Object.keys(GCAL_DIFF_FIELD_LABELS).forEach(k => { formSnap[k] = (state && state[k]) ? String(state[k]) : ''; });
+        Object.keys(GCAL_DIFF_FIELD_LABELS).forEach(k => { formSnap[k] = state[k] ? String(state[k]) : ''; });
         const changed = Object.keys(GCAL_DIFF_FIELD_LABELS).filter(
           f => (formSnap[f] || '') !== (gcalDiffLiveSnap[f] || '')
         );
@@ -6008,7 +6008,14 @@ Return only the complete URL, with no explanation unless asked.`;
       }
 
       function applyGcalField(fieldKey) {
-        if (!gcalDiffLiveSnap || !(fieldKey in gcalDiffLiveSnap) || !state) return;
+        if (!gcalDiffLiveSnap || !state) {
+          logger.debug('EVENT', 'applyGcalField called but preconditions not met', { fieldKey, hasSnap: Boolean(gcalDiffLiveSnap) });
+          return;
+        }
+        if (!(fieldKey in gcalDiffLiveSnap)) {
+          logger.debug('EVENT', 'applyGcalField: unknown field key', { fieldKey });
+          return;
+        }
         state[fieldKey] = gcalDiffLiveSnap[fieldKey] || '';
         applyStateToForm();
         refreshUi();
@@ -6738,7 +6745,12 @@ Return only the complete URL, with no explanation unless asked.`;
         if (dom.gcalDiffModalBody) {
           dom.gcalDiffModalBody.addEventListener('click', event => {
             const btn = event.target.closest('[data-gcal-apply]');
-            if (btn) applyGcalField(btn.dataset.gcalApply);
+            if (btn) {
+              const fieldKey = btn.dataset.gcalApply;
+              if (fieldKey && Object.prototype.hasOwnProperty.call(GCAL_DIFF_FIELD_LABELS, fieldKey)) {
+                applyGcalField(fieldKey);
+              }
+            }
           });
         }
         if (dom.gcalDiffPanel) {
