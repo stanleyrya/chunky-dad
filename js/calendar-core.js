@@ -1595,6 +1595,8 @@ class CalendarCore {
         const icalUrl = `https://calendar.google.com/calendar/ical/${calendarId}/public/basic.ics?_nc=${Date.now()}`;
         const proxyBuilders = [
             (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+            (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
             (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
         ];
         for (let i = 0; i < proxyBuilders.length; i++) {

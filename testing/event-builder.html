@@ -625,6 +625,8 @@
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
       max-height: 85vh;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .existing-modal::backdrop {
@@ -636,7 +638,8 @@
       display: grid;
       gap: 1rem;
       padding: 1.2rem;
-      max-height: 85vh;
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
     }
@@ -672,6 +675,8 @@
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
       max-height: 85vh;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .ai-modal::backdrop {
@@ -683,7 +688,8 @@
       display: grid;
       gap: 1rem;
       padding: 1.2rem;
-      max-height: 85vh;
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
     }
@@ -719,6 +725,8 @@
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
       max-height: 85vh;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .diff-modal::backdrop {
@@ -730,7 +738,8 @@
       display: grid;
       gap: 1rem;
       padding: 1.2rem;
-      max-height: 85vh;
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
     }
@@ -1742,7 +1751,6 @@
 
       .existing-modal__content {
         padding: 1rem;
-        max-height: 90vh;
       }
 
       .ai-modal {
@@ -1752,7 +1760,6 @@
 
       .ai-modal__content {
         padding: 1rem;
-        max-height: 90vh;
       }
 
       .diff-modal {
@@ -1762,7 +1769,6 @@
 
       .diff-modal__content {
         padding: 1rem;
-        max-height: 90vh;
       }
 
       .page-wrapper {
