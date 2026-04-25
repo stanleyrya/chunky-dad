@@ -1073,6 +1073,29 @@
       flex: 1;
     }
 
+    .similar-event-notice {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-basis: 100%;
+      margin-top: 0.3rem;
+      padding: 0.45rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      background: rgba(251, 191, 36, 0.08);
+      color: var(--text-secondary);
+      font-size: 0.74rem;
+    }
+
+    .similar-event-notice i {
+      flex-shrink: 0;
+      color: rgba(251, 191, 36, 0.85);
+    }
+
+    .similar-event-notice-text {
+      flex: 1;
+    }
+
     .action-button.is-compact {
       font-size: 0.72rem;
       padding: 0.35rem 0.6rem;
@@ -1956,6 +1979,25 @@
                   <span>Sync</span>
                 </button>
               </div>
+              <div class="similar-event-notice is-hidden" id="similar-event-notice">
+                <i class="bi bi-search-heart" aria-hidden="true"></i>
+                <span class="similar-event-notice-text" id="similar-event-notice-text">Are you trying to edit this event?</span>
+                <button type="button" class="ghost-button action-button is-compact" id="similar-event-diff">
+                  <i class="bi bi-layout-split" aria-hidden="true"></i>
+                  <span>View Diff</span>
+                </button>
+                <button type="button" class="ghost-button action-button is-compact" id="similar-event-edit">
+                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                  <span>Edit This</span>
+                </button>
+                <button type="button" class="ghost-button action-button is-compact" id="similar-event-load-edit">
+                  <i class="bi bi-cloud-download" aria-hidden="true"></i>
+                  <span>Load &amp; Edit</span>
+                </button>
+                <button type="button" class="ghost-button action-button is-compact" id="similar-event-dismiss" aria-label="Dismiss suggestion">
+                  <i class="bi bi-x" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div class="series-override-warning is-hidden" id="series-override-warning">
               <p id="series-override-warning-text"></p>
@@ -2464,6 +2506,16 @@
         </div>
       </div>
       <div id="diff-modal-body"></div>
+      <div class="diff-modal-footer is-hidden" id="diff-suggestion-footer">
+        <button type="button" class="ghost-button action-button is-compact" id="diff-suggestion-edit">
+          <i class="bi bi-pencil-square" aria-hidden="true"></i>
+          <span>Edit This (keep form values)</span>
+        </button>
+        <button type="button" class="primary-button action-button is-compact" id="diff-suggestion-load-edit">
+          <i class="bi bi-cloud-download" aria-hidden="true"></i>
+          <span>Load &amp; Edit (overwrite form)</span>
+        </button>
+      </div>
     </div>
   </dialog>
 
@@ -2576,6 +2628,11 @@
       const sharedCore = new SharedCore(CITY_CONFIG, { eventSchema: EventSchema });
       let existingCalendarIndex = null;
       let existingResults = [];
+      let suggestedExistingResult = null; // best-match result when suggesting an event to edit
+      let suggestedExistingIndex = null; // calendar index for the suggested result
+      let suggestedEventDismissed = false; // true after user dismisses the suggestion
+      let similarEventSearchTimeoutId = null;
+      let isSuggestionDiffMode = false; // true when diff modal is showing suggestion context
       let existingOccurrenceResults = [];
       let selectedExistingResult = null;
       let selectedExistingOccurrence = null;
@@ -2768,6 +2825,15 @@
         dom.backendChangesNotice = document.getElementById('backend-changes-notice');
         dom.backendChangesDiffButton = document.getElementById('backend-changes-diff');
         dom.backendChangesSyncButton = document.getElementById('backend-changes-sync');
+        dom.similarEventNotice = document.getElementById('similar-event-notice');
+        dom.similarEventNoticeText = document.getElementById('similar-event-notice-text');
+        dom.similarEventDiffButton = document.getElementById('similar-event-diff');
+        dom.similarEventEditButton = document.getElementById('similar-event-edit');
+        dom.similarEventLoadEditButton = document.getElementById('similar-event-load-edit');
+        dom.similarEventDismissButton = document.getElementById('similar-event-dismiss');
+        dom.diffSuggestionFooter = document.getElementById('diff-suggestion-footer');
+        dom.diffSuggestionEditButton = document.getElementById('diff-suggestion-edit');
+        dom.diffSuggestionLoadEditButton = document.getElementById('diff-suggestion-load-edit');
         dom.gcalDiffPanel = document.getElementById('gcal-diff-panel');
         dom.gcalDiffModalClose = document.getElementById('gcal-diff-modal-close');
         dom.gcalDiffModalBody = document.getElementById('gcal-diff-modal-body');
