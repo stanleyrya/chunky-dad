@@ -624,7 +624,7 @@
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
       max-height: 85vh;
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
     .existing-modal::backdrop {
@@ -671,7 +671,7 @@
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
       max-height: 85vh;
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
     .ai-modal::backdrop {
@@ -718,7 +718,7 @@
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
       max-height: 85vh;
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
     .diff-modal::backdrop {
@@ -2608,6 +2608,9 @@
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
+        if (state.isEditingExisting && !existingSnapshot) {
+          existingSnapshot = snapshotFormFields(state);
+        }
         applyDebugVisibility();
         syncExistingSelectionSummaryFromState();
         syncExistingCitySelection();
@@ -3780,27 +3783,7 @@
       async function fetchLiveCalendarIcs(cityKey) {
         const cityConfig = (typeof CITY_CONFIG === 'object' && CITY_CONFIG) ? CITY_CONFIG[cityKey] : null;
         if (!cityConfig || !cityConfig.calendarId) throw new Error(`No calendar ID for ${cityKey}`);
-        const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
-        const proxyBuilders = [
-          url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-          url => `https://corsproxy.io/?${encodeURIComponent(url)}`
-        ];
-        for (const buildProxy of proxyBuilders) {
-          try {
-            const response = await Promise.race([
-              fetch(buildProxy(icalUrl), { cache: 'no-cache' }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), LIVE_CALENDAR_FETCH_TIMEOUT_MS))
-            ]);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const text = await response.text();
-            if (!text.includes('BEGIN:VCALENDAR')) throw new Error('Invalid iCal');
-            return text;
-          } catch (error) {
-            logger.debug('EVENT', 'Live calendar proxy attempt failed, trying next', { cityKey, error: error && error.message });
-            continue;
-          }
-        }
-        throw new Error('All proxies failed');
+        return calendarCore.fetchICalViaProxy(cityConfig.calendarId, { timeoutMs: LIVE_CALENDAR_FETCH_TIMEOUT_MS });
       }
 
       async function fetchLiveCalendarIndex(cityKey) {

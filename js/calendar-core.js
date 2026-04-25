@@ -1585,6 +1585,59 @@ class CalendarCore {
         }
     }
 
+    // Fetch a Google Calendar ICS via CORS proxy with cache-busting.
+    // calendarId: Google Calendar ID string
+    // options.timeoutMs: per-proxy timeout in ms (default 12000)
+    // Returns the raw ICS text on success, throws if all proxies fail.
+    async fetchICalViaProxy(calendarId, options = {}) {
+        const timeoutMs = options.timeoutMs || 12000;
+        // Append a cache-busting nonce so proxies always fetch fresh data.
+        const icalUrl = `https://calendar.google.com/calendar/ical/${calendarId}/public/basic.ics?_nc=${Date.now()}`;
+        const proxyBuilders = [
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
+        for (let i = 0; i < proxyBuilders.length; i++) {
+            const proxyUrl = proxyBuilders[i](icalUrl);
+            try {
+                logger.info('CALENDAR', 'Attempting to fetch iCal via CORS proxy', {
+                    calendarId,
+                    proxyIndex: i,
+                    proxyUrlPreview: proxyUrl.split('?')[0]
+                });
+                const fetchPromise = fetch(proxyUrl, {
+                    method: 'GET',
+                    headers: { 'Accept': 'text/calendar,text/plain,*/*' },
+                    cache: 'no-cache'
+                });
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error(`Proxy request timed out after ${timeoutMs / 1000} seconds`)), timeoutMs);
+                });
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const text = await response.text();
+                if (!text || !text.includes('BEGIN:VCALENDAR')) {
+                    throw new Error('Invalid iCal data received via proxy');
+                }
+                logger.apiCall('CALENDAR', 'Successfully fetched iCal via CORS proxy', {
+                    calendarId,
+                    proxyIndex: i,
+                    dataLength: text.length
+                });
+                return text;
+            } catch (error) {
+                logger.warn('CALENDAR', 'CORS proxy attempt failed', {
+                    calendarId,
+                    proxyIndex: i,
+                    error: error.message
+                });
+            }
+        }
+        throw new Error('All CORS proxy attempts failed');
+    }
+
     // Get the effective timezone for an event
     getEventTimezone(event) {
         // Priority order:
