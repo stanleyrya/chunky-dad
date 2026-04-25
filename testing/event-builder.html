@@ -2468,6 +2468,7 @@
       };
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
+      const LIVE_CALENDAR_FETCH_TIMEOUT_MS = 12000;
       const DAD_EMAIL = 'events@chunky.dad';
       const ISSUES_EMAIL = 'events+issues@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
@@ -3717,13 +3718,14 @@
           try {
             const response = await Promise.race([
               fetch(buildProxy(icalUrl), { cache: 'no-cache' }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000))
+              new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), LIVE_CALENDAR_FETCH_TIMEOUT_MS))
             ]);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const text = await response.text();
             if (!text.includes('BEGIN:VCALENDAR')) throw new Error('Invalid iCal');
             return text;
-          } catch {
+          } catch (error) {
+            logger.debug('EVENT', 'Live calendar proxy attempt failed, trying next', { cityKey, error: error && error.message });
             continue;
           }
         }
@@ -3792,6 +3794,8 @@
         const liveEvent = getLiveEventForEditing();
         if (!liveEvent) return false;
         const liveSnap = snapshotEventForComparison(liveEvent);
+        // Both snapshots normalize missing fields to '' (iCal does not distinguish
+        // "not set" from empty), so treating null/undefined as '' is intentional.
         const keys = Object.keys(liveSnap);
         return keys.some(k => (liveSnap[k] || '') !== (localEventRaw[k] || ''));
       }
