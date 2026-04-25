@@ -1016,26 +1016,26 @@
       background: rgba(183, 28, 28, 0.48);
     }
 
-    .stale-data-warning {
+    .backend-changes-notice {
       display: flex;
       align-items: center;
       gap: 0.45rem;
       flex-basis: 100%;
       margin-top: 0.3rem;
-      padding: 0.4rem 0.6rem;
+      padding: 0.45rem 0.7rem;
       border-radius: 8px;
-      border: 1px solid rgba(255, 193, 7, 0.32);
-      background: rgba(255, 193, 7, 0.08);
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      background: rgba(96, 165, 250, 0.08);
       color: var(--text-secondary);
       font-size: 0.74rem;
     }
 
-    .stale-data-warning i {
+    .backend-changes-notice i {
       flex-shrink: 0;
-      color: rgba(255, 193, 7, 0.8);
+      color: rgba(96, 165, 250, 0.85);
     }
 
-    .stale-data-warning span {
+    .backend-changes-notice span {
       flex: 1;
     }
 
@@ -1757,7 +1757,7 @@
         width: 100%;
       }
 
-      .stale-data-warning {
+      .backend-changes-notice {
         width: 100%;
       }
 
@@ -1913,12 +1913,12 @@
                   <span>Open in Google</span>
                 </a>
               </div>
-              <div class="stale-data-warning is-hidden" id="stale-data-warning">
-                <i class="bi bi-clock-history" aria-hidden="true"></i>
-                <span id="stale-data-warning-text">Calendar data may be outdated.</span>
-                <button type="button" class="ghost-button action-button is-compact" id="stale-data-refresh">
-                  <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
-                  <span>Refresh</span>
+              <div class="backend-changes-notice is-hidden" id="backend-changes-notice">
+                <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                <span>Google Calendar has updates</span>
+                <button type="button" class="ghost-button action-button is-compact" id="backend-changes-sync">
+                  <i class="bi bi-cloud-download" aria-hidden="true"></i>
+                  <span>Sync</span>
                 </button>
               </div>
             </div>
@@ -2468,7 +2468,6 @@
       };
       const BAR_DATA_PATH = '../data/bars';
       const CALENDAR_DATA_PATH = '../data/calendars';
-      const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
       const DAD_EMAIL = 'events@chunky.dad';
       const ISSUES_EMAIL = 'events+issues@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
@@ -2499,7 +2498,8 @@
       let selectedBar = null;
       const barCache = {};
       const calendarCache = {};
-      const calendarCacheTime = {}; // cityKey -> Date.now() at time of fetch
+      const liveCalendarCache = {}; // cityKey -> live Google Calendar index
+      let localEventRaw = null; // snapshot of the raw local ICS event when loaded for editing
       const calendarCore = new CalendarCore();
       // sharedCore will be used for merge/diff logic in subsequent phases.
       const sharedCore = new SharedCore(CITY_CONFIG, { eventSchema: EventSchema });
@@ -2553,13 +2553,14 @@
         populateVenueOptions(state.city);
         updateRecurrenceUi();
         updateSeriesOverrideWarningUi();
-        updateStaleDataWarning();
+        updateBackendChangesNotice();
         updateTimeNotes();
         updatePreviewCard();
         updateActionButtonsState();
         updateUrl();
         updateCalendarSource(true);
         prefetchCalendarInBackground(state.city);
+        fetchLiveCalendarInBackground(state.city);
         setupMessaging();
         scheduleEventPush();
         logger.componentInit('EVENT', 'Event builder initialized', {
@@ -2690,9 +2691,8 @@
         dom.recurrenceOverrideWarning = document.getElementById('recurrence-override-warning');
         dom.recurrenceOverrideWarningText = document.getElementById('recurrence-override-warning-text');
         dom.recurrenceOverrideWarningList = document.getElementById('recurrence-override-warning-list');
-        dom.staleDataWarning = document.getElementById('stale-data-warning');
-        dom.staleDataWarningText = document.getElementById('stale-data-warning-text');
-        dom.staleDataRefreshButton = document.getElementById('stale-data-refresh');
+        dom.backendChangesNotice = document.getElementById('backend-changes-notice');
+        dom.backendChangesSyncButton = document.getElementById('backend-changes-sync');
         dom.existingChangeButton = document.getElementById('existing-change');
         dom.existingCopySummaryButton = document.getElementById('existing-copy-summary');
         dom.existingClearSummaryButton = document.getElementById('existing-clear-summary');
@@ -3687,11 +3687,11 @@
         return `${baseLabel}, no matches`;
       }
 
-      async function fetchCalendarIndex(cityKey, { force = false } = {}) {
+      async function fetchCalendarIndex(cityKey) {
         if (!cityKey) {
           return buildCalendarIndex([], cityKey);
         }
-        if (!force && Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) {
+        if (Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) {
           return calendarCache[cityKey];
         }
         const response = await fetch(`${CALENDAR_DATA_PATH}/${cityKey}.ics`, { cache: 'no-store' });
@@ -3702,13 +3702,126 @@
         const events = calendarCore.parseICalData(text) || [];
         const index = buildCalendarIndex(events, cityKey);
         calendarCache[cityKey] = index;
-        calendarCacheTime[cityKey] = Date.now();
         return index;
       }
 
-      function isCalendarDataStale(cityKey) {
-        if (!cityKey || !(cityKey in calendarCacheTime)) return false;
-        return (Date.now() - calendarCacheTime[cityKey]) > STALE_THRESHOLD_MS;
+      async function fetchLiveCalendarIcs(cityKey) {
+        const cityConfig = (typeof CITY_CONFIG === 'object' && CITY_CONFIG) ? CITY_CONFIG[cityKey] : null;
+        if (!cityConfig || !cityConfig.calendarId) throw new Error(`No calendar ID for ${cityKey}`);
+        const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
+        const proxyBuilders = [
+          url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+          url => `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
+        for (const buildProxy of proxyBuilders) {
+          try {
+            const response = await Promise.race([
+              fetch(buildProxy(icalUrl), { cache: 'no-cache' }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000))
+            ]);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const text = await response.text();
+            if (!text.includes('BEGIN:VCALENDAR')) throw new Error('Invalid iCal');
+            return text;
+          } catch {
+            continue;
+          }
+        }
+        throw new Error('All proxies failed');
+      }
+
+      async function fetchLiveCalendarIndex(cityKey) {
+        if (!cityKey) return null;
+        if (Object.prototype.hasOwnProperty.call(liveCalendarCache, cityKey)) {
+          return liveCalendarCache[cityKey];
+        }
+        const text = await fetchLiveCalendarIcs(cityKey);
+        const events = calendarCore.parseICalData(text) || [];
+        const index = buildCalendarIndex(events, cityKey);
+        liveCalendarCache[cityKey] = index;
+        return index;
+      }
+
+      function fetchLiveCalendarInBackground(cityKey) {
+        if (!cityKey || Object.prototype.hasOwnProperty.call(liveCalendarCache, cityKey)) return;
+        fetchLiveCalendarIndex(cityKey).then(() => {
+          if (state && state.isEditingExisting && state.city === cityKey) {
+            updateBackendChangesNotice();
+          }
+        }).catch(error => {
+          logger.debug('EVENT', 'Background live calendar fetch failed (non-blocking)', { cityKey, error: error && error.message });
+        });
+      }
+
+      function snapshotEventForComparison(normalizedEvent) {
+        if (!normalizedEvent) return null;
+        return {
+          name: normalizeText(normalizedEvent.name || ''),
+          shortName: normalizeText(normalizedEvent.shortName || ''),
+          venue: normalizeText(normalizedEvent.bar || ''),
+          address: normalizeText(normalizedEvent.address || ''),
+          description: normalizeText(normalizedEvent.tea || normalizedEvent.description || ''),
+          cover: normalizeText(normalizedEvent.cover || ''),
+          website: normalizeText(normalizedEvent.website || ''),
+          instagram: normalizeText(normalizedEvent.instagram || ''),
+          facebook: normalizeText(normalizedEvent.facebook || ''),
+          gmaps: normalizeText(normalizedEvent.gmaps || ''),
+          ticketUrl: normalizeText(normalizedEvent.ticketUrl || ''),
+          image: normalizeText(normalizedEvent.image || ''),
+          recurrence: normalizeText(normalizedEvent.recurrence || '')
+        };
+      }
+
+      function getLiveEventForEditing() {
+        if (!state || !state.isEditingExisting) return null;
+        const cityKey = state.city;
+        if (!(cityKey in liveCalendarCache)) return null;
+        const liveIndex = liveCalendarCache[cityKey];
+        const uid = getEditingUidFromState();
+        if (!uid) return null;
+        const base = findBaseEventByUid(liveIndex, uid);
+        if (base) return base;
+        if (Array.isArray(liveIndex.singleEvents)) {
+          return liveIndex.singleEvents.find(e => e && e.uid === uid) || null;
+        }
+        return null;
+      }
+
+      function hasBackendChanges() {
+        if (!state || !state.isEditingExisting || !localEventRaw) return false;
+        const liveEvent = getLiveEventForEditing();
+        if (!liveEvent) return false;
+        const liveSnap = snapshotEventForComparison(liveEvent);
+        const keys = Object.keys(liveSnap);
+        return keys.some(k => (liveSnap[k] || '') !== (localEventRaw[k] || ''));
+      }
+
+      function updateBackendChangesNotice() {
+        if (!dom.backendChangesNotice) return;
+        dom.backendChangesNotice.classList.toggle('is-hidden', !hasBackendChanges());
+      }
+
+      async function syncFromGoogleCalendar() {
+        const liveEvent = getLiveEventForEditing();
+        if (!liveEvent) {
+          showToast('Live calendar data is not available yet.', 'warn');
+          return;
+        }
+        selectedBar = null;
+        state = buildExistingState(liveEvent, {
+          cityKey: liveEvent.city || state.city,
+          startDate: liveEvent.startDate,
+          endDate: liveEvent.endDate,
+          recurrence: liveEvent.recurrence || ''
+        });
+        state.isEditingExisting = true;
+        localEventRaw = snapshotEventForComparison(liveEvent);
+        existingSnapshot = snapshotFormFields(state);
+        applyStateToForm();
+        populateVenueOptions(state.city);
+        refreshUi();
+        scheduleEventPush();
+        showToast('Synced from Google Calendar.', 'info');
       }
 
       function prefetchCalendarInBackground(cityKey) {
@@ -4966,6 +5079,7 @@
         });
         state.isEditingExisting = true;
         existingSnapshot = snapshotFormFields(state);
+        localEventRaw = snapshotEventForComparison(baseEvent || eventData);
         state.editingExistingId = selectedExistingResult.id;
         state.editingExistingMode = mode;
         state.editingExistingOccurrenceId = occurrenceId;
@@ -5393,26 +5507,11 @@
         renderSeriesOverrideWarningList(dom.recurrenceOverrideWarningList, context);
       }
 
-      function updateStaleDataWarning() {
-        if (!dom.staleDataWarning || !dom.staleDataWarningText) return;
-        const isEditing = Boolean(state && state.isEditingExisting);
-        const cityKey = state && state.city;
-        const stale = isEditing && isCalendarDataStale(cityKey);
-        dom.staleDataWarning.classList.toggle('is-hidden', !stale);
-        if (stale && dom.staleDataWarningText) {
-          const fetchedAt = calendarCacheTime[cityKey];
-          const minutesAgo = fetchedAt ? Math.round((Date.now() - fetchedAt) / 60000) : 0;
-          dom.staleDataWarningText.textContent = minutesAgo > 0
-            ? `Calendar data is ${minutesAgo} min old and may be outdated.`
-            : 'Calendar data may be outdated.';
-        }
-      }
-
       function refreshEditingContextUi() {
         updateRecurrenceUi();
         updateRecurrenceSummary();
         updateSeriesOverrideWarningUi();
-        updateStaleDataWarning();
+        updateBackendChangesNotice();
         updateActionButtonsState();
         updateGoogleRefNote();
       }
@@ -5738,6 +5837,7 @@ Return only the complete URL, with no explanation unless asked.`;
         if (!state) return;
         state.isEditingExisting = false;
         existingSnapshot = null;
+        localEventRaw = null;
         state.editingExistingId = '';
         state.editingExistingMode = 'series';
         state.editingExistingOccurrenceId = '';
@@ -6084,6 +6184,7 @@ Return only the complete URL, with no explanation unless asked.`;
             updateCalendarSource();
             syncExistingCitySelection({ refresh: dom.existingPanel && dom.existingPanel.open });
             prefetchCalendarInBackground(newCity);
+            fetchLiveCalendarInBackground(newCity);
             refreshUi();
           });
         }
@@ -6403,22 +6504,9 @@ Return only the complete URL, with no explanation unless asked.`;
         if (dom.diffViewStackedButton) {
           dom.diffViewStackedButton.addEventListener('click', () => setDiffViewMode('stacked'));
         }
-        if (dom.staleDataRefreshButton) {
-          dom.staleDataRefreshButton.addEventListener('click', async () => {
-            const cityKey = state && state.city;
-            if (!cityKey) return;
-            dom.staleDataRefreshButton.disabled = true;
-            if (dom.staleDataWarningText) dom.staleDataWarningText.textContent = 'Refreshing calendar data…';
-            try {
-              const index = await fetchCalendarIndex(cityKey, { force: true });
-              existingCalendarIndex = index;
-              updateStaleDataWarning();
-              showToast('Calendar data refreshed.', 'info');
-            } catch (error) {
-              if (dom.staleDataWarningText) dom.staleDataWarningText.textContent = 'Could not refresh. Please try again.';
-            } finally {
-              dom.staleDataRefreshButton.disabled = false;
-            }
+        if (dom.backendChangesSyncButton) {
+          dom.backendChangesSyncButton.addEventListener('click', () => {
+            syncFromGoogleCalendar();
           });
         }
         if (dom.existingCitySelect) {
@@ -8154,6 +8242,7 @@ Return only the complete URL, with no explanation unless asked.`;
         state.editingExistingMode = 'series';
         state.editingExistingOccurrenceId = '';
         state.editingExistingUid = baseEvent.uid || '';
+        localEventRaw = snapshotEventForComparison(baseEvent);
         state.editingExistingRecurrenceId = '';
         state.editingExistingRecurrenceTimezone = '';
         state.editingExistingOverrideType = '';
