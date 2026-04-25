@@ -887,6 +887,31 @@
       margin-right: 0.4rem;
     }
 
+    .diff-modal-footer {
+      padding: 0.65rem 1rem;
+      border-top: 1px solid var(--border-color, rgba(255,255,255,0.1));
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .diff-table td.diff-apply-col {
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .diff-apply-btn {
+      font-size: 0.72rem;
+      padding: 0.28rem 0.55rem;
+    }
+
+    .diff-line-field-footer {
+      padding: 0.3rem 0.5rem;
+      border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));
+      display: flex;
+      justify-content: flex-end;
+      background: rgba(255,255,255,0.02);
+    }
+
     .ai-agent-list {
       display: grid;
       gap: 0.5rem;
@@ -1916,6 +1941,10 @@
               <div class="backend-changes-notice is-hidden" id="backend-changes-notice">
                 <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
                 <span>Google Calendar has updates</span>
+                <button type="button" class="ghost-button action-button is-compact" id="backend-changes-diff">
+                  <i class="bi bi-layout-split" aria-hidden="true"></i>
+                  <span>Diff</span>
+                </button>
                 <button type="button" class="ghost-button action-button is-compact" id="backend-changes-sync">
                   <i class="bi bi-cloud-download" aria-hidden="true"></i>
                   <span>Sync</span>
@@ -2432,6 +2461,39 @@
     </div>
   </dialog>
 
+  <dialog class="diff-modal" id="gcal-diff-panel" aria-labelledby="gcal-diff-modal-title">
+    <div class="diff-modal__content">
+      <div class="diff-modal__header">
+        <div>
+          <h2 id="gcal-diff-modal-title">Google Calendar Updates</h2>
+          <p class="panel-subtitle">Compare the live Google Calendar data with your current form. Apply fields individually or sync everything at once.</p>
+        </div>
+        <div class="diff-modal__header-controls">
+          <div class="diff-view-toggle" id="gcal-diff-view-toggle" aria-label="Diff view layout">
+            <button type="button" id="gcal-diff-view-side" class="is-active" aria-pressed="true" title="Side by side">
+              <i class="bi bi-layout-split" aria-hidden="true"></i>
+              <span>Side by side</span>
+            </button>
+            <button type="button" id="gcal-diff-view-stacked" aria-pressed="false" title="Stacked">
+              <i class="bi bi-layout-stack" aria-hidden="true"></i>
+              <span>Stacked</span>
+            </button>
+          </div>
+          <button type="button" class="ghost-button action-button diff-modal__close" id="gcal-diff-modal-close" aria-label="Close Google Calendar diff dialog">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div id="gcal-diff-modal-body"></div>
+      <div class="diff-modal-footer">
+        <button type="button" class="primary-button action-button is-compact" id="gcal-diff-sync-all">
+          <i class="bi bi-cloud-download" aria-hidden="true"></i>
+          <span>Sync All from Google Calendar</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="../js/logger.js"></script>
@@ -2480,6 +2542,8 @@
       let state;
       let existingSnapshot = null;
       let diffViewMode = 'side'; // 'side' or 'stacked'
+      let gcalDiffViewMode = 'side'; // 'side' or 'stacked'
+      let gcalDiffLiveSnap = null; // cached live snapshot for per-field apply
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
       let lastRecurrenceConstraintWarning = '';
@@ -2693,7 +2757,14 @@
         dom.recurrenceOverrideWarningText = document.getElementById('recurrence-override-warning-text');
         dom.recurrenceOverrideWarningList = document.getElementById('recurrence-override-warning-list');
         dom.backendChangesNotice = document.getElementById('backend-changes-notice');
+        dom.backendChangesDiffButton = document.getElementById('backend-changes-diff');
         dom.backendChangesSyncButton = document.getElementById('backend-changes-sync');
+        dom.gcalDiffPanel = document.getElementById('gcal-diff-panel');
+        dom.gcalDiffModalClose = document.getElementById('gcal-diff-modal-close');
+        dom.gcalDiffModalBody = document.getElementById('gcal-diff-modal-body');
+        dom.gcalDiffViewSideButton = document.getElementById('gcal-diff-view-side');
+        dom.gcalDiffViewStackedButton = document.getElementById('gcal-diff-view-stacked');
+        dom.gcalDiffSyncAllButton = document.getElementById('gcal-diff-sync-all');
         dom.existingChangeButton = document.getElementById('existing-change');
         dom.existingCopySummaryButton = document.getElementById('existing-copy-summary');
         dom.existingClearSummaryButton = document.getElementById('existing-clear-summary');
@@ -5837,6 +5908,137 @@ Return only the complete URL, with no explanation unless asked.`;
         }
       }
 
+      // GCal fields that exist in snapshotEventForComparison, labelled for the diff UI
+      const GCAL_DIFF_FIELD_LABELS = Object.freeze({
+        name: 'Name',
+        shortName: 'Short name',
+        venue: 'Venue',
+        address: 'Address',
+        description: 'Description',
+        cover: 'Cover',
+        recurrence: 'Recurrence',
+        website: 'Website',
+        ticketUrl: 'Tickets',
+        instagram: 'Instagram',
+        facebook: 'Facebook',
+        gmaps: 'Google Maps',
+        image: 'Image'
+      });
+
+      function buildGcalDiffContent() {
+        if (!dom.gcalDiffModalBody) return;
+        const liveEvent = getLiveEventForEditing();
+        if (!liveEvent) {
+          dom.gcalDiffModalBody.innerHTML = '<p class="diff-no-changes">Live Google Calendar data is not available yet.</p>';
+          return;
+        }
+        gcalDiffLiveSnap = snapshotEventForComparison(liveEvent);
+        // Current form state snapshot (same keys as gcalDiffLiveSnap)
+        const formSnap = {};
+        Object.keys(GCAL_DIFF_FIELD_LABELS).forEach(k => { formSnap[k] = (state && state[k]) ? String(state[k]) : ''; });
+        const changed = Object.keys(GCAL_DIFF_FIELD_LABELS).filter(
+          f => (formSnap[f] || '') !== (gcalDiffLiveSnap[f] || '')
+        );
+        if (!changed.length) {
+          dom.gcalDiffModalBody.innerHTML = '<p class="diff-no-changes">No differences found.</p>';
+          return;
+        }
+        if (gcalDiffViewMode === 'stacked') {
+          const fields = changed.map(f => {
+            const label = escapeDiffHtml(GCAL_DIFF_FIELD_LABELS[f]);
+            const curVal = escapeDiffHtml(formSnap[f] || '');
+            const gcalVal = escapeDiffHtml(gcalDiffLiveSnap[f] || '');
+            const removedLine = curVal
+              ? `<div class="diff-line-removed"><span class="diff-line-prefix">−</span>${curVal}</div>`
+              : '';
+            const addedLine = gcalVal
+              ? `<div class="diff-line-added"><span class="diff-line-prefix">+</span>${gcalVal}</div>`
+              : '';
+            return `<div class="diff-line-field">
+              <div class="diff-line-field-label">${label}</div>
+              ${removedLine}${addedLine}
+              <div class="diff-line-field-footer">
+                <button class="ghost-button action-button is-compact diff-apply-btn" data-gcal-apply="${escapeDiffHtml(f)}">
+                  <i class="bi bi-cloud-download" aria-hidden="true"></i> Apply
+                </button>
+              </div>
+            </div>`;
+          }).join('');
+          dom.gcalDiffModalBody.innerHTML = `<div class="diff-line-view">${fields}</div>`;
+        } else {
+          const rows = changed.map(f => {
+            const label = escapeDiffHtml(GCAL_DIFF_FIELD_LABELS[f]);
+            const curVal = escapeDiffHtml(formSnap[f] || '');
+            const gcalVal = escapeDiffHtml(gcalDiffLiveSnap[f] || '');
+            const curCell = curVal
+              ? `<span class="diff-value-old">${curVal}</span>`
+              : `<span class="diff-value-empty">(empty)</span>`;
+            const gcalCell = gcalVal
+              ? `<span class="diff-value-new">${gcalVal}</span>`
+              : `<span class="diff-value-empty">(empty)</span>`;
+            return `<tr>
+              <td class="diff-field-label">${label}</td>
+              <td>${curCell}</td>
+              <td>${gcalCell}</td>
+              <td class="diff-apply-col">
+                <button class="ghost-button action-button is-compact diff-apply-btn" data-gcal-apply="${escapeDiffHtml(f)}">
+                  <i class="bi bi-cloud-download" aria-hidden="true"></i> Apply
+                </button>
+              </td>
+            </tr>`;
+          }).join('');
+          dom.gcalDiffModalBody.innerHTML = `<table class="diff-table">
+            <thead><tr><th>Field</th><th>Current Form</th><th>Google Calendar</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+        }
+      }
+
+      function setGcalDiffViewMode(mode) {
+        gcalDiffViewMode = mode === 'stacked' ? 'stacked' : 'side';
+        if (dom.gcalDiffViewSideButton) {
+          dom.gcalDiffViewSideButton.classList.toggle('is-active', gcalDiffViewMode === 'side');
+          dom.gcalDiffViewSideButton.setAttribute('aria-pressed', String(gcalDiffViewMode === 'side'));
+        }
+        if (dom.gcalDiffViewStackedButton) {
+          dom.gcalDiffViewStackedButton.classList.toggle('is-active', gcalDiffViewMode === 'stacked');
+          dom.gcalDiffViewStackedButton.setAttribute('aria-pressed', String(gcalDiffViewMode === 'stacked'));
+        }
+        buildGcalDiffContent();
+      }
+
+      function applyGcalField(fieldKey) {
+        if (!gcalDiffLiveSnap || !(fieldKey in gcalDiffLiveSnap) || !state) return;
+        state[fieldKey] = gcalDiffLiveSnap[fieldKey] || '';
+        applyStateToForm();
+        refreshUi();
+        scheduleEventPush();
+        // Rebuild the diff so the applied field disappears
+        buildGcalDiffContent();
+        updateBackendChangesNotice();
+      }
+
+      function openGcalDiffPanel() {
+        if (!dom.gcalDiffPanel) return;
+        buildGcalDiffContent();
+        if (!dom.gcalDiffPanel.open) {
+          if (typeof dom.gcalDiffPanel.showModal === 'function') {
+            dom.gcalDiffPanel.showModal();
+          } else {
+            dom.gcalDiffPanel.setAttribute('open', '');
+          }
+        }
+      }
+
+      function closeGcalDiffPanel() {
+        if (!dom.gcalDiffPanel || !dom.gcalDiffPanel.open) return;
+        if (typeof dom.gcalDiffPanel.close === 'function') {
+          dom.gcalDiffPanel.close();
+        } else {
+          dom.gcalDiffPanel.removeAttribute('open');
+        }
+      }
+
       function clearEditingState() {
         if (!state) return;
         state.isEditingExisting = false;
@@ -6508,9 +6710,40 @@ Return only the complete URL, with no explanation unless asked.`;
         if (dom.diffViewStackedButton) {
           dom.diffViewStackedButton.addEventListener('click', () => setDiffViewMode('stacked'));
         }
+        if (dom.backendChangesDiffButton) {
+          dom.backendChangesDiffButton.addEventListener('click', () => {
+            openGcalDiffPanel();
+          });
+        }
         if (dom.backendChangesSyncButton) {
           dom.backendChangesSyncButton.addEventListener('click', () => {
             syncFromGoogleCalendar();
+          });
+        }
+        if (dom.gcalDiffModalClose) {
+          dom.gcalDiffModalClose.addEventListener('click', closeGcalDiffPanel);
+        }
+        if (dom.gcalDiffViewSideButton) {
+          dom.gcalDiffViewSideButton.addEventListener('click', () => setGcalDiffViewMode('side'));
+        }
+        if (dom.gcalDiffViewStackedButton) {
+          dom.gcalDiffViewStackedButton.addEventListener('click', () => setGcalDiffViewMode('stacked'));
+        }
+        if (dom.gcalDiffSyncAllButton) {
+          dom.gcalDiffSyncAllButton.addEventListener('click', () => {
+            syncFromGoogleCalendar();
+            closeGcalDiffPanel();
+          });
+        }
+        if (dom.gcalDiffModalBody) {
+          dom.gcalDiffModalBody.addEventListener('click', event => {
+            const btn = event.target.closest('[data-gcal-apply]');
+            if (btn) applyGcalField(btn.dataset.gcalApply);
+          });
+        }
+        if (dom.gcalDiffPanel) {
+          dom.gcalDiffPanel.addEventListener('click', event => {
+            if (event.target === dom.gcalDiffPanel) closeGcalDiffPanel();
           });
         }
         if (dom.existingCitySelect) {
