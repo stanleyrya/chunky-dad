@@ -1558,72 +1558,22 @@ class DynamicCalendarLoader extends CalendarCore {
     
     // Try multiple free CORS proxies to fetch Google Calendar ICS
     async loadCalendarDataViaProxy(cityKey, cityConfig) {
-        const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
-        const proxyBuilders = [
-            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
-        ];
-        
-        for (let i = 0; i < proxyBuilders.length; i++) {
-            const proxyUrl = proxyBuilders[i](icalUrl);
-            try {
-                this.updateLoadingMessage(i + 1, 'proxy');
-                logger.info('CALENDAR', 'Attempting to load calendar via CORS proxy', {
-                    cityKey,
-                    proxyIndex: i,
-                    proxyUrlPreview: proxyUrl.split('?')[0]
-                });
-                
-                const fetchPromise = fetch(proxyUrl, {
-                    method: 'GET',
-                    headers: { 'Accept': 'text/calendar,text/plain,*/*' },
-                    cache: 'no-cache'
-                });
-                
-                // 12s timeout per proxy
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Proxy request timed out after 12 seconds')), 12000);
-                });
-                
-                const response = await Promise.race([fetchPromise, timeoutPromise]);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const icalText = await response.text();
-                if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
-                    throw new Error('Invalid iCal data received via proxy');
-                }
-                
-                logger.apiCall('CALENDAR', 'Successfully loaded calendar via CORS proxy', {
-                    cityKey,
-                    proxyIndex: i,
-                    dataLength: icalText.length
-                });
-                
-                const events = this.parseICalData(icalText);
-                this.allEvents = events;
-                this.eventsData = {
-                    cityConfig,
-                    events,
-                    calendarTimezone: this.calendarTimezone,
-                    timezoneData: this.timezoneData
-                };
-                
-                return this.eventsData;
-            } catch (error) {
-                logger.warn('CALENDAR', 'CORS proxy attempt failed', {
-                    cityKey,
-                    proxyIndex: i,
-                    error: error.message
-                });
-                // Try next proxy
-                continue;
-            }
+        this.updateLoadingMessage(1, 'proxy');
+        try {
+            const icalText = await this.fetchICalViaProxy(cityConfig.calendarId);
+            const events = this.parseICalData(icalText);
+            this.allEvents = events;
+            this.eventsData = {
+                cityConfig,
+                events,
+                calendarTimezone: this.calendarTimezone,
+                timezoneData: this.timezoneData
+            };
+            return this.eventsData;
+        } catch (error) {
+            logger.componentError('CALENDAR', 'All CORS proxy attempts failed', { cityKey });
+            return null;
         }
-        
-        logger.componentError('CALENDAR', 'All CORS proxy attempts failed');
-        return null;
     }
      
      // Fallback method: try direct Google Calendar access (will likely fail due to CORS)
