@@ -623,6 +623,7 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
+      height: 85vh;
       max-height: 85vh;
       overflow: hidden;
       display: flex;
@@ -673,6 +674,7 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
+      height: auto;
       max-height: 85vh;
       overflow: hidden;
       display: flex;
@@ -723,6 +725,7 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
+      height: 85vh;
       max-height: 85vh;
       overflow: hidden;
       display: flex;
@@ -1745,8 +1748,9 @@
       }
 
       .existing-modal {
-        width: min(560px, calc(100vw - 2rem));
-        max-width: calc(100vw - 2rem);
+        width: calc(100vw - 1rem);
+        max-width: calc(100vw - 1rem);
+        height: 85vh;
       }
 
       .existing-modal__content {
@@ -1754,8 +1758,10 @@
       }
 
       .ai-modal {
-        width: min(460px, calc(100vw - 2rem));
-        max-width: calc(100vw - 2rem);
+        width: calc(100vw - 1rem);
+        max-width: calc(100vw - 1rem);
+        height: auto;
+        max-height: 85vh;
       }
 
       .ai-modal__content {
@@ -1763,8 +1769,9 @@
       }
 
       .diff-modal {
-        width: min(560px, calc(100vw - 2rem));
-        max-width: calc(100vw - 2rem);
+        width: calc(100vw - 1rem);
+        max-width: calc(100vw - 1rem);
+        height: 85vh;
       }
 
       .diff-modal__content {
@@ -1960,6 +1967,10 @@
             <div class="series-override-warning is-hidden" id="series-override-warning">
               <p id="series-override-warning-text"></p>
               <ul class="series-override-warning-list" id="series-override-warning-list"></ul>
+            </div>
+            <div class="series-override-warning is-hidden" id="similarity-warning" style="border-color: rgba(96, 165, 250, 0.35); background: rgba(96, 165, 250, 0.08);">
+              <p id="similarity-warning-text" style="color: var(--text-primary); font-weight: 600;">Similar events found:</p>
+              <ul class="series-override-warning-list" id="similarity-warning-list"></ul>
             </div>
           </div>
         </div>
@@ -2589,6 +2600,8 @@
       let existingDateRangeEnd = '';
       let existingCalendarSwipeStart = null;
       let existingCalendarSwipeIgnoreClick = false;
+      let similarityTimeoutId = null;
+      let similarityResults = [];
       const existingPanelState = {
         city: '',
         searchText: '',
@@ -2789,6 +2802,8 @@
         dom.previewRecurring = document.getElementById('preview-recurring');
         dom.previewCover = document.getElementById('preview-cover');
         dom.previewLinks = document.getElementById('preview-links');
+        dom.similarityWarning = document.getElementById('similarity-warning');
+        dom.similarityWarningList = document.getElementById('similarity-warning-list');
         dom.toastContainer = document.getElementById('toast-container');
       }
 
@@ -5608,6 +5623,8 @@
 
       function updateExistingDiff() {
         if (!dom.existingDiffText) return;
+        const isSimilarityMode = dom.diffPanel && dom.diffPanel.open && dom.diffPanel.querySelector('#diff-modal-title')?.textContent === 'Similarity Match Comparison';
+        if (isSimilarityMode) return;
         if (!state || !state.isEditingExisting || !existingSnapshot) {
           dom.existingDiffText.textContent = '';
           return;
@@ -5895,6 +5912,12 @@ Return only the complete URL, with no explanation unless asked.`;
         if (dom.diffButton) {
           dom.diffButton.setAttribute('aria-expanded', 'false');
         }
+        const title = dom.diffPanel.querySelector('#diff-modal-title');
+        if (title) title.textContent = 'Changes vs. Existing Event';
+        const subtitle = dom.diffPanel.querySelector('.panel-subtitle');
+        if (subtitle) subtitle.textContent = 'Fields changed since loading the existing event.';
+        const footer = dom.diffPanel.querySelector('.diff-modal-footer');
+        if (footer) footer.innerHTML = '';
       }
 
       // GCal fields that exist in snapshotEventForComparison, labelled for the diff UI
@@ -8623,6 +8646,7 @@ Return only the complete URL, with no explanation unless asked.`;
         updateActionButtonsState();
         updateGoogleRefNote();
         updateExistingDiff();
+        scheduleSimilarityCheck();
         scheduleUrlUpdate();
         scheduleEventPush();
       }
@@ -8827,7 +8851,191 @@ Return only the complete URL, with no explanation unless asked.`;
         });
       }
 
-      function updateCalendarSource(force = false) {
+
+      function scheduleSimilarityCheck() {
+        if (state && state.isEditingExisting) {
+          updateSimilarityUi([]);
+          return;
+        }
+        if (similarityTimeoutId) {
+          clearTimeout(similarityTimeoutId);
+        }
+        similarityTimeoutId = setTimeout(() => {
+          similarityTimeoutId = null;
+          checkSimilarity();
+        }, 500);
+      }
+
+      async function checkSimilarity() {
+        if (!state || state.isEditingExisting || !state.city || !state.name) {
+          updateSimilarityUi([]);
+          return;
+        }
+
+        try {
+          const index = await fetchCalendarIndex(state.city);
+          if (!index || !index.events) {
+            updateSimilarityUi([]);
+            return;
+          }
+
+          const currentEvent = buildEventPayload();
+          if (currentEvent.startDate) {
+             currentEvent.searchStartDate = currentEvent.startDate;
+          }
+
+          const analysis = sharedCore.analyzeEventAction(currentEvent, index.events);
+
+          let matches = [];
+          if (analysis.action === 'merge' && analysis.existingEvent) {
+            matches.push(analysis.existingEvent);
+          } else if (analysis.action === 'conflict' && analysis.existingEvent) {
+             matches.push(analysis.existingEvent);
+          }
+
+          if (matches.length === 0) {
+            const similar = index.events.filter(e => {
+               const sameDay = currentEvent.startDate && e.startDate &&
+                               sharedCore.areDatesEqual(new Date(currentEvent.startDate), new Date(e.startDate), 1440);
+               const titleSimilar = sharedCore.areTitlesSimilar(e.name || e.title, currentEvent.name);
+               return sameDay && titleSimilar;
+            });
+            matches = similar;
+          }
+
+          updateSimilarityUi(matches);
+        } catch (error) {
+          logger.componentError('EVENT', 'Similarity check failed', error);
+          updateSimilarityUi([]);
+        }
+      }
+
+      function updateSimilarityUi(matches) {
+        similarityResults = matches;
+        if (!dom.similarityWarning || !dom.similarityWarningList) return;
+
+        if (!matches || matches.length === 0) {
+          dom.similarityWarning.classList.add('is-hidden');
+          dom.similarityWarningList.innerHTML = '';
+          return;
+        }
+
+        dom.similarityWarning.classList.remove('is-hidden');
+        dom.similarityWarningList.innerHTML = '';
+
+        matches.forEach((match, idx) => {
+          const li = document.createElement('li');
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const dateLabel = match.startDate ? formatCompactDateLabel(new Date(match.startDate)) : 'Unknown date';
+          btn.textContent = `${match.name || match.title} at ${match.bar || match.venue || 'Unknown venue'} (${dateLabel})`;
+          btn.addEventListener('click', () => {
+            openSimilarityDiff(match);
+          });
+          li.appendChild(btn);
+          dom.similarityWarningList.appendChild(li);
+        });
+      }
+
+      function openSimilarityDiff(match) {
+        const matchSnapshot = snapshotEventForComparison(match);
+        const currentSnapshot = snapshotFormFields(state);
+
+        const diffs = getSnapshotDiffs(matchSnapshot, currentSnapshot);
+        renderSimilarityDiff(match, diffs);
+
+        if (dom.diffPanel) {
+          dom.diffPanel.showModal();
+          if (dom.diffButton) dom.diffButton.setAttribute('aria-expanded', 'true');
+        }
+      }
+
+      function renderSimilarityDiff(match, diffs) {
+        if (!dom.diffModalBody) return;
+
+        const title = dom.diffPanel.querySelector('#diff-modal-title');
+        if (title) title.textContent = 'Similarity Match Comparison';
+
+        const subtitle = dom.diffPanel.querySelector('.panel-subtitle');
+        if (subtitle) subtitle.textContent = 'Comparing your current edits with an existing event.';
+
+        if (diffs.length === 0) {
+          dom.diffModalBody.innerHTML = '<div class="diff-no-changes">No differences found between your edits and the existing event.</div>';
+        } else {
+          dom.diffModalBody.innerHTML = renderDiffTable(diffs, diffViewMode);
+        }
+
+        let footer = dom.diffPanel.querySelector('.diff-modal-footer');
+        if (!footer) {
+          footer = document.createElement('div');
+          footer.className = 'diff-modal-footer';
+          dom.diffPanel.querySelector('.diff-modal__content').appendChild(footer);
+        }
+
+        footer.style.gap = '0.5rem';
+        footer.style.flexWrap = 'wrap';
+        footer.innerHTML = `
+          <button type="button" class="ghost-button action-button is-compact" id="similarity-dismiss">Dismiss</button>
+          <button type="button" class="secondary-button action-button is-compact" id="similarity-link">Link edits to event</button>
+          <button type="button" class="primary-button action-button is-compact" id="similarity-load">Load event data</button>
+        `;
+
+        document.getElementById('similarity-dismiss').addEventListener('click', () => dom.diffPanel.close());
+        document.getElementById('similarity-link').addEventListener('click', () => {
+          linkEditsToEvent(match);
+          dom.diffPanel.close();
+        });
+        document.getElementById('similarity-load').addEventListener('click', () => {
+          loadEventData(match);
+          dom.diffPanel.close();
+        });
+      }
+
+      function linkEditsToEvent(match) {
+        state.isEditingExisting = true;
+        state.editingExistingId = buildResultId(match, match.recurrence ? 'series' : 'occurrence', null);
+        state.editingExistingMode = match.recurrence ? 'series' : 'occurrence';
+        state.editingExistingUid = match.uid || '';
+        state.editingExistingSourceUid = match.sourceUid || '';
+        state.editingExistingRecurrenceId = match.recurrenceId ? (match.recurrenceId instanceof Date ? match.recurrenceId.toISOString() : match.recurrenceId) : '';
+        state.editingExistingSequence = match.sequence != null ? String(match.sequence) : '';
+
+        existingSnapshot = snapshotEventForComparison(match);
+        localEventRaw = existingSnapshot;
+
+        syncExistingSelectionSummaryFromState();
+        updateActionButtonsState();
+        updateUrl();
+        showToast('Linked to existing event.', 'success');
+      }
+
+      function loadEventData(match) {
+        const cityKey = match.city || state.city;
+        state = buildExistingState(match, {
+          cityKey,
+          startDate: match.startDate,
+          endDate: match.endDate,
+          recurrence: match.recurrence || ''
+        });
+
+        state.isEditingExisting = true;
+        state.editingExistingId = buildResultId(match, match.recurrence ? 'series' : 'occurrence', null);
+        state.editingExistingMode = match.recurrence ? 'series' : 'occurrence';
+        state.editingExistingUid = match.uid || '';
+        state.editingExistingSourceUid = match.sourceUid || '';
+        state.editingExistingRecurrenceId = match.recurrenceId ? (match.recurrenceId instanceof Date ? match.recurrenceId.toISOString() : match.recurrenceId) : '';
+        state.editingExistingSequence = match.sequence != null ? String(match.sequence) : '';
+
+        existingSnapshot = snapshotEventForComparison(match);
+        localEventRaw = existingSnapshot;
+
+        applyStateToForm();
+        populateVenueOptions(state.city);
+        refreshUi();
+        syncExistingSelectionSummaryFromState();
+        showToast('Event data loaded.', 'success');
+      }
+function updateCalendarSource(force = false) {
         if (!dom.calendarIframe) return;
         const targetCity = state.city || 'nyc';
         if (!force && currentCalendarCity === targetCity) {
