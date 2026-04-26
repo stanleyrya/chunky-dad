@@ -623,7 +623,8 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
-      max-height: 85vh;
+      min-height: 500px;
+      max-height: 90vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -673,7 +674,8 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
-      max-height: 85vh;
+      min-height: 300px;
+      max-height: 90vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -715,7 +717,7 @@
 
     .diff-modal {
       margin: auto;
-      width: min(560px, calc(100vw - 2rem));
+      width: min(760px, calc(100vw - 2rem));
       max-width: calc(100vw - 2rem);
       border: none;
       border-radius: 16px;
@@ -723,7 +725,8 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
-      max-height: 85vh;
+      min-height: 500px;
+      max-height: 90vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -973,7 +976,8 @@
       color: var(--text-secondary);
     }
 
-    .series-override-warning {
+    .series-override-warning,
+    .similarity-warning {
       display: grid;
       gap: 0.35rem;
       margin-top: 0.55rem;
@@ -983,6 +987,41 @@
       background: rgba(255, 193, 7, 0.08);
       color: var(--text-secondary);
       font-size: 0.74rem;
+    }
+
+    .similarity-warning {
+      border-color: rgba(96, 165, 250, 0.35);
+      background: rgba(96, 165, 250, 0.08);
+    }
+
+    .similarity-item-list {
+      margin: 0.25rem 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .similarity-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      padding: 0.4rem 0.6rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    .similarity-item-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .similarity-item-button {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.7rem;
     }
 
     .series-override-warning p {
@@ -1961,6 +2000,10 @@
               <p id="series-override-warning-text"></p>
               <ul class="series-override-warning-list" id="series-override-warning-list"></ul>
             </div>
+            <div class="similarity-warning is-hidden" id="similarity-warning">
+              <p id="similarity-warning-text"><strong>Heads up:</strong> We found similar existing events on this date. Are you editing one of these?</p>
+              <ul class="similarity-item-list" id="similarity-item-list"></ul>
+            </div>
           </div>
         </div>
 
@@ -2576,6 +2619,7 @@
       const sharedCore = new SharedCore(CITY_CONFIG, { eventSchema: EventSchema });
       let existingCalendarIndex = null;
       let existingResults = [];
+      let currentSimilarityMatch = null;
       let existingOccurrenceResults = [];
       let selectedExistingResult = null;
       let selectedExistingOccurrence = null;
@@ -2790,6 +2834,8 @@
         dom.previewCover = document.getElementById('preview-cover');
         dom.previewLinks = document.getElementById('preview-links');
         dom.toastContainer = document.getElementById('toast-container');
+        dom.similarityWarning = document.getElementById('similarity-warning');
+        dom.similarityList = document.getElementById('similarity-item-list');
       }
 
       function enableExistingDateNativeFallback() {
@@ -3890,7 +3936,13 @@
 
       function prefetchCalendarInBackground(cityKey) {
         if (!cityKey || Object.prototype.hasOwnProperty.call(calendarCache, cityKey)) return;
-        fetchCalendarIndex(cityKey).catch(error => {
+        fetchCalendarIndex(cityKey).then(index => {
+          if (state && state.city === cityKey) {
+            existingCalendarIndex = index;
+            existingResults = buildExistingResults(index, { now: new Date() });
+            updateSimilarityWarningUi();
+          }
+        }).catch(error => {
           logger.debug('EVENT', 'Background calendar prefetch failed (non-blocking)', { cityKey, error: error && error.message });
         });
       }
@@ -5575,9 +5627,246 @@
         updateRecurrenceUi();
         updateRecurrenceSummary();
         updateSeriesOverrideWarningUi();
+        updateSimilarityWarningUi();
         updateBackendChangesNotice();
         updateActionButtonsState();
         updateGoogleRefNote();
+      }
+
+      function updateSimilarityWarningUi() {
+        if (!dom.similarityWarning || !dom.similarityList) return;
+        if (state.isEditingExisting) {
+          dom.similarityWarning.classList.add('is-hidden');
+          return;
+        }
+
+        const draft = buildEventPayload();
+        if (!draft.name || draft.name.trim().length < 3 || !draft.startDate) {
+          dom.similarityWarning.classList.add('is-hidden');
+          return;
+        }
+
+        const matches = findSimilarExistingEvents(draft);
+        if (matches.length === 0) {
+          dom.similarityWarning.classList.add('is-hidden');
+          return;
+        }
+
+        dom.similarityList.innerHTML = '';
+        matches.forEach(match => {
+          const li = document.createElement('li');
+          li.className = 'similarity-item';
+
+          const text = document.createElement('span');
+          text.className = 'similarity-item-text';
+          text.textContent = match.event.title || match.event.name || 'Untitled Event';
+          if (match.isOccurrence) {
+            text.textContent += ` (Occurrence)`;
+          }
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'secondary-button action-button is-compact similarity-item-button';
+          btn.innerHTML = '<i class="bi bi-layout-split"></i><span>Compare</span>';
+          btn.onclick = () => openSimilarityDiff(match);
+
+          li.appendChild(text);
+          li.appendChild(btn);
+          dom.similarityList.appendChild(li);
+        });
+
+        dom.similarityWarning.classList.remove('is-hidden');
+      }
+
+      function findSimilarExistingEvents(draft) {
+        if (!existingCalendarIndex || !existingCalendarIndex.events) return [];
+
+        const matches = [];
+        const draftDate = new Date(draft.startDate);
+        draftDate.setHours(0, 0, 0, 0);
+
+        existingCalendarIndex.events.forEach(event => {
+          // Check for title similarity
+          const titlesSimilar = sharedCore.areTitlesSimilar(event.title, draft.name);
+
+          // Check if event occurs on the same day
+          let occursOnDate = false;
+          if (event.recurring && event.recurrence) {
+            occursOnDate = calendarCore.doesRecurringEventOccurOnDate(event, draftDate);
+          } else if (event.startDate) {
+            const eventDate = new Date(event.startDate);
+            eventDate.setHours(0, 0, 0, 0);
+            occursOnDate = eventDate.getTime() === draftDate.getTime();
+          }
+
+          if (titlesSimilar && occursOnDate) {
+            if (event.recurring) {
+              // For recurring events, we should ideally point to the specific occurrence
+              const occurrences = buildOccurrenceResultsForEvent(existingCalendarIndex, event, {
+                rangeStart: draftDate,
+                rangeEnd: draftDate,
+                maxCount: 1
+              });
+              if (occurrences.length > 0) {
+                matches.push({
+                  event: occurrences[0].event,
+                  baseEvent: event,
+                  type: 'occurrence',
+                  id: occurrences[0].id,
+                  isOccurrence: true
+                });
+              } else {
+                // Fallback to series if occurrence logic fails
+                matches.push({
+                  event: event,
+                  baseEvent: event,
+                  type: 'series',
+                  id: buildResultId(event, 'series'),
+                  isOccurrence: false
+                });
+              }
+            } else {
+              matches.push({
+                event: event,
+                baseEvent: event,
+                type: 'series',
+                id: buildResultId(event, 'series'),
+                isOccurrence: false
+              });
+            }
+          }
+        });
+
+        return matches;
+      }
+
+      function openSimilarityDiff(match) {
+        if (!dom.diffPanel) return;
+        currentSimilarityMatch = match;
+        const existingData = buildExistingState(match.event, {
+          cityKey: match.baseEvent.city || state.city,
+          startDate: match.event.startDate,
+          endDate: match.event.endDate,
+          recurrence: match.baseEvent.recurrence || ''
+        });
+
+        // Simplified diff build for similarity
+        buildSimilarityDiffContent(existingData, match);
+
+        if (!dom.diffPanel.open) {
+          dom.diffPanel.showModal();
+        }
+      }
+
+      function buildSimilarityDiffContent(existingData, match) {
+        if (!dom.diffModalBody) return;
+
+        const fields = Object.keys(DIFF_FIELD_LABELS).map(f => {
+          const label = DIFF_FIELD_LABELS[f];
+          const existingVal = existingData[f] || '';
+          const currentVal = state[f] || '';
+          const isSame = existingVal === currentVal;
+
+          const existingCell = existingVal
+            ? `<div class="diff-value-old">${escapeDiffHtml(existingVal)}</div>`
+            : '<div class="diff-value-empty">empty</div>';
+          const currentCell = currentVal
+            ? `<div class="diff-value-new">${escapeDiffHtml(currentVal)}</div>`
+            : '<div class="diff-value-empty">empty</div>';
+
+          const useBtn = isSame ? '' : `<button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applySimilarityField('${f}')">Use</button>`;
+
+          return `<tr>
+            <td class="diff-field-label">${label}</td>
+            <td>${existingCell}</td>
+            <td>${currentCell}</td>
+            <td class="diff-apply-col">${useBtn}</td>
+          </tr>`;
+        }).join('');
+
+        dom.diffModalBody.innerHTML = `
+          <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(96, 165, 250, 0.1); border-radius: 8px; font-size: 0.85rem;">
+            <p><strong>Comparing with existing event:</strong> ${match.event.title}</p>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
+              <button type="button" class="primary-button action-button is-compact" id="similarity-load-btn">Load Existing</button>
+              <button type="button" class="secondary-button action-button is-compact" id="similarity-link-btn">Link Edits</button>
+              <button type="button" class="ghost-button action-button is-compact" id="similarity-dismiss-btn">Dismiss</button>
+            </div>
+          </div>
+          <table class="diff-table">
+            <thead><tr><th>Field</th><th>Existing</th><th>Current Draft</th><th></th></tr></thead>
+            <tbody>${fields}</tbody>
+          </table>`;
+
+          document.getElementById('similarity-load-btn').onclick = () => loadSimilarEvent(match);
+          document.getElementById('similarity-link-btn').onclick = () => linkToSimilarEvent(match);
+          document.getElementById('similarity-dismiss-btn').onclick = () => closeDiffPanel();
+      }
+
+      window.applySimilarityField = (field) => {
+        if (!currentSimilarityMatch) return;
+        const existingData = buildExistingState(currentSimilarityMatch.event, {
+          cityKey: currentSimilarityMatch.baseEvent.city || state.city,
+          startDate: currentSimilarityMatch.event.startDate,
+          endDate: currentSimilarityMatch.event.endDate,
+          recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
+        });
+        state[field] = existingData[field];
+        applyStateToForm();
+        refreshUi();
+        if (currentSimilarityMatch) {
+          openSimilarityDiff(currentSimilarityMatch);
+        }
+      };
+
+      function loadSimilarEvent(match) {
+        const eventToLoad = (match.type === 'occurrence' && match.event) ? match.event : match.baseEvent;
+
+        state = buildExistingState(eventToLoad, {
+          cityKey: match.baseEvent.city || state.city,
+          startDate: eventToLoad.startDate,
+          endDate: eventToLoad.endDate,
+          recurrence: match.baseEvent.recurrence || ''
+        });
+
+        state.isEditingExisting = true;
+        state.editingExistingId = match.id;
+        state.editingExistingMode = match.type;
+        state.editingExistingUid = match.baseEvent.uid || '';
+        existingSnapshot = snapshotFormFields(state);
+
+        applyStateToForm();
+        refreshUi();
+        closeDiffPanel();
+        showToast('Event data loaded.', 'success');
+      }
+
+      function linkToSimilarEvent(match) {
+        state.isEditingExisting = true;
+        state.editingExistingId = match.id;
+        state.editingExistingMode = match.type;
+        state.editingExistingUid = match.baseEvent.uid || '';
+
+        const eventToLoad = (match.type === 'occurrence' && match.event) ? match.event : match.baseEvent;
+        existingSnapshot = buildExistingState(eventToLoad, {
+          cityKey: match.baseEvent.city || state.city,
+          startDate: eventToLoad.startDate,
+          endDate: eventToLoad.endDate,
+          recurrence: match.baseEvent.recurrence || ''
+        });
+
+        const summaryText = buildExistingSelectionText(
+          match,
+          match.type,
+          eventToLoad.startDate,
+          eventToLoad.endDate,
+          'edit'
+        );
+        setExistingSelectionSummary(summaryText, 'edit');
+
+        refreshUi();
+        closeDiffPanel();
+        showToast('Draft linked to existing event.', 'success');
       }
 
       const DIFF_FIELD_LABELS = Object.freeze({
@@ -8618,6 +8907,7 @@ Return only the complete URL, with no explanation unless asked.`;
         updateRecurrenceUi();
         updateRecurrenceSummary();
         updateSeriesOverrideWarningUi();
+        updateSimilarityWarningUi();
         updatePreviewCard();
         updateCoordinatesFieldState();
         updateActionButtonsState();
