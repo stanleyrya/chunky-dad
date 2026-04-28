@@ -5771,8 +5771,10 @@
 
         const allFields = Object.keys(DIFF_FIELD_LABELS);
         const changedFields = allFields.filter(f => (existingData[f] || '') !== (state[f] || ''));
+        // Only include "same" fields that actually have a value — empty-on-both fields add no useful info
         const sameFields = allFields.filter(f => (existingData[f] || '') === (state[f] || '') && (existingData[f] || state[f] || ''));
 
+        // Normalized events store the display name under `.name`; `.title` is the raw iCal SUMMARY fallback
         const eventName = escapeDiffHtml(match.event.name || match.event.title || 'Unknown Event');
         const headerHtml = `
           <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(96, 165, 250, 0.1); border-radius: 8px; font-size: 0.85rem;">
