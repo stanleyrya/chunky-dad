@@ -1790,6 +1790,7 @@
       .existing-modal {
         width: min(560px, calc(100vw - 2rem));
         max-width: calc(100vw - 2rem);
+        min-height: 80vh;
       }
 
       .existing-modal__content {
@@ -1799,6 +1800,7 @@
       .ai-modal {
         width: min(460px, calc(100vw - 2rem));
         max-width: calc(100vw - 2rem);
+        min-height: 80vh;
       }
 
       .ai-modal__content {
@@ -1808,6 +1810,7 @@
       .diff-modal {
         width: min(560px, calc(100vw - 2rem));
         max-width: calc(100vw - 2rem);
+        min-height: 80vh;
       }
 
       .diff-modal__content {
@@ -2595,6 +2598,7 @@
       let state;
       let existingSnapshot = null;
       let diffViewMode = 'side'; // 'side' or 'stacked'
+      let diffPanelMode = 'diff'; // 'diff' or 'similarity'
       let gcalDiffViewMode = 'side'; // 'side' or 'stacked'
       let gcalDiffLiveSnap = null; // cached live snapshot for per-field apply
       let recurrenceMode = 'builder';
@@ -5746,6 +5750,7 @@
 
       function openSimilarityDiff(match) {
         if (!dom.diffPanel) return;
+        diffPanelMode = 'similarity';
         currentSimilarityMatch = match;
         const existingData = buildExistingState(match.event, {
           cityKey: match.baseEvent.city || state.city,
@@ -5754,7 +5759,6 @@
           recurrence: match.baseEvent.recurrence || ''
         });
 
-        // Simplified diff build for similarity
         buildSimilarityDiffContent(existingData, match);
 
         if (!dom.diffPanel.open) {
@@ -5765,46 +5769,81 @@
       function buildSimilarityDiffContent(existingData, match) {
         if (!dom.diffModalBody) return;
 
-        const fields = Object.keys(DIFF_FIELD_LABELS).map(f => {
-          const label = DIFF_FIELD_LABELS[f];
-          const existingVal = existingData[f] || '';
-          const currentVal = state[f] || '';
-          const isSame = existingVal === currentVal;
+        const allFields = Object.keys(DIFF_FIELD_LABELS);
+        const changedFields = allFields.filter(f => (existingData[f] || '') !== (state[f] || ''));
+        const sameFields = allFields.filter(f => (existingData[f] || '') === (state[f] || '') && (existingData[f] || state[f] || ''));
 
-          const existingCell = existingVal
-            ? `<div class="diff-value-old">${escapeDiffHtml(existingVal)}</div>`
-            : '<div class="diff-value-empty">empty</div>';
-          const currentCell = currentVal
-            ? `<div class="diff-value-new">${escapeDiffHtml(currentVal)}</div>`
-            : '<div class="diff-value-empty">empty</div>';
-
-          const useBtn = isSame ? '' : `<button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applySimilarityField('${f}')">Use</button>`;
-
-          return `<tr>
-            <td class="diff-field-label">${label}</td>
-            <td>${existingCell}</td>
-            <td>${currentCell}</td>
-            <td class="diff-apply-col">${useBtn}</td>
-          </tr>`;
-        }).join('');
-
-        dom.diffModalBody.innerHTML = `
+        const eventName = escapeDiffHtml(match.event.name || match.event.title || 'Unknown Event');
+        const headerHtml = `
           <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(96, 165, 250, 0.1); border-radius: 8px; font-size: 0.85rem;">
-            <p><strong>Comparing with existing event:</strong> ${match.event.name || match.event.title || 'Unknown Event'}</p>
-            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
+            <p style="margin: 0 0 0.75rem"><strong>Comparing with existing event:</strong> ${eventName}</p>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button type="button" class="primary-button action-button is-compact" id="similarity-load-btn">Load Existing</button>
               <button type="button" class="secondary-button action-button is-compact" id="similarity-link-btn">Link Edits</button>
               <button type="button" class="ghost-button action-button is-compact" id="similarity-dismiss-btn">Dismiss</button>
             </div>
-          </div>
-          <table class="diff-table">
-            <thead><tr><th>Field</th><th>Existing</th><th>Current Draft</th><th></th></tr></thead>
-            <tbody>${fields}</tbody>
-          </table>`;
+          </div>`;
 
-          document.getElementById('similarity-load-btn').onclick = () => loadSimilarEvent(match);
-          document.getElementById('similarity-link-btn').onclick = () => linkToSimilarEvent(match);
-          document.getElementById('similarity-dismiss-btn').onclick = () => closeDiffPanel();
+        let bodyHtml = '';
+        if (!changedFields.length) {
+          bodyHtml = '<p class="diff-no-changes">Events look identical — no differences found.</p>';
+        } else if (diffViewMode === 'stacked') {
+          const changedHtml = changedFields.map(f => {
+            const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
+            const oldVal = escapeDiffHtml(existingData[f] || '');
+            const newVal = escapeDiffHtml(state[f] || '');
+            const removedLine = oldVal ? `<div class="diff-line-removed"><span class="diff-line-prefix">−</span>${oldVal}</div>` : '';
+            const addedLine = newVal ? `<div class="diff-line-added"><span class="diff-line-prefix">+</span>${newVal}</div>` : '';
+            return `<div class="diff-line-field">
+              <div class="diff-line-field-label">${label}</div>
+              ${removedLine}${addedLine}
+              <div class="diff-line-field-footer">
+                <button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applySimilarityField('${f}')">Use existing</button>
+              </div>
+            </div>`;
+          }).join('');
+          const sameHtml = sameFields.map(f => {
+            const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
+            const val = escapeDiffHtml(existingData[f] || state[f] || '');
+            return `<div class="diff-line-field" style="opacity: 0.45;">
+              <div class="diff-line-field-label">${label} ✓</div>
+              <div style="padding: 0.3rem 0.6rem; font-size: 0.8rem; color: var(--text-secondary);">${val}</div>
+            </div>`;
+          }).join('');
+          bodyHtml = `<div class="diff-line-view">${changedHtml}${sameHtml}</div>`;
+        } else {
+          const changedRows = changedFields.map(f => {
+            const label = DIFF_FIELD_LABELS[f];
+            const existingVal = escapeDiffHtml(existingData[f] || '');
+            const currentVal = escapeDiffHtml(state[f] || '');
+            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            const currentCell = currentVal ? `<span class="diff-value-new">${currentVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            return `<tr>
+              <td class="diff-field-label">${label}</td>
+              <td>${existingCell}</td>
+              <td>${currentCell}</td>
+              <td class="diff-apply-col"><button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applySimilarityField('${f}')">Use</button></td>
+            </tr>`;
+          }).join('');
+          const sameRows = sameFields.map(f => {
+            const label = DIFF_FIELD_LABELS[f];
+            const val = escapeDiffHtml(existingData[f] || state[f] || '');
+            return `<tr style="opacity: 0.45;">
+              <td class="diff-field-label">${label}</td>
+              <td colspan="2"><span class="diff-value-new">✓ ${val}</span></td>
+              <td></td>
+            </tr>`;
+          }).join('');
+          bodyHtml = `<table class="diff-table">
+            <thead><tr><th>Field</th><th>Existing</th><th>Current Draft</th><th></th></tr></thead>
+            <tbody>${changedRows}${sameRows}</tbody>
+          </table>`;
+        }
+
+        dom.diffModalBody.innerHTML = headerHtml + bodyHtml;
+        document.getElementById('similarity-load-btn').onclick = () => loadSimilarEvent(match);
+        document.getElementById('similarity-link-btn').onclick = () => linkToSimilarEvent(match);
+        document.getElementById('similarity-dismiss-btn').onclick = () => closeDiffPanel();
       }
 
       window.applySimilarityField = (field) => {
@@ -6106,7 +6145,17 @@ Return only the complete URL, with no explanation unless asked.`;
           dom.diffViewStackedButton.classList.toggle('is-active', diffViewMode === 'stacked');
           dom.diffViewStackedButton.setAttribute('aria-pressed', String(diffViewMode === 'stacked'));
         }
-        buildDiffModalContent();
+        if (diffPanelMode === 'similarity' && currentSimilarityMatch) {
+          const existingData = buildExistingState(currentSimilarityMatch.event, {
+            cityKey: currentSimilarityMatch.baseEvent.city || state.city,
+            startDate: currentSimilarityMatch.event.startDate,
+            endDate: currentSimilarityMatch.event.endDate,
+            recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
+          });
+          buildSimilarityDiffContent(existingData, currentSimilarityMatch);
+        } else {
+          buildDiffModalContent();
+        }
       }
 
       function buildDiffModalContent() {
@@ -6165,6 +6214,7 @@ Return only the complete URL, with no explanation unless asked.`;
 
       function openDiffPanel() {
         if (!dom.diffPanel) return;
+        diffPanelMode = 'diff';
         buildDiffModalContent();
         if (!dom.diffPanel.open) {
           if (typeof dom.diffPanel.showModal === 'function') {
