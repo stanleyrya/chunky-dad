@@ -613,9 +613,13 @@
       margin-top: 0.35rem;
     }
 
+    dialog:not([open]) {
+      display: none !important;
+    }
+
     .existing-modal {
       margin: auto;
-      width: min(760px, calc(100vw - 2rem));
+      width: min(1100px, calc(100vw - 2rem));
       max-width: calc(100vw - 2rem);
       border: none;
       border-radius: 16px;
@@ -623,8 +627,8 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
-      min-height: 500px;
-      max-height: 90vh;
+      min-height: 80vh;
+      max-height: 95vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -666,7 +670,7 @@
 
     .ai-modal {
       margin: auto;
-      width: min(460px, calc(100vw - 2rem));
+      width: min(620px, calc(100vw - 2rem));
       max-width: calc(100vw - 2rem);
       border: none;
       border-radius: 16px;
@@ -674,8 +678,8 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
-      min-height: 300px;
-      max-height: 90vh;
+      min-height: 50vh;
+      max-height: 95vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -717,7 +721,7 @@
 
     .diff-modal {
       margin: auto;
-      width: min(760px, calc(100vw - 2rem));
+      width: min(1100px, calc(100vw - 2rem));
       max-width: calc(100vw - 2rem);
       border: none;
       border-radius: 16px;
@@ -725,8 +729,8 @@
       background: var(--panel-bg);
       color: var(--text-primary);
       box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
-      min-height: 500px;
-      max-height: 90vh;
+      min-height: 80vh;
+      max-height: 95vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -5659,7 +5663,7 @@
 
           const text = document.createElement('span');
           text.className = 'similarity-item-text';
-          text.textContent = match.event.title || match.event.name || 'Untitled Event';
+          text.textContent = match.event.name || match.event.title || 'Untitled Event';
           if (match.isOccurrence) {
             text.textContent += ` (Occurrence)`;
           }
@@ -5687,7 +5691,7 @@
 
         existingCalendarIndex.events.forEach(event => {
           // Check for title similarity
-          const titlesSimilar = sharedCore.areTitlesSimilar(event.title, draft.name);
+          const titlesSimilar = sharedCore.areTitlesSimilar(event.name || event.title, draft.name);
 
           // Check if event occurs on the same day
           let occursOnDate = false;
@@ -5786,7 +5790,7 @@
 
         dom.diffModalBody.innerHTML = `
           <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(96, 165, 250, 0.1); border-radius: 8px; font-size: 0.85rem;">
-            <p><strong>Comparing with existing event:</strong> ${match.event.title}</p>
+            <p><strong>Comparing with existing event:</strong> ${match.event.name || match.event.title || 'Unknown Event'}</p>
             <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
               <button type="button" class="primary-button action-button is-compact" id="similarity-load-btn">Load Existing</button>
               <button type="button" class="secondary-button action-button is-compact" id="similarity-link-btn">Link Edits</button>
