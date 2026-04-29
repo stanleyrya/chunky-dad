@@ -5584,26 +5584,14 @@
         const matches = [];
 
         existingCalendarIndex.events.forEach(event => {
-          const titlesSimilar = sharedCore.areTitlesSimilar(event.name || event.title, draft.name);
-          if (!titlesSimilar) return;
-
-          if (event.recurring) {
-            matches.push({
-              event: event,
-              baseEvent: event,
-              type: 'series',
-              id: buildResultId(event, 'series'),
-              isOccurrence: false
-            });
-          } else {
-            matches.push({
-              event: event,
-              baseEvent: event,
-              type: 'series',
-              id: buildResultId(event, 'series'),
-              isOccurrence: false
-            });
-          }
+          if (!sharedCore.areTitlesSimilar(event.name || event.title, draft.name)) return;
+          matches.push({
+            event: event,
+            baseEvent: event,
+            type: 'series',
+            id: buildResultId(event, 'series'),
+            isOccurrence: false
+          });
         });
 
         return matches;
@@ -5646,6 +5634,7 @@
                 isOccurrence: true
               });
             } else {
+              // Fallback: occurrence resolution failed, link to the series directly
               matches.push({
                 event: event,
                 baseEvent: event,
