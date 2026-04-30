@@ -5873,13 +5873,12 @@
         state.editingExistingUid = match.baseEvent.uid || '';
 
         const eventToLoad = (match.type === 'occurrence' && match.event) ? match.event : match.baseEvent;
-        const existingState = buildExistingState(eventToLoad, {
+        existingSnapshot = buildExistingSnapshot(eventToLoad, {
           cityKey: match.baseEvent.city || state.city,
           startDate: eventToLoad.startDate,
           endDate: eventToLoad.endDate,
           recurrence: match.baseEvent.recurrence || ''
         });
-        existingSnapshot = snapshotFormFields(existingState);
 
         const summaryText = buildExistingSelectionText(
           match,
@@ -5919,6 +5918,10 @@
         return Object.fromEntries(
           Object.keys(DIFF_FIELD_LABELS).map(f => [f, s[f] || ''])
         );
+      }
+
+      function buildExistingSnapshot(eventData, options = {}) {
+        return snapshotFormFields(buildExistingState(eventData, options));
       }
 
       function updateExistingDiff() {
@@ -6167,7 +6170,7 @@ Return only the complete URL, with no explanation unless asked.`;
             <button type="button" class="primary-button action-button" id="diff-apply-changes-btn">Apply Changes</button>`;
           const discardBtn = document.getElementById('diff-discard-btn');
           const applyBtn = document.getElementById('diff-apply-changes-btn');
-          if (discardBtn) discardBtn.onclick = () => { linkDiffPendingData = null; closeDiffPanel(); };
+          if (discardBtn) discardBtn.onclick = () => closeDiffPanel();
           if (applyBtn) applyBtn.onclick = applyLinkDiffChanges;
         } else {
           dom.diffModalFooterLeft.innerHTML = '';
@@ -6315,7 +6318,8 @@ Return only the complete URL, with no explanation unless asked.`;
 
         const { mode, baseEvent, eventData, startDate, endDate, summaryResult, occurrenceId, existingResultId } = linkDiffPendingData;
         const linkCheckbox = document.getElementById('diff-link-checkbox');
-        const shouldLink = !linkCheckbox || linkCheckbox.checked;
+        // Default to linking if the checkbox element is unexpectedly missing (it is always rendered by updateDiffModalFooter)
+        const shouldLink = linkCheckbox ? linkCheckbox.checked : true;
 
         if (shouldLink) {
           state.isEditingExisting = true;
