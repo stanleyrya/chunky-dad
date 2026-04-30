@@ -166,6 +166,11 @@
       margin-bottom: 0.75rem;
     }
 
+    .panel-header > div {
+      flex: 1;
+      min-width: 0;
+    }
+
     .panel-header h2 {
       margin: 0;
       font-size: 1.15rem;
@@ -758,6 +763,11 @@
       gap: 1rem;
     }
 
+    .diff-modal__header > div:first-child {
+      flex: 1;
+      min-width: 0;
+    }
+
     .diff-modal__header h2 {
       margin: 0;
       font-size: 1.05rem;
@@ -907,7 +917,33 @@
       padding: 0.65rem 1rem;
       border-top: 1px solid var(--border-color, rgba(255,255,255,0.1));
       display: flex;
+      align-items: center;
       justify-content: flex-end;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .diff-modal-footer-left {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .diff-link-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .diff-link-checkbox-label input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
     }
 
     .diff-table td.diff-apply-col {
@@ -1963,6 +1999,7 @@
                   <span>Open in Google</span>
                 </a>
               </div>
+            </div>
             <div class="series-override-warning is-hidden" id="series-override-warning">
               <p id="series-override-warning-text"></p>
               <ul class="series-override-warning-list" id="series-override-warning-list"></ul>
@@ -2431,9 +2468,9 @@
             <i class="bi bi-files" aria-hidden="true"></i>
             <span>Copy to New</span>
           </button>
-          <button type="button" class="secondary-button action-button" id="existing-link" title="Link your current draft to this existing event without replacing your changes">
-            <i class="bi bi-link-45deg" aria-hidden="true"></i>
-            <span>Link Edits</span>
+          <button type="button" class="secondary-button action-button" id="existing-link" title="Compare your draft with this existing event and choose what to apply">
+            <i class="bi bi-subtract" aria-hidden="true"></i>
+            <span>Diff</span>
           </button>
           <button type="button" class="ghost-button action-button" id="existing-clear">
             <i class="bi bi-x-circle" aria-hidden="true"></i>
@@ -2465,7 +2502,7 @@
       <div class="diff-modal__header">
         <div>
           <h2 id="diff-modal-title">Changes vs. Existing Event</h2>
-          <p class="panel-subtitle">Fields changed since loading the existing event.</p>
+          <p class="panel-subtitle" id="diff-modal-subtitle">Fields changed since loading the existing event.</p>
         </div>
         <div class="diff-modal__header-controls">
           <div class="diff-view-toggle" id="diff-view-toggle" aria-label="Diff view layout">
@@ -2488,6 +2525,10 @@
         </div>
       </div>
       <div id="diff-modal-body"></div>
+    </div>
+    <div class="diff-modal-footer" id="diff-modal-footer">
+      <div class="diff-modal-footer-left" id="diff-modal-footer-left"></div>
+      <div id="diff-modal-footer-actions"></div>
     </div>
   </dialog>
 
@@ -2539,8 +2580,9 @@
       let state;
       let existingSnapshot = null;
       let diffViewMode = 'side'; // 'side' or 'stacked'
-      let diffPanelMode = 'diff'; // 'diff' or 'similarity'
+      let diffPanelMode = 'diff'; // 'diff', 'similarity', or 'link'
       let diffReplaceMode = false; // whether to show replace buttons in the normal diff
+      let linkDiffPendingData = null; // pending selection data when in 'link' diff mode
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
       let lastRecurrenceConstraintWarning = '';
@@ -2748,6 +2790,11 @@
         dom.diffViewSideButton = document.getElementById('diff-view-side');
         dom.diffViewStackedButton = document.getElementById('diff-view-stacked');
         dom.diffReplaceToggle = document.getElementById('diff-replace-toggle');
+        dom.diffModalTitle = document.getElementById('diff-modal-title');
+        dom.diffModalSubtitle = document.getElementById('diff-modal-subtitle');
+        dom.diffModalFooter = document.getElementById('diff-modal-footer');
+        dom.diffModalFooterLeft = document.getElementById('diff-modal-footer-left');
+        dom.diffModalFooterActions = document.getElementById('diff-modal-footer-actions');
         dom.existingDeleteOverrideSummaryButton = document.getElementById('existing-delete-override-summary');
         dom.seriesOverrideWarning = document.getElementById('series-override-warning');
         dom.seriesOverrideWarningText = document.getElementById('series-override-warning-text');
@@ -5175,7 +5222,7 @@
         closeExistingPanel();
       }
 
-      function linkExistingSelection() {
+      function openLinkDiffPanel() {
         const selection = resolveExistingSelection('edit');
         if (selection.error) {
           showToast(selection.error, 'warn');
@@ -5194,28 +5241,39 @@
           occurrenceId
         } = selection;
 
-        state.isEditingExisting = true;
-        state.editingExistingId = selectedExistingResult.id;
-        state.editingExistingMode = mode;
-        state.editingExistingOccurrenceId = occurrenceId;
-        const editingUid = (baseEvent && baseEvent.uid) || eventData.uid || '';
-        state.editingExistingUid = editingUid;
-
-        existingSnapshot = snapshotFormFields(state);
-
-        const summaryText = buildExistingSelectionText(
-          summaryResult || selectedExistingResult,
+        // Store pending data so the diff panel can apply or discard the link
+        linkDiffPendingData = {
           mode,
+          baseEvent,
+          eventData,
           startDate,
           endDate,
-          'edit'
-        );
-        setExistingSelectionSummary(summaryText, 'edit');
+          recurrence,
+          summaryResult,
+          occurrenceId,
+          existingResultId: selectedExistingResult ? selectedExistingResult.id : '',
+          existingState: buildExistingState(eventData, {
+            cityKey: eventData.city || state.city,
+            startDate,
+            endDate,
+            recurrence
+          })
+        };
 
-        applyStateToForm();
-        refreshUi();
         closeExistingPanel();
-        showToast('Draft linked to existing event.', 'success');
+        diffPanelMode = 'link';
+        buildDiffModalContent();
+        updateDiffModalViewToggle();
+        if (!dom.diffPanel.open) {
+          if (typeof dom.diffPanel.showModal === 'function') {
+            dom.diffPanel.showModal();
+          } else {
+            dom.diffPanel.setAttribute('open', '');
+          }
+        }
+        if (dom.diffButton) {
+          dom.diffButton.setAttribute('aria-expanded', 'true');
+        }
       }
 
       function buildExistingState(eventData, options = {}) {
@@ -5669,15 +5727,7 @@
         });
 
         buildSimilarityDiffContent(existingData, match);
-
-        if (dom.diffViewSideButton) {
-          dom.diffViewSideButton.classList.toggle('is-active', diffViewMode === 'side');
-          dom.diffViewSideButton.setAttribute('aria-pressed', String(diffViewMode === 'side'));
-        }
-        if (dom.diffViewStackedButton) {
-          dom.diffViewStackedButton.classList.toggle('is-active', diffViewMode === 'stacked');
-          dom.diffViewStackedButton.setAttribute('aria-pressed', String(diffViewMode === 'stacked'));
-        }
+        updateDiffModalViewToggle();
 
         if (!dom.diffPanel.open) {
           dom.diffPanel.showModal();
@@ -5686,6 +5736,9 @@
 
       function buildSimilarityDiffContent(existingData, match) {
         if (!dom.diffModalBody) return;
+        if (dom.diffModalTitle) dom.diffModalTitle.textContent = 'Similar Event Found';
+        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = 'Compare with an existing event and decide how to proceed.';
+        if (dom.diffReplaceToggle) dom.diffReplaceToggle.classList.add('is-hidden');
 
         const allFields = Object.keys(DIFF_FIELD_LABELS);
         const changedFields = allFields.filter(f => (existingData[f] || '') !== (state[f] || ''));
@@ -5764,6 +5817,7 @@
         document.getElementById('similarity-load-btn').onclick = () => loadSimilarEvent(match);
         document.getElementById('similarity-link-btn').onclick = () => linkToSimilarEvent(match);
         document.getElementById('similarity-dismiss-btn').onclick = () => closeDiffPanel();
+        updateDiffModalFooter();
       }
 
       window.applySimilarityField = (field) => {
@@ -5819,7 +5873,7 @@
         state.editingExistingUid = match.baseEvent.uid || '';
 
         const eventToLoad = (match.type === 'occurrence' && match.event) ? match.event : match.baseEvent;
-        existingSnapshot = buildExistingState(eventToLoad, {
+        existingSnapshot = buildExistingSnapshot(eventToLoad, {
           cityKey: match.baseEvent.city || state.city,
           startDate: eventToLoad.startDate,
           endDate: eventToLoad.endDate,
@@ -5864,6 +5918,10 @@
         return Object.fromEntries(
           Object.keys(DIFF_FIELD_LABELS).map(f => [f, s[f] || ''])
         );
+      }
+
+      function buildExistingSnapshot(eventData, options = {}) {
+        return snapshotFormFields(buildExistingState(eventData, options));
       }
 
       function updateExistingDiff() {
@@ -6065,14 +6123,7 @@ Return only the complete URL, with no explanation unless asked.`;
 
       function setDiffViewMode(mode) {
         diffViewMode = mode === 'stacked' ? 'stacked' : 'side';
-        if (dom.diffViewSideButton) {
-          dom.diffViewSideButton.classList.toggle('is-active', diffViewMode === 'side');
-          dom.diffViewSideButton.setAttribute('aria-pressed', String(diffViewMode === 'side'));
-        }
-        if (dom.diffViewStackedButton) {
-          dom.diffViewStackedButton.classList.toggle('is-active', diffViewMode === 'stacked');
-          dom.diffViewStackedButton.setAttribute('aria-pressed', String(diffViewMode === 'stacked'));
-        }
+        updateDiffModalViewToggle();
         if (diffPanelMode === 'similarity' && currentSimilarityMatch) {
           const existingData = buildExistingState(currentSimilarityMatch.event, {
             cityKey: currentSimilarityMatch.baseEvent.city || state.city,
@@ -6095,10 +6146,56 @@ Return only the complete URL, with no explanation unless asked.`;
         buildDiffModalContent();
       }
 
+      function updateDiffModalViewToggle() {
+        if (dom.diffViewSideButton) {
+          dom.diffViewSideButton.classList.toggle('is-active', diffViewMode === 'side');
+          dom.diffViewSideButton.setAttribute('aria-pressed', String(diffViewMode === 'side'));
+        }
+        if (dom.diffViewStackedButton) {
+          dom.diffViewStackedButton.classList.toggle('is-active', diffViewMode === 'stacked');
+          dom.diffViewStackedButton.setAttribute('aria-pressed', String(diffViewMode === 'stacked'));
+        }
+      }
+
+      function updateDiffModalFooter() {
+        if (!dom.diffModalFooterLeft || !dom.diffModalFooterActions) return;
+        if (diffPanelMode === 'link') {
+          dom.diffModalFooterLeft.innerHTML = `
+            <label class="diff-link-checkbox-label">
+              <input type="checkbox" id="diff-link-checkbox" checked>
+              Link draft to this existing event
+            </label>`;
+          dom.diffModalFooterActions.innerHTML = `
+            <button type="button" class="ghost-button action-button" id="diff-discard-btn">Discard</button>
+            <button type="button" class="primary-button action-button" id="diff-apply-changes-btn">Apply Changes</button>`;
+          const discardBtn = document.getElementById('diff-discard-btn');
+          const applyBtn = document.getElementById('diff-apply-changes-btn');
+          if (discardBtn) discardBtn.onclick = () => closeDiffPanel();
+          if (applyBtn) applyBtn.onclick = applyLinkDiffChanges;
+        } else {
+          dom.diffModalFooterLeft.innerHTML = '';
+          dom.diffModalFooterActions.innerHTML = `
+            <button type="button" class="ghost-button action-button" id="diff-close-btn">Close</button>`;
+          const closeBtn = document.getElementById('diff-close-btn');
+          if (closeBtn) closeBtn.onclick = () => closeDiffPanel();
+        }
+      }
+
       function buildDiffModalContent() {
         if (!dom.diffModalBody) return;
+
+        if (diffPanelMode === 'link') {
+          buildLinkDiffContent();
+          return;
+        }
+
+        if (dom.diffModalTitle) dom.diffModalTitle.textContent = 'Changes vs. Existing Event';
+        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = 'Fields changed since loading the existing event.';
+        if (dom.diffReplaceToggle) dom.diffReplaceToggle.classList.remove('is-hidden');
+
         if (!state || !state.isEditingExisting || !existingSnapshot) {
           dom.diffModalBody.innerHTML = '<p class="diff-no-changes">No existing event loaded.</p>';
+          updateDiffModalFooter();
           return;
         }
         const changed = Object.keys(DIFF_FIELD_LABELS).filter(
@@ -6106,6 +6203,7 @@ Return only the complete URL, with no explanation unless asked.`;
         );
         if (!changed.length) {
           dom.diffModalBody.innerHTML = '<p class="diff-no-changes">No changes detected.</p>';
+          updateDiffModalFooter();
           return;
         }
         if (diffViewMode === 'stacked') {
@@ -6149,20 +6247,111 @@ Return only the complete URL, with no explanation unless asked.`;
             <tbody>${rows}</tbody>
           </table>`;
         }
+        updateDiffModalFooter();
+      }
+
+      function buildLinkDiffContent() {
+        if (!dom.diffModalBody || !linkDiffPendingData) return;
+        if (dom.diffModalTitle) dom.diffModalTitle.textContent = 'Compare with Existing Event';
+        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = 'Apply field values from the existing event to your draft, then click Apply Changes.';
+        if (dom.diffReplaceToggle) dom.diffReplaceToggle.classList.add('is-hidden');
+
+        const existingData = linkDiffPendingData.existingState;
+        const allFields = Object.keys(DIFF_FIELD_LABELS);
+        const changedFields = allFields.filter(f => (existingData[f] || '') !== (state[f] || ''));
+
+        if (!changedFields.length) {
+          dom.diffModalBody.innerHTML = '<p class="diff-no-changes">Your draft already matches the existing event.</p>';
+          updateDiffModalFooter();
+          return;
+        }
+
+        if (diffViewMode === 'stacked') {
+          const fields = changedFields.map(f => {
+            const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
+            const existingVal = escapeDiffHtml(existingData[f] || '');
+            const draftVal = escapeDiffHtml(state[f] || '');
+            const removedLine = existingVal ? `<div class="diff-line-removed"><span class="diff-line-prefix">−</span>${existingVal}</div>` : '';
+            const addedLine = draftVal ? `<div class="diff-line-added"><span class="diff-line-prefix">+</span>${draftVal}</div>` : '';
+            return `<div class="diff-line-field">
+              <div class="diff-line-field-label">${label}</div>
+              ${removedLine}${addedLine}
+              <div class="diff-line-field-footer">
+                <button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applyLinkDiffField('${f}')">Use existing</button>
+              </div>
+            </div>`;
+          }).join('');
+          dom.diffModalBody.innerHTML = `<div class="diff-line-view">${fields}</div>`;
+        } else {
+          const rows = changedFields.map(f => {
+            const label = DIFF_FIELD_LABELS[f];
+            const existingVal = escapeDiffHtml(existingData[f] || '');
+            const draftVal = escapeDiffHtml(state[f] || '');
+            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            const draftCell = draftVal ? `<span class="diff-value-new">${draftVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            return `<tr>
+              <td class="diff-field-label">${label}</td>
+              <td>${existingCell}</td>
+              <td>${draftCell}</td>
+              <td class="diff-apply-col"><button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applyLinkDiffField('${f}')">Use existing</button></td>
+            </tr>`;
+          }).join('');
+          dom.diffModalBody.innerHTML = `<table class="diff-table">
+            <thead><tr><th>Field</th><th>Existing Event</th><th>Your Draft</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+        }
+        updateDiffModalFooter();
+      }
+
+      window.applyLinkDiffField = (field) => {
+        if (!linkDiffPendingData) return;
+        state[field] = linkDiffPendingData.existingState[field] || '';
+        applyStateToForm();
+        refreshUi();
+        buildLinkDiffContent();
+        updateDiffModalFooter();
+      };
+
+      function applyLinkDiffChanges() {
+        if (!linkDiffPendingData) { closeDiffPanel(); return; }
+
+        const { mode, baseEvent, eventData, startDate, endDate, summaryResult, occurrenceId, existingResultId } = linkDiffPendingData;
+        const linkCheckbox = document.getElementById('diff-link-checkbox');
+        // Default to linking if the checkbox element is unexpectedly missing (it is always rendered by updateDiffModalFooter)
+        const shouldLink = linkCheckbox ? linkCheckbox.checked : true;
+
+        if (shouldLink) {
+          state.isEditingExisting = true;
+          state.editingExistingId = existingResultId || (baseEvent && baseEvent.id) || '';
+          state.editingExistingMode = mode;
+          state.editingExistingOccurrenceId = occurrenceId;
+          const editingUid = (baseEvent && baseEvent.uid) || eventData.uid || '';
+          state.editingExistingUid = editingUid;
+          existingSnapshot = snapshotFormFields(linkDiffPendingData.existingState);
+
+          const summaryText = buildExistingSelectionText(
+            summaryResult || { event: eventData, baseEvent },
+            mode,
+            startDate,
+            endDate,
+            'edit'
+          );
+          setExistingSelectionSummary(summaryText, 'edit');
+        }
+
+        linkDiffPendingData = null;
+        applyStateToForm();
+        refreshUi();
+        closeDiffPanel();
+        showToast(shouldLink ? 'Draft linked and changes applied.' : 'Changes applied.', 'success');
       }
 
       function openDiffPanel() {
         if (!dom.diffPanel) return;
         diffPanelMode = 'diff';
         buildDiffModalContent();
-        if (dom.diffViewSideButton) {
-          dom.diffViewSideButton.classList.toggle('is-active', diffViewMode === 'side');
-          dom.diffViewSideButton.setAttribute('aria-pressed', String(diffViewMode === 'side'));
-        }
-        if (dom.diffViewStackedButton) {
-          dom.diffViewStackedButton.classList.toggle('is-active', diffViewMode === 'stacked');
-          dom.diffViewStackedButton.setAttribute('aria-pressed', String(diffViewMode === 'stacked'));
-        }
+        updateDiffModalViewToggle();
         if (!dom.diffPanel.open) {
           if (typeof dom.diffPanel.showModal === 'function') {
             dom.diffPanel.showModal();
@@ -6176,6 +6365,7 @@ Return only the complete URL, with no explanation unless asked.`;
       }
 
       function closeDiffPanel() {
+        linkDiffPendingData = null;
         diffReplaceMode = false;
         if (dom.diffReplaceToggle) {
           dom.diffReplaceToggle.classList.remove('is-active');
@@ -6951,7 +7141,7 @@ Return only the complete URL, with no explanation unless asked.`;
           dom.existingCopyButton.addEventListener('click', copyExistingSelection);
         }
         if (dom.existingLinkButton) {
-          dom.existingLinkButton.addEventListener('click', linkExistingSelection);
+          dom.existingLinkButton.addEventListener('click', openLinkDiffPanel);
         }
         if (dom.existingClearButton) {
           dom.existingClearButton.addEventListener('click', () => {
