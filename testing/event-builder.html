@@ -5746,7 +5746,6 @@
       function buildSimilarityDiffContent(existingData, match) {
         if (!dom.diffModalBody) return;
         if (dom.diffModalTitle) dom.diffModalTitle.textContent = 'Similar Event Found';
-        const eventName = escapeDiffHtml(match.event.name || match.event.title || 'Unknown Event');
         if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = `Comparing with: ${match.event.name || match.event.title || 'Unknown Event'}`;
         if (dom.diffReplaceToggle) dom.diffReplaceToggle.classList.add('is-hidden');
 
@@ -5827,7 +5826,13 @@
         applyStateToForm();
         refreshUi();
         if (currentSimilarityMatch) {
-          buildSimilarityDiffContent(existingData, currentSimilarityMatch);
+          const refreshedData = buildExistingState(currentSimilarityMatch.event, {
+            cityKey: currentSimilarityMatch.baseEvent.city || state.city,
+            startDate: currentSimilarityMatch.event.startDate,
+            endDate: currentSimilarityMatch.event.endDate,
+            recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
+          });
+          buildSimilarityDiffContent(refreshedData, currentSimilarityMatch);
         }
       };
 
