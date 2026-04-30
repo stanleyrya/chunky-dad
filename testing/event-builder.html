@@ -758,12 +758,18 @@
 
     .diff-modal__header {
       display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .diff-modal__header-row {
+      display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 1rem;
     }
 
-    .diff-modal__header > div:first-child {
+    .diff-modal__header-row > div:first-child {
       flex: 1;
       min-width: 0;
     }
@@ -784,7 +790,6 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      flex-shrink: 0;
     }
 
     .diff-no-changes {
@@ -2500,12 +2505,17 @@
   <dialog class="diff-modal" id="diff-panel" aria-labelledby="diff-modal-title">
     <div class="diff-modal__content">
       <div class="diff-modal__header">
-        <div>
-          <h2 id="diff-modal-title">Changes vs. Existing Event</h2>
-          <p class="panel-subtitle" id="diff-modal-subtitle">Fields changed since loading the existing event.</p>
+        <div class="diff-modal__header-row">
+          <div>
+            <h2 id="diff-modal-title">Changes vs. Existing Event</h2>
+            <p class="panel-subtitle" id="diff-modal-subtitle">Fields changed since loading the existing event.</p>
+          </div>
+          <button type="button" class="ghost-button action-button diff-modal__close" id="diff-modal-close" aria-label="Close diff dialog">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
         </div>
-        <div class="diff-modal__header-controls">
-          <div class="diff-view-toggle" id="diff-view-toggle" aria-label="Diff view layout">
+        <div class="diff-modal__header-controls" id="diff-view-toggle" aria-label="Diff view layout">
+          <div class="diff-view-toggle">
             <button type="button" id="diff-view-side" class="is-active" aria-pressed="true" title="Side by side">
               <i class="bi bi-layout-split" aria-hidden="true"></i>
               <span>Side by side</span>
@@ -2518,9 +2528,6 @@
           <button type="button" id="diff-replace-toggle" class="ghost-button action-button is-compact" aria-pressed="false" title="Show replace buttons to restore calendar values">
             <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
             <span>Restore</span>
-          </button>
-          <button type="button" class="ghost-button action-button diff-modal__close" id="diff-modal-close" aria-label="Close diff dialog">
-            <i class="bi bi-x-lg" aria-hidden="true"></i>
           </button>
         </div>
       </div>
@@ -5262,6 +5269,7 @@
 
         closeExistingPanel();
         diffPanelMode = 'link';
+        diffViewMode = 'side';
         buildDiffModalContent();
         updateDiffModalViewToggle();
         if (!dom.diffPanel.open) {
@@ -5718,6 +5726,7 @@
       function openSimilarityDiff(match) {
         if (!dom.diffPanel) return;
         diffPanelMode = 'similarity';
+        diffViewMode = 'side';
         currentSimilarityMatch = match;
         const existingData = buildExistingState(match.event, {
           cityKey: match.baseEvent.city || state.city,
@@ -5737,25 +5746,13 @@
       function buildSimilarityDiffContent(existingData, match) {
         if (!dom.diffModalBody) return;
         if (dom.diffModalTitle) dom.diffModalTitle.textContent = 'Similar Event Found';
-        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = 'Compare with an existing event and decide how to proceed.';
+        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = `Comparing with: ${match.event.name || match.event.title || 'Unknown Event'}`;
         if (dom.diffReplaceToggle) dom.diffReplaceToggle.classList.add('is-hidden');
 
         const allFields = Object.keys(DIFF_FIELD_LABELS);
         const changedFields = allFields.filter(f => (existingData[f] || '') !== (state[f] || ''));
         // Only include "same" fields that actually have a value — empty-on-both fields add no useful info
         const sameFields = allFields.filter(f => (existingData[f] || '') === (state[f] || '') && (existingData[f] || state[f] || ''));
-
-        // Normalized events store the display name under `.name`; `.title` is the raw iCal SUMMARY fallback
-        const eventName = escapeDiffHtml(match.event.name || match.event.title || 'Unknown Event');
-        const headerHtml = `
-          <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(96, 165, 250, 0.1); border-radius: 8px; font-size: 0.85rem;">
-            <p style="margin: 0 0 0.75rem"><strong>Comparing with existing event:</strong> ${eventName}</p>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button type="button" class="primary-button action-button is-compact" id="similarity-load-btn">Load Existing</button>
-              <button type="button" class="secondary-button action-button is-compact" id="similarity-link-btn">Link Edits</button>
-              <button type="button" class="ghost-button action-button is-compact" id="similarity-dismiss-btn">Dismiss</button>
-            </div>
-          </div>`;
 
         let bodyHtml = '';
         if (!changedFields.length) {
@@ -5813,10 +5810,7 @@
           </table>`;
         }
 
-        dom.diffModalBody.innerHTML = headerHtml + bodyHtml;
-        document.getElementById('similarity-load-btn').onclick = () => loadSimilarEvent(match);
-        document.getElementById('similarity-link-btn').onclick = () => linkToSimilarEvent(match);
-        document.getElementById('similarity-dismiss-btn').onclick = () => closeDiffPanel();
+        dom.diffModalBody.innerHTML = bodyHtml;
         updateDiffModalFooter();
       }
 
@@ -5832,7 +5826,13 @@
         applyStateToForm();
         refreshUi();
         if (currentSimilarityMatch) {
-          openSimilarityDiff(currentSimilarityMatch);
+          const refreshedData = buildExistingState(currentSimilarityMatch.event, {
+            cityKey: currentSimilarityMatch.baseEvent.city || state.city,
+            startDate: currentSimilarityMatch.event.startDate,
+            endDate: currentSimilarityMatch.event.endDate,
+            recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
+          });
+          buildSimilarityDiffContent(refreshedData, currentSimilarityMatch);
         }
       };
 
@@ -6166,12 +6166,21 @@ Return only the complete URL, with no explanation unless asked.`;
               Link draft to this existing event
             </label>`;
           dom.diffModalFooterActions.innerHTML = `
-            <button type="button" class="ghost-button action-button" id="diff-discard-btn">Discard</button>
             <button type="button" class="primary-button action-button" id="diff-apply-changes-btn">Apply Changes</button>`;
-          const discardBtn = document.getElementById('diff-discard-btn');
           const applyBtn = document.getElementById('diff-apply-changes-btn');
-          if (discardBtn) discardBtn.onclick = () => closeDiffPanel();
           if (applyBtn) applyBtn.onclick = applyLinkDiffChanges;
+        } else if (diffPanelMode === 'similarity' && currentSimilarityMatch) {
+          dom.diffModalFooterLeft.innerHTML = '';
+          dom.diffModalFooterActions.innerHTML = `
+            <button type="button" class="ghost-button action-button" id="similarity-dismiss-btn">Dismiss</button>
+            <button type="button" class="secondary-button action-button" id="similarity-link-btn">Link Edits</button>
+            <button type="button" class="primary-button action-button" id="similarity-load-btn">Load Existing</button>`;
+          const loadBtn = document.getElementById('similarity-load-btn');
+          const linkBtn = document.getElementById('similarity-link-btn');
+          const dismissBtn = document.getElementById('similarity-dismiss-btn');
+          if (loadBtn) loadBtn.onclick = () => loadSimilarEvent(currentSimilarityMatch);
+          if (linkBtn) linkBtn.onclick = () => linkToSimilarEvent(currentSimilarityMatch);
+          if (dismissBtn) dismissBtn.onclick = () => closeDiffPanel();
         } else {
           dom.diffModalFooterLeft.innerHTML = '';
           dom.diffModalFooterActions.innerHTML = `
@@ -6277,7 +6286,7 @@ Return only the complete URL, with no explanation unless asked.`;
               <div class="diff-line-field-label">${label}</div>
               ${removedLine}${addedLine}
               <div class="diff-line-field-footer">
-                <button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applyLinkDiffField('${f}')">Use existing</button>
+                <button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applyLinkDiffField('${f}')">Replace</button>
               </div>
             </div>`;
           }).join('');
@@ -6293,7 +6302,7 @@ Return only the complete URL, with no explanation unless asked.`;
               <td class="diff-field-label">${label}</td>
               <td>${existingCell}</td>
               <td>${draftCell}</td>
-              <td class="diff-apply-col"><button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applyLinkDiffField('${f}')">Use existing</button></td>
+              <td class="diff-apply-col"><button type="button" class="secondary-button action-button is-compact diff-apply-btn" onclick="applyLinkDiffField('${f}')">Replace</button></td>
             </tr>`;
           }).join('');
           dom.diffModalBody.innerHTML = `<table class="diff-table">
@@ -6350,6 +6359,7 @@ Return only the complete URL, with no explanation unless asked.`;
       function openDiffPanel() {
         if (!dom.diffPanel) return;
         diffPanelMode = 'diff';
+        diffViewMode = 'side';
         buildDiffModalContent();
         updateDiffModalViewToggle();
         if (!dom.diffPanel.open) {
