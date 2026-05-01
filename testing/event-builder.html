@@ -5903,9 +5903,9 @@
       function buildSimilarityDiffContent(existingData, match) {
         if (!dom.diffModalBody) return;
         if (dom.diffModalTitle) dom.diffModalTitle.textContent = 'Similar Event Found';
-        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = diffEditMode
+        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = (diffEditMode
           ? 'Your draft is pre-selected. Click a value to choose which version to keep, then click Apply Changes.'
-          : `Comparing with: ${match.event.name || match.event.title || 'Unknown Event'}`;
+          : `Comparing with: ${match.event.name || match.event.title || 'Unknown Event'}`);
 
         const allFields = Object.keys(DIFF_FIELD_LABELS);
         const changedFields = allFields.filter(f => (existingData[f] || '') !== (state[f] || ''));
