@@ -990,6 +990,96 @@
       margin-right: 0.3rem;
     }
 
+    .diff-value-cell {
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      border-radius: 4px;
+    }
+
+    .diff-cell-selected {
+      background: rgba(105, 240, 174, 0.1);
+      outline: 1.5px solid rgba(105, 240, 174, 0.35);
+    }
+
+    .diff-cell-selected .diff-value-old {
+      text-decoration: none;
+      opacity: 1;
+    }
+
+    .diff-cell-unselected {
+      opacity: 0.38;
+    }
+
+    .diff-cell-unselected:hover {
+      opacity: 0.65;
+    }
+
+    .diff-line-chosen {
+      outline: 1.5px solid rgba(105, 240, 174, 0.35);
+    }
+
+    .diff-line-removed.diff-line-chosen {
+      background: rgba(105, 240, 174, 0.08);
+      color: #69f0ae;
+    }
+
+    .diff-line-added.diff-line-chosen {
+      background: rgba(105, 240, 174, 0.12);
+    }
+
+    @media (max-width: 600px) {
+      .diff-table thead {
+        display: none;
+      }
+
+      .diff-table tr {
+        display: block;
+        border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        overflow: hidden;
+      }
+
+      .diff-table tr:last-child td {
+        border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.07));
+      }
+
+      .diff-table tr:last-child td:last-child {
+        border-bottom: none;
+      }
+
+      .diff-table td.diff-field-label {
+        display: block;
+        width: 100%;
+        font-size: 0.78rem;
+        background: rgba(255,255,255,0.04);
+        border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+        box-sizing: border-box;
+      }
+
+      .diff-table td:not(.diff-field-label) {
+        display: inline-block;
+        width: 50%;
+        box-sizing: border-box;
+        vertical-align: top;
+      }
+
+      .diff-table td:not(.diff-field-label)::before {
+        content: attr(data-col-label);
+        display: block;
+        font-size: 0.68rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .diff-table td[colspan="2"]:not(.diff-field-label) {
+        width: 100%;
+      }
+    }
+
     .ai-agent-list {
       display: grid;
       gap: 0.5rem;
@@ -2609,7 +2699,8 @@
       let existingSnapshot = null;
       let diffViewMode = 'side'; // 'side' or 'stacked'
       let diffPanelMode = 'diff'; // 'diff', 'similarity', or 'link'
-      let diffEditMode = false; // whether to show checkmark selection UI in the diff
+      let diffEditMode = false; // whether to show edit mode UI in the diff
+      let pendingFieldSelections = null; // { fieldName: 'left' | 'right' } staged selections in edit mode
       let linkDiffPendingData = null; // pending selection data when in 'link' diff mode
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
@@ -3351,6 +3442,19 @@
             if (state.editingExistingMode !== selectedExistingMode) {
               state.editingExistingMode = selectedExistingMode;
               scheduleUrlUpdate();
+            }
+            // Rebuild snapshot from the actual calendar event so a page reload
+            // doesn't use user-edited URL values as the diff baseline (issue: "no diff after reload")
+            if (selectedExistingMode === 'series') {
+              const foundEvent = selectedExistingResult.baseEvent || selectedExistingResult.event;
+              if (foundEvent) {
+                existingSnapshot = buildExistingSnapshot(foundEvent, {
+                  cityKey: foundEvent.city || state.city,
+                  startDate: foundEvent.startDate,
+                  endDate: foundEvent.endDate,
+                  recurrence: foundEvent.recurrence || ''
+                });
+              }
             }
           } else if (pendingExistingSelectionId || pendingExistingOccurrenceId) {
             const requestedMode = selectedExistingMode === 'series' ? 'series' : 'occurrence';
@@ -4913,6 +5017,23 @@
         if (matchIndex >= 0) {
           dom.existingOccurrenceSelect.value = String(matchIndex);
           selectedExistingOccurrence = results[matchIndex];
+          // Rebuild snapshot from the actual occurrence so a page reload doesn't use
+          // the URL-encoded user edits as the diff baseline (issue: "no diff after reload")
+          if (state && state.isEditingExisting) {
+            const occResult = results[matchIndex];
+            const occEventData = (occResult.type === 'override' ? occResult.event : null)
+              || occResult.event
+              || (selectedExistingResult && (selectedExistingResult.event || selectedExistingResult.baseEvent));
+            const baseEvent = (selectedExistingResult && (selectedExistingResult.baseEvent || selectedExistingResult.event)) || occResult.event;
+            if (occEventData) {
+              existingSnapshot = buildExistingSnapshot(occEventData, {
+                cityKey: (occEventData.city || (baseEvent && baseEvent.city) || state.city),
+                startDate: occResult.startDate || occEventData.startDate,
+                endDate: occResult.endDate || occEventData.endDate,
+                recurrence: ''
+              });
+            }
+          }
           pendingExistingOccurrenceId = '';
           updateExistingActionButtons();
           return;
@@ -5292,6 +5413,7 @@
         diffPanelMode = 'link';
         diffViewMode = 'side';
         diffEditMode = true; // link mode: edit on by default for selecting values
+        pendingFieldSelections = {};
         if (dom.diffEditToggle) {
           dom.diffEditToggle.classList.add('is-active');
           dom.diffEditToggle.setAttribute('aria-pressed', 'true');
@@ -5754,6 +5876,7 @@
         diffPanelMode = 'similarity';
         diffViewMode = 'side';
         diffEditMode = true; // similarity mode: edit on by default for selecting values
+        pendingFieldSelections = {};
         if (dom.diffEditToggle) {
           dom.diffEditToggle.classList.add('is-active');
           dom.diffEditToggle.setAttribute('aria-pressed', 'true');
@@ -5790,13 +5913,27 @@
         } else if (diffViewMode === 'stacked') {
           const changedHtml = changedFields.map(f => {
             const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
-            const oldVal = escapeDiffHtml(existingData[f] || '');
-            const newVal = escapeDiffHtml(state[f] || '');
-            const removedLine = oldVal
-              ? `<div class="diff-line-removed${diffEditMode ? ' diff-line-selectable' : ''}" ${diffEditMode ? `onclick="applySimilarityField('${f}')" title="Click to use this value"` : ''}><span class="diff-line-prefix">−</span>${oldVal}</div>`
+            const existingVal = escapeDiffHtml(existingData[f] || '');
+            const draftVal = escapeDiffHtml(state[f] || '');
+            if (diffEditMode) {
+              const selLeft = pendingFieldSelections && pendingFieldSelections[f] === 'left';
+              const selRight = !selLeft;
+              const removedLine = existingVal
+                ? `<div class="diff-line-removed diff-line-selectable${selLeft ? ' diff-line-chosen' : ''}" onclick="selectSimilarityField('${f}', 'left')"><span class="${selLeft ? 'diff-line-kept-check' : 'diff-line-prefix'}">${selLeft ? '✓' : '−'}</span>${existingVal}</div>`
+                : '';
+              const addedLine = draftVal
+                ? `<div class="diff-line-added diff-line-selectable${selRight ? ' diff-line-chosen' : ''}" onclick="selectSimilarityField('${f}', 'right')"><span class="${selRight ? 'diff-line-kept-check' : 'diff-line-prefix'}">${selRight ? '✓' : '+'}</span>${draftVal}</div>`
+                : '';
+              return `<div class="diff-line-field">
+                <div class="diff-line-field-label">${label}</div>
+                ${removedLine}${addedLine}
+              </div>`;
+            }
+            const removedLine = existingVal
+              ? `<div class="diff-line-removed"><span class="diff-line-prefix">−</span>${existingVal}</div>`
               : '';
-            const addedLine = newVal
-              ? `<div class="diff-line-added"><span class="${diffEditMode ? 'diff-line-kept-check' : 'diff-line-prefix'}">${diffEditMode ? '✓' : '+'}</span>${newVal}</div>`
+            const addedLine = draftVal
+              ? `<div class="diff-line-added"><span class="diff-line-prefix">+</span>${draftVal}</div>`
               : '';
             return `<div class="diff-line-field">
               <div class="diff-line-field-label">${label}</div>
@@ -5817,33 +5954,43 @@
             const label = DIFF_FIELD_LABELS[f];
             const existingVal = escapeDiffHtml(existingData[f] || '');
             const currentVal = escapeDiffHtml(state[f] || '');
-            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
-            const currentCell = currentVal
-              ? `<span class="diff-value-new">${diffEditMode ? '<span class="diff-kept-check">✓</span>' : ''}${currentVal}</span>`
-              : `<span class="diff-value-empty">${diffEditMode ? '<span class="diff-kept-check">✓</span>' : ''}(empty)</span>`;
-            return diffEditMode
-              ? `<tr>
+            if (diffEditMode) {
+              const selLeft = pendingFieldSelections && pendingFieldSelections[f] === 'left';
+              const selRight = !selLeft;
+              const leftClass = selLeft ? 'diff-cell-selected' : 'diff-cell-unselected';
+              const rightClass = selRight ? 'diff-cell-selected' : 'diff-cell-unselected';
+              const existingContent = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+              const currentContent = currentVal ? `<span class="diff-value-new">${currentVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+              return `<tr>
                   <td class="diff-field-label">${label}</td>
-                  <td class="diff-selectable-cell" onclick="applySimilarityField('${f}')" title="Click to use this value">${existingCell}</td>
-                  <td>${currentCell}</td>
-                </tr>`
-              : `<tr>
-                  <td class="diff-field-label">${label}</td>
-                  <td>${existingCell}</td>
-                  <td>${currentCell}</td>
+                  <td class="diff-value-cell ${leftClass}" data-col-label="Existing" onclick="selectSimilarityField('${f}', 'left')">
+                    ${selLeft ? '<span class="diff-kept-check">✓ </span>' : ''}${existingContent}
+                  </td>
+                  <td class="diff-value-cell ${rightClass}" data-col-label="Your Draft" onclick="selectSimilarityField('${f}', 'right')">
+                    ${selRight ? '<span class="diff-kept-check">✓ </span>' : ''}${currentContent}
+                  </td>
                 </tr>`;
+            }
+            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            const currentCell = currentVal ? `<span class="diff-value-new">${currentVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            return `<tr>
+                <td class="diff-field-label">${label}</td>
+                <td data-col-label="Existing">${existingCell}</td>
+                <td data-col-label="Your Draft">${currentCell}</td>
+              </tr>`;
           }).join('');
           const sameRows = sameFields.map(f => {
             const label = DIFF_FIELD_LABELS[f];
             const val = escapeDiffHtml(existingData[f] || state[f] || '');
             return `<tr style="opacity: 0.45;">
               <td class="diff-field-label">${label}</td>
-              <td colspan="2"><span class="diff-value-new">✓ ${val}</span></td>
+              <td colspan="2" data-col-label="Same"><span class="diff-value-new">✓ ${val}</span></td>
             </tr>`;
           }).join('');
-          const editHint = diffEditMode ? ' <span style="font-size:0.75em;font-weight:normal;color:var(--text-secondary);">(click to use)</span>' : '';
+          const leftHdr = diffEditMode ? 'Existing <span style="font-size:0.75em;font-weight:normal;color:var(--text-secondary);">(click to use)</span>' : 'Existing';
+          const rightHdr = diffEditMode ? '✓ Your Draft' : 'Your Draft';
           bodyHtml = `<table class="diff-table">
-            <thead><tr><th>Field</th><th>Existing${editHint}</th><th>✓ Your Draft</th></tr></thead>
+            <thead><tr><th>Field</th><th>${leftHdr}</th><th>${rightHdr}</th></tr></thead>
             <tbody>${changedRows}${sameRows}</tbody>
           </table>`;
         }
@@ -5852,33 +5999,23 @@
         updateDiffModalFooter();
       }
 
-      window.applySimilarityField = (field) => {
-        if (!currentSimilarityMatch) return;
-        const existingData = buildExistingState(currentSimilarityMatch.event, {
-          cityKey: currentSimilarityMatch.baseEvent.city || state.city,
-          startDate: currentSimilarityMatch.event.startDate,
-          endDate: currentSimilarityMatch.event.endDate,
-          recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
-        });
-        state[field] = existingData[field];
-        applyStateToForm();
-        refreshUi();
+      window.selectSimilarityField = (field, side) => {
+        if (!pendingFieldSelections) pendingFieldSelections = {};
+        pendingFieldSelections[field] = side;
         if (currentSimilarityMatch) {
-          const refreshedData = buildExistingState(currentSimilarityMatch.event, {
+          const existingData = buildExistingState(currentSimilarityMatch.event, {
             cityKey: currentSimilarityMatch.baseEvent.city || state.city,
             startDate: currentSimilarityMatch.event.startDate,
             endDate: currentSimilarityMatch.event.endDate,
             recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
           });
-          buildSimilarityDiffContent(refreshedData, currentSimilarityMatch);
+          buildSimilarityDiffContent(existingData, currentSimilarityMatch);
         }
       };
 
-      window.applyDiffField = (field) => {
-        if (!existingSnapshot) return;
-        state[field] = existingSnapshot[field] || '';
-        applyStateToForm();
-        refreshUi();
+      window.selectDiffField = (field, side) => {
+        if (!pendingFieldSelections) pendingFieldSelections = {};
+        pendingFieldSelections[field] = side;
         buildDiffModalContent();
       };
 
@@ -6181,6 +6318,11 @@ Return only the complete URL, with no explanation unless asked.`;
           dom.diffEditToggle.classList.toggle('is-active', diffEditMode);
           dom.diffEditToggle.setAttribute('aria-pressed', String(diffEditMode));
         }
+        if (diffEditMode) {
+          pendingFieldSelections = {};
+        } else {
+          pendingFieldSelections = null;
+        }
         if (diffPanelMode === 'similarity' && currentSimilarityMatch) {
           const existingData = buildExistingState(currentSimilarityMatch.event, {
             cityKey: currentSimilarityMatch.baseEvent.city || state.city,
@@ -6208,27 +6350,44 @@ Return only the complete URL, with no explanation unless asked.`;
       function updateDiffModalFooter() {
         if (!dom.diffModalFooterLeft || !dom.diffModalFooterActions) return;
         if (diffPanelMode === 'link') {
-          dom.diffModalFooterLeft.innerHTML = `
-            <label class="diff-link-checkbox-label">
-              <input type="checkbox" id="diff-link-checkbox" checked>
-              Link draft to this existing event
-            </label>`;
+          // Link checkbox only shown in edit mode (issue 7)
+          dom.diffModalFooterLeft.innerHTML = diffEditMode
+            ? `<label class="diff-link-checkbox-label">
+                <input type="checkbox" id="diff-link-checkbox" checked>
+                Link draft to this existing event
+              </label>`
+            : '';
           dom.diffModalFooterActions.innerHTML = `
             <button type="button" class="primary-button action-button" id="diff-apply-changes-btn">Apply Changes</button>`;
           const applyBtn = document.getElementById('diff-apply-changes-btn');
           if (applyBtn) applyBtn.onclick = applyLinkDiffChanges;
         } else if (diffPanelMode === 'similarity' && currentSimilarityMatch) {
           dom.diffModalFooterLeft.innerHTML = '';
-          dom.diffModalFooterActions.innerHTML = `
-            <button type="button" class="ghost-button action-button" id="similarity-close-btn">Close</button>`;
-          const closeBtn = document.getElementById('similarity-close-btn');
-          if (closeBtn) closeBtn.onclick = () => closeDiffPanel();
+          // Apply Changes only shown in edit mode; no close button at bottom (issue 2)
+          if (diffEditMode) {
+            dom.diffModalFooterActions.innerHTML = `
+              <button type="button" class="primary-button action-button" id="diff-apply-changes-btn">Apply Changes</button>`;
+            const applyBtn = document.getElementById('diff-apply-changes-btn');
+            if (applyBtn) applyBtn.onclick = applySimilarityChanges;
+          } else {
+            dom.diffModalFooterActions.innerHTML = '';
+          }
         } else {
           dom.diffModalFooterLeft.innerHTML = '';
-          dom.diffModalFooterActions.innerHTML = `
-            <button type="button" class="ghost-button action-button" id="diff-close-btn">Close</button>`;
-          const closeBtn = document.getElementById('diff-close-btn');
-          if (closeBtn) closeBtn.onclick = () => closeDiffPanel();
+          // Apply Changes only shown in edit mode; no close button at bottom (issue 2)
+          if (diffEditMode) {
+            dom.diffModalFooterActions.innerHTML = `
+              <button type="button" class="primary-button action-button" id="diff-apply-changes-btn">Apply Changes</button>`;
+            const applyBtn = document.getElementById('diff-apply-changes-btn');
+            if (applyBtn) applyBtn.onclick = applyDiffChanges;
+          } else {
+            dom.diffModalFooterActions.innerHTML = '';
+          }
+        }
+        // Hide the footer bar itself when there's nothing in it
+        if (dom.diffModalFooter) {
+          const hasContent = Boolean(dom.diffModalFooterLeft.innerHTML.trim() || dom.diffModalFooterActions.innerHTML.trim());
+          dom.diffModalFooter.classList.toggle('is-hidden', !hasContent);
         }
       }
 
@@ -6261,11 +6420,25 @@ Return only the complete URL, with no explanation unless asked.`;
             const label = DIFF_FIELD_LABELS[f];
             const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
             const newVal = escapeDiffHtml(state[f] || '');
+            if (diffEditMode) {
+              const selLeft = pendingFieldSelections && pendingFieldSelections[f] === 'left';
+              const selRight = !selLeft;
+              const removedLine = oldVal
+                ? `<div class="diff-line-removed diff-line-selectable${selLeft ? ' diff-line-chosen' : ''}" onclick="selectDiffField('${f}', 'left')"><span class="${selLeft ? 'diff-line-kept-check' : 'diff-line-prefix'}">${selLeft ? '✓' : '−'}</span>${oldVal}</div>`
+                : '';
+              const addedLine = newVal
+                ? `<div class="diff-line-added diff-line-selectable${selRight ? ' diff-line-chosen' : ''}" onclick="selectDiffField('${f}', 'right')"><span class="${selRight ? 'diff-line-kept-check' : 'diff-line-prefix'}">${selRight ? '✓' : '+'}</span>${newVal}</div>`
+                : '';
+              return `<div class="diff-line-field">
+                <div class="diff-line-field-label">${label}</div>
+                ${removedLine}${addedLine}
+              </div>`;
+            }
             const removedLine = oldVal
-              ? `<div class="diff-line-removed${diffEditMode ? ' diff-line-selectable' : ''}" ${diffEditMode ? `onclick="applyDiffField('${f}')" title="Click to restore this value"` : ''}><span class="diff-line-prefix">−</span>${oldVal}</div>`
+              ? `<div class="diff-line-removed"><span class="diff-line-prefix">−</span>${oldVal}</div>`
               : '';
             const addedLine = newVal
-              ? `<div class="diff-line-added"><span class="${diffEditMode ? 'diff-line-kept-check' : 'diff-line-prefix'}">${diffEditMode ? '✓' : '+'}</span>${newVal}</div>`
+              ? `<div class="diff-line-added"><span class="diff-line-prefix">+</span>${newVal}</div>`
               : '';
             return `<div class="diff-line-field">
               <div class="diff-line-field-label">${label}</div>
@@ -6278,27 +6451,39 @@ Return only the complete URL, with no explanation unless asked.`;
             const label = DIFF_FIELD_LABELS[f];
             const oldVal = escapeDiffHtml(existingSnapshot[f] || '');
             const newVal = escapeDiffHtml(state[f] || '');
+            if (diffEditMode) {
+              const selLeft = pendingFieldSelections && pendingFieldSelections[f] === 'left';
+              const selRight = !selLeft;
+              const leftClass = selLeft ? 'diff-cell-selected' : 'diff-cell-unselected';
+              const rightClass = selRight ? 'diff-cell-selected' : 'diff-cell-unselected';
+              const oldContent = oldVal ? `<span class="diff-value-old">${oldVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+              const newContent = newVal ? `<span class="diff-value-new">${newVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+              return `<tr>
+                  <td class="diff-field-label">${label}</td>
+                  <td class="diff-value-cell ${leftClass}" data-col-label="Before" onclick="selectDiffField('${f}', 'left')">
+                    ${selLeft ? '<span class="diff-kept-check">✓ </span>' : ''}${oldContent}
+                  </td>
+                  <td class="diff-value-cell ${rightClass}" data-col-label="After" onclick="selectDiffField('${f}', 'right')">
+                    ${selRight ? '<span class="diff-kept-check">✓ </span>' : ''}${newContent}
+                  </td>
+                </tr>`;
+            }
             const oldCell = oldVal
               ? `<span class="diff-value-old">${oldVal}</span>`
               : `<span class="diff-value-empty">(empty)</span>`;
             const newCell = newVal
-              ? `<span class="diff-value-new">${diffEditMode ? '<span class="diff-kept-check">✓</span>' : ''}${newVal}</span>`
-              : `<span class="diff-value-empty">${diffEditMode ? '<span class="diff-kept-check">✓</span>' : ''}(empty)</span>`;
-            return diffEditMode
-              ? `<tr>
-                  <td class="diff-field-label">${label}</td>
-                  <td class="diff-selectable-cell" onclick="applyDiffField('${f}')" title="Click to restore this value">${oldCell}</td>
-                  <td>${newCell}</td>
-                </tr>`
-              : `<tr>
-                  <td class="diff-field-label">${label}</td>
-                  <td>${oldCell}</td>
-                  <td>${newCell}</td>
-                </tr>`;
+              ? `<span class="diff-value-new">${newVal}</span>`
+              : `<span class="diff-value-empty">(empty)</span>`;
+            return `<tr>
+                <td class="diff-field-label">${label}</td>
+                <td data-col-label="Before">${oldCell}</td>
+                <td data-col-label="After">${newCell}</td>
+              </tr>`;
           }).join('');
-          const editHint = diffEditMode ? ' <span style="font-size:0.75em;font-weight:normal;color:var(--text-secondary);">(click to restore)</span>' : '';
+          const leftHdr = diffEditMode ? 'Before <span style="font-size:0.75em;font-weight:normal;color:var(--text-secondary);">(click to restore)</span>' : 'Before';
+          const rightHdr = diffEditMode ? '✓ After' : 'After';
           dom.diffModalBody.innerHTML = `<table class="diff-table">
-            <thead><tr><th>Field</th><th>Before${editHint}</th><th>${diffEditMode ? '✓ ' : ''}After</th></tr></thead>
+            <thead><tr><th>Field</th><th>${leftHdr}</th><th>${rightHdr}</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>`;
         }
@@ -6308,7 +6493,9 @@ Return only the complete URL, with no explanation unless asked.`;
       function buildLinkDiffContent() {
         if (!dom.diffModalBody || !linkDiffPendingData) return;
         if (dom.diffModalTitle) dom.diffModalTitle.textContent = 'Compare with Existing Event';
-        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = 'Select field values to use in your draft, then click Apply Changes.';
+        if (dom.diffModalSubtitle) dom.diffModalSubtitle.textContent = diffEditMode
+          ? 'Select field values to keep in your draft, then click Apply Changes.'
+          : 'Comparing your draft with the existing event. Toggle Edit to pick field values.';
 
         const existingData = linkDiffPendingData.existingState;
         const allFields = Object.keys(DIFF_FIELD_LABELS);
@@ -6325,11 +6512,25 @@ Return only the complete URL, with no explanation unless asked.`;
             const label = escapeDiffHtml(DIFF_FIELD_LABELS[f]);
             const existingVal = escapeDiffHtml(existingData[f] || '');
             const draftVal = escapeDiffHtml(state[f] || '');
+            if (diffEditMode) {
+              const selLeft = pendingFieldSelections && pendingFieldSelections[f] === 'left';
+              const selRight = !selLeft;
+              const removedLine = existingVal
+                ? `<div class="diff-line-removed diff-line-selectable${selLeft ? ' diff-line-chosen' : ''}" onclick="selectLinkField('${f}', 'left')"><span class="${selLeft ? 'diff-line-kept-check' : 'diff-line-prefix'}">${selLeft ? '✓' : '−'}</span>${existingVal}</div>`
+                : '';
+              const addedLine = draftVal
+                ? `<div class="diff-line-added diff-line-selectable${selRight ? ' diff-line-chosen' : ''}" onclick="selectLinkField('${f}', 'right')"><span class="${selRight ? 'diff-line-kept-check' : 'diff-line-prefix'}">${selRight ? '✓' : '+'}</span>${draftVal}</div>`
+                : '';
+              return `<div class="diff-line-field">
+                <div class="diff-line-field-label">${label}</div>
+                ${removedLine}${addedLine}
+              </div>`;
+            }
             const removedLine = existingVal
-              ? `<div class="diff-line-removed${diffEditMode ? ' diff-line-selectable' : ''}" ${diffEditMode ? `onclick="applyLinkDiffField('${f}')" title="Click to use this value"` : ''}><span class="diff-line-prefix">−</span>${existingVal}</div>`
+              ? `<div class="diff-line-removed"><span class="diff-line-prefix">−</span>${existingVal}</div>`
               : '';
             const addedLine = draftVal
-              ? `<div class="diff-line-added"><span class="${diffEditMode ? 'diff-line-kept-check' : 'diff-line-prefix'}">${diffEditMode ? '✓' : '+'}</span>${draftVal}</div>`
+              ? `<div class="diff-line-added"><span class="diff-line-prefix">+</span>${draftVal}</div>`
               : '';
             return `<div class="diff-line-field">
               <div class="diff-line-field-label">${label}</div>
@@ -6342,36 +6543,45 @@ Return only the complete URL, with no explanation unless asked.`;
             const label = DIFF_FIELD_LABELS[f];
             const existingVal = escapeDiffHtml(existingData[f] || '');
             const draftVal = escapeDiffHtml(state[f] || '');
-            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
-            const draftCell = draftVal
-              ? `<span class="diff-value-new">${diffEditMode ? '<span class="diff-kept-check">✓</span>' : ''}${draftVal}</span>`
-              : `<span class="diff-value-empty">${diffEditMode ? '<span class="diff-kept-check">✓</span>' : ''}(empty)</span>`;
-            return diffEditMode
-              ? `<tr>
+            if (diffEditMode) {
+              const selLeft = pendingFieldSelections && pendingFieldSelections[f] === 'left';
+              const selRight = !selLeft;
+              const leftClass = selLeft ? 'diff-cell-selected' : 'diff-cell-unselected';
+              const rightClass = selRight ? 'diff-cell-selected' : 'diff-cell-unselected';
+              const existingContent = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+              const draftContent = draftVal ? `<span class="diff-value-new">${draftVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+              return `<tr>
                   <td class="diff-field-label">${label}</td>
-                  <td class="diff-selectable-cell" onclick="applyLinkDiffField('${f}')" title="Click to use this value">${existingCell}</td>
-                  <td>${draftCell}</td>
-                </tr>`
-              : `<tr>
-                  <td class="diff-field-label">${label}</td>
-                  <td>${existingCell}</td>
-                  <td>${draftCell}</td>
+                  <td class="diff-value-cell ${leftClass}" data-col-label="Existing" onclick="selectLinkField('${f}', 'left')">
+                    ${selLeft ? '<span class="diff-kept-check">✓ </span>' : ''}${existingContent}
+                  </td>
+                  <td class="diff-value-cell ${rightClass}" data-col-label="Your Draft" onclick="selectLinkField('${f}', 'right')">
+                    ${selRight ? '<span class="diff-kept-check">✓ </span>' : ''}${draftContent}
+                  </td>
                 </tr>`;
+            }
+            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            const draftCell = draftVal ? `<span class="diff-value-new">${draftVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            return `<tr>
+                <td class="diff-field-label">${label}</td>
+                <td data-col-label="Existing">${existingCell}</td>
+                <td data-col-label="Your Draft">${draftCell}</td>
+              </tr>`;
           }).join('');
-          const editHint = diffEditMode ? ' <span style="font-size:0.75em;font-weight:normal;color:var(--text-secondary);">(click to use)</span>' : '';
+          const leftHdr = diffEditMode ? 'Existing Event <span style="font-size:0.75em;font-weight:normal;color:var(--text-secondary);">(click to use)</span>' : 'Existing Event';
+          const rightHdr = diffEditMode ? '✓ Your Draft' : 'Your Draft';
           dom.diffModalBody.innerHTML = `<table class="diff-table">
-            <thead><tr><th>Field</th><th>Existing Event${editHint}</th><th>${diffEditMode ? '✓ ' : ''}Your Draft</th></tr></thead>
+            <thead><tr><th>Field</th><th>${leftHdr}</th><th>${rightHdr}</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>`;
         }
         updateDiffModalFooter();
       }
 
-      window.applyLinkDiffField = (field) => {
+      window.selectLinkField = (field, side) => {
         if (!linkDiffPendingData) return;
-        state[field] = linkDiffPendingData.existingState[field] || '';
-        applyStateToForm();
-        refreshUi();
+        if (!pendingFieldSelections) pendingFieldSelections = {};
+        pendingFieldSelections[field] = side;
         buildLinkDiffContent();
         updateDiffModalFooter();
       };
@@ -6379,10 +6589,19 @@ Return only the complete URL, with no explanation unless asked.`;
       function applyLinkDiffChanges() {
         if (!linkDiffPendingData) { closeDiffPanel(); return; }
 
+        // Apply staged field selections: 'left' = use existing event value
+        if (pendingFieldSelections) {
+          Object.keys(pendingFieldSelections).forEach(f => {
+            if (pendingFieldSelections[f] === 'left') {
+              state[f] = (linkDiffPendingData.existingState[f] || '');
+            }
+          });
+        }
+
         const { mode, baseEvent, eventData, startDate, endDate, summaryResult, occurrenceId, existingResultId } = linkDiffPendingData;
         const linkCheckbox = document.getElementById('diff-link-checkbox');
-        // Default to linking if the checkbox element is unexpectedly missing (it is always rendered by updateDiffModalFooter)
-        const shouldLink = linkCheckbox ? linkCheckbox.checked : true;
+        // Link checkbox is only shown in edit mode; when not in edit mode, always link
+        const shouldLink = diffEditMode && linkCheckbox ? linkCheckbox.checked : true;
 
         if (shouldLink) {
           state.isEditingExisting = true;
@@ -6410,6 +6629,43 @@ Return only the complete URL, with no explanation unless asked.`;
         showToast(shouldLink ? 'Draft linked and changes applied.' : 'Changes applied.', 'success');
       }
 
+      function applyDiffChanges() {
+        // Apply staged field selections: 'left' = restore to existingSnapshot value
+        if (pendingFieldSelections && existingSnapshot) {
+          Object.keys(pendingFieldSelections).forEach(f => {
+            if (pendingFieldSelections[f] === 'left') {
+              state[f] = existingSnapshot[f] || '';
+            }
+          });
+        }
+        applyStateToForm();
+        refreshUi();
+        closeDiffPanel();
+        showToast('Changes applied.', 'success');
+      }
+
+      function applySimilarityChanges() {
+        if (!currentSimilarityMatch) { closeDiffPanel(); return; }
+        const existingData = buildExistingState(currentSimilarityMatch.event, {
+          cityKey: currentSimilarityMatch.baseEvent.city || state.city,
+          startDate: currentSimilarityMatch.event.startDate,
+          endDate: currentSimilarityMatch.event.endDate,
+          recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
+        });
+        // Apply staged field selections: 'left' = use existing event value
+        if (pendingFieldSelections) {
+          Object.keys(pendingFieldSelections).forEach(f => {
+            if (pendingFieldSelections[f] === 'left') {
+              state[f] = existingData[f] || '';
+            }
+          });
+        }
+        applyStateToForm();
+        refreshUi();
+        closeDiffPanel();
+        showToast('Changes applied.', 'success');
+      }
+
       function openDiffPanel() {
         if (!dom.diffPanel) return;
         diffPanelMode = 'diff';
@@ -6435,6 +6691,7 @@ Return only the complete URL, with no explanation unless asked.`;
 
       function closeDiffPanel() {
         linkDiffPendingData = null;
+        pendingFieldSelections = null;
         diffEditMode = false;
         if (dom.diffEditToggle) {
           dom.diffEditToggle.classList.remove('is-active');
