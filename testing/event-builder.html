@@ -1037,7 +1037,9 @@
     }
 
     .diff-table tr {
-      display: block;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
       border: 1px solid var(--border-color, rgba(255,255,255,0.1));
       border-radius: 8px;
       margin-bottom: 0.5rem;
@@ -1053,7 +1055,7 @@
     }
 
     .diff-table td.diff-field-label {
-      display: block;
+      flex: 0 0 100%;
       width: 100%;
       font-size: 0.78rem;
       background: rgba(255,255,255,0.04);
@@ -1062,8 +1064,7 @@
     }
 
     .diff-table td:not(.diff-field-label) {
-      display: inline-block;
-      width: 50%;
+      flex: 0 0 50%;
       box-sizing: border-box;
       vertical-align: top;
     }
@@ -1080,7 +1081,104 @@
     }
 
     .diff-table td[colspan="2"]:not(.diff-field-label) {
+      flex: 0 0 100%;
       width: 100%;
+    }
+
+    .diff-img-preview {
+      max-width: 140px;
+      max-height: 100px;
+      object-fit: contain;
+      border-radius: 4px;
+      margin-top: 0.4rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      display: block;
+    }
+
+    .diff-coords-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--accent);
+      font-size: 0.78rem;
+      text-decoration: none;
+      margin-top: 0.3rem;
+    }
+
+    .diff-coords-link:hover {
+      text-decoration: underline;
+    }
+
+    .ai-mode-toggle {
+      display: inline-flex;
+      gap: 0.25rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 0.2rem;
+      align-self: flex-start;
+    }
+
+    .ai-mode-toggle button {
+      padding: 0.28rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .ai-mode-toggle button.is-active {
+      background: var(--panel-bg, #1a1d2e);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .ai-step-info {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .ai-step-info p {
+      margin: 0 0 0.5rem;
+    }
+
+    .ai-step-info p:last-child {
+      margin-bottom: 0;
+    }
+
+    .ai-step-info strong {
+      color: var(--text-primary);
+    }
+
+    .ai-step-info ol {
+      margin: 0.35rem 0 0;
+      padding-left: 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .ai-shortcut-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.85rem;
+    }
+
+    .ai-shortcut-link:hover {
+      text-decoration: underline;
     }
 
     .ai-agent-list {
@@ -2605,13 +2703,31 @@
       <div class="ai-modal__header">
         <div>
           <h2 id="ai-modal-title">Parse with AI</h2>
-          <p class="panel-subtitle">Open an AI assistant with the event-builder prompt pre-loaded. Paste your event info to get a ready-to-use URL.</p>
         </div>
         <button type="button" class="ghost-button action-button ai-modal__close" id="ai-modal-close" aria-label="Close AI parse dialog">
           <i class="bi bi-x-lg" aria-hidden="true"></i>
         </button>
       </div>
-      <div class="ai-agent-list" id="ai-agent-list">
+      <div class="ai-mode-toggle" role="group" aria-label="Parsing mode">
+        <button type="button" id="ai-mode-one-step" class="is-active" aria-pressed="true">One-step</button>
+        <button type="button" id="ai-mode-two-step" aria-pressed="false">Two-step</button>
+      </div>
+      <div id="ai-one-step-content">
+        <p class="panel-subtitle">Open an AI assistant with the event-builder prompt pre-loaded. Paste your event info to get a ready-to-use URL.</p>
+        <div class="ai-agent-list" id="ai-agent-list"></div>
+      </div>
+      <div id="ai-two-step-content" class="is-hidden">
+        <div class="ai-step-info">
+          <p><strong>How two-step works:</strong></p>
+          <ol>
+            <li>Open an AI assistant below and paste your event info. The AI will return a <strong>JSON object</strong> with all the event fields it can extract.</li>
+            <li>Copy the JSON output from the AI.</li>
+            <li>Open the <a class="ai-shortcut-link" href="https://www.icloud.com/shortcuts/1551364b70094cbcaa3c1f497b76d418" target="_blank" rel="noopener noreferrer"><i class="bi bi-apple" aria-hidden="true"></i> iOS Shortcut</a> on your iPhone or iPad.</li>
+            <li>Run the shortcut and paste the JSON when prompted. It will use your on-device LLM to refine each field and generate the final chunky.dad URL.</li>
+          </ol>
+          <p style="margin-top:0.5rem;">This method works great when your local AI model is better at structured data than a chat model, or when you want finer per-field control.</p>
+        </div>
+        <div class="ai-agent-list" id="ai-agent-list-two-step"></div>
       </div>
     </div>
   </dialog>
@@ -2705,6 +2821,7 @@
       let diffEditMode = false; // whether to show edit mode UI in the diff
       let pendingFieldSelections = null; // { fieldName: 'left' | 'right' } staged selections in edit mode
       let linkDiffPendingData = null; // pending selection data when in 'link' diff mode
+      let aiParseMode = 'one-step'; // 'one-step' or 'two-step'
       let recurrenceMode = 'builder';
       let isRecurrenceSyncing = false;
       let lastRecurrenceConstraintWarning = '';
@@ -2867,6 +2984,11 @@
         dom.aiParsePanel = document.getElementById('ai-parse-panel');
         dom.aiModalClose = document.getElementById('ai-modal-close');
         dom.aiAgentList = document.getElementById('ai-agent-list');
+        dom.aiAgentListTwoStep = document.getElementById('ai-agent-list-two-step');
+        dom.aiModeOneStep = document.getElementById('ai-mode-one-step');
+        dom.aiModeTwoStep = document.getElementById('ai-mode-two-step');
+        dom.aiOneStepContent = document.getElementById('ai-one-step-content');
+        dom.aiTwoStepContent = document.getElementById('ai-two-step-content');
         dom.existingModalClose = document.getElementById('existing-modal-close');
         dom.existingCitySelect = document.getElementById('existing-city');
         dom.existingSearchInput = document.getElementById('existing-search');
@@ -5976,8 +6098,8 @@
                   </td>
                 </tr>`;
             }
-            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
-            const currentCell = currentVal ? `<span class="diff-value-new">${currentVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>${richDiffHtml(f, existingData[f] || '')}` : '<span class="diff-value-empty">(empty)</span>';
+            const currentCell = currentVal ? `<span class="diff-value-new">${currentVal}</span>${richDiffHtml(f, state[f] || '')}` : '<span class="diff-value-empty">(empty)</span>';
             return `<tr>
                 <td class="diff-field-label">${label}</td>
                 <td data-col-label="Existing">${existingCell}</td>
@@ -6240,6 +6362,43 @@ RULES:
 Return only the complete URL, with no explanation unless asked.`;
       }
 
+      function buildAiTwoStepPrompt() {
+        const cityKeys = (typeof CITY_CONFIG === 'object' && CITY_CONFIG)
+          ? Object.keys(CITY_CONFIG).join(', ')
+          : 'nyc, seattle, la, toronto, london, chicago, berlin, palm-springs, denver, dallas, dc, vegas, atlanta, nola, sf, portland, sitges, boston, phoenix, ptown, san-diego, philly, miami, pv, austin, houston, sacramento';
+        return `You are an assistant that extracts structured event data for the chunky.dad event-builder.
+
+Given information about a bear community event (from a website, flyer, image, or text), extract all available fields and return ONLY a valid JSON object. Do not guess or fabricate values — only include fields you can source from the provided content.
+
+FIELDS:
+  name       - Full event title
+  short      - Shorter reference title (omit if the name is already short)
+  desc       - Event description or tagline
+  city       - City key. Must be one of: ${cityKeys}
+  venue      - Name of the venue or bar
+  addr       - Street address
+  coords     - Coordinates as "lat,lng" — ONLY if explicitly in the source, never estimate
+  start      - Start datetime in local time: YYYY-MM-DDTHH:MM
+  end        - End datetime in local time: YYYY-MM-DDTHH:MM
+  tz         - IANA timezone (e.g. America/New_York)
+  rrule      - RRULE recurrence string (only if recurring, e.g. FREQ=WEEKLY;BYDAY=FR)
+  web        - Event or organizer website URL
+  tickets    - Ticket purchase URL
+  insta      - Instagram handle (e.g. @bearracuda) or full Instagram URL
+  fb         - Facebook event or page URL
+  gmaps      - Google Maps link
+  img        - Direct URL to a promo image or flyer
+  cover      - Cover charge info (e.g. Free, $15, Cover TBD)
+
+RULES:
+- Omit any field you cannot reliably source from the provided content.
+- Never fabricate coordinates, dates, or URLs.
+- Return ONLY the JSON object — no explanation, no markdown code fences.
+
+Example output:
+{"name":"Bear Night","city":"nyc","venue":"Nowhere Bar","start":"2025-08-15T21:00","tz":"America/New_York"}`;
+      }
+
       const AI_AGENTS = [
         { name: 'ChatGPT', base: 'https://chat.openai.com/?q=', icon: 'bi-chat-dots' },
         { name: 'Claude', base: 'https://claude.ai/new?q=', icon: 'bi-stars' },
@@ -6249,18 +6408,46 @@ Return only the complete URL, with no explanation unless asked.`;
       ];
 
       function populateAiAgentList() {
-        if (!dom.aiAgentList) return;
-        const encoded = encodeURIComponent(buildAiParsePrompt());
-        dom.aiAgentList.innerHTML = '';
-        AI_AGENTS.forEach(agent => {
-          const a = document.createElement('a');
-          a.href = agent.base + encoded;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          a.className = 'ai-agent-link';
-          a.innerHTML = `<i class="bi ${agent.icon}" aria-hidden="true"></i><span>${agent.name}</span><i class="bi bi-box-arrow-up-right ai-agent-arrow" aria-hidden="true"></i>`;
-          dom.aiAgentList.appendChild(a);
-        });
+        if (dom.aiAgentList) {
+          const encoded = encodeURIComponent(buildAiParsePrompt());
+          dom.aiAgentList.innerHTML = '';
+          AI_AGENTS.forEach(agent => {
+            const a = document.createElement('a');
+            a.href = agent.base + encoded;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.className = 'ai-agent-link';
+            a.innerHTML = `<i class="bi ${agent.icon}" aria-hidden="true"></i><span>${agent.name}</span><i class="bi bi-box-arrow-up-right ai-agent-arrow" aria-hidden="true"></i>`;
+            dom.aiAgentList.appendChild(a);
+          });
+        }
+        if (dom.aiAgentListTwoStep) {
+          const encoded = encodeURIComponent(buildAiTwoStepPrompt());
+          dom.aiAgentListTwoStep.innerHTML = '';
+          AI_AGENTS.forEach(agent => {
+            const a = document.createElement('a');
+            a.href = agent.base + encoded;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.className = 'ai-agent-link';
+            a.innerHTML = `<i class="bi ${agent.icon}" aria-hidden="true"></i><span>${agent.name}</span><i class="bi bi-box-arrow-up-right ai-agent-arrow" aria-hidden="true"></i>`;
+            dom.aiAgentListTwoStep.appendChild(a);
+          });
+        }
+      }
+
+      function setAiParseMode(mode) {
+        aiParseMode = mode === 'two-step' ? 'two-step' : 'one-step';
+        if (dom.aiModeOneStep) {
+          dom.aiModeOneStep.classList.toggle('is-active', aiParseMode === 'one-step');
+          dom.aiModeOneStep.setAttribute('aria-pressed', String(aiParseMode === 'one-step'));
+        }
+        if (dom.aiModeTwoStep) {
+          dom.aiModeTwoStep.classList.toggle('is-active', aiParseMode === 'two-step');
+          dom.aiModeTwoStep.setAttribute('aria-pressed', String(aiParseMode === 'two-step'));
+        }
+        if (dom.aiOneStepContent) dom.aiOneStepContent.classList.toggle('is-hidden', aiParseMode !== 'one-step');
+        if (dom.aiTwoStepContent) dom.aiTwoStepContent.classList.toggle('is-hidden', aiParseMode !== 'two-step');
       }
 
       function openAiParsePanel() {
@@ -6297,6 +6484,25 @@ Return only the complete URL, with no explanation unless asked.`;
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      function richDiffHtml(field, rawValue) {
+        if (!rawValue) return '';
+        if (field === 'image') {
+          return `<img src="${escapeDiffHtml(rawValue)}" class="diff-img-preview" alt="Event image preview" loading="lazy" onerror="this.style.display='none'">`;
+        }
+        if (field === 'location') {
+          const parts = rawValue.split(',');
+          if (parts.length === 2) {
+            const lat = parseFloat(parts[0]);
+            const lng = parseFloat(parts[1]);
+            if (!isNaN(lat) && !isNaN(lng)) {
+              const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+              return `<a href="${escapeDiffHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer" class="diff-coords-link"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> View on map</a>`;
+            }
+          }
+        }
+        return '';
       }
 
       function setDiffViewMode(mode) {
@@ -6474,10 +6680,10 @@ Return only the complete URL, with no explanation unless asked.`;
                 </tr>`;
             }
             const oldCell = oldVal
-              ? `<span class="diff-value-old">${oldVal}</span>`
+              ? `<span class="diff-value-old">${oldVal}</span>${richDiffHtml(f, existingSnapshot[f] || '')}`
               : `<span class="diff-value-empty">(empty)</span>`;
             const newCell = newVal
-              ? `<span class="diff-value-new">${newVal}</span>`
+              ? `<span class="diff-value-new">${newVal}</span>${richDiffHtml(f, state[f] || '')}`
               : `<span class="diff-value-empty">(empty)</span>`;
             return `<tr>
                 <td class="diff-field-label">${label}</td>
@@ -6563,8 +6769,8 @@ Return only the complete URL, with no explanation unless asked.`;
                   </td>
                 </tr>`;
             }
-            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
-            const draftCell = draftVal ? `<span class="diff-value-new">${draftVal}</span>` : '<span class="diff-value-empty">(empty)</span>';
+            const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>${richDiffHtml(f, existingData[f] || '')}` : '<span class="diff-value-empty">(empty)</span>';
+            const draftCell = draftVal ? `<span class="diff-value-new">${draftVal}</span>${richDiffHtml(f, state[f] || '')}` : '<span class="diff-value-empty">(empty)</span>';
             return `<tr>
                 <td class="diff-field-label">${label}</td>
                 <td data-col-label="Existing">${existingCell}</td>
@@ -7347,6 +7553,12 @@ Return only the complete URL, with no explanation unless asked.`;
         }
         if (dom.aiModalClose) {
           dom.aiModalClose.addEventListener('click', closeAiParsePanel);
+        }
+        if (dom.aiModeOneStep) {
+          dom.aiModeOneStep.addEventListener('click', () => setAiParseMode('one-step'));
+        }
+        if (dom.aiModeTwoStep) {
+          dom.aiModeTwoStep.addEventListener('click', () => setAiParseMode('two-step'));
         }
         if (dom.diffButton) {
           dom.diffButton.addEventListener('click', () => {
