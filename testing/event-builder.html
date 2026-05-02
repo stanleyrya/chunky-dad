@@ -2722,7 +2722,7 @@
           <ol>
             <li>Open an AI assistant below and paste your event info. The AI will return a <strong>JSON object</strong> with all the event fields it can extract.</li>
             <li>Copy the JSON output from the AI.</li>
-            <li>Open the <a class="ai-shortcut-link" href="https://www.icloud.com/shortcuts/1551364b70094cbcaa3c1f497b76d418" target="_blank" rel="noopener noreferrer"><i class="bi bi-apple" aria-hidden="true"></i> iOS Shortcut</a> on your iPhone or iPad.</li>
+            <li>Open the <a class="ai-shortcut-link" id="ai-shortcut-link" href="#" target="_blank" rel="noopener noreferrer"><i class="bi bi-apple" aria-hidden="true"></i> iOS Shortcut</a> on your iPhone or iPad.</li>
             <li>Run the shortcut and paste the JSON when prompted. It will use your on-device LLM to refine each field and generate the final chunky.dad URL.</li>
           </ol>
           <p style="margin-top:0.5rem;">This method works great when your local AI model is better at structured data than a chat model, or when you want finer per-field control.</p>
@@ -2809,6 +2809,8 @@
       const DAD_EMAIL = 'events@chunky.dad';
       const ISSUES_EMAIL = 'events+issues@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
+      // iOS Shortcut for two-step AI parsing — owned by chunky.dad project
+      const TWO_STEP_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/1551364b70094cbcaa3c1f497b76d418';
       const LEGACY_OVERRIDE_HELP_MESSAGE = 'Legacy override detected. Edits are limited in this tool. Use Tell Dad and describe what you are trying to change.';
       const LEGACY_SERIES_BLOCK_MESSAGE = 'This series has legacy overrides, so series edits are blocked in this tool.';
       const LEGACY_TELL_DAD_PROMPT = 'Use Tell Dad and tell us exactly what you are trying to change.';
@@ -2989,6 +2991,8 @@
         dom.aiModeTwoStep = document.getElementById('ai-mode-two-step');
         dom.aiOneStepContent = document.getElementById('ai-one-step-content');
         dom.aiTwoStepContent = document.getElementById('ai-two-step-content');
+        const shortcutLink = document.getElementById('ai-shortcut-link');
+        if (shortcutLink) shortcutLink.href = TWO_STEP_SHORTCUT_URL;
         dom.existingModalClose = document.getElementById('existing-modal-close');
         dom.existingCitySelect = document.getElementById('existing-city');
         dom.existingSearchInput = document.getElementById('existing-search');
@@ -6489,6 +6493,8 @@ Example output:
       function richDiffHtml(field, rawValue) {
         if (!rawValue) return '';
         if (field === 'image') {
+          // Only render preview for https:// URLs to avoid security risks
+          if (!rawValue.startsWith('https://')) return '';
           return `<img src="${escapeDiffHtml(rawValue)}" class="diff-img-preview" alt="Event image preview" loading="lazy" onerror="this.style.display='none'">`;
         }
         if (field === 'location') {
