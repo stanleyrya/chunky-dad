@@ -2762,7 +2762,7 @@
           <i class="bi bi-lightning-charge" aria-hidden="true"></i> One-step
         </button>
         <button type="button" id="ai-mode-two-step" aria-pressed="false">
-          <i class="bi bi-apple" aria-hidden="true"></i> Two-step (iOS)
+          <i class="bi bi-apple" aria-hidden="true"></i> Two-step
         </button>
       </div>
       <div id="ai-one-step-content">
@@ -6220,6 +6220,7 @@
         if (!diffEditMode) return;
         if (!pendingFieldSelections) pendingFieldSelections = {};
         let fields = [];
+        let similarityExistingData = null;
         if (diffPanelMode === 'link') {
           if (linkDiffPendingData) {
             fields = Object.keys(DIFF_FIELD_LABELS).filter(
@@ -6227,14 +6228,14 @@
             );
           }
         } else if (diffPanelMode === 'similarity' && currentSimilarityMatch) {
-          const existingData = buildExistingState(currentSimilarityMatch.event, {
+          similarityExistingData = buildExistingState(currentSimilarityMatch.event, {
             cityKey: currentSimilarityMatch.baseEvent.city || state.city,
             startDate: currentSimilarityMatch.event.startDate,
             endDate: currentSimilarityMatch.event.endDate,
             recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
           });
           fields = Object.keys(DIFF_FIELD_LABELS).filter(
-            f => (existingData[f] || '') !== (state[f] || '')
+            f => (similarityExistingData[f] || '') !== (state[f] || '')
           );
         } else if (state && state.isEditingExisting && existingSnapshot) {
           fields = Object.keys(DIFF_FIELD_LABELS).filter(
@@ -6242,14 +6243,8 @@
           );
         }
         fields.forEach(f => { pendingFieldSelections[f] = side; });
-        if (diffPanelMode === 'similarity' && currentSimilarityMatch) {
-          const existingData = buildExistingState(currentSimilarityMatch.event, {
-            cityKey: currentSimilarityMatch.baseEvent.city || state.city,
-            startDate: currentSimilarityMatch.event.startDate,
-            endDate: currentSimilarityMatch.event.endDate,
-            recurrence: currentSimilarityMatch.baseEvent.recurrence || ''
-          });
-          buildSimilarityDiffContent(existingData, currentSimilarityMatch);
+        if (similarityExistingData) {
+          buildSimilarityDiffContent(similarityExistingData, currentSimilarityMatch);
         } else {
           buildDiffModalContent();
         }
@@ -6611,6 +6606,7 @@ Example output:
             const lng = parseFloat(parts[1]);
             if (!isNaN(lat) && !isNaN(lng)) {
               const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+              // Bounding box offsets (~1.5km wide, ~1km tall) give a neighbourhood-level zoom
               const osmBbox = `${lng - 0.015},${lat - 0.01},${lng + 0.015},${lat + 0.01}`;
               const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(osmBbox)}&layer=mapnik&marker=${lat},${lng}`;
               return `<div class="diff-rich-block" onclick="event.stopPropagation()">
