@@ -623,6 +623,9 @@
         // Stores the events from the most recent successful test run for ICS download
         let lastTestEvents = [];
 
+        // Max characters to show from an event description in the card preview
+        const MAX_DESC_PREVIEW_LENGTH = 200;
+
         // Builds an event-builder.html URL pre-filled with the scraped event's fields.
         // Uses the short param names from AI_PROMPT_FIELDS so event-builder's loadStateFromUrl
         // can resolve them via getEventBuilderStateKey.
@@ -633,7 +636,8 @@
                     params.set(paramName, String(value));
                 }
             };
-            // Normalize a date value to YYYY-MM-DDTHH:MM (what event-builder expects)
+            // Normalize a date value to YYYY-MM-DDTHH:MM (16 chars = "YYYY-MM-DDTHH:MM"),
+            // which is the format event-builder's sanitizeDateTimeInput expects.
             const normalizeDate = (d) => {
                 if (!d) return '';
                 const s = String(d);
@@ -652,7 +656,8 @@
             add('start', normalizeDate(event.startDate));
             add('end', normalizeDate(event.endDate));
             add('rrule', event.recurrence);
-            // website is canonical; url is an alias — prefer website
+            // website is the canonical field; url is an alias kept for backward compatibility
+            // with parsers that may still populate it before enrichEventLocation runs
             add('web', event.website || event.url);
             add('tickets', event.ticketUrl);
             add('insta', event.instagram);
@@ -953,7 +958,7 @@
                                 const venueName = event.bar || event.venue || '';
                                 const siteUrl = event.website || event.url || '';
                                 const descSnippet = event.description
-                                    ? escapeHtml(event.description.slice(0, 200)) + (event.description.length > 200 ? '…' : '')
+                                    ? escapeHtml(event.description.slice(0, MAX_DESC_PREVIEW_LENGTH)) + (event.description.length > MAX_DESC_PREVIEW_LENGTH ? '…' : '')
                                     : '';
                                 const builderUrl = buildEventBuilderUrl(event);
                                 return `
