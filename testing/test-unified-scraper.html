@@ -270,11 +270,42 @@
         }
         
         .event-card h4 {
-            margin: 0 0 15px 0;
+            margin: 0 0 10px 0;
             color: #333;
-            font-size: 1.2em;
+            font-size: 1.1em;
         }
-        
+
+        .event-card-desc {
+            font-size: 13px;
+            color: #555;
+            margin: 0 0 10px 0;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .btn-open-builder {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 14px;
+            background: linear-gradient(135deg, #FF6B35, #e55a2b);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-open-builder:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(255, 107, 53, 0.4);
+        }
+
         .event-detail {
             display: flex;
             align-items: center;
@@ -564,19 +595,74 @@
             }
         }
         
-        // Override console methods
-        console.log = (message) => addLogEntry(message, 'log');
-        console.error = (message) => addLogEntry(message, 'error');
-        console.warn = (message) => addLogEntry(message, 'warn');
-        console.info = (message) => addLogEntry(message, 'info');
-        console.debug = (message) => addLogEntry(message, 'debug');
-        
+        // Format multiple console args into a single string
+        function formatConsoleArgs(...args) {
+            return args.map(a => {
+                if (typeof a === 'object' && a !== null) {
+                    try { return JSON.stringify(a); } catch (e) { return String(a); }
+                }
+                return String(a);
+            }).join(' ');
+        }
+
+        // Override console methods - handle multiple args
+        console.log = (...args) => addLogEntry(formatConsoleArgs(...args), 'log');
+        console.error = (...args) => addLogEntry(formatConsoleArgs(...args), 'error');
+        console.warn = (...args) => addLogEntry(formatConsoleArgs(...args), 'warn');
+        console.info = (...args) => addLogEntry(formatConsoleArgs(...args), 'info');
+        console.debug = (...args) => addLogEntry(formatConsoleArgs(...args), 'debug');
+
         // Add success logging
-        console.success = (message) => addLogEntry(message, 'success');
+        console.success = (...args) => addLogEntry(formatConsoleArgs(...args), 'success');
         
         function clearConsole() {
             consoleDiv.innerHTML = '';
             addLogEntry('Console cleared', 'info');
+        }
+
+        // Stores the events from the most recent successful test run for ICS download
+        let lastTestEvents = [];
+
+        // Builds an event-builder.html URL pre-filled with the scraped event's fields.
+        // Uses the short param names from AI_PROMPT_FIELDS so event-builder's loadStateFromUrl
+        // can resolve them via getEventBuilderStateKey.
+        function buildEventBuilderUrl(event) {
+            const params = new URLSearchParams();
+            const add = (paramName, value) => {
+                if (value !== undefined && value !== null && value !== '') {
+                    params.set(paramName, String(value));
+                }
+            };
+            // Normalize a date value to YYYY-MM-DDTHH:MM (what event-builder expects)
+            const normalizeDate = (d) => {
+                if (!d) return '';
+                const s = String(d);
+                if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) return s.slice(0, 16);
+                return '';
+            };
+
+            add('name', event.title);
+            add('short', event.shortName);
+            add('desc', event.description);
+            add('city', event.city);
+            // bar is the canonical field for venue name; some parsers may use venue directly
+            add('venue', event.bar || event.venue);
+            add('addr', event.address);
+            add('coords', event.location);
+            add('start', normalizeDate(event.startDate));
+            add('end', normalizeDate(event.endDate));
+            add('rrule', event.recurrence);
+            // website is canonical; url is an alias — prefer website
+            add('web', event.website || event.url);
+            add('tickets', event.ticketUrl);
+            add('insta', event.instagram);
+            add('fb', event.facebook);
+            add('gmaps', event.gmaps);
+            add('img', event.image);
+            add('cover', event.cover);
+
+            const qs = params.toString();
+            return qs ? `event-builder.html?${qs}` : 'event-builder.html';
         }
         
         function updateStatus(elementId, text, type = 'info') {
@@ -851,35 +937,53 @@
             let eventsHtml = '';
             if (results.parserResults && results.parserResults.length > 0) {
                 const allEvents = results.parserResults.flatMap(r => r.events || []);
-                
+
+                // Store for ICS download
+                lastTestEvents = allEvents;
+
                 if (allEvents.length > 0) {
+                    const escapeHtml = (s) => String(s || '')
+                        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
                     eventsHtml = `
                         <h4>📅 Found Events (${allEvents.length})</h4>
                         <div class="event-grid">
-                            ${allEvents.slice(0, 12).map(event => `
-                                <div class="event-card">
-                                    <h4>${event.title || 'Untitled Event'}</h4>
-                                    <div class="event-detail">
-                                        <strong>📅</strong> ${event.startDate ? new Date(event.startDate).toLocaleDateString() : 'No date'}
+                            ${allEvents.map(event => {
+                                const venueName = event.bar || event.venue || '';
+                                const siteUrl = event.website || event.url || '';
+                                const descSnippet = event.description
+                                    ? escapeHtml(event.description.slice(0, 200)) + (event.description.length > 200 ? '…' : '')
+                                    : '';
+                                const builderUrl = buildEventBuilderUrl(event);
+                                return `
+                                    <div class="event-card">
+                                        <h4>${escapeHtml(event.title || 'Untitled Event')}</h4>
+                                        ${descSnippet ? `<p class="event-card-desc">${descSnippet}</p>` : ''}
+                                        <div class="event-detail">
+                                            <strong>📅</strong>&nbsp;${event.startDate ? new Date(event.startDate).toLocaleDateString() : 'No date'}
+                                        </div>
+                                        <div class="event-detail">
+                                            <strong>📍</strong>&nbsp;${escapeHtml(venueName) || 'No venue'}
+                                        </div>
+                                        <div class="event-detail">
+                                            <strong>🌆</strong>&nbsp;${escapeHtml(event.city) || 'No city'}
+                                        </div>
+                                        <div class="event-detail">
+                                            <strong>🐻</strong>&nbsp;${event.isBearEvent ? 'Yes' : 'No'}
+                                        </div>
+                                        <div class="event-detail">
+                                            <strong>📊</strong>&nbsp;${escapeHtml(event.source) || 'Unknown'}
+                                        </div>
+                                        ${event._action ? `<div class="event-detail"><strong>⚡</strong>&nbsp;${escapeHtml(event._action)}</div>` : ''}
+                                        ${siteUrl ? `<div class="event-detail"><strong>🔗</strong>&nbsp;<a href="${escapeHtml(siteUrl)}" target="_blank" rel="noopener noreferrer">View Event</a></div>` : ''}
+                                        <a class="btn-open-builder" href="${escapeHtml(builderUrl)}" target="_blank" rel="noopener noreferrer">
+                                            🛠️ Open in Event Builder
+                                        </a>
                                     </div>
-                                    <div class="event-detail">
-                                        <strong>📍</strong> ${event.venue || 'No venue'}
-                                    </div>
-                                    <div class="event-detail">
-                                        <strong>🌆</strong> ${event.city || 'No city'}
-                                    </div>
-                                    <div class="event-detail">
-                                        <strong>🐻</strong> ${event.isBearEvent ? 'Yes' : 'No'}
-                                    </div>
-                                    <div class="event-detail">
-                                        <strong>📊</strong> ${event.source || 'Unknown'}
-                                    </div>
-                                    ${event._action ? `<div class="event-detail"><strong>⚡</strong> ${event._action}</div>` : ''}
-                                    ${event.url ? `<div class="event-detail"><strong>🔗</strong> <a href="${event.url}" target="_blank">View Event</a></div>` : ''}
-                                </div>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </div>
-                        ${allEvents.length > 12 ? `<p style="text-align: center; color: #666; margin-top: 20px;">... and ${allEvents.length - 12} more events</p>` : ''}
                     `;
                 }
             }
@@ -908,11 +1012,11 @@
             
             // Add download button for .ics file if events found
             let downloadHtml = '';
-            if (results.bearEvents > 0 && typeof WebAdapter !== 'undefined') {
+            if (lastTestEvents.length > 0 && typeof WebAdapter !== 'undefined') {
                 downloadHtml = `
                     <div style="text-align: center; margin: 20px 0;">
                         <button onclick="downloadICSFile()" class="success">
-                            📥 Download .ics File
+                            📥 Download .ics File (${lastTestEvents.length} events)
                         </button>
                     </div>
                 `;
@@ -923,25 +1027,20 @@
             resultsContainer.scrollIntoView({ behavior: 'smooth' });
         }
         
-        // Download .ics file function
+        // Download .ics file using the events from the most recent test run
         function downloadICSFile() {
             try {
                 if (typeof WebAdapter === 'undefined') {
                     console.error('WebAdapter not available for .ics download');
                     return;
                 }
-                
-                // Get events from last test results
-                const resultsContainer = document.getElementById('resultsContainer');
-                if (!resultsContainer || resultsContainer.style.display === 'none') {
-                    console.error('No test results available for download');
+                if (!lastTestEvents || lastTestEvents.length === 0) {
+                    console.error('No events available — run a test first');
                     return;
                 }
-                
-                // This would need to be implemented to get the actual events from the last run
-                // For now, we'll show a message
-                console.info('📥 .ics download feature - would need to be connected to actual test results');
-                
+                const webAdapter = new WebAdapter();
+                webAdapter.generateICSFile(lastTestEvents);
+                console.success(`📥 Downloading ${lastTestEvents.length} events as .ics file`);
             } catch (error) {
                 console.error(`Failed to download .ics file: ${error.message}`);
             }
