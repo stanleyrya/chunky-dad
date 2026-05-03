@@ -108,37 +108,46 @@ class WebAdapter {
                 delete require.cache[require.resolve(citiesPath)]; // Clear cache for fresh load
                 cities = require(citiesPath);
             } else {
-                // Browser environment - load JS file and evaluate
-                const response = await fetch('./scraper-input.js');
-                
-                if (!response.ok) {
-                    throw new Error(`Configuration file not found: ${response.status} ${response.statusText}`);
+                // Browser environment - use pre-loaded globals if available (loaded via script tags),
+                // otherwise fall back to fetching (only works when page is served from scripts/ directory)
+                if (typeof window.scraperConfig !== 'undefined') {
+                    config = window.scraperConfig;
+                } else {
+                    const response = await fetch('./scraper-input.js');
+                    
+                    if (!response.ok) {
+                        throw new Error(`Configuration file not found: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const configText = await response.text();
+                    
+                    if (!configText || configText.trim().length === 0) {
+                        throw new Error('Configuration file is empty');
+                    }
+                    
+                    // Execute the JS file to get the configuration
+                    eval(configText);
+                    config = window.scraperConfig;
                 }
                 
-                const configText = await response.text();
-                
-                if (!configText || configText.trim().length === 0) {
-                    throw new Error('Configuration file is empty');
+                if (typeof window.scraperCities !== 'undefined') {
+                    cities = window.scraperCities;
+                } else {
+                    const citiesResponse = await fetch('./scraper-cities.js');
+                    
+                    if (!citiesResponse.ok) {
+                        throw new Error(`City configuration file not found: ${citiesResponse.status} ${citiesResponse.statusText}`);
+                    }
+                    
+                    const citiesText = await citiesResponse.text();
+                    
+                    if (!citiesText || citiesText.trim().length === 0) {
+                        throw new Error('City configuration file is empty');
+                    }
+                    
+                    eval(citiesText);
+                    cities = window.scraperCities;
                 }
-                
-                // Execute the JS file to get the configuration
-                eval(configText);
-                config = window.scraperConfig;
-                
-                const citiesResponse = await fetch('./scraper-cities.js');
-                
-                if (!citiesResponse.ok) {
-                    throw new Error(`City configuration file not found: ${citiesResponse.status} ${citiesResponse.statusText}`);
-                }
-                
-                const citiesText = await citiesResponse.text();
-                
-                if (!citiesText || citiesText.trim().length === 0) {
-                    throw new Error('City configuration file is empty');
-                }
-                
-                eval(citiesText);
-                cities = window.scraperCities;
             }
             
             // Validate configuration structure
