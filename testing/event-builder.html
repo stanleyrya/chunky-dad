@@ -1068,13 +1068,28 @@
 
     .diff-minimap {
       width: 100%;
-      max-width: 220px;
-      height: 90px;
+      height: 150px;
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 6px;
       display: block;
       margin-bottom: 0.3rem;
       pointer-events: none;
+    }
+
+    .diff-coords-maps-cell {
+      padding: 0.5rem 0.75rem 0.75rem;
+      border-top: 1px solid var(--border-color, rgba(255,255,255,0.07));
+    }
+
+    .diff-coords-maps-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .diff-coords-map-side {
+      display: flex;
+      flex-direction: column;
     }
 
     .diff-table thead {
@@ -1131,8 +1146,8 @@
     }
 
     .diff-img-preview {
-      max-width: 140px;
-      max-height: 100px;
+      max-width: 200px;
+      max-height: 150px;
       object-fit: contain;
       border-radius: 4px;
       margin-top: 0.4rem;
@@ -1193,6 +1208,7 @@
       font-size: 0.82rem;
       color: var(--text-secondary);
       line-height: 1.55;
+      margin-bottom: 0.75rem;
     }
 
     .ai-step-info p {
@@ -2241,7 +2257,7 @@
             <h2 id="event-details-heading">Event Details</h2>
             <div class="existing-selection-summary is-hidden" id="existing-selection-summary">
               <div id="existing-selection-text"></div>
-              <div id="existing-diff-text" class="existing-diff-text"></div>
+
               <div class="existing-selection-actions">
                 <button type="button" class="ghost-button action-button is-compact" id="existing-change" aria-controls="existing-event-panel" aria-haspopup="dialog">
                   <i class="bi bi-search" aria-hidden="true"></i>
@@ -2779,9 +2795,9 @@
             <li>Open an AI assistant below and paste your event info. The AI will return a <strong>JSON object</strong> with all the event fields it can extract.</li>
             <li>Copy the JSON output from the AI.</li>
             <li>Open the <a class="ai-shortcut-link" id="ai-shortcut-link" href="#" target="_blank" rel="noopener noreferrer"><i class="bi bi-apple" aria-hidden="true"></i> iOS Shortcut</a> on your iPhone or iPad.</li>
-            <li>Run the shortcut and paste the JSON when prompted. It will use your on-device LLM to refine each field and generate the final chunky.dad URL.</li>
+            <li>Run the shortcut — it reads the JSON automatically from your clipboard and uses your on-device LLM to refine each field and generate the final chunky.dad URL.</li>
           </ol>
-          <p style="margin-top:0.5rem;">Great when one-step isn't producing a URL, or when you want finer per-field control on iOS.</p>
+          <p style="margin-top:0.5rem;">This approach converts an AI-extracted JSON summary into a chunky.dad URL with precise, per-field control — ideal when the one-step method isn't generating a URL on iOS.</p>
         </div>
         <div class="ai-agent-list" id="ai-agent-list-two-step"></div>
       </div>
@@ -6168,6 +6184,7 @@
                   <td class="diff-value-cell ${rightClass}" data-col-label="Your Draft" onclick="selectSimilarityField('${f}', 'right')">
                     ${selRight ? '<span class="diff-kept-check">✓ </span>' : ''}${currentContent}
                   </td>
+                  ${richDiffLocationRow(f, existingData[f] || '', state[f] || '')}
                 </tr>`;
             }
             const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>${richDiffHtml(f, existingData[f] || '')}` : '<span class="diff-value-empty">(empty)</span>';
@@ -6176,6 +6193,7 @@
                 <td class="diff-field-label">${label}</td>
                 <td data-col-label="Existing">${existingCell}</td>
                 <td data-col-label="Your Draft">${currentCell}</td>
+                ${richDiffLocationRow(f, existingData[f] || '', state[f] || '')}
               </tr>`;
           }).join('');
           const sameRows = sameFields.map(f => {
@@ -6599,24 +6617,48 @@ Example output:
           if (!rawValue.startsWith('https://')) return '';
           return `<div class="diff-rich-block"><img src="${escapeDiffHtml(rawValue)}" class="diff-img-preview" alt="Event image preview" loading="lazy" onerror="this.style.display='none'"></div>`;
         }
-        if (field === 'location') {
-          const parts = rawValue.split(',');
-          if (parts.length === 2) {
-            const lat = parseFloat(parts[0]);
-            const lng = parseFloat(parts[1]);
-            if (!isNaN(lat) && !isNaN(lng)) {
-              const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-              // Bounding box offsets (~1.5km wide, ~1km tall) give a neighbourhood-level zoom
-              const osmBbox = `${lng - 0.015},${lat - 0.01},${lng + 0.015},${lat + 0.01}`;
-              const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(osmBbox)}&layer=mapnik&marker=${lat},${lng}`;
-              return `<div class="diff-rich-block" onclick="event.stopPropagation()">
-                <iframe src="${escapeDiffHtml(osmUrl)}" class="diff-minimap" title="Map preview" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
-                <a href="${escapeDiffHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer" class="diff-coords-link" onclick="event.stopPropagation()"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> View on map</a>
-              </div>`;
-            }
-          }
-        }
+        // Location maps are rendered as a full-width row via richDiffLocationRow
         return '';
+      }
+
+      function buildMapCellHtml(rawValue, title) {
+        if (!rawValue) return null;
+        const parts = rawValue.split(',');
+        if (parts.length !== 2) return null;
+        const lat = parseFloat(parts[0]);
+        const lng = parseFloat(parts[1]);
+        if (isNaN(lat) || isNaN(lng)) return null;
+        const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+        // Bounding box offsets (~1.5km wide, ~1km tall) give a neighbourhood-level zoom
+        const osmBbox = `${lng - 0.015},${lat - 0.01},${lng + 0.015},${lat + 0.01}`;
+        const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(osmBbox)}&layer=mapnik&marker=${lat},${lng}`;
+        return { mapsUrl: escapeDiffHtml(mapsUrl), osmUrl: escapeDiffHtml(osmUrl), title };
+      }
+
+      function richDiffLocationRow(f, leftRaw, rightRaw) {
+        if (f !== 'location') return '';
+        const left = buildMapCellHtml(leftRaw, 'Previous coordinates');
+        const right = buildMapCellHtml(rightRaw, 'New coordinates');
+        if (!left && !right) return '';
+        if (left && right) {
+          return `<td colspan="2" class="diff-coords-maps-cell" onclick="event.stopPropagation()">
+            <div class="diff-coords-maps-row">
+              <div class="diff-coords-map-side">
+                <iframe src="${left.osmUrl}" class="diff-minimap" title="${left.title}" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
+                <a href="${left.mapsUrl}" target="_blank" rel="noopener noreferrer" class="diff-coords-link" onclick="event.stopPropagation()"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> View on map</a>
+              </div>
+              <div class="diff-coords-map-side">
+                <iframe src="${right.osmUrl}" class="diff-minimap" title="${right.title}" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
+                <a href="${right.mapsUrl}" target="_blank" rel="noopener noreferrer" class="diff-coords-link" onclick="event.stopPropagation()"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> View on map</a>
+              </div>
+            </div>
+          </td>`;
+        }
+        const single = left || right;
+        return `<td colspan="2" class="diff-coords-maps-cell" onclick="event.stopPropagation()">
+          <iframe src="${single.osmUrl}" class="diff-minimap" title="${single.title}" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
+          <a href="${single.mapsUrl}" target="_blank" rel="noopener noreferrer" class="diff-coords-link" onclick="event.stopPropagation()"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> View on map</a>
+        </td>`;
       }
 
       function setDiffViewMode(mode) {
@@ -6794,6 +6836,7 @@ Example output:
                   <td class="diff-value-cell ${rightClass}" data-col-label="After" onclick="selectDiffField('${f}', 'right')">
                     ${selRight ? '<span class="diff-kept-check">✓ </span>' : ''}${newContent}
                   </td>
+                  ${richDiffLocationRow(f, existingSnapshot[f] || '', state[f] || '')}
                 </tr>`;
             }
             const oldCell = oldVal
@@ -6806,6 +6849,7 @@ Example output:
                 <td class="diff-field-label">${label}</td>
                 <td data-col-label="Before">${oldCell}</td>
                 <td data-col-label="After">${newCell}</td>
+                ${richDiffLocationRow(f, existingSnapshot[f] || '', state[f] || '')}
               </tr>`;
           }).join('');
           dom.diffModalBody.innerHTML = `<table class="diff-table">
@@ -6884,6 +6928,7 @@ Example output:
                   <td class="diff-value-cell ${rightClass}" data-col-label="Your Draft" onclick="selectLinkField('${f}', 'right')">
                     ${selRight ? '<span class="diff-kept-check">✓ </span>' : ''}${draftContent}
                   </td>
+                  ${richDiffLocationRow(f, existingData[f] || '', state[f] || '')}
                 </tr>`;
             }
             const existingCell = existingVal ? `<span class="diff-value-old">${existingVal}</span>${richDiffHtml(f, existingData[f] || '')}` : '<span class="diff-value-empty">(empty)</span>';
@@ -6892,6 +6937,7 @@ Example output:
                 <td class="diff-field-label">${label}</td>
                 <td data-col-label="Existing">${existingCell}</td>
                 <td data-col-label="Your Draft">${draftCell}</td>
+                ${richDiffLocationRow(f, existingData[f] || '', state[f] || '')}
               </tr>`;
           }).join('');
           dom.diffModalBody.innerHTML = `<table class="diff-table">
