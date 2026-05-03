@@ -6445,10 +6445,27 @@
         setExistingPanelExpanded(false);
       }
 
+      function buildAiFieldListText(cityKeys, isUrlMode) {
+        const schema = (typeof EventSchema !== 'undefined' && EventSchema) ? EventSchema : null;
+        const fields = (schema && Array.isArray(schema.AI_PROMPT_FIELDS)) ? schema.AI_PROMPT_FIELDS : [];
+        return fields.map(({ param, desc }) => {
+          let fieldDesc = desc;
+          if (param === 'city') {
+            fieldDesc += `. Must be one of: ${cityKeys}`;
+          }
+          // URL mode uses soft-hyphen syntax for long words, which is not relevant in JSON output
+          if (param === 'short' && isUrlMode) {
+            fieldDesc = 'Shorter reference title. Use a dash (-) as a breakable hyphen for long words (e.g. MEGA-WOOF). Use \\- for a hyphen that always appears. Omit if the name is already short.';
+          }
+          return `  ${param.padEnd(11)}- ${fieldDesc}`;
+        }).join('\n');
+      }
+
       function buildAiParsePrompt() {
         const cityKeys = (typeof CITY_CONFIG === 'object' && CITY_CONFIG)
           ? Object.keys(CITY_CONFIG).join(', ')
           : 'nyc, seattle, la, toronto, london, chicago, berlin, palm-springs, denver, dallas, dc, vegas, atlanta, nola, sf, portland, sitges, boston, phoenix, ptown, san-diego, philly, miami, pv, austin, houston, sacramento';
+        const fieldList = buildAiFieldListText(cityKeys, true);
         return `You are an assistant that builds event URLs for the chunky.dad event-builder page.
 
 Given information about a bear community event (from a website, flyer, image, or text), construct a URL using the base:
@@ -6457,23 +6474,7 @@ Given information about a bear community event (from a website, flyer, image, or
 Append URL parameters for every field you can confidently extract. Do not guess or fabricate values — only include fields you can source from the provided content.
 
 PARAMETERS:
-  name       - Full event title
-  short      - Shorter reference title. Use a dash (-) as a breakable hyphen for long words (e.g. MEGA-WOOF). Use \\- for a hyphen that always appears. Omit if the name is already short.
-  desc       - Event description or tagline
-  city       - City key. Must be one of: ${cityKeys}
-  venue      - Name of the venue or bar
-  addr       - Street address
-  coords     - Coordinates in "lat,lng" format — ONLY include if explicitly found in the source, never estimate
-  start      - Start datetime in local time: YYYY-MM-DDTHH:MM (e.g. 2025-06-21T21:00)
-  end        - End datetime in local time: YYYY-MM-DDTHH:MM
-  rrule      - Recurrence rule in RRULE format (e.g. FREQ=WEEKLY;BYDAY=FR) — only if recurring
-  web        - Event or organizer website URL
-  tickets    - Ticket purchase URL
-  insta      - Instagram handle (e.g. @bearracuda) or full Instagram URL
-  fb         - Facebook event or page URL
-  gmaps      - Google Maps link
-  img        - Direct URL to a promo image or flyer
-  cover      - Cover charge info (e.g. Free, $15, Cover TBD)
+${fieldList}
 
 RULES:
 - URL-encode all parameter values.
@@ -6489,28 +6490,13 @@ Return only the complete URL, with no explanation unless asked.`;
         const cityKeys = (typeof CITY_CONFIG === 'object' && CITY_CONFIG)
           ? Object.keys(CITY_CONFIG).join(', ')
           : 'nyc, seattle, la, toronto, london, chicago, berlin, palm-springs, denver, dallas, dc, vegas, atlanta, nola, sf, portland, sitges, boston, phoenix, ptown, san-diego, philly, miami, pv, austin, houston, sacramento';
+        const fieldList = buildAiFieldListText(cityKeys, false);
         return `You are an assistant that extracts structured event data for the chunky.dad event-builder.
 
 Given information about a bear community event (from a website, flyer, image, or text), extract all available fields and return ONLY a valid JSON object. Do not guess or fabricate values — only include fields you can source from the provided content.
 
 FIELDS:
-  name       - Full event title
-  short      - Shorter reference title (omit if the name is already short)
-  desc       - Event description or tagline
-  city       - City key. Must be one of: ${cityKeys}
-  venue      - Name of the venue or bar
-  addr       - Street address
-  coords     - Coordinates as "lat,lng" — ONLY if explicitly in the source, never estimate
-  start      - Start datetime in local time: YYYY-MM-DDTHH:MM
-  end        - End datetime in local time: YYYY-MM-DDTHH:MM
-  rrule      - RRULE recurrence string (only if recurring, e.g. FREQ=WEEKLY;BYDAY=FR)
-  web        - Event or organizer website URL
-  tickets    - Ticket purchase URL
-  insta      - Instagram handle (e.g. @bearracuda) or full Instagram URL
-  fb         - Facebook event or page URL
-  gmaps      - Google Maps link
-  img        - Direct URL to a promo image or flyer
-  cover      - Cover charge info (e.g. Free, $15, Cover TBD)
+${fieldList}
 
 RULES:
 - Omit any field you cannot reliably source from the provided content.

@@ -732,8 +732,9 @@ class SharedCore {
         let key = format;
         
         const useLocalDate = options.useLocalDate === true;
+        const eventTimezone = event.timezone || (event.city && this.cities[event.city]?.timezone) || null;
         const dateValue = useLocalDate
-            ? this.normalizeEventDateLocal(event.startDate, event.timezone)
+            ? this.normalizeEventDateLocal(event.startDate, eventTimezone)
             : this.normalizeEventDate(event.startDate);
         
         // Replace template variables
@@ -1977,11 +1978,8 @@ class SharedCore {
             event.city = extractedCity;
         }
         
-        // Apply timezone from city configuration if not already set
-        // This is needed for parsers like chunk that pass timezone: null
-        if (!event.timezone && event.city && this.cities[event.city]) {
-            event.timezone = this.cities[event.city].timezone;
-        } else if (!event.timezone && event.city && !this.cities[event.city]) {
+        // Warn when the event references a city we have no config for (timezone-aware key building would fall back to UTC)
+        if (!event.timezone && event.city && !this.cities[event.city]) {
             const title = event.title || 'unknown';
             this.warnOnce(
                 `timezone:${event.city}`,
@@ -2922,7 +2920,8 @@ class SharedCore {
             .replace(/[\s\-]+/g, '-')
             .replace(/^-+|-+$/g, '');
         
-        const date = this.normalizeEventDateLocal(event.startDate, event.timezone);
+        const eventTimezone = event.timezone || (event.city && this.cities[event.city]?.timezone) || null;
+        const date = this.normalizeEventDateLocal(event.startDate, eventTimezone);
         const venue = String(event.bar || '').toLowerCase().trim();
         if (!normalizedTitle || !date) return null;
         
