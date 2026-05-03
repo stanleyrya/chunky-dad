@@ -269,4 +269,12 @@ class FurballParser {
 
 }
 
-module.exports = { FurballParser };
+// Export for both environments
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { FurballParser };
+} else if (typeof window !== 'undefined') {
+    window.FurballParser = FurballParser;
+} else {
+    // Scriptable environment
+    this.FurballParser = FurballParser;
+}
