@@ -838,10 +838,10 @@
                 const debugMode = document.getElementById('debugMode').checked;
                 const showRawData = document.getElementById('showRawData').checked;
                 
-                console.info(`Test config: source=${sourceSelect}, days=${daysInput}, dryRun=${dryRun}, debug=${debugMode}, rawData=${showRawData}`);
+                console.info(`Test config: source=${sourceSelect}, days=${daysInput}, corsProxy=${corsProxy || 'none'}, dryRun=${dryRun}, debug=${debugMode}, rawData=${showRawData}`);
                 
                 // Create and run orchestrator
-                const orchestrator = new BearEventScraperOrchestrator();
+                const orchestrator = new BearEventScraperOrchestrator({ corsProxy });
                 
                 console.info('🔧 Initializing orchestrator...');
                 await orchestrator.initialize();
