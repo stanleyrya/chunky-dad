@@ -697,7 +697,7 @@
 
     .ai-modal__content {
       display: grid;
-      gap: 1rem;
+      gap: 0.65rem;
       padding: 1.2rem;
       flex: 1;
       min-height: 0;
@@ -2890,7 +2890,7 @@
       const ISSUES_EMAIL = 'events+issues@chunky.dad';
       const SCRIPTABLE_SCRIPT_NAME = 'bear-event-scraper-unified';
       // iOS Shortcut for two-step AI parsing — owned by chunky.dad project
-      const TWO_STEP_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/1551364b70094cbcaa3c1f497b76d418';
+      const TWO_STEP_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/7adddab28986499b898fbf6908b91d38';
       const LEGACY_OVERRIDE_HELP_MESSAGE = 'Legacy override detected. Edits are limited in this tool. Use Tell Dad and describe what you are trying to change.';
       const LEGACY_SERIES_BLOCK_MESSAGE = 'This series has legacy overrides, so series edits are blocked in this tool.';
       const LEGACY_TELL_DAD_PROMPT = 'Use Tell Dad and tell us exactly what you are trying to change.';
@@ -6466,7 +6466,6 @@ PARAMETERS:
   coords     - Coordinates in "lat,lng" format — ONLY include if explicitly found in the source, never estimate
   start      - Start datetime in local time: YYYY-MM-DDTHH:MM (e.g. 2025-06-21T21:00)
   end        - End datetime in local time: YYYY-MM-DDTHH:MM
-  tz         - IANA timezone (e.g. America/New_York, America/Los_Angeles, America/Chicago, Europe/London). Match the city's local timezone.
   rrule      - Recurrence rule in RRULE format (e.g. FREQ=WEEKLY;BYDAY=FR) — only if recurring
   web        - Event or organizer website URL
   tickets    - Ticket purchase URL
@@ -6504,7 +6503,6 @@ FIELDS:
   coords     - Coordinates as "lat,lng" — ONLY if explicitly in the source, never estimate
   start      - Start datetime in local time: YYYY-MM-DDTHH:MM
   end        - End datetime in local time: YYYY-MM-DDTHH:MM
-  tz         - IANA timezone (e.g. America/New_York)
   rrule      - RRULE recurrence string (only if recurring, e.g. FREQ=WEEKLY;BYDAY=FR)
   web        - Event or organizer website URL
   tickets    - Ticket purchase URL
@@ -6520,7 +6518,7 @@ RULES:
 - Return ONLY the JSON object — no explanation, no markdown code fences.
 
 Example output:
-{"name":"Bear Night","city":"nyc","venue":"Nowhere Bar","start":"2025-08-15T21:00","tz":"America/New_York"}`;
+{"name":"Bear Night","city":"nyc","venue":"Nowhere Bar","start":"2025-08-15T21:00"}`;
       }
 
       const AI_AGENTS = [
@@ -8141,32 +8139,39 @@ Example output:
         const input = document.getElementById(targetId);
         if (!input) return;
 
-        // Don't blur active element as it causes UI jumps on mobile
-        // and can interfere with clipboard operations
+        // Focus the input first so the user can always paste manually as a fallback
+        input.focus();
 
         const isSecure = typeof window.isSecureContext === 'boolean' ? window.isSecureContext : true;
         if (!isSecure) {
-          showToast('Clipboard needs HTTPS/localhost. Paste manually.', 'warn');
+          showToast('Field focused — use Ctrl+V / ⌘V to paste.', 'info');
           return;
         }
-        if (!navigator.clipboard || !navigator.clipboard.readText) {
-          showToast('Clipboard blocked. Paste manually.', 'warn');
-          return;
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          try {
+            const text = await navigator.clipboard.readText();
+            const trimmed = String(text || '').trim();
+            if (!trimmed) {
+              showToast('Clipboard empty.', 'warn');
+              return;
+            }
+            applyPasteValue(input, trimmed);
+            showTemporaryState(button, 'Pasted');
+            return;
+          } catch (error) {
+            // Fall through to execCommand
+          }
         }
         try {
-          const text = await navigator.clipboard.readText();
-          const trimmed = String(text || '').trim();
-          if (!trimmed) {
-            showToast('Clipboard empty.', 'warn');
+          const success = document.execCommand('paste');
+          if (success) {
+            showTemporaryState(button, 'Pasted');
             return;
           }
-          applyPasteValue(input, trimmed);
-          showTemporaryState(button, 'Pasted');
-        } catch (error) {
-          console.warn('Clipboard read failed:', error);
-          showToast('Clipboard blocked. Paste manually.', 'warn');
-          input.focus();
+        } catch (e) {
+          // ignore
         }
+        showToast('Field focused — use Ctrl+V / ⌘V to paste.', 'info');
       }
 
       function applyPasteValue(input, value) {
@@ -9175,7 +9180,6 @@ Example output:
         setTextParam('cover', state.cover);
         setTextParam('start', state.start);
         setTextParam('end', state.end);
-        setTextParam('tz', state.timezone);
         setTextParam('rrule', state.recurrence);
         if (includeAllEditingFields) {
           params.set('rmode', state.recurrenceMode === 'raw' ? 'raw' : 'builder');
