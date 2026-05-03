@@ -25,12 +25,13 @@
 console.log('🐻 Bear Event Scraper: Starting...');
 
 class BearEventScraperOrchestrator {
-    constructor() {
+    constructor(config = {}) {
         this.isScriptable = typeof importModule !== 'undefined';
         this.isNode = typeof module !== 'undefined' && module.exports && typeof window === 'undefined';
         this.isWeb = typeof window !== 'undefined';
         this.isInitialized = false;
         this.modules = {};
+        this.config = config;
     }
 
     async initialize() {

@@ -50,6 +50,10 @@ class WebAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
+            const fetchUrl = this.config.corsProxy
+                ? `${this.config.corsProxy}${encodeURIComponent(url)}`
+                : url;
+
             const fetchOptions = {
                 method: options.method || 'GET',
                 headers: {
@@ -64,7 +68,7 @@ class WebAdapter {
                 fetchOptions.body = options.body;
             }
             
-            const response = await fetch(url, fetchOptions);
+            const response = await fetch(fetchUrl, fetchOptions);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
