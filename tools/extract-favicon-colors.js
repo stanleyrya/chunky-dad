@@ -41,7 +41,13 @@ const BARS_DIR         = path.join(ROOT, 'data', 'bars');
 const EVENT_COLORS_DIR = path.join(ROOT, 'data', 'event-colors');
 
 // Shared filename utilities (same as used by download-images.js)
-const { convertWebsiteUrlToFaviconPath } = require(path.join(ROOT, 'js', 'filename-utils.js'));
+const {
+  convertWebsiteUrlToFaviconPath,
+  isLinktreeUrl,
+  isWikipediaUrl,
+  generateLinktreeFaviconFilename,
+  generateWikipediaFaviconFilename,
+} = require(path.join(ROOT, 'js', 'filename-utils.js'));
 
 // ---------------------------------------------------------------------------
 // CLI flags
@@ -85,35 +91,9 @@ function isGenericPlatformUrl(url) {
 }
 
 /**
- * Return true if the URL is a Wikipedia page.
- * download-images.js downloads Wikipedia infobox logos under a special filename.
- */
-function isWikipediaUrl(url) {
-  try {
-    const h = new URL(url).hostname;
-    return h === 'en.wikipedia.org' || h.endsWith('.wikipedia.org');
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Generate the local favicon filename for a Wikipedia URL.
- * Matches the logic in tools/download-images.js → generateWikipediaFaviconFilename().
- */
-function wikipediaFaviconFilename(wikipediaUrl, size = '64') {
-  const parsedUrl = new URL(wikipediaUrl);
-  const cleanPath = parsedUrl.pathname
-    .substring(1)
-    .replace(/[^a-zA-Z0-9._-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `favicon-wikipedia-${cleanPath}-${size}px.png`;
-}
-
-/**
  * Given a website URL, return the absolute path to the already-downloaded
  * local favicon file (or null if the file doesn't exist / URL is skipped).
+ * Mirrors the filename logic in download-images.js so the two tools stay in sync.
  */
 function localFaviconPath(websiteUrl) {
   if (!websiteUrl) return null;
@@ -123,7 +103,14 @@ function localFaviconPath(websiteUrl) {
   if (isWikipediaUrl(websiteUrl)) {
     // Try both 64px and 256px — prefer 64px
     for (const size of ['64', '256']) {
-      const f = path.join(FAVICONS_DIR, wikipediaFaviconFilename(websiteUrl, size));
+      const f = path.join(FAVICONS_DIR, generateWikipediaFaviconFilename(websiteUrl, size));
+      if (fs.existsSync(f)) return f;
+    }
+    return null;
+  } else if (isLinktreeUrl(websiteUrl)) {
+    // Try both 64px and 256px — prefer 64px
+    for (const size of ['64', '256']) {
+      const f = path.join(FAVICONS_DIR, generateLinktreeFaviconFilename(websiteUrl, size));
       if (fs.existsSync(f)) return f;
     }
     return null;

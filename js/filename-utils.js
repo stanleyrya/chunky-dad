@@ -226,6 +226,68 @@ function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
 }
 
 /**
+ * Return true if the URL is a Linktree page.
+ * @param {string} url - The URL to check
+ * @returns {boolean}
+ */
+function isLinktreeUrl(url) {
+    try {
+        const parsedUrl = new URL(url);
+        return parsedUrl.hostname === 'linktr.ee' || parsedUrl.hostname === 'www.linktr.ee';
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Return true if the URL is a Wikipedia page.
+ * @param {string} url - The URL to check
+ * @returns {boolean}
+ */
+function isWikipediaUrl(url) {
+    try {
+        const parsedUrl = new URL(url);
+        return parsedUrl.hostname === 'en.wikipedia.org' ||
+               parsedUrl.hostname === 'www.en.wikipedia.org' ||
+               parsedUrl.hostname.endsWith('.wikipedia.org');
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Generate the local favicon filename for a Linktree URL.
+ * @param {string} linktreeUrl - The Linktree URL
+ * @param {string} size - Size suffix (default '32')
+ * @returns {string}
+ */
+function generateLinktreeFaviconFilename(linktreeUrl, size = '32') {
+    const parsedUrl = new URL(linktreeUrl);
+    const pathname = parsedUrl.pathname.substring(1);
+    const cleanPath = pathname
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    return `favicon-linktr.ee-${cleanPath}-${size}px.png`;
+}
+
+/**
+ * Generate the local favicon filename for a Wikipedia URL.
+ * @param {string} wikipediaUrl - The Wikipedia URL
+ * @param {string} size - Size suffix (default '32')
+ * @returns {string}
+ */
+function generateWikipediaFaviconFilename(wikipediaUrl, size = '32') {
+    const parsedUrl = new URL(wikipediaUrl);
+    const pathname = parsedUrl.pathname.substring(1);
+    const cleanPath = pathname
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    return `favicon-wikipedia-${cleanPath}-${size}px.png`;
+}
+
+/**
  * Convert a website URL to a local favicon path, handling Linktree URLs specially
  * @param {string} websiteUrl - The website URL
  * @param {string} basePath - The base path (e.g., 'img/favicons')
@@ -324,6 +386,10 @@ if (typeof module !== 'undefined' && module.exports) {
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        isLinktreeUrl,
+        isWikipediaUrl,
+        generateLinktreeFaviconFilename,
+        generateWikipediaFaviconFilename,
         detectFileExtension,
         slugify,
         simpleHash
@@ -341,6 +407,10 @@ if (typeof window !== 'undefined') {
         convertImageUrlToLocalPath,
         convertFaviconUrlToLocalPath,
         convertWebsiteUrlToFaviconPath,
+        isLinktreeUrl,
+        isWikipediaUrl,
+        generateLinktreeFaviconFilename,
+        generateWikipediaFaviconFilename,
         detectFileExtension,
         slugify,
         simpleHash

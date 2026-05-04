@@ -120,14 +120,8 @@ function parseGoogleSheetsData(json) {
             instagram: cells[7]?.v || '',      // H: instagram
             website: cells[8]?.v || '',        // I: website
             facebook: cells[9]?.v || '',       // J: facebook
-            image: ''
+            image: ''                          // K: twitter (not used, image field empty for now)
         };
-
-        // Linktree is just a type of website — fold it into website if no website exists
-        const linktree = cells[10]?.v || '';
-        if (linktree && !bar.website) {
-            bar.website = linktree;
-        }
         
         // Clean Instagram username - remove @ symbol and trim
         if (bar.instagram) {
@@ -300,7 +294,7 @@ function cleanBarObject(bar) {
     const cleaned = {};
     
     // Keep only fields that have values
-    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities', 'faviconBg', 'faviconFg'];
+    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities'];
     
     fieldsToKeep.forEach(field => {
         if (bar[field] && bar[field].toString().trim() !== '') {
