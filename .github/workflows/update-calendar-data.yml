@@ -256,7 +256,7 @@ jobs:
             COLOR_FILE_COUNT=0
           fi
           if [ "$COLOR_FILE_COUNT" -eq 0 ]; then
-            FAVICON_COUNT=$(find img/favicons -name "*.ico" -o -name "*.png" 2>/dev/null | wc -l)
+            FAVICON_COUNT=$(find img/favicons \( -name "*.ico" -o -name "*.png" \) 2>/dev/null | wc -l)
             if [ "$FAVICON_COUNT" -gt 0 ]; then
               echo "🎨 event-colors/ is empty but $FAVICON_COUNT favicons exist — will run color extraction"
               COLORS_MISSING=true
