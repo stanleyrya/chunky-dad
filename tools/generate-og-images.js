@@ -36,6 +36,12 @@ function sanitize(text) {
   return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Default background color used when no favicon palette is available (matches gradient end stop).
+const DEFAULT_DARK_BG = '#1c2833';
+// Gradient darkening ratios: darker stop → lighter stop for a subtle gradient.
+const GRADIENT_DARK_RATIO  = 0.65;
+const GRADIENT_LIGHT_RATIO = 0.45;
+
 /**
  * Load event favicon colors for a city, keyed by event slug.
  * Returns a Map<string, { bg: string, fg: string }>.
@@ -85,7 +91,7 @@ function loadBarColors(cityKey) {
  * Used to create a dark readable background from a brand color.
  */
 function darken(hex, ratio = 0.6) {
-  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return '#1c2833';
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return DEFAULT_DARK_BG;
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -104,8 +110,8 @@ function buildTemplate({ cityName, eventName, day, time, bar, faviconColors }) {
 
   // Derive background and accent from favicon colors when available
   const bgGrad = faviconColors
-    ? `linear-gradient(135deg, ${darken(faviconColors.bg, 0.65)} 0%, ${darken(faviconColors.bg, 0.45)} 100%)`
-    : 'linear-gradient(135deg, #10151a 0%, #1c2833 100%)';
+    ? `linear-gradient(135deg, ${darken(faviconColors.bg, GRADIENT_DARK_RATIO)} 0%, ${darken(faviconColors.bg, GRADIENT_LIGHT_RATIO)} 100%)`
+    : `linear-gradient(135deg, #10151a 0%, ${DEFAULT_DARK_BG} 100%)`;
   const accentColor = faviconColors ? faviconColors.bg : '#667eea';
   const cardBg = faviconColors
     ? `rgba(255,255,255,0.08)`
