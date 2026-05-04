@@ -9,9 +9,8 @@
  * by download-images.js is reused here so the two tools stay in sync:
  *
  *   • Regular websites  → Google Favicon service filename, e.g. favicon-animal.nyc-64px.ico
+ *   • Linktree pages    → profile-picture filename, e.g. favicon-linktr.ee-cubhouse-64px.png
  *   • Wikipedia pages   → infobox-logo filename, e.g. favicon-wikipedia-wiki-Eagle_NYC-64px.png
- *
- * Linktree URLs are treated as regular websites — their Google Favicon is used.
  *
  * Generic social platforms (instagram, facebook, twitter, tiktok, youtube, googlemaps)
  * are skipped — they have no entity-specific locally-stored favicon.
@@ -152,12 +151,14 @@ function localFaviconPath(websiteUrl) {
 
 /**
  * Pick the best URL to represent a bar or event for color extraction.
+ * Priority: own website → linktree.
  * Social platforms (instagram/facebook/etc.) are skipped.
- * Linktree URLs are treated as regular websites.
  */
 function chooseBestUrl(entity) {
-  // Own website (not a social platform) — linktree URLs fall through here too
+  // Own website (not a social platform)
   if (entity.website && !isGenericPlatformUrl(entity.website)) return entity.website;
+  // Linktree (profile picture already downloaded)
+  if (entity.linktree && !isGenericPlatformUrl(entity.linktree)) return entity.linktree;
   // Wikipedia (bar logo already downloaded)
   if (entity.wikipedia && isWikipediaUrl(entity.wikipedia)) return entity.wikipedia;
   return null;
