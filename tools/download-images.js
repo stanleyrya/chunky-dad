@@ -747,15 +747,11 @@ function processWebsiteUrl(url, context = '') {
   try {
     const domain = new URL(url).hostname;
     
-    // Check if it's a Linktree URL
-    if (isLinktreeUrl(url)) {
-      console.log(`🔗 Found Linktree URL${context}: ${url}`);
-      return { type: 'linktree', url };
-    } else if (isWikipediaUrl(url)) {
+    if (isWikipediaUrl(url)) {
       console.log(`📚 Found Wikipedia URL${context}: ${url}`);
       return { type: 'wikipedia', url };
     } else {
-      // Use Google's favicon service for regular domains with multiple sizes
+      // Use Google's favicon service for all other domains (including linktr.ee)
       const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
       const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
       
@@ -775,10 +771,7 @@ function processWebsiteUrl(url, context = '') {
 function addProcessedUrl(imageUrls, result) {
   if (!result) return;
   
-  if (result.type === 'linktree') {
-    imageUrls.linktreeUrls = imageUrls.linktreeUrls || new Set();
-    imageUrls.linktreeUrls.add(result.url);
-  } else if (result.type === 'wikipedia') {
+  if (result.type === 'wikipedia') {
     imageUrls.wikipediaUrls = imageUrls.wikipediaUrls || new Set();
     imageUrls.wikipediaUrls.add(result.url);
   } else if (result.type === 'favicon') {
@@ -878,9 +871,8 @@ function extractImageUrls() {
     console.log('📁 No bars directory found, skipping bar logo extraction');
   }
   
-  const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
   const wikipediaCount = imageUrls.wikipediaUrls ? imageUrls.wikipediaUrls.size : 0;
-  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), ${linktreeCount} Linktree URLs, and ${wikipediaCount} Wikipedia URLs`);
+  console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), and ${wikipediaCount} Wikipedia URLs`);
   return imageUrls;
 }
 
@@ -961,49 +953,6 @@ async function main() {
     }
   }
   
-  // Process Linktree profile pictures with multiple sizes
-  if (imageUrls.linktreeUrls && imageUrls.linktreeUrls.size > 0) {
-    console.log('\n🔗 Processing Linktree profile pictures with multiple sizes...');
-    for (const linktreeUrl of imageUrls.linktreeUrls) {
-      try {
-        // Extract profile picture URL from Linktree page
-        const profilePictureUrl = await extractLinktreeProfilePicture(linktreeUrl);
-        
-        if (profilePictureUrl) {
-          // Generate multiple sizes for Linktree profile pictures
-          const sizes = [
-            { size: '64', targetSize: 64, description: 'Map markers (64px)' },
-            { size: '256', targetSize: 256, description: 'Cards/OG images (256px)' }
-          ];
-          
-          for (const { size, targetSize, description } of sizes) {
-            const linktreeFilename = generateLinktreeFaviconFilename(linktreeUrl, size);
-            
-            console.log(`📥 Processing Linktree ${description}: ${linktreeFilename}`);
-            
-            // Download and process the profile picture with the custom filename
-            const result = await downloadImageWithCustomFilename(profilePictureUrl, linktreeFilename, 'favicon', true, targetSize);
-            if (result.success) {
-              if (result.skipped) {
-                totalSkipped++;
-              } else {
-                totalDownloaded++;
-              }
-            } else {
-              totalFailed++;
-            }
-          }
-        } else {
-          console.log(`⚠️  Could not extract profile picture from ${linktreeUrl}`);
-          totalFailed++;
-        }
-      } catch (error) {
-        console.error(`❌ Failed to process Linktree ${linktreeUrl}:`, error.message);
-        totalFailed++;
-      }
-    }
-  }
-  
   // Process Wikipedia logos with multiple sizes
   if (imageUrls.wikipediaUrls && imageUrls.wikipediaUrls.size > 0) {
     console.log('\\n📚 Processing Wikipedia logos with multiple sizes...');
@@ -1070,4 +1019,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaLogo, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractWikipediaLogo, isWikipediaUrl, fetchPageContent, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };

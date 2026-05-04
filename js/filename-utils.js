@@ -226,31 +226,17 @@ function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
 }
 
 /**
- * Convert a website URL to a local favicon path, handling Linktree URLs specially
+ * Convert a website URL to a local favicon path.
+ * All domains (including linktr.ee) use the Google Favicon service.
  * @param {string} websiteUrl - The website URL
  * @param {string} basePath - The base path (e.g., 'img/favicons')
  * @returns {string} - The local file path
  */
 function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
     const parsedUrl = new URL(websiteUrl);
-    
-    // Check if it's a Linktree URL
-    if (parsedUrl.hostname === 'linktr.ee' || parsedUrl.hostname === 'www.linktr.ee') {
-        // Generate Linktree-specific filename
-        const pathname = parsedUrl.pathname.substring(1); // Remove leading slash
-        const cleanPath = pathname
-            .replace(/[^a-zA-Z0-9._-]/g, '-') // Replace invalid chars with dashes
-            .replace(/-+/g, '-') // Collapse multiple dashes
-            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-        
-        const filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
-        return `${basePath}/${filename}`;
-    } else {
-        // Use regular favicon logic for other domains (prefer 64px for higher quality)
-        const hostname = parsedUrl.hostname;
-        const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
-        return convertFaviconUrlToLocalPath(googleFaviconUrl, basePath);
-    }
+    const hostname = parsedUrl.hostname;
+    const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+    return convertFaviconUrlToLocalPath(googleFaviconUrl, basePath);
 }
 
 
