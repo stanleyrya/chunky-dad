@@ -120,7 +120,8 @@ function parseGoogleSheetsData(json) {
             instagram: cells[7]?.v || '',      // H: instagram
             website: cells[8]?.v || '',        // I: website
             facebook: cells[9]?.v || '',       // J: facebook
-            image: ''                          // K: twitter (not used, image field empty for now)
+            linktree: cells[10]?.v || '',      // K: linktree
+            image: ''
         };
         
         // Clean Instagram username - remove @ symbol and trim
@@ -294,7 +295,7 @@ function cleanBarObject(bar) {
     const cleaned = {};
     
     // Keep only fields that have values
-    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities'];
+    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'linktree', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities', 'faviconBg', 'faviconFg'];
     
     fieldsToKeep.forEach(field => {
         if (bar[field] && bar[field].toString().trim() !== '') {
