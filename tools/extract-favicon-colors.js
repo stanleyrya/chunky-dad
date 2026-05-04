@@ -1,109 +1,52 @@
 #!/usr/bin/env node
 
 /**
- * Extract two dominant colors (background + foreground/symbol) from bar favicons.
+ * Extract two dominant colors (background + foreground/symbol) from favicons.
  *
- * For well-known social platforms the brand colors are hardcoded.
- * For bar website URLs the favicon is fetched, decoded with sharp, and the two
- * most dominant opaque colors are found via k-means (k=2) on the raw RGBA pixels.
+ * For every URL supplied (from bars or events) the favicon is actually fetched
+ * from the page, decoded with sharp, and the two most dominant opaque colors
+ * are found via k-means (k=2) on raw RGBA pixels.  There are no hardcoded
+ * platform shortcut colors — every URL is treated the same way.
  *
- * Results are written back into data/bars/<city>.json as `faviconBg` and `faviconFg`.
+ * Bars:   results written to data/bars/<city>.json as `faviconBg` / `faviconFg`.
+ * Events: results written to data/event-colors/<city>.json as
+ *         [{ slug, url, faviconBg, faviconFg }, …].
  *
  * Usage:
- *   node tools/extract-favicon-colors.js [--force] [--city <city>] [--bar "<bar name>"]
+ *   node tools/extract-favicon-colors.js [options]
  *
  * Options:
- *   --force           Re-extract even if faviconBg/faviconFg already present
- *   --city <city>     Only process bars in the given city file
- *   --bar  <name>     Only process the bar with the given name (case-insensitive)
+ *   --bars            Process bars only
+ *   --events          Process events only
+ *   (default: both)
+ *   --force           Re-extract even if colors already present
+ *   --city <city>     Only process the given city
  */
 
 'use strict';
 
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
 const https = require('https');
-const http = require('http');
+const http  = require('http');
 
-const ROOT = path.resolve(__dirname, '..');
-const BARS_DIR = path.join(ROOT, 'data', 'bars');
+const ROOT            = path.resolve(__dirname, '..');
+const BARS_DIR        = path.join(ROOT, 'data', 'bars');
+const EVENT_COLORS_DIR = path.join(ROOT, 'data', 'event-colors');
 
 // ---------------------------------------------------------------------------
 // CLI flags
 // ---------------------------------------------------------------------------
 const args = process.argv.slice(2);
-const FORCE = args.includes('--force');
+const FORCE      = args.includes('--force');
+const ONLY_BARS  = args.includes('--bars');
+const ONLY_EVENTS = args.includes('--events');
+const DO_BARS    = !ONLY_EVENTS;
+const DO_EVENTS  = !ONLY_BARS;
 const cityFilter = (() => {
   const idx = args.indexOf('--city');
   return idx !== -1 ? args[idx + 1] : null;
 })();
-const barFilter = (() => {
-  const idx = args.indexOf('--bar');
-  return idx !== -1 ? (args[idx + 1] || '').toLowerCase() : null;
-})();
-
-// ---------------------------------------------------------------------------
-// Hardcoded brand colors for well-known platforms.
-// bg = dominant background color, fg = symbol / foreground color.
-// ---------------------------------------------------------------------------
-const PLATFORM_COLORS = {
-  instagram: { bg: '#E4405F', fg: '#ffffff' },
-  facebook:  { bg: '#1877F2', fg: '#ffffff' },
-  linktree:  { bg: '#43E55C', fg: '#1A1A1A' },
-  twitter:   { bg: '#000000', fg: '#ffffff' },
-  x:         { bg: '#000000', fg: '#ffffff' },
-  tiktok:    { bg: '#010101', fg: '#ffffff' },
-  youtube:   { bg: '#FF0000', fg: '#ffffff' },
-  gaycities: { bg: '#CC0066', fg: '#ffffff' },
-  wikipedia: { bg: '#ffffff', fg: '#000000' },
-  googlemaps:{ bg: '#4285F4', fg: '#ffffff' },
-};
-
-// Map URL hostname to platform key using exact hostname matching to prevent
-// substring-based spoofing (e.g. evilinstagram.com or instagram.com.evil.com).
-const PLATFORM_HOSTNAMES = {
-  'instagram.com':     'instagram',
-  'www.instagram.com': 'instagram',
-  'facebook.com':      'facebook',
-  'www.facebook.com':  'facebook',
-  'linktr.ee':         'linktree',
-  'linktree.com':      'linktree',
-  'www.linktree.com':  'linktree',
-  'twitter.com':       'twitter',
-  'www.twitter.com':   'twitter',
-  'x.com':             'twitter',
-  'www.x.com':         'twitter',
-  'tiktok.com':        'tiktok',
-  'www.tiktok.com':    'tiktok',
-  'youtube.com':       'youtube',
-  'www.youtube.com':   'youtube',
-  'm.youtube.com':     'youtube',
-  'gaycities.com':     'gaycities',
-  'newyork.gaycities.com': 'gaycities',
-  'losangeles.gaycities.com': 'gaycities',
-  'seattle.gaycities.com': 'gaycities',
-  'london.gaycities.com': 'gaycities',
-  'en.wikipedia.org':  'wikipedia',
-  'www.wikipedia.org': 'wikipedia',
-  'maps.google.com':   'googlemaps',
-  'www.google.com':    'googlemaps',
-  'goo.gl':            'googlemaps',
-};
-
-function detectPlatform(url) {
-  if (!url) return null;
-  try {
-    const { hostname, pathname } = new URL(url);
-    const host = hostname.toLowerCase();
-    // Exact hostname match
-    if (PLATFORM_HOSTNAMES[host]) return PLATFORM_HOSTNAMES[host];
-    // google.com is a googlemaps link only when the path starts with /maps
-    if (host === 'www.google.com' && pathname.startsWith('/maps')) return 'googlemaps';
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // HTTP fetch helpers
@@ -112,7 +55,8 @@ function detectPlatform(url) {
 /** Fetch a URL, following up to maxRedirects redirects. Returns Buffer. */
 function fetchBuffer(url, maxRedirects = 5) {
   return new Promise((resolve, reject) => {
-    const parsedUrl = new URL(url);
+    let parsedUrl;
+    try { parsedUrl = new URL(url); } catch (e) { return reject(new Error(`Invalid URL: ${url}`)); }
     const lib = parsedUrl.protocol === 'https:' ? https : http;
     const options = {
       hostname: parsedUrl.hostname,
@@ -126,10 +70,14 @@ function fetchBuffer(url, maxRedirects = 5) {
       timeout: 10000,
     };
     const req = lib.request(options, (res) => {
-      if ((res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) && res.headers.location) {
+      if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
         if (maxRedirects <= 0) return reject(new Error('Too many redirects'));
-        const redirectUrl = new URL(res.headers.location, url).toString();
-        resolve(fetchBuffer(redirectUrl, maxRedirects - 1));
+        try {
+          const redirectUrl = new URL(res.headers.location, url).toString();
+          resolve(fetchBuffer(redirectUrl, maxRedirects - 1));
+        } catch (e) {
+          reject(new Error(`Bad redirect URL: ${res.headers.location}`));
+        }
         res.resume();
         return;
       }
@@ -139,7 +87,7 @@ function fetchBuffer(url, maxRedirects = 5) {
       }
       const chunks = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('end',  () => resolve(Buffer.concat(chunks)));
       res.on('error', reject);
     });
     req.on('error', reject);
@@ -160,17 +108,18 @@ async function fetchText(url) {
 
 /** Extract the best favicon URL from an HTML page. */
 function parseFaviconFromHtml(html, baseUrl) {
-  // Look for <link rel="icon"> or <link rel="shortcut icon">
+  // Collect all <link rel="…icon…"> entries (including apple-touch-icon, mask-icon, etc.)
   const iconPattern = /<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>/gi;
   const candidates = [];
   let m;
   while ((m = iconPattern.exec(html)) !== null) {
     candidates.push(m[1]);
   }
-  // Prefer PNG over ICO
-  const png = candidates.find(c => c.toLowerCase().endsWith('.png'));
-  const ico = candidates.find(c => c.toLowerCase().endsWith('.ico'));
-  const chosen = png || ico || candidates[0];
+  // Prefer PNG over SVG over ICO for better color extraction
+  const png = candidates.find(c => /\.png(\?|$)/i.test(c));
+  const svg = candidates.find(c => /\.svg(\?|$)/i.test(c));
+  const ico = candidates.find(c => /\.ico(\?|$)/i.test(c));
+  const chosen = png || ico || svg || candidates[0];
   if (!chosen) return null;
   try {
     return new URL(chosen, baseUrl).toString();
@@ -179,26 +128,30 @@ function parseFaviconFromHtml(html, baseUrl) {
   }
 }
 
-/** Find the favicon URL for a given website URL. */
-async function resolveFaviconUrl(websiteUrl) {
-  const origin = new URL(websiteUrl).origin;
+/**
+ * Find the best favicon URL for a given page URL.
+ * Strategy: try /favicon.ico, then parse HTML for <link rel="icon">.
+ */
+async function resolveFaviconUrl(pageUrl) {
+  let origin;
+  try { origin = new URL(pageUrl).origin; } catch { return null; }
   const icoUrl = `${origin}/favicon.ico`;
 
-  // First try /favicon.ico
+  // Try the fallback /favicon.ico first (cheap)
   try {
     const buf = await fetchBuffer(icoUrl);
-    if (buf.length > 0) return icoUrl;
+    if (buf.length > 100) return icoUrl; // ignore empty / trivial responses
   } catch {
-    // fall through
+    // ignore
   }
 
-  // Try parsing the HTML
+  // Parse the actual page HTML for a declared icon
   try {
-    const html = await fetchText(websiteUrl);
-    const found = parseFaviconFromHtml(html, websiteUrl);
+    const html = await fetchText(pageUrl);
+    const found = parseFaviconFromHtml(html, pageUrl);
     if (found) return found;
   } catch {
-    // fall through
+    // ignore
   }
 
   return null;
@@ -211,19 +164,21 @@ async function resolveFaviconUrl(websiteUrl) {
 let sharp;
 try {
   sharp = require('sharp');
-} catch (e) {
+} catch {
   console.error('sharp is required. Run: npm install sharp');
   process.exit(1);
 }
 
 /**
  * Simple k-means (k=2) on RGB pixels.
- * Returns the two cluster centroids as hex strings, ordered by cluster size (largest first).
+ * Returns the two cluster centroids as hex strings:
+ *   [0] = larger cluster (background)
+ *   [1] = smaller cluster (foreground / symbol)
  */
 function kMeans2(pixels, maxIter = 20) {
   if (pixels.length < 2) return ['#000000', '#ffffff'];
 
-  // Initialize with the first pixel and the pixel farthest from it
+  // Initialize: c1 = first pixel, c2 = farthest pixel from c1
   let c1 = pixels[0];
   let maxDist = -1;
   let c2 = pixels[0];
@@ -246,8 +201,7 @@ function kMeans2(pixels, maxIter = 20) {
     const newC2 = cnt2 > 0 ? [sum2[0]/cnt2, sum2[1]/cnt2, sum2[2]/cnt2] : c2;
     if (colorDist(newC1, c1) < 1 && colorDist(newC2, c2) < 1) break;
     c1 = newC1; c2 = newC2;
-    // Swap so c1 is always the larger cluster
-    if (cnt2 > cnt1) { [c1, c2] = [c2, c1]; }
+    if (cnt2 > cnt1) { [c1, c2] = [c2, c1]; } // keep c1 as the larger cluster
   }
 
   return [toHex(c1), toHex(c2)];
@@ -263,11 +217,10 @@ function toHex(rgb) {
 
 /**
  * Given a favicon image buffer, extract two dominant colors.
- * Returns { bg, fg } where bg is the most-common color and fg is the other.
+ * Returns { bg, fg } — bg = most-common color, fg = other.
  */
 async function extractColors(imageBuffer) {
-  // Resize to 32x32 RGBA for speed / consistency
-  const { data, info } = await sharp(imageBuffer)
+  const { data } = await sharp(imageBuffer)
     .resize(32, 32, { fit: 'fill' })
     .ensureAlpha()
     .raw()
@@ -275,8 +228,7 @@ async function extractColors(imageBuffer) {
 
   const pixels = [];
   for (let i = 0; i < data.length; i += 4) {
-    const a = data[i + 3];
-    if (a < 128) continue; // skip mostly-transparent pixels
+    if (data[i + 3] < 128) continue; // skip mostly-transparent pixels
     pixels.push([data[i], data[i + 1], data[i + 2]]);
   }
 
@@ -287,58 +239,173 @@ async function extractColors(imageBuffer) {
 }
 
 // ---------------------------------------------------------------------------
-// Per-bar processing
+// Generic: extract colors from any URL
 // ---------------------------------------------------------------------------
 
 /**
- * Determine the best URL from which to fetch a favicon for a bar.
- * Priority: website > linktree > other links.
+ * Fetch the favicon at `url`, extract bg+fg colors.
+ * Returns { bg, fg } or null on failure.
  */
-function choosePrimaryUrl(bar) {
-  // Prefer the bar's own website for actual extraction
-  if (bar.website) return { url: bar.website, type: 'website' };
-  if (bar.linktree) return { url: bar.linktree, type: 'linktree' };
-  // Social links we detect by URL pattern
-  if (bar.instagram) {
-    const url = bar.instagram.startsWith('http') ? bar.instagram : `https://instagram.com/${bar.instagram}`;
-    return { url, type: 'instagram' };
+async function extractColorsFromUrl(url, label) {
+  try {
+    const faviconUrl = await resolveFaviconUrl(url);
+    if (!faviconUrl) {
+      console.log(`  ⚠️  ${label} — could not find favicon at ${url}`);
+      return null;
+    }
+    console.log(`  🌐 ${label} — fetching ${faviconUrl}`);
+    const imageBuffer = await fetchBuffer(faviconUrl);
+    const colors = await extractColors(imageBuffer);
+    console.log(`  ✅ ${label} — bg=${colors.bg} fg=${colors.fg}`);
+    return colors;
+  } catch (err) {
+    console.log(`  ⚠️  ${label} — favicon extraction failed: ${err.message}`);
+    return null;
   }
-  if (bar.facebook) return { url: bar.facebook, type: 'facebook' };
-  if (bar.wikipedia) return { url: bar.wikipedia, type: 'wikipedia' };
-  if (bar.gayCities) return { url: bar.gayCities, type: 'gaycities' };
-  if (bar.googleMaps) return { url: bar.googleMaps, type: 'googlemaps' };
+}
+
+// ---------------------------------------------------------------------------
+// URL priority: choose the best URL to represent an entity
+// ---------------------------------------------------------------------------
+
+/**
+ * Pick the best URL to extract a favicon from for a bar or event.
+ * Priority: website > instagram > facebook > other social/data links.
+ * For instagram handles (not full URLs), construct the full URL.
+ */
+function chooseBestUrl(entity) {
+  if (entity.website) return entity.website;
+  if (entity.linktree) return entity.linktree;
+  if (entity.instagram) {
+    const ig = String(entity.instagram);
+    return ig.startsWith('http') ? ig : `https://www.instagram.com/${ig.replace(/^@/, '')}`;
+  }
+  if (entity.facebook) return entity.facebook;
+  // Don't use gmaps/googlemaps/wikipedia/gayCities — those favicons aren't entity-specific
   return null;
 }
 
-async function processBar(bar) {
-  const primary = choosePrimaryUrl(bar);
-  if (!primary) {
-    console.log(`  ⏭️  ${bar.name} — no URLs, skipping`);
-    return {};
-  }
+// ---------------------------------------------------------------------------
+// Bar processing
+// ---------------------------------------------------------------------------
 
-  // Check if this URL is a known platform — use hardcoded colors
-  const platform = detectPlatform(primary.url) || primary.type;
-  if (PLATFORM_COLORS[platform]) {
-    console.log(`  🎨 ${bar.name} — using hardcoded ${platform} colors`);
-    return PLATFORM_COLORS[platform];
-  }
+async function processBars(cityKey) {
+  const filePath = path.join(BARS_DIR, `${cityKey}.json`);
+  if (!fs.existsSync(filePath)) return;
 
-  // Otherwise fetch the favicon and extract colors
+  let bars;
   try {
-    const faviconUrl = await resolveFaviconUrl(primary.url);
-    if (!faviconUrl) {
-      console.log(`  ⚠️  ${bar.name} — could not find favicon at ${primary.url}`);
-      return {};
-    }
-    console.log(`  🌐 ${bar.name} — fetching favicon ${faviconUrl}`);
-    const imageBuffer = await fetchBuffer(faviconUrl);
-    const colors = await extractColors(imageBuffer);
-    console.log(`  ✅ ${bar.name} — bg=${colors.bg} fg=${colors.fg}`);
-    return colors;
+    bars = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch (err) {
-    console.log(`  ⚠️  ${bar.name} — favicon fetch failed: ${err.message}`);
-    return {};
+    console.warn(`⚠️  Could not parse bars/${cityKey}.json: ${err.message}`);
+    return;
+  }
+
+  console.log(`\n🍺 Bars — ${cityKey} (${bars.length})`);
+  let changed = false;
+
+  for (const bar of bars) {
+    if (!FORCE && bar.faviconBg && bar.faviconFg) {
+      console.log(`  ⏭️  ${bar.name} — already has colors`);
+      continue;
+    }
+    const url = chooseBestUrl(bar);
+    if (!url) {
+      console.log(`  ⏭️  ${bar.name} — no usable URL`);
+      continue;
+    }
+    const colors = await extractColorsFromUrl(url, bar.name);
+    if (colors) {
+      bar.faviconBg = colors.bg;
+      bar.faviconFg = colors.fg;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    fs.writeFileSync(filePath, JSON.stringify(bars, null, 2));
+    console.log(`  💾 Saved bars/${cityKey}.json`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Event processing
+// ---------------------------------------------------------------------------
+
+// Load CalendarCore for ICS parsing
+let CalendarCore;
+try {
+  CalendarCore = require(path.join(ROOT, 'js', 'calendar-core.js'));
+  // Minimal logger shim so CalendarCore doesn't throw
+  if (typeof global.logger === 'undefined') {
+    global.logger = { debug() {}, info() {}, warn() {}, error() {}, componentInit() {}, componentLoad() {}, componentError() {}, time() {}, timeEnd() {}, apiCall() {}, performance() {} };
+  }
+} catch (err) {
+  console.error('Could not load CalendarCore:', err.message);
+  process.exit(1);
+}
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+async function processEvents(cityKey) {
+  const icsPath = path.join(ROOT, 'data', 'calendars', `${cityKey}.ics`);
+  if (!fs.existsSync(icsPath)) return;
+
+  const icalText = fs.readFileSync(icsPath, 'utf8');
+  let events;
+  try {
+    const calendar = new CalendarCore();
+    events = calendar.parseICalData(icalText) || [];
+  } catch (err) {
+    console.warn(`⚠️  Could not parse ${cityKey}.ics: ${err.message}`);
+    return;
+  }
+
+  // Load existing event colors for this city
+  ensureDir(EVENT_COLORS_DIR);
+  const colorsPath = path.join(EVENT_COLORS_DIR, `${cityKey}.json`);
+  let existing = [];
+  if (fs.existsSync(colorsPath)) {
+    try { existing = JSON.parse(fs.readFileSync(colorsPath, 'utf8')); } catch { existing = []; }
+  }
+  const existingBySlug = new Map(existing.map(e => [e.slug, e]));
+
+  console.log(`\n📅 Events — ${cityKey} (${events.length})`);
+  let changed = false;
+
+  // Deduplicate by slug
+  const seen = new Set();
+  for (const event of events) {
+    if (!event.slug) continue;
+    if (seen.has(event.slug)) continue;
+    seen.add(event.slug);
+
+    const prev = existingBySlug.get(event.slug);
+    if (!FORCE && prev && prev.faviconBg && prev.faviconFg) {
+      console.log(`  ⏭️  ${event.name} — already has colors`);
+      continue;
+    }
+
+    const url = chooseBestUrl(event);
+    if (!url) {
+      console.log(`  ⏭️  ${event.name} — no usable URL`);
+      continue;
+    }
+
+    const colors = await extractColorsFromUrl(url, event.name);
+    if (colors) {
+      existingBySlug.set(event.slug, { slug: event.slug, url, faviconBg: colors.bg, faviconFg: colors.fg });
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    const output = Array.from(existingBySlug.values())
+      .sort((a, b) => a.slug.localeCompare(b.slug));
+    fs.writeFileSync(colorsPath, JSON.stringify(output, null, 2));
+    console.log(`  💾 Saved event-colors/${cityKey}.json`);
   }
 }
 
@@ -347,60 +414,48 @@ async function processBar(bar) {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  if (!fs.existsSync(BARS_DIR)) {
-    console.error(`Bars directory not found: ${BARS_DIR}`);
-    process.exit(1);
+  // Gather list of cities to process
+  const cities = new Set();
+
+  if (DO_BARS && fs.existsSync(BARS_DIR)) {
+    fs.readdirSync(BARS_DIR)
+      .filter(f => f.endsWith('.json'))
+      .forEach(f => cities.add(f.replace('.json', '')));
   }
 
-  const files = fs.readdirSync(BARS_DIR)
-    .filter(f => f.endsWith('.json'))
-    .filter(f => !cityFilter || f === `${cityFilter}.json`);
+  if (DO_EVENTS) {
+    const calDir = path.join(ROOT, 'data', 'calendars');
+    if (fs.existsSync(calDir)) {
+      fs.readdirSync(calDir)
+        .filter(f => f.endsWith('.ics'))
+        .forEach(f => cities.add(f.replace('.ics', '')));
+    }
+  }
 
-  if (files.length === 0) {
-    console.log('No bar files found to process.');
+  if (cityFilter) {
+    if (!cities.has(cityFilter)) {
+      console.error(`City "${cityFilter}" not found.`);
+      process.exit(1);
+    }
+    cities.clear();
+    cities.add(cityFilter);
+  }
+
+  if (cities.size === 0) {
+    console.log('Nothing to process.');
     return;
   }
 
-  for (const file of files) {
-    const filePath = path.join(BARS_DIR, file);
-    let bars;
-    try {
-      bars = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch (err) {
-      console.warn(`⚠️  Could not parse ${file}: ${err.message}`);
-      continue;
-    }
-
-    const cityKey = file.replace('.json', '');
-    console.log(`\n📁 Processing ${cityKey} (${bars.length} bars)…`);
-    let changed = false;
-
-    for (const bar of bars) {
-      if (barFilter && bar.name.toLowerCase() !== barFilter) continue;
-      if (!FORCE && bar.faviconBg && bar.faviconFg) {
-        console.log(`  ⏭️  ${bar.name} — already has colors (use --force to re-extract)`);
-        continue;
-      }
-      const colors = await processBar(bar);
-      if (colors.bg) {
-        bar.faviconBg = colors.bg;
-        bar.faviconFg = colors.fg || '#ffffff';
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      fs.writeFileSync(filePath, JSON.stringify(bars, null, 2));
-      console.log(`💾 Saved ${file}`);
-    } else {
-      console.log(`⏭️  No changes for ${file}`);
-    }
+  for (const city of [...cities].sort()) {
+    if (DO_BARS)   await processBars(city);
+    if (DO_EVENTS) await processEvents(city);
   }
 
   console.log('\n✅ Favicon color extraction complete.');
 }
 
 main().catch(err => {
-  console.error('Fatal error:', err);
+  console.error('Fatal:', err);
   process.exit(1);
 });
+

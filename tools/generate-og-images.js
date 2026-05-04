@@ -37,7 +37,29 @@ function sanitize(text) {
 }
 
 /**
- * Load bar favicon colors indexed by bar name (lower-cased) for a given city.
+ * Load event favicon colors for a city, keyed by event slug.
+ * Returns a Map<string, { bg: string, fg: string }>.
+ */
+function loadEventColors(cityKey) {
+  const colorsFile = path.join(ROOT, 'data', 'event-colors', `${cityKey}.json`);
+  if (!fs.existsSync(colorsFile)) return new Map();
+  try {
+    const entries = JSON.parse(fs.readFileSync(colorsFile, 'utf8'));
+    const map = new Map();
+    for (const entry of entries) {
+      if (entry.slug && entry.faviconBg) {
+        map.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff' });
+      }
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Load bar favicon colors for a city, keyed by lower-cased bar name.
+ * Used as a fallback when an event has no extracted colors of its own.
  * Returns a Map<string, { bg: string, fg: string }>.
  */
 function loadBarColors(cityKey) {
@@ -63,6 +85,7 @@ function loadBarColors(cityKey) {
  * Used to create a dark readable background from a brand color.
  */
 function darken(hex, ratio = 0.6) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return '#1c2833';
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -73,7 +96,7 @@ function darken(hex, ratio = 0.6) {
 }
 
 // Build a minimal HTML snippet (no external CSS/fonts) for deterministic render.
-// When faviconColors is provided the OG card uses the bar's brand palette.
+// When faviconColors is provided the OG card uses the event's extracted favicon palette.
 function buildTemplate({ cityName, eventName, day, time, bar, faviconColors }) {
   const title = sanitize(eventName);
   const subtitle = [sanitize(cityName), sanitize(day), sanitize(time)].filter(Boolean).join(' • ');
@@ -135,8 +158,9 @@ async function main() {
     const indexHtml = path.join(ROOT, cityKey, 'index.html');
     if (!fs.existsSync(indexHtml)) continue;
 
-    // Load bar favicon colors for this city (keyed by lower-cased bar name)
-    const barColors = loadBarColors(cityKey);
+    // Load favicon colors — event colors are primary, bar colors are fallback
+    const eventColors = loadEventColors(cityKey);
+    const barColors   = loadBarColors(cityKey);
 
     const eventDirs = fs.readdirSync(path.join(ROOT, cityKey), { withFileTypes: true }).filter(d => d.isDirectory());
     for (const evDir of eventDirs) {
@@ -167,8 +191,10 @@ async function main() {
         if (venuePart) bar = venuePart.replace(/^@\s*/, '');
       }
 
-      // Look up favicon colors for the venue (if known)
-      const faviconColors = bar ? barColors.get(bar.toLowerCase()) || null : null;
+      // Look up favicon colors: prefer event-specific, fall back to the venue bar's colors
+      const faviconColors = eventColors.get(evDir.name)
+        || (bar ? barColors.get(bar.toLowerCase()) : null)
+        || null;
 
       targets.push({ cityKey: cityFromCanonical, slug: evDir.name, title, day, time, bar, faviconColors });
     }

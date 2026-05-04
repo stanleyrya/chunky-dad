@@ -48,41 +48,7 @@
     --solid-warning: var(--background-light);
     --solid-light: var(--background-light);
 
-    /* Platform Brand Colors — bg = dominant background, fg = symbol/foreground */
-    --platform-instagram-bg: #E4405F;
-    --platform-instagram-fg: #ffffff;
-    --platform-facebook-bg:  #1877F2;
-    --platform-facebook-fg:  #ffffff;
-    --platform-linktree-bg:  #43E55C;
-    --platform-linktree-fg:  #1A1A1A;
-    --platform-twitter-bg:   #000000;
-    --platform-twitter-fg:   #ffffff;
-    --platform-tiktok-bg:    #010101;
-    --platform-tiktok-fg:    #ffffff;
-    --platform-youtube-bg:   #FF0000;
-    --platform-youtube-fg:   #ffffff;
-    --platform-googlemaps-bg:#4285F4;
-    --platform-googlemaps-fg:#ffffff;
-    --platform-wikipedia-bg: #ffffff;
-    --platform-wikipedia-fg: #000000;
-    --platform-gaycities-bg: #CC0066;
-    --platform-gaycities-fg: #ffffff;
-    --platform-website-bg:   #333333;
-    --platform-website-fg:   #ffffff;
-
 }
-
-/* Bar link buttons — styled with platform brand colors */
-.bar-link-instagram  { background-color: var(--platform-instagram-bg);  color: var(--platform-instagram-fg);  }
-.bar-link-facebook   { background-color: var(--platform-facebook-bg);   color: var(--platform-facebook-fg);   }
-.bar-link-linktree   { background-color: var(--platform-linktree-bg);   color: var(--platform-linktree-fg);   }
-.bar-link-twitter    { background-color: var(--platform-twitter-bg);    color: var(--platform-twitter-fg);    }
-.bar-link-tiktok     { background-color: var(--platform-tiktok-bg);     color: var(--platform-tiktok-fg);     }
-.bar-link-youtube    { background-color: var(--platform-youtube-bg);    color: var(--platform-youtube-fg);    }
-.bar-link-googlemaps { background-color: var(--platform-googlemaps-bg); color: var(--platform-googlemaps-fg); }
-.bar-link-wikipedia  { background-color: var(--platform-wikipedia-bg);  color: var(--platform-wikipedia-fg);  }
-.bar-link-gaycities  { background-color: var(--platform-gaycities-bg);  color: var(--platform-gaycities-fg);  }
-.bar-link-website    { background-color: var(--platform-website-bg);    color: var(--platform-website-fg);    }
 
 /* Dynamic Viewport Height Support for Mobile */
 .full-viewport-height {
