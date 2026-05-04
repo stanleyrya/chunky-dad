@@ -246,6 +246,34 @@ jobs:
             echo "CALENDAR_CHANGED=true" >> $GITHUB_ENV
           fi
       
+      - name: Check missing favicon colors
+        run: |
+          COLORS_MISSING=false
+          # Colors are missing if the event-colors directory is empty
+          if [ -d "data/event-colors" ]; then
+            COLOR_FILE_COUNT=$(find data/event-colors -name "*.json" | wc -l)
+          else
+            COLOR_FILE_COUNT=0
+          fi
+          if [ "$COLOR_FILE_COUNT" -eq 0 ]; then
+            FAVICON_COUNT=$(find img/favicons -name "*.ico" -o -name "*.png" 2>/dev/null | wc -l)
+            if [ "$FAVICON_COUNT" -gt 0 ]; then
+              echo "🎨 event-colors/ is empty but $FAVICON_COUNT favicons exist — will run color extraction"
+              COLORS_MISSING=true
+            fi
+          fi
+          # Colors are also missing if any bars JSON lacks faviconBg
+          if [ "$COLORS_MISSING" = "false" ] && [ -d "data/bars" ]; then
+            for f in data/bars/*.json; do
+              if [ -f "$f" ] && ! grep -q '"faviconBg"' "$f"; then
+                echo "🎨 $f missing faviconBg — will run color extraction"
+                COLORS_MISSING=true
+                break
+              fi
+            done
+          fi
+          echo "COLORS_MISSING=$COLORS_MISSING" >> $GITHUB_ENV
+
       - name: Generate event pages
         if: env.CALENDAR_CHANGED == 'true'
         env:
@@ -266,7 +294,7 @@ jobs:
           fi
 
       - name: Install Node dependencies
-        if: env.CALENDAR_CHANGED == 'true'
+        if: env.CALENDAR_CHANGED == 'true' || env.COLORS_MISSING == 'true'
         run: |
           npm install --no-audit --no-fund --prefer-offline
 
@@ -286,7 +314,7 @@ jobs:
           fi
 
       - name: Extract favicon colors
-        if: env.CALENDAR_CHANGED == 'true'
+        if: env.CALENDAR_CHANGED == 'true' || env.COLORS_MISSING == 'true'
         run: |
           node tools/extract-favicon-colors.js
           git add -A data/event-colors/ data/bars/ 2>/dev/null || true
