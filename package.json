@@ -9,6 +9,10 @@
     "dev": "python3 -m http.server 8000",
     "update-test-index": "cd testing && node generate-file-list.js",
     "update-test-manifest": "cd testing && node generate-manifest.js",
+    "sync-bars": "node tools/sync-bars.js",
+    "download-images": "node tools/download-images.js",
+    "extract-favicon-colors": "node tools/extract-favicon-colors.js",
+    "sync-data": "npm run sync-bars && npm run download-images && npm run extract-favicon-colors",
     "setup-hooks": "bash .github/hooks/setup-hooks.sh",
     "postinstall": "npm run setup-hooks"
   },

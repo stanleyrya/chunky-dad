@@ -36,11 +36,90 @@ function sanitize(text) {
   return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Build a minimal HTML snippet (no external CSS/fonts) for deterministic render
-function buildTemplate({ cityName, eventName, day, time, bar }) {
+// Default background color used when no favicon palette is available (matches gradient end stop).
+const DEFAULT_DARK_BG = '#1c2833';
+// Gradient darkening ratios: darker stop → lighter stop for a subtle gradient.
+const GRADIENT_DARK_RATIO  = 0.65;
+const GRADIENT_LIGHT_RATIO = 0.45;
+
+/**
+ * Load event favicon colors for a city, keyed by event slug.
+ * Returns a Map<string, { bg: string, fg: string }>.
+ */
+function loadEventColors(cityKey) {
+  const colorsFile = path.join(ROOT, 'data', 'event-colors', `${cityKey}.json`);
+  if (!fs.existsSync(colorsFile)) return new Map();
+  try {
+    const entries = JSON.parse(fs.readFileSync(colorsFile, 'utf8'));
+    const map = new Map();
+    for (const entry of entries) {
+      if (entry.slug && entry.faviconBg) {
+        map.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff' });
+      }
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Load bar favicon colors for a city, keyed by lower-cased bar name.
+ * Used as a fallback when an event has no extracted colors of its own.
+ * Returns a Map<string, { bg: string, fg: string }>.
+ */
+function loadBarColors(cityKey) {
+  const barsFile = path.join(ROOT, 'data', 'bars', `${cityKey}.json`);
+  if (!fs.existsSync(barsFile)) return new Map();
+  try {
+    const bars = JSON.parse(fs.readFileSync(barsFile, 'utf8'));
+    const map = new Map();
+    for (const bar of bars) {
+      if (bar.name && bar.faviconBg) {
+        map.set(bar.name.toLowerCase(), { bg: bar.faviconBg, fg: bar.faviconFg || '#ffffff' });
+      }
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Mix a hex color with black by the given ratio (0–1 = proportion of black).
+ * ratio=0.6 means 60% black + 40% original color.
+ * Used to create a dark readable background from a brand color.
+ */
+function darken(hex, ratio = 0.6) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return DEFAULT_DARK_BG;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const dr = Math.round(r * (1 - ratio));
+  const dg = Math.round(g * (1 - ratio));
+  const db = Math.round(b * (1 - ratio));
+  return `#${[dr, dg, db].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+// Build a minimal HTML snippet (no external CSS/fonts) for deterministic render.
+// When faviconColors is provided the OG card uses the event's extracted favicon palette.
+function buildTemplate({ cityName, eventName, day, time, bar, faviconColors }) {
   const title = sanitize(eventName);
   const subtitle = [sanitize(cityName), sanitize(day), sanitize(time)].filter(Boolean).join(' • ');
   const venue = bar ? `@ ${sanitize(bar)}` : '';
+
+  // Derive background and accent from favicon colors when available
+  const bgGrad = faviconColors
+    ? `linear-gradient(135deg, ${darken(faviconColors.bg, GRADIENT_DARK_RATIO)} 0%, ${darken(faviconColors.bg, GRADIENT_LIGHT_RATIO)} 100%)`
+    : `linear-gradient(135deg, #10151a 0%, ${DEFAULT_DARK_BG} 100%)`;
+  const accentColor = faviconColors ? faviconColors.bg : '#667eea';
+  const cardBg = faviconColors
+    ? `rgba(255,255,255,0.08)`
+    : 'rgba(255,255,255,0.06)';
+  const cardBorder = faviconColors
+    ? `border-left: 6px solid ${faviconColors.bg};`
+    : '';
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -51,11 +130,11 @@ function buildTemplate({ cityName, eventName, day, time, bar }) {
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
       display: flex; flex-direction: column; justify-content: center; align-items: center;
-      background: linear-gradient(135deg, #10151a 0%, #1c2833 100%);
+      background: ${bgGrad};
       color: #fff;
     }
-    .card { width: 1080px; height: 510px; border-radius: 24px; padding: 48px; background: rgba(255,255,255,0.06); box-shadow: 0 20px 60px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: center; }
-    .brand { font-weight: 700; letter-spacing: 0.6px; color: #f8f9fa; opacity: 0.9; margin-bottom: 18px; }
+    .card { width: 1080px; height: 510px; border-radius: 24px; padding: 48px; background: ${cardBg}; box-shadow: 0 20px 60px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: center; ${cardBorder} }
+    .brand { font-weight: 700; letter-spacing: 0.6px; color: ${accentColor}; opacity: 0.95; margin-bottom: 18px; }
     .title { font-size: 64px; line-height: 1.05; font-weight: 800; margin: 0 0 18px; }
     .subtitle { font-size: 28px; color: #d0d7de; margin: 0 0 8px; }
     .venue { font-size: 28px; color: #e6edf3; margin: 0; }
@@ -85,6 +164,10 @@ async function main() {
     const indexHtml = path.join(ROOT, cityKey, 'index.html');
     if (!fs.existsSync(indexHtml)) continue;
 
+    // Load favicon colors — event colors are primary, bar colors are fallback
+    const eventColors = loadEventColors(cityKey);
+    const barColors   = loadBarColors(cityKey);
+
     const eventDirs = fs.readdirSync(path.join(ROOT, cityKey), { withFileTypes: true }).filter(d => d.isDirectory());
     for (const evDir of eventDirs) {
       const evIndex = path.join(ROOT, cityKey, evDir.name, 'index.html');
@@ -113,7 +196,13 @@ async function main() {
         const venuePart = parts.find(p => p.startsWith('@ '));
         if (venuePart) bar = venuePart.replace(/^@\s*/, '');
       }
-      targets.push({ cityKey: cityFromCanonical, slug: evDir.name, title, day, time, bar });
+
+      // Look up favicon colors: prefer event-specific, fall back to the venue bar's colors
+      const faviconColors = eventColors.get(evDir.name)
+        || (bar ? barColors.get(bar.toLowerCase()) : null)
+        || null;
+
+      targets.push({ cityKey: cityFromCanonical, slug: evDir.name, title, day, time, bar, faviconColors });
     }
   }
 
@@ -129,7 +218,7 @@ async function main() {
     for (const t of targets) {
       const page = await browser.newPage();
       await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
-      const html = buildTemplate({ cityName: t.cityKey, eventName: t.title, day: t.day, time: t.time, bar: t.bar });
+      const html = buildTemplate({ cityName: t.cityKey, eventName: t.title, day: t.day, time: t.time, bar: t.bar, faviconColors: t.faviconColors });
       await page.setContent(html, { waitUntil: 'networkidle0' });
       const buffer = await page.screenshot({ type: 'png' });
       const outPath = path.join(OUTPUT_DIR, t.cityKey, `${t.slug}.png`);

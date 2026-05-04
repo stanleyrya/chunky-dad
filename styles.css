@@ -47,7 +47,7 @@
     --solid-secondary: var(--secondary-color);
     --solid-warning: var(--background-light);
     --solid-light: var(--background-light);
-    
+
 }
 
 /* Dynamic Viewport Height Support for Mobile */
