@@ -11,6 +11,8 @@ on:
       - '.github/workflows/update-calendar-data.yml'
       - 'tools/generate-event-pages.js'
       - 'tools/generate-og-images.js'
+      - 'tools/download-images.js'
+      - 'tools/extract-favicon-colors.js'
       - 'js/calendar-core.js'
 
 jobs:
@@ -246,36 +248,8 @@ jobs:
             echo "CALENDAR_CHANGED=true" >> $GITHUB_ENV
           fi
       
-      - name: Check missing favicon colors
-        run: |
-          COLORS_MISSING=false
-          # Colors are missing if the event-colors directory is empty
-          if [ -d "data/event-colors" ]; then
-            COLOR_FILE_COUNT=$(find data/event-colors -name "*.json" | wc -l)
-          else
-            COLOR_FILE_COUNT=0
-          fi
-          if [ "$COLOR_FILE_COUNT" -eq 0 ]; then
-            FAVICON_COUNT=$(find img/favicons \( -name "*.ico" -o -name "*.png" \) 2>/dev/null | wc -l)
-            if [ "$FAVICON_COUNT" -gt 0 ]; then
-              echo "🎨 event-colors/ is empty but $FAVICON_COUNT favicons exist — will run color extraction"
-              COLORS_MISSING=true
-            fi
-          fi
-          # Colors are also missing if any bars JSON lacks faviconBg
-          if [ "$COLORS_MISSING" = "false" ] && [ -d "data/bars" ]; then
-            for f in data/bars/*.json; do
-              if [ -f "$f" ] && ! grep -q '"faviconBg"' "$f"; then
-                echo "🎨 $f missing faviconBg — will run color extraction"
-                COLORS_MISSING=true
-                break
-              fi
-            done
-          fi
-          echo "COLORS_MISSING=$COLORS_MISSING" >> $GITHUB_ENV
-
       - name: Generate event pages
-        if: env.CALENDAR_CHANGED == 'true'
+        if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
         env:
           EVENT_STUB_DAYS: '240'
           EVENT_STUB_PAST_DAYS: '7'
@@ -294,12 +268,12 @@ jobs:
           fi
 
       - name: Install Node dependencies
-        if: env.CALENDAR_CHANGED == 'true' || env.COLORS_MISSING == 'true'
+        if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
         run: |
           npm install --no-audit --no-fund --prefer-offline
 
       - name: Download event images and high-quality favicons
-        if: env.CALENDAR_CHANGED == 'true'
+        if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
         run: |
           node tools/download-images.js
           git add -A img/favicons/ img/events/ 2>/dev/null || true
@@ -314,7 +288,7 @@ jobs:
           fi
 
       - name: Extract favicon colors
-        if: env.CALENDAR_CHANGED == 'true' || env.COLORS_MISSING == 'true'
+        if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
         run: |
           node tools/extract-favicon-colors.js
           git add -A data/event-colors/ data/bars/ 2>/dev/null || true
@@ -326,7 +300,7 @@ jobs:
           fi
 
       - name: Generate OG images for events
-        if: env.CALENDAR_CHANGED == 'true'
+        if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
         run: |
           node tools/generate-og-images.js
           git add -A img/og/ 2>/dev/null || true
