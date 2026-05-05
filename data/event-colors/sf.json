@@ -1,0 +1,32 @@
+[
+  {
+    "slug": "bearracuda-sf-20-year-anniversary-4ae69009",
+    "url": "https://bearracuda.com/events/sf20/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "bearracuda-sf-presents-horse-meat-disco-151154b5",
+    "url": "https://bearracuda.com/events/flsm-friday/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "bearracuda-sf-pride-2026-hold-the-door-2d1a3a4d",
+    "url": "https://bearracuda.com/events/sf-pride/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "chunk-presents-folsom-25-6a09272f",
+    "url": "https://www.chunk-party.com/event-details/chunk-presents-folsom-25",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933"
+  },
+  {
+    "slug": "chunk-san-francisco-saturday-january-17th-227d733c",
+    "url": "https://www.chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933"
+  }
+]

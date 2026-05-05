@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "bears-are-animals-4cf796ee",
+    "url": "https://animal.nyc",
+    "faviconBg": "#e51a1a",
+    "faviconFg": "#f31c1c"
+  },
+  {
+    "slug": "bears-night-out-3d00f897",
+    "url": "https://www.theurbanbear.com/",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc"
+  },
+  {
+    "slug": "beer-blast-15963ca2",
+    "url": "https://eagle-ny.com",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656"
+  },
+  {
+    "slug": "chunk-brooklyn-the-return-5dd73bae",
+    "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933"
+  }
+]

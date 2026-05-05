@@ -1,0 +1,32 @@
+[
+  {
+    "slug": "bearracuda-0f2c13d7",
+    "url": "https://bearracuda.com/events/denverpride/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "denver-39553322",
+    "url": "https://bearracuda.com/events/denverjockstrap/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "denver-42126767",
+    "url": "https://bearracuda.com/events/denvermarch/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "denverpride-2021bba4",
+    "url": "https://bearracuda.com/events/denverpride26/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "megawoof-37fcce1a",
+    "url": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849",
+    "faviconBg": "#ff5e30",
+    "faviconFg": "#ff6333"
+  }
+]
