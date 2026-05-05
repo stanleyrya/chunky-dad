@@ -287,13 +287,17 @@ async function processBars(cityKey) {
 // Event processing
 // ---------------------------------------------------------------------------
 
-// Load CalendarCore for ICS parsing
+// Load CalendarCore for ICS parsing (EventSchema must be loaded first as a global)
 let CalendarCore;
 try {
-  CalendarCore = require(path.join(ROOT, 'js', 'calendar-core.js'));
   if (typeof global.logger === 'undefined') {
     global.logger = { debug() {}, info() {}, warn() {}, error() {}, componentInit() {}, componentLoad() {}, componentError() {}, time() {}, timeEnd() {}, apiCall() {}, performance() {} };
   }
+  // EventSchema must be available globally before CalendarCore is loaded.
+  // Requiring event-schema.js sets globalThis.EventSchema as a side effect
+  // (see the if (typeof module !== 'undefined') block at the bottom of js/event-schema.js).
+  require(path.join(ROOT, 'js', 'event-schema.js'));
+  CalendarCore = require(path.join(ROOT, 'js', 'calendar-core.js'));
 } catch (err) {
   console.error('Could not load CalendarCore:', err.message);
   process.exit(1);

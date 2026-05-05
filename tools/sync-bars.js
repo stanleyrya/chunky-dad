@@ -270,6 +270,7 @@ function mergeBars(sheetsBars, localBars) {
     });
     
     // Add local bars, only if not already present, with normalized city names
+    // Also preserve color fields (faviconBg/faviconFg) from local bars onto existing sheet bars
     localBars.forEach(bar => {
         // Only normalize city if it's a real city name, not a URL
         let normalizedCity = bar.city;
@@ -283,6 +284,11 @@ function mergeBars(sheetsBars, localBars) {
         const key = `${normalizedBar.name}-${normalizedBar.city}`.toLowerCase();
         if (!merged.has(key)) {
             merged.set(key, normalizedBar);
+        } else {
+            // Preserve color fields from local bar so extract-favicon-colors data is not lost
+            const existing = merged.get(key);
+            if (!existing.faviconBg && normalizedBar.faviconBg) existing.faviconBg = normalizedBar.faviconBg;
+            if (!existing.faviconFg && normalizedBar.faviconFg) existing.faviconFg = normalizedBar.faviconFg;
         }
     });
     
@@ -294,7 +300,7 @@ function cleanBarObject(bar) {
     const cleaned = {};
     
     // Keep only fields that have values
-    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities'];
+    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities', 'faviconBg', 'faviconFg'];
     
     fieldsToKeep.forEach(field => {
         if (bar[field] && bar[field].toString().trim() !== '') {
