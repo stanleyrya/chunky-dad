@@ -75,6 +75,7 @@
     .theme-teal-sea { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
     .theme-dark-purple { background: linear-gradient(135deg, #2c003e 0%, #512b58 100%); }
     .theme-custom { background: linear-gradient(135deg, var(--custom-color-1, #8e2de2), var(--custom-color-2, #4a00e0)); }
+    .theme-favicon { background: linear-gradient(135deg, var(--favicon-color-1, #667eea) 0%, var(--favicon-color-2, #764ba2) 100%); }
 
     .custom-colors { display: flex; gap: 12px; align-items: end; }
     .color-picker-field { flex: 1; }
@@ -273,6 +274,73 @@
     .layout-banner .event-info { font-size: 32px; color: #fff; opacity: 0.95; margin-bottom: 12px; font-weight: 600; }
     .layout-banner .event-cta { background: #fff; color: #111; padding: 16px 40px; border-radius: 50px; font-size: 24px; font-weight: 700; margin-top: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 
+    /* === Pattern Layouts with Rim Effect === */
+    .artboard.layout-pattern-dots,
+    .artboard.layout-pattern-stripes,
+    .artboard.layout-pattern-grid,
+    .artboard.layout-pattern-zigzag { background: #000; position: relative; overflow: hidden; }
+
+    .layout-pattern-dots .pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+      background-image: radial-gradient(circle, var(--pattern-color, rgba(255,255,255,0.22)) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+    .layout-pattern-stripes .pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+      background-image: repeating-linear-gradient(-45deg, var(--pattern-color, rgba(255,255,255,0.18)) 0px, var(--pattern-color, rgba(255,255,255,0.18)) 1.5px, transparent 1.5px, transparent 12px);
+    }
+    .layout-pattern-grid .pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+      background-image: linear-gradient(var(--pattern-color, rgba(255,255,255,0.14)) 1px, transparent 1px), linear-gradient(90deg, var(--pattern-color, rgba(255,255,255,0.14)) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+    .layout-pattern-zigzag .pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+      background-image: linear-gradient(135deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%) -10px 0, linear-gradient(225deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%) -10px 0, linear-gradient(315deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%), linear-gradient(45deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%);
+      background-size: 20px 20px;
+    }
+    .layout-pattern-dots .content-box,
+    .layout-pattern-stripes .content-box,
+    .layout-pattern-grid .content-box,
+    .layout-pattern-zigzag .content-box {
+      position: absolute; inset: 55px; z-index: 1;
+      background: rgba(0,0,0,0.88);
+      border-radius: 18px;
+      border: 4px solid var(--rim-color, #667eea);
+      box-shadow: 0 0 40px var(--rim-glow, rgba(102,126,234,0.35)), inset 0 1px 0 rgba(255,255,255,0.05);
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 60px 72px;
+      color: #fff;
+    }
+    .layout-pattern-dots .brand,
+    .layout-pattern-stripes .brand,
+    .layout-pattern-grid .brand,
+    .layout-pattern-zigzag .brand {
+      font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--rim-color, #667eea); margin-bottom: 18px;
+    }
+    .layout-pattern-dots .event-title,
+    .layout-pattern-stripes .event-title,
+    .layout-pattern-grid .event-title,
+    .layout-pattern-zigzag .event-title { font-size: 66px; line-height: 0.95; font-weight: 900; margin-bottom: 20px; }
+    .layout-pattern-dots .event-date,
+    .layout-pattern-stripes .event-date,
+    .layout-pattern-grid .event-date,
+    .layout-pattern-zigzag .event-date { font-size: 26px; opacity: 0.9; margin-bottom: 8px; }
+    .layout-pattern-dots .event-venue,
+    .layout-pattern-stripes .event-venue,
+    .layout-pattern-grid .event-venue,
+    .layout-pattern-zigzag .event-venue { font-size: 22px; opacity: 0.8; }
+
+    /* Favicon colors indicator */
+    .favicon-colors-info { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 14px; background: var(--background-light); border-radius: 10px; font-size: 13px; color: var(--text-secondary); }
+    .favicon-color-swatch { width: 28px; height: 28px; border-radius: 6px; border: 2px solid var(--border-lighter); flex-shrink: 0; }
+    .favicon-colors-info .no-colors { opacity: 0.65; }
+
     @media (max-width: 768px) {
       .controls-grid { grid-template-columns: 1fr; }
       .variants-grid { grid-template-columns: 1fr; }
@@ -386,6 +454,9 @@
             <div class="theme-option theme-custom" data-theme="custom">
               <div class="theme-name">Custom ✨</div>
             </div>
+            <div class="theme-option theme-favicon" data-theme="favicon">
+              <div class="theme-name">Favicon 🎨</div>
+            </div>
           </div>
           <div class="custom-colors" style="margin-top: 16px;">
             <div class="color-picker-field control-field">
@@ -400,6 +471,11 @@
                 <input id="customB" type="color" value="#4a00e0">
               </div>
             </div>
+          </div>
+          <div class="favicon-colors-info" id="faviconColorsInfo">
+            <div class="favicon-color-swatch" id="faviconSwatchBg" style="display:none;"></div>
+            <div class="favicon-color-swatch" id="faviconSwatchFg" style="display:none;"></div>
+            <span id="faviconColorsText"><span class="no-colors">Select an event to detect its favicon colors</span></span>
           </div>
         </div>
 
@@ -446,6 +522,8 @@
           this.currentCity = this.getInitialCityFromUrl();
           this.filteredEvents = [];
           this.selectedEvent = null;
+          this.eventColorsMap = new Map();
+          this.barColorsMap = new Map();
         }
 
         getInitialCityFromUrl() {
@@ -477,6 +555,7 @@
           logger.apiCall('CALENDAR', 'Loading calendar for OpenGraph studio', { cityKey });
           this.currentCity = cityKey;
           const data = await this.loadCalendarData(cityKey);
+          await this.loadFaviconColors(cityKey);
           if (!data || !this.allEvents || !this.allEvents.length) {
             logger.warn(COMPONENT, 'No events loaded for city', { cityKey });
             eventSelect.innerHTML = '<option>No events found</option>';
@@ -524,8 +603,76 @@
             time: ev.time || 'Time TBA',
             city: getCityConfig(this.currentCity)?.name || 'City',
             description: ev.tea || 'Join us for an amazing bear community event!',
-            cover: (coverInput.value || '').trim() || (ev.image || '').trim()
+            cover: (coverInput.value || '').trim() || (ev.image || '').trim(),
+            faviconColors: this.getFaviconColors()
           };
+        }
+
+        async loadFaviconColors(cityKey) {
+          this.eventColorsMap = new Map();
+          this.barColorsMap = new Map();
+          try {
+            const [evRes, barRes] = await Promise.allSettled([
+              fetch(`../data/event-colors/${cityKey}.json`),
+              fetch(`../data/bars/${cityKey}.json`)
+            ]);
+            if (evRes.status === 'fulfilled' && evRes.value.ok) {
+              const entries = await evRes.value.json();
+              for (const entry of entries) {
+                if (entry.slug && entry.faviconBg) {
+                  this.eventColorsMap.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff' });
+                }
+              }
+            }
+            if (barRes.status === 'fulfilled' && barRes.value.ok) {
+              const bars = await barRes.value.json();
+              for (const bar of bars) {
+                if (bar.name && bar.faviconBg) {
+                  this.barColorsMap.set(bar.name.toLowerCase(), { bg: bar.faviconBg, fg: bar.faviconFg || '#ffffff' });
+                }
+              }
+            }
+            logger.debug(COMPONENT, 'Loaded favicon colors', { cityKey, events: this.eventColorsMap.size, bars: this.barColorsMap.size });
+          } catch (e) {
+            logger.debug(COMPONENT, 'Could not load favicon colors', { cityKey, error: e.message });
+          }
+        }
+
+        getFaviconColors() {
+          const ev = this.selectedEvent || {};
+          if (ev.slug && this.eventColorsMap.has(ev.slug)) {
+            return this.eventColorsMap.get(ev.slug);
+          }
+          if (ev.bar && this.barColorsMap.has(ev.bar.toLowerCase())) {
+            return this.barColorsMap.get(ev.bar.toLowerCase());
+          }
+          return null;
+        }
+
+        hexToRgba(hex, alpha) {
+          if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return `rgba(255,255,255,${alpha})`;
+          const r = parseInt(hex.slice(1,3), 16);
+          const g = parseInt(hex.slice(3,5), 16);
+          const b = parseInt(hex.slice(5,7), 16);
+          return `rgba(${r},${g},${b},${alpha})`;
+        }
+
+        getRimColorForTheme() {
+          const THEME_COLORS = {
+            'classic-night': '#ff6b35', 'cool-neon': '#00d4ff', 'hot-red': '#ff416c',
+            'midnight': '#667eea', 'spotlight': '#f093fb', 'sunset': '#ff512f',
+            'ocean': '#6dd5ed', 'forest': '#71b280', 'fire': '#f5af19',
+            'blurple': '#8e2de2', 'pastel': '#ff9a9e', 'blue-bolt': '#00c6ff',
+            'green-glow': '#96c93d', 'rainbow': '#ee0979', 'emerald': '#99f2c8',
+            'purple-haze': '#764ba2', 'rose-gold': '#f45c43', 'teal-sea': '#38ef7d',
+            'dark-purple': '#8e6db4'
+          };
+          if (currentTheme === 'custom') return customA.value || '#8e2de2';
+          if (currentTheme === 'favicon') {
+            const fc = this.getFaviconColors();
+            return fc ? fc.bg : '#667eea';
+          }
+          return THEME_COLORS[currentTheme] || '#667eea';
         }
 
         attachHandlers() {
@@ -587,7 +734,14 @@
         updateThemeVars() {
           document.documentElement.style.setProperty('--custom-color-1', customA.value);
           document.documentElement.style.setProperty('--custom-color-2', customB.value);
-          logger.debug(COMPONENT, 'Updated theme', { theme: currentTheme, customColors: [customA.value, customB.value] });
+          const fc = this.getFaviconColors();
+          document.documentElement.style.setProperty('--favicon-color-1', fc ? fc.bg : '#667eea');
+          document.documentElement.style.setProperty('--favicon-color-2', fc ? fc.fg : '#764ba2');
+          const rimColor = this.getRimColorForTheme();
+          document.documentElement.style.setProperty('--rim-color', rimColor);
+          document.documentElement.style.setProperty('--rim-glow', this.hexToRgba(rimColor, 0.35));
+          document.documentElement.style.setProperty('--pattern-color', this.hexToRgba(rimColor, 0.22));
+          logger.debug(COMPONENT, 'Updated theme', { theme: currentTheme, rimColor, customColors: [customA.value, customB.value] });
         }
 
         updateVariant(card, variant, data) {
@@ -776,6 +930,18 @@ Loading... <span class="cursor">█</span>`;
               if (info) info.textContent = `${data.date} · ${data.time} · ${data.venue}`;
               if (cta) cta.textContent = 'Get Tickets';
               if (bg && data.cover) bg.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            }
+            case 'pattern-dots':
+            case 'pattern-stripes':
+            case 'pattern-grid':
+            case 'pattern-zigzag': {
+              const t = artboard.querySelector('.event-title');
+              const d = artboard.querySelector('.event-date');
+              const v = artboard.querySelector('.event-venue');
+              if (t) t.textContent = data.event;
+              if (d) d.textContent = `${data.date} · ${data.time}`;
+              if (v) v.textContent = `@ ${data.venue}`;
               break;
             }
           }
@@ -992,12 +1158,63 @@ Loading... <span class="cursor">█</span>`;
                 <div class="event-cta">Get Tickets</div>
               </div>
             `,
+            'pattern-dots': `
+              <div class="pattern-bg"></div>
+              <div class="content-box">
+                <div class="brand">chunky.dad</div>
+                <div class="event-title"></div>
+                <div class="event-date"></div>
+                <div class="event-venue"></div>
+              </div>
+            `,
+            'pattern-stripes': `
+              <div class="pattern-bg"></div>
+              <div class="content-box">
+                <div class="brand">chunky.dad</div>
+                <div class="event-title"></div>
+                <div class="event-date"></div>
+                <div class="event-venue"></div>
+              </div>
+            `,
+            'pattern-grid': `
+              <div class="pattern-bg"></div>
+              <div class="content-box">
+                <div class="brand">chunky.dad</div>
+                <div class="event-title"></div>
+                <div class="event-date"></div>
+                <div class="event-venue"></div>
+              </div>
+            `,
+            'pattern-zigzag': `
+              <div class="pattern-bg"></div>
+              <div class="content-box">
+                <div class="brand">chunky.dad</div>
+                <div class="event-title"></div>
+                <div class="event-date"></div>
+                <div class="event-venue"></div>
+              </div>
+            `,
           };
           return layouts[variant.key] || '';
         }
 
         render() {
+          this.updateThemeVars();
           const data = this.getPreviewData();
+          // Update favicon colors indicator
+          const fc = data.faviconColors;
+          const swatchBg = document.getElementById('faviconSwatchBg');
+          const swatchFg = document.getElementById('faviconSwatchFg');
+          const textEl = document.getElementById('faviconColorsText');
+          if (fc) {
+            if (swatchBg) { swatchBg.style.background = fc.bg; swatchBg.style.display = 'block'; }
+            if (swatchFg) { swatchFg.style.background = fc.fg || '#ffffff'; swatchFg.style.display = 'block'; }
+            if (textEl) textEl.textContent = `${fc.bg} / ${fc.fg || '#ffffff'} — select "Favicon 🎨" theme or see colored pattern rims`;
+          } else {
+            if (swatchBg) swatchBg.style.display = 'none';
+            if (swatchFg) swatchFg.style.display = 'none';
+            if (textEl) textEl.innerHTML = '<span class="no-colors">No favicon colors detected for this event</span>';
+          }
           const VARIANTS = [
             // Simple & Clean Layouts
             { key: 'simple-speech', name: '💬 Simple Speech', class: 'layout-simple-speech', description: 'Clean chunky.dad speech bubble' },
@@ -1019,7 +1236,13 @@ Loading... <span class="cursor">█</span>`;
             { key: 'speech-story', name: 'Instagram Story', class: 'layout-speech-story', description: 'Social story format' },
             { key: 'speech-thought', name: 'Thought Cloud', class: 'layout-speech-thought', description: 'Dreamy thought bubble' },
             { key: 'speech-messenger', name: 'Messenger', class: 'layout-speech-messenger', description: 'Chat app style' },
-            { key: 'speech-discord', name: 'Discord', class: 'layout-speech-discord', description: 'Gaming chat style' }
+            { key: 'speech-discord', name: 'Discord', class: 'layout-speech-discord', description: 'Gaming chat style' },
+
+            // Pattern Layouts with Colored Rim
+            { key: 'pattern-dots', name: '🔵 Pattern: Dots', class: 'layout-pattern-dots', description: 'Polka dot background with colored rim' },
+            { key: 'pattern-stripes', name: '🔷 Pattern: Stripes', class: 'layout-pattern-stripes', description: 'Diagonal stripe background with colored rim' },
+            { key: 'pattern-grid', name: '⬜ Pattern: Grid', class: 'layout-pattern-grid', description: 'Blueprint grid background with colored rim' },
+            { key: 'pattern-zigzag', name: '🔶 Pattern: Zigzag', class: 'layout-pattern-zigzag', description: 'Chevron pattern with colored rim' }
           ];
 
           grid.innerHTML = '';
