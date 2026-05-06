@@ -2149,7 +2149,7 @@ class MetricsDisplay {
     const showDetails = family === 'large';
 
     if (items.length === 0) {
-      const none = widget.addText('No eligible parser metrics yet.');
+      const none = widget.addText('No eligible parser metrics (enabled + automation-enabled) yet.');
       none.font = Font.systemFont(FONT_SIZES.widget.small);
       none.textColor = new Color(BRAND.textMuted);
       return;
