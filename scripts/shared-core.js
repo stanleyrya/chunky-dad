@@ -151,29 +151,6 @@ class SharedCore {
         return 'generic';
     }
 
-    resolveAutomationContext(config) {
-        const runtime = config && typeof config === 'object'
-            ? (config.runtime || config.runContext || {})
-            : {};
-        const automationRun = runtime.automationRun === true || runtime.type === 'automated';
-        const filterParsers = automationRun && runtime.automationFilter !== false;
-        return {
-            automationRun,
-            filterParsers
-        };
-    }
-
-    evaluateAutomationForParser(parserConfig, automationContext) {
-        if (!automationContext || !automationContext.filterParsers) {
-            return { shouldRun: true, reason: null };
-        }
-        const automation = parserConfig ? parserConfig.automation : null;
-        if (!automation || automation.automationEnabled !== true) {
-            return { shouldRun: false, reason: 'automation-disabled' };
-        }
-        return { shouldRun: true, reason: null };
-    }
-
     // Pure business logic for processing events
     async processEvents(config, httpAdapter, displayAdapter, parsers) {
         const parserCount = config.parsers?.length || 0;
@@ -189,8 +166,6 @@ class SharedCore {
             allProcessedEvents: [] // All events ready for calendar
         };
         const disabledParsers = [];
-        const automationContext = this.resolveAutomationContext(config);
-        const automationSkipped = [];
 
         if (!config.parsers || config.parsers.length === 0) {
             await displayAdapter.logWarn('SYSTEM: No parser configurations found in config');
@@ -203,16 +178,8 @@ class SharedCore {
         for (let i = 0; i < config.parsers.length; i++) {
             const parserConfig = config.parsers[i];
             
-            // "enabled" is for manual runs only; automation runs use automation.automationEnabled
-            if (!automationContext.filterParsers && parserConfig.enabled === false) {
+            if (parserConfig.enabled === false) {
                 disabledParsers.push(parserConfig.name);
-                continue;
-            }
-
-            const automationDecision = this.evaluateAutomationForParser(parserConfig, automationContext);
-            if (!automationDecision.shouldRun) {
-                const reason = automationDecision.reason || 'unspecified';
-                automationSkipped.push({ name: parserConfig.name, reason });
                 continue;
             }
             
@@ -250,18 +217,6 @@ class SharedCore {
 
         if (disabledParsers.length > 0) {
             await displayAdapter.logInfo(`SYSTEM: Skipped disabled parsers: ${disabledParsers.join(', ')}`);
-        }
-
-        if (automationContext.filterParsers) {
-            if (automationSkipped.length > 0) {
-                const skippedLabel = automationSkipped
-                    .map(item => `${item.name} (${item.reason})`)
-                    .join(', ');
-                await displayAdapter.logInfo(`SYSTEM: Skipped parsers (automation): ${skippedLabel}`);
-            } else {
-                await displayAdapter.logInfo('SYSTEM: Running all automation-enabled parsers');
-            }
-            results.automationSkippedParsers = automationSkipped;
         }
 
         const duplicateSummary = results.duplicatesRemoved > 0

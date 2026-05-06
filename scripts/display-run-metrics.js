@@ -468,17 +468,28 @@ class MetricsDisplay {
     }
   }
 
-  getConfiguredParsers() {
+  getConfiguredParserConfigs() {
     try {
       const scraperConfig = importModule('scraper-input');
       const parsers = Array.isArray(scraperConfig?.parsers) ? scraperConfig.parsers : [];
-      return parsers
-        .filter(parser => parser && parser.name)
-        .map(parser => parser.name);
+      return parsers.filter(parser => parser && parser.name);
     } catch (error) {
       console.log(`Metrics: Could not load scraper-input: ${error.message}`);
       return [];
     }
+  }
+
+  getConfiguredParsers() {
+    return this.getConfiguredParserConfigs().map(parser => parser.name);
+  }
+
+  getWidgetEligibleParsers(configuredParserConfigs = null) {
+    const parsers = Array.isArray(configuredParserConfigs)
+      ? configuredParserConfigs
+      : this.getConfiguredParserConfigs();
+    return parsers
+      .filter(parser => parser?.enabled !== false && parser?.automation?.automationEnabled === true)
+      .map(parser => parser.name);
   }
 
   getParserIconOverrides() {
@@ -2008,6 +2019,14 @@ class MetricsDisplay {
     return 'Parser Health';
   }
 
+  filterWidgetEligibleParserItems(items, eligibleParsers) {
+    if (!Array.isArray(items)) return [];
+    const eligible = Array.isArray(eligibleParsers) ? eligibleParsers.filter(Boolean) : [];
+    if (!eligible.length) return [];
+    const eligibleSet = new Set(eligible.map(name => String(name).toLowerCase().trim()));
+    return items.filter(item => eligibleSet.has(String(item?.name || '').toLowerCase().trim()));
+  }
+
   addWidgetHeader(widget, logoImage, headerText) {
     const family = this.runtime.widgetFamily || 'medium';
     const header = widget.addStack();
@@ -2113,13 +2132,24 @@ class MetricsDisplay {
     const sortState = context.sortState;
     const family = this.runtime.widgetFamily || 'medium';
     const latestRunId = context.latest?.run_id || null;
+    const eligibleItems = this.filterWidgetEligibleParserItems(
+      parserHealth.items,
+      context.widgetEligibleParsers
+    );
 
     const columns = this.getWidgetColumnCount(family);
     const maxRows = this.getWidgetMaxRows();
-    const sortedItems = this.sortParserItems(parserHealth.items, sortState);
+    const sortedItems = this.sortParserItems(eligibleItems, sortState);
     const items = sortedItems.slice(0, maxRows * columns);
     const nameLimit = family === 'small' ? 14 : (family === 'large' ? 20 : 16);
     const showDetails = family === 'large';
+
+    if (items.length === 0) {
+      const none = widget.addText('No eligible parser metrics yet.');
+      none.font = Font.systemFont(FONT_SIZES.widget.small);
+      none.textColor = new Color(BRAND.textMuted);
+      return;
+    }
 
     for (let index = 0; index < items.length; index += columns) {
       if (index > 0) widget.addSpacer(4);
@@ -2203,8 +2233,8 @@ class MetricsDisplay {
       }
     }
 
-    if (parserHealth.items.length > items.length) {
-      const more = widget.addText(`+${parserHealth.items.length - items.length} more`);
+    if (eligibleItems.length > items.length) {
+      const more = widget.addText(`+${eligibleItems.length - items.length} more`);
       more.font = Font.systemFont(FONT_SIZES.widget.small);
       more.textColor = new Color(BRAND.textMuted);
     }
@@ -5321,7 +5351,9 @@ async function runMetricsDisplay() {
   const records = await display.loadMetricsRecords();
   const latestRecord = records.length ? records[records.length - 1] : null;
   const summary = await display.loadSummary();
-  const configuredParsers = display.getConfiguredParsers();
+  const configuredParserConfigs = display.getConfiguredParserConfigs();
+  const configuredParsers = configuredParserConfigs.map(parser => parser.name);
+  const widgetEligibleParsers = display.getWidgetEligibleParsers(configuredParserConfigs);
   const latestRunData = latestRecord ? await display.loadRunDetails(latestRecord) : null;
   const fallbackParserNames = configuredParsers.length
     ? configuredParsers
@@ -5334,7 +5366,17 @@ async function runMetricsDisplay() {
   const runSortState = display.resolveRunSort(view);
   const runFilters = display.resolveRunFilters(view);
   const runItems = display.buildRunItems(records);
-  const data = { latestRecord, summary, parserHealth, records, sortState, runSortState, runFilters, runItems };
+  const data = {
+    latestRecord,
+    summary,
+    parserHealth,
+    records,
+    sortState,
+    runSortState,
+    runFilters,
+    runItems,
+    widgetEligibleParsers
+  };
 
   if (display.runtime.runsInWidget) {
     const widget = await display.renderWidget(data, view);

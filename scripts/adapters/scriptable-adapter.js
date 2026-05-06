@@ -443,20 +443,14 @@ class ScriptableAdapter {
         return runtime;
     }
 
-    applyAutomationRunContext(runtimeContext, automationRun, automationOverride) {
+    applyAutomationRunContext(runtimeContext, automationRun) {
         const updated = { ...(runtimeContext || {}) };
         if (automationRun) {
             updated.type = 'automated';
-            if (!updated.trigger || updated.trigger === 'app' || updated.trigger === 'unknown') {
-                updated.trigger = automationOverride !== null ? 'shortcut' : updated.trigger;
-            }
-        } else if (automationOverride === false) {
+        } else {
             updated.type = 'manual';
         }
         updated.automationRun = automationRun === true;
-        if (automationOverride !== null && automationOverride !== undefined) {
-            updated.automationOverride = automationOverride;
-        }
         return updated;
     }
 
@@ -890,50 +884,6 @@ class ScriptableAdapter {
         return null;
     }
 
-    parseAutomationMode(value) {
-        if (value === null || value === undefined || value === '') {
-            return null;
-        }
-        const parsedBoolean = this.parseBoolean(value);
-        if (parsedBoolean !== null) {
-            return parsedBoolean;
-        }
-        const normalized = String(value).toLowerCase().trim();
-        if (['auto', 'automated', 'automation', 'schedule', 'scheduled', 'cron'].includes(normalized)) {
-            return true;
-        }
-        if (['manual', 'interactive'].includes(normalized)) {
-            return false;
-        }
-        return null;
-    }
-
-    getAutomationFlagFromParams(queryParameters) {
-        if (!queryParameters || typeof queryParameters !== 'object') {
-            return null;
-        }
-        const automationValue = this.getQueryValue(queryParameters, [
-            'automation', 'automated', 'auto', 'runMode', 'run_mode', 'mode', 'schedule', 'scheduled'
-        ]);
-        return this.parseAutomationMode(automationValue);
-    }
-
-    getAutomationOverrideFromQuery() {
-        const queryParameters = this.runtimeContext?.queryParameters || {};
-        return this.getAutomationFlagFromParams(queryParameters);
-    }
-
-    getAutomationOverrideFromJson() {
-        const candidates = this.getJsonInputPayloadCandidates();
-        for (const candidate of candidates) {
-            const automationOverride = this.getAutomationFlagFromParams(candidate.queryParameters);
-            if (automationOverride !== null) {
-                return automationOverride;
-            }
-        }
-        return null;
-    }
-
     normalizeParserName(value) {
         return String(value || '').trim().toLowerCase();
     }
@@ -1044,18 +994,9 @@ class ScriptableAdapter {
             const parserNameFromQuery = this.getParserNameOverrideFromQuery();
             let parserNameOverride = parserNameFromQuery;
             let urlInput = null;
-            const automationOverrideFromQuery = this.getAutomationOverrideFromQuery();
-            const automationOverrideFromJson = automationOverrideFromQuery === null
-                ? this.getAutomationOverrideFromJson()
-                : null;
-            const automationOverride = automationOverrideFromQuery !== null
-                ? automationOverrideFromQuery
-                : automationOverrideFromJson;
             const baseRuntimeContext = this.runtimeContext || this.getScriptableRuntimeContext();
-            const automationRun = typeof automationOverride === 'boolean'
-                ? automationOverride
-                : baseRuntimeContext.type === 'automated';
-            this.runtimeContext = this.applyAutomationRunContext(baseRuntimeContext, automationRun, automationOverride);
+            const automationRun = baseRuntimeContext.type === 'automated';
+            this.runtimeContext = this.applyAutomationRunContext(baseRuntimeContext, automationRun);
 
             if (!parserNameOverride) {
                 urlInput = this.getUrlInputPayload();
@@ -1160,16 +1101,12 @@ class ScriptableAdapter {
                 throw new Error('Configuration missing cities data');
             }
             
-            const automationFilter = automationRun && !parserNameOverride && !urlInput;
             config.runtime = {
                 ...this.runtimeContext,
-                automationRun: automationRun === true,
-                automationOverride,
-                automationFilter
+                automationRun: automationRun === true
             };
             if (automationRun) {
-                const filterLabel = automationFilter ? 'enabled' : 'disabled';
-                console.log(`📱 Scriptable: Automation run detected (schedule ${filterLabel})`);
+                console.log('📱 Scriptable: Automation run detected');
             }
 
             this.applyLogConfig(config);
@@ -1760,14 +1697,7 @@ class ScriptableAdapter {
             // Persist this run for later display (skip when showing saved runs)
             const hasAnalyzedEvents = Array.isArray(results?.analyzedEvents);
             const parserConfigs = results?.config?.parsers || [];
-            const runtimeForSave = results?.config?.runtime || results?.runContext || {};
-            const automationRunForSave = Boolean(runtimeForSave.automationRun) || runtimeForSave.type === 'automated';
-            const activeParsers = parserConfigs.filter(parser => {
-                if (automationRunForSave) {
-                    return parser?.automation?.automationEnabled === true;
-                }
-                return parser?.enabled !== false;
-            });
+            const activeParsers = parserConfigs.filter(parser => parser?.enabled !== false);
             const hasActiveParsers = activeParsers.length > 0;
             const shouldSaveRun = !results?._isDisplayingSavedRun && hasAnalyzedEvents && hasActiveParsers;
             const retentionDays = 30;
@@ -1787,7 +1717,7 @@ class ScriptableAdapter {
                 const reason = results?._isDisplayingSavedRun
                     ? 'display mode'
                     : !hasActiveParsers
-                        ? automationRunForSave ? 'no automation-enabled parsers' : 'no enabled parsers'
+                        ? 'no enabled parsers'
                         : 'missing analyzed events';
                 console.log(`📱 Scriptable: Skipping run save (${reason})`);
             }
