@@ -524,7 +524,8 @@ class StaleParsersChecker {
         this.addWidgetBadge(headerRow, daysBadgeLabel, BRAND.danger);
 
         if (parser.lastWriteAt) {
-          const dateText = cell.addText(`Last write: ${this.formatDaysSince(parser.daysSince)}`);
+          const writeDate = new Date(parser.lastWriteAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+          const dateText = cell.addText(`Last write: ${writeDate}`);
           dateText.font = Font.systemFont(FONT_SIZES.widget.small);
           dateText.textColor = new Color(BRAND.textMuted);
           dateText.lineLimit = 1;
@@ -600,12 +601,10 @@ class StaleParsersChecker {
       label.font = Font.systemFont(FONT_SIZES.widget.small);
       label.lineLimit = 1;
 
-      if (status.stale.length > 0) {
-        const firstName = this.truncateText(status.stale[0].name, 18);
-        const firstLabel = widget.addText(firstName);
-        firstLabel.font = Font.systemFont(10);
-        firstLabel.lineLimit = 1;
-      }
+      const firstName = this.truncateText(status.stale[0].name, 18);
+      const firstLabel = widget.addText(firstName);
+      firstLabel.font = Font.systemFont(10);
+      firstLabel.lineLimit = 1;
     }
 
     return widget;
