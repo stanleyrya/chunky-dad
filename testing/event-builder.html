@@ -10351,6 +10351,10 @@ Example output:
         if (notes) {
           lines.push(`DESCRIPTION:${escapeICS(notes)}`);
         }
+        const website = (event.website || '').trim();
+        if (website) {
+          lines.push(`URL:${website}`);
+        }
         lines.push(`STATUS:${status}`);
         lines.push(`TRANSP:${status === 'CANCELLED' ? 'TRANSPARENT' : 'OPAQUE'}`);
         if (event.recurrence && !event.recurrenceId) {
