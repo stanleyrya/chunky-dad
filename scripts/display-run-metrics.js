@@ -2618,7 +2618,7 @@ class MetricsDisplay {
     }
 
     if (staleItems.length > items.length) {
-      const more = widget.addText(`+${staleItems.length - items.length} more stale`);
+      const more = widget.addText(`+${staleItems.length - items.length} more stale parsers`);
       more.font = Font.systemFont(FONT_SIZES.widget.small);
       more.textColor = new Color(BRAND.textMuted);
     }
