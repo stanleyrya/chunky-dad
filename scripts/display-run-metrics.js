@@ -2023,7 +2023,11 @@ class MetricsDisplay {
     if (!Array.isArray(items)) return [];
     const eligible = Array.isArray(eligibleParsers) ? eligibleParsers.filter(Boolean) : [];
     if (!eligible.length) return [];
-    const eligibleSet = new Set(eligible.map(name => String(name).toLowerCase().trim()));
+    const eligibleSet = new Set(
+      eligible
+        .map(name => String(name).toLowerCase().trim())
+        .filter(Boolean)
+    );
     return items.filter(item => eligibleSet.has(String(item?.name || '').toLowerCase().trim()));
   }
 
