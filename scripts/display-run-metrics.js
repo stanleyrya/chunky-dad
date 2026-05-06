@@ -92,6 +92,7 @@ const FAVICON_CACHE_TTL_DAYS = 14;
 const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const DISPLAY_METRICS_SCRIPT = 'display-run-metrics';
 const DISPLAY_SAVED_RUN_SCRIPT = 'display-saved-run';
+const SCRAPER_SCRIPT = 'bear-event-scraper-unified';
 
 class LineChart {
   constructor(width, height, values, options = {}) {
@@ -1634,6 +1635,9 @@ class MetricsDisplay {
       const sort = runSortState || this.getDefaultRunSort();
       return this.buildRunListUrl(sort, runFilters || null);
     }
+    if (normalizedMode === 'stale') {
+      return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'stale' });
+    }
     if (normalizedMode === 'parsers') {
       const sort = sortState || this.getDefaultSortForView(safeView);
       return this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, {
@@ -1674,6 +1678,7 @@ class MetricsDisplay {
     if (!raw) return null;
     if (['parsers', 'parser-health', 'parserhealth', 'health', 'recent', 'latest'].includes(raw)) return 'parsers';
     if (['runs', 'run-history', 'history', 'all-runs', 'allruns', 'runlist', 'run-list'].includes(raw)) return 'runs';
+    if (['stale', 'stale-parsers', 'staleness', 'overdue'].includes(raw)) return 'stale';
     return null;
   }
 
@@ -2007,12 +2012,14 @@ class MetricsDisplay {
     }
     if (view.mode === 'parsers') return 'Parser Health';
     if (view.mode === 'runs') return 'All Runs';
+    if (view.mode === 'stale') return 'Stale Parsers';
     return 'Parser Health';
   }
 
   getWidgetHeaderText(context, view, sortState) {
     if (view?.mode === 'parsers') return 'Parser Health';
     if (view?.mode === 'runs') return 'All Runs';
+    if (view?.mode === 'stale') return 'Stale Parsers';
     if (view?.mode === 'parser') {
       return view.parserName ? `Parser ${view.parserName}` : 'Parser Detail';
     }
@@ -2029,6 +2036,21 @@ class MetricsDisplay {
         .filter(Boolean)
     );
     return items.filter(item => eligibleSet.has(String(item?.name || '').toLowerCase().trim()));
+  }
+
+  sortParsersByStale(items) {
+    if (!Array.isArray(items)) return [];
+    return [...items].sort((a, b) => {
+      const aTime = a?.lastRunAt ? new Date(a.lastRunAt).getTime() : 0;
+      const bTime = b?.lastRunAt ? new Date(b.lastRunAt).getTime() : 0;
+      if (aTime === 0 && bTime !== 0) return -1;
+      if (bTime === 0 && aTime !== 0) return 1;
+      return aTime - bTime;
+    });
+  }
+
+  buildScraperParserUrl(parserName) {
+    return this.buildScriptableUrl(SCRAPER_SCRIPT, { parser: parserName });
   }
 
   addWidgetHeader(widget, logoImage, headerText) {
@@ -2493,6 +2515,117 @@ class MetricsDisplay {
     writesText.textColor = new Color(BRAND.textMuted);
   }
 
+  async renderWidgetStale(widget, context) {
+    const parserHealth = context.parserHealth;
+    const family = this.runtime.widgetFamily || 'medium';
+    const dashboardUrl = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT, { view: 'parsers' });
+
+    const eligibleItems = this.filterWidgetEligibleParserItems(
+      parserHealth.items,
+      context.widgetEligibleParsers
+    );
+    const staleItems = this.sortParsersByStale(eligibleItems);
+
+    if (staleItems.length === 0) {
+      const none = widget.addText('No eligible parsers configured (enabled + automation-enabled).');
+      none.font = Font.systemFont(FONT_SIZES.widget.small);
+      none.textColor = new Color(BRAND.textMuted);
+      widget.url = dashboardUrl;
+      return;
+    }
+
+    const topStale = staleItems[0];
+
+    if (family === 'small' || family === 'accessoryRectangular' || family === 'accessoryCircular' || family === 'accessoryInline') {
+      const item = topStale;
+      const statusMeta = this.getParserStatusMeta(item);
+      const nameLimit = 16;
+      const name = widget.addText(this.truncateText(item.name, nameLimit));
+      name.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+      name.textColor = new Color(BRAND.text);
+      name.lineLimit = 1;
+
+      const lastRunLabel = item.lastRunAt
+        ? `Last run ${this.formatRelativeTime(item.lastRunAt)}`
+        : 'Never run';
+      const lastRunText = widget.addText(lastRunLabel);
+      lastRunText.font = Font.systemFont(FONT_SIZES.widget.small);
+      lastRunText.textColor = statusMeta.color;
+      lastRunText.lineLimit = 1;
+
+      widget.url = this.buildScraperParserUrl(item.name);
+      return;
+    }
+
+    const columns = this.getWidgetColumnCount(family);
+    const maxRows = this.getWidgetMaxRows();
+    const items = staleItems.slice(0, maxRows * columns);
+    const nameLimit = family === 'large' ? 20 : 16;
+
+    for (let index = 0; index < items.length; index += columns) {
+      if (index > 0) widget.addSpacer(4);
+      const row = widget.addStack();
+      row.layoutHorizontally();
+      row.spacing = WIDGET_STYLE.rowSpacing;
+      const isIncompleteRow = columns > 1 && (index + columns > items.length);
+
+      for (let colIdx = 0; colIdx < columns; colIdx += 1) {
+        const item = items[index + colIdx];
+        if (!item) {
+          row.addSpacer();
+          continue;
+        }
+        const statusMeta = this.getParserStatusMeta(item);
+        const cell = this.addWidgetCell(row, family, columns);
+        cell.url = this.buildScraperParserUrl(item.name);
+
+        const header = cell.addStack();
+        header.layoutHorizontally();
+        header.centerAlignContent();
+        header.spacing = 4;
+
+        const iconImage = await this.getParserIconImage(item, 11, new Color(BRAND.textSoft));
+        if (iconImage) {
+          const icon = header.addImage(iconImage);
+          icon.imageSize = new Size(11, 11);
+        }
+
+        const nameText = header.addText(this.truncateText(item.name, nameLimit));
+        nameText.font = Font.boldSystemFont(FONT_SIZES.widget.small);
+        nameText.textColor = new Color(BRAND.text);
+        nameText.lineLimit = 1;
+
+        if (isIncompleteRow) {
+          header.addSpacer(4);
+        } else {
+          header.addSpacer();
+        }
+
+        const statusIcon = this.buildStatusIcon(statusMeta, 11);
+        if (statusIcon) {
+          const statusImage = header.addImage(statusIcon);
+          statusImage.imageSize = new Size(11, 11);
+        }
+
+        const lastRunLabel = item.lastRunAt
+          ? this.formatLastRunLabel(item.lastRunAt)
+          : 'Never';
+        const lastRunText = cell.addText(`Last run: ${lastRunLabel}`);
+        lastRunText.font = Font.systemFont(FONT_SIZES.widget.small);
+        lastRunText.textColor = new Color(BRAND.textMuted);
+        lastRunText.lineLimit = 1;
+      }
+    }
+
+    if (staleItems.length > items.length) {
+      const more = widget.addText(`+${staleItems.length - items.length} more stale`);
+      more.font = Font.systemFont(FONT_SIZES.widget.small);
+      more.textColor = new Color(BRAND.textMuted);
+    }
+
+    widget.url = dashboardUrl;
+  }
+
   async renderWidget(data, view) {
     const widget = new ListWidget();
     widget.backgroundColor = new Color(BRAND.primary);
@@ -2518,6 +2651,27 @@ class MetricsDisplay {
     const headerText = this.getWidgetHeaderText({ latest, parserHealth }, normalizedView, sortState);
     this.addWidgetHeader(widget, logoImage, headerText);
 
+    const widgetEligibleParsers = data.widgetEligibleParsers || [];
+
+    const context = {
+      latest,
+      summary,
+      parserHealth,
+      records,
+      recentRecords,
+      chartSize,
+      sortState,
+      runSortState,
+      runFilters,
+      runItems,
+      widgetEligibleParsers
+    };
+
+    if (normalizedView.mode === 'stale') {
+      await this.renderWidgetStale(widget, context);
+      return widget;
+    }
+
     if (!latest && normalizedView.mode !== 'runs') {
       const message = widget.addText('No metrics found yet.');
       message.font = Font.systemFont(FONT_SIZES.widget.label);
@@ -2532,19 +2686,6 @@ class MetricsDisplay {
       if (widgetUrl) widget.url = widgetUrl;
       return widget;
     }
-
-    const context = {
-      latest,
-      summary,
-      parserHealth,
-      records,
-      recentRecords,
-      chartSize,
-      sortState,
-      runSortState,
-      runFilters,
-      runItems
-    };
 
     if (normalizedView.mode === 'parsers') {
       await this.renderWidgetParserHealth(widget, context);
