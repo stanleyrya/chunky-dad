@@ -10280,9 +10280,13 @@ Example output:
         params.set('text', event.name);
         params.set('dates', `${startStr}/${endStr}`);
         if (timezone) params.set('ctz', timezone);
-        // Use the full key:value notes format (same as ICS description) so all
-        // event fields are included in the Google Calendar event description.
-        const notes = formatEventNotes(event);
+        // Use the full key:value notes format so all event fields are included in
+        // the Google Calendar event description. Google Calendar has no native URL
+        // field, so include website in details (unlike ICS which uses URL:).
+        const schema = getRequiredEventSchema();
+        const gcalExcludeFields = new Set(schema.DEFAULT_NOTES_EXCLUDED_FIELDS);
+        gcalExcludeFields.delete('website');
+        const notes = schema.formatEventNotes(event, { excludeFields: gcalExcludeFields });
         if (notes) params.set('details', notes);
         // location is always coordinates (lat,lng); bar and address are in details via formatEventNotes.
         if (event.location) params.set('location', event.location);
