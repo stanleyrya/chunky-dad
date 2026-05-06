@@ -10353,7 +10353,7 @@ Example output:
         }
         const website = (event.website || '').trim();
         if (website) {
-          lines.push(`URL:${website}`);
+          lines.push(`URL:${escapeICS(website)}`);
         }
         lines.push(`STATUS:${status}`);
         lines.push(`TRANSP:${status === 'CANCELLED' ? 'TRANSPARENT' : 'OPAQUE'}`);
