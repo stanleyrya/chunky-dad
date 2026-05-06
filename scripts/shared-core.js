@@ -157,82 +157,10 @@ class SharedCore {
             : {};
         const automationRun = runtime.automationRun === true || runtime.type === 'automated';
         const filterParsers = automationRun && runtime.automationFilter !== false;
-        let now = runtime.now ? new Date(runtime.now) : new Date();
-        if (!(now instanceof Date) || isNaN(now.getTime())) {
-            now = new Date();
-        }
         return {
             automationRun,
-            filterParsers,
-            now
+            filterParsers
         };
-    }
-
-    normalizeAutomationDayValue(value) {
-        if (value === null || value === undefined) {
-            return null;
-        }
-        if (typeof value === 'number' && Number.isFinite(value)) {
-            const normalized = Math.floor(value);
-            return (normalized >= 0 && normalized <= 6) ? normalized : null;
-        }
-        const normalized = String(value).toLowerCase().trim();
-        if (!normalized) {
-            return null;
-        }
-        const dayMap = {
-            sun: 0, sunday: 0,
-            mon: 1, monday: 1,
-            tue: 2, tues: 2, tuesday: 2,
-            wed: 3, weds: 3, wednesday: 3,
-            thu: 4, thur: 4, thurs: 4, thursday: 4,
-            fri: 5, friday: 5,
-            sat: 6, saturday: 6
-        };
-        return Object.prototype.hasOwnProperty.call(dayMap, normalized)
-            ? dayMap[normalized]
-            : null;
-    }
-
-    isAutomationDayMatch(days, date) {
-        if (!Array.isArray(days) || days.length === 0) {
-            return true;
-        }
-        const dayIndex = date.getDay();
-        const normalizedDays = days
-            .map(day => this.normalizeAutomationDayValue(day))
-            .filter(day => day !== null);
-        if (normalizedDays.length === 0) {
-            return true;
-        }
-        return normalizedDays.includes(dayIndex);
-    }
-
-    isAutomationTimeMatch(timeWindow, date) {
-        if (!timeWindow || typeof timeWindow !== 'object') {
-            return true;
-        }
-        const startHour = Number(timeWindow.startHour);
-        const endHour = Number(timeWindow.endHour);
-        if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) {
-            return true;
-        }
-        const startMinute = Number.isFinite(Number(timeWindow.startMinute))
-            ? Number(timeWindow.startMinute)
-            : 0;
-        const endMinute = Number.isFinite(Number(timeWindow.endMinute))
-            ? Number(timeWindow.endMinute)
-            : 0;
-        const startTotal = (startHour * 60) + startMinute;
-        const endTotal = (endHour * 60) + endMinute;
-        const currentTotal = (date.getHours() * 60) + date.getMinutes();
-        if (startTotal === endTotal) {
-            return true;
-        }
-        if (endTotal < startTotal) {
-            return currentTotal >= startTotal || currentTotal < endTotal;
-        }
-        return currentTotal >= startTotal && currentTotal < endTotal;
     }
 
     evaluateAutomationForParser(parserConfig, automationContext) {
@@ -242,12 +170,6 @@ class SharedCore {
         const automation = parserConfig ? parserConfig.automation : null;
         if (!automation || automation.automationEnabled !== true) {
             return { shouldRun: false, reason: 'automation-disabled' };
-        }
-        if (!this.isAutomationDayMatch(automation.days, automationContext.now)) {
-            return { shouldRun: false, reason: 'day-mismatch' };
-        }
-        if (!this.isAutomationTimeMatch(automation.timeWindow, automationContext.now)) {
-            return { shouldRun: false, reason: 'time-mismatch' };
         }
         return { shouldRun: true, reason: null };
     }
@@ -337,7 +259,7 @@ class SharedCore {
                     .join(', ');
                 await displayAdapter.logInfo(`SYSTEM: Skipped parsers (automation): ${skippedLabel}`);
             } else {
-                await displayAdapter.logInfo('SYSTEM: Automation schedule matched all automation-enabled parsers');
+                await displayAdapter.logInfo('SYSTEM: Running all automation-enabled parsers');
             }
             results.automationSkippedParsers = automationSkipped;
         }

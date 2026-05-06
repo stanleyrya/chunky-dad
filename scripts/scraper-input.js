@@ -18,9 +18,7 @@ const scraperConfig = {
       iconUrl: "https://ugc.production.linktr.ee/YY9vP9AGQ9OTFY9iXiDi_hcmot5ynjOsfwPWJ?io=true&size=avatar-v3_0",
       enabled: true,
       automation: {
-        automationEnabled: true,
-        days: ["mon"],
-        timeWindow: { startHour: 4, endHour: 5 }
+        automationEnabled: true
       },
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
@@ -54,9 +52,7 @@ const scraperConfig = {
       iconUrl: "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64",
       enabled: true,
       automation: {
-        automationEnabled: true,
-        days: ["tue"],
-        timeWindow: { startHour: 4, endHour: 5 }
+        automationEnabled: true
       },
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
@@ -86,9 +82,7 @@ const scraperConfig = {
       iconUrl: "https://www.google.com/s2/favicons?domain=bearracuda.com&sz=64",
       enabled: true,
       automation: {
-        automationEnabled: true,
-        days: ["wed"],
-        timeWindow: { startHour: 4, endHour: 5 }
+        automationEnabled: true
       },
       urls: [
         "https://bearracuda.com/",
@@ -126,9 +120,7 @@ const scraperConfig = {
       iconUrl: "https://www.google.com/s2/favicons?domain=www.chunk-party.com&sz=64",
       enabled: true,
       automation: {
-        automationEnabled: true,
-        days: ["thu"],
-        timeWindow: { startHour: 4, endHour: 5 }
+        automationEnabled: true
       },
       urls: ["https://www.chunk-party.com"],
       alwaysBear: true,        // Chunk parties are always bear events
@@ -166,9 +158,7 @@ const scraperConfig = {
       iconUrl: "https://www.google.com/s2/favicons?domain=www.furball.nyc&sz=64",
       enabled: true,
       automation: {
-        automationEnabled: false,
-        days: ["sun"],
-        timeWindow: { startHour: 5, endHour: 6 }
+        automationEnabled: false
       },
       urls: [
         "https://www.furball.nyc"
@@ -205,9 +195,7 @@ const scraperConfig = {
       iconUrl: "https://ugc.production.linktr.ee/48e9facd-5c7d-41e3-a7d0-04752baa27f1_IMG-5519.jpeg?io=true&size=avatar-v3_0",
       enabled: true,
       automation: {
-        automationEnabled: true,
-        days: ["fri"],
-        timeWindow: { startHour: 4, endHour: 5 }
+        automationEnabled: true
       },
       urls: ["https://linktr.ee/cubhouse"],
       // parser: "linktree",    // Auto-detected from URL pattern
@@ -247,9 +235,7 @@ const scraperConfig = {
       iconUrl: "https://www.google.com/s2/favicons?domain=redeyetickets.com&sz=64",
       enabled: true,
       automation: {
-        automationEnabled: true,
-        days: ["sat"],
-        timeWindow: { startHour: 4, endHour: 5 }
+        automationEnabled: true
       },
       urls: ["https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25"],
       alwaysBear: true,        // Goldiloxx is a bear party
@@ -290,9 +276,7 @@ const scraperConfig = {
       iconUrl: "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64",
       enabled: true,
       automation: {
-        automationEnabled: true,
-        days: ["sun"],
-        timeWindow: { startHour: 4, endHour: 5 }
+        automationEnabled: true
       },
       urls: ["https://www.eventbrite.com/o/nab-events-llc-51471535173"],
       alwaysBear: true,
@@ -326,9 +310,7 @@ const scraperConfig = {
       iconUrl: "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64",
       enabled: true,
       automation: {
-        automationEnabled: false,
-        days: ["mon"],
-        timeWindow: { startHour: 5, endHour: 6 }
+        automationEnabled: false
       },
       urls: ["https://www.eventbrite.com/o/77139864473"],
       alwaysBear: false,
