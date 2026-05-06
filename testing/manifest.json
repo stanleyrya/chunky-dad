@@ -2,7 +2,7 @@
   "files": [
     {
       "name": "event-builder.html",
-      "size": 417030,
+      "size": 417474,
       "icon": "🛠️",
       "description": "Build chunky.dad calendar events and preview them instantly."
     },
@@ -26,7 +26,7 @@
     },
     {
       "name": "test-og-event-layouts-calendar.html",
-      "size": 77370,
+      "size": 77359,
       "icon": "📅",
       "description": "Old School Blueprint - Classic event layouts, tried and true"
     },
