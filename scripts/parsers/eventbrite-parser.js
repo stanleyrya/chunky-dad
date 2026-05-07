@@ -21,7 +21,8 @@
 
 const EVENTBRITE_BASE_URL = 'https://www.eventbrite.com';
 // Small fixed-point loop for timezone offset convergence near DST transitions.
-// Four passes are enough to converge because offset changes are limited and discrete.
+// Four passes are enough to converge because timezone jumps are discrete (typically ±60 minutes
+// at DST boundaries), so the UTC guess stabilizes after a few offset recomputations.
 const MAX_TIMEZONE_CONVERGENCE_ITERATIONS = 4;
 
 class EventbriteParser {
@@ -1024,7 +1025,8 @@ class EventbriteParser {
         const minute = parseInt(match[5], 10);
         const second = parseInt(match[6] || '0', 10);
 
-        let utcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
+        const baseUtcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
+        let utcMillis = baseUtcMillis;
         // Iterate because the guessed UTC instant can initially map to a different
         // timezone offset than the final instant (notably around DST boundaries).
         for (let i = 0; i < MAX_TIMEZONE_CONVERGENCE_ITERATIONS; i++) {
@@ -1033,7 +1035,7 @@ class EventbriteParser {
                 return null;
             }
 
-            const adjustedMillis = Date.UTC(year, month - 1, day, hour, minute, second) - (offsetMinutes * 60 * 1000);
+            const adjustedMillis = baseUtcMillis - (offsetMinutes * 60 * 1000);
             if (adjustedMillis === utcMillis) {
                 break;
             }
@@ -1064,6 +1066,13 @@ class EventbriteParser {
 
         const parsed = new Date(valueText);
         return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    getPreferredDateValue(utcOrAbsoluteValue, localValue, hasCityTimezone) {
+        if (hasCityTimezone && this.hasNonEmptyValue(localValue)) {
+            return localValue;
+        }
+        return utcOrAbsoluteValue || localValue;
     }
 
     // Check if an event is in the future (not past)
@@ -1335,15 +1344,8 @@ class EventbriteParser {
             }
 
             const parseTimezone = eventTimezone || originalTimezone || null;
-            let preferredStartValue = startUtcOrAbsoluteValue || startLocalValue;
-            if (eventTimezone && startLocalValue) {
-                preferredStartValue = startLocalValue;
-            }
-
-            let preferredEndValue = endUtcOrAbsoluteValue || endLocalValue;
-            if (eventTimezone && endLocalValue) {
-                preferredEndValue = endLocalValue;
-            }
+            const preferredStartValue = this.getPreferredDateValue(startUtcOrAbsoluteValue, startLocalValue, !!eventTimezone);
+            const preferredEndValue = this.getPreferredDateValue(endUtcOrAbsoluteValue, endLocalValue, !!eventTimezone);
             const parsedStartDate = this.parseEventDateValue(preferredStartValue, parseTimezone);
             const parsedEndDate = this.parseEventDateValue(preferredEndValue, parseTimezone);
             
