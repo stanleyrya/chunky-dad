@@ -10282,11 +10282,11 @@ Example output:
         if (timezone) params.set('ctz', timezone);
         // Use the full key:value notes format so all event fields are included in
         // the Google Calendar event description. Google Calendar has no native URL
-        // field, so include website in details (unlike ICS which uses URL:).
+        // field; website is included in details because it is not in DEFAULT_NOTES_EXCLUDED_FIELDS.
+        // ICS also includes website in both the URL: field and the DESCRIPTION notes
+        // so Scriptable (which cannot read CalendarEvent.url) can read it from notes.
         const schema = getRequiredEventSchema();
-        const gcalExcludeFields = new Set(schema.DEFAULT_NOTES_EXCLUDED_FIELDS);
-        gcalExcludeFields.delete('website');
-        const notes = schema.formatEventNotes(event, { excludeFields: gcalExcludeFields });
+        const notes = schema.formatEventNotes(event);
         if (notes) params.set('details', notes);
         // location is always coordinates (lat,lng); bar and address are in details via formatEventNotes.
         if (event.location) params.set('location', event.location);
