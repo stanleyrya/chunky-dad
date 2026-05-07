@@ -1011,14 +1011,8 @@ class SharedCore {
         // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
         // The merge strategy above has already chosen the correct gmaps URL
         
-        // Resolve url/website alias: url and website are the same concept.
-        // url and its aliases (link, eventurl, eventlink) all canonicalize to "website"
-        // via EVENT_KEY_ALIASES. "website" is written to notes by formatEventNotes().
-        // Backfill mergedObject.url so non-Scriptable integrations (ICS, web adapter)
-        // that read the native url field still get the value.
-        if (!mergedObject.url && mergedObject.website) {
-            mergedObject.url = mergedObject.website;
-        }
+        // Keep url/website aliases in sync before generating notes and final output.
+        this.syncUrlAndWebsiteFields(mergedObject);
         
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);
@@ -1073,6 +1067,25 @@ class SharedCore {
         finalEvent._changes = changes;
         
         return finalEvent;
+    }
+
+    syncUrlAndWebsiteFields(event) {
+        if (!event || typeof event !== 'object') {
+            return event;
+        }
+
+        const hasUrl = typeof event.url === 'string' && event.url.trim().length > 0;
+        const hasWebsite = typeof event.website === 'string' && event.website.trim().length > 0;
+
+        if (!hasWebsite && hasUrl) {
+            event.website = event.url;
+        }
+
+        if (!hasUrl && hasWebsite) {
+            event.url = event.website;
+        }
+
+        return event;
     }
     
     // ============================================================================
@@ -1893,13 +1906,8 @@ class SharedCore {
     enrichEventLocation(event) {
         if (!event) return event;
 
-        // Sync url/website: url and its aliases (link, eventurl, eventlink) all
-        // canonicalize to "website" via EVENT_KEY_ALIASES. "website" is the canonical
-        // notes field written by formatEventNotes(). Backfill event.url so non-Scriptable
-        // integrations that read the native url field still get the value.
-        if (!event.url && event.website) {
-            event.url = event.website;
-        }
+        // Keep url/website aliases in sync before enrichment.
+        this.syncUrlAndWebsiteFields(event);
 
         // DEBUG: Check URL field before enrichment
         const hadUrlBefore = 'url' in event;

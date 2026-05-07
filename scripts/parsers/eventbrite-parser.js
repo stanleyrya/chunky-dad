@@ -1035,7 +1035,8 @@ class EventbriteParser {
                 venue: finalVenue,
                 address: finalAddress,
                 url: url,
-                venueAddress: eventData.venue?.address || null
+                venueAddress: eventData.venue?.address || null,
+                locationHints: this.extractLocationHintsFromEventData(eventData)
             }, cityConfig);
 
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
@@ -1322,8 +1323,12 @@ class EventbriteParser {
 
         // Fall back to scanning other event text fields using configured patterns
         // Prioritize address/venue/title before description to avoid unrelated city mentions.
+        const locationHints = Array.isArray(eventDetails.locationHints)
+            ? eventDetails.locationHints
+            : [];
         const prioritizedFields = [
             eventDetails.address,
+            ...locationHints,
             eventDetails.venue,
             eventDetails.title,
             eventDetails.description,
@@ -1338,6 +1343,65 @@ class EventbriteParser {
         }
 
         return null;
+    }
+
+    extractLocationHintsFromEventData(eventData) {
+        if (!eventData || typeof eventData !== 'object') {
+            return [];
+        }
+
+        const hints = [];
+        const seen = new Set();
+        const addHint = (value) => {
+            if (value === null || value === undefined) {
+                return;
+            }
+            const normalized = String(value).trim();
+            if (!normalized) {
+                return;
+            }
+            const dedupeKey = normalized.toLowerCase();
+            if (seen.has(dedupeKey)) {
+                return;
+            }
+            seen.add(dedupeKey);
+            hints.push(normalized);
+        };
+
+        const primaryVenue = eventData.primary_venue || eventData.primaryVenue || null;
+        if (primaryVenue && typeof primaryVenue === 'object') {
+            addHint(primaryVenue.name);
+            addHint(primaryVenue.city);
+            addHint(primaryVenue.region);
+            const primaryAddress = primaryVenue.address;
+            if (primaryAddress && typeof primaryAddress === 'object') {
+                addHint(primaryAddress.address_1);
+                addHint(primaryAddress.city);
+                addHint(primaryAddress.region);
+                addHint(primaryAddress.localized_address_display);
+                addHint(primaryAddress.localized_area_display);
+            } else {
+                addHint(primaryAddress);
+            }
+        }
+
+        const directVenue = eventData.venue;
+        if (directVenue && typeof directVenue === 'object' && directVenue.address) {
+            const venueAddress = directVenue.address;
+            addHint(venueAddress.address_1);
+            addHint(venueAddress.city);
+            addHint(venueAddress.region);
+            addHint(venueAddress.localized_address_display);
+            addHint(venueAddress.localized_area_display);
+        }
+
+        addHint(eventData.location);
+        addHint(eventData.location_summary);
+        addHint(eventData.locationSummary);
+        addHint(eventData.location_name);
+        addHint(eventData.locationName);
+
+        return hints;
     }
 
     // Find city key from text using centralized pattern list
