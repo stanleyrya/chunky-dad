@@ -6,9 +6,32 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-phoenix
 X-WR-TIMEZONE:America/Phoenix
 BEGIN:VEVENT
+DTSTART:20260524T043000Z
+DTEND:20260524T090000Z
+DTSTAMP:20260507T003210Z
+UID:9165A83C-32B2-497F-A522-7C5ADF7B9A2A
+CREATED:20260507T001637Z
+DESCRIPTION:description: Music & Entertainment\n• DJ FREDDY KING OF PANTS (
+ Seattle)\nbar: Kobalt\naddress: 3110 N. Central Ave\, Phoenix\, AZ\ntimezon
+ e: America/Phoenix\nimage: https://bearracuda.com/wp-content/uploads/2026/0
+ 4/cudaphdxfinal.jpg\nfacebook: https://www.facebook.com/events/919970720916
+ 515\nticketUrl: https://sickening.events/e/bearracuda-phoenix-relaunch-part
+ y\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda
+ \n_staticFields: [object Object]\ngmaps: https://www.google.com/maps/search
+ /?api=1&query=Kobalt%2C%203110%20N.%20Central%20Ave%2C%20Phoenix%2C%20AZ\nk
+ ey: bearracuda-2026-05-24-phoenix
+LAST-MODIFIED:20260507T001637Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:PHOENIX
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20251005T040000Z
 DTEND:20251005T090000Z
-DTSTAMP:20251002T022755Z
+DTSTAMP:20260507T003210Z
 UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
 CREATED:20251001T000958Z
 DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
