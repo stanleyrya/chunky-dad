@@ -542,7 +542,7 @@ class EventbriteParser {
         }
         
         const prices = ticketClasses
-            .map(tc => tc?.totalCost?.majorValue ?? tc?.cost?.majorValue ?? tc?.price?.majorValue ?? tc?.price?.value)
+            .map(tc => this.extractTicketClassNumericPrice(tc))
             .map(value => parseFloat(value))
             .filter(value => Number.isFinite(value))
             .sort((a, b) => a - b);
@@ -565,6 +565,13 @@ class EventbriteParser {
         }
         
         return price;
+    }
+
+    extractTicketClassNumericPrice(ticketClass) {
+        return ticketClass?.totalCost?.majorValue ??
+            ticketClass?.cost?.majorValue ??
+            ticketClass?.price?.majorValue ??
+            ticketClass?.price?.value;
     }
 
     extractNextDataDescription(context) {
