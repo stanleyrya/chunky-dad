@@ -355,9 +355,8 @@ class EventbriteParser {
         const seenKeys = new Set();
         
         try {
-            const candidates = this.collectNextDataEventCandidates(nextData);
-            candidates.forEach(candidate => {
-                const normalized = this.normalizeNextDataEventCandidate(candidate, htmlData);
+            const normalizedCandidates = this.getNormalizedNextDataCandidates(nextData, htmlData?.url || '');
+            normalizedCandidates.forEach(normalized => {
                 if (!normalized) {
                     return;
                 }
@@ -382,6 +381,13 @@ class EventbriteParser {
         }
         
         return events;
+    }
+
+    getNormalizedNextDataCandidates(nextData, baseUrl = '') {
+        const candidates = this.collectNextDataEventCandidates(nextData);
+        return candidates
+            .map(candidate => this.normalizeNextDataEventCandidate(candidate, baseUrl))
+            .filter(Boolean);
     }
 
     collectNextDataEventCandidates(payload) {
@@ -473,13 +479,12 @@ class EventbriteParser {
         return '';
     }
 
-    normalizeNextDataEventCandidate(candidate, htmlData = null) {
+    normalizeNextDataEventCandidate(candidate, baseUrl = '') {
         if (!candidate || typeof candidate !== 'object') {
             return null;
         }
         
         const rawUrl = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url || '';
-        const baseUrl = htmlData?.url || '';
         const normalizedUrl = this.normalizeEventbriteEventUrl(rawUrl, baseUrl);
         const normalizedName = this.getNextDataCandidateName(candidate);
         
@@ -1255,13 +1260,9 @@ class EventbriteParser {
     extractAdditionalUrlsFromNextDataPayload(nextData, sourceUrl, parserConfig) {
         const urls = new Set();
         
-        const candidates = this.collectNextDataEventCandidates(nextData);
-        candidates.forEach(candidate => {
-            const rawUrl = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url;
-            if (!rawUrl) {
-                return;
-            }
-            const normalizedUrl = this.normalizeEventbriteEventUrl(rawUrl, sourceUrl);
+        const normalizedCandidates = this.getNormalizedNextDataCandidates(nextData, sourceUrl);
+        normalizedCandidates.forEach(candidate => {
+            const normalizedUrl = candidate.url || '';
             if (normalizedUrl && this.isValidEventUrl(normalizedUrl, parserConfig)) {
                 urls.add(normalizedUrl);
             }
