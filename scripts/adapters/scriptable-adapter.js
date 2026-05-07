@@ -664,6 +664,17 @@ class ScriptableAdapter {
         throw new Error(`No timezone configuration found for city: ${city}`);
     }
 
+    // Get timezone for display purposes - falls back to UTC for unknown cities.
+    // Use this instead of getTimezoneForCity in all display/rendering contexts so that
+    // events with unresolved cities (e.g. city="unknown") still render rather than crashing.
+    getTimezoneForCityOrUtc(city) {
+        try {
+            return this.getTimezoneForCity(city);
+        } catch (e) {
+            return 'UTC';
+        }
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
@@ -2115,7 +2126,7 @@ class ScriptableAdapter {
             console.log(`  🎯 Intent: ${this.formatIntentActionLabel(this.normalizeIntentAction(event))} | 📝 Write: ${this.formatWriteActionLabel(this.getWriteActionFromEvent(event))}`);
             const eventDateForDisplay = new Date(event.startDate);
             // Get timezone from city configuration instead of expecting it on the event
-            const timezone = this.getTimezoneForCity(event.city);
+            const timezone = this.getTimezoneForCityOrUtc(event.city);
             const localDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: timezone });
             const utcDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: 'UTC' });
             console.log(`  📅 ${localDateTime} (UTC: ${utcDateTime})`);
@@ -2333,22 +2344,6 @@ class ScriptableAdapter {
             
         } catch (error) {
             console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
-            // Fallback to UITable
-            try {
-
-                await this.presentUITableFallback(results);
-            } catch (tableError) {
-                console.log(`📱 Scriptable: ✗ UITable fallback also failed: ${tableError.message}`);
-                // Final fallback to QuickLook
-                try {
-
-                    const summary = this.createResultsSummary(results);
-                    await QuickLook.present(summary, false);
-
-                } catch (quickLookError) {
-                    console.log(`📱 Scriptable: ✗ All display methods failed: ${quickLookError.message}`);
-                }
-            }
         }
     }
 
@@ -3999,7 +3994,7 @@ class ScriptableAdapter {
         const endDate = event.endDate ? new Date(event.endDate) : null;
         
         // Get timezone from city configuration instead of expecting it on the event
-        const timezone = this.getTimezoneForCity(event.city);
+        const timezone = this.getTimezoneForCityOrUtc(event.city);
         const timeZoneOptions = { timeZone: timezone };
         
         const dateStr = eventDate.toLocaleDateString('en-US', { 
@@ -4284,7 +4279,7 @@ class ScriptableAdapter {
                                     <div style="font-size: 12px; color: #666; margin-top: 2px;">
                                         ${(() => {
                                             // Get timezone from city configuration instead of expecting it on the conflict
-                                            const timezone = this.getTimezoneForCity(event.city);
+                                            const timezone = this.getTimezoneForCityOrUtc(event.city);
                                             return new Date(conflict.startDate).toLocaleString('en-US', { timeZone: timezone });
                                         })()}
                                     </div>
@@ -4947,7 +4942,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 if (field.includes('Date') && val) {
                     // For date fields in event debugging, get timezone from city configuration
                     if (field === 'startDate' || field === 'endDate') {
-                        const timezone = this.getTimezoneForCity(event?.city);
+                        const timezone = this.getTimezoneForCityOrUtc(event?.city);
                         var eventForField = { timeZone: timezone };
                     } else {
                         var eventForField = {};
@@ -5101,7 +5096,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 if (!val) return '';
                 if (field.includes('Date') && val) {
                     // Get timezone from city configuration instead of expecting it on the event
-                    const timezone = this.getTimezoneForCity(event.city);
+                    const timezone = this.getTimezoneForCityOrUtc(event.city);
                     return new Date(val).toLocaleString('en-US', { timeZone: timezone });
                 }
                 if (typeof val === 'object') {
