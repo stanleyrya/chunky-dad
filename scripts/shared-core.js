@@ -404,8 +404,13 @@ class SharedCore {
     }
 
     async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null) {
-        const maxUrls = parserConfig.maxAdditionalUrls || 12;
-        const urlsToProcess = additionalLinks.slice(0, maxUrls);
+        const configuredMaxUrls = parserConfig.maxAdditionalUrls;
+        const maxUrls = configuredMaxUrls === null
+            ? Infinity
+            : (Number.isInteger(configuredMaxUrls) && configuredMaxUrls >= 0 ? configuredMaxUrls : 12);
+        const urlsToProcess = Number.isFinite(maxUrls)
+            ? additionalLinks.slice(0, maxUrls)
+            : additionalLinks;
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
 
         await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
