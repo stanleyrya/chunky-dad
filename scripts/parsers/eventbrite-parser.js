@@ -325,6 +325,7 @@ class EventbriteParser {
             const description = this.extractNextDataDescription(context) || basicInfo.summary || '';
             const venueAddress = this.buildNextDataVenueAddress(basicInfo.venue?.address);
             const imageUrl = this.extractNextDataImage(context);
+            const pricing = this.extractNextDataPricing(context, basicInfo);
             
             const eventData = {
                 name: basicInfo.name || '',
@@ -336,7 +337,9 @@ class EventbriteParser {
                     name: basicInfo.venue.name || '',
                     ...(venueAddress ? { address: venueAddress } : {})
                 } : undefined,
-                ...(imageUrl ? { image: { url: imageUrl } } : {})
+                ...(imageUrl ? { image: { url: imageUrl } } : {}),
+                ...(pricing && pricing.isFree ? { is_free: true } : {}),
+                ...(pricing && pricing.priceRange ? { price_range: pricing.priceRange } : {})
             };
             
             const event = this.parseJsonEvent(eventData, null, parserConfig, null, cityConfig);
@@ -547,6 +550,39 @@ class EventbriteParser {
         
         const image = images[0] || {};
         return image.croppedLogoUrl600 || image.croppedLogoUrl480 || image.url || '';
+    }
+
+    extractNextDataPricing(context, basicInfo) {
+        // Check for free events from multiple possible locations
+        const isFree = basicInfo?.isFree === true ||
+                       basicInfo?.is_free === true ||
+                       context?.ticketContext?.isFree === true;
+        if (isFree) {
+            return { isFree: true };
+        }
+
+        // Try to extract numeric price values from various __NEXT_DATA__ locations
+        const lowestPrice = basicInfo?.lowestPrice?.value ??
+                            basicInfo?.minPrice?.value ??
+                            context?.ticketContext?.lowestPrice?.value ??
+                            null;
+        const highestPrice = basicInfo?.highestPrice?.value ??
+                             basicInfo?.maxPrice?.value ??
+                             context?.ticketContext?.highestPrice?.value ??
+                             null;
+
+        if (lowestPrice != null) {
+            const low = parseFloat(lowestPrice);
+            const high = highestPrice != null ? parseFloat(highestPrice) : null;
+            if (Number.isFinite(low)) {
+                if (high !== null && Number.isFinite(high) && high !== low) {
+                    return { priceRange: `$${low.toFixed(2)} - $${high.toFixed(2)}` };
+                }
+                return { priceRange: `$${low.toFixed(2)}` };
+            }
+        }
+
+        return null;
     }
 
     buildNextDataVenueAddress(venueAddress) {
@@ -823,7 +859,7 @@ class EventbriteParser {
         let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
         
         // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
-        if (typeof startDate === 'object' && startDate.utc) {
+        if (startDate && typeof startDate === 'object' && startDate.utc) {
             startDate = startDate.utc;
         }
         
@@ -869,10 +905,10 @@ class EventbriteParser {
             }
             
             // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
-            if (typeof startDate === 'object' && startDate.utc) {
+            if (startDate && typeof startDate === 'object' && startDate.utc) {
                 startDate = startDate.utc;
             }
-            if (typeof endDate === 'object' && endDate.utc) {
+            if (endDate && typeof endDate === 'object' && endDate.utc) {
                 endDate = endDate.utc;
             }
             
@@ -934,8 +970,10 @@ class EventbriteParser {
             if (primaryVenue && typeof primaryVenue === 'object') {
                 venue = venue || primaryVenue.name || null;
 
+                // Declare primaryAddress outside the address block so coordinates
+                // can be extracted even when address was already found above
+                const primaryAddress = primaryVenue.address;
                 if (!address) {
-                    const primaryAddress = primaryVenue.address;
                     if (primaryAddress && typeof primaryAddress === 'object') {
                         if (primaryAddress.address_1 && primaryAddress.city && primaryAddress.region) {
                             address = `${primaryAddress.address_1}, ${primaryAddress.city}, ${primaryAddress.region} ${primaryAddress.postal_code || ''}`.trim();
@@ -946,12 +984,18 @@ class EventbriteParser {
                         address = primaryAddress.trim() || null;
                     }
                 }
+                // Extract coordinates from primary_venue.address even when address was already found
+                if (!coordinates && primaryAddress && typeof primaryAddress === 'object' && primaryAddress.latitude && primaryAddress.longitude) {
+                    coordinates = {
+                        lat: parseFloat(primaryAddress.latitude),
+                        lng: parseFloat(primaryAddress.longitude)
+                    };
+                }
             }
             
             // Enhanced price extraction with availability info
             let price = '';
             
-            // DEBUG: Log the pricing condition checks
             if (eventData.is_free) {
                 price = 'Free';
             } else if (eventData.price_range) {
