@@ -877,6 +877,7 @@ class EventbriteParser {
             }
             
             const url = eventData.url || eventData.vanity_url || '';
+            const primaryVenue = eventData.primary_venue || eventData.primaryVenue || null;
             
             // Enhanced venue processing - get both name and address from multiple sources
             let venue = null;
@@ -925,6 +926,24 @@ class EventbriteParser {
                             lat: parseFloat(eventData.venue.latitude),
                             lng: parseFloat(eventData.venue.longitude)
                         };
+                    }
+                }
+            }
+
+            // Also check primary_venue fields used by some Eventbrite payloads
+            if (primaryVenue && typeof primaryVenue === 'object') {
+                venue = venue || primaryVenue.name || null;
+
+                if (!address) {
+                    const primaryAddress = primaryVenue.address;
+                    if (primaryAddress && typeof primaryAddress === 'object') {
+                        if (primaryAddress.address_1 && primaryAddress.city && primaryAddress.region) {
+                            address = `${primaryAddress.address_1}, ${primaryAddress.city}, ${primaryAddress.region} ${primaryAddress.postal_code || ''}`.trim();
+                        } else {
+                            address = primaryAddress.localized_address_display || null;
+                        }
+                    } else if (typeof primaryAddress === 'string') {
+                        address = primaryAddress.trim() || null;
                     }
                 }
             }
@@ -1035,7 +1054,13 @@ class EventbriteParser {
                 venue: finalVenue,
                 address: finalAddress,
                 url: url,
-                venueAddress: eventData.venue?.address || null
+                venueAddress: eventData.venue?.address || primaryVenue?.address || null,
+                location: eventData.location || '',
+                locationSummary: eventData.location_summary || eventData.locationSummary || '',
+                locationName: eventData.location_name || eventData.locationName || '',
+                primaryVenueName: primaryVenue?.name || '',
+                primaryVenueCity: primaryVenue?.city || '',
+                primaryVenueRegion: primaryVenue?.region || ''
             }, cityConfig);
 
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
@@ -1310,8 +1335,10 @@ class EventbriteParser {
         const venueAddress = eventDetails.venueAddress;
         if (venueAddress) {
             const venueCityText = [
+                venueAddress.address_1,
                 venueAddress.city,
                 venueAddress.region,
+                venueAddress.localized_address_display,
                 venueAddress.localized_area_display
             ].filter(Boolean).join(' ');
             const cityFromVenue = this.findCityFromText(venueCityText, cityConfig);
@@ -1324,6 +1351,12 @@ class EventbriteParser {
         // Prioritize address/venue/title before description to avoid unrelated city mentions.
         const prioritizedFields = [
             eventDetails.address,
+            eventDetails.locationSummary,
+            eventDetails.locationName,
+            eventDetails.location,
+            eventDetails.primaryVenueName,
+            eventDetails.primaryVenueCity,
+            eventDetails.primaryVenueRegion,
             eventDetails.venue,
             eventDetails.title,
             eventDetails.description,
