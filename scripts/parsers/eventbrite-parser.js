@@ -877,6 +877,7 @@ class EventbriteParser {
             }
             
             const url = eventData.url || eventData.vanity_url || '';
+            const primaryVenue = eventData.primary_venue || eventData.primaryVenue || null;
             
             // Enhanced venue processing - get both name and address from multiple sources
             let venue = null;
@@ -930,7 +931,6 @@ class EventbriteParser {
             }
 
             // Also check primary_venue fields used by some Eventbrite payloads
-            const primaryVenue = eventData.primary_venue || eventData.primaryVenue || null;
             if (primaryVenue && typeof primaryVenue === 'object') {
                 venue = venue || primaryVenue.name || null;
 
