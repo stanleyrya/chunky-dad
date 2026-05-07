@@ -928,6 +928,25 @@ class EventbriteParser {
                     }
                 }
             }
+
+            // Also check primary_venue fields used by some Eventbrite payloads
+            const primaryVenue = eventData.primary_venue || eventData.primaryVenue || null;
+            if (primaryVenue && typeof primaryVenue === 'object') {
+                venue = venue || primaryVenue.name || null;
+
+                if (!address) {
+                    const primaryAddress = primaryVenue.address;
+                    if (primaryAddress && typeof primaryAddress === 'object') {
+                        if (primaryAddress.address_1 && primaryAddress.city && primaryAddress.region) {
+                            address = `${primaryAddress.address_1}, ${primaryAddress.city}, ${primaryAddress.region} ${primaryAddress.postal_code || ''}`.trim();
+                        } else {
+                            address = primaryAddress.localized_address_display || null;
+                        }
+                    } else if (typeof primaryAddress === 'string') {
+                        address = primaryAddress.trim() || null;
+                    }
+                }
+            }
             
             // Enhanced price extraction with availability info
             let price = '';
@@ -1029,14 +1048,19 @@ class EventbriteParser {
             // Detect city using centralized city config (scraper-cities.js).
             // Eventbrite timezones are frequently incorrect, so we detect city here
             // to allow timezone correction before SharedCore enrichment.
-            const locationHints = this.extractLocationHintsFromEventData(eventData);
             const city = this.detectCityFromEventData({
                 title: title,
                 description: description,
                 venue: finalVenue,
                 address: finalAddress,
                 url: url,
-                venueAddress: eventData.venue?.address || null
+                venueAddress: eventData.venue?.address || primaryVenue?.address || null,
+                location: eventData.location || '',
+                locationSummary: eventData.location_summary || eventData.locationSummary || '',
+                locationName: eventData.location_name || eventData.locationName || '',
+                primaryVenueName: primaryVenue?.name || '',
+                primaryVenueCity: primaryVenue?.city || '',
+                primaryVenueRegion: primaryVenue?.region || ''
             }, cityConfig);
 
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
@@ -1154,7 +1178,6 @@ class EventbriteParser {
                 address: finalAddress,
                 city: city,
                 timezone: eventTimezone,
-                ...(locationHints.length > 0 ? { locationHints } : {}),
                 // Don't set url field to null - let other parsers (like linktree) provide the URL
                 // Only set url if we have a meaningful value, otherwise omit the field entirely
                 ticketUrl: url, // For Eventbrite events, the event URL IS the ticket URL
@@ -1312,8 +1335,10 @@ class EventbriteParser {
         const venueAddress = eventDetails.venueAddress;
         if (venueAddress) {
             const venueCityText = [
+                venueAddress.address_1,
                 venueAddress.city,
                 venueAddress.region,
+                venueAddress.localized_address_display,
                 venueAddress.localized_area_display
             ].filter(Boolean).join(' ');
             const cityFromVenue = this.findCityFromText(venueCityText, cityConfig);
@@ -1326,6 +1351,12 @@ class EventbriteParser {
         // Prioritize address/venue/title before description to avoid unrelated city mentions.
         const prioritizedFields = [
             eventDetails.address,
+            eventDetails.locationSummary,
+            eventDetails.locationName,
+            eventDetails.location,
+            eventDetails.primaryVenueName,
+            eventDetails.primaryVenueCity,
+            eventDetails.primaryVenueRegion,
             eventDetails.venue,
             eventDetails.title,
             eventDetails.description,
@@ -1340,65 +1371,6 @@ class EventbriteParser {
         }
 
         return null;
-    }
-
-    extractLocationHintsFromEventData(eventData) {
-        if (!eventData || typeof eventData !== 'object') {
-            return [];
-        }
-
-        const hints = [];
-        const seen = new Set();
-        const addHint = (value) => {
-            if (value === null || value === undefined) {
-                return;
-            }
-            const normalized = String(value).trim();
-            if (!normalized) {
-                return;
-            }
-            const dedupeKey = normalized.toLowerCase();
-            if (seen.has(dedupeKey)) {
-                return;
-            }
-            seen.add(dedupeKey);
-            hints.push(normalized);
-        };
-
-        const primaryVenue = eventData.primary_venue || eventData.primaryVenue || null;
-        if (primaryVenue && typeof primaryVenue === 'object') {
-            addHint(primaryVenue.name);
-            addHint(primaryVenue.city);
-            addHint(primaryVenue.region);
-            const primaryAddress = primaryVenue.address;
-            if (primaryAddress && typeof primaryAddress === 'object') {
-                addHint(primaryAddress.address_1);
-                addHint(primaryAddress.city);
-                addHint(primaryAddress.region);
-                addHint(primaryAddress.localized_address_display);
-                addHint(primaryAddress.localized_area_display);
-            } else {
-                addHint(primaryAddress);
-            }
-        }
-
-        const directVenue = eventData.venue;
-        if (directVenue && typeof directVenue === 'object' && directVenue.address) {
-            const venueAddress = directVenue.address;
-            addHint(venueAddress.address_1);
-            addHint(venueAddress.city);
-            addHint(venueAddress.region);
-            addHint(venueAddress.localized_address_display);
-            addHint(venueAddress.localized_area_display);
-        }
-
-        addHint(eventData.location);
-        addHint(eventData.location_summary);
-        addHint(eventData.locationSummary);
-        addHint(eventData.location_name);
-        addHint(eventData.locationName);
-
-        return hints;
     }
 
     // Find city key from text using centralized pattern list
