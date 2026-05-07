@@ -20,6 +20,8 @@
 // ============================================================================
 
 const EVENTBRITE_BASE_URL = 'https://www.eventbrite.com';
+// Small fixed-point loop for timezone offset convergence near DST transitions.
+// Four passes are enough to converge because offset changes are limited and discrete.
 const MAX_TIMEZONE_CONVERGENCE_ITERATIONS = 4;
 
 class EventbriteParser {
@@ -925,8 +927,12 @@ class EventbriteParser {
             .trim();
     }
 
+    hasNonEmptyValue(value) {
+        return value !== null && value !== undefined && value !== '';
+    }
+
     extractDateValue(value) {
-        if (value === null || value === undefined || value === '') {
+        if (!this.hasNonEmptyValue(value)) {
             return null;
         }
 
@@ -938,7 +944,7 @@ class EventbriteParser {
             const dateKeys = ['utc', 'local', 'localized', 'dateTime', 'date_time', 'value'];
             for (const key of dateKeys) {
                 const candidate = value[key];
-                if (candidate !== null && candidate !== undefined && candidate !== '') {
+                if (this.hasNonEmptyValue(candidate)) {
                     return candidate;
                 }
             }
@@ -955,7 +961,7 @@ class EventbriteParser {
 
         for (const candidate of candidates) {
             const resolved = this.extractDateValue(candidate);
-            if (resolved !== null && resolved !== undefined && resolved !== '') {
+            if (this.hasNonEmptyValue(resolved)) {
                 return resolved;
             }
         }
@@ -1019,6 +1025,8 @@ class EventbriteParser {
         const second = parseInt(match[6] || '0', 10);
 
         let utcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
+        // Iterate because the guessed UTC instant can initially map to a different
+        // timezone offset than the final instant (notably around DST boundaries).
         for (let i = 0; i < MAX_TIMEZONE_CONVERGENCE_ITERATIONS; i++) {
             const offsetMinutes = this.getTimezoneOffsetMinutes(new Date(utcMillis), timezone);
             if (offsetMinutes === null) {
@@ -1038,7 +1046,7 @@ class EventbriteParser {
 
     parseEventDateValue(dateValue, timezoneHint = null) {
         const resolvedValue = this.extractDateValue(dateValue);
-        if (resolvedValue === null || resolvedValue === undefined || resolvedValue === '') {
+        if (!this.hasNonEmptyValue(resolvedValue)) {
             return null;
         }
 
