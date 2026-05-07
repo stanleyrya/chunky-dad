@@ -10,8 +10,8 @@
 // Widget parameter: "days=N" to override the default stale threshold.
 // Example: "days=14" makes parsers stale after 14 days.
 //
-// Tapping a stale-parser row launches bear-event-scraper-unified for that parser.
-// Tapping the widget background (or small/lock-screen widgets) opens display-run-metrics.
+// Tapping the widget runs the current stale parser in a rolling queue.
+// In app mode you can temporarily skip the current parser (default: 24h).
 
 // ─── Brand & style constants (mirrored from display-run-metrics.js) ───────────
 
@@ -55,6 +55,11 @@ const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const SCRAPER_SCRIPT = 'bear-event-scraper-unified';
 const DISPLAY_METRICS_SCRIPT = 'display-run-metrics';
 const DEFAULT_STALE_DAYS = 7;
+const DEFAULT_SKIP_HOURS = 24;
+const QUEUE_IDLE_RESET_HOURS = 12;
+const QUEUE_STATE_FILE = 'stale-parser-queue.json';
+const HOURS_SUFFIX = 'h';
+const SHORT_DATE_FORMAT_OPTIONS = { month: 'short', day: 'numeric', year: 'numeric' };
 const FAVICON_CACHE_TTL_DAYS = 14;
 const LOGO_CACHE_TTL_DAYS = 7;
 
@@ -77,7 +82,8 @@ class StaleParsersChecker {
     const runtime = {
       runsInWidget: false,
       widgetFamily: null,
-      widgetParameter: null
+      widgetParameter: null,
+      queryParameters: {}
     };
     try {
       if (typeof config !== 'undefined') {
@@ -86,6 +92,7 @@ class StaleParsersChecker {
       }
       if (typeof args !== 'undefined') {
         runtime.widgetParameter = args.widgetParameter || null;
+        runtime.queryParameters = args.queryParameters || {};
       }
     } catch (error) {
       console.log(`StaleParsers: Runtime detection failed: ${error.message}`);
@@ -208,7 +215,156 @@ class StaleParsersChecker {
       }
     });
 
+    stale.sort((a, b) => {
+      const aDays = a.daysSince === null ? Number.POSITIVE_INFINITY : a.daysSince;
+      const bDays = b.daysSince === null ? Number.POSITIVE_INFINITY : b.daysSince;
+      if (bDays !== aDays) return bDays - aDays;
+      return String(a.name).localeCompare(String(b.name));
+    });
+
     return { total: configuredParsers.length, stale, upToDate };
+  }
+
+  // ── Rolling queue state ──────────────────────────────────────────────────────
+
+  ensureBaseDir() {
+    if (!this.fm.fileExists(this.baseDir)) {
+      this.fm.createDirectory(this.baseDir, true);
+    }
+  }
+
+  getQueueStatePath() {
+    return this.fm.joinPath(this.baseDir, QUEUE_STATE_FILE);
+  }
+
+  loadQueueState() {
+    const path = this.getQueueStatePath();
+    if (!this.fm.fileExists(path)) return null;
+    try {
+      const raw = this.fm.readString(path) || '';
+      if (!raw.trim()) return null;
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object') ? parsed : null;
+    } catch (error) {
+      console.log(`StaleParsers: Could not read queue state: ${error.message}`);
+      return null;
+    }
+  }
+
+  saveQueueState(state) {
+    try {
+      this.ensureBaseDir();
+      const path = this.getQueueStatePath();
+      this.fm.writeString(path, JSON.stringify(state, null, 2));
+    } catch (error) {
+      console.log(`StaleParsers: Could not write queue state: ${error.message}`);
+    }
+  }
+
+  buildStaleSignature(staleParsers) {
+    return staleParsers.map(parser => parser.name).join('|');
+  }
+
+  emptyQueueState(signature) {
+    return {
+      version: 1,
+      staleSignature: signature,
+      lastTapAt: 0,
+      processed: {},
+      skippedUntil: {}
+    };
+  }
+
+  sanitizeQueueState(state, staleNames, nowMs) {
+    const out = this.emptyQueueState(state.staleSignature || '');
+    const validNames = new Set(staleNames);
+    out.lastTapAt = Number.isFinite(state.lastTapAt) ? state.lastTapAt : 0;
+    if (state.processed && typeof state.processed === 'object') {
+      Object.keys(state.processed).forEach(name => {
+        if (validNames.has(name) && state.processed[name]) out.processed[name] = true;
+      });
+    }
+    if (state.skippedUntil && typeof state.skippedUntil === 'object') {
+      Object.keys(state.skippedUntil).forEach(name => {
+        const value = Number(state.skippedUntil[name]);
+        if (validNames.has(name) && Number.isFinite(value) && value > nowMs) {
+          out.skippedUntil[name] = value;
+        }
+      });
+    }
+    return out;
+  }
+
+  isQueueIdle(state, nowMs) {
+    if (!state.lastTapAt || state.lastTapAt <= 0) return false;
+    const idleMs = QUEUE_IDLE_RESET_HOURS * 60 * 60 * 1000;
+    return (nowMs - state.lastTapAt) > idleMs;
+  }
+
+  resolveQueueState(status) {
+    const nowMs = Date.now();
+    const staleNames = status.stale.map(parser => parser.name);
+    const staleSignature = this.buildStaleSignature(status.stale);
+    const loaded = this.loadQueueState();
+    const baseState = loaded && typeof loaded === 'object'
+      ? this.sanitizeQueueState(loaded, staleNames, nowMs)
+      : this.emptyQueueState(staleSignature);
+    const state = {
+      ...baseState,
+      staleSignature: baseState.staleSignature || staleSignature
+    };
+
+    if (state.staleSignature !== staleSignature || this.isQueueIdle(state, nowMs)) {
+      state.processed = {};
+      state.skippedUntil = {};
+      state.staleSignature = staleSignature;
+    }
+
+    const cycleDone = staleNames.length > 0 && staleNames.every(name => {
+      const isProcessed = !!state.processed[name];
+      const skipUntil = Number(state.skippedUntil[name] || 0);
+      const isSkipped = Number.isFinite(skipUntil) && skipUntil > nowMs;
+      return isProcessed || isSkipped;
+    });
+    if (cycleDone) {
+      state.processed = {};
+    }
+
+    const currentName = staleNames.find(name => {
+      if (state.processed[name]) return false;
+      const skipUntil = Number(state.skippedUntil[name] || 0);
+      return !(Number.isFinite(skipUntil) && skipUntil > nowMs);
+    }) || null;
+    const currentParser = currentName
+      ? (status.stale.find(parser => parser.name === currentName) || null)
+      : null;
+
+    this.saveQueueState(state);
+    return { state, currentParser };
+  }
+
+  markCurrentParserProcessed(queueStateInfo) {
+    const currentName = queueStateInfo?.currentParser?.name;
+    if (!currentName) return false;
+    const nowMs = Date.now();
+    queueStateInfo.state.processed[currentName] = true;
+    delete queueStateInfo.state.skippedUntil[currentName];
+    queueStateInfo.state.lastTapAt = nowMs;
+    this.saveQueueState(queueStateInfo.state);
+    return true;
+  }
+
+  skipCurrentParser(queueStateInfo, hours) {
+    const currentName = queueStateInfo?.currentParser?.name;
+    if (!currentName) return false;
+    const skipHours = Number.isFinite(hours) && hours > 0 ? hours : DEFAULT_SKIP_HOURS;
+    const nowMs = Date.now();
+    const untilMs = nowMs + (skipHours * 60 * 60 * 1000);
+    queueStateInfo.state.skippedUntil[currentName] = untilMs;
+    delete queueStateInfo.state.processed[currentName];
+    queueStateInfo.state.lastTapAt = nowMs;
+    this.saveQueueState(queueStateInfo.state);
+    return true;
   }
 
   // ── Image helpers ───────────────────────────────────────────────────────────
@@ -300,6 +456,27 @@ class StaleParsersChecker {
     return query ? `${base}&${query}` : base;
   }
 
+  getSelfScriptName() {
+    try {
+      if (typeof Script !== 'undefined' && typeof Script.name === 'function') {
+        return Script.name();
+      }
+    } catch (_) {
+      // ignore
+    }
+    return 'stale-parsers';
+  }
+
+  buildSelfUrl(params) {
+    return this.buildScriptableUrl(this.getSelfScriptName(), params);
+  }
+
+  getActionFromQuery() {
+    const query = this.runtime.queryParameters || {};
+    const action = query.action || query.cmd || null;
+    return action ? String(action).trim().toLowerCase() : null;
+  }
+
   // ── Formatting helpers ──────────────────────────────────────────────────────
 
   formatDaysSince(daysSince) {
@@ -313,6 +490,7 @@ class StaleParsersChecker {
   truncateText(value, maxLength) {
     const raw = String(value || '');
     if (!Number.isFinite(maxLength) || maxLength <= 0) return raw;
+    if (maxLength === 1) return raw.length > 1 ? '…' : raw;
     if (raw.length <= maxLength) return raw;
     return `${raw.slice(0, maxLength - 1)}…`;
   }
@@ -367,7 +545,7 @@ class StaleParsersChecker {
     const widget = new ListWidget();
     widget.backgroundColor = new Color(BRAND.primary);
     widget.setPadding(12, 12, 12, 12);
-    widget.url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT);
+    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
 
     const logoImage = await this.loadLogoImage();
 
@@ -406,7 +584,7 @@ class StaleParsersChecker {
     const widget = new ListWidget();
     widget.backgroundColor = new Color(BRAND.primary);
     widget.setPadding(12, 12, 12, 12);
-    widget.url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT);
+    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
 
     const logoImage = await this.loadLogoImage();
     this.addWidgetHeader(widget, logoImage, 'Stale Parsers');
@@ -435,7 +613,7 @@ class StaleParsersChecker {
       if (i > 0) widget.addSpacer(4);
       const parser = items[i];
       const cell = this.addWidgetCell(widget, 'medium');
-      cell.url = this.buildScriptableUrl(SCRAPER_SCRIPT, { parserName: parser.name });
+      cell.url = this.buildSelfUrl({ action: 'runCurrent' });
 
       const headerRow = cell.addStack();
       headerRow.layoutHorizontally();
@@ -473,7 +651,7 @@ class StaleParsersChecker {
     const widget = new ListWidget();
     widget.backgroundColor = new Color(BRAND.primary);
     widget.setPadding(12, 12, 12, 12);
-    widget.url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT);
+    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
 
     const logoImage = await this.loadLogoImage();
     this.addWidgetHeader(widget, logoImage, 'Stale Parsers');
@@ -500,7 +678,7 @@ class StaleParsersChecker {
         if (i > 0) widget.addSpacer(4);
         const parser = items[i];
         const cell = this.addWidgetCell(widget, 'large');
-        cell.url = this.buildScriptableUrl(SCRAPER_SCRIPT, { parserName: parser.name });
+        cell.url = this.buildSelfUrl({ action: 'runCurrent' });
 
         const headerRow = cell.addStack();
         headerRow.layoutHorizontally();
@@ -524,7 +702,7 @@ class StaleParsersChecker {
         this.addWidgetBadge(headerRow, daysBadgeLabel, BRAND.danger);
 
         if (parser.lastWriteAt) {
-          const writeDate = new Date(parser.lastWriteAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+          const writeDate = new Date(parser.lastWriteAt).toLocaleDateString(undefined, SHORT_DATE_FORMAT_OPTIONS);
           const dateText = cell.addText(`Last write: ${writeDate}`);
           dateText.font = Font.systemFont(FONT_SIZES.widget.small);
           dateText.textColor = new Color(BRAND.textMuted);
@@ -559,7 +737,7 @@ class StaleParsersChecker {
 
   renderAccessoryCircularWidget(status) {
     const widget = new ListWidget();
-    widget.url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT);
+    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
 
     if (status.stale.length === 0) {
       const check = widget.addText('✓');
@@ -581,9 +759,9 @@ class StaleParsersChecker {
     return widget;
   }
 
-  renderAccessoryRectangularWidget(status) {
+  renderAccessoryRectangularWidget(status, queueStateInfo) {
     const widget = new ListWidget();
-    widget.url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT);
+    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
 
     const title = widget.addText('Stale Parsers');
     title.font = Font.boldSystemFont(FONT_SIZES.widget.small);
@@ -601,7 +779,8 @@ class StaleParsersChecker {
       label.font = Font.systemFont(FONT_SIZES.widget.small);
       label.lineLimit = 1;
 
-      const firstName = this.truncateText(status.stale[0].name, 18);
+      const firstParserName = queueStateInfo?.currentParser?.name || status.stale[0].name;
+      const firstName = this.truncateText(firstParserName, 18);
       const firstLabel = widget.addText(firstName);
       firstLabel.font = Font.systemFont(10);
       firstLabel.lineLimit = 1;
@@ -612,7 +791,7 @@ class StaleParsersChecker {
 
   renderAccessoryInlineWidget(status) {
     const widget = new ListWidget();
-    widget.url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT);
+    widget.url = this.buildSelfUrl({ action: 'runCurrent' });
 
     if (status.stale.length === 0) {
       const label = widget.addText('Parsers: All up to date');
@@ -630,7 +809,31 @@ class StaleParsersChecker {
 
   // ── App-mode (non-widget) display ───────────────────────────────────────────
 
-  async showAppAlert(status, staleDays) {
+  runCurrentParser(queueStateInfo) {
+    const parser = queueStateInfo?.currentParser || null;
+    if (!parser) return false;
+    const marked = this.markCurrentParserProcessed(queueStateInfo);
+    if (!marked) return false;
+    const url = this.buildScriptableUrl(SCRAPER_SCRIPT, { parserName: parser.name });
+    Safari.open(url);
+    return true;
+  }
+
+  async handleQueryAction(status, queueStateInfo) {
+    const action = this.getActionFromQuery();
+    if (!action) return null;
+    if (action === 'runcurrent') {
+      return this.runCurrentParser(queueStateInfo);
+    }
+    if (action === 'skipcurrent') {
+      const skipped = this.skipCurrentParser(queueStateInfo, DEFAULT_SKIP_HOURS);
+      if (!skipped) return false;
+      return this.runCurrentParser(this.resolveQueueState(status));
+    }
+    return null;
+  }
+
+  async showAppAlert(status, staleDays, queueStateInfo) {
     const alert = new Alert();
     alert.title = 'Stale Parsers';
 
@@ -650,17 +853,24 @@ class StaleParsersChecker {
       const when = this.formatDaysSince(p.daysSince);
       return `• ${p.name} (${when})`;
     });
+    const current = queueStateInfo?.currentParser || null;
+    const currentLine = current
+      ? `Current: ${current.name} (${this.formatDaysSince(current.daysSince)})`
+      : 'Current: none available (all stale parsers are temporarily skipped)';
     alert.message = [
       `${status.stale.length} of ${status.total} parsers haven't written to calendar in ${staleDays}+ days:`,
+      '',
+      currentLine,
       '',
       ...staleLines
     ].join('\n');
 
     alert.addAction('Open Metrics');
-    if (status.stale.length === 1) {
-      alert.addAction(`Run ${status.stale[0].name}`);
+    if (current) {
+      alert.addAction(`Run ${current.name}`);
+      alert.addAction(`Skip Current (${DEFAULT_SKIP_HOURS}${HOURS_SUFFIX})`);
     } else {
-      alert.addAction('Run Stale Parsers…');
+      alert.addAction('No parser available');
     }
     alert.addCancelAction('Dismiss');
 
@@ -669,41 +879,26 @@ class StaleParsersChecker {
       const url = this.buildScriptableUrl(DISPLAY_METRICS_SCRIPT);
       Safari.open(url);
     } else if (idx === 1) {
-      if (status.stale.length === 1) {
-        const url = this.buildScriptableUrl(SCRAPER_SCRIPT, { parserName: status.stale[0].name });
-        Safari.open(url);
-      } else {
-        await this.showParserPicker(status.stale);
+      if (current) this.runCurrentParser(queueStateInfo);
+    } else if (idx === 2 && current) {
+      const skipped = this.skipCurrentParser(queueStateInfo, DEFAULT_SKIP_HOURS);
+      if (skipped) {
+        const updatedQueueState = this.resolveQueueState(status);
+        this.runCurrentParser(updatedQueueState);
       }
-    }
-  }
-
-  async showParserPicker(staleParsers) {
-    const alert = new Alert();
-    alert.title = 'Run Stale Parser';
-    alert.message = 'Choose a parser to run:';
-    staleParsers.forEach(p => {
-      const when = this.formatDaysSince(p.daysSince);
-      alert.addAction(`${p.name} (${when})`);
-    });
-    alert.addCancelAction('Cancel');
-    const idx = await alert.present();
-    if (idx >= 0 && idx < staleParsers.length) {
-      const url = this.buildScriptableUrl(SCRAPER_SCRIPT, { parserName: staleParsers[idx].name });
-      Safari.open(url);
     }
   }
 
   // ── Main render dispatcher ──────────────────────────────────────────────────
 
-  async render(status, staleDays) {
+  async render(status, staleDays, queueStateInfo) {
     const family = this.runtime.widgetFamily;
 
     if (family === 'accessoryCircular') {
       return this.renderAccessoryCircularWidget(status);
     }
     if (family === 'accessoryRectangular') {
-      return this.renderAccessoryRectangularWidget(status);
+      return this.renderAccessoryRectangularWidget(status, queueStateInfo);
     }
     if (family === 'accessoryInline') {
       return this.renderAccessoryInlineWidget(status);
@@ -734,14 +929,18 @@ class StaleParsersChecker {
     console.log(`StaleParsers: Loaded ${records.length} metric records, ${configuredParsers.length} configured parsers`);
 
     const status = checker.computeStaleStatus(records, configuredParsers, staleDays);
+    const queueStateInfo = checker.resolveQueueState(status);
 
     console.log(`StaleParsers: ${status.stale.length} stale, ${status.upToDate.length} up to date`);
 
     if (checker.runtime.runsInWidget) {
-      const widget = await checker.render(status, staleDays);
+      const widget = await checker.render(status, staleDays, queueStateInfo);
       Script.setWidget(widget);
     } else {
-      await checker.showAppAlert(status, staleDays);
+      const actionHandled = await checker.handleQueryAction(status, queueStateInfo);
+      if (!actionHandled) {
+        await checker.showAppAlert(status, staleDays, queueStateInfo);
+      }
     }
   } catch (error) {
     console.log(`StaleParsers: Fatal error: ${error.message}`);
