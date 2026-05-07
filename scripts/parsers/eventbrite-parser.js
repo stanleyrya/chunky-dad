@@ -571,9 +571,9 @@ class EventbriteParser {
                              context?.ticketContext?.highestPrice?.value ??
                              null;
 
-        if (lowestPrice !== null && lowestPrice !== undefined) {
+        if (lowestPrice != null) {
             const low = parseFloat(lowestPrice);
-            const high = (highestPrice !== null && highestPrice !== undefined) ? parseFloat(highestPrice) : null;
+            const high = highestPrice != null ? parseFloat(highestPrice) : null;
             if (Number.isFinite(low)) {
                 if (high !== null && Number.isFinite(high) && high !== low) {
                     return { priceRange: `$${low.toFixed(2)} - $${high.toFixed(2)}` };
@@ -970,6 +970,8 @@ class EventbriteParser {
             if (primaryVenue && typeof primaryVenue === 'object') {
                 venue = venue || primaryVenue.name || null;
 
+                // Declare primaryAddress outside the address block so coordinates
+                // can be extracted even when address was already found above
                 const primaryAddress = primaryVenue.address;
                 if (!address) {
                     if (primaryAddress && typeof primaryAddress === 'object') {
