@@ -19,6 +19,8 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+const EVENTBRITE_BASE_URL = 'https://www.eventbrite.com';
+
 class EventbriteParser {
     constructor(config = {}) {
         this.config = {
@@ -313,6 +315,10 @@ class EventbriteParser {
             const context = nextData?.props?.pageProps?.context;
             const basicInfo = context?.basicInfo;
             if (!basicInfo || !basicInfo.name) {
+                const fallbackEvents = this.extractEventsFromNextDataPayload(nextData, parserConfig, htmlData, cityConfig);
+                if (fallbackEvents.length > 0) {
+                    events.push(...fallbackEvents);
+                }
                 return events;
             }
             
@@ -342,6 +348,173 @@ class EventbriteParser {
         }
         
         return events;
+    }
+
+    extractEventsFromNextDataPayload(nextData, parserConfig = {}, htmlData = null, cityConfig = null) {
+        const events = [];
+        const seenKeys = new Set();
+        
+        try {
+            const normalizedCandidates = this.getNormalizedNextDataCandidates(nextData, htmlData?.url || '');
+            normalizedCandidates.forEach(normalized => {
+                if (!normalized) {
+                    return;
+                }
+                
+                if (!this.isFutureEvent(normalized)) {
+                    return;
+                }
+                
+                const dedupeKey = `${normalized.url || ''}|${normalized.start || ''}`;
+                if (seenKeys.has(dedupeKey)) {
+                    return;
+                }
+                
+                const event = this.parseJsonEvent(normalized, null, parserConfig, null, cityConfig);
+                if (event) {
+                    events.push(event);
+                    seenKeys.add(dedupeKey);
+                }
+            });
+        } catch (error) {
+            console.warn(`🎫 Eventbrite: Error extracting fallback __NEXT_DATA__ events: ${error}`);
+        }
+        
+        return events;
+    }
+
+    getNormalizedNextDataCandidates(nextData, baseUrl = '') {
+        const candidates = this.collectNextDataEventCandidates(nextData);
+        return candidates
+            .map(candidate => this.normalizeNextDataEventCandidate(candidate, baseUrl))
+            .filter(Boolean);
+    }
+
+    collectNextDataEventCandidates(payload) {
+        const candidates = [];
+        const visited = new Set();
+        const maxDepth = 30;
+        
+        const walk = (node, depth = 0) => {
+            if (!node || typeof node !== 'object') {
+                return;
+            }
+            
+            if (depth > maxDepth) {
+                return;
+            }
+            
+            if (visited.has(node)) {
+                return;
+            }
+            visited.add(node);
+            
+            if (Array.isArray(node)) {
+                node.forEach(item => walk(item, depth + 1));
+                return;
+            }
+            
+            if (this.isNextDataEventCandidate(node)) {
+                candidates.push(node);
+            }
+            
+            Object.keys(node).forEach(key => {
+                walk(node[key], depth + 1);
+            });
+        };
+        
+        walk(payload);
+        return candidates;
+    }
+
+    isNextDataEventCandidate(candidate) {
+        if (!candidate || typeof candidate !== 'object') {
+            return false;
+        }
+        
+        const name = this.getNextDataCandidateName(candidate);
+        const url = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url || '';
+        const start = candidate.start?.utc ||
+            candidate.start_date ||
+            candidate.startDate ||
+            candidate.start ||
+            candidate.start_time ||
+            candidate.starts_at ||
+            '';
+        
+        if (!name || !url) {
+            return false;
+        }
+        
+        const normalizedUrl = String(url);
+        const hasEventPath = normalizedUrl.includes('/e/');
+        if (!hasEventPath) {
+            return false;
+        }
+        
+        return !!start;
+    }
+
+    getNextDataCandidateName(candidate) {
+        if (!candidate || typeof candidate !== 'object') {
+            return '';
+        }
+        
+        if (typeof candidate.name === 'string') {
+            return candidate.name;
+        }
+        
+        if (candidate.name && typeof candidate.name.text === 'string') {
+            return candidate.name.text;
+        }
+        
+        if (typeof candidate.title === 'string') {
+            return candidate.title;
+        }
+        
+        if (typeof candidate.event_name === 'string') {
+            return candidate.event_name;
+        }
+        
+        return '';
+    }
+
+    normalizeNextDataEventCandidate(candidate, baseUrl = '') {
+        if (!candidate || typeof candidate !== 'object') {
+            return null;
+        }
+        
+        const rawUrl = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url || '';
+        const normalizedUrl = this.normalizeEventbriteEventUrl(rawUrl, baseUrl);
+        const normalizedName = this.getNextDataCandidateName(candidate);
+        
+        const normalizedCandidate = {
+            ...candidate,
+            name: normalizedName,
+            description: candidate.description || candidate.summary || candidate.event_summary || '',
+            url: normalizedUrl || rawUrl,
+            start: candidate.start || candidate.startDate || candidate.start_date || candidate.start_time || candidate.starts_at,
+            end: candidate.end || candidate.endDate || candidate.end_date || candidate.end_time || candidate.ends_at
+        };
+        
+        if (!normalizedCandidate.url || !normalizedCandidate.name) {
+            return null;
+        }
+        
+        return normalizedCandidate;
+    }
+
+    normalizeEventbriteEventUrl(rawUrl, baseUrl = '') {
+        if (!rawUrl) {
+            return '';
+        }
+        
+        const normalized = this.normalizeUrl(rawUrl, baseUrl);
+        if (normalized && normalized.startsWith('/e/')) {
+            return `${EVENTBRITE_BASE_URL}${normalized}`;
+        }
+        
+        return normalized || rawUrl;
     }
 
     extractNextDataDescription(context) {
@@ -1064,11 +1237,38 @@ class EventbriteParser {
                     }
                 }
             }
+            
+            if (urls.size === 0) {
+                const nextDataMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+                if (nextDataMatch) {
+                    try {
+                        const nextData = JSON.parse((nextDataMatch[1] || '').trim());
+                        const nextDataUrls = this.extractAdditionalUrlsFromNextDataPayload(nextData, sourceUrl, parserConfig);
+                        nextDataUrls.forEach(url => urls.add(url));
+                    } catch (nextDataError) {
+                        console.warn(`🎫 Eventbrite: Failed to parse __NEXT_DATA__ for URL extraction: ${nextDataError}`);
+                    }
+                }
+            }
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting additional URLs: ${error}`);
         }
         
         return Array.from(urls).slice(0, 20); // Limit to 20 additional links per page
+    }
+
+    extractAdditionalUrlsFromNextDataPayload(nextData, sourceUrl, parserConfig) {
+        const urls = new Set();
+        
+        const normalizedCandidates = this.getNormalizedNextDataCandidates(nextData, sourceUrl);
+        normalizedCandidates.forEach(candidate => {
+            const normalizedUrl = candidate.url || '';
+            if (normalizedUrl && this.isValidEventUrl(normalizedUrl, parserConfig)) {
+                urls.add(normalizedUrl);
+            }
+        });
+        
+        return Array.from(urls);
     }
  
      // Validate if URL is a valid event URL
