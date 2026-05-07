@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20260507T030545Z
+DTSTAMP:20260507T145542Z
 UID:A6BB3951-52D8-4124-B6CD-3E5AC290BBBF
 CREATED:20250823T205551Z
 DESCRIPTION:description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :
@@ -35,33 +35,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260523T000000Z
-DTSTAMP:20260507T030545Z
-UID:3BA1D88F-B4EE-4165-AEC9-063C609A6AAD
-CREATED:20260507T020554Z
-DESCRIPTION:bar: Dust Las Vegas\naddress: 855 East Twain Avenue\, Las Vegas
- \, NV 89169\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbri
- te.com/e/megawoof-las-vegas-memorial-day-weekend--tickets-1987462465736\nim
- age: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F118228636
- 9%2F185013722403%2F1%2Foriginal.20260416-004205?crop=focalpoint&fit=crop&h=
- 230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5ee0a701
- 90eaeba819a6803484446412\nshortName: MEGA-WOOF\ninstagram: https://www.inst
- agram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\ngm
- aps: https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%
- 20855%20East%20Twain%20Avenue%2C%20Las%20Vegas%2C%20NV%2089169\nkey: megawo
- of|2026-05-23|dust las vegas
-LAST-MODIFIED:20260507T023926Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20251102T040000Z
 DTEND:20251102T110000Z
-DTSTAMP:20260507T030545Z
+DTSTAMP:20260507T145542Z
 UID:CD1401F3-1C01-4716-8C0D-4BCDC8CB458C
 CREATED:20250830T012218Z
 DESCRIPTION:description: MEGAWOOF - 10 YEAR US ANNIVERSARY - INTERNATIONAL 
@@ -84,5 +60,30 @@ STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260523T000000Z
+DTSTAMP:20260507T145542Z
+UID:3BA1D88F-B4EE-4165-AEC9-063C609A6AAD
+CREATED:20260507T020554Z
+DESCRIPTION:bar: Dust Las Vegas\naddress: 855 East Twain Avenue\, Las Vegas
+ \, NV 89169\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbri
+ te.com/e/megawoof-las-vegas-memorial-day-weekend--tickets-1987462465736\nim
+ age: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F118228636
+ 9%2F185013722403%2F1%2Foriginal.20260416-004205?crop=focalpoint&fit=crop&h=
+ 230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5ee0a701
+ 90eaeba819a6803484446412\nshortName: MEGA-WOOF\ninstagram: https://www.inst
+ agram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\ngm
+ aps: https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%
+ 20855%20East%20Twain%20Avenue%2C%20Las%20Vegas%2C%20NV%2089169\nkey: megawo
+ of|2026-05-23|dust las vegas
+LAST-MODIFIED:20260507T125102Z
+LOCATION:36.1214368\, -115.144945
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR
