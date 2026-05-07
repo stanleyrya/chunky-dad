@@ -20,6 +20,7 @@
 // ============================================================================
 
 const EVENTBRITE_BASE_URL = 'https://www.eventbrite.com';
+const MAX_TIMEZONE_CONVERGENCE_ITERATIONS = 4;
 
 class EventbriteParser {
     constructor(config = {}) {
@@ -1018,7 +1019,7 @@ class EventbriteParser {
         const second = parseInt(match[6] || '0', 10);
 
         let utcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < MAX_TIMEZONE_CONVERGENCE_ITERATIONS; i++) {
             const offsetMinutes = this.getTimezoneOffsetMinutes(new Date(utcMillis), timezone);
             if (offsetMinutes === null) {
                 return null;
@@ -1326,8 +1327,15 @@ class EventbriteParser {
             }
 
             const parseTimezone = eventTimezone || originalTimezone || null;
-            const preferredStartValue = (eventTimezone && startLocalValue) ? startLocalValue : (startUtcOrAbsoluteValue || startLocalValue);
-            const preferredEndValue = (eventTimezone && endLocalValue) ? endLocalValue : (endUtcOrAbsoluteValue || endLocalValue);
+            let preferredStartValue = startUtcOrAbsoluteValue || startLocalValue;
+            if (eventTimezone && startLocalValue) {
+                preferredStartValue = startLocalValue;
+            }
+
+            let preferredEndValue = endUtcOrAbsoluteValue || endLocalValue;
+            if (eventTimezone && endLocalValue) {
+                preferredEndValue = endLocalValue;
+            }
             const parsedStartDate = this.parseEventDateValue(preferredStartValue, parseTimezone);
             const parsedEndDate = this.parseEventDateValue(preferredEndValue, parseTimezone);
             
