@@ -474,7 +474,8 @@ class EventbriteParser {
         }
         
         const rawUrl = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url || '';
-        const normalizedUrl = this.normalizeUrl(rawUrl, htmlData?.url || EVENTBRITE_BASE_URL);
+        const baseUrl = htmlData?.url || '';
+        const normalizedUrl = this.normalizeEventbriteEventUrl(rawUrl, baseUrl);
         const normalizedName = this.getNextDataCandidateName(candidate);
         
         const normalizedCandidate = {
@@ -491,6 +492,19 @@ class EventbriteParser {
         }
         
         return normalizedCandidate;
+    }
+
+    normalizeEventbriteEventUrl(rawUrl, baseUrl = '') {
+        if (!rawUrl) {
+            return '';
+        }
+        
+        const normalized = this.normalizeUrl(rawUrl, baseUrl);
+        if (normalized && normalized.startsWith('/e/')) {
+            return `${EVENTBRITE_BASE_URL}${normalized}`;
+        }
+        
+        return normalized || rawUrl;
     }
 
     extractNextDataDescription(context) {
@@ -1239,7 +1253,10 @@ class EventbriteParser {
         const candidates = this.collectNextDataEventCandidates(nextData);
         candidates.forEach(candidate => {
             const rawUrl = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url;
-            const normalizedUrl = this.normalizeUrl(rawUrl, sourceUrl);
+            if (!rawUrl) {
+                return;
+            }
+            const normalizedUrl = this.normalizeEventbriteEventUrl(rawUrl, sourceUrl);
             if (normalizedUrl && this.isValidEventUrl(normalizedUrl, parserConfig)) {
                 urls.add(normalizedUrl);
             }
