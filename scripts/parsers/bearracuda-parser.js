@@ -901,7 +901,13 @@ class BearraccudaParser {
                     }
                     
                     // Limit to prevent infinite loops (shared-core will also limit)
-                    const maxUrls = parserConfig.maxAdditionalUrls || this.config.maxAdditionalUrls || 20;
+                    const configuredMaxUrls = parserConfig.maxAdditionalUrls;
+                    let maxUrls = this.config.maxAdditionalUrls || 20;
+                    if (configuredMaxUrls === null) {
+                        maxUrls = Infinity;
+                    } else if (Number.isInteger(configuredMaxUrls) && configuredMaxUrls >= 0) {
+                        maxUrls = configuredMaxUrls;
+                    }
                     if (urls.length >= maxUrls) {
                         break;
                     }
