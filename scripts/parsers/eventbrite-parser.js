@@ -512,7 +512,7 @@ class EventbriteParser {
                 candidate.end_date_with_time ||
                 candidate.end_local ||
                 candidate.end_localized,
-            is_free: candidate.is_free === true || candidate.isFree === true,
+            is_free: candidate.is_free || candidate.isFree,
             price_range: candidate.price_range || candidate.priceRange || ''
         };
         
@@ -542,8 +542,7 @@ class EventbriteParser {
         }
         
         const prices = ticketClasses
-            .map(tc => this.extractTicketClassNumericPrice(tc))
-            .map(value => parseFloat(value))
+            .map(tc => parseFloat(this.extractTicketClassNumericPrice(tc)))
             .filter(value => Number.isFinite(value))
             .sort((a, b) => a - b);
         
@@ -558,13 +557,17 @@ class EventbriteParser {
             : `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
         
         if (includeAsOfDate) {
-            const now = new Date();
-            const month = now.getMonth() + 1;
-            const day = now.getDate();
-            price += ` (as of ${month}/${day})`;
+            price += this.formatAsOfDateSuffix();
         }
         
         return price;
+    }
+
+    formatAsOfDateSuffix() {
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        return ` (as of ${month}/${day})`;
     }
 
     extractTicketClassNumericPrice(ticketClass) {
