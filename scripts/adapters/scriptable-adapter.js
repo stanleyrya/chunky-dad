@@ -1542,12 +1542,13 @@ class ScriptableAdapter {
                             const targetEvent = event._existingEvent;
                             
                             // Apply the final merged values (event object already contains final values)
+                            // Note: Scriptable cannot read or write the native CalendarEvent.url field,
+                            // so URL data is stored exclusively as "website:" in notes.
                             targetEvent.title = event.title;
                             targetEvent.startDate = event.startDate;
                             targetEvent.endDate = event.endDate;
                             targetEvent.location = event.location;
                             targetEvent.notes = event.notes;
-                            targetEvent.url = event.url;
                             
                             await targetEvent.save();
                             processedCount++;
@@ -1614,7 +1615,7 @@ class ScriptableAdapter {
         calendarEvent.endDate = event.endDate;
         calendarEvent.location = event.location;
         calendarEvent.notes = event.notes;
-        calendarEvent.url = event.url;
+        // Note: Scriptable cannot read or write CalendarEvent.url — URL is stored as "website:" in notes.
         calendarEvent.calendar = calendar;
         
         const isAllDay = this.isAllDayEvent(event);
