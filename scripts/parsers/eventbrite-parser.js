@@ -496,8 +496,24 @@ class EventbriteParser {
             name: normalizedName,
             description: candidate.description || candidate.summary || candidate.event_summary || '',
             url: normalizedUrl || rawUrl,
-            start: candidate.start || candidate.startDate || candidate.start_date || candidate.start_time || candidate.starts_at,
-            end: candidate.end || candidate.endDate || candidate.end_date || candidate.end_time || candidate.ends_at
+            start: candidate.start ||
+                candidate.startDate ||
+                candidate.start_date ||
+                candidate.start_time ||
+                candidate.starts_at ||
+                candidate.start_date_with_time ||
+                candidate.start_local ||
+                candidate.start_localized,
+            end: candidate.end ||
+                candidate.endDate ||
+                candidate.end_date ||
+                candidate.end_time ||
+                candidate.ends_at ||
+                candidate.end_date_with_time ||
+                candidate.end_local ||
+                candidate.end_localized,
+            is_free: candidate.is_free || candidate.isFree,
+            price_range: candidate.price_range || candidate.priceRange || ''
         };
         
         if (!normalizedCandidate.url || !normalizedCandidate.name) {
@@ -518,6 +534,47 @@ class EventbriteParser {
         }
         
         return normalized || rawUrl;
+    }
+
+    extractPriceFromTicketClasses(ticketClasses, includeAsOfDate = false) {
+        if (!Array.isArray(ticketClasses) || ticketClasses.length === 0) {
+            return '';
+        }
+        
+        const prices = ticketClasses
+            .map(tc => parseFloat(this.extractTicketClassNumericPrice(tc)))
+            .filter(value => Number.isFinite(value))
+            .sort((a, b) => a - b);
+        
+        if (prices.length === 0) {
+            return '';
+        }
+        
+        const minPrice = prices[0];
+        const maxPrice = prices[prices.length - 1];
+        let price = minPrice === maxPrice
+            ? `$${minPrice.toFixed(2)}`
+            : `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
+        
+        if (includeAsOfDate) {
+            price += this.formatAsOfDateSuffix();
+        }
+        
+        return price;
+    }
+
+    formatAsOfDateSuffix() {
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        return ` (as of ${month}/${day})`;
+    }
+
+    extractTicketClassNumericPrice(ticketClass) {
+        return ticketClass?.totalCost?.majorValue ??
+            ticketClass?.cost?.majorValue ??
+            ticketClass?.price?.majorValue ??
+            ticketClass?.price?.value;
     }
 
     extractNextDataDescription(context) {
@@ -564,11 +621,15 @@ class EventbriteParser {
         // Try to extract numeric price values from various __NEXT_DATA__ locations
         const lowestPrice = basicInfo?.lowestPrice?.value ??
                             basicInfo?.minPrice?.value ??
+                            basicInfo?.startingPrice?.value ??
                             context?.ticketContext?.lowestPrice?.value ??
+                            context?.ticketContext?.minPrice?.value ??
                             null;
         const highestPrice = basicInfo?.highestPrice?.value ??
                              basicInfo?.maxPrice?.value ??
+                             basicInfo?.endingPrice?.value ??
                              context?.ticketContext?.highestPrice?.value ??
+                             context?.ticketContext?.maxPrice?.value ??
                              null;
 
         if (lowestPrice != null) {
@@ -580,6 +641,16 @@ class EventbriteParser {
                 }
                 return { priceRange: `$${low.toFixed(2)}` };
             }
+        }
+
+        const ticketClasses = context?.ticketContext?.ticketClasses ||
+            context?.ticketContext?.ticketClassList ||
+            basicInfo?.ticketClasses ||
+            basicInfo?.tickets?.ticketClasses ||
+            [];
+        const ticketClassPrice = this.extractPriceFromTicketClasses(ticketClasses, false);
+        if (ticketClassPrice) {
+            return { priceRange: ticketClassPrice };
         }
 
         return null;
@@ -893,8 +964,24 @@ class EventbriteParser {
             
             // Handle both organizer page format (start.utc) and detail page format (start as string)
             // Detail pages may have start/end as timezone objects with utc field
-            let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
-            let endDate = eventData.end?.utc || eventData.end_date || eventData.endDate || eventData.end;
+            let startDate = eventData.start?.utc ||
+                eventData.start_date ||
+                eventData.startDate ||
+                eventData.start ||
+                eventData.start_time ||
+                eventData.starts_at ||
+                eventData.start_date_with_time ||
+                eventData.start_local ||
+                eventData.start_localized;
+            let endDate = eventData.end?.utc ||
+                eventData.end_date ||
+                eventData.endDate ||
+                eventData.end ||
+                eventData.end_time ||
+                eventData.ends_at ||
+                eventData.end_date_with_time ||
+                eventData.end_local ||
+                eventData.end_localized;
             
             // Extract original timezone from event data (preserve Eventbrite's timezone)
             let originalTimezone = null;
@@ -996,10 +1083,10 @@ class EventbriteParser {
             // Enhanced price extraction with availability info
             let price = '';
             
-            if (eventData.is_free) {
+            if (eventData.is_free || eventData.isFree) {
                 price = 'Free';
-            } else if (eventData.price_range) {
-                price = eventData.price_range;
+            } else if (eventData.price_range || eventData.priceRange) {
+                price = eventData.price_range || eventData.priceRange;
                 
                 // Add availability hint based on inventory type (applies to all ticket tiers)
                 if (eventData.inventory_type === 'limited') {
@@ -1011,38 +1098,14 @@ class EventbriteParser {
             } else if (serverData && serverData.event_listing_response && serverData.event_listing_response.tickets && serverData.event_listing_response.tickets.ticketClasses) {
                 // Detail pages have pricing in tickets.ticketClasses - extract price range
                 const ticketClasses = serverData.event_listing_response.tickets.ticketClasses;
-                const prices = ticketClasses
-                    .filter(tc => tc.totalCost && tc.totalCost.display)
-                    .map(tc => parseFloat(tc.totalCost.majorValue))
-                    .filter(p => !isNaN(p))
-                    .sort((a, b) => a - b);
-                
-                if (prices.length > 0) {
-                    const minPrice = prices[0];
-                    const maxPrice = prices[prices.length - 1];
-                    const currency = ticketClasses[0]?.totalCost?.currency || 'USD';
-                    
-                    if (minPrice === maxPrice) {
-                        price = `$${minPrice.toFixed(2)}`;
-                    } else {
-                        price = `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
-                    }
-                    
-                    // Add availability hint for detail pages
-                    const now = new Date();
-                    const month = now.getMonth() + 1;
-                    const day = now.getDate();
-                    price += ` (as of ${month}/${day})`;
-                }
+                price = this.extractPriceFromTicketClasses(ticketClasses, true);
             } else {
-                
-                // Try alternative pricing sources in detail pages
-                let foundAlternativePrice = false;
-                
-                // Check if pricing info is in components.eventDetails or other locations
-                if (serverData?.components?.eventDetails) {
-                    // This is where we might find alternative pricing data in the future
-                }
+                const eventLevelTicketClasses = eventData?.ticketClasses ||
+                    eventData?.tickets?.ticketClasses ||
+                    eventData?.ticketContext?.ticketClasses ||
+                    eventData?.ticketContext?.ticketClassList ||
+                    [];
+                price = this.extractPriceFromTicketClasses(eventLevelTicketClasses, false);
             }
             let image = eventData.logo?.url || eventData.image?.url;
             
