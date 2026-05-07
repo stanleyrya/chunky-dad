@@ -1029,14 +1029,14 @@ class EventbriteParser {
             // Detect city using centralized city config (scraper-cities.js).
             // Eventbrite timezones are frequently incorrect, so we detect city here
             // to allow timezone correction before SharedCore enrichment.
+            const locationHints = this.extractLocationHintsFromEventData(eventData);
             const city = this.detectCityFromEventData({
                 title: title,
                 description: description,
                 venue: finalVenue,
                 address: finalAddress,
                 url: url,
-                venueAddress: eventData.venue?.address || null,
-                locationHints: this.extractLocationHintsFromEventData(eventData)
+                venueAddress: eventData.venue?.address || null
             }, cityConfig);
 
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
@@ -1154,6 +1154,7 @@ class EventbriteParser {
                 address: finalAddress,
                 city: city,
                 timezone: eventTimezone,
+                ...(locationHints.length > 0 ? { locationHints } : {}),
                 // Don't set url field to null - let other parsers (like linktree) provide the URL
                 // Only set url if we have a meaningful value, otherwise omit the field entirely
                 ticketUrl: url, // For Eventbrite events, the event URL IS the ticket URL
@@ -1323,12 +1324,8 @@ class EventbriteParser {
 
         // Fall back to scanning other event text fields using configured patterns
         // Prioritize address/venue/title before description to avoid unrelated city mentions.
-        const locationHints = Array.isArray(eventDetails.locationHints)
-            ? eventDetails.locationHints
-            : [];
         const prioritizedFields = [
             eventDetails.address,
-            ...locationHints,
             eventDetails.venue,
             eventDetails.title,
             eventDetails.description,

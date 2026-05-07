@@ -2282,7 +2282,17 @@ class SharedCore {
                 return cityFromAddress;
             }
         }
-        
+
+        // Try parser-provided location hints using centralized city config matching.
+        if (Array.isArray(event.locationHints)) {
+            for (const hint of event.locationHints) {
+                const cityFromHint = this.extractCityFromText(hint);
+                if (cityFromHint) {
+                    return cityFromHint;
+                }
+            }
+        }
+         
         // Try extracting from text content
         const searchText = `${event.title || event.name || ''} ${event.description || ''} ${event.bar || ''}`;
         const cityFromText = this.extractCityFromText(searchText);
