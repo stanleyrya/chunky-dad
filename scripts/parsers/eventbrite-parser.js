@@ -313,6 +313,10 @@ class EventbriteParser {
             const context = nextData?.props?.pageProps?.context;
             const basicInfo = context?.basicInfo;
             if (!basicInfo || !basicInfo.name) {
+                const fallbackEvents = this.extractEventsFromNextDataPayload(nextData, parserConfig, htmlData, cityConfig);
+                if (fallbackEvents.length > 0) {
+                    events.push(...fallbackEvents);
+                }
                 return events;
             }
             
@@ -342,6 +346,124 @@ class EventbriteParser {
         }
         
         return events;
+    }
+
+    extractEventsFromNextDataPayload(nextData, parserConfig = {}, htmlData = null, cityConfig = null) {
+        const events = [];
+        const seenKeys = new Set();
+        
+        try {
+            const candidates = this.collectNextDataEventCandidates(nextData);
+            candidates.forEach(candidate => {
+                const normalized = this.normalizeNextDataEventCandidate(candidate, htmlData);
+                if (!normalized) {
+                    return;
+                }
+                
+                if (!this.isFutureEvent(normalized)) {
+                    return;
+                }
+                
+                const dedupeKey = `${normalized.url || ''}|${normalized.startDate || normalized.start || ''}`;
+                if (seenKeys.has(dedupeKey)) {
+                    return;
+                }
+                
+                const event = this.parseJsonEvent(normalized, null, parserConfig, null, cityConfig);
+                if (event) {
+                    events.push(event);
+                    seenKeys.add(dedupeKey);
+                }
+            });
+        } catch (error) {
+            console.warn(`🎫 Eventbrite: Error extracting fallback __NEXT_DATA__ events: ${error}`);
+        }
+        
+        return events;
+    }
+
+    collectNextDataEventCandidates(payload) {
+        const candidates = [];
+        const visited = new Set();
+        
+        const walk = (node) => {
+            if (!node || typeof node !== 'object') {
+                return;
+            }
+            
+            if (visited.has(node)) {
+                return;
+            }
+            visited.add(node);
+            
+            if (Array.isArray(node)) {
+                node.forEach(item => walk(item));
+                return;
+            }
+            
+            if (this.isNextDataEventCandidate(node)) {
+                candidates.push(node);
+            }
+            
+            Object.keys(node).forEach(key => {
+                walk(node[key]);
+            });
+        };
+        
+        walk(payload);
+        return candidates;
+    }
+
+    isNextDataEventCandidate(candidate) {
+        if (!candidate || typeof candidate !== 'object') {
+            return false;
+        }
+        
+        const name = candidate.name?.text || candidate.name || candidate.title || candidate.event_name || '';
+        const url = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url || '';
+        const start = candidate.start?.utc ||
+            candidate.start_date ||
+            candidate.startDate ||
+            candidate.start ||
+            candidate.start_time ||
+            candidate.starts_at ||
+            '';
+        
+        if (!name || !url) {
+            return false;
+        }
+        
+        const normalizedUrl = String(url);
+        const hasEventPath = normalizedUrl.includes('/e/');
+        if (!hasEventPath) {
+            return false;
+        }
+        
+        return !!start;
+    }
+
+    normalizeNextDataEventCandidate(candidate, htmlData = null) {
+        if (!candidate || typeof candidate !== 'object') {
+            return null;
+        }
+        
+        const rawUrl = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url || '';
+        const normalizedUrl = this.normalizeUrl(rawUrl, htmlData?.url || 'https://www.eventbrite.com');
+        
+        const normalizedCandidate = {
+            ...candidate,
+            name: candidate.name || candidate.title || candidate.event_name || '',
+            description: candidate.description || candidate.summary || candidate.event_summary || '',
+            url: normalizedUrl || rawUrl,
+            start: candidate.start || candidate.startDate || candidate.start_date || candidate.start_time || candidate.starts_at,
+            end: candidate.end || candidate.endDate || candidate.end_date || candidate.end_time || candidate.ends_at
+        };
+        
+        if (!normalizedCandidate.url || !normalizedCandidate.name) {
+            return null;
+        }
+        
+        return normalizedCandidate;
     }
 
     extractNextDataDescription(context) {
@@ -1064,11 +1186,39 @@ class EventbriteParser {
                     }
                 }
             }
+            
+            if (urls.size === 0) {
+                const nextDataMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+                if (nextDataMatch) {
+                    try {
+                        const nextData = JSON.parse((nextDataMatch[1] || '').trim());
+                        const nextDataUrls = this.extractAdditionalUrlsFromNextDataPayload(nextData, sourceUrl, parserConfig);
+                        nextDataUrls.forEach(url => urls.add(url));
+                    } catch (nextDataError) {
+                        console.warn(`🎫 Eventbrite: Failed to parse __NEXT_DATA__ for URL extraction: ${nextDataError}`);
+                    }
+                }
+            }
         } catch (error) {
             console.warn(`🎫 Eventbrite: Error extracting additional URLs: ${error}`);
         }
         
         return Array.from(urls).slice(0, 20); // Limit to 20 additional links per page
+    }
+
+    extractAdditionalUrlsFromNextDataPayload(nextData, sourceUrl, parserConfig) {
+        const urls = new Set();
+        
+        const candidates = this.collectNextDataEventCandidates(nextData);
+        candidates.forEach(candidate => {
+            const rawUrl = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url;
+            const normalizedUrl = this.normalizeUrl(rawUrl, sourceUrl);
+            if (normalizedUrl && this.isValidEventUrl(normalizedUrl, parserConfig)) {
+                urls.add(normalizedUrl);
+            }
+        });
+        
+        return Array.from(urls);
     }
  
      // Validate if URL is a valid event URL
