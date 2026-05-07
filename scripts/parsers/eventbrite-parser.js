@@ -366,7 +366,7 @@ class EventbriteParser {
                     return;
                 }
                 
-                const dedupeKey = `${normalized.url || ''}|${normalized.startDate || normalized.start || ''}`;
+                const dedupeKey = `${normalized.url || ''}|${normalized.start || ''}`;
                 if (seenKeys.has(dedupeKey)) {
                     return;
                 }
@@ -387,9 +387,14 @@ class EventbriteParser {
     collectNextDataEventCandidates(payload) {
         const candidates = [];
         const visited = new Set();
+        const maxDepth = 30;
         
-        const walk = (node) => {
+        const walk = (node, depth = 0) => {
             if (!node || typeof node !== 'object') {
+                return;
+            }
+            
+            if (depth > maxDepth) {
                 return;
             }
             
@@ -399,7 +404,7 @@ class EventbriteParser {
             visited.add(node);
             
             if (Array.isArray(node)) {
-                node.forEach(item => walk(item));
+                node.forEach(item => walk(item, depth + 1));
                 return;
             }
             
@@ -408,7 +413,7 @@ class EventbriteParser {
             }
             
             Object.keys(node).forEach(key => {
-                walk(node[key]);
+                walk(node[key], depth + 1);
             });
         };
         
