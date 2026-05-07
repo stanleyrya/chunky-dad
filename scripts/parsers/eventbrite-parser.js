@@ -924,15 +924,154 @@ class EventbriteParser {
             .trim();
     }
 
+    extractDateValue(value) {
+        if (value === null || value === undefined || value === '') {
+            return null;
+        }
+
+        if (value instanceof Date) {
+            return isNaN(value.getTime()) ? null : value.toISOString();
+        }
+
+        if (typeof value === 'object') {
+            const dateKeys = ['utc', 'local', 'localized', 'dateTime', 'date_time', 'value'];
+            for (const key of dateKeys) {
+                const candidate = value[key];
+                if (candidate !== null && candidate !== undefined && candidate !== '') {
+                    return candidate;
+                }
+            }
+            return null;
+        }
+
+        return value;
+    }
+
+    getFirstDateValue(candidates) {
+        if (!Array.isArray(candidates)) {
+            return null;
+        }
+
+        for (const candidate of candidates) {
+            const resolved = this.extractDateValue(candidate);
+            if (resolved !== null && resolved !== undefined && resolved !== '') {
+                return resolved;
+            }
+        }
+
+        return null;
+    }
+
+    hasExplicitTimezoneInfo(dateValue) {
+        if (!dateValue || typeof dateValue !== 'string') {
+            return false;
+        }
+        return /(z|[+-]\d{2}:\d{2})$/i.test(dateValue.trim());
+    }
+
+    getTimezoneOffsetMinutes(date, timezone) {
+        if (!date || !timezone) {
+            return null;
+        }
+
+        try {
+            const parts = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            }).formatToParts(date);
+
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            if (!offsetPart || !offsetPart.value) {
+                return null;
+            }
+
+            const match = offsetPart.value.match(/GMT([+-])(\d{1,2}):(\d{2})/);
+            if (!match) {
+                return null;
+            }
+
+            const sign = match[1] === '+' ? 1 : -1;
+            const hours = parseInt(match[2], 10);
+            const minutes = parseInt(match[3], 10);
+            return sign * (hours * 60 + minutes);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    convertLocalDateTimeToUtc(localDateTimeValue, timezone) {
+        if (!localDateTimeValue || !timezone || typeof localDateTimeValue !== 'string') {
+            return null;
+        }
+
+        const normalized = localDateTimeValue.trim().replace(' ', 'T');
+        const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+        if (!match) {
+            return null;
+        }
+
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10);
+        const day = parseInt(match[3], 10);
+        const hour = parseInt(match[4], 10);
+        const minute = parseInt(match[5], 10);
+        const second = parseInt(match[6] || '0', 10);
+
+        let utcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
+        for (let i = 0; i < 4; i++) {
+            const offsetMinutes = this.getTimezoneOffsetMinutes(new Date(utcMillis), timezone);
+            if (offsetMinutes === null) {
+                return null;
+            }
+
+            const adjustedMillis = Date.UTC(year, month - 1, day, hour, minute, second) - (offsetMinutes * 60 * 1000);
+            if (adjustedMillis === utcMillis) {
+                break;
+            }
+            utcMillis = adjustedMillis;
+        }
+
+        const parsed = new Date(utcMillis);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    parseEventDateValue(dateValue, timezoneHint = null) {
+        const resolvedValue = this.extractDateValue(dateValue);
+        if (resolvedValue === null || resolvedValue === undefined || resolvedValue === '') {
+            return null;
+        }
+
+        const valueText = typeof resolvedValue === 'string' ? resolvedValue.trim() : String(resolvedValue).trim();
+        if (!valueText) {
+            return null;
+        }
+
+        if (timezoneHint && !this.hasExplicitTimezoneInfo(valueText)) {
+            const converted = this.convertLocalDateTimeToUtc(valueText, timezoneHint);
+            if (converted) {
+                return converted;
+            }
+        }
+
+        const parsed = new Date(valueText);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
     // Check if an event is in the future (not past)
     isFutureEvent(eventData) {
         const now = new Date();
-        let startDate = eventData.start?.utc || eventData.start_date || eventData.startDate || eventData.start;
-        
-        // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
-        if (startDate && typeof startDate === 'object' && startDate.utc) {
-            startDate = startDate.utc;
-        }
+        const startDate = this.getFirstDateValue([
+            eventData.start?.utc,
+            eventData.start?.local,
+            eventData.start_date,
+            eventData.startDate,
+            eventData.start,
+            eventData.start_time,
+            eventData.starts_at,
+            eventData.start_date_with_time,
+            eventData.start_local,
+            eventData.start_localized
+        ]);
         
         if (!startDate) {
             // If no start date, assume it might be future and let it through
@@ -964,24 +1103,35 @@ class EventbriteParser {
             
             // Handle both organizer page format (start.utc) and detail page format (start as string)
             // Detail pages may have start/end as timezone objects with utc field
-            let startDate = eventData.start?.utc ||
-                eventData.start_date ||
-                eventData.startDate ||
-                eventData.start ||
-                eventData.start_time ||
-                eventData.starts_at ||
-                eventData.start_date_with_time ||
-                eventData.start_local ||
-                eventData.start_localized;
-            let endDate = eventData.end?.utc ||
-                eventData.end_date ||
-                eventData.endDate ||
-                eventData.end ||
-                eventData.end_time ||
-                eventData.ends_at ||
-                eventData.end_date_with_time ||
-                eventData.end_local ||
-                eventData.end_localized;
+            const startUtcOrAbsoluteValue = this.getFirstDateValue([
+                eventData.start?.utc,
+                eventData.start_date,
+                eventData.startDate,
+                eventData.start,
+                eventData.start_time,
+                eventData.starts_at,
+                eventData.start_date_with_time
+            ]);
+            const endUtcOrAbsoluteValue = this.getFirstDateValue([
+                eventData.end?.utc,
+                eventData.end_date,
+                eventData.endDate,
+                eventData.end,
+                eventData.end_time,
+                eventData.ends_at,
+                eventData.end_date_with_time
+            ]);
+
+            const startLocalValue = this.getFirstDateValue([
+                eventData.start?.local,
+                eventData.start_local,
+                eventData.start_localized
+            ]);
+            const endLocalValue = this.getFirstDateValue([
+                eventData.end?.local,
+                eventData.end_local,
+                eventData.end_localized
+            ]);
             
             // Extract original timezone from event data (preserve Eventbrite's timezone)
             let originalTimezone = null;
@@ -989,14 +1139,6 @@ class EventbriteParser {
                 originalTimezone = eventData.start.timezone;
             } else if (eventData.end?.timezone) {
                 originalTimezone = eventData.end.timezone;
-            }
-            
-            // Handle detail page timezone format: {timezone: "America/Denver", local: "...", utc: "..."}
-            if (startDate && typeof startDate === 'object' && startDate.utc) {
-                startDate = startDate.utc;
-            }
-            if (endDate && typeof endDate === 'object' && endDate.utc) {
-                endDate = endDate.utc;
             }
             
             const url = eventData.url || eventData.vanity_url || '';
@@ -1173,113 +1315,27 @@ class EventbriteParser {
             // Determine timezone: prefer city-based timezone when available, fallback to original Eventbrite timezone
             // This fixes cases where Eventbrite has incorrect timezone but parser correctly detects city
             let eventTimezone = null;
-            let needsTimeConversion = false;
             
             if (city) {
                 eventTimezone = this.getTimezoneForCity(city, cityConfig);
-                if (eventTimezone) {
-                    if (originalTimezone && originalTimezone !== eventTimezone) {
-                        needsTimeConversion = true;
-                    }
-                }
-            }
-            
-            // When timezone is overridden, convert time assuming the original local time should be preserved
-            if (needsTimeConversion && startDate && originalTimezone && eventTimezone) {
-                try {
-                    // Parse the original UTC time
-                    const originalStartUTC = new Date(startDate);
-                    const originalEndUTC = endDate ? new Date(endDate) : null;
-                    
-                    // Get what the local time would be in the original timezone
-                    const originalLocalFormatted = new Intl.DateTimeFormat('en-CA', {
-                        timeZone: originalTimezone,
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false
-                    }).format(originalStartUTC);
-                    
-                    // Create a new date with the same local time but in the target timezone
-                    // Parse the local time components (handle comma separator)
-                    const [datePart, timePart] = originalLocalFormatted.split(', ');
-                    const localDateTime = `${datePart}T${timePart}`;
-                    
-                    // Use proper timezone conversion without hardcoded offsets
-                    // The goal: interpret the local time string as if it were in the target timezone
-                    
-                    // Method: Use the Intl.DateTimeFormat to reverse-engineer the UTC time
-                    // that would produce the desired local time in the target timezone
-                    
-                    const [year, month, day] = datePart.split('-').map(Number);
-                    const [hour, minute, second] = timePart.split(':').map(Number);
-                    
-                    // Create a test date and iteratively find the UTC time that gives us the desired local time
-                    let testUTC = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-                    let iterations = 0;
-                    const maxIterations = 24; // Should converge quickly
-                    let correctedStartUTC;
-                    
-                    while (iterations < maxIterations) {
-                        // Check what local time this UTC time produces in the target timezone
-                        const testLocalFormatted = new Intl.DateTimeFormat('en-CA', {
-                            timeZone: eventTimezone,
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                            hour12: false
-                        }).format(testUTC);
-                        
-                        // If it matches our desired local time, we're done
-                        if (testLocalFormatted === originalLocalFormatted) {
-                            correctedStartUTC = testUTC;
-                            break;
-                        }
-                        
-                        // Calculate the difference and adjust
-                        const [testDatePart, testTimePart] = testLocalFormatted.split(', ');
-                        const testDate = new Date(`${testDatePart}T${testTimePart}`);
-                        const targetDate = new Date(`${datePart}T${timePart}`);
-                        const diff = targetDate.getTime() - testDate.getTime();
-                        
-                        testUTC = new Date(testUTC.getTime() + diff);
-                        iterations++;
-                    }
-                    
-                    if (iterations >= maxIterations) {
-                        // Fallback to original time
-                        correctedStartUTC = originalStartUTC;
-                    }
-                    
-                    startDate = correctedStartUTC.toISOString();
-                    
-                    // Apply same adjustment to end time if it exists
-                    if (originalEndUTC) {
-                        const timeDiff = originalEndUTC.getTime() - originalStartUTC.getTime();
-                        const correctedEnd = new Date(correctedStartUTC.getTime() + timeDiff);
-                        endDate = correctedEnd.toISOString();
-                    }
-                    
-                } catch (error) {
-                }
             }
             
             // Fallback to original Eventbrite timezone if no city-based timezone found
             if (!eventTimezone && originalTimezone) {
                 eventTimezone = originalTimezone;
             }
+
+            const parseTimezone = eventTimezone || originalTimezone || null;
+            const preferredStartValue = (eventTimezone && startLocalValue) ? startLocalValue : (startUtcOrAbsoluteValue || startLocalValue);
+            const preferredEndValue = (eventTimezone && endLocalValue) ? endLocalValue : (endUtcOrAbsoluteValue || endLocalValue);
+            const parsedStartDate = this.parseEventDateValue(preferredStartValue, parseTimezone);
+            const parsedEndDate = this.parseEventDateValue(preferredEndValue, parseTimezone);
             
             const event = {
                 title: title,
                 description: description,
-                startDate: startDate ? new Date(startDate) : null,
-                endDate: endDate ? new Date(endDate) : null,
+                startDate: parsedStartDate,
+                endDate: parsedEndDate,
                 bar: finalVenue, // Use 'bar' field name that calendar-core.js expects
                 location: finalCoordinates ? `${finalCoordinates.lat}, ${finalCoordinates.lng}` : null, // Store coordinates as "lat, lng" string in location field
                 address: finalAddress,
