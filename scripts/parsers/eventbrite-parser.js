@@ -977,6 +977,15 @@ class EventbriteParser {
         return /(z|[+-]\d{2}:\d{2})$/i.test(dateValue.trim());
     }
 
+    isDateOnlyValue(dateValue) {
+        const resolvedValue = this.extractDateValue(dateValue);
+        if (!resolvedValue) {
+            return false;
+        }
+        const valueText = typeof resolvedValue === 'string' ? resolvedValue.trim() : String(resolvedValue).trim();
+        return /^\d{4}-\d{2}-\d{2}$/.test(valueText);
+    }
+
     getTimezoneOffsetMinutes(date, timezone) {
         if (!date || !timezone) {
             return null;
@@ -1072,6 +1081,9 @@ class EventbriteParser {
         if (hasCityTimezone && this.hasNonEmptyValue(localValue)) {
             return localValue;
         }
+        if (this.hasNonEmptyValue(localValue) && this.isDateOnlyValue(utcOrAbsoluteValue)) {
+            return localValue;
+        }
         return utcOrAbsoluteValue || localValue;
     }
 
@@ -1081,12 +1093,12 @@ class EventbriteParser {
         const startDate = this.getFirstDateValue([
             eventData.start?.utc,
             eventData.start?.local,
-            eventData.start_date,
-            eventData.startDate,
             eventData.start,
             eventData.start_time,
             eventData.starts_at,
             eventData.start_date_with_time,
+            eventData.startDate,
+            eventData.start_date,
             eventData.start_local,
             eventData.start_localized
         ]);
@@ -1123,21 +1135,21 @@ class EventbriteParser {
             // Detail pages may have start/end as timezone objects with utc field
             const startUtcOrAbsoluteValue = this.getFirstDateValue([
                 eventData.start?.utc,
-                eventData.start_date,
-                eventData.startDate,
                 eventData.start,
                 eventData.start_time,
                 eventData.starts_at,
-                eventData.start_date_with_time
+                eventData.start_date_with_time,
+                eventData.startDate,
+                eventData.start_date
             ]);
             const endUtcOrAbsoluteValue = this.getFirstDateValue([
                 eventData.end?.utc,
-                eventData.end_date,
-                eventData.endDate,
                 eventData.end,
                 eventData.end_time,
                 eventData.ends_at,
-                eventData.end_date_with_time
+                eventData.end_date_with_time,
+                eventData.endDate,
+                eventData.end_date
             ]);
 
             const startLocalValue = this.getFirstDateValue([
@@ -1344,8 +1356,15 @@ class EventbriteParser {
             }
 
             const parseTimezone = eventTimezone || originalTimezone || null;
-            const preferredStartValue = this.getPreferredDateValue(startUtcOrAbsoluteValue, startLocalValue, !!eventTimezone);
-            const preferredEndValue = this.getPreferredDateValue(endUtcOrAbsoluteValue, endLocalValue, !!eventTimezone);
+            const preferredStartValue = this.getPreferredDateValue(startUtcOrAbsoluteValue, startLocalValue, !!parseTimezone);
+            const preferredEndValue = this.getPreferredDateValue(endUtcOrAbsoluteValue, endLocalValue, !!parseTimezone);
+            if (this.isDateOnlyValue(preferredStartValue)) {
+                const titleText = title || 'untitled';
+                const localStartText = this.extractDateValue(startLocalValue) || '';
+                const utcStartText = this.extractDateValue(startUtcOrAbsoluteValue) || '';
+                const timezoneText = parseTimezone || 'none';
+                console.warn(`🎫 Eventbrite: Date-only start for "${titleText}" (selected="${this.extractDateValue(preferredStartValue)}", local="${localStartText}", utcOrAbsolute="${utcStartText}", timezone="${timezoneText}")`);
+            }
             const parsedStartDate = this.parseEventDateValue(preferredStartValue, parseTimezone);
             const parsedEndDate = this.parseEventDateValue(preferredEndValue, parseTimezone);
             
