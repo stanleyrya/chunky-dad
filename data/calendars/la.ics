@@ -42,9 +42,26 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20250720T150000
+DTEND;TZID=America/Los_Angeles:20250720T210000
+RRULE:FREQ=MONTHLY;BYDAY=3SU
+DTSTAMP:20260507T030545Z
+UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
+CREATED:20250719T050204Z
+DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
+ oMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?ig
+ sh=MWxjZHprZnl6NWc0NQ==
+LAST-MODIFIED:20250719T051145Z
+LOCATION:34.0498043\, -118.2493258
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Club Chub
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20260416T164616Z
+DTSTAMP:20260507T030545Z
 UID:848D15A3-27B4-4F56-AAD0-9D7D66DD12A1
 CREATED:20250823T205552Z
 DESCRIPTION:description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF 
@@ -71,51 +88,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20250720T150000
-DTEND;TZID=America/Los_Angeles:20250720T210000
-RRULE:FREQ=MONTHLY;BYDAY=3SU
-DTSTAMP:20260416T164616Z
-UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
-CREATED:20250719T050204Z
-DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
- oMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?ig
- sh=MWxjZHprZnl6NWc0NQ==
-LAST-MODIFIED:20250719T051145Z
-LOCATION:34.0498043\, -118.2493258
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Club Chub
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250817T050000Z
-DTEND:20250817T100000Z
-DTSTAMP:20260416T164616Z
-UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
-CREATED:20250719T045039Z
-DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
-  😈 Be sure to follow them on IG for location\, updates\, and more!\ninstag
- ram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|t
- ba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/du
- ro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbu
- c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%
- 2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format
- %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe
- 04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-s
- ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as 
- of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036
- %2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k
-LAST-MODIFIED:20250817T033530Z
-LOCATION:33.9139036\, -118.2805709
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20251026T050000Z
 DTEND:20251026T120000Z
-DTSTAMP:20260416T164616Z
+DTSTAMP:20260507T030545Z
 UID:342C3C24-21CD-4149-8634-E60F5CB0A57A
 CREATED:20250921T003523Z
 DESCRIPTION:description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED
@@ -139,7 +114,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Vancouver:20250717T170000
 DTEND;TZID=America/Vancouver:20250717T210000
 RRULE:FREQ=WEEKLY
-DTSTAMP:20260416T164616Z
+DTSTAMP:20260507T030545Z
 UID:9vnvsm6kjpievu62279lco139k@google.com
 CREATED:20250715T045103Z
 DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
@@ -150,5 +125,103 @@ SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Bear Happy Hour
 TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260530T000000Z
+DTSTAMP:20260507T030545Z
+UID:1D4F9701-73E2-4929-B2E0-E58654550C6B
+CREATED:20260507T024016Z
+DESCRIPTION:bar: Falcon North\naddress: 2020 East Artesia Boulevard\, Long 
+ Beach\, CA 90805\ntimezone: America/Los_Angeles\nticketUrl: https://www.eve
+ ntbrite.com/e/twisted-bear-long-beach-tickets-1987640418999\nimage: https:/
+ /img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1182351239%2F10882079
+ 12863%2F1%2Foriginal.20260416-191059?crop=focalpoint&fit=crop&h=230&w=460&a
+ uto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a15e9ca8c17e973ca26
+ e3c97d03e0430\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.c
+ om/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\n_st
+ aticFields: [object Object]\ngmaps: https://www.google.com/maps/search/?api
+ =1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20
+ Beach%2C%20CA%2090805\nkey: twisted-bear-long-beach|2026-05-30|falcon north
+LAST-MODIFIED:20260507T024016Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TWISTED BEAR LONG BEACH
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250817T050000Z
+DTEND:20250817T100000Z
+DTSTAMP:20260507T030545Z
+UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
+CREATED:20250719T045039Z
+DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
+  😈 Be sure to follow them on IG for location\, updates\, and more!\ninstag
+ ram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|t
+ ba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/du
+ ro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbu
+ c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%
+ 2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format
+ %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe
+ 04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-s
+ ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as 
+ of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036
+ %2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k
+LAST-MODIFIED:20250817T033530Z
+LOCATION:33.9139036\, -118.2805709
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260606T000000Z
+DTSTAMP:20260507T030545Z
+UID:D8B88D6F-D8A6-4A03-B2DE-732EC80F5EAC
+CREATED:20260507T023923Z
+DESCRIPTION:bar: Globe Theatre Los Angeles\naddress: 740 South Broadway\, L
+ os Angeles\, CA 90014\ntimezone: America/Los_Angeles\nticketUrl: https://ww
+ w.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets
+ -1987743346859\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2F
+ images%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=foca
+ lpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&f
+ p-y=0.5&s=582028dad2e46d73c308ce66a1b32a9a\nshortName: MEGA-WOOF\ninstagram
+ : https://www.instagram.com/megawoof_america\n_staticFields: [object Object
+ ]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.c
+ om/maps/search/?api=1&query=Globe%20Theatre%20Los%20Angeles%2C%20740%20Sout
+ h%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014\nkey: megawoof|2026-06-06|g
+ lobe theatre los angeles
+LAST-MODIFIED:20260507T023923Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260516T000000Z
+DTSTAMP:20260507T030545Z
+UID:37687396-8D77-4ED3-9091-55EA50295E6C
+CREATED:20260507T020551Z
+DESCRIPTION:bar: Falcon North\naddress: 2020 East Artesia Boulevard\, Long 
+ Beach\, CA 90805\ntimezone: America/Los_Angeles\nticketUrl: https://www.eve
+ ntbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425\nimag
+ e: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%
+ 2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&h=23
+ 0&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=93fafd0e3b
+ 545e0cafe461fb49eaf2c4\nshortName: MEGA-WOOF\ninstagram: https://www.instag
+ ram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\ngmap
+ s: https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020
+ %20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megaw
+ oof|2026-05-16|falcon north
+LAST-MODIFIED:20260507T023924Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR
