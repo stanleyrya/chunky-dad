@@ -405,9 +405,12 @@ class SharedCore {
 
     async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null) {
         const configuredMaxUrls = parserConfig.maxAdditionalUrls;
-        const maxUrls = configuredMaxUrls === null
-            ? Infinity
-            : (Number.isInteger(configuredMaxUrls) && configuredMaxUrls >= 0 ? configuredMaxUrls : 12);
+        let maxUrls = 12;
+        if (configuredMaxUrls === null) {
+            maxUrls = Infinity;
+        } else if (Number.isInteger(configuredMaxUrls) && configuredMaxUrls >= 0) {
+            maxUrls = configuredMaxUrls;
+        }
         const urlsToProcess = Number.isFinite(maxUrls)
             ? additionalLinks.slice(0, maxUrls)
             : additionalLinks;
