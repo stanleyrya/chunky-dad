@@ -19,6 +19,8 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+const EVENTBRITE_BASE_URL = 'https://www.eventbrite.com';
+
 class EventbriteParser {
     constructor(config = {}) {
         this.config = {
@@ -419,7 +421,7 @@ class EventbriteParser {
             return false;
         }
         
-        const name = candidate.name?.text || candidate.name || candidate.title || candidate.event_name || '';
+        const name = this.getNextDataCandidateName(candidate);
         const url = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url || '';
         const start = candidate.start?.utc ||
             candidate.start_date ||
@@ -442,17 +444,42 @@ class EventbriteParser {
         return !!start;
     }
 
+    getNextDataCandidateName(candidate) {
+        if (!candidate || typeof candidate !== 'object') {
+            return '';
+        }
+        
+        if (typeof candidate.name === 'string') {
+            return candidate.name;
+        }
+        
+        if (candidate.name && typeof candidate.name.text === 'string') {
+            return candidate.name.text;
+        }
+        
+        if (typeof candidate.title === 'string') {
+            return candidate.title;
+        }
+        
+        if (typeof candidate.event_name === 'string') {
+            return candidate.event_name;
+        }
+        
+        return '';
+    }
+
     normalizeNextDataEventCandidate(candidate, htmlData = null) {
         if (!candidate || typeof candidate !== 'object') {
             return null;
         }
         
         const rawUrl = candidate.url || candidate.event_url || candidate.vanity_url || candidate.public_url || '';
-        const normalizedUrl = this.normalizeUrl(rawUrl, htmlData?.url || 'https://www.eventbrite.com');
+        const normalizedUrl = this.normalizeUrl(rawUrl, htmlData?.url || EVENTBRITE_BASE_URL);
+        const normalizedName = this.getNextDataCandidateName(candidate);
         
         const normalizedCandidate = {
             ...candidate,
-            name: candidate.name || candidate.title || candidate.event_name || '',
+            name: normalizedName,
             description: candidate.description || candidate.summary || candidate.event_summary || '',
             url: normalizedUrl || rawUrl,
             start: candidate.start || candidate.startDate || candidate.start_date || candidate.start_time || candidate.starts_at,
