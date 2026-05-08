@@ -104,9 +104,9 @@ class AiWebParser {
         if (Array.isArray(this.cachedEventSchemaPromptFields)) {
             return this.cachedEventSchemaPromptFields;
         }
-        const schema = (typeof EventSchema !== 'undefined' && EventSchema)
-            || (typeof globalThis !== 'undefined' && globalThis.EventSchema)
-            || null;
+        const localEventSchema = typeof EventSchema !== 'undefined' ? EventSchema : null;
+        const globalEventSchema = typeof globalThis !== 'undefined' ? globalThis.EventSchema : null;
+        const schema = localEventSchema || globalEventSchema || null;
         if (!schema || !Array.isArray(schema.AI_PROMPT_FIELDS)) {
             this.cachedEventSchemaPromptFields = [];
             return this.cachedEventSchemaPromptFields;
@@ -115,7 +115,7 @@ class AiWebParser {
             .filter(field => field && typeof field.param === 'string' && typeof field.desc === 'string')
             .map(field => ({
                 name: this.normalizePromptFieldName(field.param),
-                description: String(field.desc || '').trim()
+                description: field.desc.trim()
             }));
         return this.cachedEventSchemaPromptFields;
     }
