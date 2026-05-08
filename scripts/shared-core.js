@@ -72,6 +72,10 @@ class SharedCore {
                 parser: 'scriptable-input'
             },
             {
+                pattern: /^ai-web:\/\//i,
+                parser: 'ai-web'
+            },
+            {
                 pattern: /eventbrite\.com/i,
                 parser: 'eventbrite'
             },
@@ -149,6 +153,19 @@ class SharedCore {
         
         // Default to generic parser if no pattern matches
         return 'generic';
+    }
+
+    normalizeParserName(parserName) {
+        if (!parserName && parserName !== 0) return null;
+        const normalized = String(parserName).trim().toLowerCase();
+        return normalized.length > 0 ? normalized : null;
+    }
+
+    buildFetchOptions(parserConfig, parserName) {
+        return {
+            parserName: parserName || null,
+            parserConfig
+        };
     }
 
     resolveAutomationContext(config) {
@@ -272,9 +289,9 @@ class SharedCore {
     }
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers, globalProcessedUrls = new Set()) {
-        // Automatically detect parser from the first URL
-        let parserName = null;
-        if (parserConfig.urls && parserConfig.urls.length > 0) {
+        // Prefer explicit parser selection from config; otherwise auto-detect from URL.
+        let parserName = this.normalizeParserName(parserConfig && parserConfig.parser);
+        if (!parserName && parserConfig.urls && parserConfig.urls.length > 0) {
             parserName = this.detectParserFromUrl(parserConfig.urls[0]);
         }
         
@@ -316,7 +333,7 @@ class SharedCore {
 
                 const htmlData = hasInlineInput
                     ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
-                    : await httpAdapter.fetchData(url);
+                    : await httpAdapter.fetchData(url, this.buildFetchOptions(parserConfig, parserName));
                 
                 // Detect parser for this specific URL (allows mid-run switching)
                 const urlParserName = this.detectParserFromUrl(url) || parserName;
@@ -327,7 +344,16 @@ class SharedCore {
                 }
                 
                 // Parse events (consolidated logging)
-                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
+                let parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
+                if (
+                    urlParserName === 'ai-web' &&
+                    ((!parseResult || !Array.isArray(parseResult.events) || parseResult.events.length === 0)) &&
+                    parsers.generic &&
+                    parsers.generic !== urlParser
+                ) {
+                    await displayAdapter.logWarn(`SYSTEM: AI parser returned no events for ${url}; falling back to generic parser`);
+                    parseResult = parsers.generic.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
+                }
                 
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
@@ -426,7 +452,7 @@ class SharedCore {
             processedUrls.add(url);
 
             try {
-                const htmlData = await httpAdapter.fetchData(url);
+                const htmlData = await httpAdapter.fetchData(url, this.buildFetchOptions(parserConfig, parserName));
                 
                 // Detect parser for this specific URL (allows mid-run switching)
                 const urlParserName = this.detectParserFromUrl(url) || parserName || 'generic';
