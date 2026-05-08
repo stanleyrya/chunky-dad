@@ -340,18 +340,6 @@ class SharedCore {
                 let parseResult = await Promise.resolve(
                     urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
                 );
-                if (
-                    urlParserName === 'ai-web' &&
-                    ((!parseResult || !Array.isArray(parseResult.events) || parseResult.events.length === 0)) &&
-                    parsers.generic &&
-                    parsers.generic !== urlParser
-                ) {
-                    await displayAdapter.logWarn(`SYSTEM: AI parser returned no events for ${url}; falling back to generic parser`);
-                    parseResult = await Promise.resolve(
-                        parsers.generic.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
-                    );
-                }
-                
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
