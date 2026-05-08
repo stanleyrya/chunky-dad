@@ -358,7 +358,8 @@ const scraperConfig = {
         enabled: true,
         endpoint: "http://127.0.0.1:11434/api/generate",
         model: "llama3",
-        maxHtmlChars: 12000
+        maxHtmlChars: 12000,
+        fields: ["title", "description", "bar", "address", "startDate", "endDate", "city", "url", "ticketUrl", "image", "cover"]
       },
       fieldPriorities: {
         title: { priority: ["ai-web"], merge: "clobber" },

@@ -737,19 +737,26 @@ class ScriptableAdapter {
     getAiExtractionConfig(options = {}) {
         const parserConfig = options && typeof options === 'object' ? (options.parserConfig || {}) : {};
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        const configuredFields = Array.isArray(aiConfig.fields)
+            ? aiConfig.fields.map(field => String(field || '').trim()).filter(Boolean)
+            : [];
         return {
             endpoint: String(aiConfig.endpoint || 'http://127.0.0.1:11434/api/generate'),
             model: String(aiConfig.model || 'llama3'),
-            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000
+            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000,
+            fields: configuredFields
         };
     }
 
-    buildAiExtractionPrompt(url, html, maxHtmlChars) {
+    buildAiExtractionPrompt(url, html, maxHtmlChars, fields = []) {
         const snippetLimit = Math.max(500, Number(maxHtmlChars));
         const snippet = String(html || '').slice(0, snippetLimit);
+        const fieldText = Array.isArray(fields) && fields.length > 0
+            ? `Preferred keys: ${fields.join(', ')}.`
+            : 'Use relevant event keys that match the scraper schema.';
         return `Extract one event from this web page and return JSON only.
 
-Return keys when available: title, shortName, description, city, bar, address, location, startDate, endDate, recurrenceRule, url, ticketUrl, instagram, facebook, gmaps, image, cover.
+${fieldText}
 Rules:
 - JSON only (no markdown)
 - Use ISO datetime for startDate/endDate when possible
@@ -815,7 +822,12 @@ ${snippet}`;
     async extractAiEventFromHtml(fetchResult, options = {}) {
         try {
             const aiConfig = this.getAiExtractionConfig(options);
-            const prompt = this.buildAiExtractionPrompt(fetchResult.url, fetchResult.html, aiConfig.maxHtmlChars);
+            const prompt = this.buildAiExtractionPrompt(
+                fetchResult.url,
+                fetchResult.html,
+                aiConfig.maxHtmlChars,
+                aiConfig.fields
+            );
             const request = new Request(aiConfig.endpoint);
             request.method = 'POST';
             request.headers = {
