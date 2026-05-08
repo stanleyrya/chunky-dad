@@ -17,6 +17,7 @@ class AiWebParser {
             source: 'ai-web',
             ...config
         };
+        this.cachedEventSchemaPromptFields = null;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -100,18 +101,23 @@ class AiWebParser {
     }
 
     getEventSchemaPromptFields() {
+        if (Array.isArray(this.cachedEventSchemaPromptFields)) {
+            return this.cachedEventSchemaPromptFields;
+        }
         const schema = (typeof EventSchema !== 'undefined' && EventSchema)
             || (typeof globalThis !== 'undefined' && globalThis.EventSchema)
             || null;
         if (!schema || !Array.isArray(schema.AI_PROMPT_FIELDS)) {
-            return [];
+            this.cachedEventSchemaPromptFields = [];
+            return this.cachedEventSchemaPromptFields;
         }
-        return schema.AI_PROMPT_FIELDS
+        this.cachedEventSchemaPromptFields = schema.AI_PROMPT_FIELDS
             .filter(field => field && typeof field.param === 'string' && typeof field.desc === 'string')
             .map(field => ({
                 name: this.normalizePromptFieldName(field.param),
                 description: String(field.desc || '').trim()
             }));
+        return this.cachedEventSchemaPromptFields;
     }
 
     getDefaultExtractionFields() {
