@@ -94,11 +94,12 @@ class AiWebParser {
         return {
             enabled: aiConfig.enabled !== false,
             endpoint: String(aiConfig.endpoint || 'http://desktop.taila7523c.ts.net:11434/api/generate'),
-            model: String(aiConfig.model || 'llama3'),
+            model: String(aiConfig.model || 'qwen3.5:4b'),
             maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000,
             numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 4096,
             numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
-            timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120
+            timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
+            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
         };
     }
 
@@ -298,6 +299,7 @@ ${String(rawResponse || '')}`;
             model: aiConfig.model,
             prompt,
             stream: false,
+            keep_alive: aiConfig.keepAlive,
             options: {
                 num_ctx: aiConfig.numCtx,
                 num_predict: aiConfig.numPredict
