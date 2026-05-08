@@ -745,8 +745,7 @@ class ScriptableAdapter {
     }
 
     buildAiExtractionPrompt(url, html, maxHtmlChars) {
-        const configuredLimit = Number.isFinite(Number(maxHtmlChars)) ? Number(maxHtmlChars) : 12000;
-        const snippetLimit = Math.max(500, configuredLimit);
+        const snippetLimit = Math.max(500, Number(maxHtmlChars));
         const snippet = String(html || '').slice(0, snippetLimit);
         return `Extract one event from this web page and return JSON only.
 
@@ -801,13 +800,13 @@ ${snippet}`;
         try {
             const parsed = JSON.parse(rawText);
             return parsed && typeof parsed === 'object' ? parsed : null;
-        } catch (_) {
+        } catch (parseError) {
             const jsonObject = this.extractFirstJsonObject(rawText);
             if (!jsonObject) return null;
             try {
                 const parsed = JSON.parse(jsonObject);
                 return parsed && typeof parsed === 'object' ? parsed : null;
-            } catch (_) {
+            } catch (jsonError) {
                 return null;
             }
         }
