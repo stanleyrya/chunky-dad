@@ -151,12 +151,32 @@ class AiWebParser {
         };
         let description = contextByField[normalized] || 'Event field';
         if (normalized === 'city' && cityConfig && typeof cityConfig === 'object') {
-            const cityKeys = Object.keys(cityConfig);
+            const cityKeys = this.getCityKeys(cityConfig);
             if (cityKeys.length > 0) {
                 description += `. Must be one of: ${cityKeys.join(', ')}`;
             }
         }
         return description;
+    }
+
+    getCityKeys(cityConfig) {
+        if (!cityConfig || typeof cityConfig !== 'object') return [];
+        const candidateMap = cityConfig.cities && typeof cityConfig.cities === 'object'
+            ? cityConfig.cities
+            : cityConfig;
+        const keys = Object.keys(candidateMap);
+        if (keys.length === 0) return [];
+        const inferredKeys = keys.filter(key => {
+            const value = candidateMap[key];
+            return value && typeof value === 'object' && (
+                'timezone' in value ||
+                'state' in value ||
+                'country' in value ||
+                'aliases' in value ||
+                'label' in value
+            );
+        });
+        return inferredKeys.length > 0 ? inferredKeys : keys;
     }
 
     buildFieldContextText(fields, cityConfig) {
