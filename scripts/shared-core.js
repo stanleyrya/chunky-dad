@@ -283,7 +283,9 @@ class SharedCore {
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers, globalProcessedUrls = new Set()) {
         // Prefer explicit parser selection from config; otherwise auto-detect from URL.
-        let parserName = this.normalizeParserName(parserConfig && parserConfig.parser);
+        const configuredParserName = this.normalizeParserName(parserConfig && parserConfig.parser);
+        const allowParserAutoSwitch = !configuredParserName;
+        let parserName = configuredParserName;
         if (!parserName && parserConfig.urls && parserConfig.urls.length > 0) {
             parserName = this.detectParserFromUrl(parserConfig.urls[0]);
         }
@@ -329,10 +331,13 @@ class SharedCore {
                     : await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = this.detectParserFromUrl(url) || parserName;
+                const detectedParserName = this.detectParserFromUrl(url);
+                const urlParserName = allowParserAutoSwitch
+                    ? (detectedParserName || parserName)
+                    : parserName;
                 const urlParser = parsers[urlParserName];
                 
-                if (urlParserName !== parserName) {
+                if (allowParserAutoSwitch && urlParserName !== parserName) {
                     await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
                 }
                 
@@ -375,7 +380,8 @@ class SharedCore {
                         globalProcessedUrls,
                         undefined,
                         mainConfig,
-                        parserName
+                        parserName,
+                        allowParserAutoSwitch
                     );
                     await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
                 }
@@ -414,7 +420,7 @@ class SharedCore {
         };
     }
 
-    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null) {
+    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null, allowParserAutoSwitch = true) {
         const configuredMaxUrls = parserConfig.maxAdditionalUrls;
         let maxUrls = 12;
         if (configuredMaxUrls === null) {
@@ -440,7 +446,10 @@ class SharedCore {
                 const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const urlParserName = this.detectParserFromUrl(url) || parserName || 'generic';
+                const detectedParserName = this.detectParserFromUrl(url);
+                const urlParserName = allowParserAutoSwitch
+                    ? (detectedParserName || parserName || 'generic')
+                    : (parserName || 'generic');
                 const urlParser = parsers[urlParserName];
                 
                 const parseResult = await Promise.resolve(
@@ -470,7 +479,8 @@ class SharedCore {
                                 processedUrls,
                                 currentDepth + 1,
                                 mainConfig,
-                                urlParserName
+                                urlParserName,
+                                allowParserAutoSwitch
                             );
                         }
                 } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
