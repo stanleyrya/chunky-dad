@@ -327,7 +327,8 @@ ${String(rawResponse || '')}`;
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
         const startTime = Date.now();
         try {
-            let responseText = '';
+            const payloadPreviewChars = 1000;
+            let responseText = null;
             let responseJson = null;
             if (typeof Request !== 'undefined') {
                 const request = new Request(aiConfig.endpoint);
@@ -348,12 +349,15 @@ ${String(rawResponse || '')}`;
                     return null;
                 }
                 responseText = await response.text();
+            } else {
+                console.warn(`🤖 AI Web: AI request${label} failed - no HTTP client available (Request/fetch missing)`);
+                return null;
             }
             if (responseText) {
                 try {
                     responseJson = JSON.parse(responseText);
                 } catch (parseError) {
-                    const preview = responseText.length > 500 ? `${responseText.slice(0, 500)}…` : responseText;
+                    const preview = responseText.length > payloadPreviewChars ? `${responseText.slice(0, payloadPreviewChars)}…` : responseText;
                     console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars): ${preview}`);
                     return null;
                 }
@@ -367,7 +371,7 @@ ${String(rawResponse || '')}`;
             const thinkingChars = responseJson && typeof responseJson.thinking === 'string' ? responseJson.thinking.length : 0;
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (thinking: ${thinkingChars} chars, done_reason: ${doneReason})`);
             if (responseText) {
-                const preview = responseText.length > 1000 ? `${responseText.slice(0, 1000)}…` : responseText;
+                const preview = responseText.length > payloadPreviewChars ? `${responseText.slice(0, payloadPreviewChars)}…` : responseText;
                 console.warn(`🤖 AI Web: Raw AI payload${label} (${responseText.length} chars): ${preview}`);
             } else {
                 console.warn(`🤖 AI Web: Raw AI payload${label} was empty`);
