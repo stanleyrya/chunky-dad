@@ -63,26 +63,18 @@ class AiWebParser {
         if (!aiConfig.enabled || !htmlData.html) {
             return null;
         }
-        const promptFields = this.getAiPromptFields(aiConfig);
+        const promptFields = this.getAiPromptFields(aiConfig, parserConfig);
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
-        return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig);
+        return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig);
     }
 
     getAiConfig(parserConfig = {}) {
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
-        const configuredFields = Array.isArray(aiConfig.fields)
-            ? aiConfig.fields.map(field => String(field || '').trim()).filter(Boolean)
-            : [];
-        const ignoredFields = Array.isArray(aiConfig.ignoreFields)
-            ? aiConfig.ignoreFields.map(field => String(field || '').trim()).filter(Boolean)
-            : [];
         return {
             enabled: aiConfig.enabled !== false,
-            endpoint: String(aiConfig.endpoint || 'http://127.0.0.1:11434/api/generate'),
+            endpoint: String(aiConfig.endpoint || 'http://desktop.taila7523c.ts.net:11434/api/generate'),
             model: String(aiConfig.model || 'llama3'),
-            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000,
-            fields: configuredFields,
-            ignoreFields: ignoredFields
+            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000
         };
     }
 
@@ -107,25 +99,25 @@ class AiWebParser {
         return aliasMap[normalized] || normalized;
     }
 
-    getAiPromptFields(aiConfig) {
-        const configuredFields = aiConfig && Array.isArray(aiConfig.fields) && aiConfig.fields.length > 0
-            ? aiConfig.fields
-            : AiWebParser.DEFAULT_EXTRACTION_FIELDS;
-        const ignoredFields = aiConfig && Array.isArray(aiConfig.ignoreFields)
-            ? aiConfig.ignoreFields
-            : [];
-        const ignoredSet = new Set(ignoredFields.map(field => this.normalizePromptFieldName(field)));
-        const kept = configuredFields.filter(field => {
-            const normalized = this.normalizePromptFieldName(field);
-            return !ignoredSet.has(normalized);
+    getAiPromptFields(aiConfig, parserConfig = {}) {
+        const priorities = parserConfig && parserConfig.fieldPriorities && typeof parserConfig.fieldPriorities === 'object'
+            ? parserConfig.fieldPriorities
+            : {};
+        const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object'
+            ? parserConfig.metadata
+            : {};
+        const selected = Object.keys(priorities).filter(field => {
+            const rule = priorities[field];
+            if (!rule || !Array.isArray(rule.priority)) return false;
+            if (!rule.priority.includes('ai-web')) return false;
+            if (rule.priority.includes('static')) return false;
+            if (Object.prototype.hasOwnProperty.call(metadata, field)) return false;
+            return true;
         });
-        if (kept.length > 0) {
-            return kept;
+        if (selected.length > 0) {
+            return selected;
         }
-        return AiWebParser.DEFAULT_EXTRACTION_FIELDS.filter(field => {
-            const normalized = this.normalizePromptFieldName(field);
-            return !ignoredSet.has(normalized);
-        });
+        return AiWebParser.DEFAULT_EXTRACTION_FIELDS;
     }
 
     getFieldContext(field, cityConfig) {
@@ -183,14 +175,11 @@ class AiWebParser {
         return fields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
-    buildExtractionPrompt(htmlData, aiConfig, cityConfig) {
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig) {
         const htmlCharLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
         const snippet = String(htmlData.html || '').slice(0, htmlCharLimit);
-        const fields = this.getAiPromptFields(aiConfig);
+        const fields = this.getAiPromptFields(aiConfig, parserConfig);
         const fieldContext = this.buildFieldContextText(fields, cityConfig);
-        const ignoredFieldsText = Array.isArray(aiConfig.ignoreFields) && aiConfig.ignoreFields.length > 0
-            ? `\nIgnored fields: ${aiConfig.ignoreFields.join(', ')}.`
-            : '';
         return `Extract exactly one event from this page and return JSON only.
 Preferred keys:
 ${fieldContext}
@@ -198,19 +187,15 @@ Rules:
 - Return a single JSON object only
 - Use ISO datetime for startDate/endDate when possible
 - Omit unknown fields
-- Omit ignored fields${ignoredFieldsText}
 
 URL: ${htmlData.url || ''}
 HTML:
 ${snippet}`;
     }
 
-    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig) {
-        const fields = this.getAiPromptFields(aiConfig);
+    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig) {
+        const fields = this.getAiPromptFields(aiConfig, parserConfig);
         const fieldContext = this.buildFieldContextText(fields, cityConfig);
-        const ignoredFieldsText = Array.isArray(aiConfig.ignoreFields) && aiConfig.ignoreFields.length > 0
-            ? `\nIgnored fields: ${aiConfig.ignoreFields.join(', ')}.`
-            : '';
         return `Convert this text into one strict JSON object for an event.
 Preferred keys:
 ${fieldContext}
@@ -219,14 +204,13 @@ Rules:
 - No markdown
 - No commentary
 - Omit unknown fields
-- Omit ignored fields${ignoredFieldsText}
 
 TEXT:
 ${String(rawResponse || '')}`;
     }
 
-    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig) {
-        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig);
+    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig) {
+        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig);
         const firstPass = await this.callAiGenerate(aiConfig, extractPrompt);
         if (!firstPass) return null;
         const parsedFirstPass = this.parseAiEventResponse(firstPass);
@@ -235,7 +219,7 @@ ${String(rawResponse || '')}`;
             return parsedFirstPass;
         }
         console.warn('🤖 AI Web: Extraction pass was not parseable JSON; running repair pass');
-        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig);
+        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig, parserConfig);
         const secondPass = await this.callAiGenerate(aiConfig, repairPrompt);
         if (!secondPass) return null;
         const parsedSecondPass = this.parseAiEventResponse(secondPass);

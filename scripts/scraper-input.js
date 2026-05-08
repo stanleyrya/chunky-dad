@@ -356,11 +356,9 @@ const scraperConfig = {
       dryRun: true,
       ai: {
         enabled: true,
-        endpoint: "http://127.0.0.1:11434/api/generate",
+        endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
         model: "llama3",
-        maxHtmlChars: 12000,
-        fields: ["title", "description", "bar", "address", "startDate", "endDate", "city", "url", "ticketUrl", "image", "cover", "instagram", "facebook"],
-        ignoreFields: ["instagram", "facebook"]
+        maxHtmlChars: 12000
       },
       fieldPriorities: {
         title: { priority: ["ai-web"], merge: "clobber" },
