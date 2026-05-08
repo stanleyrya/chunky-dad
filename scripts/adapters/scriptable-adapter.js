@@ -700,20 +700,12 @@ class ScriptableAdapter {
             }
             
             if (response && response.length > 0) {
-                const fetchResult = {
+                return {
                     html: response,
                     url: url,
                     statusCode: statusCode,
                     headers: request.response ? request.response.headers : {}
                 };
-                if (this.shouldRunAiExtraction(options)) {
-                    const aiExtraction = await this.extractAiEventFromHtml(fetchResult, options);
-                    if (aiExtraction && aiExtraction.event) {
-                        fetchResult.aiExtraction = aiExtraction;
-                        fetchResult.aiEvent = aiExtraction.event;
-                    }
-                }
-                return fetchResult;
             } else {
                 console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
                 throw new Error(`Empty response from ${url}`);
@@ -723,139 +715,6 @@ class ScriptableAdapter {
             const errorMessage = `📱 Scriptable: ✗ HTTP request failed for ${url}: ${error.message}`;
             console.log(errorMessage);
             throw new Error(`HTTP request failed for ${url}: ${error.message}`);
-        }
-    }
-
-    shouldRunAiExtraction(options = {}) {
-        const parserConfig = options && typeof options === 'object' ? (options.parserConfig || {}) : {};
-        const parserName = options && typeof options === 'object' ? String(options.parserName || parserConfig.parser || '').toLowerCase() : '';
-        const aiConfig = parserConfig.ai;
-        if (parserName === 'ai-web') return true;
-        return Boolean(aiConfig && aiConfig.enabled === true);
-    }
-
-    getAiExtractionConfig(options = {}) {
-        const parserConfig = options && typeof options === 'object' ? (options.parserConfig || {}) : {};
-        const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
-        const configuredFields = Array.isArray(aiConfig.fields)
-            ? aiConfig.fields.map(field => String(field || '').trim()).filter(Boolean)
-            : [];
-        return {
-            endpoint: String(aiConfig.endpoint || 'http://127.0.0.1:11434/api/generate'),
-            model: String(aiConfig.model || 'llama3'),
-            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000,
-            fields: configuredFields
-        };
-    }
-
-    buildAiExtractionPrompt(url, html, maxHtmlChars, fields = []) {
-        const snippetLimit = Math.max(500, Number(maxHtmlChars));
-        const snippet = String(html || '').slice(0, snippetLimit);
-        const fieldText = Array.isArray(fields) && fields.length > 0
-            ? `Preferred keys: ${fields.join(', ')}.`
-            : 'Use relevant event keys that match the scraper schema.';
-        return `Extract one event from this web page and return JSON only.
-
-${fieldText}
-Rules:
-- JSON only (no markdown)
-- Use ISO datetime for startDate/endDate when possible
-- If unknown, omit the key
-
-URL: ${url}
-HTML:
-${snippet}`;
-    }
-
-    extractFirstJsonObject(text) {
-        if (!text) return null;
-        const source = String(text).trim();
-        const firstBrace = source.indexOf('{');
-        if (firstBrace < 0) return null;
-        let depth = 0;
-        let inString = false;
-        let escaped = false;
-        for (let i = firstBrace; i < source.length; i++) {
-            const ch = source[i];
-            if (inString) {
-                if (escaped) {
-                    escaped = false;
-                } else if (ch === '\\') {
-                    escaped = true;
-                } else if (ch === '"') {
-                    inString = false;
-                }
-                continue;
-            }
-            if (ch === '"') {
-                inString = true;
-                continue;
-            }
-            if (ch === '{') depth++;
-            if (ch === '}') {
-                depth--;
-                if (depth === 0) {
-                    return source.slice(firstBrace, i + 1);
-                }
-            }
-        }
-        return null;
-    }
-
-    parseAiEventResponse(rawText) {
-        if (!rawText) return null;
-        try {
-            const parsed = JSON.parse(rawText);
-            return parsed && typeof parsed === 'object' ? parsed : null;
-        } catch (parseError) {
-            const jsonObject = this.extractFirstJsonObject(rawText);
-            if (!jsonObject) return null;
-            try {
-                const parsed = JSON.parse(jsonObject);
-                return parsed && typeof parsed === 'object' ? parsed : null;
-            } catch (jsonError) {
-                return null;
-            }
-        }
-    }
-
-    async extractAiEventFromHtml(fetchResult, options = {}) {
-        try {
-            const aiConfig = this.getAiExtractionConfig(options);
-            const prompt = this.buildAiExtractionPrompt(
-                fetchResult.url,
-                fetchResult.html,
-                aiConfig.maxHtmlChars,
-                aiConfig.fields
-            );
-            const request = new Request(aiConfig.endpoint);
-            request.method = 'POST';
-            request.headers = {
-                'Content-Type': 'application/json'
-            };
-            request.body = JSON.stringify({
-                model: aiConfig.model,
-                prompt,
-                stream: false
-            });
-            const aiResponse = await request.loadJSON();
-            const rawText = aiResponse && typeof aiResponse.response === 'string'
-                ? aiResponse.response
-                : '';
-            const event = this.parseAiEventResponse(rawText);
-            if (!event) {
-                console.warn(`📱 Scriptable: AI extraction returned non-JSON content for ${fetchResult.url}`);
-                return null;
-            }
-            return {
-                event,
-                rawResponse: rawText,
-                model: aiConfig.model,
-                endpoint: aiConfig.endpoint
-            };
-        } catch (error) {
-            console.warn(`📱 Scriptable: AI extraction failed for ${fetchResult.url}: ${error.message}`);
-            return null;
         }
     }
 

@@ -1,21 +1,8 @@
 // ============================================================================
-// AI WEB PARSER - PURE PARSING LOGIC
+// AI WEB PARSER
 // ============================================================================
-// ⚠️  AI ASSISTANT WARNING: This file contains PURE parsing logic only
-//
-// ✅ THIS FILE SHOULD CONTAIN:
-// ✅ Pure JavaScript parsing functions (input payload processing)
-// ✅ AI response normalization and validation
-// ✅ Event object creation and validation
-//
-// ❌ NEVER ADD THESE TO THIS FILE:
-// ❌ Environment detection (typeof importModule, typeof window, typeof DOMParser)
-// ❌ HTTP requests (receive payload data, don't fetch it)
-// ❌ Calendar operations (return event objects, don't save them)
-// ❌ Scriptable APIs (Request, Calendar, FileManager, Alert)
-// ❌ DOM APIs (DOMParser, document, window) - use pure JS
-//
-// 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
+// Handles AI extraction + event normalization for pages that don't parse well
+// with deterministic selectors.
 // ============================================================================
 
 class AiWebParser {
@@ -26,9 +13,9 @@ class AiWebParser {
         };
     }
 
-    parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
+    async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
-            const aiEvent = this.getAiEvent(htmlData);
+            const aiEvent = await this.getAiEvent(htmlData, parserConfig);
             if (!aiEvent) {
                 return this.buildEmptyResult(htmlData);
             }
@@ -59,13 +46,169 @@ class AiWebParser {
         };
     }
 
-    getAiEvent(htmlData) {
+    async getAiEvent(htmlData, parserConfig) {
         if (!htmlData || typeof htmlData !== 'object') return null;
         if (htmlData.aiEvent && typeof htmlData.aiEvent === 'object') return htmlData.aiEvent;
         if (htmlData.aiExtraction && typeof htmlData.aiExtraction.event === 'object') {
             return htmlData.aiExtraction.event;
         }
+        const aiConfig = this.getAiConfig(parserConfig);
+        if (!aiConfig.enabled || !htmlData.html) {
+            return null;
+        }
+        return await this.extractEventWithTwoPassAi(htmlData, aiConfig);
+    }
+
+    getAiConfig(parserConfig = {}) {
+        const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        const configuredFields = Array.isArray(aiConfig.fields)
+            ? aiConfig.fields.map(field => String(field || '').trim()).filter(Boolean)
+            : [];
+        return {
+            enabled: aiConfig.enabled !== false,
+            endpoint: String(aiConfig.endpoint || 'http://127.0.0.1:11434/api/generate'),
+            model: String(aiConfig.model || 'llama3'),
+            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000,
+            fields: configuredFields
+        };
+    }
+
+    getAiPromptFields(aiConfig) {
+        if (aiConfig && Array.isArray(aiConfig.fields) && aiConfig.fields.length > 0) {
+            return aiConfig.fields;
+        }
+        return ['title', 'shortName', 'description', 'city', 'bar', 'address', 'location', 'startDate', 'endDate', 'recurrenceRule', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps', 'image', 'cover'];
+    }
+
+    buildExtractionPrompt(htmlData, aiConfig) {
+        const snippetLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
+        const snippet = String(htmlData.html || '').slice(0, snippetLimit);
+        const fields = this.getAiPromptFields(aiConfig);
+        return `Extract exactly one event from this page and return JSON only.
+Preferred keys: ${fields.join(', ')}.
+Rules:
+- Return a single JSON object only
+- Use ISO datetime for startDate/endDate when possible
+- Omit unknown fields
+
+URL: ${htmlData.url || ''}
+HTML:
+${snippet}`;
+    }
+
+    buildJsonRepairPrompt(rawResponse, aiConfig) {
+        const fields = this.getAiPromptFields(aiConfig);
+        return `Convert this text into one strict JSON object for an event.
+Preferred keys: ${fields.join(', ')}.
+Rules:
+- JSON object only
+- No markdown
+- No commentary
+- Omit unknown fields
+
+TEXT:
+${String(rawResponse || '')}`;
+    }
+
+    async extractEventWithTwoPassAi(htmlData, aiConfig) {
+        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig);
+        const firstPass = await this.callAiGenerate(aiConfig, extractPrompt);
+        if (!firstPass) return null;
+        const parsedFirstPass = this.parseAiEventResponse(firstPass);
+        if (parsedFirstPass) return parsedFirstPass;
+        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig);
+        const secondPass = await this.callAiGenerate(aiConfig, repairPrompt);
+        if (!secondPass) return null;
+        return this.parseAiEventResponse(secondPass);
+    }
+
+    async callAiGenerate(aiConfig, prompt) {
+        if (!prompt) return null;
+        const payload = {
+            model: aiConfig.model,
+            prompt,
+            stream: false
+        };
+        try {
+            if (typeof Request !== 'undefined') {
+                const request = new Request(aiConfig.endpoint);
+                request.method = 'POST';
+                request.headers = { 'Content-Type': 'application/json' };
+                request.body = JSON.stringify(payload);
+                const responseJson = await request.loadJSON();
+                return responseJson && typeof responseJson.response === 'string'
+                    ? responseJson.response
+                    : null;
+            }
+            if (typeof fetch === 'function') {
+                const response = await fetch(aiConfig.endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) return null;
+                const responseJson = await response.json();
+                return responseJson && typeof responseJson.response === 'string'
+                    ? responseJson.response
+                    : null;
+            }
+        } catch (error) {
+            console.warn(`🤖 AI Web: AI request failed: ${error.message}`);
+            return null;
+        }
         return null;
+    }
+
+    extractFirstJsonObject(text) {
+        if (!text) return null;
+        const source = String(text).trim();
+        const firstBrace = source.indexOf('{');
+        if (firstBrace < 0) return null;
+        let depth = 0;
+        let inString = false;
+        let escaped = false;
+        for (let i = firstBrace; i < source.length; i++) {
+            const ch = source[i];
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (ch === '\\') {
+                    escaped = true;
+                } else if (ch === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (ch === '"') {
+                inString = true;
+                continue;
+            }
+            if (ch === '{') depth++;
+            if (ch === '}') {
+                depth--;
+                if (depth === 0) {
+                    return source.slice(firstBrace, i + 1);
+                }
+            }
+        }
+        return null;
+    }
+
+    parseAiEventResponse(rawText) {
+        if (!rawText) return null;
+        try {
+            const parsed = JSON.parse(rawText);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (parseError) {
+            const jsonObject = this.extractFirstJsonObject(rawText);
+            if (!jsonObject) return null;
+            try {
+                const parsed = JSON.parse(jsonObject);
+                return parsed && typeof parsed === 'object' ? parsed : null;
+            } catch (jsonError) {
+                return null;
+            }
+        }
     }
 
     normalizeAiEvent(aiEvent, parserConfig) {

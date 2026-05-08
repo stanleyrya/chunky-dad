@@ -161,13 +161,6 @@ class SharedCore {
         return normalized.length > 0 ? normalized : null;
     }
 
-    buildFetchOptions(parserConfig, parserName) {
-        return {
-            parserName: parserName || null,
-            parserConfig
-        };
-    }
-
     resolveAutomationContext(config) {
         const runtime = config && typeof config === 'object'
             ? (config.runtime || config.runContext || {})
@@ -333,7 +326,7 @@ class SharedCore {
 
                 const htmlData = hasInlineInput
                     ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
-                    : await httpAdapter.fetchData(url, this.buildFetchOptions(parserConfig, parserName));
+                    : await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
                 const urlParserName = this.detectParserFromUrl(url) || parserName;
@@ -344,7 +337,9 @@ class SharedCore {
                 }
                 
                 // Parse events (consolidated logging)
-                let parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
+                let parseResult = await Promise.resolve(
+                    urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
+                );
                 if (
                     urlParserName === 'ai-web' &&
                     ((!parseResult || !Array.isArray(parseResult.events) || parseResult.events.length === 0)) &&
@@ -352,7 +347,9 @@ class SharedCore {
                     parsers.generic !== urlParser
                 ) {
                     await displayAdapter.logWarn(`SYSTEM: AI parser returned no events for ${url}; falling back to generic parser`);
-                    parseResult = parsers.generic.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
+                    parseResult = await Promise.resolve(
+                        parsers.generic.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
+                    );
                 }
                 
                 const eventCount = parseResult?.events?.length || 0;
@@ -452,13 +449,15 @@ class SharedCore {
             processedUrls.add(url);
 
             try {
-                const htmlData = await httpAdapter.fetchData(url, this.buildFetchOptions(parserConfig, parserName));
+                const htmlData = await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
                 const urlParserName = this.detectParserFromUrl(url) || parserName || 'generic';
                 const urlParser = parsers[urlParserName];
                 
-                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
+                const parseResult = await Promise.resolve(
+                    urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
+                );
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery
                 const shouldProcessUrls = parseResult.additionalLinks && 
