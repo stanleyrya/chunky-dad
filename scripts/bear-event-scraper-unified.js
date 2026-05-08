@@ -83,6 +83,7 @@ class BearEventScraperOrchestrator {
             const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
             const ticketleapParserModule = importModule('parsers/ticketleap-parser');
             const scriptableUrlParserModule = importModule('parsers/scriptable-url-parser');
+            const aiWebParserModule = importModule('parsers/ai-web-parser');
             
             // Store modules
             this.modules = {
@@ -98,7 +99,8 @@ class BearEventScraperOrchestrator {
                     linktree: linktreeParserModule.LinktreeParser,
                     redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
                     ticketleap: ticketleapParserModule.TicketleapParser,
-                    'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser
+                    'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser,
+                    'ai-web': aiWebParserModule.AiWebParser
                 }
             };
             this.validateLoadedModules('Scriptable');
@@ -127,6 +129,7 @@ class BearEventScraperOrchestrator {
             const redeyeticketsParserModule = require('./parsers/redeyetickets-parser');
             const ticketleapParserModule = require('./parsers/ticketleap-parser');
             const scriptableUrlParserModule = require('./parsers/scriptable-url-parser');
+            const aiWebParserModule = require('./parsers/ai-web-parser');
             
             // Store modules
             this.modules = {
@@ -142,7 +145,8 @@ class BearEventScraperOrchestrator {
                     linktree: linktreeParserModule.LinktreeParser,
                     redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
                     ticketleap: ticketleapParserModule.TicketleapParser,
-                    'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser
+                    'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser,
+                    'ai-web': aiWebParserModule.AiWebParser
                 }
             };
             this.validateLoadedModules('Node.js');
@@ -158,7 +162,7 @@ class BearEventScraperOrchestrator {
             
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
-                'EventSchema', 'SharedCore', 'WebAdapter', 
+                'EventSchema', 'SharedCore', 'WebAdapter',
                 'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser', 'LinktreeParser', 'RedEyeTicketsParser', 'TicketleapParser'
             ];
             
@@ -182,6 +186,9 @@ class BearEventScraperOrchestrator {
 
             if (window.ScriptableUrlParser) {
                 parsers['scriptable-input'] = window.ScriptableUrlParser;
+            }
+            if (window.AiWebParser) {
+                parsers['ai-web'] = window.AiWebParser;
             }
 
             this.modules = {

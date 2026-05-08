@@ -340,6 +340,41 @@ const scraperConfig = {
         instagram: { value: "https://www.instagram.com/thedallaseagle/" },
         mastodon: { value: "https://mastodon.social/@dallaseagle" }
       }
+    },
+    {
+      name: "AI Web Parser (Sample)",
+      iconUrl: "https://www.google.com/s2/favicons?domain=example.com&sz=64",
+      enabled: false,
+      automation: {
+        automationEnabled: false
+      },
+      parser: "ai-web",
+      urls: ["https://example.com/events"],
+      alwaysBear: false,
+      urlDiscoveryDepth: 0,
+      maxAdditionalUrls: 0,
+      dryRun: true,
+      ai: {
+        enabled: true,
+        endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
+        model: "llama3",
+        maxHtmlChars: 12000
+      },
+      fieldPriorities: {
+        title: { priority: ["ai-web"], merge: "clobber" },
+        description: { priority: ["ai-web"], merge: "clobber" },
+        bar: { priority: ["ai-web"], merge: "clobber" },
+        address: { priority: ["ai-web"], merge: "clobber" },
+        startDate: { priority: ["ai-web"], merge: "clobber" },
+        endDate: { priority: ["ai-web"], merge: "clobber" },
+        city: { priority: ["ai-web"], merge: "clobber" },
+        url: { priority: ["ai-web"], merge: "clobber" },
+        ticketUrl: { priority: ["ai-web"], merge: "clobber" },
+        gmaps: { priority: ["ai-web"], merge: "clobber" },
+        image: { priority: ["ai-web"], merge: "clobber" },
+        cover: { priority: ["ai-web"], merge: "clobber" }
+      },
+      metadata: {}
     }
   ]
 };

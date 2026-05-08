@@ -72,6 +72,10 @@ class SharedCore {
                 parser: 'scriptable-input'
             },
             {
+                pattern: /^ai-web:\/\//i,
+                parser: 'ai-web'
+            },
+            {
                 pattern: /eventbrite\.com/i,
                 parser: 'eventbrite'
             },
@@ -149,6 +153,12 @@ class SharedCore {
         
         // Default to generic parser if no pattern matches
         return 'generic';
+    }
+
+    normalizeParserName(parserName) {
+        if (parserName === null || parserName === undefined) return null;
+        const normalized = String(parserName).trim().toLowerCase();
+        return normalized.length > 0 ? normalized : null;
     }
 
     resolveAutomationContext(config) {
@@ -272,9 +282,9 @@ class SharedCore {
     }
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers, globalProcessedUrls = new Set()) {
-        // Automatically detect parser from the first URL
-        let parserName = null;
-        if (parserConfig.urls && parserConfig.urls.length > 0) {
+        // Prefer explicit parser selection from config; otherwise auto-detect from URL.
+        let parserName = this.normalizeParserName(parserConfig && parserConfig.parser);
+        if (!parserName && parserConfig.urls && parserConfig.urls.length > 0) {
             parserName = this.detectParserFromUrl(parserConfig.urls[0]);
         }
         
@@ -327,8 +337,9 @@ class SharedCore {
                 }
                 
                 // Parse events (consolidated logging)
-                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
-                
+                let parseResult = await Promise.resolve(
+                    urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
+                );
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
@@ -432,7 +443,9 @@ class SharedCore {
                 const urlParserName = this.detectParserFromUrl(url) || parserName || 'generic';
                 const urlParser = parsers[urlParserName];
                 
-                const parseResult = urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null);
+                const parseResult = await Promise.resolve(
+                    urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
+                );
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery
                 const shouldProcessUrls = parseResult.additionalLinks && 
