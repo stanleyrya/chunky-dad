@@ -29,6 +29,7 @@ class AiWebParser {
     constructor(config = {}) {
         this.config = {
             source: 'ai-web',
+            maxAdditionalUrls: 15,
             ...config
         };
         this.cachedEventSchemaPromptFields = [];
@@ -38,6 +39,20 @@ class AiWebParser {
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
+            const html = htmlData && htmlData.html ? htmlData.html : '';
+            const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+
+            if (parserConfig.urlDiscoveryDepth > 0) {
+                const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
+                console.log(`🤖 AI Web: Discovery mode found ${additionalLinks.length} additional links`);
+                return {
+                    events: [],
+                    additionalLinks: additionalLinks,
+                    source: this.config.source,
+                    url: sourceUrl
+                };
+            }
+
             const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig);
             if (!aiEvent) {
                 return this.buildEmptyResult(htmlData);
@@ -59,6 +74,108 @@ class AiWebParser {
             console.warn(`🤖 AI Web: Failed to parse AI event: ${error}`);
             return this.buildEmptyResult(htmlData);
         }
+    }
+
+    extractAdditionalUrls(html, sourceUrl, parserConfig) {
+        const urls = new Set();
+
+        try {
+            const patterns = parserConfig.urlPatterns;
+            if (!Array.isArray(patterns) || patterns.length === 0) {
+                throw new Error('ai-web parser requires urlPatterns when urlDiscoveryDepth > 0');
+            }
+
+            for (const pattern of patterns) {
+                const regex = new RegExp(pattern.regex, 'gi');
+                let match;
+                let matchCount = 0;
+
+                while ((match = regex.exec(html)) !== null && matchCount < (pattern.maxMatches || 10)) {
+                    const url = this.normalizeUrl(match[1], sourceUrl);
+                    if (this.isValidEventUrl(url, sourceUrl)) {
+                        urls.add(url);
+                        matchCount++;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
+        }
+
+        const maxAdditionalUrls = Number.isFinite(Number(parserConfig.maxAdditionalUrls))
+            ? Number(parserConfig.maxAdditionalUrls)
+            : Number(this.config.maxAdditionalUrls);
+        if (Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0) {
+            return Array.from(urls).slice(0, maxAdditionalUrls);
+        }
+        return Array.from(urls);
+    }
+
+    isValidEventUrl(url, sourceUrl) {
+        if (!url || typeof url !== 'string') return false;
+
+        try {
+            const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
+
+            const urlMatch = url.match(urlPattern);
+            const sourceMatch = sourceUrl.match(urlPattern);
+
+            if (!urlMatch || !sourceMatch) return false;
+
+            const urlHostname = urlMatch[2].split(':')[0];
+            const sourceHostname = sourceMatch[2].split(':')[0];
+
+            if (!urlHostname.includes(sourceHostname) &&
+                !sourceHostname.includes(urlHostname)) return false;
+
+            const invalidPaths = [
+                '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
+                '#', 'javascript:', 'mailto:', 'tel:', 'sms:',
+                'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
+            ];
+
+            if (invalidPaths.some(invalid => url.toLowerCase().includes(invalid))) return false;
+
+            const eventKeywords = ['event', 'party', 'show', 'calendar', 'listing'];
+            const pathname = urlMatch[3] || '/';
+            const hasEventKeyword = eventKeywords.some(keyword =>
+                pathname.toLowerCase().includes(keyword)
+            );
+
+            return hasEventKeyword;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    normalizeUrl(url, baseUrl) {
+        if (!url) return null;
+
+        url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+
+        if (url.startsWith('/')) {
+            const urlPattern = /^(https?:)\/\/([^\/]+)/;
+            const match = baseUrl.match(urlPattern);
+            if (match) {
+                const [, protocol, host] = match;
+                return `${protocol}//${host}${url}`;
+            }
+        }
+
+        if (url.startsWith('//')) {
+            const urlPattern = /^(https?:)/;
+            const match = baseUrl.match(urlPattern);
+            if (match) {
+                const [, protocol] = match;
+                return `${protocol}${url}`;
+            }
+        }
+
+        if (url.startsWith('#')) {
+            return null;
+        }
+
+        return url;
     }
 
     buildEmptyResult(htmlData) {
