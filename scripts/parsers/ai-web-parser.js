@@ -81,8 +81,8 @@ class AiWebParser {
     }
 
     buildExtractionPrompt(htmlData, aiConfig) {
-        const snippetLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
-        const snippet = String(htmlData.html || '').slice(0, snippetLimit);
+        const effectiveSnippetLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
+        const snippet = String(htmlData.html || '').slice(0, effectiveSnippetLimit);
         const fields = this.getAiPromptFields(aiConfig);
         return `Extract exactly one event from this page and return JSON only.
 Preferred keys: ${fields.join(', ')}.
@@ -153,7 +153,7 @@ ${String(rawResponse || '')}`;
                     : null;
             }
         } catch (error) {
-            console.warn(`🤖 AI Web: AI request failed: ${error.message}`);
+            console.warn(`🤖 AI Web: AI request to ${aiConfig.endpoint} with model ${aiConfig.model} failed: ${error.message}`);
             return null;
         }
         return null;
