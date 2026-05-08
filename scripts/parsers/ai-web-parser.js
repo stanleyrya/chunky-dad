@@ -5,6 +5,26 @@
 // with deterministic selectors.
 // ============================================================================
 
+const ImportedEventSchema = (() => {
+    try {
+        if (typeof importModule === 'function') {
+            const schemaModule = importModule('event-schema');
+            if (schemaModule && schemaModule.EventSchema) {
+                return schemaModule.EventSchema;
+            }
+        }
+    } catch (_) {}
+    try {
+        if (typeof require === 'function') {
+            const schemaModule = require('../event-schema');
+            if (schemaModule && schemaModule.EventSchema) {
+                return schemaModule.EventSchema;
+            }
+        }
+    } catch (_) {}
+    return null;
+})();
+
 class AiWebParser {
     constructor(config = {}) {
         this.config = {
@@ -81,8 +101,8 @@ class AiWebParser {
 
     getEventSchema() {
         const localEventSchema = typeof EventSchema !== 'undefined' ? EventSchema : null;
-        const globalEventSchema = globalThis.EventSchema || null;
-        return localEventSchema || globalEventSchema || null;
+        const globalEventSchema = typeof globalThis !== 'undefined' ? (globalThis.EventSchema || null) : null;
+        return localEventSchema || globalEventSchema || ImportedEventSchema || null;
     }
 
     normalizePromptFieldName(field) {
