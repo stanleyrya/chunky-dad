@@ -6,6 +6,12 @@
 // ============================================================================
 
 class AiWebParser {
+    static DEFAULT_EXTRACTION_FIELDS = [
+        'title', 'shortName', 'description', 'city', 'bar', 'address', 'location',
+        'startDate', 'endDate', 'recurrenceRule', 'url', 'ticketUrl',
+        'instagram', 'facebook', 'gmaps', 'image', 'cover'
+    ];
+
     constructor(config = {}) {
         this.config = {
             source: 'ai-web',
@@ -56,7 +62,7 @@ class AiWebParser {
         if (!aiConfig.enabled || !htmlData.html) {
             return null;
         }
-        return this.extractEventWithTwoPassAi(htmlData, aiConfig);
+        return await this.extractEventWithTwoPassAi(htmlData, aiConfig);
     }
 
     getAiConfig(parserConfig = {}) {
@@ -77,7 +83,7 @@ class AiWebParser {
         if (aiConfig && Array.isArray(aiConfig.fields) && aiConfig.fields.length > 0) {
             return aiConfig.fields;
         }
-        return ['title', 'shortName', 'description', 'city', 'bar', 'address', 'location', 'startDate', 'endDate', 'recurrenceRule', 'url', 'ticketUrl', 'instagram', 'facebook', 'gmaps', 'image', 'cover'];
+        return AiWebParser.DEFAULT_EXTRACTION_FIELDS;
     }
 
     buildExtractionPrompt(htmlData, aiConfig) {
