@@ -99,26 +99,8 @@ class AiWebParser {
             numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 4096,
             numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
-            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
-            think: this.parseThinkSetting(aiConfig)
+            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
         };
-    }
-
-    parseThinkSetting(aiConfig = {}) {
-        if (!Object.prototype.hasOwnProperty.call(aiConfig, 'think')) {
-            return false;
-        }
-        const truthyValues = ['true', '1', 'yes', 'on'];
-        const falsyValues = ['false', '0', 'no', 'off', ''];
-        const raw = aiConfig.think;
-        if (typeof raw === 'boolean') return raw;
-        if (typeof raw === 'number') return raw !== 0;
-        if (typeof raw === 'string') {
-            const normalized = raw.trim().toLowerCase();
-            if (truthyValues.includes(normalized)) return true;
-            if (falsyValues.includes(normalized)) return false;
-        }
-        return Boolean(raw);
     }
 
     cleanHtml(html) {
@@ -318,7 +300,6 @@ ${String(rawResponse || '')}`;
             model: aiConfig.model,
             prompt,
             stream: false,
-            think: aiConfig.think,
             keep_alive: aiConfig.keepAlive,
             options: {
                 num_ctx: aiConfig.numCtx,
