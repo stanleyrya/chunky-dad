@@ -324,20 +324,18 @@ ${String(rawResponse || '')}`;
                 num_predict: aiConfig.numPredict
             }
         };
-        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, prompt: ${promptChars} chars`);
+        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
         const startTime = Date.now();
         try {
+            let responseText = '';
             let responseJson = null;
-            // Use Request (Scriptable) if available, otherwise fall back to fetch.
-            // Original code had explicit returns inside each branch which had the same
-            // effect — if Request is defined, fetch is never attempted.
             if (typeof Request !== 'undefined') {
                 const request = new Request(aiConfig.endpoint);
                 request.method = 'POST';
                 request.headers = { 'Content-Type': 'application/json' };
                 request.body = JSON.stringify(payload);
                 request.timeoutInterval = aiConfig.timeoutSeconds;
-                responseJson = await request.loadJSON();
+                responseText = await request.loadString();
             } else if (typeof fetch === 'function') {
                 const response = await fetch(aiConfig.endpoint, {
                     method: 'POST',
@@ -349,15 +347,22 @@ ${String(rawResponse || '')}`;
                     console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
                     return null;
                 }
-                responseJson = await response.json();
+                responseText = await response.text();
             }
+            responseJson = responseText ? JSON.parse(responseText) : null;
             const elapsed = Date.now() - startTime;
-            const aiOutput = this.extractAiOutput(responseJson);
-            if (aiOutput.text) {
-                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${aiOutput.responseChars} chars, thinking: ${aiOutput.thinkingChars} chars, done_reason: ${aiOutput.doneReason || 'n/a'}, outputSource: ${aiOutput.source || 'none'}, output: ${aiOutput.text.length} chars`);
-                return aiOutput.text;
+            if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
+                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
+                return responseJson.response;
             }
-            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms but no usable text output (response: ${aiOutput.responseChars} chars, thinking: ${aiOutput.thinkingChars} chars, done_reason: ${aiOutput.doneReason || 'n/a'})`);
+            const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
+            const thinkingChars = responseJson && typeof responseJson.thinking === 'string' ? responseJson.thinking.length : 0;
+            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (thinking: ${thinkingChars} chars, done_reason: ${doneReason})`);
+            if (responseText) {
+                console.warn(`🤖 AI Web: Raw AI payload${label}: ${responseText}`);
+            } else {
+                console.warn(`🤖 AI Web: Raw AI payload${label} was empty`);
+            }
             return null;
         } catch (error) {
             const elapsed = Date.now() - startTime;
@@ -365,59 +370,6 @@ ${String(rawResponse || '')}`;
             console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
             return null;
         }
-    }
-
-    extractAiOutput(responseJson) {
-        const payload = responseJson && typeof responseJson === 'object' ? responseJson : {};
-        const responseText = typeof payload.response === 'string'
-            ? payload.response
-            : '';
-        const messageContent = payload.message && typeof payload.message.content === 'string'
-            ? payload.message.content
-            : '';
-        const thinkingText = typeof payload.thinking === 'string'
-            ? payload.thinking
-            : '';
-        const doneReason = typeof payload.done_reason === 'string'
-            ? payload.done_reason
-            : '';
-
-        if (responseText.length > 0) {
-            return {
-                text: responseText,
-                source: 'response',
-                responseChars: responseText.length,
-                thinkingChars: thinkingText.length,
-                doneReason
-            };
-        }
-        if (messageContent.length > 0) {
-            console.warn(`🤖 AI Web: AI payload had empty response but message.content was present (${messageContent.length} chars)`);
-            return {
-                text: messageContent,
-                source: 'message.content',
-                responseChars: responseText.length,
-                thinkingChars: thinkingText.length,
-                doneReason
-            };
-        }
-        if (thinkingText.length > 0) {
-            console.warn(`🤖 AI Web: AI payload had empty response but thinking was present (${thinkingText.length} chars, done_reason: ${doneReason || 'n/a'})`);
-            return {
-                text: thinkingText,
-                source: 'thinking',
-                responseChars: responseText.length,
-                thinkingChars: thinkingText.length,
-                doneReason
-            };
-        }
-        return {
-            text: null,
-            source: null,
-            responseChars: responseText.length,
-            thinkingChars: thinkingText.length,
-            doneReason
-        };
     }
 
     extractFirstJsonObject(text) {
