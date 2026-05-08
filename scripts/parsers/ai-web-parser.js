@@ -6,12 +6,6 @@
 // ============================================================================
 
 class AiWebParser {
-    static DEFAULT_EXTRACTION_FIELDS = [
-        'title', 'shortName', 'description', 'city', 'bar', 'address', 'location',
-        'startDate', 'endDate', 'recurrenceRule', 'url', 'ticketUrl',
-        'instagram', 'facebook', 'gmaps', 'image', 'cover'
-    ];
-
     constructor(config = {}) {
         this.config = {
             source: 'ai-web',
@@ -81,48 +75,43 @@ class AiWebParser {
         };
     }
 
+    getEventSchema() {
+        const localEventSchema = typeof EventSchema !== 'undefined' ? EventSchema : null;
+        const globalEventSchema = globalThis.EventSchema || null;
+        return localEventSchema || globalEventSchema || null;
+    }
+
     normalizePromptFieldName(field) {
         const normalized = String(field || '').trim().toLowerCase();
-        const aliasMap = {
-            name: 'title',
-            short: 'shortname',
-            desc: 'description',
-            venue: 'bar',
-            addr: 'address',
-            coords: 'location',
-            start: 'startdate',
-            end: 'enddate',
-            rrule: 'recurrencerule',
-            web: 'url',
-            tickets: 'ticketurl',
-            insta: 'instagram',
-            fb: 'facebook',
-            img: 'image'
-        };
-        return aliasMap[normalized] || normalized;
+        const schema = this.getEventSchema();
+        if (!schema || typeof schema.canonicalizeEventKey !== 'function') {
+            return normalized;
+        }
+        const canonical = schema.canonicalizeEventKey(normalized);
+        return String(canonical || normalized).toLowerCase();
     }
 
     getEventSchemaPromptFields() {
         if (this.eventSchemaPromptFieldsLoaded) {
             return this.cachedEventSchemaPromptFields;
         }
-        const localEventSchema = typeof EventSchema !== 'undefined' ? EventSchema : null;
-        const globalEventSchema = globalThis.EventSchema || null;
-        const schema = localEventSchema || globalEventSchema;
+        const schema = this.getEventSchema();
         if (!schema || !Array.isArray(schema.AI_PROMPT_FIELDS)) {
             this.cachedEventSchemaPromptFields = [];
             this.cachedEventSchemaPromptFieldDescriptions = new Map();
             this.eventSchemaPromptFieldsLoaded = true;
+            console.warn('🤖 AI Web: EventSchema.AI_PROMPT_FIELDS unavailable');
             return this.cachedEventSchemaPromptFields;
         }
         this.cachedEventSchemaPromptFields = schema.AI_PROMPT_FIELDS
             .filter(field => field && typeof field.param === 'string' && typeof field.desc === 'string')
             .map(field => ({
-                name: this.normalizePromptFieldName(field.param),
+                name: String(field.param).trim(),
+                normalizedName: this.normalizePromptFieldName(field.param),
                 description: field.desc.trim()
             }));
         this.cachedEventSchemaPromptFieldDescriptions = new Map(
-            this.cachedEventSchemaPromptFields.map(field => [field.name, field.description])
+            this.cachedEventSchemaPromptFields.map(field => [field.normalizedName, field.description])
         );
         this.eventSchemaPromptFieldsLoaded = true;
         return this.cachedEventSchemaPromptFields;
@@ -136,11 +125,7 @@ class AiWebParser {
     }
 
     getDefaultExtractionFields() {
-        const schemaFields = this.getEventSchemaPromptFields().map(field => field.name);
-        if (schemaFields.length > 0) {
-            return schemaFields;
-        }
-        return AiWebParser.DEFAULT_EXTRACTION_FIELDS;
+        return this.getEventSchemaPromptFields().map(field => field.name);
     }
 
     getAiPromptFields(aiConfig, parserConfig = {}) {
@@ -167,26 +152,7 @@ class AiWebParser {
     getFieldContext(field, cityConfig) {
         const normalized = this.normalizePromptFieldName(field);
         const schemaDescription = this.getEventSchemaPromptFieldDescription(normalized);
-        const contextByField = {
-            title: 'Full event title',
-            shortname: 'Shorter reference title (omit if title is already short)',
-            description: 'Event description or tagline',
-            city: 'City key',
-            bar: 'Name of the venue or bar',
-            address: 'Street address',
-            location: 'Coordinates as "lat,lng" — only if explicitly in source, never estimate',
-            startdate: 'Start datetime in local time: YYYY-MM-DDTHH:MM',
-            enddate: 'End datetime in local time: YYYY-MM-DDTHH:MM',
-            recurrencerule: 'RRULE recurrence string only for recurring events',
-            url: 'Event or organizer website URL',
-            ticketurl: 'Ticket purchase URL',
-            instagram: 'Instagram handle or URL',
-            facebook: 'Facebook event or page URL',
-            gmaps: 'Google Maps link',
-            image: 'Direct URL to promo image or flyer',
-            cover: 'Cover charge info (e.g. Free, $15, Cover TBD)'
-        };
-        let description = schemaDescription || contextByField[normalized] || 'Event field';
+        let description = schemaDescription || 'Event field';
         if (normalized === 'city' && cityConfig && typeof cityConfig === 'object') {
             const cityKeys = this.getCityKeys(cityConfig);
             if (cityKeys.length > 0) {
