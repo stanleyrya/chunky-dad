@@ -61,6 +61,10 @@ class AiWebParser {
             return null;
         }
         const promptFields = this.getAiPromptFields(aiConfig, parserConfig);
+        if (promptFields.length === 0) {
+            console.warn('🤖 AI Web: EventSchema.AI_PROMPT_FIELDS unavailable - skipping extraction');
+            return null;
+        }
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
         return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig);
     }
@@ -100,7 +104,7 @@ class AiWebParser {
             this.cachedEventSchemaPromptFields = [];
             this.cachedEventSchemaPromptFieldDescriptions = new Map();
             this.eventSchemaPromptFieldsLoaded = true;
-            console.warn('🤖 AI Web: EventSchema.AI_PROMPT_FIELDS unavailable');
+            console.warn('🤖 AI Web: EventSchema.AI_PROMPT_FIELDS unavailable - extraction fields will be empty');
             return this.cachedEventSchemaPromptFields;
         }
         this.cachedEventSchemaPromptFields = schema.AI_PROMPT_FIELDS
