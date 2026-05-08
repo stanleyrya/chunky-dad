@@ -91,6 +91,8 @@ class AiWebParser {
 
     getAiConfig(parserConfig = {}) {
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        const hasThink = Object.prototype.hasOwnProperty.call(aiConfig, 'think');
+        const thinkDisabledValues = [false, 0, '0', 'false', 'FALSE', 'False'];
         return {
             enabled: aiConfig.enabled !== false,
             endpoint: String(aiConfig.endpoint || 'http://desktop.taila7523c.ts.net:11434/api/generate'),
@@ -99,7 +101,8 @@ class AiWebParser {
             numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 4096,
             numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
-            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
+            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
+            think: hasThink ? !thinkDisabledValues.includes(aiConfig.think) : false
         };
     }
 
@@ -299,6 +302,7 @@ ${String(rawResponse || '')}`;
             model: aiConfig.model,
             prompt,
             stream: false,
+            think: aiConfig.think,
             keep_alive: aiConfig.keepAlive,
             options: {
                 num_ctx: aiConfig.numCtx,
@@ -333,9 +337,15 @@ ${String(rawResponse || '')}`;
                 responseJson = await response.json();
             }
             const elapsed = Date.now() - startTime;
-            if (responseJson && typeof responseJson.response === 'string') {
-                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
-                return responseJson.response;
+            const aiOutput = this.extractAiOutput(responseJson);
+            const responseChars = aiOutput.responseChars;
+            const thinkingChars = aiOutput.thinkingChars;
+            const doneReason = aiOutput.doneReason || 'n/a';
+            const outputSource = aiOutput.source || 'none';
+            console.log(`🤖 AI Web: AI request${label} completed in ${elapsed}ms — response: ${responseChars} chars, thinking: ${thinkingChars} chars, done_reason: ${doneReason}, outputSource: ${outputSource}`);
+            if (aiOutput.text) {
+                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — parsed output: ${aiOutput.text.length} chars (${outputSource})`);
+                return aiOutput.text;
             }
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms but response field missing or invalid`);
             return null;
@@ -345,6 +355,58 @@ ${String(rawResponse || '')}`;
             console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
             return null;
         }
+    }
+
+    extractAiOutput(responseJson) {
+        const responseText = responseJson && typeof responseJson.response === 'string'
+            ? responseJson.response
+            : '';
+        const messageContent = responseJson && responseJson.message && typeof responseJson.message.content === 'string'
+            ? responseJson.message.content
+            : '';
+        const thinkingText = responseJson && typeof responseJson.thinking === 'string'
+            ? responseJson.thinking
+            : '';
+        const doneReason = responseJson && typeof responseJson.done_reason === 'string'
+            ? responseJson.done_reason
+            : '';
+
+        if (responseText.length > 0) {
+            return {
+                text: responseText,
+                source: 'response',
+                responseChars: responseText.length,
+                thinkingChars: thinkingText.length,
+                doneReason
+            };
+        }
+        if (messageContent.length > 0) {
+            console.warn(`🤖 AI Web: AI payload had empty response but message.content was present (${messageContent.length} chars)`);
+            return {
+                text: messageContent,
+                source: 'message.content',
+                responseChars: responseText.length,
+                thinkingChars: thinkingText.length,
+                doneReason
+            };
+        }
+        if (thinkingText.length > 0) {
+            console.warn(`🤖 AI Web: AI payload had empty response but thinking was present (${thinkingText.length} chars, done_reason: ${doneReason || 'n/a'})`);
+            return {
+                text: thinkingText,
+                source: 'thinking',
+                responseChars: responseText.length,
+                thinkingChars: thinkingText.length,
+                doneReason
+            };
+        }
+        return {
+            text: null,
+            source: null,
+            responseChars: responseText.length,
+            thinkingChars: thinkingText.length,
+            doneReason
+        };
     }
 
     extractFirstJsonObject(text) {
