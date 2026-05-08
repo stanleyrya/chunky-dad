@@ -18,6 +18,7 @@ class AiWebParser {
             ...config
         };
         this.cachedEventSchemaPromptFields = null;
+        this.cachedEventSchemaPromptFieldDescriptions = null;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -105,10 +106,11 @@ class AiWebParser {
             return this.cachedEventSchemaPromptFields;
         }
         const localEventSchema = typeof EventSchema !== 'undefined' ? EventSchema : null;
-        const globalEventSchema = typeof globalThis !== 'undefined' ? globalThis.EventSchema : null;
+        const globalEventSchema = globalThis.EventSchema || null;
         const schema = localEventSchema || globalEventSchema || null;
         if (!schema || !Array.isArray(schema.AI_PROMPT_FIELDS)) {
             this.cachedEventSchemaPromptFields = [];
+            this.cachedEventSchemaPromptFieldDescriptions = new Map();
             return this.cachedEventSchemaPromptFields;
         }
         this.cachedEventSchemaPromptFields = schema.AI_PROMPT_FIELDS
@@ -117,7 +119,17 @@ class AiWebParser {
                 name: this.normalizePromptFieldName(field.param),
                 description: field.desc.trim()
             }));
+        this.cachedEventSchemaPromptFieldDescriptions = new Map(
+            this.cachedEventSchemaPromptFields.map(field => [field.name, field.description])
+        );
         return this.cachedEventSchemaPromptFields;
+    }
+
+    getEventSchemaPromptFieldDescription(fieldName) {
+        if (!(this.cachedEventSchemaPromptFieldDescriptions instanceof Map)) {
+            this.getEventSchemaPromptFields();
+        }
+        return this.cachedEventSchemaPromptFieldDescriptions.get(fieldName) || null;
     }
 
     getDefaultExtractionFields() {
@@ -151,7 +163,7 @@ class AiWebParser {
 
     getFieldContext(field, cityConfig) {
         const normalized = this.normalizePromptFieldName(field);
-        const schemaField = this.getEventSchemaPromptFields().find(entry => entry.name === normalized);
+        const schemaDescription = this.getEventSchemaPromptFieldDescription(normalized);
         const contextByField = {
             title: 'Full event title',
             shortname: 'Shorter reference title (omit if title is already short)',
@@ -171,7 +183,7 @@ class AiWebParser {
             image: 'Direct URL to promo image or flyer',
             cover: 'Cover charge info (e.g. Free, $15, Cover TBD)'
         };
-        let description = (schemaField && schemaField.description) || contextByField[normalized] || 'Event field';
+        let description = schemaDescription || contextByField[normalized] || 'Event field';
         if (normalized === 'city' && cityConfig && typeof cityConfig === 'object') {
             const cityKeys = this.getCityKeys(cityConfig);
             if (cityKeys.length > 0) {
