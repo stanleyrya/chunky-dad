@@ -99,6 +99,29 @@ class AiWebParser {
         return aliasMap[normalized] || normalized;
     }
 
+    getEventSchemaPromptFields() {
+        const schema = (typeof EventSchema !== 'undefined' && EventSchema)
+            || (typeof globalThis !== 'undefined' && globalThis.EventSchema)
+            || null;
+        if (!schema || !Array.isArray(schema.AI_PROMPT_FIELDS)) {
+            return [];
+        }
+        return schema.AI_PROMPT_FIELDS
+            .filter(field => field && typeof field.param === 'string' && typeof field.desc === 'string')
+            .map(field => ({
+                name: this.normalizePromptFieldName(field.param),
+                description: String(field.desc || '').trim()
+            }));
+    }
+
+    getDefaultExtractionFields() {
+        const schemaFields = this.getEventSchemaPromptFields().map(field => field.name);
+        if (schemaFields.length > 0) {
+            return schemaFields;
+        }
+        return AiWebParser.DEFAULT_EXTRACTION_FIELDS;
+    }
+
     getAiPromptFields(aiConfig, parserConfig = {}) {
         const priorities = parserConfig && parserConfig.fieldPriorities && typeof parserConfig.fieldPriorities === 'object'
             ? parserConfig.fieldPriorities
@@ -117,11 +140,12 @@ class AiWebParser {
         if (selected.length > 0) {
             return selected;
         }
-        return AiWebParser.DEFAULT_EXTRACTION_FIELDS;
+        return this.getDefaultExtractionFields();
     }
 
     getFieldContext(field, cityConfig) {
         const normalized = this.normalizePromptFieldName(field);
+        const schemaField = this.getEventSchemaPromptFields().find(entry => entry.name === normalized);
         const contextByField = {
             title: 'Full event title',
             shortname: 'Shorter reference title (omit if title is already short)',
@@ -141,7 +165,7 @@ class AiWebParser {
             image: 'Direct URL to promo image or flyer',
             cover: 'Cover charge info (e.g. Free, $15, Cover TBD)'
         };
-        let description = contextByField[normalized] || 'Event field';
+        let description = (schemaField && schemaField.description) || contextByField[normalized] || 'Event field';
         if (normalized === 'city' && cityConfig && typeof cityConfig === 'object') {
             const cityKeys = this.getCityKeys(cityConfig);
             if (cityKeys.length > 0) {
