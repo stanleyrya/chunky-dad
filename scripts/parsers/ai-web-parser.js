@@ -249,7 +249,7 @@ ${String(rawResponse || '')}`;
 
     async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig) {
         const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig);
-        const firstPass = await this.callAiGenerate(aiConfig, extractPrompt);
+        const firstPass = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
         if (!firstPass) return null;
         const parsedFirstPass = this.parseAiEventResponse(firstPass);
         if (parsedFirstPass) {
@@ -258,7 +258,7 @@ ${String(rawResponse || '')}`;
         }
         console.warn('🤖 AI Web: Extraction pass was not parseable JSON; running repair pass');
         const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig, parserConfig);
-        const secondPass = await this.callAiGenerate(aiConfig, repairPrompt);
+        const secondPass = await this.callAiGenerate(aiConfig, repairPrompt, 'repair');
         if (!secondPass) return null;
         const parsedSecondPass = this.parseAiEventResponse(secondPass);
         if (parsedSecondPass) {
@@ -269,42 +269,53 @@ ${String(rawResponse || '')}`;
         return null;
     }
 
-    async callAiGenerate(aiConfig, prompt) {
+    async callAiGenerate(aiConfig, prompt, passLabel) {
         if (!prompt) return null;
+        const label = passLabel ? ` (${passLabel} pass)` : '';
+        const promptChars = prompt.length;
         const payload = {
             model: aiConfig.model,
             prompt,
             stream: false
         };
+        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, prompt: ${promptChars} chars`);
+        const startTime = Date.now();
         try {
+            let responseJson = null;
+            // Use Request (Scriptable) if available, otherwise fall back to fetch.
+            // Original code had explicit returns inside each branch which had the same
+            // effect — if Request is defined, fetch is never attempted.
             if (typeof Request !== 'undefined') {
                 const request = new Request(aiConfig.endpoint);
                 request.method = 'POST';
                 request.headers = { 'Content-Type': 'application/json' };
                 request.body = JSON.stringify(payload);
-                const responseJson = await request.loadJSON();
-                return responseJson && typeof responseJson.response === 'string'
-                    ? responseJson.response
-                    : null;
-            }
-            if (typeof fetch === 'function') {
+                responseJson = await request.loadJSON();
+            } else if (typeof fetch === 'function') {
                 const response = await fetch(aiConfig.endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (!response.ok) return null;
-                const responseJson = await response.json();
-                return responseJson && typeof responseJson.response === 'string'
-                    ? responseJson.response
-                    : null;
+                if (!response.ok) {
+                    console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
+                    return null;
+                }
+                responseJson = await response.json();
             }
+            const elapsed = Date.now() - startTime;
+            if (responseJson && typeof responseJson.response === 'string') {
+                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
+                return responseJson.response;
+            }
+            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms but response field missing or invalid`);
+            return null;
         } catch (error) {
+            const elapsed = Date.now() - startTime;
             const errorType = error && error.name ? error.name : 'Error';
-            console.warn(`🤖 AI Web: AI request to ${aiConfig.endpoint} with model ${aiConfig.model} failed (${errorType}): ${error.message}`);
+            console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
             return null;
         }
-        return null;
     }
 
     extractFirstJsonObject(text) {
