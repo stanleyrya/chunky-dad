@@ -109,11 +109,14 @@ class AiWebParser {
         }
         this.cachedEventSchemaPromptFields = schema.AI_PROMPT_FIELDS
             .filter(field => field && typeof field.param === 'string' && typeof field.desc === 'string')
-            .map(field => ({
-                promptFieldName: String(field.param).trim(),
-                normalizedName: this.normalizePromptFieldName(field.param),
-                description: field.desc.trim()
-            }));
+            .map(field => {
+                const promptFieldName = String(field.param).trim();
+                return {
+                    promptFieldName,
+                    normalizedName: this.normalizePromptFieldName(promptFieldName),
+                    description: field.desc.trim()
+                };
+            });
         this.cachedEventSchemaPromptFieldDescriptions = new Map(
             this.cachedEventSchemaPromptFields.map(field => [field.normalizedName, field.description])
         );
