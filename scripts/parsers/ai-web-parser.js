@@ -21,13 +21,14 @@ class AiWebParser {
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
-            const aiEvent = await this.getAiEvent(htmlData, parserConfig);
+            const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig);
             if (!aiEvent) {
                 return this.buildEmptyResult(htmlData);
             }
 
             const event = this.normalizeAiEvent(aiEvent, parserConfig);
             if (!event || !event.title || !event.startDate) {
+                console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
                 return this.buildEmptyResult(htmlData);
             }
 
@@ -52,7 +53,7 @@ class AiWebParser {
         };
     }
 
-    async getAiEvent(htmlData, parserConfig) {
+    async getAiEvent(htmlData, parserConfig, cityConfig) {
         if (!htmlData || typeof htmlData !== 'object') return null;
         if (htmlData.aiEvent && typeof htmlData.aiEvent === 'object') return htmlData.aiEvent;
         if (htmlData.aiExtraction && typeof htmlData.aiExtraction.event === 'object') {
@@ -62,7 +63,9 @@ class AiWebParser {
         if (!aiConfig.enabled || !htmlData.html) {
             return null;
         }
-        return await this.extractEventWithTwoPassAi(htmlData, aiConfig);
+        const promptFields = this.getAiPromptFields(aiConfig);
+        console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
+        return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig);
     }
 
     getAiConfig(parserConfig = {}) {
@@ -70,62 +73,158 @@ class AiWebParser {
         const configuredFields = Array.isArray(aiConfig.fields)
             ? aiConfig.fields.map(field => String(field || '').trim()).filter(Boolean)
             : [];
+        const ignoredFields = Array.isArray(aiConfig.ignoreFields)
+            ? aiConfig.ignoreFields.map(field => String(field || '').trim()).filter(Boolean)
+            : [];
         return {
             enabled: aiConfig.enabled !== false,
             endpoint: String(aiConfig.endpoint || 'http://127.0.0.1:11434/api/generate'),
             model: String(aiConfig.model || 'llama3'),
             maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000,
-            fields: configuredFields
+            fields: configuredFields,
+            ignoreFields: ignoredFields
         };
     }
 
-    getAiPromptFields(aiConfig) {
-        if (aiConfig && Array.isArray(aiConfig.fields) && aiConfig.fields.length > 0) {
-            return aiConfig.fields;
-        }
-        return AiWebParser.DEFAULT_EXTRACTION_FIELDS;
+    normalizePromptFieldName(field) {
+        const normalized = String(field || '').trim().toLowerCase();
+        const aliasMap = {
+            name: 'title',
+            short: 'shortname',
+            desc: 'description',
+            venue: 'bar',
+            addr: 'address',
+            coords: 'location',
+            start: 'startdate',
+            end: 'enddate',
+            rrule: 'recurrencerule',
+            web: 'url',
+            tickets: 'ticketurl',
+            insta: 'instagram',
+            fb: 'facebook',
+            img: 'image'
+        };
+        return aliasMap[normalized] || normalized;
     }
 
-    buildExtractionPrompt(htmlData, aiConfig) {
+    getAiPromptFields(aiConfig) {
+        const configuredFields = aiConfig && Array.isArray(aiConfig.fields) && aiConfig.fields.length > 0
+            ? aiConfig.fields
+            : AiWebParser.DEFAULT_EXTRACTION_FIELDS;
+        const ignoredFields = aiConfig && Array.isArray(aiConfig.ignoreFields)
+            ? aiConfig.ignoreFields
+            : [];
+        const ignoredSet = new Set(ignoredFields.map(field => this.normalizePromptFieldName(field)));
+        const kept = configuredFields.filter(field => {
+            const normalized = this.normalizePromptFieldName(field);
+            return !ignoredSet.has(normalized);
+        });
+        if (kept.length > 0) {
+            return kept;
+        }
+        return AiWebParser.DEFAULT_EXTRACTION_FIELDS.filter(field => {
+            const normalized = this.normalizePromptFieldName(field);
+            return !ignoredSet.has(normalized);
+        });
+    }
+
+    getFieldContext(field, cityConfig) {
+        const normalized = this.normalizePromptFieldName(field);
+        const contextByField = {
+            title: 'Full event title',
+            shortname: 'Shorter reference title (omit if title is already short)',
+            description: 'Event description or tagline',
+            city: 'City key',
+            bar: 'Name of the venue or bar',
+            address: 'Street address',
+            location: 'Coordinates as "lat,lng" — only if explicitly in source, never estimate',
+            startdate: 'Start datetime in local time: YYYY-MM-DDTHH:MM',
+            enddate: 'End datetime in local time: YYYY-MM-DDTHH:MM',
+            recurrencerule: 'RRULE recurrence string only for recurring events',
+            url: 'Event or organizer website URL',
+            ticketurl: 'Ticket purchase URL',
+            instagram: 'Instagram handle or URL',
+            facebook: 'Facebook event or page URL',
+            gmaps: 'Google Maps link',
+            image: 'Direct URL to promo image or flyer',
+            cover: 'Cover charge info (e.g. Free, $15, Cover TBD)'
+        };
+        let description = contextByField[normalized] || 'Event field';
+        if (normalized === 'city' && cityConfig && typeof cityConfig === 'object') {
+            const cityKeys = Object.keys(cityConfig);
+            if (cityKeys.length > 0) {
+                description += `. Must be one of: ${cityKeys.join(', ')}`;
+            }
+        }
+        return description;
+    }
+
+    buildFieldContextText(fields, cityConfig) {
+        return fields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
+    }
+
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig) {
         const htmlCharLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
         const snippet = String(htmlData.html || '').slice(0, htmlCharLimit);
         const fields = this.getAiPromptFields(aiConfig);
+        const fieldContext = this.buildFieldContextText(fields, cityConfig);
+        const ignoredFieldsText = Array.isArray(aiConfig.ignoreFields) && aiConfig.ignoreFields.length > 0
+            ? `\nIgnored fields: ${aiConfig.ignoreFields.join(', ')}.`
+            : '';
         return `Extract exactly one event from this page and return JSON only.
-Preferred keys: ${fields.join(', ')}.
+Preferred keys:
+${fieldContext}
 Rules:
 - Return a single JSON object only
 - Use ISO datetime for startDate/endDate when possible
 - Omit unknown fields
+- Omit ignored fields${ignoredFieldsText}
 
 URL: ${htmlData.url || ''}
 HTML:
 ${snippet}`;
     }
 
-    buildJsonRepairPrompt(rawResponse, aiConfig) {
+    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig) {
         const fields = this.getAiPromptFields(aiConfig);
+        const fieldContext = this.buildFieldContextText(fields, cityConfig);
+        const ignoredFieldsText = Array.isArray(aiConfig.ignoreFields) && aiConfig.ignoreFields.length > 0
+            ? `\nIgnored fields: ${aiConfig.ignoreFields.join(', ')}.`
+            : '';
         return `Convert this text into one strict JSON object for an event.
-Preferred keys: ${fields.join(', ')}.
+Preferred keys:
+${fieldContext}
 Rules:
 - JSON object only
 - No markdown
 - No commentary
 - Omit unknown fields
+- Omit ignored fields${ignoredFieldsText}
 
 TEXT:
 ${String(rawResponse || '')}`;
     }
 
-    async extractEventWithTwoPassAi(htmlData, aiConfig) {
-        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig);
+    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig) {
+        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig);
         const firstPass = await this.callAiGenerate(aiConfig, extractPrompt);
         if (!firstPass) return null;
         const parsedFirstPass = this.parseAiEventResponse(firstPass);
-        if (parsedFirstPass) return parsedFirstPass;
-        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig);
+        if (parsedFirstPass) {
+            console.log('🤖 AI Web: Extraction pass returned parseable JSON');
+            return parsedFirstPass;
+        }
+        console.warn('🤖 AI Web: Extraction pass was not parseable JSON; running repair pass');
+        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig);
         const secondPass = await this.callAiGenerate(aiConfig, repairPrompt);
         if (!secondPass) return null;
-        return this.parseAiEventResponse(secondPass);
+        const parsedSecondPass = this.parseAiEventResponse(secondPass);
+        if (parsedSecondPass) {
+            console.log('🤖 AI Web: Repair pass returned parseable JSON');
+            return parsedSecondPass;
+        }
+        console.warn('🤖 AI Web: Repair pass output was still not parseable JSON');
+        return null;
     }
 
     async callAiGenerate(aiConfig, prompt) {
