@@ -147,13 +147,17 @@ class AiWebParser {
                 return false;
             }
 
-            const invalidPaths = [
+            const invalidUrlTokens = [
                 '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
-                '#', 'javascript:', 'mailto:', 'tel:', 'sms:',
-                'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
+                '#', 'javascript:', 'mailto:', 'tel:', 'sms:'
             ];
+            if (invalidUrlTokens.some(invalid => url.toLowerCase().includes(invalid))) return false;
 
-            if (invalidPaths.some(invalid => url.toLowerCase().includes(invalid))) return false;
+            const invalidHostnames = ['facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'];
+            const isInvalidHostname = invalidHostnames.some(host =>
+                parsedUrl.hostname === host || parsedUrl.hostname.endsWith(`.${host}`)
+            );
+            if (isInvalidHostname) return false;
 
             const eventKeywords = Array.isArray(parserConfig.eventUrlKeywords) && parserConfig.eventUrlKeywords.length > 0
                 ? parserConfig.eventUrlKeywords
@@ -186,10 +190,6 @@ class AiWebParser {
             if (parsedBaseUrl) {
                 return `${parsedBaseUrl.protocol}${url}`;
             }
-        }
-
-        if (url.startsWith('#')) {
-            return null;
         }
 
         return url;
