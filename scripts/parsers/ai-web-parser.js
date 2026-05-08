@@ -91,8 +91,6 @@ class AiWebParser {
 
     getAiConfig(parserConfig = {}) {
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
-        const hasThink = Object.prototype.hasOwnProperty.call(aiConfig, 'think');
-        const thinkDisabledValues = [false, 0, '0', 'false', 'FALSE', 'False'];
         return {
             enabled: aiConfig.enabled !== false,
             endpoint: String(aiConfig.endpoint || 'http://desktop.taila7523c.ts.net:11434/api/generate'),
@@ -102,8 +100,23 @@ class AiWebParser {
             numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
-            think: hasThink ? !thinkDisabledValues.includes(aiConfig.think) : false
+            think: this.parseThinkSetting(aiConfig)
         };
+    }
+
+    parseThinkSetting(aiConfig = {}) {
+        if (!Object.prototype.hasOwnProperty.call(aiConfig, 'think')) {
+            return false;
+        }
+        const raw = aiConfig.think;
+        if (typeof raw === 'boolean') return raw;
+        if (typeof raw === 'number') return raw !== 0;
+        if (typeof raw === 'string') {
+            const normalized = raw.trim().toLowerCase();
+            if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') return true;
+            if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off' || normalized === '') return false;
+        }
+        return Boolean(raw);
     }
 
     cleanHtml(html) {
@@ -338,13 +351,9 @@ ${String(rawResponse || '')}`;
             }
             const elapsed = Date.now() - startTime;
             const aiOutput = this.extractAiOutput(responseJson);
-            const responseChars = aiOutput.responseChars;
-            const thinkingChars = aiOutput.thinkingChars;
-            const doneReason = aiOutput.doneReason || 'n/a';
-            const outputSource = aiOutput.source || 'none';
-            console.log(`🤖 AI Web: AI request${label} completed in ${elapsed}ms — response: ${responseChars} chars, thinking: ${thinkingChars} chars, done_reason: ${doneReason}, outputSource: ${outputSource}`);
+            console.log(`🤖 AI Web: AI request${label} completed in ${elapsed}ms — response: ${aiOutput.responseChars} chars, thinking: ${aiOutput.thinkingChars} chars, done_reason: ${aiOutput.doneReason || 'n/a'}, outputSource: ${aiOutput.source || 'none'}`);
             if (aiOutput.text) {
-                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — parsed output: ${aiOutput.text.length} chars (${outputSource})`);
+                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — parsed output: ${aiOutput.text.length} chars (${aiOutput.source || 'unknown'})`);
                 return aiOutput.text;
             }
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms but response field missing or invalid`);
@@ -358,17 +367,18 @@ ${String(rawResponse || '')}`;
     }
 
     extractAiOutput(responseJson) {
-        const responseText = responseJson && typeof responseJson.response === 'string'
-            ? responseJson.response
+        const payload = responseJson && typeof responseJson === 'object' ? responseJson : {};
+        const responseText = typeof payload.response === 'string'
+            ? payload.response
             : '';
-        const messageContent = responseJson && responseJson.message && typeof responseJson.message.content === 'string'
-            ? responseJson.message.content
+        const messageContent = payload.message && typeof payload.message.content === 'string'
+            ? payload.message.content
             : '';
-        const thinkingText = responseJson && typeof responseJson.thinking === 'string'
-            ? responseJson.thinking
+        const thinkingText = typeof payload.thinking === 'string'
+            ? payload.thinking
             : '';
-        const doneReason = responseJson && typeof responseJson.done_reason === 'string'
-            ? responseJson.done_reason
+        const doneReason = typeof payload.done_reason === 'string'
+            ? payload.done_reason
             : '';
 
         if (responseText.length > 0) {
