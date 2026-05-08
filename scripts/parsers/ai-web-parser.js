@@ -56,7 +56,7 @@ class AiWebParser {
         if (!aiConfig.enabled || !htmlData.html) {
             return null;
         }
-        return await this.extractEventWithTwoPassAi(htmlData, aiConfig);
+        return this.extractEventWithTwoPassAi(htmlData, aiConfig);
     }
 
     getAiConfig(parserConfig = {}) {
