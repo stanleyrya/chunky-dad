@@ -313,6 +313,7 @@ ${String(rawResponse || '')}`;
         if (!prompt) return null;
         const label = passLabel ? ` (${passLabel} pass)` : '';
         const promptChars = prompt.length;
+        const PAYLOAD_PREVIEW_MAX_CHARS = 1000;
         const payload = {
             model: aiConfig.model,
             prompt,
@@ -327,7 +328,6 @@ ${String(rawResponse || '')}`;
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
         const startTime = Date.now();
         try {
-            const payloadPreviewChars = 1000;
             let responseText = null;
             let responseJson = null;
             if (typeof Request !== 'undefined') {
@@ -357,7 +357,7 @@ ${String(rawResponse || '')}`;
                 try {
                     responseJson = JSON.parse(responseText);
                 } catch (parseError) {
-                    const preview = responseText.length > payloadPreviewChars ? `${responseText.slice(0, payloadPreviewChars)}…` : responseText;
+                    const preview = this.createPayloadPreview(responseText, PAYLOAD_PREVIEW_MAX_CHARS);
                     console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars): ${preview}`);
                     return null;
                 }
@@ -371,7 +371,7 @@ ${String(rawResponse || '')}`;
             const thinkingChars = responseJson && typeof responseJson.thinking === 'string' ? responseJson.thinking.length : 0;
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (thinking: ${thinkingChars} chars, done_reason: ${doneReason})`);
             if (responseText) {
-                const preview = responseText.length > payloadPreviewChars ? `${responseText.slice(0, payloadPreviewChars)}…` : responseText;
+                const preview = this.createPayloadPreview(responseText, PAYLOAD_PREVIEW_MAX_CHARS);
                 console.warn(`🤖 AI Web: Raw AI payload${label} (${responseText.length} chars): ${preview}`);
             } else {
                 console.warn(`🤖 AI Web: Raw AI payload${label} was empty`);
@@ -383,6 +383,12 @@ ${String(rawResponse || '')}`;
             console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
             return null;
         }
+    }
+
+    createPayloadPreview(text, maxChars) {
+        if (!text) return '';
+        if (text.length <= maxChars) return text;
+        return `${text.slice(0, maxChars)}…`;
     }
 
     extractFirstJsonObject(text) {
