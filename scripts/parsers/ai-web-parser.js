@@ -17,8 +17,9 @@ class AiWebParser {
             source: 'ai-web',
             ...config
         };
-        this.cachedEventSchemaPromptFields = null;
-        this.cachedEventSchemaPromptFieldDescriptions = null;
+        this.cachedEventSchemaPromptFields = [];
+        this.cachedEventSchemaPromptFieldDescriptions = new Map();
+        this.eventSchemaPromptFieldsLoaded = false;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -102,15 +103,16 @@ class AiWebParser {
     }
 
     getEventSchemaPromptFields() {
-        if (Array.isArray(this.cachedEventSchemaPromptFields)) {
+        if (this.eventSchemaPromptFieldsLoaded) {
             return this.cachedEventSchemaPromptFields;
         }
         const localEventSchema = typeof EventSchema !== 'undefined' ? EventSchema : null;
         const globalEventSchema = globalThis.EventSchema || null;
-        const schema = localEventSchema || globalEventSchema || null;
+        const schema = localEventSchema || globalEventSchema;
         if (!schema || !Array.isArray(schema.AI_PROMPT_FIELDS)) {
             this.cachedEventSchemaPromptFields = [];
             this.cachedEventSchemaPromptFieldDescriptions = new Map();
+            this.eventSchemaPromptFieldsLoaded = true;
             return this.cachedEventSchemaPromptFields;
         }
         this.cachedEventSchemaPromptFields = schema.AI_PROMPT_FIELDS
@@ -122,11 +124,12 @@ class AiWebParser {
         this.cachedEventSchemaPromptFieldDescriptions = new Map(
             this.cachedEventSchemaPromptFields.map(field => [field.name, field.description])
         );
+        this.eventSchemaPromptFieldsLoaded = true;
         return this.cachedEventSchemaPromptFields;
     }
 
     getEventSchemaPromptFieldDescription(fieldName) {
-        if (!(this.cachedEventSchemaPromptFieldDescriptions instanceof Map)) {
+        if (!this.eventSchemaPromptFieldsLoaded) {
             this.getEventSchemaPromptFields();
         }
         return this.cachedEventSchemaPromptFieldDescriptions.get(fieldName) || null;
