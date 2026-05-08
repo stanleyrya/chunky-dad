@@ -92,7 +92,7 @@ class AiWebParser {
 
                 while ((match = regex.exec(html)) !== null && matchCount < (pattern.maxMatches || 10)) {
                     const url = this.normalizeUrl(match[1], sourceUrl);
-                    if (this.isValidEventUrl(url, sourceUrl)) {
+                    if (this.isValidEventUrl(url, sourceUrl, parserConfig)) {
                         urls.add(url);
                         matchCount++;
                     }
@@ -102,8 +102,9 @@ class AiWebParser {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
         }
 
-        const maxAdditionalUrls = Number.isFinite(Number(parserConfig.maxAdditionalUrls))
-            ? Number(parserConfig.maxAdditionalUrls)
+        const parserMaxAdditionalUrls = Number(parserConfig.maxAdditionalUrls);
+        const maxAdditionalUrls = Number.isFinite(parserMaxAdditionalUrls)
+            ? parserMaxAdditionalUrls
             : Number(this.config.maxAdditionalUrls);
         if (Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0) {
             return Array.from(urls).slice(0, maxAdditionalUrls);
@@ -111,22 +112,40 @@ class AiWebParser {
         return Array.from(urls);
     }
 
-    isValidEventUrl(url, sourceUrl) {
+    parseHttpUrl(url) {
+        const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
+        const match = String(url || '').match(urlPattern);
+        if (!match) return null;
+        return {
+            protocol: match[1],
+            hostname: match[2].split(':')[0].toLowerCase(),
+            pathname: match[3] || '/',
+            query: match[4] || '',
+            hash: match[5] || ''
+        };
+    }
+
+    isSameDomainOrSubdomain(urlHostname, sourceHostname) {
+        if (!urlHostname || !sourceHostname) return false;
+        const normalizedUrlHost = String(urlHostname).replace(/^www\./i, '').toLowerCase();
+        const normalizedSourceHost = String(sourceHostname).replace(/^www\./i, '').toLowerCase();
+        return normalizedUrlHost === normalizedSourceHost ||
+            normalizedUrlHost.endsWith(`.${normalizedSourceHost}`) ||
+            normalizedSourceHost.endsWith(`.${normalizedUrlHost}`);
+    }
+
+    isValidEventUrl(url, sourceUrl, parserConfig = {}) {
         if (!url || typeof url !== 'string') return false;
 
         try {
-            const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
+            const parsedUrl = this.parseHttpUrl(url);
+            const parsedSourceUrl = this.parseHttpUrl(sourceUrl);
 
-            const urlMatch = url.match(urlPattern);
-            const sourceMatch = sourceUrl.match(urlPattern);
+            if (!parsedUrl || !parsedSourceUrl) return false;
 
-            if (!urlMatch || !sourceMatch) return false;
-
-            const urlHostname = urlMatch[2].split(':')[0];
-            const sourceHostname = sourceMatch[2].split(':')[0];
-
-            if (!urlHostname.includes(sourceHostname) &&
-                !sourceHostname.includes(urlHostname)) return false;
+            if (!this.isSameDomainOrSubdomain(parsedUrl.hostname, parsedSourceUrl.hostname)) {
+                return false;
+            }
 
             const invalidPaths = [
                 '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
@@ -136,10 +155,12 @@ class AiWebParser {
 
             if (invalidPaths.some(invalid => url.toLowerCase().includes(invalid))) return false;
 
-            const eventKeywords = ['event', 'party', 'show', 'calendar', 'listing'];
-            const pathname = urlMatch[3] || '/';
+            const eventKeywords = Array.isArray(parserConfig.eventUrlKeywords) && parserConfig.eventUrlKeywords.length > 0
+                ? parserConfig.eventUrlKeywords
+                : ['event', 'party', 'show', 'calendar', 'listing'];
+            const pathname = parsedUrl.pathname || '/';
             const hasEventKeyword = eventKeywords.some(keyword =>
-                pathname.toLowerCase().includes(keyword)
+                pathname.toLowerCase().includes(String(keyword || '').toLowerCase())
             );
 
             return hasEventKeyword;
@@ -151,23 +172,19 @@ class AiWebParser {
     normalizeUrl(url, baseUrl) {
         if (!url) return null;
 
-        url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        url = url.replace(/&amp;/g, '&');
 
         if (url.startsWith('/')) {
-            const urlPattern = /^(https?:)\/\/([^\/]+)/;
-            const match = baseUrl.match(urlPattern);
-            if (match) {
-                const [, protocol, host] = match;
-                return `${protocol}//${host}${url}`;
+            const parsedBaseUrl = this.parseHttpUrl(baseUrl);
+            if (parsedBaseUrl) {
+                return `${parsedBaseUrl.protocol}//${parsedBaseUrl.hostname}${url}`;
             }
         }
 
         if (url.startsWith('//')) {
-            const urlPattern = /^(https?:)/;
-            const match = baseUrl.match(urlPattern);
-            if (match) {
-                const [, protocol] = match;
-                return `${protocol}${url}`;
+            const parsedBaseUrl = this.parseHttpUrl(baseUrl);
+            if (parsedBaseUrl) {
+                return `${parsedBaseUrl.protocol}${url}`;
             }
         }
 
