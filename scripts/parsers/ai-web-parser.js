@@ -349,7 +349,15 @@ ${String(rawResponse || '')}`;
                 }
                 responseText = await response.text();
             }
-            responseJson = responseText ? JSON.parse(responseText) : null;
+            if (responseText) {
+                try {
+                    responseJson = JSON.parse(responseText);
+                } catch (parseError) {
+                    const preview = responseText.length > 500 ? `${responseText.slice(0, 500)}…` : responseText;
+                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars): ${preview}`);
+                    return null;
+                }
+            }
             const elapsed = Date.now() - startTime;
             if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
                 console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
@@ -359,7 +367,8 @@ ${String(rawResponse || '')}`;
             const thinkingChars = responseJson && typeof responseJson.thinking === 'string' ? responseJson.thinking.length : 0;
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (thinking: ${thinkingChars} chars, done_reason: ${doneReason})`);
             if (responseText) {
-                console.warn(`🤖 AI Web: Raw AI payload${label}: ${responseText}`);
+                const preview = responseText.length > 1000 ? `${responseText.slice(0, 1000)}…` : responseText;
+                console.warn(`🤖 AI Web: Raw AI payload${label} (${responseText.length} chars): ${preview}`);
             } else {
                 console.warn(`🤖 AI Web: Raw AI payload${label} was empty`);
             }
