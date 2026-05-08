@@ -745,7 +745,9 @@ class ScriptableAdapter {
     }
 
     buildAiExtractionPrompt(url, html, maxHtmlChars) {
-        const snippet = String(html || '').slice(0, Math.max(500, maxHtmlChars || 12000));
+        const configuredLimit = Number.isFinite(Number(maxHtmlChars)) ? Number(maxHtmlChars) : 12000;
+        const snippetLimit = Math.max(500, configuredLimit);
+        const snippet = String(html || '').slice(0, snippetLimit);
         return `Extract one event from this web page and return JSON only.
 
 Return keys when available: title, shortName, description, city, bar, address, location, startDate, endDate, recurrenceRule, url, ticketUrl, instagram, facebook, gmaps, image, cover.

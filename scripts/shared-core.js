@@ -156,7 +156,7 @@ class SharedCore {
     }
 
     normalizeParserName(parserName) {
-        if (!parserName && parserName !== 0) return null;
+        if (parserName === null || parserName === undefined) return null;
         const normalized = String(parserName).trim().toLowerCase();
         return normalized.length > 0 ? normalized : null;
     }
