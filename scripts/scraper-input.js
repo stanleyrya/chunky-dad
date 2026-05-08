@@ -357,8 +357,12 @@ const scraperConfig = {
       ai: {
         enabled: true,
         endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-        model: "llama3",
-        maxHtmlChars: 12000
+        model: "qwen3.5:4b",
+        maxHtmlChars: 12000,
+        numCtx: 4096,
+        numPredict: 512,
+        timeoutSeconds: 120,
+        keepAlive: "5m"
       },
       fieldPriorities: {
         title: { priority: ["ai-web"], merge: "clobber" },

@@ -94,9 +94,31 @@ class AiWebParser {
         return {
             enabled: aiConfig.enabled !== false,
             endpoint: String(aiConfig.endpoint || 'http://desktop.taila7523c.ts.net:11434/api/generate'),
-            model: String(aiConfig.model || 'llama3'),
-            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000
+            model: String(aiConfig.model || 'qwen3.5:4b'),
+            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000,
+            numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 4096,
+            numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
+            timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
+            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
         };
+    }
+
+    cleanHtml(html) {
+        if (!html) return '';
+        // Cap raw HTML before regex passes to avoid pathological inputs
+        let text = String(html).slice(0, 500000);
+        // Remove script and style blocks (and their content)
+        text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
+        text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
+        // Remove HTML comments
+        text = text.replace(/<!--[\s\S]*?-->/g, ' ');
+        // Remove nav/header/footer/aside/noscript blocks (high-noise, low-signal)
+        text = text.replace(/<(nav|header|footer|aside|noscript)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
+        // Remove remaining HTML tags
+        text = text.replace(/<[^>]+>/g, ' ');
+        // Collapse all whitespace into single spaces
+        text = text.replace(/\s+/g, ' ').trim();
+        return text;
     }
 
     getEventSchema() {
@@ -215,7 +237,7 @@ class AiWebParser {
 
     buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig) {
         const htmlCharLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
-        const snippet = String(htmlData.html || '').slice(0, htmlCharLimit);
+        const snippet = this.cleanHtml(htmlData.html || '').slice(0, htmlCharLimit);
         const fields = this.getAiPromptFields(aiConfig, parserConfig);
         const fieldContext = this.buildFieldContextText(fields, cityConfig);
         return `Extract exactly one event from this page and return JSON only.
@@ -276,7 +298,12 @@ ${String(rawResponse || '')}`;
         const payload = {
             model: aiConfig.model,
             prompt,
-            stream: false
+            stream: false,
+            keep_alive: aiConfig.keepAlive,
+            options: {
+                num_ctx: aiConfig.numCtx,
+                num_predict: aiConfig.numPredict
+            }
         };
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, prompt: ${promptChars} chars`);
         const startTime = Date.now();
@@ -290,12 +317,14 @@ ${String(rawResponse || '')}`;
                 request.method = 'POST';
                 request.headers = { 'Content-Type': 'application/json' };
                 request.body = JSON.stringify(payload);
+                request.timeoutInterval = aiConfig.timeoutSeconds;
                 responseJson = await request.loadJSON();
             } else if (typeof fetch === 'function') {
                 const response = await fetch(aiConfig.endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    signal: AbortSignal.timeout(aiConfig.timeoutSeconds * 1000)
                 });
                 if (!response.ok) {
                     console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
