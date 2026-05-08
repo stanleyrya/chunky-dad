@@ -108,13 +108,15 @@ class AiWebParser {
         if (!Object.prototype.hasOwnProperty.call(aiConfig, 'think')) {
             return false;
         }
+        const truthyValues = ['true', '1', 'yes', 'on'];
+        const falsyValues = ['false', '0', 'no', 'off', ''];
         const raw = aiConfig.think;
         if (typeof raw === 'boolean') return raw;
         if (typeof raw === 'number') return raw !== 0;
         if (typeof raw === 'string') {
             const normalized = raw.trim().toLowerCase();
-            if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') return true;
-            if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off' || normalized === '') return false;
+            if (truthyValues.includes(normalized)) return true;
+            if (falsyValues.includes(normalized)) return false;
         }
         return Boolean(raw);
     }
@@ -351,12 +353,11 @@ ${String(rawResponse || '')}`;
             }
             const elapsed = Date.now() - startTime;
             const aiOutput = this.extractAiOutput(responseJson);
-            console.log(`🤖 AI Web: AI request${label} completed in ${elapsed}ms — response: ${aiOutput.responseChars} chars, thinking: ${aiOutput.thinkingChars} chars, done_reason: ${aiOutput.doneReason || 'n/a'}, outputSource: ${aiOutput.source || 'none'}`);
             if (aiOutput.text) {
-                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — parsed output: ${aiOutput.text.length} chars (${aiOutput.source || 'unknown'})`);
+                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${aiOutput.responseChars} chars, thinking: ${aiOutput.thinkingChars} chars, done_reason: ${aiOutput.doneReason || 'n/a'}, outputSource: ${aiOutput.source || 'none'}, output: ${aiOutput.text.length} chars`);
                 return aiOutput.text;
             }
-            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms but response field missing or invalid`);
+            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms but no usable text output (response: ${aiOutput.responseChars} chars, thinking: ${aiOutput.thinkingChars} chars, done_reason: ${aiOutput.doneReason || 'n/a'})`);
             return null;
         } catch (error) {
             const elapsed = Date.now() - startTime;
