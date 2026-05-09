@@ -76,9 +76,8 @@ class AiWebParser {
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
         this.proxyImagePathPrefixes = ['/e/_next/image?', '/_next/image?'];
-        this.jsonLdSelectionBufferMultiplier = 2;
-        this.placeholderBaseUrl = 'https://placeholder.local';
-        this.ellipsisLength = 1;
+        this.jsonLdCandidatePoolMultiplier = 2;
+        this.placeholderBaseUrl = 'https://placeholder.example';
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -984,7 +983,7 @@ ${String(rawResponse || '')}`;
             if (this.containsEventType(text)) {
                 eventResults.push(text);
             }
-            if (results.length >= this.extractionLimits.maxJsonLdParts * this.jsonLdSelectionBufferMultiplier) break;
+            if (results.length >= this.extractionLimits.maxJsonLdParts * this.jsonLdCandidatePoolMultiplier) break;
         }
         const selected = eventResults.length > 0 ? eventResults : results;
         return selected.slice(0, this.extractionLimits.maxJsonLdParts);
@@ -1142,9 +1141,7 @@ ${String(rawResponse || '')}`;
     }
 
     simplifyUrlValue(value, options = {}) {
-        const stripQuery = options && Object.prototype.hasOwnProperty.call(options, 'stripQuery')
-            ? Boolean(options.stripQuery)
-            : true;
+        const stripQuery = options?.stripQuery ?? true;
         let text = this.decodeUrlEscapes(this.decodeBasicEntities(value || ''));
         text = this.normalizeWhitespace(text);
         if (!text) return '';
@@ -1186,7 +1183,7 @@ ${String(rawResponse || '')}`;
         if (!Number.isFinite(maxLength) || maxLength <= 0 || normalized.length <= maxLength) {
             return normalized;
         }
-        return `${normalized.slice(0, Math.max(0, maxLength - this.ellipsisLength)).trim()}…`;
+        return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
     }
 
     extractLinksFromPage(html, sourceUrl) {
