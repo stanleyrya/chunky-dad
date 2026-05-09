@@ -38,6 +38,7 @@ class AiWebParser {
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
+            timezoneConvergenceIterations: 4,
             millisPerDay: 24 * 60 * 60 * 1000,
             maxMetaParts: 30,
             maxJsonLdParts: 8,
@@ -62,6 +63,8 @@ class AiWebParser {
             .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
             .join('|');
         this.noiseLineRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
+        this.freeCoverRegex = /\b(?:free\s+(?:entry|admission)|no\s+cover)\b/i;
+        this.coverPriceRegex = /\b(?:cover|admission|tickets?\s*(?:from|at)?|entry)\b[^\n\r$]{0,40}\$?\s*(\d+(?:\.\d{1,2})?)(?:\s*(?:-|to)\s*\$?\s*(\d+(?:\.\d{1,2})?))?/i;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -710,9 +713,11 @@ ${String(rawResponse || '')}`;
         const minute = parseInt(match[5] || '0', 10);
         const second = parseInt(match[6] || '0', 10);
 
+        // Build an initial UTC guess from local components, then iteratively converge
+        // using the target timezone offset (handles DST boundaries reliably).
         const baseUtcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
         let utcMillis = baseUtcMillis;
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < this.extractionLimits.timezoneConvergenceIterations; i++) {
             const offsetMinutes = this.getTimezoneOffsetMinutes(new Date(utcMillis), timezone);
             if (!Number.isFinite(offsetMinutes)) {
                 return null;
@@ -842,11 +847,11 @@ ${String(rawResponse || '')}`;
         const text = this.decodeBasicEntities(this.stripTags(html || ''));
         if (!text) return '';
 
-        if (/\b(?:free\s+(?:entry|admission)|no\s+cover)\b/i.test(text)) {
+        if (this.freeCoverRegex.test(text)) {
             return 'Free';
         }
 
-        const labeledMatch = text.match(/\b(?:cover|admission|tickets?\s*(?:from|at)?|entry)\b[^\n\r$]{0,40}\$?\s*(\d+(?:\.\d{1,2})?)(?:\s*(?:-|to)\s*\$?\s*(\d+(?:\.\d{1,2})?))?/i);
+        const labeledMatch = text.match(this.coverPriceRegex);
         if (labeledMatch) {
             const low = this.parsePriceNumber(labeledMatch[1]);
             const high = this.parsePriceNumber(labeledMatch[2]);
@@ -864,6 +869,7 @@ ${String(rawResponse || '')}`;
         if (value === null || value === undefined || value === '') return null;
         const normalized = String(value).replace(/[^0-9.]/g, '').trim();
         if (!normalized) return null;
+        if ((normalized.match(/\./g) || []).length > 1) return null;
         const parsed = parseFloat(normalized);
         return Number.isFinite(parsed) ? parsed : null;
     }
