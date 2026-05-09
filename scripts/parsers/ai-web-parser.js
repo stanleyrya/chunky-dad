@@ -217,7 +217,7 @@ class AiWebParser {
         if (!aiConfig.enabled || !htmlData.html) {
             return null;
         }
-        const promptFields = this.getAiPromptFields(aiConfig, parserConfig);
+        const promptFields = this.getAiPromptFields(parserConfig);
         if (promptFields.length === 0) {
             console.warn('🤖 AI Web: EventSchema.AI_PROMPT_FIELDS unavailable - skipping extraction');
             return null;
@@ -235,8 +235,8 @@ class AiWebParser {
             maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 6000,
             numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 2048,
             numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
+            temperature: Number.isFinite(Number(aiConfig.temperature)) ? Number(aiConfig.temperature) : 0,
             think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
-            ignoreFields: Array.isArray(aiConfig.ignoreFields) ? aiConfig.ignoreFields : [],
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
         };
@@ -315,7 +315,7 @@ class AiWebParser {
         return this.getEventSchemaPromptFields().map(field => field.promptFieldName);
     }
 
-    getAiPromptFields(aiConfig, parserConfig = {}) {
+    getAiPromptFields(parserConfig = {}) {
         const priorities = parserConfig && parserConfig.fieldPriorities && typeof parserConfig.fieldPriorities === 'object'
             ? parserConfig.fieldPriorities
             : {};
@@ -330,29 +330,7 @@ class AiWebParser {
             if (Object.prototype.hasOwnProperty.call(metadata, field)) return false;
             return true;
         });
-        const rawFields = selected.length > 0 ? selected : this.getDefaultExtractionFields();
-        const excluded = this.getExcludedAiPromptFields(aiConfig, parserConfig);
-        const filtered = rawFields.filter(field => !excluded.has(this.normalizePromptFieldName(field)));
-        return Array.from(new Set(filtered));
-    }
-
-    getExcludedAiPromptFields(aiConfig = {}, parserConfig = {}) {
-        const defaultExcluded = [
-            'instagram',
-            'facebook',
-            'ticketUrl',
-            'image',
-            'gmaps'
-        ];
-        const parserIgnoreFields = parserConfig && parserConfig.ai && Array.isArray(parserConfig.ai.ignoreFields)
-            ? parserConfig.ai.ignoreFields
-            : [];
-        const aiIgnoreFields = Array.isArray(aiConfig.ignoreFields) ? aiConfig.ignoreFields : [];
-        const excluded = new Set();
-        for (const field of [...defaultExcluded, ...parserIgnoreFields, ...aiIgnoreFields]) {
-            excluded.add(this.normalizePromptFieldName(field));
-        }
-        return excluded;
+        return selected.length > 0 ? selected : this.getDefaultExtractionFields();
     }
 
     getFieldContext(field, cityConfig) {
@@ -397,7 +375,7 @@ class AiWebParser {
         const snippet = this.cleanHtml(htmlData.html || '').slice(0, htmlCharLimit);
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
-            : this.getAiPromptFields(aiConfig, parserConfig);
+            : this.getAiPromptFields(parserConfig);
         const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
         return `Extract exactly one event from this page and return ONLY valid JSON.
 Preferred keys:
@@ -416,7 +394,7 @@ ${snippet}`;
     buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields) {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
-            : this.getAiPromptFields(aiConfig, parserConfig);
+            : this.getAiPromptFields(parserConfig);
         const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
         return `Convert this text into one strict JSON object for an event.
 Preferred keys:
@@ -469,7 +447,7 @@ ${String(rawResponse || '')}`;
             options: {
                 num_ctx: aiConfig.numCtx,
                 num_predict: aiConfig.numPredict,
-                temperature: 0
+                temperature: aiConfig.temperature
             }
         };
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
