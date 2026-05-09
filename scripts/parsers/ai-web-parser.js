@@ -305,11 +305,11 @@ class AiWebParser {
         if (title) sections.push(`TITLE\n${title}`);
         if (payloadMode === 'jsonld') {
             if (jsonLdParts.length > 0) {
-                sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
+                sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
             }
         } else if (payloadMode === 'meta') {
             if (metaParts.length > 0) {
-                sections.push(`META\n${metaParts.join('\n')}`);
+                sections.push(`META_PRIMARY\n${metaParts.join('\n')}`);
             }
         } else if (payloadMode === 'best') {
             const jsonLdLooksFull = jsonLdParts.length > 0 && this.isSnippetSourceFull(
@@ -321,17 +321,17 @@ class AiWebParser {
                 this.extractionLimits.metaFullnessMinSignals
             );
             if (jsonLdLooksFull && metaLooksFull) {
-                sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-                sections.push(`META\n${metaParts.join('\n')}`);
+                sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
+                sections.push(`META_FALLBACK\n${metaParts.join('\n')}`);
             } else {
-                if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-                if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
+                if (jsonLdParts.length > 0) sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
+                if (metaParts.length > 0) sections.push(`META_FALLBACK\n${metaParts.join('\n')}`);
                 if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
                 if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
             }
         } else {
-            if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-            if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
+            if (jsonLdParts.length > 0) sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
+            if (metaParts.length > 0) sections.push(`META_FALLBACK\n${metaParts.join('\n')}`);
             if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
             if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
         }
@@ -508,6 +508,9 @@ Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list
 - Omit unknown fields
+- Treat JSON_LD_PRIMARY as the authoritative source when present
+- Use META_FALLBACK only to fill missing fields or confirm JSON_LD_PRIMARY
+- For cover, prefer explicit price/admission text and return concise plain text (e.g. "$20", "$20-$30.65", "Free")
 
 URL: ${htmlData.url || ''}
 HTML:
@@ -925,6 +928,14 @@ ${String(rawResponse || '')}`;
         const results = [];
         const seen = new Set();
         const regex = /<meta\b[^>]*>/gi;
+        const excludedMetaKeyRegexes = [
+            /^apple-mobile-web-app-title$/i,
+            /^keywords$/i,
+            /^og:(site_name|locale|determiner)$/i,
+            /^twitter:site$/i,
+            /^twitter:app:/i,
+            /^twitter:(label\d+|data\d+)$/i
+        ];
         let match;
         while ((match = regex.exec(html)) !== null) {
             const tag = match[0];
@@ -932,20 +943,19 @@ ${String(rawResponse || '')}`;
             const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || !contentMatch) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
+            if (excludedMetaKeyRegexes.some(regexPattern => regexPattern.test(key))) continue;
             const allowedMetaKeys = new Set([
                 'description',
                 'title',
-                'keywords',
                 'location',
                 'venue',
                 'address',
                 'geo.position',
-                'geo.placename',
-                'apple-mobile-web-app-title'
+                'geo.placename'
             ]);
             const hasAllowedPrefix = key.startsWith('og:') || key.startsWith('twitter:') || key.startsWith('event:');
             if (!hasAllowedPrefix && !allowedMetaKeys.has(key)) continue;
-            const value = this.normalizeWhitespace(contentMatch[1]);
+            const value = this.sanitizeMetaContent(key, contentMatch[1]);
             if (!value) continue;
             const line = `${key}: ${value}`;
             const dedupeKey = line.toLowerCase();
@@ -959,15 +969,20 @@ ${String(rawResponse || '')}`;
 
     extractJsonLdParts(html) {
         const results = [];
+        const eventResults = [];
         const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
         let match;
         while ((match = regex.exec(html)) !== null) {
-            const text = this.normalizeWhitespace(match[1] || '');
+            const text = this.normalizeJsonLdPayload(match[1] || '');
             if (!text) continue;
             results.push(text);
-            if (results.length >= this.extractionLimits.maxJsonLdParts) break;
+            if (this.containsEventType(text)) {
+                eventResults.push(text);
+            }
+            if (results.length >= this.extractionLimits.maxJsonLdParts * 2) break;
         }
-        return results;
+        const selected = eventResults.length > 0 ? eventResults : results;
+        return selected.slice(0, this.extractionLimits.maxJsonLdParts);
     }
 
     extractLinkParts(html) {
@@ -1033,6 +1048,141 @@ ${String(rawResponse || '')}`;
 
     normalizeWhitespace(text) {
         return String(text || '').replace(/\s+/g, ' ').trim();
+    }
+
+    sanitizeMetaContent(key, value) {
+        const normalizedKey = String(key || '').toLowerCase();
+        const normalizedValue = this.normalizeWhitespace(this.decodeBasicEntities(value || ''));
+        if (!normalizedValue) return '';
+        const likelyUrlKey = /(?:^|:)(?:url|image|video|audio)$/.test(normalizedKey) || /(url|image)/.test(normalizedKey);
+        if (likelyUrlKey || this.isLikelyUrlValue(normalizedValue)) {
+            return this.simplifyUrlValue(normalizedValue, { stripQuery: true });
+        }
+        return this.trimToMaxLength(normalizedValue, 320);
+    }
+
+    normalizeJsonLdPayload(rawText) {
+        const normalized = this.normalizeWhitespace(this.decodeBasicEntities(rawText || ''));
+        if (!normalized) return '';
+        let parsed = null;
+        try {
+            parsed = JSON.parse(normalized);
+        } catch (_) {
+            return this.trimToMaxLength(normalized, 2000);
+        }
+        const compact = this.compactJsonLdValue(parsed);
+        if (compact === null || compact === undefined || compact === '') return '';
+        try {
+            return JSON.stringify(compact);
+        } catch (_) {
+            return this.trimToMaxLength(normalized, 2000);
+        }
+    }
+
+    compactJsonLdValue(value, keyName = '') {
+        if (value === null || value === undefined) return null;
+        if (Array.isArray(value)) {
+            const compacted = value
+                .map(item => this.compactJsonLdValue(item, keyName))
+                .filter(item => item !== null && item !== undefined && item !== '');
+            return compacted.length > 0 ? compacted : null;
+        }
+        if (typeof value === 'object') {
+            const dropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
+            const result = {};
+            Object.keys(value).forEach(key => {
+                if (dropKeyPattern.test(key)) return;
+                const compacted = this.compactJsonLdValue(value[key], key);
+                if (compacted === null || compacted === undefined || compacted === '') return;
+                result[key] = compacted;
+            });
+            return Object.keys(result).length > 0 ? result : null;
+        }
+        if (typeof value === 'string') {
+            const normalized = this.normalizeWhitespace(this.decodeBasicEntities(value));
+            if (!normalized) return '';
+            const lowerKey = String(keyName || '').toLowerCase();
+            if (this.isLikelyUrlValue(normalized) || /(url|image|logo|sameas|@id)/.test(lowerKey)) {
+                return this.simplifyUrlValue(normalized, { stripQuery: true });
+            }
+            const maxLength = /(description)/.test(lowerKey) ? 500 : 240;
+            return this.trimToMaxLength(normalized, maxLength);
+        }
+        return value;
+    }
+
+    containsEventType(jsonText) {
+        try {
+            const parsed = JSON.parse(jsonText);
+            return this.hasEventTypeValue(parsed);
+        } catch (_) {
+            return /"@type"\s*:\s*(?:"[^"]*event[^"]*"|\[[^\]]*event[^\]]*\])/i.test(String(jsonText || ''));
+        }
+    }
+
+    hasEventTypeValue(node) {
+        if (!node) return false;
+        if (Array.isArray(node)) return node.some(item => this.hasEventTypeValue(item));
+        if (typeof node !== 'object') return false;
+        const typeValue = node['@type'];
+        if (typeof typeValue === 'string' && /event/i.test(typeValue)) return true;
+        if (Array.isArray(typeValue) && typeValue.some(type => typeof type === 'string' && /event/i.test(type))) {
+            return true;
+        }
+        return Object.keys(node).some(key => this.hasEventTypeValue(node[key]));
+    }
+
+    isLikelyUrlValue(value) {
+        const text = String(value || '').trim();
+        return /^https?:\/\//i.test(text) || /^\/[^\s]/.test(text);
+    }
+
+    simplifyUrlValue(value, options = {}) {
+        const stripQuery = options && Object.prototype.hasOwnProperty.call(options, 'stripQuery')
+            ? Boolean(options.stripQuery)
+            : true;
+        let text = this.decodeUrlEscapes(this.decodeBasicEntities(value || ''));
+        text = this.normalizeWhitespace(text);
+        if (!text) return '';
+
+        if (text.startsWith('/e/_next/image?')) {
+            try {
+                const proxyUrl = new URL(`https://placeholder.local${text}`);
+                const wrapped = proxyUrl.searchParams.get('url');
+                if (wrapped) {
+                    const decodedWrapped = this.decodeUrlEscapes(this.decodeBasicEntities(wrapped));
+                    return this.simplifyUrlValue(decodedWrapped, options);
+                }
+            } catch (_) {}
+        }
+
+        if (!/^https?:\/\//i.test(text) && !/^\/[^\s]/.test(text)) {
+            return this.trimToMaxLength(text, 320);
+        }
+
+        try {
+            const baseUrl = text.startsWith('/') ? 'https://placeholder.local' : undefined;
+            const parsed = new URL(text, baseUrl);
+            if (stripQuery) {
+                parsed.search = '';
+                parsed.hash = '';
+            }
+            const normalized = parsed.toString();
+            if (text.startsWith('/')) {
+                return normalized.replace(/^https:\/\/placeholder\.local/i, '');
+            }
+            return normalized;
+        } catch (_) {
+            return this.trimToMaxLength(text, 320);
+        }
+    }
+
+    trimToMaxLength(text, maxLength) {
+        const normalized = this.normalizeWhitespace(text || '');
+        if (!Number.isFinite(maxLength) || maxLength <= 0 || normalized.length <= maxLength) {
+            return normalized;
+        }
+        return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
     }
 
     extractLinksFromPage(html, sourceUrl) {
