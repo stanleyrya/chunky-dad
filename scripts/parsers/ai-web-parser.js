@@ -76,8 +76,9 @@ class AiWebParser {
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
         this.proxyImagePathPrefixes = ['/e/_next/image?', '/_next/image?'];
-        this.jsonLdCandidatePoolMultiplier = 2;
-        this.placeholderBaseUrl = 'https://placeholder.example';
+        this.jsonLdCandidatePoolSizeMultiplier = 2;
+        this.relativeUrlParsingBase = 'https://placeholder.example';
+        this.maxUrlUnwrapDepth = 3;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -983,7 +984,7 @@ ${String(rawResponse || '')}`;
             if (this.containsEventType(text)) {
                 eventResults.push(text);
             }
-            if (results.length >= this.extractionLimits.maxJsonLdParts * this.jsonLdCandidatePoolMultiplier) break;
+            if (results.length >= this.extractionLimits.maxJsonLdParts * this.jsonLdCandidatePoolSizeMultiplier) break;
         }
         const selected = eventResults.length > 0 ? eventResults : results;
         return selected.slice(0, this.extractionLimits.maxJsonLdParts);
@@ -1058,7 +1059,7 @@ ${String(rawResponse || '')}`;
         const normalizedKey = String(key || '').toLowerCase();
         const normalizedValue = this.normalizeWhitespace(this.decodeBasicEntities(value || ''));
         if (!normalizedValue) return '';
-        const likelyUrlKey = /(?:^|:)(?:url|image|video|audio)$/.test(normalizedKey) || /(url|image)/.test(normalizedKey);
+        const likelyUrlKey = /(url|image|video|audio)/.test(normalizedKey);
         if (likelyUrlKey || this.isLikelyUrlValue(normalizedValue)) {
             return this.simplifyUrlValue(normalizedValue, { stripQuery: true });
         }
@@ -1140,19 +1141,22 @@ ${String(rawResponse || '')}`;
         return /^https?:\/\//i.test(text) || /^\/[^\s]/.test(text);
     }
 
-    simplifyUrlValue(value, options = {}) {
+    simplifyUrlValue(value, options = {}, unwrapDepth = 0) {
         const stripQuery = options?.stripQuery ?? true;
         let text = this.decodeUrlEscapes(this.decodeBasicEntities(value || ''));
         text = this.normalizeWhitespace(text);
         if (!text) return '';
+        if (unwrapDepth > this.maxUrlUnwrapDepth) {
+            return this.trimToMaxLength(text, 320);
+        }
 
         if (this.proxyImagePathPrefixes.some(prefix => text.startsWith(prefix))) {
             try {
-                const proxyUrl = new URL(`${this.placeholderBaseUrl}${text}`);
+                const proxyUrl = new URL(`${this.relativeUrlParsingBase}${text}`);
                 const wrapped = proxyUrl.searchParams.get('url');
                 if (wrapped) {
                     const decodedWrapped = this.decodeUrlEscapes(this.decodeBasicEntities(wrapped));
-                    return this.simplifyUrlValue(decodedWrapped, options);
+                    return this.simplifyUrlValue(decodedWrapped, options, unwrapDepth + 1);
                 }
             } catch (_) {}
         }
@@ -1162,7 +1166,7 @@ ${String(rawResponse || '')}`;
         }
 
         try {
-            const baseUrl = text.startsWith('/') ? this.placeholderBaseUrl : undefined;
+            const baseUrl = text.startsWith('/') ? this.relativeUrlParsingBase : undefined;
             const parsed = new URL(text, baseUrl);
             if (stripQuery) {
                 parsed.search = '';
@@ -1170,7 +1174,7 @@ ${String(rawResponse || '')}`;
             }
             const normalized = parsed.toString();
             if (text.startsWith('/')) {
-                return normalized.replace(new RegExp(`^${this.placeholderBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'), '');
+                return normalized.replace(new RegExp(`^${this.relativeUrlParsingBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'), '');
             }
             return normalized;
         } catch (_) {
