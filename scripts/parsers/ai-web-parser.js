@@ -125,16 +125,21 @@ class AiWebParser {
             
             const urlHostname = urlMatch[2].split(':')[0];
             const sourceHostname = sourceMatch[2].split(':')[0];
-            
-            if (!urlHostname.includes(sourceHostname) && !sourceHostname.includes(urlHostname)) return false;
-            
-            const invalidPaths = [
+
+            const normalizedUrlHostname = urlHostname.toLowerCase().replace(/^www\./, '');
+            const normalizedSourceHostname = sourceHostname.toLowerCase().replace(/^www\./, '');
+            const isSameDomainOrSubdomain = normalizedUrlHostname === normalizedSourceHostname ||
+                normalizedUrlHostname.endsWith(`.${normalizedSourceHostname}`) ||
+                normalizedSourceHostname.endsWith(`.${normalizedUrlHostname}`);
+            if (!isSameDomainOrSubdomain) return false;
+
+            const invalidUrlPatterns = [
                 '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
                 '#', 'javascript:', 'mailto:', 'tel:', 'sms:',
                 'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
             ];
-            
-            if (invalidPaths.some(invalid => url.toLowerCase().includes(invalid))) return false;
+
+            if (invalidUrlPatterns.some(invalid => url.toLowerCase().includes(invalid))) return false;
             
             const eventKeywords = ['event', 'party', 'show', 'calendar', 'listing'];
             const pathname = urlMatch[3] || '/';
@@ -151,7 +156,7 @@ class AiWebParser {
     normalizeUrl(url, baseUrl) {
         if (!url) return null;
 
-        url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        url = url.replace(/&amp;/g, '&');
 
         if (url.startsWith('/')) {
             const urlPattern = /^(https?:)\/\/([^\/]+)/;
