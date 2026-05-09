@@ -116,10 +116,21 @@ class AiWebParser {
         if (!url || typeof url !== 'string') return false;
 
         try {
+            const parsedUrl = new URL(url);
+            if (!/^https?:$/.test(parsedUrl.protocol)) return false;
             const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
             
             const urlMatch = url.match(urlPattern);
             if (!urlMatch) return false;
+            const lowerPath = (parsedUrl.pathname || '').toLowerCase();
+            const staticAssetExtensions = [
+                '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tif', '.tiff',
+                '.css', '.js', '.mjs', '.map', '.json', '.xml', '.txt', '.pdf', '.zip', '.gz', '.tgz',
+                '.mp3', '.m4a', '.wav', '.mp4', '.webm', '.mov', '.avi', '.woff', '.woff2', '.ttf'
+            ];
+            if (staticAssetExtensions.some(ext => lowerPath.endsWith(ext))) return false;
+            const staticAssetPathHints = ['/touch_icons/', '/images/', '/image/', '/img/', '/assets/', '/static/'];
+            if (staticAssetPathHints.some(segment => lowerPath.includes(segment))) return false;
 
             const invalidUrlPatterns = [
                 '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
@@ -189,7 +200,7 @@ class AiWebParser {
             return null;
         }
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
-        return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig);
+        return await this.extractEventWithBatchedAi(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
     }
 
     getAiConfig(parserConfig = {}) {
@@ -198,9 +209,12 @@ class AiWebParser {
             enabled: aiConfig.enabled !== false,
             endpoint: String(aiConfig.endpoint || 'http://desktop.taila7523c.ts.net:11434/api/generate'),
             model: String(aiConfig.model || 'qwen3.5:4b'),
-            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 12000,
-            numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 4096,
-            numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
+            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 6000,
+            numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 2048,
+            numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 50,
+            temperature: Number.isFinite(Number(aiConfig.temperature)) ? Number(aiConfig.temperature) : 0,
+            think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
+            fieldBatchSize: Number.isFinite(Number(aiConfig.fieldBatchSize)) ? Math.max(1, Number(aiConfig.fieldBatchSize)) : 4,
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
         };
@@ -338,16 +352,16 @@ class AiWebParser {
         return fields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
-    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig) {
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields) {
         const htmlCharLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
         const snippet = this.cleanHtml(htmlData.html || '').slice(0, htmlCharLimit);
-        const fields = this.getAiPromptFields(aiConfig, parserConfig);
         const fieldContext = this.buildFieldContextText(fields, cityConfig);
-        return `Extract exactly one event from this page and return JSON only.
+        return `Extract exactly one event from this page and return ONLY valid JSON.
 Preferred keys:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
+- Return only keys from the Preferred keys list
 - Use ISO datetime for startDate/endDate when possible
 - Omit unknown fields
 
@@ -356,14 +370,14 @@ HTML:
 ${snippet}`;
     }
 
-    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig) {
-        const fields = this.getAiPromptFields(aiConfig, parserConfig);
+    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields) {
         const fieldContext = this.buildFieldContextText(fields, cityConfig);
         return `Convert this text into one strict JSON object for an event.
 Preferred keys:
 ${fieldContext}
 Rules:
 - JSON object only
+- Use only the preferred keys
 - No markdown
 - No commentary
 - Omit unknown fields
@@ -372,26 +386,93 @@ TEXT:
 ${String(rawResponse || '')}`;
     }
 
-    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig) {
-        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig);
+    getAiFieldBatches(fields, batchSize) {
+        const allFields = Array.isArray(fields) ? fields.filter(Boolean) : [];
+        if (allFields.length === 0) return [];
+        const normalizedRequired = new Set(['title', 'name', 'startdate', 'start']);
+        const required = [];
+        const optional = [];
+        for (const field of allFields) {
+            const normalized = String(field).toLowerCase().replace(/[\s_-]/g, '');
+            if (normalizedRequired.has(normalized)) {
+                required.push(field);
+            } else {
+                optional.push(field);
+            }
+        }
+        const ordered = [];
+        const seen = new Set();
+        for (const field of [...required, ...optional]) {
+            if (!seen.has(field)) {
+                seen.add(field);
+                ordered.push(field);
+            }
+        }
+        const safeBatchSize = Math.max(1, Number(batchSize) || 1);
+        const batches = [];
+        for (let i = 0; i < ordered.length; i += safeBatchSize) {
+            batches.push(ordered.slice(i, i + safeBatchSize));
+        }
+        return batches;
+    }
+
+    mergeAiPartialEvent(target, partial) {
+        if (!partial || typeof partial !== 'object') return target;
+        const merged = target && typeof target === 'object' ? { ...target } : {};
+        for (const [key, value] of Object.entries(partial)) {
+            if (value === null || value === undefined) continue;
+            const text = typeof value === 'string' ? value.trim() : value;
+            if (text === '') continue;
+            if (!Object.prototype.hasOwnProperty.call(merged, key) || merged[key] === null || merged[key] === undefined || String(merged[key]).trim() === '') {
+                merged[key] = value;
+            }
+        }
+        return merged;
+    }
+
+    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, batchIndex = 1, batchTotal = 1) {
+        const passSuffix = batchTotal > 1 ? ` batch ${batchIndex}/${batchTotal}` : '';
+        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields);
         const firstPass = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
         if (!firstPass) return null;
         const parsedFirstPass = this.parseAiEventResponse(firstPass);
         if (parsedFirstPass) {
-            console.log('🤖 AI Web: Extraction pass returned parseable JSON');
+            console.log(`🤖 AI Web: Extraction pass${passSuffix} returned parseable JSON`);
             return parsedFirstPass;
         }
-        console.warn('🤖 AI Web: Extraction pass was not parseable JSON; running repair pass');
-        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig, parserConfig);
+        console.warn(`🤖 AI Web: Extraction pass${passSuffix} was not parseable JSON; running repair pass`);
+        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig, parserConfig, fields);
         const secondPass = await this.callAiGenerate(aiConfig, repairPrompt, 'repair');
         if (!secondPass) return null;
         const parsedSecondPass = this.parseAiEventResponse(secondPass);
         if (parsedSecondPass) {
-            console.log('🤖 AI Web: Repair pass returned parseable JSON');
+            console.log(`🤖 AI Web: Repair pass${passSuffix} returned parseable JSON`);
             return parsedSecondPass;
         }
-        console.warn('🤖 AI Web: Repair pass output was still not parseable JSON');
+        console.warn(`🤖 AI Web: Repair pass${passSuffix} output was still not parseable JSON`);
         return null;
+    }
+
+    async extractEventWithBatchedAi(htmlData, aiConfig, cityConfig, parserConfig, promptFields) {
+        const fieldBatches = this.getAiFieldBatches(promptFields, aiConfig.fieldBatchSize);
+        if (fieldBatches.length === 0) return null;
+        let mergedAiEvent = {};
+        for (let batchIndex = 0; batchIndex < fieldBatches.length; batchIndex++) {
+            const batchFields = fieldBatches[batchIndex];
+            const partialEvent = await this.extractEventWithTwoPassAi(
+                htmlData,
+                aiConfig,
+                cityConfig,
+                parserConfig,
+                batchFields,
+                batchIndex + 1,
+                fieldBatches.length
+            );
+            if (partialEvent && typeof partialEvent === 'object') {
+                mergedAiEvent = this.mergeAiPartialEvent(mergedAiEvent, partialEvent);
+            }
+        }
+        return Object.keys(mergedAiEvent).length > 0 ? mergedAiEvent : null;
     }
 
     async callAiGenerate(aiConfig, prompt, passLabel) {
@@ -402,10 +483,12 @@ ${String(rawResponse || '')}`;
             model: aiConfig.model,
             prompt,
             stream: false,
+            think: aiConfig.think,
             keep_alive: aiConfig.keepAlive,
             options: {
                 num_ctx: aiConfig.numCtx,
-                num_predict: aiConfig.numPredict
+                num_predict: aiConfig.numPredict,
+                temperature: aiConfig.temperature
             }
         };
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
