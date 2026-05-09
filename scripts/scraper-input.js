@@ -351,8 +351,8 @@ const scraperConfig = {
       parser: "ai-web",
       urls: ["https://example.com/events"],
       alwaysBear: false,
-      urlDiscoveryDepth: 0,
-      maxAdditionalUrls: 0,
+      urlDiscoveryDepth: 1,
+      maxAdditionalUrls: 15,
       dryRun: true,
       ai: {
         enabled: true,
