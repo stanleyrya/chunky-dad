@@ -38,7 +38,7 @@ class AiWebParser {
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
-            // Small fixed-point loop count for timezone offset convergence around DST boundaries.
+            // Small iteration limit for timezone offset convergence around DST boundaries.
             timezoneConvergenceIterations: 4,
             millisPerDay: 24 * 60 * 60 * 1000,
             maxMetaParts: 30,
@@ -874,7 +874,7 @@ ${String(rawResponse || '')}`;
         if (value === null || value === undefined || value === '') return null;
         const normalized = String(value).replace(/[^0-9.]/g, '').trim();
         if (!normalized) return null;
-        // Reject malformed values like "12.34.56" so we do not silently parse partial prices.
+        // Reject malformed values after normalization (e.g. "12.34.56" or "12..34").
         if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
         const parsed = parseFloat(normalized);
         return Number.isFinite(parsed) ? parsed : null;
