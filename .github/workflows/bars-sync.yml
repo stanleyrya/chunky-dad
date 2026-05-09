@@ -31,6 +31,7 @@ jobs:
     - name: Sync bars data
       id: sync_bars
       run: |
+        # Keep workflow running so we can commit failure notes before failing at the end.
         set +e
         node tools/sync-bars.js
         SYNC_EXIT_CODE=$?

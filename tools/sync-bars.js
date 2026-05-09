@@ -65,7 +65,7 @@ async function syncBars() {
             extractionFailures.forEach((failure) => {
                 console.error(`   - [${failure.source}] ${failure.bar} (${failure.city}) at ${failure.failedAt}: ${failure.error}`);
             });
-            throw new Error('One or more external extractions failed. Check the *ExtractionFailure* fields in saved bars data, investigate source pages/logs, then trigger a new bars sync run.');
+            throw new Error('One or more external extractions failed. Check extraction failure fields in saved bars data, investigate source pages/logs, then trigger a new bars sync run.');
         }
         
         console.log('✅ Simplified sync completed successfully!');
