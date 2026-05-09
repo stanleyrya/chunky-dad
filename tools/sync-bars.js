@@ -65,7 +65,7 @@ async function syncBars() {
             extractionFailures.forEach((failure) => {
                 console.error(`   - [${failure.source}] ${failure.bar} (${failure.city}) at ${failure.failedAt}: ${failure.error}`);
             });
-            throw new Error('One or more external extractions failed. Data was saved with failure notes; investigate and rerun.');
+            throw new Error('One or more external extractions failed. Check the *ExtractionFailure* fields in saved bars data, investigate source pages/logs, then trigger a new bars sync run.');
         }
         
         console.log('✅ Simplified sync completed successfully!');
@@ -318,7 +318,25 @@ function cleanBarObject(bar) {
     const cleaned = {};
     
     // Keep only fields that have values
-    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities', 'faviconBg', 'faviconFg', 'wikipediaExtractionFailureAt', 'wikipediaExtractionFailureMessage', 'gayCitiesExtractionFailureAt', 'gayCitiesExtractionFailureMessage'];
+    const fieldsToKeep = [
+        'name',
+        'city',
+        'address',
+        'coordinates',
+        'website',
+        'instagram',
+        'facebook',
+        'googleMaps',
+        'image',
+        'wikipedia',
+        'gayCities',
+        'faviconBg',
+        'faviconFg',
+        'wikipediaExtractionFailureAt',
+        'wikipediaExtractionFailureMessage',
+        'gayCitiesExtractionFailureAt',
+        'gayCitiesExtractionFailureMessage'
+    ];
     
     fieldsToKeep.forEach(field => {
         if (bar[field] && bar[field].toString().trim() !== '') {
