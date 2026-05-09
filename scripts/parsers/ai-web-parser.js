@@ -58,6 +58,10 @@ class AiWebParser {
                 'buy tickets'
             ]
         };
+        const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
+            .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
+            .join('|');
+        this.noiseLineRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -771,14 +775,10 @@ ${String(rawResponse || '')}`;
 
         const seen = new Set();
         const results = [];
-        const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
-            .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
-            .join('|');
-        const noiseRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
         for (const line of lines) {
             const lower = line.toLowerCase();
             if (line.length < 3) continue;
-            if (noiseRegex.test(line)) continue;
+            if (this.noiseLineRegex.test(line)) continue;
             if (seen.has(lower)) continue;
             seen.add(lower);
             results.push(line);
@@ -833,7 +833,7 @@ ${String(rawResponse || '')}`;
             const path = String(parsedUrl.pathname || '').toLowerCase();
             const isInstagram = host === 'instagram.com' || host.endsWith('.instagram.com');
             const isFacebook = host === 'facebook.com' || host.endsWith('.facebook.com');
-            const isGoogleMaps = host === 'maps.app.goo.gl' || (
+            const isGoogleMaps = host === 'maps.app.goo.gl' || host.endsWith('.maps.app.goo.gl') || (
                 (host === 'google.com' || host.endsWith('.google.com')) &&
                 (path.startsWith('/maps') || path.startsWith('/search'))
             );
