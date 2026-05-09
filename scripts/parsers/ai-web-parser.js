@@ -394,7 +394,6 @@ ${fieldContext}
 Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list
-- Use ISO datetime for startDate/endDate when possible
 - Omit unknown fields
 
 URL: ${htmlData.url || ''}
