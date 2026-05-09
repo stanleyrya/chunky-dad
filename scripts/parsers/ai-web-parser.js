@@ -46,6 +46,7 @@ class AiWebParser {
             maxLinkParts: 40,
             maxBodyParts: 300,
             safeModeContentFallbackParts: 20,
+            // META must beat JSON-LD by this many scored signals; close scores prefer JSON-LD.
             metaWinsByThreshold: 1,
             noisyLinePrefixes: [
                 'share',
