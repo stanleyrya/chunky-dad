@@ -67,7 +67,7 @@ class AiWebParser {
         // Matches phrases like "Free entry", "Free admission", or "No cover".
         this.freeCoverRegex = /\b(?:free\s+(?:entry|admission)|no\s+cover)\b/i;
         // Matches labeled price text such as "Cover $10" or "Tickets from $15 - $25".
-        this.coverPriceRegex = /\b(?:cover|admission|tickets?\s*(?:from|at)?|entry)\b[^\n\r$]{0,40}\$?\s*(\d+(?:\.\d{1,2})?)(?:\s*(?:-|to)\s*\$?\s*(\d+(?:\.\d{1,2})?))?/i;
+        this.coverPriceRegex = /\b(?:cover|admission|tickets?\s*(?:from|at)?|entry)\b(?:\s*(?::|-|from|at)\s*)?\$?\s*(\d+(?:\.\d{1,2})?)(?:\s*(?:-|to)\s*\$?\s*(\d+(?:\.\d{1,2})?))?/i;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -740,7 +740,7 @@ ${String(rawResponse || '')}`;
     parseDateValue(value, timezoneHint = null) {
         if (value === null || value === undefined || value === '') return null;
         if (value instanceof Date) {
-            return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+            return Number.isNaN(value.getTime()) ? null : value;
         }
         if (typeof value === 'number') {
             const numericDate = new Date(value);
@@ -875,7 +875,7 @@ ${String(rawResponse || '')}`;
         const normalized = String(value).replace(/[^0-9.]/g, '').trim();
         if (!normalized) return null;
         // Reject malformed values like "12.34.56" so we do not silently parse partial prices.
-        if ((normalized.match(/\./g) || []).length > 1) return null;
+        if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
         const parsed = parseFloat(normalized);
         return Number.isFinite(parsed) ? parsed : null;
     }
