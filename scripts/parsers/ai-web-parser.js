@@ -127,6 +127,14 @@ class AiWebParser {
                     }
                 }
             }
+
+            const rawUrlCandidates = this.extractUrlCandidatesFromRawHtml(html);
+            for (const candidate of rawUrlCandidates) {
+                const url = this.normalizeUrl(candidate, sourceUrl);
+                if (this.isValidEventUrl(url, sourceUrl)) {
+                    urls.add(url);
+                }
+            }
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
         }
@@ -173,7 +181,8 @@ class AiWebParser {
     normalizeUrl(url, baseUrl) {
         if (!url) return null;
 
-        url = url.replace(/&amp;/g, '&');
+        url = this.decodeUrlEscapes(url).replace(/&amp;/g, '&');
+        url = url.replace(/[),.;]+$/, '');
 
         if (url.startsWith('/')) {
             const urlPattern = /^(https?:)\/\/([^\/]+)/;
@@ -198,6 +207,35 @@ class AiWebParser {
         }
 
         return url;
+    }
+
+    decodeUrlEscapes(url) {
+        return String(url || '')
+            .replace(/\\u002f/gi, '/')
+            .replace(/\\u0026/gi, '&')
+            .replace(/\\u003a/gi, ':')
+            .replace(/\\\//g, '/')
+            .replace(/^['"]+|['"]+$/g, '')
+            .trim();
+    }
+
+    extractUrlCandidatesFromRawHtml(html) {
+        if (!html) return [];
+        const candidates = new Set();
+        const patterns = [
+            /https?:\/\/[^\s"'<>\\]+/gi,
+            /https?:\\\/\\\/[^\s"'<>]+/gi,
+            /\/e\/[a-z0-9-]+-tickets-\d+/gi
+        ];
+
+        for (const pattern of patterns) {
+            let match;
+            while ((match = pattern.exec(html)) !== null) {
+                if (match[0]) candidates.add(match[0]);
+            }
+        }
+
+        return Array.from(candidates);
     }
 
     buildEmptyResult(htmlData) {
