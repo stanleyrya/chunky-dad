@@ -349,6 +349,12 @@ function cleanBarObject(bar) {
 
 // Check if a bar needs Wikipedia scraping based on missing data or URL changes
 function shouldScrapeWikipediaBar(bar, localBar) {
+    const priorFailureAt = bar.wikipediaExtractionFailureAt || localBar?.wikipediaExtractionFailureAt;
+    if (priorFailureAt) {
+        console.log(`🚫 Skipping Wikipedia scraping for ${bar.name} - previous extraction failed at ${priorFailureAt}; requires manual investigation`);
+        return false;
+    }
+
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
@@ -371,6 +377,12 @@ function shouldScrapeWikipediaBar(bar, localBar) {
 
 // Check if a bar needs GayCities scraping based on missing data or URL changes
 function shouldScrapeGayCitiesBar(bar, localBar) {
+    const priorFailureAt = bar.gayCitiesExtractionFailureAt || localBar?.gayCitiesExtractionFailureAt;
+    if (priorFailureAt) {
+        console.log(`🚫 Skipping GayCities scraping for ${bar.name} - previous extraction failed at ${priorFailureAt}; requires manual investigation`);
+        return false;
+    }
+
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
