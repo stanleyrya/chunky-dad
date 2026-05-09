@@ -66,6 +66,16 @@ class AiWebParser {
             .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
             .join('|');
         this.noiseLineRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
+        this.excludedMetaKeyRegexes = [
+            /^apple-mobile-web-app-title$/i,
+            /^keywords$/i,
+            /^og:(site_name|locale|determiner)$/i,
+            /^twitter:site$/i,
+            /^twitter:app:/i,
+            /^twitter:(label\d+|data\d+)$/i
+        ];
+        this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
+        this.proxyImagePathPrefixes = ['/e/_next/image?', '/_next/image?'];
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -928,14 +938,6 @@ ${String(rawResponse || '')}`;
         const results = [];
         const seen = new Set();
         const regex = /<meta\b[^>]*>/gi;
-        const excludedMetaKeyRegexes = [
-            /^apple-mobile-web-app-title$/i,
-            /^keywords$/i,
-            /^og:(site_name|locale|determiner)$/i,
-            /^twitter:site$/i,
-            /^twitter:app:/i,
-            /^twitter:(label\d+|data\d+)$/i
-        ];
         let match;
         while ((match = regex.exec(html)) !== null) {
             const tag = match[0];
@@ -943,7 +945,7 @@ ${String(rawResponse || '')}`;
             const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || !contentMatch) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
-            if (excludedMetaKeyRegexes.some(regexPattern => regexPattern.test(key))) continue;
+            if (this.excludedMetaKeyRegexes.some(regexPattern => regexPattern.test(key))) continue;
             const allowedMetaKeys = new Set([
                 'description',
                 'title',
@@ -1088,10 +1090,9 @@ ${String(rawResponse || '')}`;
             return compacted.length > 0 ? compacted : null;
         }
         if (typeof value === 'object') {
-            const dropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
             const result = {};
             Object.keys(value).forEach(key => {
-                if (dropKeyPattern.test(key)) return;
+                if (this.jsonLdDropKeyPattern.test(key)) return;
                 const compacted = this.compactJsonLdValue(value[key], key);
                 if (compacted === null || compacted === undefined || compacted === '') return;
                 result[key] = compacted;
@@ -1145,7 +1146,7 @@ ${String(rawResponse || '')}`;
         text = this.normalizeWhitespace(text);
         if (!text) return '';
 
-        if (text.startsWith('/e/_next/image?')) {
+        if (this.proxyImagePathPrefixes.some(prefix => text.startsWith(prefix))) {
             try {
                 const proxyUrl = new URL(`https://placeholder.local${text}`);
                 const wrapped = proxyUrl.searchParams.get('url');
