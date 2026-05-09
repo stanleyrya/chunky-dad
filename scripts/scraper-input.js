@@ -360,10 +360,10 @@ const scraperConfig = {
         model: "qwen3.5:4b",
         maxHtmlChars: 6000,
         numCtx: 2048,
-        numPredict: 50,
+        numPredict: 512,
         temperature: 0,
         think: false,
-        fieldBatchSize: 4,
+        ignoreFields: ["instagram", "facebook", "ticketUrl", "gmaps", "image"],
         timeoutSeconds: 120,
         keepAlive: "5m"
       },
@@ -376,9 +376,7 @@ const scraperConfig = {
         endDate: { priority: ["ai-web"], merge: "clobber" },
         city: { priority: ["ai-web"], merge: "clobber" },
         url: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" },
         gmaps: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
         cover: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {}

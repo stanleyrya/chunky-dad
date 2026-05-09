@@ -58,7 +58,7 @@ class AiWebParser {
                 return this.buildEmptyResult(htmlData);
             }
 
-            const event = this.normalizeAiEvent(aiEvent, parserConfig);
+            const event = this.normalizeAiEvent(aiEvent, parserConfig, htmlData);
             if (!event || !event.title || !event.startDate) {
                 console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
                 return this.buildEmptyResult(htmlData);
@@ -196,7 +196,7 @@ class AiWebParser {
             return null;
         }
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
-        return await this.extractEventWithBatchedAi(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
+        return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
     }
 
     getAiConfig(parserConfig = {}) {
@@ -207,10 +207,10 @@ class AiWebParser {
             model: String(aiConfig.model || 'qwen3.5:4b'),
             maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 6000,
             numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 2048,
-            numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 50,
-            temperature: Number.isFinite(Number(aiConfig.temperature)) ? Number(aiConfig.temperature) : 0,
+            numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
+            temperature: 0,
             think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
-            fieldBatchSize: Number.isFinite(Number(aiConfig.fieldBatchSize)) ? Math.max(1, Number(aiConfig.fieldBatchSize)) : 4,
+            ignoreFields: Array.isArray(aiConfig.ignoreFields) ? aiConfig.ignoreFields : [],
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
         };
@@ -218,20 +218,19 @@ class AiWebParser {
 
     cleanHtml(html) {
         if (!html) return '';
-        // Cap raw HTML before regex passes to avoid pathological inputs
-        let text = String(html).slice(0, 500000);
-        // Remove script and style blocks (and their content)
-        text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
-        text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
-        // Remove HTML comments
-        text = text.replace(/<!--[\s\S]*?-->/g, ' ');
-        // Remove nav/header/footer/aside/noscript blocks (high-noise, low-signal)
-        text = text.replace(/<(nav|header|footer|aside|noscript)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
-        // Remove remaining HTML tags
-        text = text.replace(/<[^>]+>/g, ' ');
-        // Collapse all whitespace into single spaces
-        text = text.replace(/\s+/g, ' ').trim();
-        return text;
+        const source = String(html).slice(0, 500000);
+        const title = this.extractTitlePart(source);
+        const metaParts = this.extractMetaParts(source);
+        const jsonLdParts = this.extractJsonLdParts(source);
+        const linkParts = this.extractLinkParts(source);
+        const bodyParts = this.extractBodyParts(source);
+        const sections = [];
+        if (title) sections.push(`TITLE\n${title}`);
+        if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
+        if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
+        if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
+        if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
+        return sections.join('\n\n').trim();
     }
 
     getEventSchema() {
@@ -305,10 +304,29 @@ class AiWebParser {
             if (Object.prototype.hasOwnProperty.call(metadata, field)) return false;
             return true;
         });
-        if (selected.length > 0) {
-            return selected;
+        const rawFields = selected.length > 0 ? selected : this.getDefaultExtractionFields();
+        const excluded = this.getExcludedAiPromptFields(aiConfig, parserConfig);
+        const filtered = rawFields.filter(field => !excluded.has(this.normalizePromptFieldName(field)));
+        return Array.from(new Set(filtered));
+    }
+
+    getExcludedAiPromptFields(aiConfig = {}, parserConfig = {}) {
+        const defaultExcluded = [
+            'instagram',
+            'facebook',
+            'ticketUrl',
+            'image',
+            'gmaps'
+        ];
+        const parserIgnoreFields = parserConfig && parserConfig.ai && Array.isArray(parserConfig.ai.ignoreFields)
+            ? parserConfig.ai.ignoreFields
+            : [];
+        const aiIgnoreFields = Array.isArray(aiConfig.ignoreFields) ? aiConfig.ignoreFields : [];
+        const excluded = new Set();
+        for (const field of [...defaultExcluded, ...parserIgnoreFields, ...aiIgnoreFields]) {
+            excluded.add(this.normalizePromptFieldName(field));
         }
-        return this.getDefaultExtractionFields();
+        return excluded;
     }
 
     getFieldContext(field, cityConfig) {
@@ -388,54 +406,6 @@ TEXT:
 ${String(rawResponse || '')}`;
     }
 
-    getAiFieldBatches(fields, batchSize) {
-        const allFields = Array.isArray(fields) ? fields.filter(Boolean) : [];
-        if (allFields.length === 0) return [];
-        const normalizedRequired = new Set(['title', 'name', 'startdate', 'start']);
-        const required = [];
-        const optional = [];
-        for (const field of allFields) {
-            const normalizedFieldName = String(field).toLowerCase().replace(/[\s_-]/g, '');
-            if (normalizedRequired.has(normalizedFieldName)) {
-                required.push(field);
-            } else {
-                optional.push(field);
-            }
-        }
-        const ordered = [];
-        const seen = new Set();
-        for (const field of [...required, ...optional]) {
-            if (!seen.has(field)) {
-                seen.add(field);
-                ordered.push(field);
-            }
-        }
-        const safeBatchSize = Math.max(1, Number(batchSize) || 1);
-        const batches = [];
-        for (let i = 0; i < ordered.length; i += safeBatchSize) {
-            batches.push(ordered.slice(i, i + safeBatchSize));
-        }
-        return batches;
-    }
-
-    mergeAiPartialEvent(target, partial) {
-        if (!partial || typeof partial !== 'object') return target;
-        const merged = target && typeof target === 'object' ? { ...target } : {};
-        for (const [key, value] of Object.entries(partial)) {
-            if (this.isEmptyAiMergeValue(value)) continue;
-            if (!Object.prototype.hasOwnProperty.call(merged, key) || this.isEmptyAiMergeValue(merged[key])) {
-                merged[key] = value;
-            }
-        }
-        return merged;
-    }
-
-    isEmptyAiMergeValue(value) {
-        if (value === null || value === undefined) return true;
-        if (typeof value === 'string') return value.trim() === '';
-        return false;
-    }
-
     async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, batchIndex = 1, batchTotal = 1) {
         const passSuffix = batchTotal > 1 ? ` batch ${batchIndex}/${batchTotal}` : '';
         const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields);
@@ -459,28 +429,6 @@ ${String(rawResponse || '')}`;
         return null;
     }
 
-    async extractEventWithBatchedAi(htmlData, aiConfig, cityConfig, parserConfig, promptFields) {
-        const fieldBatches = this.getAiFieldBatches(promptFields, aiConfig.fieldBatchSize);
-        if (fieldBatches.length === 0) return null;
-        let mergedAiEvent = {};
-        for (let batchIndex = 0; batchIndex < fieldBatches.length; batchIndex++) {
-            const batchFields = fieldBatches[batchIndex];
-            const partialEvent = await this.extractEventWithTwoPassAi(
-                htmlData,
-                aiConfig,
-                cityConfig,
-                parserConfig,
-                batchFields,
-                batchIndex + 1,
-                fieldBatches.length
-            );
-            if (partialEvent && typeof partialEvent === 'object') {
-                mergedAiEvent = this.mergeAiPartialEvent(mergedAiEvent, partialEvent);
-            }
-        }
-        return Object.keys(mergedAiEvent).length > 0 ? mergedAiEvent : null;
-    }
-
     async callAiGenerate(aiConfig, prompt, passLabel) {
         if (!prompt) return null;
         const label = passLabel ? ` (${passLabel} pass)` : '';
@@ -488,6 +436,7 @@ ${String(rawResponse || '')}`;
         const payload = {
             model: aiConfig.model,
             prompt,
+            format: 'json',
             stream: false,
             think: aiConfig.think,
             keep_alive: aiConfig.keepAlive,
@@ -498,7 +447,6 @@ ${String(rawResponse || '')}`;
             }
         };
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
-        console.log(`🤖 AI Web: Prompt${label} (${promptChars} chars):\n${prompt}`);
         const startTime = Date.now();
         try {
             let responseText = null;
@@ -526,24 +474,21 @@ ${String(rawResponse || '')}`;
                 console.warn(`🤖 AI Web: AI request${label} failed - no HTTP client available (Request/fetch missing)`);
                 return null;
             }
-            console.log(`🤖 AI Web: Raw AI payload${label} (${responseText ? responseText.length : 0} chars):\n${responseText || ''}`);
             if (responseText) {
                 try {
                     responseJson = JSON.parse(responseText);
                 } catch (parseError) {
-                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars):\n${responseText}`);
+                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars)`);
                     return null;
                 }
             }
             const elapsed = Date.now() - startTime;
             if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
                 console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
-                console.log(`🤖 AI Web: AI response text${label} (${responseJson.response.length} chars):\n${responseJson.response}`);
                 return responseJson.response;
             }
             const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
-            const thinkingChars = responseJson && typeof responseJson.thinking === 'string' ? responseJson.thinking.length : 0;
-            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (thinking: ${thinkingChars} chars, done_reason: ${doneReason})`);
+            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
             return null;
         } catch (error) {
             const elapsed = Date.now() - startTime;
@@ -605,7 +550,11 @@ ${String(rawResponse || '')}`;
         }
     }
 
-    normalizeAiEvent(aiEvent, parserConfig) {
+    normalizeAiEvent(aiEvent, parserConfig, htmlData = null) {
+        const scrapedLinks = this.extractLinksFromPage(
+            htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
+            htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
+        );
         const title = this.firstNonEmpty(aiEvent.title, aiEvent.name, aiEvent.summary);
         const description = this.firstNonEmpty(aiEvent.description, aiEvent.desc, '');
         const bar = this.firstNonEmpty(aiEvent.bar, aiEvent.venue, '');
@@ -614,16 +563,17 @@ ${String(rawResponse || '')}`;
         const city = this.firstNonEmpty(aiEvent.city, '');
         const url = this.firstNonEmpty(aiEvent.url, aiEvent.web, aiEvent.website, '');
         const ticketUrl = this.firstNonEmpty(aiEvent.ticketUrl, aiEvent.tickets, '');
-        const instagram = this.firstNonEmpty(aiEvent.instagram, aiEvent.insta, '');
-        const facebook = this.firstNonEmpty(aiEvent.facebook, aiEvent.fb, '');
-        const gmaps = this.firstNonEmpty(aiEvent.gmaps, '');
+        const instagram = this.firstNonEmpty(scrapedLinks.instagram, aiEvent.instagram, aiEvent.insta, '');
+        const facebook = this.firstNonEmpty(scrapedLinks.facebook, aiEvent.facebook, aiEvent.fb, '');
+        const gmaps = this.firstNonEmpty(scrapedLinks.gmaps, aiEvent.gmaps, '');
         const image = this.firstNonEmpty(aiEvent.image, aiEvent.img, '');
         const cover = this.firstNonEmpty(aiEvent.cover, '');
         const shortName = this.firstNonEmpty(aiEvent.shortName, aiEvent.short, '');
         const recurrenceRule = this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, '');
 
-        const startDate = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''));
-        const endDate = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''));
+        const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''));
+        const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''));
+        const { startDate, endDate } = this.normalizeEventDates(startDateRaw, endDateRaw);
 
         if (!title || !startDate) {
             return null;
@@ -679,6 +629,182 @@ ${String(rawResponse || '')}`;
             return parsed;
         }
         return null;
+    }
+
+    normalizeEventDates(startDate, endDate) {
+        const adjustedStart = this.adjustLikelyEventYear(startDate);
+        const adjustedEnd = this.adjustLikelyEventYear(endDate);
+        if (!adjustedStart) {
+            return { startDate: null, endDate: null };
+        }
+        let normalizedEnd = adjustedEnd || new Date(adjustedStart);
+        if (normalizedEnd < adjustedStart) {
+            normalizedEnd = new Date(adjustedStart);
+        }
+        return { startDate: adjustedStart, endDate: normalizedEnd };
+    }
+
+    adjustLikelyEventYear(date) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+        const now = new Date();
+        const windowStart = new Date(now.getTime() - (45 * 24 * 60 * 60 * 1000));
+        const windowEnd = new Date(now.getTime() + (210 * 24 * 60 * 60 * 1000));
+        if (date >= windowStart && date <= windowEnd) {
+            return new Date(date);
+        }
+
+        const year = date.getFullYear();
+        const candidates = [year - 1, year, year + 1].map(candidateYear => {
+            const candidate = new Date(date);
+            candidate.setFullYear(candidateYear);
+            return candidate;
+        });
+        const inWindow = candidates.filter(candidate => candidate >= windowStart && candidate <= windowEnd);
+        const candidateSet = inWindow.length > 0 ? inWindow : candidates;
+        return candidateSet.reduce((best, candidate) => {
+            if (!best) return candidate;
+            return Math.abs(candidate.getTime() - now.getTime()) < Math.abs(best.getTime() - now.getTime())
+                ? candidate
+                : best;
+        }, null);
+    }
+
+    extractTitlePart(html) {
+        const match = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+        if (!match) return '';
+        return this.normalizeWhitespace(this.stripTags(match[1]));
+    }
+
+    extractMetaParts(html) {
+        const results = [];
+        const seen = new Set();
+        const regex = /<meta\b[^>]*>/gi;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+            const tag = match[0];
+            const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
+            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
+            if (!nameMatch || !contentMatch) continue;
+            const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
+            if (!/(description|title|keywords|og:|twitter:|event|venue|location)/.test(key)) continue;
+            const value = this.normalizeWhitespace(contentMatch[1]);
+            if (!value) continue;
+            const line = `${key}: ${value}`;
+            const dedupeKey = line.toLowerCase();
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+            results.push(line);
+            if (results.length >= 30) break;
+        }
+        return results;
+    }
+
+    extractJsonLdParts(html) {
+        const results = [];
+        const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+            const text = this.normalizeWhitespace(match[1] || '');
+            if (!text) continue;
+            results.push(text);
+            if (results.length >= 8) break;
+        }
+        return results;
+    }
+
+    extractLinkParts(html) {
+        const results = [];
+        const seen = new Set();
+        const regex = /href=["']([^"']+)["']/gi;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+            const rawUrl = match[1];
+            if (!rawUrl || rawUrl.startsWith('#')) continue;
+            const normalized = this.normalizeWhitespace(rawUrl);
+            if (!/^https?:\/\//i.test(normalized)) continue;
+            const dedupeKey = normalized.toLowerCase();
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+            results.push(normalized);
+            if (results.length >= 40) break;
+        }
+        return results;
+    }
+
+    extractBodyParts(html) {
+        let text = String(html);
+        text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
+        text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
+        text = text.replace(/<!--[\s\S]*?-->/g, ' ');
+        text = text.replace(/<(nav|header|footer|aside|noscript|form|button)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
+        text = text.replace(/<([a-z0-9]+)\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, ' ');
+        text = text.replace(/<(br|\/p|\/div|\/li|\/section|\/article|\/h[1-6]|\/tr|\/td)\b[^>]*>/gi, '\n');
+        text = text.replace(/<[^>]+>/g, ' ');
+
+        const lines = text
+            .split('\n')
+            .map(line => this.normalizeWhitespace(this.decodeBasicEntities(line)))
+            .filter(Boolean);
+
+        const seen = new Set();
+        const results = [];
+        for (const line of lines) {
+            const lower = line.toLowerCase();
+            if (line.length < 3) continue;
+            if (/^(share|follow|menu|navigation|recommended|related|you may also like|sign up|subscribe|read more|get tickets|buy tickets)\b/i.test(line)) continue;
+            if (seen.has(lower)) continue;
+            seen.add(lower);
+            results.push(line);
+            if (results.length >= 300) break;
+        }
+        return results;
+    }
+
+    decodeBasicEntities(text) {
+        return String(text || '')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/&amp;/gi, '&')
+            .replace(/&quot;/gi, '"')
+            .replace(/&#39;/gi, "'")
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>');
+    }
+
+    stripTags(text) {
+        return String(text || '').replace(/<[^>]+>/g, ' ');
+    }
+
+    normalizeWhitespace(text) {
+        return String(text || '').replace(/\s+/g, ' ').trim();
+    }
+
+    extractLinksFromPage(html, sourceUrl) {
+        if (!html) return { instagram: '', facebook: '', gmaps: '' };
+        const links = [];
+        const hrefRegex = /href=["']([^"']+)["']/gi;
+        const contentUrlRegex = /<meta\b[^>]*content=["']([^"']+)["'][^>]*>/gi;
+        let match;
+        while ((match = hrefRegex.exec(html)) !== null) {
+            links.push(match[1]);
+        }
+        while ((match = contentUrlRegex.exec(html)) !== null) {
+            links.push(match[1]);
+        }
+        let instagram = '';
+        let facebook = '';
+        let gmaps = '';
+
+        for (const link of links) {
+            const normalized = this.normalizeUrl(link, sourceUrl);
+            if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
+            const lower = normalized.toLowerCase();
+            if (!instagram && lower.includes('instagram.com')) instagram = normalized;
+            if (!facebook && lower.includes('facebook.com')) facebook = normalized;
+            if (!gmaps && (lower.includes('google.com/maps') || lower.includes('maps.app.goo.gl'))) gmaps = normalized;
+            if (instagram && facebook && gmaps) break;
+        }
+
+        return { instagram, facebook, gmaps };
     }
 }
 
