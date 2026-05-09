@@ -29,7 +29,14 @@ jobs:
       run: mkdir -p data/bars
       
     - name: Sync bars data
-      run: node tools/sync-bars.js
+      id: sync_bars
+      run: |
+        # Keep workflow running so we can commit failure notes before failing at the end.
+        set +e
+        node tools/sync-bars.js
+        SYNC_EXIT_CODE=$?
+        echo "sync_exit_code=$SYNC_EXIT_CODE" >> "$GITHUB_OUTPUT"
+        exit 0
       
     - name: Commit updated bars data
       run: |
@@ -51,3 +58,9 @@ jobs:
           git push
           echo "✓ Bars data synced and committed (${CHANGED_FILES} files changed)"
         fi
+
+    - name: Fail workflow if extraction failed
+      if: steps.sync_bars.outputs.sync_exit_code != '0'
+      run: |
+        echo "❌ External extraction failed during bars sync. Check sync logs and failure notes in updated bars data."
+        exit 1
