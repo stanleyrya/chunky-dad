@@ -2,11 +2,6 @@
   {
     "name": "Royal Vauxhall Tavern",
     "city": "london",
-    "gayCities": "https://london.gaycities.com/bars/1710-royal-vauxhall-tavern",
-    "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
-    "coordinates": "51.4863391, -0.1217784",
-    "instagram": "https://www.instagram.com/rvtofficial",
-    "facebook": "https://www.facebook.com/TheRVT",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw"
+    "gayCities": "https://london.gaycities.com/bars/1710-royal-vauxhall-tavern"
   }
 ]
