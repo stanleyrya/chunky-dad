@@ -349,9 +349,6 @@ class AiWebParser {
                 description += `. Must be one of: ${cityKeys.join(', ')}`;
             }
         }
-        if (normalized === 'cover') {
-            description += '. Extract the exact cover/admission/ticket price text shown on the page; use "Free" only when explicitly stated; do not invent placeholders';
-        }
         return description;
     }
 
@@ -398,7 +395,6 @@ Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list
 - Use ISO datetime for startDate/endDate when possible
-- For cover, extract exact price text from the page (e.g. "$15", "$15 - $25", "Free"); do not return placeholder text unless the page explicitly says it
 - Omit unknown fields
 
 URL: ${htmlData.url || ''}
@@ -417,7 +413,6 @@ ${fieldContext}
 Rules:
 - JSON object only
 - Use only the preferred keys
-- Keep cover as exact on-page price text when present; do not synthesize placeholder values
 - No markdown
 - No commentary
 - Omit unknown fields
