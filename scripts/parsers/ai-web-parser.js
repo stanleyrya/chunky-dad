@@ -46,7 +46,7 @@ class AiWebParser {
             maxLinkParts: 40,
             maxBodyParts: 300,
             safeModeContentFallbackParts: 20,
-            metaPreferredOverJsonLdBy: 1,
+            metaWinsByThreshold: 1,
             noisyLinePrefixes: [
                 'share',
                 'follow',
@@ -333,7 +333,7 @@ class AiWebParser {
         if (metaParts.length === 0) return 'json-ld';
         const jsonLdScore = this.scoreJsonLdParts(jsonLdParts);
         const metaScore = this.scoreMetaParts(metaParts);
-        if (metaScore > (jsonLdScore + this.extractionLimits.metaPreferredOverJsonLdBy)) return 'meta';
+        if (metaScore > (jsonLdScore + this.extractionLimits.metaWinsByThreshold)) return 'meta';
         return 'json-ld';
     }
 
