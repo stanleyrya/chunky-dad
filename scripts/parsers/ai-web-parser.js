@@ -45,6 +45,8 @@ class AiWebParser {
             maxJsonLdParts: 8,
             maxLinkParts: 40,
             maxBodyParts: 300,
+            safeModeContentFallbackParts: 20,
+            metaPreferredOverJsonLdBy: 1,
             noisyLinePrefixes: [
                 'share',
                 'follow',
@@ -314,7 +316,7 @@ class AiWebParser {
             if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
             if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
             if (jsonLdParts.length === 0 && metaParts.length === 0 && bodyParts.length > 0) {
-                sections.push(`CONTENT\n${bodyParts.slice(0, 20).join('\n')}`);
+                sections.push(`CONTENT\n${bodyParts.slice(0, this.extractionLimits.safeModeContentFallbackParts).join('\n')}`);
             }
         } else {
             if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
@@ -331,7 +333,7 @@ class AiWebParser {
         if (metaParts.length === 0) return 'json-ld';
         const jsonLdScore = this.scoreJsonLdParts(jsonLdParts);
         const metaScore = this.scoreMetaParts(metaParts);
-        if (metaScore > (jsonLdScore + 1)) return 'meta';
+        if (metaScore > (jsonLdScore + this.extractionLimits.metaPreferredOverJsonLdBy)) return 'meta';
         return 'json-ld';
     }
 
