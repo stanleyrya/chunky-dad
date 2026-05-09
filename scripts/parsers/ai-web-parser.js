@@ -361,12 +361,12 @@ class AiWebParser {
     scoreOpenGraphParts(parts) {
         if (!Array.isArray(parts) || parts.length === 0) return 0;
         const keyRegexes = [
-            /(?:^|\s)og:title\s*:/i,
-            /(?:^|\s)og:description\s*:/i,
-            /(?:^|\s)og:type\s*:/i,
-            /(?:^|\s)og:url\s*:/i,
-            /(?:^|\s)og:image\s*:/i,
-            /(?:^|\s)og:site_name\s*:/i
+            /^og:title\s*:/im,
+            /^og:description\s*:/im,
+            /^og:type\s*:/im,
+            /^og:url\s*:/im,
+            /^og:image\s*:/im,
+            /^og:site_name\s*:/im
         ];
         const joined = parts.join('\n');
         return keyRegexes.reduce((score, regex) => score + (regex.test(joined) ? 1 : 0), 0);
