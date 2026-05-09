@@ -229,8 +229,7 @@ class AiWebParser {
         ];
 
         for (const pattern of patterns) {
-            let match;
-            while ((match = pattern.exec(html)) !== null) {
+            for (const match of html.matchAll(pattern)) {
                 if (match[0]) candidates.add(match[0]);
             }
         }
