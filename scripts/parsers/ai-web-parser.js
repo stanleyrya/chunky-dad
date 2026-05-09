@@ -330,7 +330,9 @@ class AiWebParser {
             if (Object.prototype.hasOwnProperty.call(metadata, field)) return false;
             return true;
         });
-        return selected.length > 0 ? selected : this.getDefaultExtractionFields();
+        const aiPromptFields = selected.length > 0 ? selected : this.getDefaultExtractionFields();
+        const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
+        return aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
     }
 
     getFieldContext(field, cityConfig) {
