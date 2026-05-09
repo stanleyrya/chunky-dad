@@ -38,10 +38,25 @@ class AiWebParser {
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
+            millisPerDay: 24 * 60 * 60 * 1000,
             maxMetaParts: 30,
             maxJsonLdParts: 8,
             maxLinkParts: 40,
-            maxBodyParts: 300
+            maxBodyParts: 300,
+            noisyLinePrefixes: [
+                'share',
+                'follow',
+                'menu',
+                'navigation',
+                'recommended',
+                'related',
+                'you may also like',
+                'sign up',
+                'subscribe',
+                'read more',
+                'get tickets',
+                'buy tickets'
+            ]
         };
     }
 
@@ -216,7 +231,6 @@ class AiWebParser {
             maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 6000,
             numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 2048,
             numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
-            temperature: 0,
             think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
             ignoreFields: Array.isArray(aiConfig.ignoreFields) ? aiConfig.ignoreFields : [],
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
@@ -451,7 +465,7 @@ ${String(rawResponse || '')}`;
             options: {
                 num_ctx: aiConfig.numCtx,
                 num_predict: aiConfig.numPredict,
-                temperature: aiConfig.temperature
+                temperature: 0
             }
         };
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
@@ -655,8 +669,9 @@ ${String(rawResponse || '')}`;
     adjustLikelyEventYear(date) {
         if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
         const now = new Date();
-        const windowStart = new Date(now.getTime() - (this.extractionLimits.yearWindowPastDays * 24 * 60 * 60 * 1000));
-        const windowEnd = new Date(now.getTime() + (this.extractionLimits.yearWindowFutureDays * 24 * 60 * 60 * 1000));
+        const dayMs = this.extractionLimits.millisPerDay;
+        const windowStart = new Date(now.getTime() - (this.extractionLimits.yearWindowPastDays * dayMs));
+        const windowEnd = new Date(now.getTime() + (this.extractionLimits.yearWindowFutureDays * dayMs));
         if (date >= windowStart && date <= windowEnd) {
             return new Date(date);
         }
@@ -756,10 +771,14 @@ ${String(rawResponse || '')}`;
 
         const seen = new Set();
         const results = [];
+        const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
+            .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
+            .join('|');
+        const noiseRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
         for (const line of lines) {
             const lower = line.toLowerCase();
             if (line.length < 3) continue;
-            if (/^(share|follow|menu|navigation|recommended|related|you may also like|sign up|subscribe|read more|get tickets|buy tickets)\b/i.test(line)) continue;
+            if (noiseRegex.test(line)) continue;
             if (seen.has(lower)) continue;
             seen.add(lower);
             results.push(line);
