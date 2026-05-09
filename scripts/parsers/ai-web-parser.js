@@ -64,10 +64,6 @@ class AiWebParser {
             .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
             .join('|');
         this.noiseLineRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
-        // Matches phrases like "Free entry", "Free admission", or "No cover".
-        this.freeCoverRegex = /\b(?:free\s+(?:entry|admission)|no\s+cover)\b/i;
-        // Matches labeled price text such as "Cover $10" or "Tickets from $15 - $25".
-        this.coverPriceRegex = /\b(?:cover|admission|tickets?\s*(?:from|at)?|entry)\b(?:\s*(?::|-|from|at)\s*)?\$?\s*(\d+(?:\.\d{1,2})?)(?:\s*(?:-|to)\s*\$?\s*(\d+(?:\.\d{1,2})?))?/i;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -351,6 +347,9 @@ class AiWebParser {
                 description += `. Must be one of: ${cityKeys.join(', ')}`;
             }
         }
+        if (normalized === 'cover') {
+            description += '. Extract the exact cover/admission/ticket price text shown on the page; use "Free" only when explicitly stated; do not invent placeholders';
+        }
         return description;
     }
 
@@ -392,6 +391,7 @@ Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list
 - Use ISO datetime for startDate/endDate when possible
+- For cover, extract exact price text from the page (e.g. "$15", "$15 - $25", "Free"); do not return placeholder text unless the page explicitly says it
 - Omit unknown fields
 
 URL: ${htmlData.url || ''}
@@ -410,6 +410,7 @@ ${fieldContext}
 Rules:
 - JSON object only
 - Use only the preferred keys
+- Keep cover as exact on-page price text when present; do not synthesize placeholder values
 - No markdown
 - No commentary
 - Omit unknown fields
@@ -585,10 +586,7 @@ ${String(rawResponse || '')}`;
         const facebook = this.firstNonEmpty(scrapedLinks.facebook, aiEvent.facebook, aiEvent.fb, '');
         const gmaps = this.firstNonEmpty(scrapedLinks.gmaps, aiEvent.gmaps, '');
         const image = this.firstNonEmpty(aiEvent.image, aiEvent.img, '');
-        const coverFromPage = this.extractCoverFromPage(
-            htmlData && typeof htmlData.html === 'string' ? htmlData.html : ''
-        );
-        const cover = this.firstNonEmpty(this.normalizeCoverValue(aiEvent.cover), coverFromPage, '');
+        const cover = this.firstNonEmpty(aiEvent.cover, '');
         const shortName = this.firstNonEmpty(aiEvent.shortName, aiEvent.short, '');
         const recurrenceRule = this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, '');
 
@@ -762,127 +760,6 @@ ${String(rawResponse || '')}`;
             return parsed;
         }
         return null;
-    }
-
-    normalizeCoverValue(value) {
-        const text = this.firstNonEmpty(value, '');
-        if (!text) return '';
-        if (/^(?:cover\s*)?(?:tbd|unknown|none|n\/a|na|not\s+available)$/i.test(text)) {
-            return '';
-        }
-        return text;
-    }
-
-    extractCoverFromPage(html) {
-        if (!html || typeof html !== 'string') return '';
-        const fromJsonLd = this.extractCoverFromJsonLd(html);
-        if (fromJsonLd) return fromJsonLd;
-        return this.extractCoverFromText(html);
-    }
-
-    extractCoverFromJsonLd(html) {
-        const scriptRegex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-        let match;
-        while ((match = scriptRegex.exec(html)) !== null) {
-            const rawJson = (match[1] || '').trim();
-            if (!rawJson) continue;
-            try {
-                const parsed = JSON.parse(rawJson);
-                const cover = this.extractCoverFromStructuredData(parsed);
-                if (cover) return cover;
-            } catch (_) {
-                continue;
-            }
-        }
-        return '';
-    }
-
-    extractCoverFromStructuredData(node) {
-        if (!node) return '';
-        if (Array.isArray(node)) {
-            for (const item of node) {
-                const cover = this.extractCoverFromStructuredData(item);
-                if (cover) return cover;
-            }
-            return '';
-        }
-        if (typeof node !== 'object') return '';
-
-        const offersCover = this.formatCoverFromOffer(node.offers);
-        if (offersCover) return offersCover;
-
-        for (const value of Object.values(node)) {
-            const nestedCover = this.extractCoverFromStructuredData(value);
-            if (nestedCover) return nestedCover;
-        }
-        return '';
-    }
-
-    formatCoverFromOffer(offers) {
-        if (!offers) return '';
-        if (Array.isArray(offers)) {
-            for (const offer of offers) {
-                const cover = this.formatCoverFromOffer(offer);
-                if (cover) return cover;
-            }
-            return '';
-        }
-        if (typeof offers !== 'object') return '';
-
-        const price = this.parsePriceNumber(offers.price);
-        const lowPrice = this.parsePriceNumber(offers.lowPrice);
-        const highPrice = this.parsePriceNumber(offers.highPrice);
-        const minPrice = this.parsePriceNumber(offers.minPrice);
-        const maxPrice = this.parsePriceNumber(offers.maxPrice);
-
-        const low = Number.isFinite(lowPrice) ? lowPrice : minPrice;
-        const high = Number.isFinite(highPrice) ? highPrice : maxPrice;
-        if (Number.isFinite(low) && Number.isFinite(high)) {
-            if (low === high) return this.formatCurrency(low);
-            return `${this.formatCurrency(low)} - ${this.formatCurrency(high)}`;
-        }
-        if (Number.isFinite(low)) return this.formatCurrency(low);
-        if (Number.isFinite(high)) return this.formatCurrency(high);
-        if (Number.isFinite(price)) return this.formatCurrency(price);
-
-        return this.extractCoverFromStructuredData(offers.priceSpecification);
-    }
-
-    extractCoverFromText(html) {
-        const text = this.decodeBasicEntities(this.stripTags(html || ''));
-        if (!text) return '';
-
-        if (this.freeCoverRegex.test(text)) {
-            return 'Free';
-        }
-
-        const labeledMatch = text.match(this.coverPriceRegex);
-        if (labeledMatch) {
-            const low = this.parsePriceNumber(labeledMatch[1]);
-            const high = this.parsePriceNumber(labeledMatch[2]);
-            if (Number.isFinite(low) && Number.isFinite(high)) {
-                if (low === high) return this.formatCurrency(low);
-                return `${this.formatCurrency(low)} - ${this.formatCurrency(high)}`;
-            }
-            if (Number.isFinite(low)) return this.formatCurrency(low);
-        }
-
-        return '';
-    }
-
-    parsePriceNumber(value) {
-        if (value === null || value === undefined || value === '') return null;
-        const normalized = String(value).replace(/[^0-9.]/g, '').trim();
-        if (!normalized) return null;
-        // Reject malformed values after normalization (e.g. "12.34.56" or "12..34").
-        if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
-        const parsed = parseFloat(normalized);
-        return Number.isFinite(parsed) ? parsed : null;
-    }
-
-    formatCurrency(value) {
-        if (!Number.isFinite(value)) return '';
-        return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2).replace(/\.00$/, '')}`;
     }
 
     normalizeEventDates(startDate, endDate) {
