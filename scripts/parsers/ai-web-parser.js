@@ -393,8 +393,8 @@ ${String(rawResponse || '')}`;
         const required = [];
         const optional = [];
         for (const field of allFields) {
-            const normalized = String(field).toLowerCase().replace(/[\s_-]/g, '');
-            if (normalizedRequired.has(normalized)) {
+            const normalizedFieldName = String(field).toLowerCase().replace(/[\s_-]/g, '');
+            if (normalizedRequired.has(normalizedFieldName)) {
                 required.push(field);
             } else {
                 optional.push(field);
@@ -420,14 +420,18 @@ ${String(rawResponse || '')}`;
         if (!partial || typeof partial !== 'object') return target;
         const merged = target && typeof target === 'object' ? { ...target } : {};
         for (const [key, value] of Object.entries(partial)) {
-            if (value === null || value === undefined) continue;
-            const text = typeof value === 'string' ? value.trim() : value;
-            if (text === '') continue;
-            if (!Object.prototype.hasOwnProperty.call(merged, key) || merged[key] === null || merged[key] === undefined || String(merged[key]).trim() === '') {
+            if (this.isEmptyAiMergeValue(value)) continue;
+            if (!Object.prototype.hasOwnProperty.call(merged, key) || this.isEmptyAiMergeValue(merged[key])) {
                 merged[key] = value;
             }
         }
         return merged;
+    }
+
+    isEmptyAiMergeValue(value) {
+        if (value === null || value === undefined) return true;
+        if (typeof value === 'string') return value.trim() === '';
+        return false;
     }
 
     async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, batchIndex = 1, batchTotal = 1) {
