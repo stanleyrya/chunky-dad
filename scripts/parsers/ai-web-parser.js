@@ -359,16 +359,23 @@ class AiWebParser {
 
     scoreMetaParts(parts) {
         if (!Array.isArray(parts) || parts.length === 0) return 0;
-        const keyRegexes = [
-            /^(?:title|description|keywords)\s*:/im,
-            /^og:(?:title|description|type|url|image|site_name|locale)\s*:/im,
-            /^twitter:(?:title|description|card|image|label\d+|data\d+|site)\s*:/im,
-            /^event:(?:start_time|end_time|location(?::(?:latitude|longitude))?)\s*:/im,
-            /(?:^|\n)(?:geo\.position|geo\.placename|apple-mobile-web-app-title)\s*:/i,
-            /(?:^|\n)(?:location|venue|address)\s*:/i
-        ];
-        const joined = parts.join('\n');
-        return keyRegexes.reduce((score, regex) => score + (regex.test(joined) ? 1 : 0), 0);
+        const keySet = new Set(parts.map(part => {
+            const line = String(part || '').trim().toLowerCase();
+            const separatorIndex = line.indexOf(': ');
+            if (separatorIndex >= 0) return line.slice(0, separatorIndex).trim();
+            const firstColonIndex = line.indexOf(':');
+            return firstColonIndex >= 0 ? line.slice(0, firstColonIndex).trim() : line;
+        }).filter(Boolean));
+        const hasAny = candidates => candidates.some(candidate => keySet.has(candidate));
+        const hasPrefix = prefixes => Array.from(keySet).some(key => prefixes.some(prefix => key.startsWith(prefix)));
+        let score = 0;
+        if (hasAny(['title', 'description', 'keywords'])) score++;
+        if (hasPrefix(['og:'])) score++;
+        if (hasPrefix(['twitter:'])) score++;
+        if (hasPrefix(['event:'])) score++;
+        if (hasAny(['geo.position', 'geo.placename', 'apple-mobile-web-app-title'])) score++;
+        if (hasAny(['location', 'venue', 'address'])) score++;
+        return score;
     }
 
     getEventSchema() {
@@ -927,7 +934,7 @@ ${String(rawResponse || '')}`;
             const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || !contentMatch) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
-            if (!/(^og:|^twitter:|^event:|^(description|title|keywords|location|venue|address|geo\.position|geo\.placename|apple-mobile-web-app-title)$)/.test(key)) continue;
+            if (!/^(?:og:|twitter:|event:|description|title|keywords|location|venue|address|geo\.position|geo\.placename|apple-mobile-web-app-title)$/.test(key)) continue;
             const value = this.normalizeWhitespace(contentMatch[1]);
             if (!value) continue;
             const line = `${key}: ${value}`;
