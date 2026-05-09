@@ -358,6 +358,7 @@ const scraperConfig = {
         enabled: true,
         endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
         model: "qwen3.5:4b",
+        payloadMode: "best",
         maxHtmlChars: 6000,
         numCtx: 2048,
         numPredict: 512,
