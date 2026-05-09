@@ -53,12 +53,20 @@ async function syncBars() {
         
         // 4. Enrich bars with external data
         console.log('🌐 Enriching bars with external data...');
-        const enrichedBars = await enrichBarsWithExternalData(mergedBars);
+        const { enrichedBars, extractionFailures } = await enrichBarsWithExternalData(mergedBars);
         console.log(`✨ Enriched ${enrichedBars.length} bars with additional data`);
         
         // 5. Save merged data locally
         console.log('💾 Saving merged data locally...');
         await saveBarsLocally(enrichedBars);
+
+        if (extractionFailures.length > 0) {
+            console.error(`❌ External extraction failed for ${extractionFailures.length} bars:`);
+            extractionFailures.forEach((failure) => {
+                console.error(`   - [${failure.source}] ${failure.bar} (${failure.city}) at ${failure.failedAt}: ${failure.error}`);
+            });
+            throw new Error('One or more external extractions failed. Data was saved with failure notes; investigate and rerun.');
+        }
         
         console.log('✅ Simplified sync completed successfully!');
         
@@ -310,7 +318,7 @@ function cleanBarObject(bar) {
     const cleaned = {};
     
     // Keep only fields that have values
-    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities', 'faviconBg', 'faviconFg'];
+    const fieldsToKeep = ['name', 'city', 'address', 'coordinates', 'website', 'instagram', 'facebook', 'googleMaps', 'image', 'wikipedia', 'gayCities', 'faviconBg', 'faviconFg', 'wikipediaExtractionFailureAt', 'wikipediaExtractionFailureMessage', 'gayCitiesExtractionFailureAt', 'gayCitiesExtractionFailureMessage'];
     
     fieldsToKeep.forEach(field => {
         if (bar[field] && bar[field].toString().trim() !== '') {
@@ -371,6 +379,7 @@ function shouldScrapeGayCitiesBar(bar, localBar) {
 // Enrich bars with data from Wikipedia and GayCities fields
 async function enrichBarsWithExternalData(bars) {
     const enrichedBars = [];
+    const extractionFailures = [];
     
     for (const bar of bars) {
         let enrichedBar = { ...bar };
@@ -405,9 +414,22 @@ async function enrichBarsWithExternalData(bars) {
                 if (!enrichedBar.image && scrapedData.image) {
                     enrichedBar.image = scrapedData.image;
                 }
+
+                delete enrichedBar.wikipediaExtractionFailureAt;
+                delete enrichedBar.wikipediaExtractionFailureMessage;
                 
                 console.log(`✅ Enriched ${bar.name} with Wikipedia data`);
             } catch (error) {
+                const failedAt = new Date().toISOString();
+                enrichedBar.wikipediaExtractionFailureAt = failedAt;
+                enrichedBar.wikipediaExtractionFailureMessage = error.message;
+                extractionFailures.push({
+                    bar: bar.name,
+                    city: bar.city,
+                    source: 'Wikipedia',
+                    failedAt,
+                    error: error.message
+                });
                 console.warn(`⚠️  Failed to scrape Wikipedia data for ${bar.name}:`, error.message);
             }
         } else if (needsGayCitiesScraping) {
@@ -434,9 +456,22 @@ async function enrichBarsWithExternalData(bars) {
                 if (!enrichedBar.googleMaps && scrapedData.googleMaps) {
                     enrichedBar.googleMaps = scrapedData.googleMaps;
                 }
+
+                delete enrichedBar.gayCitiesExtractionFailureAt;
+                delete enrichedBar.gayCitiesExtractionFailureMessage;
                 
                 console.log(`✅ Enriched ${bar.name} with GayCities data`);
             } catch (error) {
+                const failedAt = new Date().toISOString();
+                enrichedBar.gayCitiesExtractionFailureAt = failedAt;
+                enrichedBar.gayCitiesExtractionFailureMessage = error.message;
+                extractionFailures.push({
+                    bar: bar.name,
+                    city: bar.city,
+                    source: 'GayCities',
+                    failedAt,
+                    error: error.message
+                });
                 console.warn(`⚠️  Failed to scrape GayCities data for ${bar.name}:`, error.message);
             }
         } else if (bar.wikipedia) {
@@ -448,7 +483,7 @@ async function enrichBarsWithExternalData(bars) {
         enrichedBars.push(enrichedBar);
     }
     
-    return enrichedBars;
+    return { enrichedBars, extractionFailures };
 }
 
 // Save merged bars locally, grouped by city
