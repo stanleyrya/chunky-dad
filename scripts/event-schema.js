@@ -361,7 +361,7 @@ const AI_PROMPT_FIELDS = [
     { param: 'fb',      desc: 'Facebook event or page URL' },
     { param: 'gmaps',   desc: 'Google Maps link' },
     { param: 'img',     desc: 'Direct URL to a promo image or flyer' },
-    { param: 'cover',   desc: 'Cover charge info (e.g. Free, $15, Cover TBD)' }
+    { param: 'cover',   desc: 'Exact cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). Omit if not stated' }
 ];
 
 const EventSchema = {

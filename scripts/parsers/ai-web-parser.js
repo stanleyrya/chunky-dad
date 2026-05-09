@@ -38,6 +38,8 @@ class AiWebParser {
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
+            // Small iteration limit for timezone offset convergence around DST boundaries.
+            timezoneConvergenceIterations: 4,
             millisPerDay: 24 * 60 * 60 * 1000,
             maxMetaParts: 30,
             maxJsonLdParts: 8,
@@ -85,7 +87,7 @@ class AiWebParser {
                 return this.buildEmptyResult(htmlData);
             }
 
-            const event = this.normalizeAiEvent(aiEvent, parserConfig, htmlData);
+            const event = this.normalizeAiEvent(aiEvent, parserConfig, htmlData, cityConfig);
             if (!event || !event.title || !event.startDate) {
                 console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
                 return this.buildEmptyResult(htmlData);
@@ -223,6 +225,8 @@ class AiWebParser {
             return null;
         }
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
+        const pageSnippet = this.getPageSnippet(htmlData, aiConfig);
+        console.log(`🤖 AI Web: Page data sent to AI for ${htmlData.url || 'unknown URL'} (${pageSnippet.length} chars)\n${pageSnippet}`);
         return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
     }
 
@@ -372,9 +376,14 @@ class AiWebParser {
         return fields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
-    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields) {
+    getPageSnippet(htmlData, aiConfig) {
         const htmlCharLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
-        const snippet = this.cleanHtml(htmlData.html || '').slice(0, htmlCharLimit);
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        return this.cleanHtml(html).slice(0, htmlCharLimit);
+    }
+
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields) {
+        const snippet = this.getPageSnippet(htmlData, aiConfig);
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
             : this.getAiPromptFields(parserConfig);
@@ -385,7 +394,6 @@ ${fieldContext}
 Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list
-- Use ISO datetime for startDate/endDate when possible
 - Omit unknown fields
 
 URL: ${htmlData.url || ''}
@@ -556,7 +564,7 @@ ${String(rawResponse || '')}`;
         }
     }
 
-    normalizeAiEvent(aiEvent, parserConfig, htmlData = null) {
+    normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
             htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
@@ -566,7 +574,13 @@ ${String(rawResponse || '')}`;
         const bar = this.firstNonEmpty(aiEvent.bar, aiEvent.venue, '');
         const address = this.firstNonEmpty(aiEvent.address, aiEvent.addr, '');
         const location = this.firstNonEmpty(aiEvent.location, aiEvent.coords, '');
-        const city = this.firstNonEmpty(aiEvent.city, '');
+        const city = this.firstNonEmpty(aiEvent.city, parserConfig && parserConfig.city, '');
+        const timezone = this.firstNonEmpty(
+            aiEvent.timezone,
+            this.getTimezoneForCity(city, cityConfig),
+            this.getTimezoneForCity(parserConfig && parserConfig.city, cityConfig),
+            ''
+        );
         const url = this.firstNonEmpty(aiEvent.url, aiEvent.web, aiEvent.website, '');
         const ticketUrl = this.firstNonEmpty(aiEvent.ticketUrl, aiEvent.tickets, '');
         const instagram = this.firstNonEmpty(scrapedLinks.instagram, aiEvent.instagram, aiEvent.insta, '');
@@ -577,8 +591,8 @@ ${String(rawResponse || '')}`;
         const shortName = this.firstNonEmpty(aiEvent.shortName, aiEvent.short, '');
         const recurrenceRule = this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, '');
 
-        const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''));
-        const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''));
+        const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
+        const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
         const { startDate, endDate } = this.normalizeEventDates(startDateRaw, endDateRaw);
 
         if (!title || !startDate) {
@@ -594,6 +608,7 @@ ${String(rawResponse || '')}`;
             location,
             address,
             city,
+            timezone,
             url,
             ticketUrl,
             instagram,
@@ -628,9 +643,120 @@ ${String(rawResponse || '')}`;
         return '';
     }
 
-    parseDateValue(value) {
-        if (!value) return null;
-        const parsed = new Date(value);
+    getCityConfigMap(cityConfig) {
+        if (!cityConfig || typeof cityConfig !== 'object') return null;
+        if (cityConfig.cities && typeof cityConfig.cities === 'object') {
+            return cityConfig.cities;
+        }
+        return cityConfig;
+    }
+
+    getTimezoneForCity(city, cityConfig) {
+        const map = this.getCityConfigMap(cityConfig);
+        if (!map || typeof map !== 'object') return '';
+        const cityText = String(city || '').trim();
+        if (!cityText) return '';
+
+        const direct = map[cityText];
+        if (direct && typeof direct === 'object' && typeof direct.timezone === 'string' && direct.timezone.trim()) {
+            return direct.timezone.trim();
+        }
+
+        const normalizedCity = cityText.toLowerCase();
+        const matchedKey = Object.keys(map).find(key => String(key).toLowerCase() === normalizedCity);
+        if (!matchedKey) return '';
+        const matched = map[matchedKey];
+        if (!matched || typeof matched !== 'object' || typeof matched.timezone !== 'string') return '';
+        return matched.timezone.trim();
+    }
+
+    hasExplicitTimezoneInfo(dateValue) {
+        const valueText = String(dateValue || '').trim();
+        if (!valueText) return false;
+        return /(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(valueText) || /\b(?:UTC|GMT)\b/i.test(valueText);
+    }
+
+    getTimezoneOffsetMinutes(date, timezone) {
+        if (!date || !timezone) return null;
+        try {
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            });
+            const parts = formatter.formatToParts(date);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            const offsetText = offsetPart && typeof offsetPart.value === 'string' ? offsetPart.value : '';
+            const offsetMatch = offsetText.match(/GMT([+-])(\d{2}):(\d{2})/);
+            if (!offsetMatch) return null;
+            const sign = offsetMatch[1] === '+' ? 1 : -1;
+            const hours = parseInt(offsetMatch[2], 10);
+            const minutes = parseInt(offsetMatch[3], 10);
+            return sign * ((hours * 60) + minutes);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    convertLocalDateTimeToUtc(localDateTimeValue, timezone) {
+        if (!localDateTimeValue || !timezone || typeof localDateTimeValue !== 'string') {
+            return null;
+        }
+
+        const valueText = localDateTimeValue.trim();
+        // Supports "YYYY-MM-DD", "YYYY-MM-DD HH:mm", "YYYY-MM-DDTHH:mm:ss".
+        const match = valueText.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2})(?::?(\d{2}))?(?::?(\d{2}))?)?$/);
+        if (!match) {
+            return null;
+        }
+
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10);
+        const day = parseInt(match[3], 10);
+        const hour = parseInt(match[4] || '0', 10);
+        const minute = parseInt(match[5] || '0', 10);
+        const second = parseInt(match[6] || '0', 10);
+
+        // Build an initial UTC guess from local components, then iteratively converge
+        // to the UTC instant whose timezone offset maps back to the requested local time.
+        // Iteration is needed near DST transitions where the first offset guess can be wrong.
+        const baseUtcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
+        let utcMillis = baseUtcMillis;
+        for (let i = 0; i < this.extractionLimits.timezoneConvergenceIterations; i++) {
+            const offsetMinutes = this.getTimezoneOffsetMinutes(new Date(utcMillis), timezone);
+            if (!Number.isFinite(offsetMinutes)) {
+                return null;
+            }
+            const nextUtcMillis = baseUtcMillis - (offsetMinutes * 60 * 1000);
+            if (nextUtcMillis === utcMillis) {
+                break;
+            }
+            utcMillis = nextUtcMillis;
+        }
+
+        return new Date(utcMillis);
+    }
+
+    parseDateValue(value, timezoneHint = null) {
+        if (value === null || value === undefined || value === '') return null;
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value;
+        }
+        if (typeof value === 'number') {
+            const numericDate = new Date(value);
+            return Number.isNaN(numericDate.getTime()) ? null : numericDate;
+        }
+
+        const valueText = String(value).trim();
+        if (!valueText) return null;
+
+        if (timezoneHint && !this.hasExplicitTimezoneInfo(valueText) && /\d{1,2}:\d{2}/.test(valueText)) {
+            const converted = this.convertLocalDateTimeToUtc(valueText, timezoneHint);
+            if (converted && !Number.isNaN(converted.getTime())) {
+                return converted;
+            }
+        }
+
+        const parsed = new Date(valueText);
         if (!Number.isNaN(parsed.getTime())) {
             return parsed;
         }
