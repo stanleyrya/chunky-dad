@@ -764,7 +764,7 @@ ${String(rawResponse || '')}`;
         text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
         text = text.replace(/<!--[\s\S]*?-->/g, ' ');
         text = text.replace(/<(nav|header|footer|aside|noscript|form|button)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
-        text = text.replace(/<([a-z0-9]+)\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi, ' ');
+        text = text.replace(/<[a-z0-9]+\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]{0,12000}?<\/[a-z0-9]+>/gi, ' ');
         text = text.replace(/<(br|\/p|\/div|\/li|\/section|\/article|\/h[1-6]|\/tr|\/td)\b[^>]*>/gi, '\n');
         text = text.replace(/<[^>]+>/g, ' ');
 
@@ -835,7 +835,7 @@ ${String(rawResponse || '')}`;
             const isFacebook = host === 'facebook.com' || host.endsWith('.facebook.com');
             const isGoogleMaps = host === 'maps.app.goo.gl' || host.endsWith('.maps.app.goo.gl') || (
                 (host === 'google.com' || host.endsWith('.google.com')) &&
-                (path.startsWith('/maps') || path.startsWith('/search'))
+                path.startsWith('/maps')
             );
             if (!instagram && isInstagram) instagram = normalized;
             if (!facebook && isFacebook) facebook = normalized;
