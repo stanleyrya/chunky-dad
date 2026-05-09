@@ -41,13 +41,12 @@ class AiWebParser {
             // Small iteration limit for timezone offset convergence around DST boundaries.
             timezoneConvergenceIterations: 4,
             millisPerDay: 24 * 60 * 60 * 1000,
-            maxMetaParts: 30,
+            maxOpenGraphParts: 30,
             maxJsonLdParts: 8,
             maxLinkParts: 40,
             maxBodyParts: 300,
-            safeModeContentFallbackParts: 20,
-            // META must beat JSON-LD by this many scored signals; close scores prefer JSON-LD.
-            metaWinsByThreshold: 1,
+            jsonLdFullnessMinSignals: 4,
+            openGraphFullnessMinSignals: 4,
             noisyLinePrefixes: [
                 'share',
                 'follow',
@@ -289,7 +288,8 @@ class AiWebParser {
 
     normalizePayloadMode(mode) {
         const normalized = String(mode || '').trim().toLowerCase();
-        if (normalized === 'safe' || normalized === 'exhaustive') return normalized;
+        if (normalized === 'exhaustive' || normalized === 'jsonld' || normalized === 'opengraph') return normalized;
+        if (normalized === 'safe') return 'exhaustive';
         return 'best';
     }
 
@@ -298,44 +298,49 @@ class AiWebParser {
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
         const source = String(html).slice(0, 500000);
         const title = this.extractTitlePart(source);
-        const metaParts = this.extractMetaParts(source);
+        const openGraphParts = this.extractOpenGraphParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
         const linkParts = this.extractLinkParts(source);
         const bodyParts = this.extractBodyParts(source);
         const sections = [];
         if (title) sections.push(`TITLE\n${title}`);
-        if (payloadMode === 'best') {
-            const preferredSource = this.pickBestSnippetSource(jsonLdParts, metaParts);
-            if (preferredSource === 'json-ld' && jsonLdParts.length > 0) {
-                sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-            } else if (metaParts.length > 0) {
-                sections.push(`META\n${metaParts.join('\n')}`);
-            } else if (jsonLdParts.length > 0) {
+        if (payloadMode === 'jsonld') {
+            if (jsonLdParts.length > 0) {
                 sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
             }
-        } else if (payloadMode === 'safe') {
-            if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-            if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
-            if (jsonLdParts.length === 0 && metaParts.length === 0 && bodyParts.length > 0) {
-                sections.push(`CONTENT\n${bodyParts.slice(0, this.extractionLimits.safeModeContentFallbackParts).join('\n')}`);
+        } else if (payloadMode === 'opengraph') {
+            if (openGraphParts.length > 0) {
+                sections.push(`OPEN_GRAPH\n${openGraphParts.join('\n')}`);
+            }
+        } else if (payloadMode === 'best') {
+            const jsonLdLooksFull = jsonLdParts.length > 0 && this.isSnippetSourceFull(
+                this.scoreJsonLdParts(jsonLdParts),
+                this.extractionLimits.jsonLdFullnessMinSignals
+            );
+            const openGraphLooksFull = openGraphParts.length > 0 && this.isSnippetSourceFull(
+                this.scoreOpenGraphParts(openGraphParts),
+                this.extractionLimits.openGraphFullnessMinSignals
+            );
+            if (jsonLdLooksFull && openGraphLooksFull) {
+                sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
+                sections.push(`OPEN_GRAPH\n${openGraphParts.join('\n')}`);
+            } else {
+                if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
+                if (openGraphParts.length > 0) sections.push(`OPEN_GRAPH\n${openGraphParts.join('\n')}`);
+                if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
+                if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
             }
         } else {
             if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-            if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
+            if (openGraphParts.length > 0) sections.push(`OPEN_GRAPH\n${openGraphParts.join('\n')}`);
             if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
             if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
         }
         return sections.join('\n\n').trim();
     }
 
-    pickBestSnippetSource(jsonLdParts, metaParts) {
-        if (jsonLdParts.length === 0 && metaParts.length === 0) return 'none';
-        if (jsonLdParts.length === 0) return 'meta';
-        if (metaParts.length === 0) return 'json-ld';
-        const jsonLdScore = this.scoreJsonLdParts(jsonLdParts);
-        const metaScore = this.scoreMetaParts(metaParts);
-        if (metaScore > (jsonLdScore + this.extractionLimits.metaWinsByThreshold)) return 'meta';
-        return 'json-ld';
+    isSnippetSourceFull(score, minSignals) {
+        return Number.isFinite(score) && score >= minSignals;
     }
 
     scoreJsonLdParts(parts) {
@@ -353,16 +358,15 @@ class AiWebParser {
         return keyRegexes.reduce((score, regex) => score + (regex.test(joined) ? 1 : 0), 0);
     }
 
-    scoreMetaParts(parts) {
+    scoreOpenGraphParts(parts) {
         if (!Array.isArray(parts) || parts.length === 0) return 0;
         const keyRegexes = [
-            /(?:^|\s)(?:title|og:title|twitter:title)\s*:/i,
-            /(?:^|\s)(?:description|og:description|twitter:description)\s*:/i,
-            /(?:^|\s)(?:event:start_time|event:end_time|article:published_time|date|time)\s*:/i,
-            /(?:^|\s)(?:location|venue|og:location)\s*:/i,
-            /(?:^|\s)(?:organizer|author)\s*:/i,
-            /(?:^|\s)(?:url|og:url)\s*:/i,
-            /(?:^|\s)(?:price|offers|ticket)\s*:/i
+            /(?:^|\s)og:title\s*:/i,
+            /(?:^|\s)og:description\s*:/i,
+            /(?:^|\s)og:type\s*:/i,
+            /(?:^|\s)og:url\s*:/i,
+            /(?:^|\s)og:image\s*:/i,
+            /(?:^|\s)og:site_name\s*:/i
         ];
         const joined = parts.join('\n');
         return keyRegexes.reduce((score, regex) => score + (regex.test(joined) ? 1 : 0), 0);
@@ -913,7 +917,7 @@ ${String(rawResponse || '')}`;
         return this.normalizeWhitespace(this.stripTags(match[1]));
     }
 
-    extractMetaParts(html) {
+    extractOpenGraphParts(html) {
         const results = [];
         const seen = new Set();
         const regex = /<meta\b[^>]*>/gi;
@@ -924,7 +928,7 @@ ${String(rawResponse || '')}`;
             const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || !contentMatch) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
-            if (!/(description|title|keywords|og:|twitter:|event|venue|location)/.test(key)) continue;
+            if (!/^og:/.test(key)) continue;
             const value = this.normalizeWhitespace(contentMatch[1]);
             if (!value) continue;
             const line = `${key}: ${value}`;
@@ -932,7 +936,7 @@ ${String(rawResponse || '')}`;
             if (seen.has(dedupeKey)) continue;
             seen.add(dedupeKey);
             results.push(line);
-            if (results.length >= this.extractionLimits.maxMetaParts) break;
+            if (results.length >= this.extractionLimits.maxOpenGraphParts) break;
         }
         return results;
     }
