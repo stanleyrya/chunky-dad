@@ -225,6 +225,8 @@ class AiWebParser {
             return null;
         }
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
+        const pageSnippet = this.getPageSnippet(htmlData, aiConfig);
+        console.log(`🤖 AI Web: Page data sent to AI for ${htmlData.url || 'unknown URL'} (${pageSnippet.length} chars)\n${pageSnippet}`);
         return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
     }
 
@@ -377,9 +379,14 @@ class AiWebParser {
         return fields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
-    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields) {
+    getPageSnippet(htmlData, aiConfig) {
         const htmlCharLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
-        const snippet = this.cleanHtml(htmlData.html || '').slice(0, htmlCharLimit);
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        return this.cleanHtml(html).slice(0, htmlCharLimit);
+    }
+
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields) {
+        const snippet = this.getPageSnippet(htmlData, aiConfig);
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
             : this.getAiPromptFields(parserConfig);
