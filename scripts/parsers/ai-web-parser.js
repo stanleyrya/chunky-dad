@@ -76,6 +76,9 @@ class AiWebParser {
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
         this.proxyImagePathPrefixes = ['/e/_next/image?', '/_next/image?'];
+        this.jsonLdSelectionBufferMultiplier = 2;
+        this.placeholderBaseUrl = 'https://placeholder.local';
+        this.ellipsisLength = 1;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -981,7 +984,7 @@ ${String(rawResponse || '')}`;
             if (this.containsEventType(text)) {
                 eventResults.push(text);
             }
-            if (results.length >= this.extractionLimits.maxJsonLdParts * 2) break;
+            if (results.length >= this.extractionLimits.maxJsonLdParts * this.jsonLdSelectionBufferMultiplier) break;
         }
         const selected = eventResults.length > 0 ? eventResults : results;
         return selected.slice(0, this.extractionLimits.maxJsonLdParts);
@@ -1148,7 +1151,7 @@ ${String(rawResponse || '')}`;
 
         if (this.proxyImagePathPrefixes.some(prefix => text.startsWith(prefix))) {
             try {
-                const proxyUrl = new URL(`https://placeholder.local${text}`);
+                const proxyUrl = new URL(`${this.placeholderBaseUrl}${text}`);
                 const wrapped = proxyUrl.searchParams.get('url');
                 if (wrapped) {
                     const decodedWrapped = this.decodeUrlEscapes(this.decodeBasicEntities(wrapped));
@@ -1162,7 +1165,7 @@ ${String(rawResponse || '')}`;
         }
 
         try {
-            const baseUrl = text.startsWith('/') ? 'https://placeholder.local' : undefined;
+            const baseUrl = text.startsWith('/') ? this.placeholderBaseUrl : undefined;
             const parsed = new URL(text, baseUrl);
             if (stripQuery) {
                 parsed.search = '';
@@ -1170,7 +1173,7 @@ ${String(rawResponse || '')}`;
             }
             const normalized = parsed.toString();
             if (text.startsWith('/')) {
-                return normalized.replace(/^https:\/\/placeholder\.local/i, '');
+                return normalized.replace(new RegExp(`^${this.placeholderBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'), '');
             }
             return normalized;
         } catch (_) {
@@ -1183,7 +1186,7 @@ ${String(rawResponse || '')}`;
         if (!Number.isFinite(maxLength) || maxLength <= 0 || normalized.length <= maxLength) {
             return normalized;
         }
-        return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+        return `${normalized.slice(0, Math.max(0, maxLength - this.ellipsisLength)).trim()}…`;
     }
 
     extractLinksFromPage(html, sourceUrl) {
