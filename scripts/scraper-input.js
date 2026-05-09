@@ -353,9 +353,6 @@ const scraperConfig = {
       alwaysBear: false,
       urlDiscoveryDepth: 1,
       maxAdditionalUrls: 15,
-      urlPatterns: [
-        { regex: 'href="([^"]*\\/events\\/[^"#?]+)"' }
-      ],
       dryRun: true,
       ai: {
         enabled: true,

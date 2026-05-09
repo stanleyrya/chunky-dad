@@ -80,10 +80,10 @@ class AiWebParser {
         const urls = new Set();
 
         try {
-            const patterns = parserConfig.urlPatterns;
-            if (!Array.isArray(patterns) || patterns.length === 0) {
-                throw new Error('ai-web parser requires urlPatterns when urlDiscoveryDepth > 0');
-            }
+            const configuredPatterns = parserConfig.urlPatterns;
+            const patterns = Array.isArray(configuredPatterns) && configuredPatterns.length > 0
+                ? configuredPatterns
+                : [{ regex: 'href=["\']([^"\']+)["\']' }];
 
             for (const pattern of patterns) {
                 const regex = new RegExp(pattern.regex, 'gi');
@@ -119,19 +119,7 @@ class AiWebParser {
             const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
             
             const urlMatch = url.match(urlPattern);
-            const sourceMatch = sourceUrl.match(urlPattern);
-            
-            if (!urlMatch || !sourceMatch) return false;
-            
-            const urlHostname = urlMatch[2].split(':')[0];
-            const sourceHostname = sourceMatch[2].split(':')[0];
-
-            const normalizedUrlHostname = urlHostname.toLowerCase().replace(/^www\./, '');
-            const normalizedSourceHostname = sourceHostname.toLowerCase().replace(/^www\./, '');
-            const isSameDomainOrSubdomain = normalizedUrlHostname === normalizedSourceHostname ||
-                normalizedUrlHostname.endsWith(`.${normalizedSourceHostname}`) ||
-                normalizedSourceHostname.endsWith(`.${normalizedUrlHostname}`);
-            if (!isSameDomainOrSubdomain) return false;
+            if (!urlMatch) return false;
 
             const invalidUrlPatterns = [
                 '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
@@ -140,14 +128,7 @@ class AiWebParser {
             ];
 
             if (invalidUrlPatterns.some(invalid => url.toLowerCase().includes(invalid))) return false;
-            
-            const eventKeywords = ['event', 'party', 'show', 'calendar', 'listing'];
-            const pathname = urlMatch[3] || '/';
-            const hasEventKeyword = eventKeywords.some(keyword =>
-                pathname.toLowerCase().includes(keyword)
-            );
-
-            return hasEventKeyword;
+            return true;
         } catch (error) {
             return false;
         }
