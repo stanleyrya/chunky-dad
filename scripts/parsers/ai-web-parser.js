@@ -85,7 +85,7 @@ class AiWebParser {
                 return this.buildEmptyResult(htmlData);
             }
 
-            const event = this.normalizeAiEvent(aiEvent, parserConfig, htmlData);
+            const event = this.normalizeAiEvent(aiEvent, parserConfig, htmlData, cityConfig);
             if (!event || !event.title || !event.startDate) {
                 console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
                 return this.buildEmptyResult(htmlData);
@@ -556,7 +556,7 @@ ${String(rawResponse || '')}`;
         }
     }
 
-    normalizeAiEvent(aiEvent, parserConfig, htmlData = null) {
+    normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
             htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
@@ -566,19 +566,28 @@ ${String(rawResponse || '')}`;
         const bar = this.firstNonEmpty(aiEvent.bar, aiEvent.venue, '');
         const address = this.firstNonEmpty(aiEvent.address, aiEvent.addr, '');
         const location = this.firstNonEmpty(aiEvent.location, aiEvent.coords, '');
-        const city = this.firstNonEmpty(aiEvent.city, '');
+        const city = this.firstNonEmpty(aiEvent.city, parserConfig && parserConfig.city, '');
+        const timezone = this.firstNonEmpty(
+            aiEvent.timezone,
+            this.getTimezoneForCity(city, cityConfig),
+            this.getTimezoneForCity(parserConfig && parserConfig.city, cityConfig),
+            ''
+        );
         const url = this.firstNonEmpty(aiEvent.url, aiEvent.web, aiEvent.website, '');
         const ticketUrl = this.firstNonEmpty(aiEvent.ticketUrl, aiEvent.tickets, '');
         const instagram = this.firstNonEmpty(scrapedLinks.instagram, aiEvent.instagram, aiEvent.insta, '');
         const facebook = this.firstNonEmpty(scrapedLinks.facebook, aiEvent.facebook, aiEvent.fb, '');
         const gmaps = this.firstNonEmpty(scrapedLinks.gmaps, aiEvent.gmaps, '');
         const image = this.firstNonEmpty(aiEvent.image, aiEvent.img, '');
-        const cover = this.firstNonEmpty(aiEvent.cover, '');
+        const coverFromPage = this.extractCoverFromPage(
+            htmlData && typeof htmlData.html === 'string' ? htmlData.html : ''
+        );
+        const cover = this.firstNonEmpty(this.normalizeCoverValue(aiEvent.cover), coverFromPage, '');
         const shortName = this.firstNonEmpty(aiEvent.shortName, aiEvent.short, '');
         const recurrenceRule = this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, '');
 
-        const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''));
-        const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''));
+        const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
+        const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
         const { startDate, endDate } = this.normalizeEventDates(startDateRaw, endDateRaw);
 
         if (!title || !startDate) {
@@ -594,6 +603,7 @@ ${String(rawResponse || '')}`;
             location,
             address,
             city,
+            timezone,
             url,
             ticketUrl,
             instagram,
@@ -628,13 +638,239 @@ ${String(rawResponse || '')}`;
         return '';
     }
 
-    parseDateValue(value) {
-        if (!value) return null;
-        const parsed = new Date(value);
+    getCityConfigMap(cityConfig) {
+        if (!cityConfig || typeof cityConfig !== 'object') return null;
+        if (cityConfig.cities && typeof cityConfig.cities === 'object') {
+            return cityConfig.cities;
+        }
+        return cityConfig;
+    }
+
+    getTimezoneForCity(city, cityConfig) {
+        const map = this.getCityConfigMap(cityConfig);
+        if (!map || typeof map !== 'object') return '';
+        const cityText = String(city || '').trim();
+        if (!cityText) return '';
+
+        const direct = map[cityText];
+        if (direct && typeof direct === 'object' && typeof direct.timezone === 'string' && direct.timezone.trim()) {
+            return direct.timezone.trim();
+        }
+
+        const normalizedCity = cityText.toLowerCase();
+        const matchedKey = Object.keys(map).find(key => String(key).toLowerCase() === normalizedCity);
+        if (!matchedKey) return '';
+        const matched = map[matchedKey];
+        if (!matched || typeof matched !== 'object' || typeof matched.timezone !== 'string') return '';
+        return matched.timezone.trim();
+    }
+
+    hasExplicitTimezoneInfo(dateValue) {
+        const valueText = String(dateValue || '').trim();
+        if (!valueText) return false;
+        return /(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(valueText) || /\b(?:UTC|GMT)\b/i.test(valueText);
+    }
+
+    getTimezoneOffsetMinutes(date, timezone) {
+        if (!date || !timezone) return null;
+        try {
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            });
+            const parts = formatter.formatToParts(date);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            const offsetText = offsetPart && typeof offsetPart.value === 'string' ? offsetPart.value : '';
+            const offsetMatch = offsetText.match(/GMT([+-])(\d{2}):(\d{2})/);
+            if (!offsetMatch) return null;
+            const sign = offsetMatch[1] === '+' ? 1 : -1;
+            const hours = parseInt(offsetMatch[2], 10);
+            const minutes = parseInt(offsetMatch[3], 10);
+            return sign * ((hours * 60) + minutes);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    convertLocalDateTimeToUtc(localDateTimeValue, timezone) {
+        if (!localDateTimeValue || !timezone || typeof localDateTimeValue !== 'string') {
+            return null;
+        }
+
+        const valueText = localDateTimeValue.trim();
+        const match = valueText.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2})(?::?(\d{2}))?(?::?(\d{2}))?)?$/);
+        if (!match) {
+            return null;
+        }
+
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10);
+        const day = parseInt(match[3], 10);
+        const hour = parseInt(match[4] || '0', 10);
+        const minute = parseInt(match[5] || '0', 10);
+        const second = parseInt(match[6] || '0', 10);
+
+        const baseUtcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
+        let utcMillis = baseUtcMillis;
+        for (let i = 0; i < 4; i++) {
+            const offsetMinutes = this.getTimezoneOffsetMinutes(new Date(utcMillis), timezone);
+            if (!Number.isFinite(offsetMinutes)) {
+                return null;
+            }
+            const nextUtcMillis = baseUtcMillis - (offsetMinutes * 60 * 1000);
+            if (nextUtcMillis === utcMillis) {
+                break;
+            }
+            utcMillis = nextUtcMillis;
+        }
+
+        return new Date(utcMillis);
+    }
+
+    parseDateValue(value, timezoneHint = null) {
+        if (value === null || value === undefined || value === '') return null;
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+        }
+        if (typeof value === 'number') {
+            const numericDate = new Date(value);
+            return Number.isNaN(numericDate.getTime()) ? null : numericDate;
+        }
+
+        const valueText = String(value).trim();
+        if (!valueText) return null;
+
+        if (timezoneHint && !this.hasExplicitTimezoneInfo(valueText) && /\d{1,2}:\d{2}/.test(valueText)) {
+            const converted = this.convertLocalDateTimeToUtc(valueText, timezoneHint);
+            if (converted && !Number.isNaN(converted.getTime())) {
+                return converted;
+            }
+        }
+
+        const parsed = new Date(valueText);
         if (!Number.isNaN(parsed.getTime())) {
             return parsed;
         }
         return null;
+    }
+
+    normalizeCoverValue(value) {
+        const text = this.firstNonEmpty(value, '');
+        if (!text) return '';
+        if (/^(?:cover\s*)?(?:tbd|unknown|none|n\/a|na|not\s+available)$/i.test(text)) {
+            return '';
+        }
+        return text;
+    }
+
+    extractCoverFromPage(html) {
+        if (!html || typeof html !== 'string') return '';
+        const fromJsonLd = this.extractCoverFromJsonLd(html);
+        if (fromJsonLd) return fromJsonLd;
+        return this.extractCoverFromText(html);
+    }
+
+    extractCoverFromJsonLd(html) {
+        const scriptRegex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptRegex.exec(html)) !== null) {
+            const rawJson = (match[1] || '').trim();
+            if (!rawJson) continue;
+            try {
+                const parsed = JSON.parse(rawJson);
+                const cover = this.extractCoverFromStructuredData(parsed);
+                if (cover) return cover;
+            } catch (_) {
+                continue;
+            }
+        }
+        return '';
+    }
+
+    extractCoverFromStructuredData(node) {
+        if (!node) return '';
+        if (Array.isArray(node)) {
+            for (const item of node) {
+                const cover = this.extractCoverFromStructuredData(item);
+                if (cover) return cover;
+            }
+            return '';
+        }
+        if (typeof node !== 'object') return '';
+
+        const offersCover = this.formatCoverFromOffer(node.offers);
+        if (offersCover) return offersCover;
+
+        for (const value of Object.values(node)) {
+            const nestedCover = this.extractCoverFromStructuredData(value);
+            if (nestedCover) return nestedCover;
+        }
+        return '';
+    }
+
+    formatCoverFromOffer(offers) {
+        if (!offers) return '';
+        if (Array.isArray(offers)) {
+            for (const offer of offers) {
+                const cover = this.formatCoverFromOffer(offer);
+                if (cover) return cover;
+            }
+            return '';
+        }
+        if (typeof offers !== 'object') return '';
+
+        const price = this.parsePriceNumber(offers.price);
+        const lowPrice = this.parsePriceNumber(offers.lowPrice);
+        const highPrice = this.parsePriceNumber(offers.highPrice);
+        const minPrice = this.parsePriceNumber(offers.minPrice);
+        const maxPrice = this.parsePriceNumber(offers.maxPrice);
+
+        const low = Number.isFinite(lowPrice) ? lowPrice : minPrice;
+        const high = Number.isFinite(highPrice) ? highPrice : maxPrice;
+        if (Number.isFinite(low) && Number.isFinite(high)) {
+            if (low === high) return this.formatCurrency(low);
+            return `${this.formatCurrency(low)} - ${this.formatCurrency(high)}`;
+        }
+        if (Number.isFinite(low)) return this.formatCurrency(low);
+        if (Number.isFinite(high)) return this.formatCurrency(high);
+        if (Number.isFinite(price)) return this.formatCurrency(price);
+
+        return this.extractCoverFromStructuredData(offers.priceSpecification);
+    }
+
+    extractCoverFromText(html) {
+        const text = this.decodeBasicEntities(this.stripTags(html || ''));
+        if (!text) return '';
+
+        if (/\b(?:free\s+(?:entry|admission)|no\s+cover)\b/i.test(text)) {
+            return 'Free';
+        }
+
+        const labeledMatch = text.match(/\b(?:cover|admission|tickets?\s*(?:from|at)?|entry)\b[^\n\r$]{0,40}\$?\s*(\d+(?:\.\d{1,2})?)(?:\s*(?:-|to)\s*\$?\s*(\d+(?:\.\d{1,2})?))?/i);
+        if (labeledMatch) {
+            const low = this.parsePriceNumber(labeledMatch[1]);
+            const high = this.parsePriceNumber(labeledMatch[2]);
+            if (Number.isFinite(low) && Number.isFinite(high)) {
+                if (low === high) return this.formatCurrency(low);
+                return `${this.formatCurrency(low)} - ${this.formatCurrency(high)}`;
+            }
+            if (Number.isFinite(low)) return this.formatCurrency(low);
+        }
+
+        return '';
+    }
+
+    parsePriceNumber(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const normalized = String(value).replace(/[^0-9.]/g, '').trim();
+        if (!normalized) return null;
+        const parsed = parseFloat(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    formatCurrency(value) {
+        if (!Number.isFinite(value)) return '';
+        return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2).replace(/\.00$/, '')}`;
     }
 
     normalizeEventDates(startDate, endDate) {
