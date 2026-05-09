@@ -118,10 +118,6 @@ class AiWebParser {
         try {
             const parsedUrl = new URL(url);
             if (!/^https?:$/.test(parsedUrl.protocol)) return false;
-            const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
-            
-            const urlMatch = url.match(urlPattern);
-            if (!urlMatch) return false;
             const lowerPath = (parsedUrl.pathname || '').toLowerCase();
             const staticAssetExtensions = [
                 '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tif', '.tiff',
@@ -355,7 +351,10 @@ class AiWebParser {
     buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields) {
         const htmlCharLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
         const snippet = this.cleanHtml(htmlData.html || '').slice(0, htmlCharLimit);
-        const fieldContext = this.buildFieldContextText(fields, cityConfig);
+        const promptFields = Array.isArray(fields) && fields.length > 0
+            ? fields
+            : this.getAiPromptFields(aiConfig, parserConfig);
+        const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
         return `Extract exactly one event from this page and return ONLY valid JSON.
 Preferred keys:
 ${fieldContext}
@@ -371,7 +370,10 @@ ${snippet}`;
     }
 
     buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields) {
-        const fieldContext = this.buildFieldContextText(fields, cityConfig);
+        const promptFields = Array.isArray(fields) && fields.length > 0
+            ? fields
+            : this.getAiPromptFields(aiConfig, parserConfig);
+        const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
         return `Convert this text into one strict JSON object for an event.
 Preferred keys:
 ${fieldContext}
