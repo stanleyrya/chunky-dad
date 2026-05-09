@@ -45,9 +45,8 @@ class AiWebParser {
             maxJsonLdParts: 8,
             maxLinkParts: 40,
             maxBodyParts: 300,
-            safeModeContentFallbackParts: 20,
-            // META must beat JSON-LD by this many scored signals; close scores prefer JSON-LD.
-            metaWinsByThreshold: 1,
+            jsonLdFullnessMinSignals: 4,
+            metaFullnessMinSignals: 4,
             noisyLinePrefixes: [
                 'share',
                 'follow',
@@ -289,7 +288,7 @@ class AiWebParser {
 
     normalizePayloadMode(mode) {
         const normalized = String(mode || '').trim().toLowerCase();
-        if (normalized === 'safe' || normalized === 'exhaustive') return normalized;
+        if (normalized === 'exhaustive' || normalized === 'jsonld' || normalized === 'meta') return normalized;
         return 'best';
     }
 
@@ -304,20 +303,31 @@ class AiWebParser {
         const bodyParts = this.extractBodyParts(source);
         const sections = [];
         if (title) sections.push(`TITLE\n${title}`);
-        if (payloadMode === 'best') {
-            const preferredSource = this.pickBestSnippetSource(jsonLdParts, metaParts);
-            if (preferredSource === 'json-ld' && jsonLdParts.length > 0) {
-                sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-            } else if (metaParts.length > 0) {
-                sections.push(`META\n${metaParts.join('\n')}`);
-            } else if (jsonLdParts.length > 0) {
+        if (payloadMode === 'jsonld') {
+            if (jsonLdParts.length > 0) {
                 sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
             }
-        } else if (payloadMode === 'safe') {
-            if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-            if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
-            if (jsonLdParts.length === 0 && metaParts.length === 0 && bodyParts.length > 0) {
-                sections.push(`CONTENT\n${bodyParts.slice(0, this.extractionLimits.safeModeContentFallbackParts).join('\n')}`);
+        } else if (payloadMode === 'meta') {
+            if (metaParts.length > 0) {
+                sections.push(`META\n${metaParts.join('\n')}`);
+            }
+        } else if (payloadMode === 'best') {
+            const jsonLdLooksFull = jsonLdParts.length > 0 && this.isSnippetSourceFull(
+                this.scoreJsonLdParts(jsonLdParts),
+                this.extractionLimits.jsonLdFullnessMinSignals
+            );
+            const metaLooksFull = metaParts.length > 0 && this.isSnippetSourceFull(
+                this.scoreMetaParts(metaParts),
+                this.extractionLimits.metaFullnessMinSignals
+            );
+            if (jsonLdLooksFull && metaLooksFull) {
+                sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
+                sections.push(`META\n${metaParts.join('\n')}`);
+            } else {
+                if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
+                if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
+                if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
+                if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
             }
         } else {
             if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
@@ -328,14 +338,8 @@ class AiWebParser {
         return sections.join('\n\n').trim();
     }
 
-    pickBestSnippetSource(jsonLdParts, metaParts) {
-        if (jsonLdParts.length === 0 && metaParts.length === 0) return 'none';
-        if (jsonLdParts.length === 0) return 'meta';
-        if (metaParts.length === 0) return 'json-ld';
-        const jsonLdScore = this.scoreJsonLdParts(jsonLdParts);
-        const metaScore = this.scoreMetaParts(metaParts);
-        if (metaScore > (jsonLdScore + this.extractionLimits.metaWinsByThreshold)) return 'meta';
-        return 'json-ld';
+    isSnippetSourceFull(score, minSignals) {
+        return Number.isFinite(score) && score >= minSignals;
     }
 
     scoreJsonLdParts(parts) {
@@ -355,17 +359,21 @@ class AiWebParser {
 
     scoreMetaParts(parts) {
         if (!Array.isArray(parts) || parts.length === 0) return 0;
-        const keyRegexes = [
-            /(?:^|\s)(?:title|og:title|twitter:title)\s*:/i,
-            /(?:^|\s)(?:description|og:description|twitter:description)\s*:/i,
-            /(?:^|\s)(?:event:start_time|event:end_time|article:published_time|date|time)\s*:/i,
-            /(?:^|\s)(?:location|venue|og:location)\s*:/i,
-            /(?:^|\s)(?:organizer|author)\s*:/i,
-            /(?:^|\s)(?:url|og:url)\s*:/i,
-            /(?:^|\s)(?:price|offers|ticket)\s*:/i
-        ];
-        const joined = parts.join('\n');
-        return keyRegexes.reduce((score, regex) => score + (regex.test(joined) ? 1 : 0), 0);
+        const keySet = new Set(parts.map(part => {
+            const line = String(part || '').trim().toLowerCase();
+            const separatorIndex = line.indexOf(': ');
+            return separatorIndex >= 0 ? line.slice(0, separatorIndex).trim() : line;
+        }).filter(Boolean));
+        const hasAny = candidates => candidates.some(candidate => keySet.has(candidate));
+        const hasPrefix = prefixes => Array.from(keySet).some(key => prefixes.some(prefix => key.startsWith(prefix)));
+        let score = 0;
+        if (hasAny(['title', 'description', 'keywords'])) score++;
+        if (hasPrefix(['og:'])) score++;
+        if (hasPrefix(['twitter:'])) score++;
+        if (hasPrefix(['event:'])) score++;
+        if (hasAny(['geo.position', 'geo.placename', 'apple-mobile-web-app-title'])) score++;
+        if (hasAny(['location', 'venue', 'address'])) score++;
+        return score;
     }
 
     getEventSchema() {
@@ -924,7 +932,19 @@ ${String(rawResponse || '')}`;
             const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || !contentMatch) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
-            if (!/(description|title|keywords|og:|twitter:|event|venue|location)/.test(key)) continue;
+            const allowedMetaKeys = new Set([
+                'description',
+                'title',
+                'keywords',
+                'location',
+                'venue',
+                'address',
+                'geo.position',
+                'geo.placename',
+                'apple-mobile-web-app-title'
+            ]);
+            const hasAllowedPrefix = key.startsWith('og:') || key.startsWith('twitter:') || key.startsWith('event:');
+            if (!hasAllowedPrefix && !allowedMetaKeys.has(key)) continue;
             const value = this.normalizeWhitespace(contentMatch[1]);
             if (!value) continue;
             const line = `${key}: ${value}`;
