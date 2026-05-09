@@ -351,12 +351,10 @@ const scraperConfig = {
       parser: "ai-web",
       urls: ["https://example.com/events"],
       alwaysBear: false,
-      // Listing page mode: discover detail pages first, then let ai-web parse each detail page
-      // Set urlDiscoveryDepth to 0 when the input URL is already a detail page
       urlDiscoveryDepth: 1,
       maxAdditionalUrls: 15,
       urlPatterns: [
-        { regex: 'href="([^"]*\\/events\\/[^"#?]+)"', maxMatches: 25 }
+        { regex: 'href="([^"]*\\/events\\/[^"#?]+)"' }
       ],
       dryRun: true,
       ai: {

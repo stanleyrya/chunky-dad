@@ -92,7 +92,7 @@ class AiWebParser {
 
                 while ((match = regex.exec(html)) !== null && matchCount < (pattern.maxMatches || 10)) {
                     const url = this.normalizeUrl(match[1], sourceUrl);
-                    if (this.isValidEventUrl(url, sourceUrl, parserConfig)) {
+                    if (this.isValidEventUrl(url, sourceUrl)) {
                         urls.add(url);
                         matchCount++;
                     }
@@ -112,59 +112,34 @@ class AiWebParser {
         return Array.from(urls);
     }
 
-    parseHttpUrl(url) {
-        const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
-        const match = String(url || '').match(urlPattern);
-        if (!match) return null;
-        return {
-            protocol: match[1],
-            hostname: match[2].split(':')[0].toLowerCase(),
-            pathname: match[3] || '/',
-            query: match[4] || '',
-            hash: match[5] || ''
-        };
-    }
-
-    isSameDomainOrSubdomain(urlHostname, sourceHostname) {
-        if (!urlHostname || !sourceHostname) return false;
-        const normalizedUrlHost = String(urlHostname).replace(/^www\./i, '').toLowerCase();
-        const normalizedSourceHost = String(sourceHostname).replace(/^www\./i, '').toLowerCase();
-        return normalizedUrlHost === normalizedSourceHost ||
-            normalizedUrlHost.endsWith(`.${normalizedSourceHost}`) ||
-            normalizedSourceHost.endsWith(`.${normalizedUrlHost}`);
-    }
-
-    isValidEventUrl(url, sourceUrl, parserConfig = {}) {
+    isValidEventUrl(url, sourceUrl) {
         if (!url || typeof url !== 'string') return false;
 
         try {
-            const parsedUrl = this.parseHttpUrl(url);
-            const parsedSourceUrl = this.parseHttpUrl(sourceUrl);
-
-            if (!parsedUrl || !parsedSourceUrl) return false;
-
-            if (!this.isSameDomainOrSubdomain(parsedUrl.hostname, parsedSourceUrl.hostname)) {
-                return false;
-            }
-
-            const invalidUrlTokens = [
+            const urlPattern = /^(https?:)\/\/([^\/]+)(\/[^?#]*)?(\?[^#]*)?(#.*)?$/;
+            
+            const urlMatch = url.match(urlPattern);
+            const sourceMatch = sourceUrl.match(urlPattern);
+            
+            if (!urlMatch || !sourceMatch) return false;
+            
+            const urlHostname = urlMatch[2].split(':')[0];
+            const sourceHostname = sourceMatch[2].split(':')[0];
+            
+            if (!urlHostname.includes(sourceHostname) && !sourceHostname.includes(urlHostname)) return false;
+            
+            const invalidPaths = [
                 '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
-                '#', 'javascript:', 'mailto:', 'tel:', 'sms:'
+                '#', 'javascript:', 'mailto:', 'tel:', 'sms:',
+                'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
             ];
-            if (invalidUrlTokens.some(invalid => url.toLowerCase().includes(invalid))) return false;
-
-            const invalidHostnames = ['facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'];
-            const isInvalidHostname = invalidHostnames.some(host =>
-                parsedUrl.hostname === host || parsedUrl.hostname.endsWith(`.${host}`)
-            );
-            if (isInvalidHostname) return false;
-
-            const eventKeywords = Array.isArray(parserConfig.eventUrlKeywords) && parserConfig.eventUrlKeywords.length > 0
-                ? parserConfig.eventUrlKeywords
-                : ['event', 'party', 'show', 'calendar', 'listing'];
-            const pathname = parsedUrl.pathname || '/';
+            
+            if (invalidPaths.some(invalid => url.toLowerCase().includes(invalid))) return false;
+            
+            const eventKeywords = ['event', 'party', 'show', 'calendar', 'listing'];
+            const pathname = urlMatch[3] || '/';
             const hasEventKeyword = eventKeywords.some(keyword =>
-                pathname.toLowerCase().includes(String(keyword || '').toLowerCase())
+                pathname.toLowerCase().includes(keyword)
             );
 
             return hasEventKeyword;
@@ -176,20 +151,28 @@ class AiWebParser {
     normalizeUrl(url, baseUrl) {
         if (!url) return null;
 
-        url = url.replace(/&amp;/g, '&');
+        url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
         if (url.startsWith('/')) {
-            const parsedBaseUrl = this.parseHttpUrl(baseUrl);
-            if (parsedBaseUrl) {
-                return `${parsedBaseUrl.protocol}//${parsedBaseUrl.hostname}${url}`;
+            const urlPattern = /^(https?:)\/\/([^\/]+)/;
+            const match = baseUrl.match(urlPattern);
+            if (match) {
+                const [, protocol, host] = match;
+                return `${protocol}//${host}${url}`;
             }
         }
 
         if (url.startsWith('//')) {
-            const parsedBaseUrl = this.parseHttpUrl(baseUrl);
-            if (parsedBaseUrl) {
-                return `${parsedBaseUrl.protocol}${url}`;
+            const urlPattern = /^(https?:)/;
+            const match = baseUrl.match(urlPattern);
+            if (match) {
+                const [, protocol] = match;
+                return `${protocol}${url}`;
             }
+        }
+
+        if (url.startsWith('#')) {
+            return null;
         }
 
         return url;
@@ -429,7 +412,6 @@ ${String(rawResponse || '')}`;
         if (!prompt) return null;
         const label = passLabel ? ` (${passLabel} pass)` : '';
         const promptChars = prompt.length;
-        const PAYLOAD_PREVIEW_MAX_CHARS = 1000;
         const payload = {
             model: aiConfig.model,
             prompt,
@@ -441,6 +423,7 @@ ${String(rawResponse || '')}`;
             }
         };
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
+        console.log(`🤖 AI Web: Prompt${label} (${promptChars} chars):\n${prompt}`);
         const startTime = Date.now();
         try {
             let responseText = null;
@@ -468,29 +451,24 @@ ${String(rawResponse || '')}`;
                 console.warn(`🤖 AI Web: AI request${label} failed - no HTTP client available (Request/fetch missing)`);
                 return null;
             }
+            console.log(`🤖 AI Web: Raw AI payload${label} (${responseText ? responseText.length : 0} chars):\n${responseText || ''}`);
             if (responseText) {
                 try {
                     responseJson = JSON.parse(responseText);
                 } catch (parseError) {
-                    const preview = this.createPayloadPreview(responseText, PAYLOAD_PREVIEW_MAX_CHARS);
-                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars): ${preview}`);
+                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars):\n${responseText}`);
                     return null;
                 }
             }
             const elapsed = Date.now() - startTime;
             if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
                 console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
+                console.log(`🤖 AI Web: AI response text${label} (${responseJson.response.length} chars):\n${responseJson.response}`);
                 return responseJson.response;
             }
             const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
             const thinkingChars = responseJson && typeof responseJson.thinking === 'string' ? responseJson.thinking.length : 0;
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (thinking: ${thinkingChars} chars, done_reason: ${doneReason})`);
-            if (responseText) {
-                const preview = this.createPayloadPreview(responseText, PAYLOAD_PREVIEW_MAX_CHARS);
-                console.warn(`🤖 AI Web: Raw AI payload${label} (${responseText.length} chars): ${preview}`);
-            } else {
-                console.warn(`🤖 AI Web: Raw AI payload${label} was empty`);
-            }
             return null;
         } catch (error) {
             const elapsed = Date.now() - startTime;
@@ -498,12 +476,6 @@ ${String(rawResponse || '')}`;
             console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
             return null;
         }
-    }
-
-    createPayloadPreview(text, maxChars) {
-        if (!text) return '';
-        if (text.length <= maxChars) return text;
-        return `${text.slice(0, maxChars)}…`;
     }
 
     extractFirstJsonObject(text) {
