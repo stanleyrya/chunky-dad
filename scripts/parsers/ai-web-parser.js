@@ -38,6 +38,7 @@ class AiWebParser {
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
+            // Small fixed-point loop count for timezone offset convergence around DST boundaries.
             timezoneConvergenceIterations: 4,
             millisPerDay: 24 * 60 * 60 * 1000,
             maxMetaParts: 30,
@@ -63,7 +64,9 @@ class AiWebParser {
             .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
             .join('|');
         this.noiseLineRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
+        // Matches phrases like "Free entry", "Free admission", or "No cover".
         this.freeCoverRegex = /\b(?:free\s+(?:entry|admission)|no\s+cover)\b/i;
+        // Matches labeled price text such as "Cover $10" or "Tickets from $15 - $25".
         this.coverPriceRegex = /\b(?:cover|admission|tickets?\s*(?:from|at)?|entry)\b[^\n\r$]{0,40}\$?\s*(\d+(?:\.\d{1,2})?)(?:\s*(?:-|to)\s*\$?\s*(\d+(?:\.\d{1,2})?))?/i;
     }
 
@@ -701,6 +704,7 @@ ${String(rawResponse || '')}`;
         }
 
         const valueText = localDateTimeValue.trim();
+        // Supports "YYYY-MM-DD", "YYYY-MM-DD HH:mm", "YYYY-MM-DDTHH:mm:ss".
         const match = valueText.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2})(?::?(\d{2}))?(?::?(\d{2}))?)?$/);
         if (!match) {
             return null;
@@ -714,7 +718,8 @@ ${String(rawResponse || '')}`;
         const second = parseInt(match[6] || '0', 10);
 
         // Build an initial UTC guess from local components, then iteratively converge
-        // using the target timezone offset (handles DST boundaries reliably).
+        // to the UTC instant whose timezone offset maps back to the requested local time.
+        // Iteration is needed near DST transitions where the first offset guess can be wrong.
         const baseUtcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
         let utcMillis = baseUtcMillis;
         for (let i = 0; i < this.extractionLimits.timezoneConvergenceIterations; i++) {
@@ -869,6 +874,7 @@ ${String(rawResponse || '')}`;
         if (value === null || value === undefined || value === '') return null;
         const normalized = String(value).replace(/[^0-9.]/g, '').trim();
         if (!normalized) return null;
+        // Reject malformed values like "12.34.56" so we do not silently parse partial prices.
         if ((normalized.match(/\./g) || []).length > 1) return null;
         const parsed = parseFloat(normalized);
         return Number.isFinite(parsed) ? parsed : null;
