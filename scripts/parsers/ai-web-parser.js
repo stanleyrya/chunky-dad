@@ -35,6 +35,14 @@ class AiWebParser {
         this.cachedEventSchemaPromptFields = [];
         this.cachedEventSchemaPromptFieldDescriptions = new Map();
         this.eventSchemaPromptFieldsLoaded = false;
+        this.extractionLimits = {
+            yearWindowPastDays: 45,
+            yearWindowFutureDays: 210,
+            maxMetaParts: 30,
+            maxJsonLdParts: 8,
+            maxLinkParts: 40,
+            maxBodyParts: 300
+        };
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -647,8 +655,8 @@ ${String(rawResponse || '')}`;
     adjustLikelyEventYear(date) {
         if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
         const now = new Date();
-        const windowStart = new Date(now.getTime() - (45 * 24 * 60 * 60 * 1000));
-        const windowEnd = new Date(now.getTime() + (210 * 24 * 60 * 60 * 1000));
+        const windowStart = new Date(now.getTime() - (this.extractionLimits.yearWindowPastDays * 24 * 60 * 60 * 1000));
+        const windowEnd = new Date(now.getTime() + (this.extractionLimits.yearWindowFutureDays * 24 * 60 * 60 * 1000));
         if (date >= windowStart && date <= windowEnd) {
             return new Date(date);
         }
@@ -694,7 +702,7 @@ ${String(rawResponse || '')}`;
             if (seen.has(dedupeKey)) continue;
             seen.add(dedupeKey);
             results.push(line);
-            if (results.length >= 30) break;
+            if (results.length >= this.extractionLimits.maxMetaParts) break;
         }
         return results;
     }
@@ -707,7 +715,7 @@ ${String(rawResponse || '')}`;
             const text = this.normalizeWhitespace(match[1] || '');
             if (!text) continue;
             results.push(text);
-            if (results.length >= 8) break;
+            if (results.length >= this.extractionLimits.maxJsonLdParts) break;
         }
         return results;
     }
@@ -726,7 +734,7 @@ ${String(rawResponse || '')}`;
             if (seen.has(dedupeKey)) continue;
             seen.add(dedupeKey);
             results.push(normalized);
-            if (results.length >= 40) break;
+            if (results.length >= this.extractionLimits.maxLinkParts) break;
         }
         return results;
     }
@@ -755,7 +763,7 @@ ${String(rawResponse || '')}`;
             if (seen.has(lower)) continue;
             seen.add(lower);
             results.push(line);
-            if (results.length >= 300) break;
+            if (results.length >= this.extractionLimits.maxBodyParts) break;
         }
         return results;
     }
@@ -763,7 +771,6 @@ ${String(rawResponse || '')}`;
     decodeBasicEntities(text) {
         return String(text || '')
             .replace(/&nbsp;/gi, ' ')
-            .replace(/&amp;/gi, '&')
             .replace(/&quot;/gi, '"')
             .replace(/&#39;/gi, "'")
             .replace(/&lt;/gi, '<')
@@ -797,10 +804,23 @@ ${String(rawResponse || '')}`;
         for (const link of links) {
             const normalized = this.normalizeUrl(link, sourceUrl);
             if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
-            const lower = normalized.toLowerCase();
-            if (!instagram && lower.includes('instagram.com')) instagram = normalized;
-            if (!facebook && lower.includes('facebook.com')) facebook = normalized;
-            if (!gmaps && (lower.includes('google.com/maps') || lower.includes('maps.app.goo.gl'))) gmaps = normalized;
+            let parsedUrl = null;
+            try {
+                parsedUrl = new URL(normalized);
+            } catch (_) {
+                continue;
+            }
+            const host = String(parsedUrl.hostname || '').toLowerCase();
+            const path = String(parsedUrl.pathname || '').toLowerCase();
+            const isInstagram = host === 'instagram.com' || host.endsWith('.instagram.com');
+            const isFacebook = host === 'facebook.com' || host.endsWith('.facebook.com');
+            const isGoogleMaps = host === 'maps.app.goo.gl' || (
+                (host === 'google.com' || host.endsWith('.google.com')) &&
+                (path.startsWith('/maps') || path.startsWith('/search'))
+            );
+            if (!instagram && isInstagram) instagram = normalized;
+            if (!facebook && isFacebook) facebook = normalized;
+            if (!gmaps && isGoogleMaps) gmaps = normalized;
             if (instagram && facebook && gmaps) break;
         }
 
