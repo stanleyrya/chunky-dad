@@ -41,12 +41,12 @@ class AiWebParser {
             // Small iteration limit for timezone offset convergence around DST boundaries.
             timezoneConvergenceIterations: 4,
             millisPerDay: 24 * 60 * 60 * 1000,
-            maxOpenGraphParts: 30,
+            maxMetaParts: 30,
             maxJsonLdParts: 8,
             maxLinkParts: 40,
             maxBodyParts: 300,
             jsonLdFullnessMinSignals: 4,
-            openGraphFullnessMinSignals: 4,
+            metaFullnessMinSignals: 4,
             noisyLinePrefixes: [
                 'share',
                 'follow',
@@ -288,8 +288,7 @@ class AiWebParser {
 
     normalizePayloadMode(mode) {
         const normalized = String(mode || '').trim().toLowerCase();
-        if (normalized === 'exhaustive' || normalized === 'jsonld' || normalized === 'opengraph') return normalized;
-        if (normalized === 'safe') return 'exhaustive';
+        if (normalized === 'exhaustive' || normalized === 'jsonld' || normalized === 'meta') return normalized;
         return 'best';
     }
 
@@ -298,7 +297,7 @@ class AiWebParser {
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
         const source = String(html).slice(0, 500000);
         const title = this.extractTitlePart(source);
-        const openGraphParts = this.extractOpenGraphParts(source);
+        const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
         const linkParts = this.extractLinkParts(source);
         const bodyParts = this.extractBodyParts(source);
@@ -308,31 +307,31 @@ class AiWebParser {
             if (jsonLdParts.length > 0) {
                 sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
             }
-        } else if (payloadMode === 'opengraph') {
-            if (openGraphParts.length > 0) {
-                sections.push(`OPEN_GRAPH\n${openGraphParts.join('\n')}`);
+        } else if (payloadMode === 'meta') {
+            if (metaParts.length > 0) {
+                sections.push(`META\n${metaParts.join('\n')}`);
             }
         } else if (payloadMode === 'best') {
             const jsonLdLooksFull = jsonLdParts.length > 0 && this.isSnippetSourceFull(
                 this.scoreJsonLdParts(jsonLdParts),
                 this.extractionLimits.jsonLdFullnessMinSignals
             );
-            const openGraphLooksFull = openGraphParts.length > 0 && this.isSnippetSourceFull(
-                this.scoreOpenGraphParts(openGraphParts),
-                this.extractionLimits.openGraphFullnessMinSignals
+            const metaLooksFull = metaParts.length > 0 && this.isSnippetSourceFull(
+                this.scoreMetaParts(metaParts),
+                this.extractionLimits.metaFullnessMinSignals
             );
-            if (jsonLdLooksFull && openGraphLooksFull) {
+            if (jsonLdLooksFull && metaLooksFull) {
                 sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-                sections.push(`OPEN_GRAPH\n${openGraphParts.join('\n')}`);
+                sections.push(`META\n${metaParts.join('\n')}`);
             } else {
                 if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-                if (openGraphParts.length > 0) sections.push(`OPEN_GRAPH\n${openGraphParts.join('\n')}`);
+                if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
                 if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
                 if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
             }
         } else {
             if (jsonLdParts.length > 0) sections.push(`JSON_LD\n${jsonLdParts.join('\n')}`);
-            if (openGraphParts.length > 0) sections.push(`OPEN_GRAPH\n${openGraphParts.join('\n')}`);
+            if (metaParts.length > 0) sections.push(`META\n${metaParts.join('\n')}`);
             if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
             if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
         }
@@ -358,15 +357,15 @@ class AiWebParser {
         return keyRegexes.reduce((score, regex) => score + (regex.test(joined) ? 1 : 0), 0);
     }
 
-    scoreOpenGraphParts(parts) {
+    scoreMetaParts(parts) {
         if (!Array.isArray(parts) || parts.length === 0) return 0;
         const keyRegexes = [
-            /^og:title\s*:/im,
-            /^og:description\s*:/im,
-            /^og:type\s*:/im,
-            /^og:url\s*:/im,
-            /^og:image\s*:/im,
-            /^og:site_name\s*:/im
+            /^(?:title|description|keywords)\s*:/im,
+            /^og:(?:title|description|type|url|image|site_name|locale)\s*:/im,
+            /^twitter:(?:title|description|card|image|label\d+|data\d+|site)\s*:/im,
+            /^event:(?:start_time|end_time|location(?::(?:latitude|longitude))?)\s*:/im,
+            /(?:^|\n)(?:geo\.position|geo\.placename|apple-mobile-web-app-title)\s*:/i,
+            /(?:^|\n)(?:location|venue|address)\s*:/i
         ];
         const joined = parts.join('\n');
         return keyRegexes.reduce((score, regex) => score + (regex.test(joined) ? 1 : 0), 0);
@@ -917,7 +916,7 @@ ${String(rawResponse || '')}`;
         return this.normalizeWhitespace(this.stripTags(match[1]));
     }
 
-    extractOpenGraphParts(html) {
+    extractMetaParts(html) {
         const results = [];
         const seen = new Set();
         const regex = /<meta\b[^>]*>/gi;
@@ -928,7 +927,7 @@ ${String(rawResponse || '')}`;
             const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || !contentMatch) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
-            if (!/^og:/.test(key)) continue;
+            if (!/(^og:|^twitter:|^event:|^(description|title|keywords|location|venue|address|geo\.position|geo\.placename|apple-mobile-web-app-title)$)/.test(key)) continue;
             const value = this.normalizeWhitespace(contentMatch[1]);
             if (!value) continue;
             const line = `${key}: ${value}`;
@@ -936,7 +935,7 @@ ${String(rawResponse || '')}`;
             if (seen.has(dedupeKey)) continue;
             seen.add(dedupeKey);
             results.push(line);
-            if (results.length >= this.extractionLimits.maxOpenGraphParts) break;
+            if (results.length >= this.extractionLimits.maxMetaParts) break;
         }
         return results;
     }
