@@ -362,9 +362,7 @@ class AiWebParser {
         const keySet = new Set(parts.map(part => {
             const line = String(part || '').trim().toLowerCase();
             const separatorIndex = line.indexOf(': ');
-            if (separatorIndex >= 0) return line.slice(0, separatorIndex).trim();
-            const firstColonIndex = line.indexOf(':');
-            return firstColonIndex >= 0 ? line.slice(0, firstColonIndex).trim() : line;
+            return separatorIndex >= 0 ? line.slice(0, separatorIndex).trim() : line;
         }).filter(Boolean));
         const hasAny = candidates => candidates.some(candidate => keySet.has(candidate));
         const hasPrefix = prefixes => Array.from(keySet).some(key => prefixes.some(prefix => key.startsWith(prefix)));
@@ -934,7 +932,19 @@ ${String(rawResponse || '')}`;
             const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || !contentMatch) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
-            if (!/^(?:og:|twitter:|event:|description|title|keywords|location|venue|address|geo\.position|geo\.placename|apple-mobile-web-app-title)$/.test(key)) continue;
+            const allowedMetaKeys = new Set([
+                'description',
+                'title',
+                'keywords',
+                'location',
+                'venue',
+                'address',
+                'geo.position',
+                'geo.placename',
+                'apple-mobile-web-app-title'
+            ]);
+            const hasAllowedPrefix = key.startsWith('og:') || key.startsWith('twitter:') || key.startsWith('event:');
+            if (!hasAllowedPrefix && !allowedMetaKeys.has(key)) continue;
             const value = this.normalizeWhitespace(contentMatch[1]);
             if (!value) continue;
             const line = `${key}: ${value}`;
