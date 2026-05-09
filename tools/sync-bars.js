@@ -250,6 +250,12 @@ function buildCityPatterns(cityConfig) {
     return patterns;
 }
 
+function hasMeaningfulValue(value) {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') return value.trim() !== '';
+    return true;
+}
+
 // Merge bars from sheets and local, deduplicating by name + city
 function mergeBars(sheetsBars, localBars) {
     const merged = new Map();
@@ -285,10 +291,14 @@ function mergeBars(sheetsBars, localBars) {
         if (!merged.has(key)) {
             merged.set(key, normalizedBar);
         } else {
-            // Preserve color fields from local bar so extract-favicon-colors data is not lost
+            // Preserve any local non-empty fields when sheet data is empty/unavailable
             const existing = merged.get(key);
-            if (!existing.faviconBg && normalizedBar.faviconBg) existing.faviconBg = normalizedBar.faviconBg;
-            if (!existing.faviconFg && normalizedBar.faviconFg) existing.faviconFg = normalizedBar.faviconFg;
+            Object.entries(normalizedBar).forEach(([field, value]) => {
+                if (field === 'name' || field === 'city') return;
+                if (!hasMeaningfulValue(existing[field]) && hasMeaningfulValue(value)) {
+                    existing[field] = value;
+                }
+            });
         }
     });
     
