@@ -122,23 +122,30 @@ class AiWebParser {
     }
 
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
-        const urls = new Set();
+        const urls = new Map();
 
         try {
+            const hrefCandidates = this.extractHrefCandidates(html);
+            for (const candidate of hrefCandidates) {
+                this.addAdditionalUrlCandidate(urls, candidate.url, sourceUrl, candidate.context);
+            }
+
             const configuredPatterns = parserConfig.urlPatterns;
             const patterns = Array.isArray(configuredPatterns) && configuredPatterns.length > 0
                 ? configuredPatterns
-                : [{ regex: 'href=["\']([^"\']+)["\']' }];
+                : [];
 
             for (const pattern of patterns) {
                 const regex = new RegExp(pattern.regex, 'gi');
                 let match;
                 let matchCount = 0;
+                const maxMatches = Number.isFinite(Number(pattern.maxMatches))
+                    ? Number(pattern.maxMatches)
+                    : 250;
 
-                while ((match = regex.exec(html)) !== null && matchCount < (pattern.maxMatches || 10)) {
-                    const url = this.normalizeUrl(match[1], sourceUrl);
-                    if (this.isValidEventUrl(url, sourceUrl)) {
-                        urls.add(url);
+                while ((match = regex.exec(html)) !== null && matchCount < maxMatches) {
+                    const matchedUrl = match[1] || match[0];
+                    if (this.addAdditionalUrlCandidate(urls, matchedUrl, sourceUrl, match[0])) {
                         matchCount++;
                     }
                 }
@@ -146,18 +153,12 @@ class AiWebParser {
 
             const rawUrlCandidates = this.extractUrlCandidatesFromRawHtml(html);
             for (const candidate of rawUrlCandidates) {
-                const url = this.normalizeUrl(candidate, sourceUrl);
-                if (this.isValidEventUrl(url, sourceUrl)) {
-                    urls.add(url);
-                }
+                this.addAdditionalUrlCandidate(urls, candidate.url || candidate, sourceUrl, candidate.context || '');
             }
 
             const jsonLdUrlCandidates = this.extractUrlsFromJsonLd(html);
             for (const candidate of jsonLdUrlCandidates) {
-                const url = this.normalizeUrl(candidate, sourceUrl);
-                if (this.isValidEventUrl(url, sourceUrl)) {
-                    urls.add(url);
-                }
+                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld');
             }
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
@@ -168,9 +169,90 @@ class AiWebParser {
             ? parserMaxAdditionalUrls
             : Number(this.config.maxAdditionalUrls);
         if (Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0) {
-            return Array.from(urls).slice(0, maxAdditionalUrls);
+            return this.rankAdditionalUrls(urls, sourceUrl).slice(0, maxAdditionalUrls);
         }
-        return Array.from(urls);
+        return this.rankAdditionalUrls(urls, sourceUrl);
+    }
+
+    extractHrefCandidates(html) {
+        if (!html) return [];
+        const candidates = [];
+        const anchorRegex = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+        let match;
+        while ((match = anchorRegex.exec(html)) !== null) {
+            candidates.push({
+                url: match[1],
+                context: `${match[0]} ${this.stripTags(match[2] || '')}`
+            });
+        }
+
+        const hrefRegex = /href\s*=\s*["']([^"']+)["']/gi;
+        while ((match = hrefRegex.exec(html)) !== null) {
+            candidates.push({ url: match[1], context: match[0] });
+        }
+        return candidates;
+    }
+
+    addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '') {
+        const url = this.normalizeUrl(rawUrl, sourceUrl);
+        if (!this.isValidEventUrl(url, sourceUrl)) return false;
+
+        const key = this.getUrlDedupeKey(url);
+        const score = this.scoreAdditionalUrl(url, sourceUrl, context);
+        const existing = urls.get(key);
+        if (!existing) {
+            urls.set(key, { url, score, index: urls.size });
+            return true;
+        }
+        if (score > existing.score) {
+            existing.url = url;
+            existing.score = score;
+        }
+        return false;
+    }
+
+    rankAdditionalUrls(urls, sourceUrl) {
+        return Array.from(urls.values())
+            .sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return a.index - b.index;
+            })
+            .map(item => item.url);
+    }
+
+    getUrlDedupeKey(url) {
+        try {
+            const parsed = new URL(url);
+            parsed.hash = '';
+            return parsed.toString().replace(/\/$/, '').toLowerCase();
+        } catch (_) {
+            return String(url || '').replace(/#.*$/, '').replace(/\/$/, '').toLowerCase();
+        }
+    }
+
+    scoreAdditionalUrl(url, sourceUrl, context = '') {
+        let score = 0;
+        try {
+            const parsedUrl = new URL(url);
+            const parsedSource = sourceUrl ? new URL(sourceUrl) : null;
+            const path = String(parsedUrl.pathname || '').toLowerCase();
+            const search = String(parsedUrl.search || '').toLowerCase();
+            const contextText = this.normalizeWhitespace(this.stripTags(context)).toLowerCase();
+            const haystack = `${path} ${search}`;
+
+            if (parsedSource && parsedUrl.hostname === parsedSource.hostname) score += 10;
+            if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname)) score += 15;
+            if (/\/e\/[^/?#]+/i.test(path)) score += 95;
+            if (/\/events?\/[^/?#]+/i.test(path)) score += 85;
+            if (/\/(?:party|parties|show|shows|ticket|tickets|calendar)\/[^/?#]+/i.test(path)) score += 60;
+            if (/(event|ticket|party|show|festival|concert|dance|night|rsvp|register)/i.test(haystack)) score += 40;
+            if (/(event|ticket|party|show|festival|concert|dance|night|rsvp|register|details|learn more)/i.test(contextText)) score += 30;
+            if (/\b(20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]20\d{2})\b/.test(haystack)) score += 25;
+            if (/[?&](?:event|event_id|eventid|eid|id|ticket|ticket_id)=/i.test(search)) score += 20;
+            if (/^\/(?:events?|calendar|tickets?|shows?)\/?$/i.test(path) && !search) score -= 45;
+            if (/\/(?:about|contact|privacy|terms|login|signin|signup|search|tag|category|blog)(?:\/|$)/i.test(path)) score -= 35;
+        } catch (_) {}
+        return score;
     }
 
     isValidEventUrl(url, sourceUrl) {
@@ -179,6 +261,7 @@ class AiWebParser {
         try {
             const parsedUrl = new URL(url);
             if (!/^https?:$/.test(parsedUrl.protocol)) return false;
+            if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(this.normalizeUrl(sourceUrl, sourceUrl))) return false;
             const lowerPath = (parsedUrl.pathname || '').toLowerCase();
             const staticAssetExtensions = [
                 '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tif', '.tiff',
@@ -205,29 +288,37 @@ class AiWebParser {
     normalizeUrl(url, baseUrl) {
         if (!url) return null;
 
-        url = this.decodeUrlEscapes(url).replace(/&amp;/g, '&');
+        url = this.decodeBasicEntities(this.decodeUrlEscapes(url)).replace(/&amp;/g, '&');
         url = url.replace(/[),.;]+$/, '');
+        url = url.trim();
 
-        if (url.startsWith('/')) {
-            const urlPattern = /^(https?:)\/\/([^\/]+)/;
-            const match = baseUrl.match(urlPattern);
-            if (match) {
-                const [, protocol, host] = match;
-                return `${protocol}//${host}${url}`;
-            }
+        if (/^(#|javascript:|mailto:|tel:|sms:)/i.test(url)) {
+            return null;
         }
 
         if (url.startsWith('//')) {
             const urlPattern = /^(https?:)/;
-            const match = baseUrl.match(urlPattern);
+            const match = String(baseUrl || '').match(urlPattern);
             if (match) {
                 const [, protocol] = match;
                 return `${protocol}${url}`;
             }
         }
 
-        if (url.startsWith('#')) {
-            return null;
+        try {
+            if (baseUrl) {
+                return new URL(url, baseUrl).toString();
+            }
+            return new URL(url).toString();
+        } catch (_) {}
+
+        if (url.startsWith('/')) {
+            const urlPattern = /^(https?:)\/\/([^\/]+)/;
+            const match = String(baseUrl || '').match(urlPattern);
+            if (match) {
+                const [, protocol, host] = match;
+                return `${protocol}//${host}${url}`;
+            }
         }
 
         return url;
@@ -249,12 +340,15 @@ class AiWebParser {
         const patterns = [
             /https?:\/\/[^\s"'<>\\]+/gi,
             /https?:\\\/\\\/[^\s"'<>]+/gi,
-            /\/e\/[a-z0-9-]+-tickets-\d+/gi
+            /https?:\\u002f\\u002f[^\s"'<>]+/gi,
+            /["'](?:url|href|link|eventUrl|event_url|ticketUrl|ticket_url|publicUrl|public_url)["']\s*:\s*["']([^"']+)["']/gi,
+            /\b(?:url|href|link|eventUrl|event_url|ticketUrl|ticket_url)\s*=\s*["']([^"']+)["']/gi
         ];
 
         for (const pattern of patterns) {
             for (const match of html.matchAll(pattern)) {
-                if (match[0]) candidates.add(match[0]);
+                const candidate = match[1] || match[0];
+                if (candidate) candidates.add(candidate);
             }
         }
 
