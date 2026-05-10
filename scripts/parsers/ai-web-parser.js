@@ -185,13 +185,22 @@ class AiWebParser {
             `🤖 AI Web: URL discovery stats for ${sourceUrl || 'unknown URL'} -> hrefCandidates=${discoveryStats.hrefCandidates}, configuredPatternMatches=${discoveryStats.configuredPatternMatches}, rawHtmlCandidates=${discoveryStats.rawHtmlCandidates}, jsonLdCandidates=${discoveryStats.jsonLdCandidates}, uniqueValid=${rankedUrls.length}, limit=${limitText}, returned=${limitedUrls.length}`
         );
         if (limitedUrls.length > 0) {
-            console.log(`🤖 AI Web: URL discovery top links: ${limitedUrls.slice(0, 5).join(', ')}`);
+            const previewLinks = limitedUrls
+                .slice(0, 5)
+                .map(url => this.trimToMaxLength(url, 120))
+                .join(', ');
+            console.log(`🤖 AI Web: URL discovery top links: ${previewLinks}`);
         }
 
-        if (Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0) {
-            return limitedUrls;
+        return limitedUrls;
+    }
+
+    getDefaultMaxAdditionalUrls() {
+        const defaultLimit = Number(this.config.maxAdditionalUrls);
+        if (Number.isFinite(defaultLimit) && defaultLimit >= 0) {
+            return defaultLimit;
         }
-        return rankedUrls;
+        return Infinity;
     }
 
     resolveMaxAdditionalUrls(parserConfig = {}) {
@@ -201,18 +210,17 @@ class AiWebParser {
         }
 
         const configuredValue = hasConfiguredLimit ? parserConfig.maxAdditionalUrls : undefined;
-        if (configuredValue !== undefined && configuredValue !== null && configuredValue !== '') {
+        if (typeof configuredValue === 'string' && configuredValue.trim().length === 0) {
+            return this.getDefaultMaxAdditionalUrls();
+        }
+        if (configuredValue !== undefined && configuredValue !== null) {
             const parsedConfigured = Number(configuredValue);
             if (Number.isFinite(parsedConfigured) && parsedConfigured >= 0) {
                 return parsedConfigured;
             }
         }
 
-        const defaultLimit = Number(this.config.maxAdditionalUrls);
-        if (Number.isFinite(defaultLimit) && defaultLimit >= 0) {
-            return defaultLimit;
-        }
-        return Infinity;
+        return this.getDefaultMaxAdditionalUrls();
     }
 
     extractHrefCandidates(html) {
