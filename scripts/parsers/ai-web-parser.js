@@ -771,8 +771,6 @@ Rules:
 - Use only the supplied source sections for this pass
  - Prefer any structured sections that are present (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT
 - Extract only details explicitly present in source text/data; do not infer missing facts
-- Only include rrule when the source explicitly states a repeat cadence (e.g. every Friday/weekly/monthly or literal RRULE)
-- Never create rrule from vague wording such as "returns", "back", "again", or similar phrasing
 - For cover, prefer explicit price/admission text and return concise plain text (e.g. "$20", "$20-$30.65", "Free")
 
 URL: ${htmlData.url || ''}
@@ -795,7 +793,6 @@ Rules:
 - No commentary
 - Omit unknown fields
 - Do not infer missing facts; keep only details explicitly supported by source text
-- Keep rrule only if repeat cadence is explicitly stated; otherwise omit it
 
 TEXT:
 ${String(rawResponse || '')}`;
