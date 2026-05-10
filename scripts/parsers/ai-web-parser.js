@@ -421,11 +421,14 @@ class AiWebParser {
         return chunks.filter(Boolean);
     }
 
-    isUsableAiFieldValue(value) {
+    isUsableAiFieldValue(value, depth = 0) {
+        if (depth > 4) return false;
         if (value === null || value === undefined) return false;
         if (typeof value === 'string') return value.trim().length > 0;
-        if (Array.isArray(value)) return value.some(item => this.isUsableAiFieldValue(item));
-        if (typeof value === 'object') return Object.keys(value).length > 0;
+        if (Array.isArray(value)) return value.some(item => this.isUsableAiFieldValue(item, depth + 1));
+        if (typeof value === 'object') {
+            return Object.values(value).some(item => this.isUsableAiFieldValue(item, depth + 1));
+        }
         return true;
     }
 
@@ -521,7 +524,7 @@ class AiWebParser {
             const snippets = this.buildPromptSnippets(titleSections.concat(sharedSections), sectionBundle.content ? [sectionBundle.content] : [], maxHtmlChars);
             const fallbackSnippets = snippets.length > 0
                 ? snippets
-                : this.buildPromptSnippets([], [sectionBundle.title, sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean), maxHtmlChars);
+                : this.buildPromptSnippets(titleSections, [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean), maxHtmlChars);
             for (const field of promptFields) {
                 const remainingField = this.getRemainingPromptFields([field], merged);
                 if (remainingField.length === 0) continue;
@@ -766,7 +769,7 @@ Rules:
 - Return only keys from the Preferred keys list
 - Omit unknown fields
 - Use only the supplied source sections for this pass
-- Prefer structured sections (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT when they are present
+ - Prefer any structured sections that are present (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT
 - For cover, prefer explicit price/admission text and return concise plain text (e.g. "$20", "$20-$30.65", "Free")
 
 URL: ${htmlData.url || ''}
