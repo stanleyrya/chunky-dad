@@ -81,6 +81,7 @@ const EVENT_KEY_ALIASES = {
     map: 'gmaps',
 
     image: 'image',
+    img: 'image',
     photo: 'image',
     cover: 'cover',
 
@@ -346,7 +347,7 @@ function getEventBuilderStateKey(paramKey) {
 
 const AI_PROMPT_FIELDS = [
     { param: 'name',    desc: 'The formal title of the event as stated.' },
-    { param: 'short',   desc: 'If the title is long, a shorter version to display as a reference. For long words, add&nbsp;-&nbsp;to help break them up). It will not show unless we need two lines. If you want a hyphen all the time, add&nbsp;\\-&nbsp;instead. The&nbsp;\\&nbsp;will not show.' },
+    { param: 'short',   desc: 'If the title is long, a shorter version to display as a reference. For long words, add - to help break them up). It will not show unless we need two lines. If you want a hyphen all the time, add \\- instead. The \\ will not show.' },
     { param: 'desc',    desc: 'Event description/tagline from source text; do not invent details.' },
     { param: 'city',    desc: 'City key' },
     { param: 'venue',   desc: 'Venue or bar name exactly as stated. Do not infer using address or coordinates.' },
