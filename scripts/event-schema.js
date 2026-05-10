@@ -354,7 +354,7 @@ const AI_PROMPT_FIELDS = [
     { param: 'coords',  desc: 'Coordinates as "lat,lng" — ONLY if explicitly in the source, never estimate' },
     { param: 'start',   desc: 'Start datetime in local time: YYYY-MM-DDTHH:MM, based on explicit date/time text only' },
     { param: 'end',     desc: 'End datetime in local time: YYYY-MM-DDTHH:MM, only when explicitly provided' },
-    { param: 'rrule',   desc: 'RRULE string ONLY when an explicit repeat schedule is stated (e.g. "every Friday", "weekly", or literal RRULE); never infer from vague words like "returns" or "back"' },
+    { param: 'rrule',   desc: 'Valid iCal RRULE value (e.g. FREQ=WEEKLY;BYDAY=FR) ONLY when an explicit repeat schedule is stated; never infer from vague words like "returns" or "back", and never return natural-language/date-range text' },
     { param: 'web',     desc: 'Event or organizer website URL from page metadata/content' },
     { param: 'tickets', desc: 'Ticket purchase URL only when explicitly present' },
     { param: 'insta',   desc: 'Instagram handle (e.g. @bearracuda) or full Instagram URL' },

@@ -345,23 +345,23 @@ function getEventBuilderStateKey(paramKey) {
 }
 
 const AI_PROMPT_FIELDS = [
-    { param: 'name',    desc: 'Full event title' },
-    { param: 'short',   desc: 'Shorter reference title (omit if the name is already short)' },
-    { param: 'desc',    desc: 'Event description or tagline' },
+    { param: 'name',    desc: 'Full event title exactly as shown on page' },
+    { param: 'short',   desc: 'Short reference title only when the page clearly provides one; omit if not explicit' },
+    { param: 'desc',    desc: 'Event description/tagline from source text; do not invent details' },
     { param: 'city',    desc: 'City key' },
-    { param: 'venue',   desc: 'Name of the venue or bar' },
-    { param: 'addr',    desc: 'Street address' },
+    { param: 'venue',   desc: 'Venue or bar name exactly as stated' },
+    { param: 'addr',    desc: 'Street address exactly as shown' },
     { param: 'coords',  desc: 'Coordinates as "lat,lng" — ONLY if explicitly in the source, never estimate' },
-    { param: 'start',   desc: 'Start datetime in local time: YYYY-MM-DDTHH:MM' },
-    { param: 'end',     desc: 'End datetime in local time: YYYY-MM-DDTHH:MM' },
-    { param: 'rrule',   desc: 'RRULE recurrence string (only if recurring, e.g. FREQ=WEEKLY;BYDAY=FR)' },
-    { param: 'web',     desc: 'Event or organizer website URL' },
-    { param: 'tickets', desc: 'Ticket purchase URL' },
+    { param: 'start',   desc: 'Start datetime in local time: YYYY-MM-DDTHH:MM, based on explicit date/time text only' },
+    { param: 'end',     desc: 'End datetime in local time: YYYY-MM-DDTHH:MM, only when explicitly provided' },
+    { param: 'rrule',   desc: 'Valid iCal RRULE value (e.g. FREQ=WEEKLY;BYDAY=FR) ONLY when an explicit repeat schedule is stated; never infer from vague words like "returns" or "back", and never return natural-language/date-range text' },
+    { param: 'web',     desc: 'Event or organizer website URL from page metadata/content' },
+    { param: 'tickets', desc: 'Ticket purchase URL only when explicitly present' },
     { param: 'insta',   desc: 'Instagram handle (e.g. @bearracuda) or full Instagram URL' },
     { param: 'fb',      desc: 'Facebook event or page URL' },
     { param: 'gmaps',   desc: 'Google Maps link' },
-    { param: 'img',     desc: 'Direct URL to a promo image or flyer' },
-    { param: 'cover',   desc: 'Cover charge info (e.g. Free, $15, Cover TBD)' }
+    { param: 'img',     desc: 'Direct URL to a promo image or flyer from source data' },
+    { param: 'cover',   desc: 'Exact cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). Omit if not stated' }
 ];
 
 const EventSchema = {

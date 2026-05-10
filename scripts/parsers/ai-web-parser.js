@@ -97,12 +97,13 @@ class AiWebParser {
                 };
             }
 
-            const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig);
+            const promptFields = this.getAiPromptFields(parserConfig);
+            const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig, promptFields);
             if (!aiEvent) {
                 return this.buildEmptyResult(htmlData);
             }
 
-            const event = this.normalizeAiEvent(aiEvent, parserConfig, htmlData, cityConfig);
+            const event = this.normalizeAiEvent(aiEvent, parserConfig, htmlData, cityConfig, promptFields);
             if (!event || !event.title || !event.startDate) {
                 console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
                 return this.buildEmptyResult(htmlData);
@@ -261,7 +262,7 @@ class AiWebParser {
         };
     }
 
-    async getAiEvent(htmlData, parserConfig, cityConfig) {
+    async getAiEvent(htmlData, parserConfig, cityConfig, selectedPromptFields = null) {
         if (!htmlData || typeof htmlData !== 'object') return null;
         if (htmlData.aiEvent && typeof htmlData.aiEvent === 'object') return htmlData.aiEvent;
         if (htmlData.aiExtraction && typeof htmlData.aiExtraction.event === 'object') {
@@ -271,11 +272,14 @@ class AiWebParser {
         if (!aiConfig.enabled || !htmlData.html) {
             return null;
         }
-        const promptFields = this.getAiPromptFields(parserConfig);
+        const promptFields = Array.isArray(selectedPromptFields) && selectedPromptFields.length > 0
+            ? selectedPromptFields
+            : this.getAiPromptFields(parserConfig);
         if (promptFields.length === 0) {
             console.warn('🤖 AI Web: EventSchema.AI_PROMPT_FIELDS unavailable - skipping extraction');
             return null;
         }
+        console.log(`🤖 AI Web: Prompt fields selected (${promptFields.length}): ${promptFields.join(', ')}`);
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
         const sectionBundle = this.getPromptSectionBundle(htmlData.html, aiConfig);
         const previewSnippet = this.buildPromptSnippets(
@@ -706,17 +710,40 @@ class AiWebParser {
         const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object'
             ? parserConfig.metadata
             : {};
+        const skippedFieldReasons = [];
         const selected = Object.keys(priorities).filter(field => {
             const rule = priorities[field];
-            if (!rule || !Array.isArray(rule.priority)) return false;
-            if (!rule.priority.includes('ai-web')) return false;
-            if (rule.priority.includes('static')) return false;
-            if (Object.prototype.hasOwnProperty.call(metadata, field)) return false;
+            if (!rule || !Array.isArray(rule.priority)) {
+                skippedFieldReasons.push({ field, reason: 'missing-priority-array' });
+                return false;
+            }
+            if (!rule.priority.includes('ai-web')) {
+                skippedFieldReasons.push({ field, reason: 'ai-web-not-in-priority', priority: rule.priority });
+                return false;
+            }
+            if (rule.priority.includes('static')) {
+                skippedFieldReasons.push({ field, reason: 'static-priority-present', priority: rule.priority });
+                return false;
+            }
+            if (Object.prototype.hasOwnProperty.call(metadata, field)) {
+                skippedFieldReasons.push({ field, reason: 'metadata-overrides-field' });
+                return false;
+            }
             return true;
         });
-        const aiPromptFields = selected.length > 0 ? selected : this.getDefaultExtractionFields();
+        const usingDefaults = selected.length === 0;
+        const aiPromptFields = usingDefaults ? this.getDefaultExtractionFields() : selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
-        return aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
+        const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
+        const removedManualFields = aiPromptFields.filter(field => manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
+        console.log(`🤖 AI Web: Field priority filter selected ${selected.length} field(s) from ${Object.keys(priorities).length}; defaultsUsed=${usingDefaults}`);
+        if (skippedFieldReasons.length > 0) {
+            console.log(`🤖 AI Web: Skipped priority fields => ${JSON.stringify(skippedFieldReasons)}`);
+        }
+        if (removedManualFields.length > 0) {
+            console.log(`🤖 AI Web: Removed manually scraped fields => ${removedManualFields.join(', ')}`);
+        }
+        return filteredPromptFields;
     }
 
     getFieldContext(field, cityConfig) {
@@ -769,9 +796,8 @@ Rules:
 - Return only keys from the Preferred keys list
 - Omit unknown fields
 - Use only the supplied source sections for this pass
- - Prefer any structured sections that are present (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT
+  - Prefer any structured sections that are present (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT
 - Extract only details explicitly present in source text/data; do not infer missing facts
-- For cover, prefer explicit price/admission text and return concise plain text (e.g. "$20", "$20-$30.65", "Free")
 
 URL: ${htmlData.url || ''}
 HTML:
@@ -839,6 +865,7 @@ ${String(rawResponse || '')}`;
             }
         };
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
+        console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
         const startTime = Date.now();
         try {
             let responseText = null;
@@ -871,16 +898,21 @@ ${String(rawResponse || '')}`;
                     responseJson = JSON.parse(responseText);
                 } catch (parseError) {
                     console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars)`);
+                    console.log(`🤖 AI Web: Raw response payload${label}\n${responseText}`);
                     return null;
                 }
             }
             const elapsed = Date.now() - startTime;
             if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
                 console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
+                console.log(`🤖 AI Web: Model response text${label}\n${responseJson.response}`);
                 return responseJson.response;
             }
             const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
+            if (responseText) {
+                console.log(`🤖 AI Web: Raw response payload${label}\n${responseText}`);
+            }
             return null;
         } catch (error) {
             const elapsed = Date.now() - startTime;
@@ -942,7 +974,27 @@ ${String(rawResponse || '')}`;
         }
     }
 
-    normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null) {
+    normalizeRruleValue(value) {
+        const raw = this.firstNonEmpty(value, '');
+        if (!raw) return '';
+        const withoutPrefix = raw.replace(/^RRULE\s*:/i, '').trim();
+        if (!withoutPrefix) return '';
+        if (/\s/.test(withoutPrefix)) return '';
+        const normalized = withoutPrefix.toUpperCase();
+        if (!normalized.includes('FREQ=')) return '';
+        if (!/^[A-Z0-9;=,_:+.-]+$/.test(normalized)) return '';
+        return normalized;
+    }
+
+    isPromptFieldRequested(fieldName, parserConfig = {}, promptFields = null) {
+        const requestedFields = Array.isArray(promptFields) && promptFields.length > 0
+            ? promptFields
+            : this.getAiPromptFields(parserConfig);
+        const requestedSet = new Set(requestedFields.map(field => this.normalizePromptFieldName(field)));
+        return requestedSet.has(this.normalizePromptFieldName(fieldName));
+    }
+
+    normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null, promptFields = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
             htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
@@ -967,7 +1019,9 @@ ${String(rawResponse || '')}`;
         const image = this.firstNonEmpty(aiEvent.image, aiEvent.img, '');
         const cover = this.firstNonEmpty(aiEvent.cover, '');
         const shortName = this.firstNonEmpty(aiEvent.shortName, aiEvent.short, '');
-        const recurrenceRule = this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, '');
+        const recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields)
+            ? this.normalizeRruleValue(this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, ''))
+            : '';
 
         const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
         const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
