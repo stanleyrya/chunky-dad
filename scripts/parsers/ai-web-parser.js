@@ -276,7 +276,7 @@ class AiWebParser {
             ? selectedPromptFields
             : this.getAiPromptFields(parserConfig);
         if (promptFields.length === 0) {
-            console.warn('🤖 AI Web: EventSchema.AI_PROMPT_FIELDS unavailable - skipping extraction');
+            console.warn('🤖 AI Web: No eligible AI prompt fields configured - skipping extraction');
             return null;
         }
         console.log(`🤖 AI Web: Prompt fields selected (${promptFields.length}): ${promptFields.join(', ')}`);
@@ -721,27 +721,25 @@ class AiWebParser {
                 skippedFieldReasons.push({ field, reason: 'ai-web-not-in-priority', priority: rule.priority });
                 return false;
             }
-            if (rule.priority.includes('static')) {
-                skippedFieldReasons.push({ field, reason: 'static-priority-present', priority: rule.priority });
-                return false;
-            }
             if (Object.prototype.hasOwnProperty.call(metadata, field)) {
                 skippedFieldReasons.push({ field, reason: 'metadata-overrides-field' });
                 return false;
             }
             return true;
         });
-        const usingDefaults = selected.length === 0;
-        const aiPromptFields = usingDefaults ? this.getDefaultExtractionFields() : selected;
+        const aiPromptFields = selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
         const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
         const removedManualFields = aiPromptFields.filter(field => manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
-        console.log(`🤖 AI Web: Field priority filter selected ${selected.length} field(s) from ${Object.keys(priorities).length}; defaultsUsed=${usingDefaults}`);
+        console.log(`🤖 AI Web: Field priority filter selected ${selected.length} field(s) from ${Object.keys(priorities).length}`);
         if (skippedFieldReasons.length > 0) {
             console.log(`🤖 AI Web: Skipped priority fields => ${JSON.stringify(skippedFieldReasons)}`);
         }
         if (removedManualFields.length > 0) {
             console.log(`🤖 AI Web: Removed manually scraped fields => ${removedManualFields.join(', ')}`);
+        }
+        if (filteredPromptFields.length === 0) {
+            console.warn('🤖 AI Web: No AI prompt fields selected from fieldPriorities; skipping AI extraction for this parser');
         }
         return filteredPromptFields;
     }
