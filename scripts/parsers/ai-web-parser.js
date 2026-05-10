@@ -267,8 +267,10 @@ class AiWebParser {
         const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
         let match;
         while ((match = regex.exec(html)) !== null) {
+            const content = (match[1] || '').trim();
+            if (!content) continue;
             try {
-                const parsed = JSON.parse(match[1] || '');
+                const parsed = JSON.parse(content);
                 this.collectUrlsFromObject(parsed, urls);
             } catch (_) {}
         }
