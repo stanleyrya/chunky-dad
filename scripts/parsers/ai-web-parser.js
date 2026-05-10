@@ -277,9 +277,14 @@ class AiWebParser {
             return null;
         }
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
-        const pageSnippet = this.getPageSnippet(htmlData, aiConfig);
-        console.log(`🤖 AI Web: Page data sent to AI for ${htmlData.url || 'unknown URL'} (${pageSnippet.length} chars)\n${pageSnippet}`);
-        return await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
+        const sectionBundle = this.getPromptSectionBundle(htmlData.html, aiConfig);
+        const previewSnippet = this.buildPromptSnippets(
+            sectionBundle.title ? [sectionBundle.title] : [],
+            [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean),
+            Math.max(500, Number(aiConfig.maxHtmlChars))
+        )[0] || '';
+        console.log(`🤖 AI Web: Page data sent to AI for ${htmlData.url || 'unknown URL'} (${previewSnippet.length} chars)\n${previewSnippet}`);
+        return await this.extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
     }
 
     getAiConfig(parserConfig = {}) {
@@ -305,6 +310,258 @@ class AiWebParser {
         return 'best';
     }
 
+    createPromptSection(label, parts) {
+        const values = Array.isArray(parts) ? parts : [parts];
+        const lines = values
+            .map(value => this.normalizeWhitespace(String(value || '')))
+            .filter(Boolean);
+        if (lines.length === 0) return null;
+        return { label, lines };
+    }
+
+    sectionToText(section) {
+        if (!section || !section.label || !Array.isArray(section.lines) || section.lines.length === 0) return '';
+        return `${section.label}\n${section.lines.join('\n')}`;
+    }
+
+    getPromptSectionBundle(html, aiConfig = {}) {
+        const source = String(html || '').slice(0, 500000);
+        const title = this.extractTitlePart(source);
+        const metaParts = this.extractMetaParts(source);
+        const jsonLdParts = this.extractJsonLdParts(source);
+        const bodyParts = this.extractBodyParts(source);
+        return {
+            title: this.createPromptSection('TITLE', title),
+            jsonLd: this.createPromptSection('JSON_LD_PRIMARY', jsonLdParts),
+            metaPrimary: this.createPromptSection('META_PRIMARY', metaParts),
+            metaFallback: this.createPromptSection('META_FALLBACK', metaParts),
+            content: this.createPromptSection('CONTENT', bodyParts),
+            jsonLdScore: this.scoreJsonLdParts(jsonLdParts),
+            metaScore: this.scoreMetaParts(metaParts),
+            payloadMode: this.normalizePayloadMode(aiConfig.payloadMode)
+        };
+    }
+
+    splitSectionForPrompt(section, maxChars, repeatedSections = []) {
+        if (!section) return [];
+        const repeatedText = repeatedSections
+            .map(candidate => this.sectionToText(candidate))
+            .filter(Boolean)
+            .join('\n\n');
+        const repeatedLength = repeatedText.length > 0 ? repeatedText.length + 2 : 0;
+        const availableChars = Math.max(120, Number(maxChars) - repeatedLength);
+        const fullText = this.sectionToText(section);
+        if (fullText.length <= availableChars) return [section];
+        const headerLength = String(section.label || '').length + 1;
+        const lineBudget = Math.max(40, availableChars - headerLength);
+        const chunks = [];
+        let currentLines = [];
+        for (const rawLine of section.lines) {
+            const normalizedLine = String(rawLine || '').length > lineBudget
+                ? this.trimToMaxLength(rawLine, lineBudget)
+                : String(rawLine || '');
+            const candidateLines = currentLines.concat(normalizedLine);
+            const candidateText = `${section.label}\n${candidateLines.join('\n')}`;
+            if (candidateText.length <= availableChars) {
+                currentLines = candidateLines;
+                continue;
+            }
+            if (currentLines.length > 0) {
+                chunks.push({ label: section.label, lines: currentLines });
+            }
+            currentLines = [normalizedLine];
+        }
+        if (currentLines.length > 0) {
+            chunks.push({ label: section.label, lines: currentLines });
+        }
+        return chunks;
+    }
+
+    buildPromptSnippets(repeatedSections, variableSections, maxChars) {
+        const baseSections = Array.isArray(repeatedSections) ? repeatedSections.filter(Boolean) : [];
+        const sections = Array.isArray(variableSections) ? variableSections.filter(Boolean) : [];
+        const baseText = baseSections
+            .map(section => this.sectionToText(section))
+            .filter(Boolean)
+            .join('\n\n');
+        if (sections.length === 0) {
+            return baseText ? [baseText.slice(0, maxChars)] : [];
+        }
+        const chunks = [];
+        let currentSections = [];
+        let currentText = baseText;
+        const pushCurrent = () => {
+            if (currentText) chunks.push(currentText);
+            currentSections = [];
+            currentText = baseText;
+        };
+        for (const section of sections) {
+            const sectionChunks = this.splitSectionForPrompt(section, maxChars, baseSections);
+            for (const sectionChunk of sectionChunks) {
+                const sectionText = this.sectionToText(sectionChunk);
+                const candidateText = currentText ? `${currentText}\n\n${sectionText}` : sectionText;
+                if (candidateText.length <= maxChars) {
+                    currentSections.push(sectionChunk);
+                    currentText = candidateText;
+                    continue;
+                }
+                if (currentSections.length > 0) {
+                    pushCurrent();
+                }
+                currentSections = [sectionChunk];
+                currentText = baseText ? `${baseText}\n\n${sectionText}` : sectionText;
+                if (currentText.length > maxChars) {
+                    currentText = currentText.slice(0, maxChars);
+                }
+            }
+        }
+        if (currentText) {
+            chunks.push(currentText);
+        }
+        return chunks.filter(Boolean);
+    }
+
+    isUsableAiFieldValue(value, depth = 0) {
+        if (depth > 4) return false;
+        if (value === null || value === undefined) return false;
+        if (typeof value === 'string') return value.trim().length > 0;
+        if (Array.isArray(value)) return value.some(item => this.isUsableAiFieldValue(item, depth + 1));
+        if (typeof value === 'object') {
+            return Object.values(value).some(item => this.isUsableAiFieldValue(item, depth + 1));
+        }
+        return true;
+    }
+
+    hasResolvedFieldValue(aiEvent, normalizedFieldName) {
+        if (!aiEvent || typeof aiEvent !== 'object') return false;
+        return Object.keys(aiEvent).some(key => {
+            if (this.normalizePromptFieldName(key) !== normalizedFieldName) return false;
+            return this.isUsableAiFieldValue(aiEvent[key]);
+        });
+    }
+
+    getRemainingPromptFields(fields, aiEvent) {
+        const requestedFields = Array.isArray(fields) ? fields : [];
+        return requestedFields.filter(field => !this.hasResolvedFieldValue(aiEvent, this.normalizePromptFieldName(field)));
+    }
+
+    mergeAiEventFields(currentEvent, nextEvent) {
+        const merged = currentEvent && typeof currentEvent === 'object' ? { ...currentEvent } : {};
+        if (!nextEvent || typeof nextEvent !== 'object') return merged;
+        Object.keys(nextEvent).forEach(key => {
+            const value = nextEvent[key];
+            if (!this.isUsableAiFieldValue(value)) return;
+            const normalizedName = this.normalizePromptFieldName(key);
+            if (this.hasResolvedFieldValue(merged, normalizedName)) return;
+            merged[key] = value;
+        });
+        return merged;
+    }
+
+    getBestModePromptGroups(sectionBundle) {
+        const jsonGroup = sectionBundle && sectionBundle.jsonLd
+            ? { label: 'jsonld', sections: [sectionBundle.jsonLd] }
+            : null;
+        const metaGroup = sectionBundle && sectionBundle.metaPrimary
+            ? { label: 'meta', sections: [sectionBundle.metaPrimary] }
+            : null;
+        const contentGroup = sectionBundle && sectionBundle.content
+            ? { label: 'content', sections: [sectionBundle.content] }
+            : null;
+        const groups = [];
+        if (jsonGroup && metaGroup) {
+            if (sectionBundle.jsonLdScore >= sectionBundle.metaScore) {
+                groups.push(jsonGroup, metaGroup);
+            } else {
+                groups.push(metaGroup, jsonGroup);
+            }
+        } else if (jsonGroup || metaGroup) {
+            groups.push(jsonGroup || metaGroup);
+        }
+        if (contentGroup) groups.push(contentGroup);
+        return groups.filter(Boolean);
+    }
+
+    async extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, fields, snippets, passLabelPrefix) {
+        let merged = {};
+        const promptFields = Array.isArray(fields) ? fields : [];
+        const promptSnippets = Array.isArray(snippets) ? snippets.filter(Boolean) : [];
+        for (let index = 0; index < promptSnippets.length; index++) {
+            const remainingFields = this.getRemainingPromptFields(promptFields, merged);
+            if (remainingFields.length === 0) break;
+            const partial = await this.extractEventWithTwoPassAi(
+                htmlData,
+                aiConfig,
+                cityConfig,
+                parserConfig,
+                remainingFields,
+                promptSnippets[index],
+                `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim()
+            );
+            merged = this.mergeAiEventFields(merged, partial);
+        }
+        return merged;
+    }
+
+    async extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, fields) {
+        const promptFields = Array.isArray(fields) ? fields : [];
+        const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
+        const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
+        const titleSections = sectionBundle.title ? [sectionBundle.title] : [];
+        const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
+
+        if (payloadMode === 'jsonld') {
+            const snippets = this.buildPromptSnippets(titleSections, sectionBundle.jsonLd ? [sectionBundle.jsonLd] : [], maxHtmlChars);
+            return await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'jsonld');
+        }
+        if (payloadMode === 'meta') {
+            const snippets = this.buildPromptSnippets(titleSections, sectionBundle.metaPrimary ? [sectionBundle.metaPrimary] : [], maxHtmlChars);
+            return await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'meta');
+        }
+        if (payloadMode === 'exhaustive') {
+            let merged = {};
+            const sharedSections = [sectionBundle.jsonLd, sectionBundle.metaFallback].filter(Boolean);
+            const snippets = this.buildPromptSnippets(titleSections.concat(sharedSections), sectionBundle.content ? [sectionBundle.content] : [], maxHtmlChars);
+            const fallbackSnippets = snippets.length > 0
+                ? snippets
+                : this.buildPromptSnippets(titleSections, [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean), maxHtmlChars);
+            for (const field of promptFields) {
+                const remainingField = this.getRemainingPromptFields([field], merged);
+                if (remainingField.length === 0) continue;
+                const partial = await this.extractFieldsAcrossSnippets(
+                    htmlData,
+                    aiConfig,
+                    cityConfig,
+                    parserConfig,
+                    remainingField,
+                    fallbackSnippets,
+                    `exhaustive ${field}`
+                );
+                merged = this.mergeAiEventFields(merged, partial);
+            }
+            return merged;
+        }
+
+        let merged = {};
+        const promptGroups = this.getBestModePromptGroups(sectionBundle);
+        for (const group of promptGroups) {
+            const remainingFields = this.getRemainingPromptFields(promptFields, merged);
+            if (remainingFields.length === 0) break;
+            const snippets = this.buildPromptSnippets(titleSections, group.sections, maxHtmlChars);
+            const partial = await this.extractFieldsAcrossSnippets(
+                htmlData,
+                aiConfig,
+                cityConfig,
+                parserConfig,
+                remainingFields,
+                snippets,
+                `best ${group.label}`
+            );
+            merged = this.mergeAiEventFields(merged, partial);
+        }
+        return merged;
+    }
+
     cleanHtml(html, aiConfig = {}) {
         if (!html) return '';
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
@@ -312,7 +569,6 @@ class AiWebParser {
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
-        const linkParts = this.extractLinkParts(source);
         const bodyParts = this.extractBodyParts(source);
         const sections = [];
         if (title) sections.push(`TITLE\n${title}`);
@@ -340,13 +596,11 @@ class AiWebParser {
                 if (jsonLdParts.length > 0) sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
                 if (metaParts.length > 0) sections.push(`META_FALLBACK\n${metaParts.join('\n')}`);
                 if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
-                if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
             }
         } else {
             if (jsonLdParts.length > 0) sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
             if (metaParts.length > 0) sections.push(`META_FALLBACK\n${metaParts.join('\n')}`);
             if (bodyParts.length > 0) sections.push(`CONTENT\n${bodyParts.join('\n')}`);
-            if (linkParts.length > 0) sections.push(`LINKS\n${linkParts.join('\n')}`);
         }
         return sections.join('\n\n').trim();
     }
@@ -502,14 +756,7 @@ class AiWebParser {
         return fields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
-    getPageSnippet(htmlData, aiConfig) {
-        const htmlCharLimit = Math.max(500, Number(aiConfig.maxHtmlChars));
-        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
-        return this.cleanHtml(html, aiConfig).slice(0, htmlCharLimit);
-    }
-
-    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields) {
-        const snippet = this.getPageSnippet(htmlData, aiConfig);
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet) {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
             : this.getAiPromptFields(parserConfig);
@@ -521,13 +768,13 @@ Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list
 - Omit unknown fields
-- Treat JSON_LD_PRIMARY as the authoritative source when present
-- Use META_FALLBACK only to fill missing fields or confirm JSON_LD_PRIMARY
+- Use only the supplied source sections for this pass
+ - Prefer any structured sections that are present (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT
 - For cover, prefer explicit price/admission text and return concise plain text (e.g. "$20", "$20-$30.65", "Free")
 
 URL: ${htmlData.url || ''}
 HTML:
-${snippet}`;
+${String(snippet || '')}`;
     }
 
     buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields) {
@@ -549,9 +796,9 @@ TEXT:
 ${String(rawResponse || '')}`;
     }
 
-    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, batchIndex = 1, batchTotal = 1) {
-        const passSuffix = batchTotal > 1 ? ` batch ${batchIndex}/${batchTotal}` : '';
-        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields);
+    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, passLabel = '') {
+        const passSuffix = passLabel ? ` ${passLabel}` : '';
+        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet);
         const firstPass = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
         if (!firstPass) return null;
         const parsedFirstPass = this.parseAiEventResponse(firstPass);
