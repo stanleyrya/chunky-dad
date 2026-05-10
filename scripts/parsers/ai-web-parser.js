@@ -123,9 +123,16 @@ class AiWebParser {
 
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
         const urls = new Map();
+        const discoveryStats = {
+            hrefCandidates: 0,
+            configuredPatternMatches: 0,
+            rawHtmlCandidates: 0,
+            jsonLdCandidates: 0
+        };
 
         try {
             const hrefCandidates = this.extractHrefCandidates(html);
+            discoveryStats.hrefCandidates = hrefCandidates.length;
             for (const candidate of hrefCandidates) {
                 this.addAdditionalUrlCandidate(urls, candidate.url, sourceUrl, candidate.context);
             }
@@ -149,14 +156,17 @@ class AiWebParser {
                         matchCount++;
                     }
                 }
+                discoveryStats.configuredPatternMatches += matchCount;
             }
 
             const rawUrlCandidates = this.extractUrlCandidatesFromRawHtml(html);
+            discoveryStats.rawHtmlCandidates = rawUrlCandidates.length;
             for (const candidate of rawUrlCandidates) {
                 this.addAdditionalUrlCandidate(urls, candidate.url || candidate, sourceUrl, candidate.context || '');
             }
 
             const jsonLdUrlCandidates = this.extractUrlsFromJsonLd(html);
+            discoveryStats.jsonLdCandidates = jsonLdUrlCandidates.length;
             for (const candidate of jsonLdUrlCandidates) {
                 this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld');
             }
@@ -164,14 +174,45 @@ class AiWebParser {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
         }
 
-        const parserMaxAdditionalUrls = Number(parserConfig.maxAdditionalUrls);
-        const maxAdditionalUrls = Number.isFinite(parserMaxAdditionalUrls)
-            ? parserMaxAdditionalUrls
-            : Number(this.config.maxAdditionalUrls);
-        if (Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0) {
-            return this.rankAdditionalUrls(urls, sourceUrl).slice(0, maxAdditionalUrls);
+        const rankedUrls = this.rankAdditionalUrls(urls, sourceUrl);
+        const maxAdditionalUrls = this.resolveMaxAdditionalUrls(parserConfig);
+        const hasFiniteLimit = Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0;
+        const limitedUrls = hasFiniteLimit
+            ? rankedUrls.slice(0, maxAdditionalUrls)
+            : rankedUrls;
+        const limitText = hasFiniteLimit ? `${maxAdditionalUrls}` : 'none';
+        console.log(
+            `🤖 AI Web: URL discovery stats for ${sourceUrl || 'unknown URL'} -> hrefCandidates=${discoveryStats.hrefCandidates}, configuredPatternMatches=${discoveryStats.configuredPatternMatches}, rawHtmlCandidates=${discoveryStats.rawHtmlCandidates}, jsonLdCandidates=${discoveryStats.jsonLdCandidates}, uniqueValid=${rankedUrls.length}, limit=${limitText}, returned=${limitedUrls.length}`
+        );
+        if (limitedUrls.length > 0) {
+            console.log(`🤖 AI Web: URL discovery top links: ${limitedUrls.slice(0, 5).join(', ')}`);
         }
-        return this.rankAdditionalUrls(urls, sourceUrl);
+
+        if (Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0) {
+            return limitedUrls;
+        }
+        return rankedUrls;
+    }
+
+    resolveMaxAdditionalUrls(parserConfig = {}) {
+        const hasConfiguredLimit = Object.prototype.hasOwnProperty.call(parserConfig, 'maxAdditionalUrls');
+        if (hasConfiguredLimit && parserConfig.maxAdditionalUrls === null) {
+            return Infinity;
+        }
+
+        const configuredValue = hasConfiguredLimit ? parserConfig.maxAdditionalUrls : undefined;
+        if (configuredValue !== undefined && configuredValue !== null && configuredValue !== '') {
+            const parsedConfigured = Number(configuredValue);
+            if (Number.isFinite(parsedConfigured) && parsedConfigured >= 0) {
+                return parsedConfigured;
+            }
+        }
+
+        const defaultLimit = Number(this.config.maxAdditionalUrls);
+        if (Number.isFinite(defaultLimit) && defaultLimit >= 0) {
+            return defaultLimit;
+        }
+        return Infinity;
     }
 
     extractHrefCandidates(html) {
