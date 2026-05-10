@@ -283,7 +283,7 @@ class AiWebParser {
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
         const sectionBundle = this.getPromptSectionBundle(htmlData.html, aiConfig);
         const previewSnippet = this.buildPromptSnippets(
-            sectionBundle.title ? [sectionBundle.title] : [],
+            [],
             [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean),
             Math.max(500, Number(aiConfig.maxHtmlChars))
         )[0] || '';
@@ -299,7 +299,7 @@ class AiWebParser {
             model: String(aiConfig.model || 'qwen3.5:4b'),
             payloadMode: this.normalizePayloadMode(aiConfig.payloadMode),
             maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 6000,
-            numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 2048,
+            numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 8192,
             numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 512,
             temperature: Number.isFinite(Number(aiConfig.temperature)) ? Number(aiConfig.temperature) : 0,
             think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
@@ -511,24 +511,23 @@ class AiWebParser {
         const promptFields = Array.isArray(fields) ? fields : [];
         const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
         const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
-        const titleSections = sectionBundle.title ? [sectionBundle.title] : [];
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
 
         if (payloadMode === 'jsonld') {
-            const snippets = this.buildPromptSnippets(titleSections, sectionBundle.jsonLd ? [sectionBundle.jsonLd] : [], maxHtmlChars);
+            const snippets = this.buildPromptSnippets([], sectionBundle.jsonLd ? [sectionBundle.jsonLd] : [], maxHtmlChars);
             return await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'jsonld');
         }
         if (payloadMode === 'meta') {
-            const snippets = this.buildPromptSnippets(titleSections, sectionBundle.metaPrimary ? [sectionBundle.metaPrimary] : [], maxHtmlChars);
+            const snippets = this.buildPromptSnippets([], sectionBundle.metaPrimary ? [sectionBundle.metaPrimary] : [], maxHtmlChars);
             return await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'meta');
         }
         if (payloadMode === 'exhaustive') {
             let merged = {};
             const sharedSections = [sectionBundle.jsonLd, sectionBundle.metaFallback].filter(Boolean);
-            const snippets = this.buildPromptSnippets(titleSections.concat(sharedSections), sectionBundle.content ? [sectionBundle.content] : [], maxHtmlChars);
+            const snippets = this.buildPromptSnippets(sharedSections, sectionBundle.content ? [sectionBundle.content] : [], maxHtmlChars);
             const fallbackSnippets = snippets.length > 0
                 ? snippets
-                : this.buildPromptSnippets(titleSections, [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean), maxHtmlChars);
+                : this.buildPromptSnippets([], [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean), maxHtmlChars);
             for (const field of promptFields) {
                 const remainingField = this.getRemainingPromptFields([field], merged);
                 if (remainingField.length === 0) continue;
@@ -551,7 +550,7 @@ class AiWebParser {
         for (const group of promptGroups) {
             const remainingFields = this.getRemainingPromptFields(promptFields, merged);
             if (remainingFields.length === 0) break;
-            const snippets = this.buildPromptSnippets(titleSections, group.sections, maxHtmlChars);
+            const snippets = this.buildPromptSnippets([], group.sections, maxHtmlChars);
             const partial = await this.extractFieldsAcrossSnippets(
                 htmlData,
                 aiConfig,
@@ -786,19 +785,16 @@ class AiWebParser {
             ? fields
             : this.getAiPromptFields(parserConfig);
         const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
-        return `Extract exactly one event from this page and return ONLY valid JSON.
+        return `You are a data scraper. You are being provided part of a website that includes information about an event. You must check if any of the requested keys are within the provided scraped data and return it as ONLY valid JSON. If a requested key is not explicitly in the source text, skip and omit it.
 Preferred keys:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list
-- Omit unknown fields
+- Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.
 - Use only the supplied source sections for this pass
   - Prefer any structured sections that are present (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT
-- Extract only details explicitly present in source text/data; do not infer missing facts
 
-URL: ${htmlData.url || ''}
-HTML:
 ${String(snippet || '')}`;
     }
 
