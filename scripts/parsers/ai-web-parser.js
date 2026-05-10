@@ -151,6 +151,14 @@ class AiWebParser {
                     urls.add(url);
                 }
             }
+
+            const jsonLdUrlCandidates = this.extractUrlsFromJsonLd(html);
+            for (const candidate of jsonLdUrlCandidates) {
+                const url = this.normalizeUrl(candidate, sourceUrl);
+                if (this.isValidEventUrl(url, sourceUrl)) {
+                    urls.add(url);
+                }
+            }
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
         }
@@ -251,6 +259,34 @@ class AiWebParser {
         }
 
         return Array.from(candidates);
+    }
+
+    extractUrlsFromJsonLd(html) {
+        if (!html) return [];
+        const urls = [];
+        const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+            const content = (match[1] || '').trim();
+            if (!content) continue;
+            try {
+                const parsed = JSON.parse(content);
+                this.collectUrlsFromObject(parsed, urls);
+            } catch (_) {}
+        }
+        return urls;
+    }
+
+    collectUrlsFromObject(obj, urls) {
+        if (!obj || typeof obj !== 'object') return;
+        if (Array.isArray(obj)) {
+            obj.forEach(item => this.collectUrlsFromObject(item, urls));
+            return;
+        }
+        if (typeof obj.url === 'string' && obj.url) urls.push(obj.url);
+        Object.values(obj).forEach(value => {
+            if (value && typeof value === 'object') this.collectUrlsFromObject(value, urls);
+        });
     }
 
     buildEmptyResult(htmlData) {
