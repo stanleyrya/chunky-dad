@@ -345,23 +345,23 @@ function getEventBuilderStateKey(paramKey) {
 }
 
 const AI_PROMPT_FIELDS = [
-    { param: 'title',       desc: 'The formal title of the event as stated.' },
-    { param: 'short',       desc: 'Short reference title only when the page clearly provides one; omit if not explicit' },
-    { param: 'description', desc: 'Event description/tagline from source text; do not invent details.' },
-    { param: 'city',        desc: 'City key' },
-    { param: 'bar',         desc: 'Venue or bar name exactly as stated. Do not infer using address or coordinates.' },
-    { param: 'address',     desc: 'Street address exactly as shown. Do not infer using coordinates, bar/venue name, or other data.' },
-    { param: 'location',    desc: 'Coordinates if they are explicitly stored in the page on its own in the format "lat,lng", not using the address or bar/venue' },
-    { param: 'startDate',   desc: 'Start datetime in local time: YYYY-MM-DDTHH:MM.' },
-    { param: 'endDate',     desc: 'End datetime in local time: YYYY-MM-DDTHH:MM.' },
-    { param: 'rrule',       desc: 'Valid iCal RRULE value (e.g. FREQ=WEEKLY;BYDAY=FR) ONLY when an explicit repeat schedule is stated; never infer from vague words like "returns" or "back", and never return natural-language/date-range text' },
-    { param: 'url',         desc: 'Event or organizer website URL from page metadata/content.' },
-    { param: 'tickets',     desc: 'Ticket purchase URL only when explicitly present' },
-    { param: 'insta',       desc: 'Instagram handle (e.g. @bearracuda) or full Instagram URL' },
-    { param: 'fb',          desc: 'Facebook event or page URL' },
-    { param: 'gmaps',       desc: 'Google Maps link' },
-    { param: 'image',       desc: 'The promotional image URL exactly as shown.' },
-    { param: 'cover',       desc: 'Exact cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). May be a range, omit if not stated.' }
+    { param: 'name',    desc: 'The formal title of the event as stated.' },
+    { param: 'short',   desc: 'If the title is long, a shorter version to display as a reference. For long words, add&nbsp;-&nbsp;to help break them up). It will not show unless we need two lines. If you want a hyphen all the time, add&nbsp;\\-&nbsp;instead. The&nbsp;\\&nbsp;will not show.' },
+    { param: 'desc',    desc: 'Event description/tagline from source text; do not invent details.' },
+    { param: 'city',    desc: 'City key' },
+    { param: 'venue',   desc: 'Venue or bar name exactly as stated. Do not infer using address or coordinates.' },
+    { param: 'addr',    desc: 'Street address exactly as shown. Do not infer using coordinates, bar/venue name, or other data.' },
+    { param: 'coords',  desc: 'Coordinates if they are explicitly stored in the page on its own in the format "lat,lng", not using the address or bar/venue' },
+    { param: 'start',   desc: 'Start datetime in local time: YYYY-MM-DDTHH:MM.' },
+    { param: 'end',     desc: 'End datetime in local time: YYYY-MM-DDTHH:MM.' },
+    { param: 'rrule',   desc: 'Valid iCal RRULE value (e.g. FREQ=WEEKLY;BYDAY=FR) ONLY when an explicit repeat schedule is stated; never infer from vague words like "returns" or "back", and never return natural-language/date-range text' },
+    { param: 'web',     desc: 'Event or organizer website URL from page metadata/content.' },
+    { param: 'tickets', desc: 'Ticket purchase URL only when explicitly present' },
+    { param: 'insta',   desc: 'Instagram handle (e.g. @bearracuda) or full Instagram URL' },
+    { param: 'fb',      desc: 'Facebook event or page URL' },
+    { param: 'gmaps',   desc: 'Google Maps link' },
+    { param: 'img',     desc: 'The promotional image URL exactly as shown.' },
+    { param: 'cover',   desc: 'Exact cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). May be a range, omit if not stated.' }
 ];
 
 const EventSchema = {

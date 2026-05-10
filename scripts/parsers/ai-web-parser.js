@@ -777,7 +777,12 @@ class AiWebParser {
     }
 
     buildFieldContextText(fields, cityConfig) {
-        return fields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
+        const allFields = Array.isArray(fields) ? [...fields] : [];
+        const normalizedFields = allFields.map(f => this.normalizePromptFieldName(f));
+        if (!normalizedFields.includes('city')) {
+            allFields.push('city');
+        }
+        return allFields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
     buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet) {
@@ -792,8 +797,6 @@ Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list
 - Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.
-- Use only the supplied source sections for this pass
-  - Prefer any structured sections that are present (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT
 
 ${String(snippet || '')}`;
     }
