@@ -770,6 +770,7 @@ Rules:
 - Omit unknown fields
 - Use only the supplied source sections for this pass
  - Prefer any structured sections that are present (JSON_LD_PRIMARY, META_PRIMARY, META_FALLBACK) over CONTENT
+- Extract only details explicitly present in source text/data; do not infer missing facts
 - For cover, prefer explicit price/admission text and return concise plain text (e.g. "$20", "$20-$30.65", "Free")
 
 URL: ${htmlData.url || ''}
@@ -791,6 +792,7 @@ Rules:
 - No markdown
 - No commentary
 - Omit unknown fields
+- Do not infer missing facts; keep only details explicitly supported by source text
 
 TEXT:
 ${String(rawResponse || '')}`;
