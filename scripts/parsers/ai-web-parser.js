@@ -355,31 +355,34 @@ class AiWebParser {
             }
         } catch (_) {}
 
-        const match = String(url).match(/^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i);
+        const URL_PARSE_PATTERN = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
+        // Capture groups: protocol, hostname[:port], pathname, query string, hash fragment.
+        const match = String(url).match(URL_PARSE_PATTERN);
         if (!match) return null;
-        const [, protocol = '', host = '', pathname = '', search = '', hash = ''] = match;
+        const [, protocol = '', hostname = '', pathname = '', search = '', hash = ''] = match;
         const normalizedPathname = pathname || '/';
         return {
             protocol: String(protocol || '').toLowerCase(),
-            hostname: String(host || '').toLowerCase(),
+            hostname: String(hostname || '').toLowerCase(),
             pathname: normalizedPathname,
             search: search || '',
             hash: hash || '',
-            href: `${protocol}//${host}${normalizedPathname}${search}${hash}`
+            href: `${protocol}//${hostname}${normalizedPathname}${search}${hash}`
         };
     }
 
     scoreAdditionalUrl(url, sourceUrl, context = '') {
         let score = 0;
         const parsedUrl = this.parseUrlComponents(url);
+        if (!parsedUrl) return score;
         const parsedSource = sourceUrl ? this.parseUrlComponents(sourceUrl) : null;
-        const path = String(parsedUrl?.pathname || '').toLowerCase();
-        const search = String(parsedUrl?.search || '').toLowerCase();
+        const path = String(parsedUrl.pathname || '').toLowerCase();
+        const search = String(parsedUrl.search || '').toLowerCase();
         const contextText = this.normalizeWhitespace(this.stripTags(context)).toLowerCase();
         const haystack = `${path} ${search}`;
 
-        if (parsedSource && parsedUrl?.hostname === parsedSource.hostname) score += 10;
-        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl?.hostname || '')) score += 15;
+        if (parsedSource && parsedUrl.hostname === parsedSource.hostname) score += 10;
+        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname || '')) score += 15;
         if (/\/e\/[^/?#]+/i.test(path)) score += 95;
         if (/\/events?\/[^/?#]+/i.test(path)) score += 85;
         if (/\/(?:party|parties|show|shows|ticket|tickets|calendar)\/[^/?#]+/i.test(path)) score += 60;
