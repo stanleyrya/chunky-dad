@@ -127,7 +127,7 @@ const DEFAULT_NOTES_EXCLUDED_FIELDS = new Set([
     'url',
     'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action',
     '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
-    '_original', '_mergeInfo', '_changes', '_mergeDiff',
+    '_original', '_mergeInfo', '_changes', '_mergeDiff', '_staticFields',
     'originalTitle', 'name',
     'recurrenceId', 'recurrenceIdTimezone', 'sequence',
     'lat', 'lng',
