@@ -336,6 +336,9 @@ class AiWebParser {
                 return { valid: false, reason: 'same-as-source' };
             }
             const lowerPath = (parsedUrl.pathname || '').toLowerCase();
+            if (parsedUrl.hash && (!parsedUrl.search || parsedUrl.search.length === 0) && (lowerPath === '' || lowerPath === '/')) {
+                return { valid: false, reason: 'fragment-only-root-url' };
+            }
             const staticAssetExtensions = [
                 '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tif', '.tiff',
                 '.css', '.js', '.mjs', '.map', '.json', '.xml', '.txt', '.pdf', '.zip', '.gz', '.tgz',
@@ -391,7 +394,7 @@ class AiWebParser {
         const entries = Object.entries(rejectedSamples);
         if (entries.length === 0) return '';
         return entries
-            .sort((a, b) => (b[1] || []).length - (a[1] || []).length)
+            .sort((a, b) => b[1].length - a[1].length)
             .slice(0, 3)
             .map(([reason, samples]) => `${reason}=[${(samples || []).join(' | ')}]`)
             .join('; ');
