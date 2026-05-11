@@ -2437,6 +2437,12 @@ class SharedCore {
             Object.keys(parserConfig.metadata).forEach(key => {
                 const metaValue = parserConfig.metadata[key];
                 if (typeof metaValue === 'object' && metaValue !== null) {
+                    const hasDirectValue = Object.prototype.hasOwnProperty.call(metaValue, 'value');
+                    const hasDefaultValue = Object.prototype.hasOwnProperty.call(metaValue, 'defaultValue');
+                    const hasConditionalValues = Array.isArray(metaValue.conditionalValues);
+                    if (!hasDirectValue && !hasDefaultValue && !hasConditionalValues) {
+                        return;
+                    }
                     const priorityConfig = fieldPriorities[key];
                     const selectedValue = this.resolveStaticMetadataValue(metaValue, event);
                     if (selectedValue === undefined) {
@@ -2913,7 +2919,7 @@ class SharedCore {
         for (const condition of metaValue.conditionalValues) {
             if (!condition || typeof condition !== 'object') continue;
             if (!Object.prototype.hasOwnProperty.call(condition, 'value')) continue;
-            const keywords = this.normalizeStaticMetadataKeywords(condition.keywords || condition.keyword || []);
+            const keywords = this.normalizeStaticMetadataKeywords(condition.keywords || []);
             if (keywords.length === 0) continue;
             if (keywords.some(keyword => searchText.includes(keyword))) {
                 return condition.value;
@@ -2962,7 +2968,7 @@ class SharedCore {
             }
 
             Object.keys(value).forEach(key => {
-                // Skip internal/system metadata fields when matching branding keywords.
+                // Skip internal/system metadata fields when building keyword search text.
                 if (String(key).startsWith('_')) return;
                 collect(value[key], depth + 1);
             });
