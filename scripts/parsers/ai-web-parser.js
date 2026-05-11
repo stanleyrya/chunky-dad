@@ -178,7 +178,7 @@ class AiWebParser {
                 this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld', discoveryStats);
             }
 
-            // Extract from window.__SERVER_DATA__ (Eventbrite organizer pages)
+            // Extract from common JS-embedded data objects (window.__SERVER_DATA__, __INITIAL_STATE__, etc.)
             const serverDataUrls = this.extractUrlsFromServerData(html, sourceUrl);
             discoveryStats.serverDataCandidates = serverDataUrls.length;
             for (const candidate of serverDataUrls) {
@@ -525,29 +525,28 @@ class AiWebParser {
     extractUrlsFromServerData(html, sourceUrl) {
         if (!html) return [];
         const urls = [];
-        try {
-            const startPattern = /window\.__SERVER_DATA__\s*=\s*/;
+        const patterns = [
+            /window\.__SERVER_DATA__\s*=\s*/,
+            /window\.__INITIAL_STATE__\s*=\s*/,
+            /window\.__PRELOADED_STATE__\s*=\s*/,
+            /window\.__APP_INITIAL_STATE__\s*=\s*/,
+            /window\.__APP_STATE__\s*=\s*/,
+            /window\.__REDUX_STATE__\s*=\s*/,
+            /window\.__STATE__\s*=\s*/,
+        ];
+        for (const startPattern of patterns) {
             const startMatch = html.match(startPattern);
-            if (!startMatch) return [];
-            const startIndex = startMatch.index + startMatch[0].length;
-            const jsonString = this.extractJsonObject(html, startIndex);
-            if (!jsonString) return [];
-            const serverData = JSON.parse(jsonString);
-            const futureEvents = serverData &&
-                serverData.view_data &&
-                serverData.view_data.events &&
-                Array.isArray(serverData.view_data.events.future_events)
-                ? serverData.view_data.events.future_events
-                : [];
-            for (const event of futureEvents) {
-                const rawUrl = event && (event.url || event.event_url || event.vanity_url || event.public_url);
-                if (rawUrl && typeof rawUrl === 'string') {
-                    const resolved = this.normalizeUrl(rawUrl, sourceUrl);
-                    if (resolved) urls.push(resolved);
-                }
+            if (!startMatch) continue;
+            try {
+                const startIndex = startMatch.index + startMatch[0].length;
+                const jsonString = this.extractJsonObject(html, startIndex);
+                if (!jsonString) continue;
+                const data = JSON.parse(jsonString);
+                this.collectEventUrlsFromDataObject(data, sourceUrl, urls, new Set(), 0);
+            } catch (error) {
+                const varName = (startPattern.source.match(/window\.([\w_]+)/) || [])[1] || 'unknown';
+                console.warn(`🤖 AI Web: Error extracting URLs from window.${varName}: ${error}`);
             }
-        } catch (error) {
-            console.warn(`🤖 AI Web: Error extracting URLs from window.__SERVER_DATA__: ${error}`);
         }
         return urls;
     }
@@ -559,29 +558,30 @@ class AiWebParser {
             const scriptMatch = html.match(/<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
             if (!scriptMatch) return [];
             const nextData = JSON.parse((scriptMatch[1] || '').trim());
-            this.collectEventUrlsFromNextDataObject(nextData, sourceUrl, urls, new Set(), 0);
+            this.collectEventUrlsFromDataObject(nextData, sourceUrl, urls, new Set(), 0);
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting URLs from __NEXT_DATA__: ${error}`);
         }
         return urls;
     }
 
-    collectEventUrlsFromNextDataObject(node, sourceUrl, urls, visited, depth) {
+    collectEventUrlsFromDataObject(node, sourceUrl, urls, visited, depth) {
         if (!node || typeof node !== 'object' || depth > 30) return;
         if (visited.has(node)) return;
         visited.add(node);
 
         if (Array.isArray(node)) {
             for (const item of node) {
-                this.collectEventUrlsFromNextDataObject(item, sourceUrl, urls, visited, depth + 1);
+                this.collectEventUrlsFromDataObject(item, sourceUrl, urls, visited, depth + 1);
             }
             return;
         }
 
         const rawUrl = node.url || node.event_url || node.vanity_url || node.public_url || '';
-        const hasEventPath = typeof rawUrl === 'string' && rawUrl.includes('/e/');
         const hasName = !!(node.name || node.title || node.event_name);
-        if (hasEventPath && hasName) {
+        const hasDate = !!(node.start || node.starts_at || node.start_date || node.startDate ||
+            node.start_time || node.date || node.datetime);
+        if (rawUrl && typeof rawUrl === 'string' && hasName && hasDate) {
             const resolved = this.normalizeUrl(String(rawUrl), sourceUrl);
             if (resolved) urls.push(resolved);
         }
@@ -589,7 +589,7 @@ class AiWebParser {
         for (const key of Object.keys(node)) {
             const value = node[key];
             if (value && typeof value === 'object') {
-                this.collectEventUrlsFromNextDataObject(value, sourceUrl, urls, visited, depth + 1);
+                this.collectEventUrlsFromDataObject(value, sourceUrl, urls, visited, depth + 1);
             }
         }
     }
