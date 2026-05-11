@@ -2937,7 +2937,9 @@ class SharedCore {
     }
 
     buildStaticMetadataSearchText(event) {
+        // Keep traversal bounded to avoid deep/cyclic payload costs while still covering nested parser data.
         const MAX_SEARCH_DEPTH = 10;
+        const INTERNAL_FIELD_PREFIX = '_';
         const parts = [];
         const visited = new Set();
 
@@ -2968,8 +2970,8 @@ class SharedCore {
             }
 
             Object.keys(value).forEach(key => {
-                // Skip internal/system metadata fields when building keyword search text.
-                if (String(key).startsWith('_')) return;
+                // Internal shared-core metadata keys are underscore-prefixed and should not drive matching.
+                if (String(key).startsWith(INTERNAL_FIELD_PREFIX)) return;
                 collect(value[key], depth + 1);
             });
         };
