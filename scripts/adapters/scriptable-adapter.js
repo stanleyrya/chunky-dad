@@ -3623,43 +3623,10 @@ class ScriptableAdapter {
         }
 
         function compactifyLogs(logText) {
-            // Regex matching a log entry's timestamp prefix
-            const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z \[(INFO|WARN|ERROR)\] /;
-            // Log lines whose continuation content (page data / prompts / responses) is stripped
-            const verbosePatterns = [
-                /Full prompt/,
-                /Model response text/,
-                /Page data sent to AI/,
-                /Raw response payload/,
-            ];
-            // Single-line entries that can be very long; truncate beyond this length
-            const maxSingleLineLength = 300;
-
-            const lines = logText.split('\\n');
-            const result = [];
-            let skipContinuations = false;
-
-            for (const line of lines) {
-                if (timestampPattern.test(line)) {
-                    // Start of a new log entry
-                    const isVerbose = verbosePatterns.some(p => p.test(line));
-                    skipContinuations = isVerbose;
-                    if (isVerbose) {
-                        result.push(line + ' [content omitted]');
-                    } else if (line.length > maxSingleLineLength) {
-                        result.push(line.slice(0, maxSingleLineLength) + ' [...]');
-                    } else {
-                        result.push(line);
-                    }
-                } else {
-                    // Continuation line of the previous log entry
-                    if (!skipContinuations) {
-                        result.push(line);
-                    }
-                }
-            }
-
-            return result.join('\\n');
+            return logText
+                .split('\\n')
+                .filter(line => !/🤖 AI Web: Full prompt \(extraction pass\)(?: \(\d+ chars\))?/.test(line))
+                .join('\\n');
         }
 
         function copyCompactLogs(button) {

@@ -64,6 +64,7 @@ class SharedCore {
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
         this.loggedWarnings = new Set();
+        this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
@@ -315,11 +316,11 @@ class SharedCore {
         // Process main URLs
         for (let i = 0; i < (parserConfig.urls || []).length; i++) {
             const url = parserConfig.urls[i];
-            if (globalProcessedUrls.has(url)) {
+            if (this.hasProcessedUrl(globalProcessedUrls, url)) {
                 await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
                 continue;
             }
-            globalProcessedUrls.add(url);
+            this.markProcessedUrl(globalProcessedUrls, url);
 
             try {
                 if (hasInlineInput && i === 0) {
@@ -436,11 +437,11 @@ class SharedCore {
         await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
 
         for (const url of urlsToProcess) {
-            if (processedUrls.has(url)) {
+            if (this.hasProcessedUrl(processedUrls, url)) {
                 continue; // Skip already processed URLs without logging each one
             }
 
-            processedUrls.add(url);
+            this.markProcessedUrl(processedUrls, url);
 
             try {
                 const htmlData = await httpAdapter.fetchData(url);
@@ -526,22 +527,79 @@ class SharedCore {
             if (!url || typeof url !== 'string') {
                 continue;
             }
+            const key = this.getUrlDedupeKey(url);
+            if (!key) {
+                continue;
+            }
             
             // Skip if already processed globally
-            if (processedUrls.has(url)) {
+            if (processedUrls.has(key)) {
                 continue;
             }
             
             // Skip if already in this batch
-            if (uniqueUrls.has(url)) {
+            if (uniqueUrls.has(key)) {
                 continue;
             }
             
-            uniqueUrls.add(url);
+            uniqueUrls.add(key);
             result.push(url);
         }
         
         return result;
+    }
+
+    hasProcessedUrl(processedUrls, url) {
+        const key = this.getUrlDedupeKey(url);
+        return !!key && processedUrls.has(key);
+    }
+
+    markProcessedUrl(processedUrls, url) {
+        const key = this.getUrlDedupeKey(url);
+        if (key) {
+            processedUrls.add(key);
+        }
+    }
+
+    getUrlDedupeKey(url) {
+        if (!url || typeof url !== 'string') return '';
+
+        const normalized = this.normalizeUrl(url, url) || String(url);
+        const parsed = this.parseUrl(normalized);
+        if (!parsed) {
+            return String(normalized).trim().replace(/#.*$/, '').replace(/\/$/, '').toLowerCase();
+        }
+
+        const protocol = String(parsed.protocol || '').toLowerCase();
+        const host = String(parsed.host || parsed.hostname || '').toLowerCase();
+        let pathname = String(parsed.pathname || '/');
+        pathname = pathname.replace(/\/+$/, '');
+        if (!pathname) pathname = '/';
+        const search = this.stripTrackingSearch(parsed.search || '');
+        return `${protocol}//${host}${pathname}${search}`.toLowerCase();
+    }
+
+    stripTrackingSearch(search) {
+        if (!search) return '';
+
+        const parts = String(search)
+            .replace(/^\?/, '')
+            .split('&')
+            .filter(Boolean);
+        const filtered = parts.filter(part => {
+            const [rawKey = ''] = String(part).split('=');
+            const normalizedKey = this.decodeQueryComponent(rawKey).toLowerCase();
+            return !this.trackingParamPattern.test(normalizedKey);
+        });
+        return filtered.length > 0 ? `?${filtered.join('&')}` : '';
+    }
+
+    decodeQueryComponent(value) {
+        try {
+            return decodeURIComponent(String(value || '').replace(/\+/g, '%20'));
+        } catch (_) {
+            return String(value || '');
+        }
     }
 
     // Pure utility functions
