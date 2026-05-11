@@ -358,13 +358,14 @@ class AiWebParser {
         const match = String(url).match(/^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i);
         if (!match) return null;
         const [, protocol = '', host = '', pathname = '', search = '', hash = ''] = match;
+        const normalizedPathname = pathname || '/';
         return {
             protocol: String(protocol || '').toLowerCase(),
-            hostname: String(host || '').toLowerCase().split(':')[0],
-            pathname: pathname || '/',
+            hostname: String(host || '').toLowerCase(),
+            pathname: normalizedPathname,
             search: search || '',
             hash: hash || '',
-            href: `${protocol}//${host}${pathname || ''}${search || ''}${hash || ''}`
+            href: `${protocol}//${host}${normalizedPathname}${search}${hash}`
         };
     }
 
@@ -377,8 +378,8 @@ class AiWebParser {
         const contextText = this.normalizeWhitespace(this.stripTags(context)).toLowerCase();
         const haystack = `${path} ${search}`;
 
-        if (parsedSource && parsedUrl && parsedUrl.hostname === parsedSource.hostname) score += 10;
-        if (parsedUrl && /(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname)) score += 15;
+        if (parsedSource && parsedUrl?.hostname === parsedSource.hostname) score += 10;
+        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl?.hostname || '')) score += 15;
         if (/\/e\/[^/?#]+/i.test(path)) score += 95;
         if (/\/events?\/[^/?#]+/i.test(path)) score += 85;
         if (/\/(?:party|parties|show|shows|ticket|tickets|calendar)\/[^/?#]+/i.test(path)) score += 60;
