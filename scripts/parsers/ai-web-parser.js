@@ -325,7 +325,7 @@ class AiWebParser {
     }
 
     validateEventUrl(url, sourceUrl) {
-        if (!url || typeof url !== 'string') return { valid: false, reason: 'empty-url' };
+        if (!url || typeof url !== 'string') return { valid: false, reason: 'missing-or-invalid-url' };
 
         try {
             const parsedUrl = new URL(url);
