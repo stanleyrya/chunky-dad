@@ -3622,6 +3622,63 @@ class ScriptableAdapter {
             }
         }
 
+        function compactifyLogs(logText) {
+            // Regex matching a log entry's timestamp prefix
+            const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z \[(INFO|WARN|ERROR)\] /;
+            // Log lines whose continuation content (page data / prompts / responses) is stripped
+            const verbosePatterns = [
+                /Full prompt/,
+                /Model response text/,
+                /Page data sent to AI/,
+                /Raw response payload/,
+            ];
+            // Single-line entries that can be very long; truncate beyond this length
+            const maxSingleLineLength = 300;
+
+            const lines = logText.split('\\n');
+            const result = [];
+            let skipContinuations = false;
+
+            for (const line of lines) {
+                if (timestampPattern.test(line)) {
+                    // Start of a new log entry
+                    const isVerbose = verbosePatterns.some(p => p.test(line));
+                    skipContinuations = isVerbose;
+                    if (isVerbose) {
+                        result.push(line + ' [content omitted]');
+                    } else if (line.length > maxSingleLineLength) {
+                        result.push(line.slice(0, maxSingleLineLength) + ' [...]');
+                    } else {
+                        result.push(line);
+                    }
+                } else {
+                    // Continuation line of the previous log entry
+                    if (!skipContinuations) {
+                        result.push(line);
+                    }
+                }
+            }
+
+            return result.join('\\n');
+        }
+
+        function copyCompactLogs(button) {
+            const logPre = document.querySelector('.log-output');
+            const logText = logPre ? logPre.textContent : '';
+            if (!logText) return;
+            const compactText = compactifyLogs(logText);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(compactText).then(() => {
+                    showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(compactText, button);
+                });
+            } else {
+                copyToClipboardFallback(compactText, button);
+            }
+        }
+
         function copyRawOutput() {
             // Get all event cards
             const eventCards = document.querySelectorAll('.event-card');
@@ -3969,6 +4026,7 @@ class ScriptableAdapter {
             <span class="section-title">Run Logs</span>
             <span class="section-count">${totalLines}</span>
             <button onclick="copyLogs(this)" class="log-copy-btn">📋 Copy</button>
+            <button onclick="copyCompactLogs(this)" class="log-copy-btn">📋 Compact</button>
         </div>
         <details class="log-details">
             <summary>${this.escapeHtml(summaryLabel)}</summary>
