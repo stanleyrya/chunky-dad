@@ -459,14 +459,41 @@ class AiWebParser {
         const invalidUrlPatterns = [
             '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
             'javascript:', 'mailto:', 'tel:', 'sms:',
-            'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com',
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
+        ];
+        const blockedHosts = [
+            'facebook.com',
+            'twitter.com',
+            'x.com',
+            'instagram.com',
+            'youtube.com',
+            'linkedin.com',
+            'tiktok.com',
+            't.me',
+            'telegram.me',
+            'telegram.org',
+            'whatsapp.com',
+            'eventbritecareers.com',
+            'eventbritestatus.com',
+            'cdn.evbstatic.com',
+            'img.evbuc.com',
+            'w3.org'
         ];
 
         const lowerUrl = url.toLowerCase();
         const blockedPattern = invalidUrlPatterns.find(invalid => lowerUrl.includes(invalid));
         if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
+        const hostname = String(parsedUrl.hostname || '').toLowerCase();
+        const blockedHost = blockedHosts.find(host => hostname === host || hostname.endsWith(`.${host}`));
+        if (blockedHost) return { valid: false, reason: `blocked-pattern:${blockedHost}` };
+        const lowerSearch = String(parsedUrl.search || '').toLowerCase();
+        if (/^\/(?:sharer(?:\.php)?|share(?:\/url)?|dialog\/send)$/i.test(lowerPath)) {
+            return { valid: false, reason: 'share-endpoint-path' };
+        }
+        if (/^\/send$/i.test(lowerPath) && /(?:^|[?&])text=/.test(lowerSearch)) {
+            return { valid: false, reason: 'share-endpoint-path' };
+        }
 
         // For Eventbrite URLs, only allow /e/ (event detail) and /o/ (organizer) paths
         if (/eventbrite\./i.test(parsedUrl.hostname)) {
