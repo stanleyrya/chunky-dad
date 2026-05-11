@@ -127,14 +127,17 @@ class AiWebParser {
             hrefCandidates: 0,
             configuredPatternMatches: 0,
             rawHtmlCandidates: 0,
-            jsonLdCandidates: 0
+            jsonLdCandidates: 0,
+            rejectedCandidates: 0,
+            rejectedReasons: {},
+            rejectedSamples: {}
         };
 
         try {
             const hrefCandidates = this.extractHrefCandidates(html);
             discoveryStats.hrefCandidates = hrefCandidates.length;
             for (const candidate of hrefCandidates) {
-                this.addAdditionalUrlCandidate(urls, candidate.url, sourceUrl, candidate.context);
+                this.addAdditionalUrlCandidate(urls, candidate.url, sourceUrl, candidate.context, discoveryStats);
             }
 
             const configuredPatterns = parserConfig.urlPatterns;
@@ -152,7 +155,7 @@ class AiWebParser {
 
                 while ((match = regex.exec(html)) !== null && matchCount < maxMatches) {
                     const matchedUrl = match[1] || match[0];
-                    if (this.addAdditionalUrlCandidate(urls, matchedUrl, sourceUrl, match[0])) {
+                    if (this.addAdditionalUrlCandidate(urls, matchedUrl, sourceUrl, match[0], discoveryStats)) {
                         matchCount++;
                     }
                 }
@@ -162,13 +165,13 @@ class AiWebParser {
             const rawUrlCandidates = this.extractUrlCandidatesFromRawHtml(html);
             discoveryStats.rawHtmlCandidates = rawUrlCandidates.length;
             for (const candidate of rawUrlCandidates) {
-                this.addAdditionalUrlCandidate(urls, candidate.url || candidate, sourceUrl, candidate.context || '');
+                this.addAdditionalUrlCandidate(urls, candidate.url || candidate, sourceUrl, candidate.context || '', discoveryStats);
             }
 
             const jsonLdUrlCandidates = this.extractUrlsFromJsonLd(html);
             discoveryStats.jsonLdCandidates = jsonLdUrlCandidates.length;
             for (const candidate of jsonLdUrlCandidates) {
-                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld');
+                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld', discoveryStats);
             }
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
@@ -181,9 +184,16 @@ class AiWebParser {
             ? rankedUrls.slice(0, maxAdditionalUrls)
             : rankedUrls;
         const limitText = hasFiniteLimit ? `${maxAdditionalUrls}` : 'none';
+        const rejectedTopReasons = this.formatTopRejectedReasons(discoveryStats.rejectedReasons);
         console.log(
-            `🤖 AI Web: URL discovery stats for ${sourceUrl || 'unknown URL'} -> hrefCandidates=${discoveryStats.hrefCandidates}, configuredPatternMatches=${discoveryStats.configuredPatternMatches}, rawHtmlCandidates=${discoveryStats.rawHtmlCandidates}, jsonLdCandidates=${discoveryStats.jsonLdCandidates}, uniqueValid=${rankedUrls.length}, limit=${limitText}, returned=${limitedUrls.length}`
+            `🤖 AI Web: URL discovery stats for ${sourceUrl || 'unknown URL'} -> hrefCandidates=${discoveryStats.hrefCandidates}, configuredPatternMatches=${discoveryStats.configuredPatternMatches}, rawHtmlCandidates=${discoveryStats.rawHtmlCandidates}, jsonLdCandidates=${discoveryStats.jsonLdCandidates}, rejected=${discoveryStats.rejectedCandidates}, rejectedTopReasons=${rejectedTopReasons}, uniqueValid=${rankedUrls.length}, limit=${limitText}, returned=${limitedUrls.length}`
         );
+        if (discoveryStats.rejectedCandidates > 0) {
+            const rejectedPreview = this.formatRejectedSamples(discoveryStats.rejectedSamples);
+            if (rejectedPreview) {
+                console.log(`🤖 AI Web: URL discovery rejected samples: ${rejectedPreview}`);
+            }
+        }
         if (limitedUrls.length > 0) {
             const previewLinks = limitedUrls
                 .slice(0, 5)
@@ -242,9 +252,15 @@ class AiWebParser {
         return candidates;
     }
 
-    addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '') {
+    addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '', discoveryStats = null) {
         const url = this.normalizeUrl(rawUrl, sourceUrl);
-        if (!this.isValidEventUrl(url, sourceUrl)) return false;
+        const validation = this.validateEventUrl(url, sourceUrl);
+        if (!validation.valid) {
+            if (discoveryStats && typeof discoveryStats === 'object') {
+                this.recordRejectedCandidate(discoveryStats, validation.reason, rawUrl);
+            }
+            return false;
+        }
 
         const key = this.getUrlDedupeKey(url);
         const score = this.scoreAdditionalUrl(url, sourceUrl, context);
@@ -305,33 +321,78 @@ class AiWebParser {
     }
 
     isValidEventUrl(url, sourceUrl) {
-        if (!url || typeof url !== 'string') return false;
+        return this.validateEventUrl(url, sourceUrl).valid;
+    }
+
+    validateEventUrl(url, sourceUrl) {
+        if (!url || typeof url !== 'string') return { valid: false, reason: 'empty-url' };
 
         try {
             const parsedUrl = new URL(url);
-            if (!/^https?:$/.test(parsedUrl.protocol)) return false;
-            if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(this.normalizeUrl(sourceUrl, sourceUrl))) return false;
+            if (!/^https?:$/.test(parsedUrl.protocol)) return { valid: false, reason: 'invalid-protocol' };
+            if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(this.normalizeUrl(sourceUrl, sourceUrl))) {
+                return { valid: false, reason: 'same-as-source' };
+            }
             const lowerPath = (parsedUrl.pathname || '').toLowerCase();
             const staticAssetExtensions = [
                 '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tif', '.tiff',
                 '.css', '.js', '.mjs', '.map', '.json', '.xml', '.txt', '.pdf', '.zip', '.gz', '.tgz',
                 '.mp3', '.m4a', '.wav', '.mp4', '.webm', '.mov', '.avi', '.woff', '.woff2', '.ttf'
             ];
-            if (staticAssetExtensions.some(ext => lowerPath.endsWith(ext))) return false;
+            if (staticAssetExtensions.some(ext => lowerPath.endsWith(ext))) return { valid: false, reason: 'static-asset-extension' };
             const staticAssetPathHints = ['/touch_icons/', '/images/', '/image/', '/img/', '/assets/', '/static/'];
-            if (staticAssetPathHints.some(segment => lowerPath.includes(segment))) return false;
+            if (staticAssetPathHints.some(segment => lowerPath.includes(segment))) return { valid: false, reason: 'static-asset-path' };
 
             const invalidUrlPatterns = [
                 '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
-                '#', 'javascript:', 'mailto:', 'tel:', 'sms:',
+                'javascript:', 'mailto:', 'tel:', 'sms:',
                 'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
             ];
 
-            if (invalidUrlPatterns.some(invalid => url.toLowerCase().includes(invalid))) return false;
-            return true;
+            const lowerUrl = url.toLowerCase();
+            const blockedPattern = invalidUrlPatterns.find(invalid => lowerUrl.includes(invalid));
+            if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
+            return { valid: true, reason: 'valid' };
         } catch (error) {
-            return false;
+            return { valid: false, reason: 'invalid-url' };
         }
+    }
+
+    recordRejectedCandidate(discoveryStats, reason, rawUrl) {
+        discoveryStats.rejectedCandidates += 1;
+        const rejectionReason = reason || 'unknown';
+        discoveryStats.rejectedReasons[rejectionReason] = (discoveryStats.rejectedReasons[rejectionReason] || 0) + 1;
+
+        if (!Object.prototype.hasOwnProperty.call(discoveryStats.rejectedSamples, rejectionReason)) {
+            discoveryStats.rejectedSamples[rejectionReason] = [];
+        }
+        const samples = discoveryStats.rejectedSamples[rejectionReason];
+        if (samples.length < 3) {
+            const sample = this.trimToMaxLength(String(rawUrl || ''), 120);
+            if (sample && !samples.includes(sample)) {
+                samples.push(sample);
+            }
+        }
+    }
+
+    formatTopRejectedReasons(rejectedReasons = {}) {
+        const entries = Object.entries(rejectedReasons);
+        if (entries.length === 0) return 'none';
+        return entries
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([reason, count]) => `${reason}:${count}`)
+            .join(', ');
+    }
+
+    formatRejectedSamples(rejectedSamples = {}) {
+        const entries = Object.entries(rejectedSamples);
+        if (entries.length === 0) return '';
+        return entries
+            .sort((a, b) => (b[1] || []).length - (a[1] || []).length)
+            .slice(0, 3)
+            .map(([reason, samples]) => `${reason}=[${(samples || []).join(' | ')}]`)
+            .join('; ');
     }
 
     normalizeUrl(url, baseUrl) {
