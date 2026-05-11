@@ -130,6 +130,8 @@ class AiWebParser {
             configuredPatternMatches: 0,
             rawHtmlCandidates: 0,
             jsonLdCandidates: 0,
+            nextDataCandidates: 0,
+            serverDataCandidates: 0,
             rejectedCandidates: 0,
             rejectedReasons: {},
             rejectedSamples: {}
@@ -175,6 +177,20 @@ class AiWebParser {
             for (const candidate of jsonLdUrlCandidates) {
                 this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld', discoveryStats);
             }
+
+            // Extract from window.__SERVER_DATA__ (Eventbrite organizer pages)
+            const serverDataUrls = this.extractUrlsFromServerData(html, sourceUrl);
+            discoveryStats.serverDataCandidates = serverDataUrls.length;
+            for (const candidate of serverDataUrls) {
+                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__server-data__', discoveryStats);
+            }
+
+            // Extract from __NEXT_DATA__ (Next.js pages)
+            const nextDataUrls = this.extractUrlsFromNextData(html, sourceUrl);
+            discoveryStats.nextDataCandidates = nextDataUrls.length;
+            for (const candidate of nextDataUrls) {
+                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__next-data__', discoveryStats);
+            }
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
         }
@@ -187,8 +203,11 @@ class AiWebParser {
             : rankedUrls;
         const limitText = hasFiniteLimit ? `${maxAdditionalUrls}` : 'none';
         const rejectedTopReasons = this.formatTopRejectedReasons(discoveryStats.rejectedReasons);
+        const extraSources = discoveryStats.serverDataCandidates > 0 || discoveryStats.nextDataCandidates > 0
+            ? `, serverDataCandidates=${discoveryStats.serverDataCandidates}, nextDataCandidates=${discoveryStats.nextDataCandidates}`
+            : '';
         console.log(
-            `🤖 AI Web: URL discovery stats for ${sourceUrl || 'unknown URL'} -> hrefCandidates=${discoveryStats.hrefCandidates}, configuredPatternMatches=${discoveryStats.configuredPatternMatches}, rawHtmlCandidates=${discoveryStats.rawHtmlCandidates}, jsonLdCandidates=${discoveryStats.jsonLdCandidates}, rejected=${discoveryStats.rejectedCandidates}, rejectedTopReasons=${rejectedTopReasons}, uniqueValid=${rankedUrls.length}, limit=${limitText}, returned=${limitedUrls.length}`
+            `🤖 AI Web: URL discovery stats for ${sourceUrl || 'unknown URL'} -> hrefCandidates=${discoveryStats.hrefCandidates}, configuredPatternMatches=${discoveryStats.configuredPatternMatches}, rawHtmlCandidates=${discoveryStats.rawHtmlCandidates}, jsonLdCandidates=${discoveryStats.jsonLdCandidates}${extraSources}, rejected=${discoveryStats.rejectedCandidates}, rejectedTopReasons=${rejectedTopReasons}, uniqueValid=${rankedUrls.length}, limit=${limitText}, returned=${limitedUrls.length}`
         );
         if (discoveryStats.rejectedCandidates > 0) {
             const rejectedPreview = this.formatRejectedSamples(discoveryStats.rejectedSamples);
@@ -259,7 +278,7 @@ class AiWebParser {
         const validation = this.validateEventUrl(url, sourceUrl);
         if (!validation.valid) {
             if (discoveryStats && typeof discoveryStats === 'object') {
-                this.recordRejectedCandidate(discoveryStats, validation.reason, rawUrl);
+                this.recordRejectedCandidate(discoveryStats, validation.reason, rawUrl, url);
             }
             return false;
         }
@@ -363,7 +382,7 @@ class AiWebParser {
         }
     }
 
-    recordRejectedCandidate(discoveryStats, reason, rawUrl) {
+    recordRejectedCandidate(discoveryStats, reason, rawUrl, normalizedUrl = null) {
         discoveryStats.rejectedCandidates += 1;
         const rejectionReason = reason || 'unknown';
         discoveryStats.rejectedReasons[rejectionReason] = (discoveryStats.rejectedReasons[rejectionReason] || 0) + 1;
@@ -373,7 +392,12 @@ class AiWebParser {
         }
         const samples = discoveryStats.rejectedSamples[rejectionReason];
         if (samples.length < this.maxRejectedSamplesPerReason) {
-            const sample = this.trimToMaxLength(String(rawUrl || ''), this.maxRejectedSampleLength);
+            const rawStr = String(rawUrl || '');
+            const normalizedStr = normalizedUrl && normalizedUrl !== rawStr ? String(normalizedUrl) : null;
+            const sampleRaw = this.trimToMaxLength(rawStr, this.maxRejectedSampleLength);
+            const sample = normalizedStr
+                ? `${sampleRaw} → ${this.trimToMaxLength(normalizedStr, this.maxRejectedSampleLength)}`
+                : sampleRaw;
             if (sample && !samples.includes(sample)) {
                 samples.push(sample);
             }
@@ -496,6 +520,134 @@ class AiWebParser {
         Object.values(obj).forEach(value => {
             if (value && typeof value === 'object') this.collectUrlsFromObject(value, urls);
         });
+    }
+
+    extractUrlsFromServerData(html, sourceUrl) {
+        if (!html) return [];
+        const urls = [];
+        try {
+            const startPattern = /window\.__SERVER_DATA__\s*=\s*/;
+            const startMatch = html.match(startPattern);
+            if (!startMatch) return [];
+            const startIndex = startMatch.index + startMatch[0].length;
+            const jsonString = this.extractJsonObject(html, startIndex);
+            if (!jsonString) return [];
+            const serverData = JSON.parse(jsonString);
+            const futureEvents = serverData &&
+                serverData.view_data &&
+                serverData.view_data.events &&
+                Array.isArray(serverData.view_data.events.future_events)
+                ? serverData.view_data.events.future_events
+                : [];
+            for (const event of futureEvents) {
+                const rawUrl = event && (event.url || event.event_url || event.vanity_url || event.public_url);
+                if (rawUrl && typeof rawUrl === 'string') {
+                    const resolved = this.normalizeUrl(rawUrl, sourceUrl);
+                    if (resolved) urls.push(resolved);
+                }
+            }
+        } catch (_) {}
+        return urls;
+    }
+
+    extractUrlsFromNextData(html, sourceUrl) {
+        if (!html) return [];
+        const urls = [];
+        try {
+            const scriptMatch = html.match(/<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+            if (!scriptMatch) return [];
+            const nextData = JSON.parse((scriptMatch[1] || '').trim());
+            this.collectEventUrlsFromNextDataObject(nextData, sourceUrl, urls, new Set(), 0);
+        } catch (_) {}
+        return urls;
+    }
+
+    collectEventUrlsFromNextDataObject(node, sourceUrl, urls, visited, depth) {
+        if (!node || typeof node !== 'object' || depth > 30) return;
+        if (visited.has(node)) return;
+        visited.add(node);
+
+        if (Array.isArray(node)) {
+            for (const item of node) {
+                this.collectEventUrlsFromNextDataObject(item, sourceUrl, urls, visited, depth + 1);
+            }
+            return;
+        }
+
+        const rawUrl = node.url || node.event_url || node.vanity_url || node.public_url || '';
+        const hasEventPath = typeof rawUrl === 'string' && rawUrl.includes('/e/');
+        const hasName = !!(node.name || node.title || node.event_name);
+        if (hasEventPath && hasName) {
+            const resolved = this.normalizeUrl(String(rawUrl), sourceUrl);
+            if (resolved) urls.push(resolved);
+        }
+
+        for (const key of Object.keys(node)) {
+            const value = node[key];
+            if (value && typeof value === 'object') {
+                this.collectEventUrlsFromNextDataObject(value, sourceUrl, urls, visited, depth + 1);
+            }
+        }
+    }
+
+    extractJsonObject(html, startIndex) {
+        let braceCount = 0;
+        let inString = false;
+        let i = startIndex;
+
+        while (i < html.length && html[i] !== '{') {
+            i++;
+        }
+        if (i >= html.length) return null;
+        braceCount = 1;
+        i++;
+
+        while (i < html.length && braceCount > 0) {
+            const char = html[i];
+            if (char === '"') {
+                let backslashCount = 0;
+                let j = i - 1;
+                while (j >= 0 && html[j] === '\\') { backslashCount++; j--; }
+                if (backslashCount % 2 === 0) inString = !inString;
+            } else if (!inString) {
+                if (char === '{') braceCount++;
+                else if (char === '}') braceCount--;
+            }
+            i++;
+        }
+
+        if (braceCount !== 0) return null;
+        let jsonString = html.substring(startIndex, i);
+        jsonString = this.escapeJsonControlCharacters(jsonString);
+        return jsonString;
+    }
+
+    escapeJsonControlCharacters(jsonString) {
+        let result = '';
+        let inString = false;
+        for (let i = 0; i < jsonString.length; i++) {
+            const char = jsonString[i];
+            const code = char.charCodeAt(0);
+            if (char === '"') {
+                let backslashCount = 0;
+                let j = i - 1;
+                while (j >= 0 && jsonString[j] === '\\') { backslashCount++; j--; }
+                if (backslashCount % 2 === 0) inString = !inString;
+            }
+            if (inString && code < 32) {
+                switch (code) {
+                    case 8: result += '\\b'; break;
+                    case 9: result += '\\t'; break;
+                    case 10: result += '\\n'; break;
+                    case 12: result += '\\f'; break;
+                    case 13: result += '\\r'; break;
+                    default: result += '\\u' + code.toString(16).padStart(4, '0'); break;
+                }
+            } else {
+                result += char;
+            }
+        }
+        return result;
     }
 
     buildEmptyResult(htmlData) {
