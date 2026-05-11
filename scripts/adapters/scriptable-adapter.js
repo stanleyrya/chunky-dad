@@ -3662,12 +3662,14 @@ class ScriptableAdapter {
                 return;
             }
             const options = prompts.map((entry, index) => {
-                const pass = entry && entry.pass ? String(entry.pass) : `prompt ${index + 1}`;
-                const chars = Number.isFinite(Number(entry?.chars)) ? `${Number(entry.chars)} chars` : '';
+                const pass = entry && entry.pass ? String(entry.pass) : 'prompt ' + (index + 1);
+                const chars = Number.isFinite(Number(entry?.chars)) ? String(Number(entry.chars)) + ' chars' : '';
                 const model = entry && entry.model ? String(entry.model) : '';
-                return `${index + 1}. ${pass}${chars ? ` (${chars})` : ''}${model ? ` [${model}]` : ''}`;
+                const charsLabel = chars ? ' (' + chars + ')' : '';
+                const modelLabel = model ? ' [' + model + ']' : '';
+                return String(index + 1) + '. ' + pass + charsLabel + modelLabel;
             }).join('\\n');
-            const selected = prompt(`Copy which AI prompt?\\n\\n${options}\\n\\nEnter number (1-${prompts.length})`, '1');
+            const selected = prompt('Copy which AI prompt?\\n\\n' + options + '\\n\\nEnter number (1-' + prompts.length + ')', '1');
             if (selected === null) return;
             const index = Number(selected) - 1;
             if (!Number.isInteger(index) || index < 0 || index >= prompts.length) {
