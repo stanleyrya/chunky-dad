@@ -63,7 +63,7 @@ class AiWebParser {
             ]
         };
         const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
-            .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
+            .map(prefix => this.escapeRegex(prefix).replace(/\s+/g, '\\s+'))
             .join('|');
         this.noiseLineRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
         this.excludedMetaKeyRegexes = [
@@ -81,6 +81,16 @@ class AiWebParser {
         this.maxUrlUnwrapDepth = 3;
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
+        this.structuredUrlKeys = [
+            'url',
+            'event_url',
+            'eventUrl',
+            'public_url',
+            'vanity_url',
+            'canonical_url',
+            'href',
+            'link'
+        ];
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -132,6 +142,9 @@ class AiWebParser {
             jsonLdCandidates: 0,
             nextDataCandidates: 0,
             serverDataCandidates: 0,
+            jsonLdDiagnostics: {},
+            serverDataDiagnostics: {},
+            nextDataDiagnostics: {},
             rejectedCandidates: 0,
             rejectedReasons: {},
             rejectedSamples: {}
@@ -172,22 +185,28 @@ class AiWebParser {
                 this.addAdditionalUrlCandidate(urls, candidate.url || candidate, sourceUrl, candidate.context || '', discoveryStats);
             }
 
-            const jsonLdUrlCandidates = this.extractUrlsFromJsonLd(html);
+            const jsonLdDiagnostics = {};
+            const jsonLdUrlCandidates = this.extractUrlsFromJsonLd(html, jsonLdDiagnostics);
             discoveryStats.jsonLdCandidates = jsonLdUrlCandidates.length;
+            discoveryStats.jsonLdDiagnostics = jsonLdDiagnostics;
             for (const candidate of jsonLdUrlCandidates) {
                 this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld', discoveryStats);
             }
 
             // Extract from common JS-embedded data objects (window.__SERVER_DATA__, __INITIAL_STATE__, etc.)
-            const serverDataUrls = this.extractUrlsFromServerData(html, sourceUrl);
+            const serverDataDiagnostics = {};
+            const serverDataUrls = this.extractUrlsFromServerData(html, sourceUrl, serverDataDiagnostics);
             discoveryStats.serverDataCandidates = serverDataUrls.length;
+            discoveryStats.serverDataDiagnostics = serverDataDiagnostics;
             for (const candidate of serverDataUrls) {
                 this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__server-data__', discoveryStats);
             }
 
             // Extract from __NEXT_DATA__ (Next.js pages)
-            const nextDataUrls = this.extractUrlsFromNextData(html, sourceUrl);
+            const nextDataDiagnostics = {};
+            const nextDataUrls = this.extractUrlsFromNextData(html, sourceUrl, nextDataDiagnostics);
             discoveryStats.nextDataCandidates = nextDataUrls.length;
+            discoveryStats.nextDataDiagnostics = nextDataDiagnostics;
             for (const candidate of nextDataUrls) {
                 this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__next-data__', discoveryStats);
             }
@@ -221,6 +240,10 @@ class AiWebParser {
                 .map(url => this.trimToMaxLength(url, 120))
                 .join(', ');
             console.log(`🤖 AI Web: URL discovery top links: ${previewLinks}`);
+        }
+        const structuredDiag = this.formatStructuredDiscoveryDiagnostics(discoveryStats);
+        if (structuredDiag) {
+            console.log(`🤖 AI Web: URL discovery structured diagnostics: ${structuredDiag}`);
         }
 
         return limitedUrls;
@@ -494,18 +517,39 @@ class AiWebParser {
         return Array.from(candidates);
     }
 
-    extractUrlsFromJsonLd(html) {
+    extractUrlsFromJsonLd(html, diagnostics = null) {
         if (!html) return [];
         const urls = [];
         const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
         let match;
+        const localDiagnostics = diagnostics && typeof diagnostics === 'object'
+            ? diagnostics
+            : null;
+        if (localDiagnostics) {
+            localDiagnostics.scriptsFound = 0;
+            localDiagnostics.scriptsParsed = 0;
+            localDiagnostics.parseErrors = 0;
+            localDiagnostics.scriptSamples = [];
+        }
         while ((match = regex.exec(html)) !== null) {
             const content = (match[1] || '').trim();
             if (!content) continue;
+            if (localDiagnostics) {
+                localDiagnostics.scriptsFound += 1;
+                if (localDiagnostics.scriptSamples.length < 2) {
+                    localDiagnostics.scriptSamples.push(this.trimToMaxLength(content, 240));
+                }
+            }
             try {
                 const parsed = JSON.parse(content);
+                if (localDiagnostics) localDiagnostics.scriptsParsed += 1;
                 this.collectUrlsFromObject(parsed, urls);
-            } catch (_) {}
+            } catch (_) {
+                if (localDiagnostics) localDiagnostics.parseErrors += 1;
+            }
+        }
+        if (localDiagnostics) {
+            localDiagnostics.urlSamples = urls.slice(0, 5).map(url => this.trimToMaxLength(url, 140));
         }
         return urls;
     }
@@ -522,45 +566,93 @@ class AiWebParser {
         });
     }
 
-    extractUrlsFromServerData(html, sourceUrl) {
+    extractUrlsFromServerData(html, sourceUrl, diagnostics = null) {
         if (!html) return [];
         const urls = [];
+        const localDiagnostics = diagnostics && typeof diagnostics === 'object'
+            ? diagnostics
+            : null;
+        if (localDiagnostics) {
+            localDiagnostics.containersFound = [];
+            localDiagnostics.containersParsed = [];
+            localDiagnostics.parseErrors = [];
+            localDiagnostics.regexFallbackCandidates = 0;
+            localDiagnostics.urlSamples = [];
+        }
         const patterns = [
-            /window\.__SERVER_DATA__\s*=\s*/,
-            /window\.__INITIAL_STATE__\s*=\s*/,
-            /window\.__PRELOADED_STATE__\s*=\s*/,
-            /window\.__APP_INITIAL_STATE__\s*=\s*/,
-            /window\.__APP_STATE__\s*=\s*/,
-            /window\.__REDUX_STATE__\s*=\s*/,
-            /window\.__STATE__\s*=\s*/,
+            { name: '__SERVER_DATA__', regex: /window\.__SERVER_DATA__\s*=\s*/ },
+            { name: '__INITIAL_STATE__', regex: /window\.__INITIAL_STATE__\s*=\s*/ },
+            { name: '__PRELOADED_STATE__', regex: /window\.__PRELOADED_STATE__\s*=\s*/ },
+            { name: '__APP_INITIAL_STATE__', regex: /window\.__APP_INITIAL_STATE__\s*=\s*/ },
+            { name: '__APP_STATE__', regex: /window\.__APP_STATE__\s*=\s*/ },
+            { name: '__REDUX_STATE__', regex: /window\.__REDUX_STATE__\s*=\s*/ },
+            { name: '__STATE__', regex: /window\.__STATE__\s*=\s*/ },
         ];
-        for (const startPattern of patterns) {
+        for (const patternEntry of patterns) {
+            const startPattern = patternEntry.regex;
             const startMatch = html.match(startPattern);
             if (!startMatch) continue;
+            const varName = patternEntry.name || 'unknown';
+            if (localDiagnostics) localDiagnostics.containersFound.push(varName);
             try {
                 const startIndex = startMatch.index + startMatch[0].length;
                 const jsonString = this.extractJsonObject(html, startIndex);
                 if (!jsonString) continue;
                 const data = JSON.parse(jsonString);
                 this.collectEventUrlsFromDataObject(data, sourceUrl, urls, new Set(), 0);
+                const fallbackUrls = this.extractLikelyEventUrlsFromSerializedJson(jsonString, sourceUrl);
+                fallbackUrls.forEach(url => urls.push(url));
+                if (localDiagnostics) {
+                    localDiagnostics.containersParsed.push(varName);
+                    localDiagnostics.regexFallbackCandidates += fallbackUrls.length;
+                }
             } catch (error) {
-                const varName = (startPattern.source.match(/window\.([\w_]+)/) || [])[1] || 'unknown';
                 console.warn(`🤖 AI Web: Error extracting URLs from window.${varName}: ${error}`);
+                if (localDiagnostics) {
+                    localDiagnostics.parseErrors.push(`${varName}:${this.trimToMaxLength(String(error), 120)}`);
+                }
             }
+        }
+        if (localDiagnostics) {
+            localDiagnostics.urlSamples = urls.slice(0, 5).map(url => this.trimToMaxLength(url, 140));
         }
         return urls;
     }
 
-    extractUrlsFromNextData(html, sourceUrl) {
+    extractUrlsFromNextData(html, sourceUrl, diagnostics = null) {
         if (!html) return [];
         const urls = [];
+        const localDiagnostics = diagnostics && typeof diagnostics === 'object'
+            ? diagnostics
+            : null;
+        if (localDiagnostics) {
+            localDiagnostics.found = false;
+            localDiagnostics.parsed = false;
+            localDiagnostics.parseError = '';
+            localDiagnostics.regexFallbackCandidates = 0;
+            localDiagnostics.scriptSample = '';
+            localDiagnostics.urlSamples = [];
+        }
         try {
             const scriptMatch = html.match(/<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
             if (!scriptMatch) return [];
-            const nextData = JSON.parse((scriptMatch[1] || '').trim());
+            if (localDiagnostics) {
+                localDiagnostics.found = true;
+                localDiagnostics.scriptSample = this.trimToMaxLength((scriptMatch[1] || '').trim(), 240);
+            }
+            const nextDataRaw = (scriptMatch[1] || '').trim();
+            const nextData = JSON.parse(nextDataRaw);
+            if (localDiagnostics) localDiagnostics.parsed = true;
             this.collectEventUrlsFromDataObject(nextData, sourceUrl, urls, new Set(), 0);
+            const fallbackUrls = this.extractLikelyEventUrlsFromSerializedJson(nextDataRaw, sourceUrl);
+            fallbackUrls.forEach(url => urls.push(url));
+            if (localDiagnostics) localDiagnostics.regexFallbackCandidates = fallbackUrls.length;
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting URLs from __NEXT_DATA__: ${error}`);
+            if (localDiagnostics) localDiagnostics.parseError = this.trimToMaxLength(String(error), 120);
+        }
+        if (localDiagnostics) {
+            localDiagnostics.urlSamples = urls.slice(0, 5).map(url => this.trimToMaxLength(url, 140));
         }
         return urls;
     }
@@ -577,11 +669,16 @@ class AiWebParser {
             return;
         }
 
-        const rawUrl = node.url || node.event_url || node.vanity_url || node.public_url || '';
+        const rawUrl = node.url || node.event_url || node.vanity_url || node.public_url ||
+            node.eventUrl || node.eventURL || node.event_link || node.eventLink ||
+            node.href || node.link || node.canonical_url || node.canonicalUrl || '';
+        // Include both eventUrl and eventURL because upstream payloads are inconsistent.
         const hasName = !!(node.name || node.title || node.event_name);
         const hasDate = !!(node.start || node.starts_at || node.start_date || node.startDate ||
-            node.start_time || node.date || node.datetime);
-        if (rawUrl && typeof rawUrl === 'string' && hasName && hasDate) {
+            node.start_time || node.date || node.datetime || node.start_utc || node.start_local ||
+            node.startDateTime || node.start_datetime || node.event_date || node.eventDate);
+        const looksLikeEventUrl = this.isLikelyEventPath(rawUrl, sourceUrl);
+        if (rawUrl && typeof rawUrl === 'string' && (looksLikeEventUrl || (hasName && hasDate))) {
             const resolved = this.normalizeUrl(String(rawUrl), sourceUrl);
             if (resolved) urls.push(resolved);
         }
@@ -592,6 +689,93 @@ class AiWebParser {
                 this.collectEventUrlsFromDataObject(value, sourceUrl, urls, visited, depth + 1);
             }
         }
+    }
+
+    isLikelyEventPath(rawUrl, sourceUrl) {
+        if (!rawUrl || typeof rawUrl !== 'string') return false;
+        const normalized = this.normalizeUrl(rawUrl, sourceUrl);
+        if (!normalized) return false;
+        try {
+            const parsed = new URL(normalized);
+            const path = String(parsed.pathname || '').toLowerCase();
+            return /^\/e\/[^/?#]+/.test(path) || /\/(?:events?|part(?:y|ies)|shows?|tickets?)\/[^/?#]+/.test(path);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    extractLikelyEventUrlsFromSerializedJson(rawJson, sourceUrl) {
+        if (!rawJson) return [];
+        const urls = new Set();
+        const keyPattern = this.structuredUrlKeys
+            .map(key => this.escapeRegex(key))
+            .join('|');
+        const patterns = [
+            new RegExp(`"(?:${keyPattern})"\\s*:\\s*"([^"]+)"`, 'gi'),
+            // Handles double-escaped JSON strings embedded in script payloads.
+            new RegExp(`\\\\?"(?:${keyPattern})\\\\?"\\s*:\\s*\\\\?"([^"\\\\]+)\\\\?"`, 'gi')
+        ];
+        for (const pattern of patterns) {
+            let match;
+            while ((match = pattern.exec(rawJson)) !== null) {
+                const candidate = this.normalizeUrl(match[1], sourceUrl);
+                if (!candidate) continue;
+                if (this.isLikelyEventPath(candidate, sourceUrl)) {
+                    urls.add(candidate);
+                }
+            }
+        }
+        return Array.from(urls);
+    }
+
+    formatStructuredDiscoveryDiagnostics(discoveryStats = {}) {
+        const parts = [];
+        const jsonLd = discoveryStats.jsonLdDiagnostics || {};
+        const serverData = discoveryStats.serverDataDiagnostics || {};
+        const nextData = discoveryStats.nextDataDiagnostics || {};
+
+        if (Object.keys(jsonLd).length > 0) {
+            parts.push(`jsonLd{${this.formatDiagnosticsPairs({
+                scriptsFound: jsonLd.scriptsFound || 0,
+                parsed: jsonLd.scriptsParsed || 0,
+                parseErrors: jsonLd.parseErrors || 0,
+                candidates: discoveryStats.jsonLdCandidates || 0,
+                samples: (jsonLd.urlSamples || []).join(' | ') || 'none',
+                scriptSamples: (jsonLd.scriptSamples || []).join(' | ') || 'none'
+            })}}`);
+        }
+        if (Object.keys(serverData).length > 0) {
+            parts.push(`serverData{${this.formatDiagnosticsPairs({
+                found: (serverData.containersFound || []).join(',') || 'none',
+                parsed: (serverData.containersParsed || []).join(',') || 'none',
+                parseErrors: (serverData.parseErrors || []).join(' | ') || 'none',
+                regexFallbackCandidates: serverData.regexFallbackCandidates || 0,
+                candidates: discoveryStats.serverDataCandidates || 0,
+                samples: (serverData.urlSamples || []).join(' | ') || 'none'
+            })}}`);
+        }
+        if (Object.keys(nextData).length > 0) {
+            parts.push(`nextData{${this.formatDiagnosticsPairs({
+                found: nextData.found ? 'yes' : 'no',
+                parsed: nextData.parsed ? 'yes' : 'no',
+                parseError: nextData.parseError || 'none',
+                regexFallbackCandidates: nextData.regexFallbackCandidates || 0,
+                candidates: discoveryStats.nextDataCandidates || 0,
+                samples: (nextData.urlSamples || []).join(' | ') || 'none',
+                scriptSample: nextData.scriptSample || 'none'
+            })}}`);
+        }
+        return parts.join('; ');
+    }
+
+    formatDiagnosticsPairs(values = {}) {
+        return Object.entries(values)
+            .map(([key, value]) => `${key}=${value}`)
+            .join(', ');
+    }
+
+    escapeRegex(value) {
+        return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     extractJsonObject(html, startIndex) {
