@@ -75,6 +75,7 @@ class AiWebParser {
             /^twitter:(label\d+|data\d+)$/i
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
+        this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         this.proxyImagePathPrefixes = ['/e/_next/image?', '/_next/image?'];
         this.jsonLdCandidatePoolSizeMultiplier = 2;
         this.relativeUrlParsingBase = 'https://placeholder.example';
@@ -347,7 +348,7 @@ class AiWebParser {
             // Strip tracking/affiliate params so the same event with different tracking
             // suffixes (e.g. ?aff=ebdsoporgprofile, ?utm_source=…) deduplicates correctly.
             for (const key of [...parsed.searchParams.keys()]) {
-                if (/^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i.test(key)) {
+                if (this.trackingParamPattern.test(key)) {
                     parsed.searchParams.delete(key);
                 }
             }
@@ -362,7 +363,7 @@ class AiWebParser {
         try {
             const parsed = new URL(url);
             for (const key of [...parsed.searchParams.keys()]) {
-                if (/^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i.test(key)) {
+                if (this.trackingParamPattern.test(key)) {
                     parsed.searchParams.delete(key);
                 }
             }
