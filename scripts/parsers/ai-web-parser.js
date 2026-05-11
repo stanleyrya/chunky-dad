@@ -81,6 +81,16 @@ class AiWebParser {
         this.maxUrlUnwrapDepth = 3;
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
+        this.structuredUrlKeys = [
+            'url',
+            'event_url',
+            'eventUrl',
+            'public_url',
+            'vanity_url',
+            'canonical_url',
+            'href',
+            'link'
+        ];
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -687,7 +697,7 @@ class AiWebParser {
         try {
             const parsed = new URL(normalized);
             const path = String(parsed.pathname || '').toLowerCase();
-            return /\/(?:e|event|events|party|parties|shows?|tickets?)\//i.test(path);
+            return /^\/e\/[^/?#]+/i.test(path) || /\/(?:events?|party|parties|shows?|tickets?)\/[^/?#]+/i.test(path);
         } catch (_) {
             return false;
         }
@@ -696,9 +706,12 @@ class AiWebParser {
     extractLikelyEventUrlsFromSerializedJson(rawJson, sourceUrl) {
         if (!rawJson) return [];
         const urls = new Set();
+        const keyPattern = this.structuredUrlKeys
+            .map(key => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+            .join('|');
         const patterns = [
-            /"(?:url|event_url|eventUrl|public_url|vanity_url|canonical_url|href|link)"\s*:\s*"([^"]+)"/gi,
-            /\\?"(?:url|event_url|eventUrl|public_url|vanity_url|canonical_url|href|link)\\?"\s*:\s*\\?"([^"\\]+)\\?"/gi
+            new RegExp(`"(?:${keyPattern})"\\s*:\\s*"([^"]+)"`, 'gi'),
+            new RegExp(`\\\\?"(?:${keyPattern})\\\\?"\\s*:\\s*\\\\?"([^"\\\\]+)\\\\?"`, 'gi')
         ];
         for (const pattern of patterns) {
             let match;
@@ -720,21 +733,43 @@ class AiWebParser {
         const nextData = discoveryStats.nextDataDiagnostics || {};
 
         if (Object.keys(jsonLd).length > 0) {
-            parts.push(
-                `jsonLd{scriptsFound=${jsonLd.scriptsFound || 0}, parsed=${jsonLd.scriptsParsed || 0}, parseErrors=${jsonLd.parseErrors || 0}, candidates=${discoveryStats.jsonLdCandidates || 0}, samples=${(jsonLd.urlSamples || []).join(' | ') || 'none'}, scriptSamples=${(jsonLd.scriptSamples || []).join(' | ') || 'none'}}`
-            );
+            parts.push(`jsonLd{${this.formatDiagnosticsPairs({
+                scriptsFound: jsonLd.scriptsFound || 0,
+                parsed: jsonLd.scriptsParsed || 0,
+                parseErrors: jsonLd.parseErrors || 0,
+                candidates: discoveryStats.jsonLdCandidates || 0,
+                samples: (jsonLd.urlSamples || []).join(' | ') || 'none',
+                scriptSamples: (jsonLd.scriptSamples || []).join(' | ') || 'none'
+            })}}`);
         }
         if (Object.keys(serverData).length > 0) {
-            parts.push(
-                `serverData{found=${(serverData.containersFound || []).join(',') || 'none'}, parsed=${(serverData.containersParsed || []).join(',') || 'none'}, parseErrors=${(serverData.parseErrors || []).join(' | ') || 'none'}, regexFallbackCandidates=${serverData.regexFallbackCandidates || 0}, candidates=${discoveryStats.serverDataCandidates || 0}, samples=${(serverData.urlSamples || []).join(' | ') || 'none'}}`
-            );
+            parts.push(`serverData{${this.formatDiagnosticsPairs({
+                found: (serverData.containersFound || []).join(',') || 'none',
+                parsed: (serverData.containersParsed || []).join(',') || 'none',
+                parseErrors: (serverData.parseErrors || []).join(' | ') || 'none',
+                regexFallbackCandidates: serverData.regexFallbackCandidates || 0,
+                candidates: discoveryStats.serverDataCandidates || 0,
+                samples: (serverData.urlSamples || []).join(' | ') || 'none'
+            })}}`);
         }
         if (Object.keys(nextData).length > 0) {
-            parts.push(
-                `nextData{found=${nextData.found ? 'yes' : 'no'}, parsed=${nextData.parsed ? 'yes' : 'no'}, parseError=${nextData.parseError || 'none'}, regexFallbackCandidates=${nextData.regexFallbackCandidates || 0}, candidates=${discoveryStats.nextDataCandidates || 0}, samples=${(nextData.urlSamples || []).join(' | ') || 'none'}, scriptSample=${nextData.scriptSample || 'none'}}`
-            );
+            parts.push(`nextData{${this.formatDiagnosticsPairs({
+                found: nextData.found ? 'yes' : 'no',
+                parsed: nextData.parsed ? 'yes' : 'no',
+                parseError: nextData.parseError || 'none',
+                regexFallbackCandidates: nextData.regexFallbackCandidates || 0,
+                candidates: discoveryStats.nextDataCandidates || 0,
+                samples: (nextData.urlSamples || []).join(' | ') || 'none',
+                scriptSample: nextData.scriptSample || 'none'
+            })}}`);
         }
         return parts.join('; ');
+    }
+
+    formatDiagnosticsPairs(values = {}) {
+        return Object.entries(values)
+            .map(([key, value]) => `${key}=${value}`)
+            .join(', ');
     }
 
     extractJsonObject(html, startIndex) {
