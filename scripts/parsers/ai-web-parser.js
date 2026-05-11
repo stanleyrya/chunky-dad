@@ -81,6 +81,7 @@ class AiWebParser {
         this.maxUrlUnwrapDepth = 3;
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
+        this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         this.structuredUrlKeys = [
             'url',
             'event_url',
@@ -355,9 +356,8 @@ class AiWebParser {
             }
         } catch (_) {}
 
-        const URL_PARSE_PATTERN = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         // Capture groups: protocol, hostname[:port], pathname, query string, hash fragment.
-        const match = String(url).match(URL_PARSE_PATTERN);
+        const match = String(url).match(this.urlParsePattern);
         if (!match) return null;
         const [, protocol = '', hostname = '', pathname = '', search = '', hash = ''] = match;
         const normalizedPathname = pathname || '/';
@@ -382,7 +382,7 @@ class AiWebParser {
         const haystack = `${path} ${search}`;
 
         if (parsedSource && parsedUrl.hostname === parsedSource.hostname) score += 10;
-        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname || '')) score += 15;
+        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname)) score += 15;
         if (/\/e\/[^/?#]+/i.test(path)) score += 95;
         if (/\/events?\/[^/?#]+/i.test(path)) score += 85;
         if (/\/(?:party|parties|show|shows|ticket|tickets|calendar)\/[^/?#]+/i.test(path)) score += 60;
