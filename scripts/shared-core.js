@@ -2931,11 +2931,12 @@ class SharedCore {
     }
 
     buildStaticMetadataSearchText(event) {
+        const MAX_SEARCH_DEPTH = 10;
         const parts = [];
         const visited = new Set();
 
         const collect = (value, depth = 0) => {
-            if (value === null || value === undefined || depth > 10) return;
+            if (value === null || value === undefined || depth > MAX_SEARCH_DEPTH) return;
             const valueType = typeof value;
 
             if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
@@ -2961,6 +2962,7 @@ class SharedCore {
             }
 
             Object.keys(value).forEach(key => {
+                // Skip internal/system metadata fields when matching branding keywords.
                 if (String(key).startsWith('_')) return;
                 collect(value[key], depth + 1);
             });
