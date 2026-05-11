@@ -79,6 +79,8 @@ class AiWebParser {
         this.jsonLdCandidatePoolSizeMultiplier = 2;
         this.relativeUrlParsingBase = 'https://placeholder.example';
         this.maxUrlUnwrapDepth = 3;
+        this.maxRejectedSamplesPerReason = 3;
+        this.maxRejectedSampleLength = 120;
     }
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
@@ -363,12 +365,12 @@ class AiWebParser {
         const rejectionReason = reason || 'unknown';
         discoveryStats.rejectedReasons[rejectionReason] = (discoveryStats.rejectedReasons[rejectionReason] || 0) + 1;
 
-        if (!Object.prototype.hasOwnProperty.call(discoveryStats.rejectedSamples, rejectionReason)) {
+        if (!(rejectionReason in discoveryStats.rejectedSamples)) {
             discoveryStats.rejectedSamples[rejectionReason] = [];
         }
         const samples = discoveryStats.rejectedSamples[rejectionReason];
-        if (samples.length < 3) {
-            const sample = this.trimToMaxLength(String(rawUrl || ''), 120);
+        if (samples.length < this.maxRejectedSamplesPerReason) {
+            const sample = this.trimToMaxLength(String(rawUrl || ''), this.maxRejectedSampleLength);
             if (sample && !samples.includes(sample)) {
                 samples.push(sample);
             }
