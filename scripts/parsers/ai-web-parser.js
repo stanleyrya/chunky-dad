@@ -218,16 +218,26 @@ class AiWebParser {
         const rankedUrls = this.rankAdditionalUrls(urls, sourceUrl);
         const maxAdditionalUrls = this.resolveMaxAdditionalUrls(parserConfig);
         const hasFiniteLimit = Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0;
+
+        // Deduplicate by canonical key before slicing so the limit applies to unique URLs only
+        const seenKeys = new Set();
+        const dedupedRankedUrls = rankedUrls.filter(url => {
+            const key = this.getUrlDedupeKey(url);
+            if (seenKeys.has(key)) return false;
+            seenKeys.add(key);
+            return true;
+        });
+
         const limitedUrls = hasFiniteLimit
-            ? rankedUrls.slice(0, maxAdditionalUrls)
-            : rankedUrls;
+            ? dedupedRankedUrls.slice(0, maxAdditionalUrls)
+            : dedupedRankedUrls;
         const limitText = hasFiniteLimit ? `${maxAdditionalUrls}` : 'none';
         const rejectedTopReasons = this.formatTopRejectedReasons(discoveryStats.rejectedReasons);
         const extraSources = discoveryStats.serverDataCandidates > 0 || discoveryStats.nextDataCandidates > 0
             ? `, serverDataCandidates=${discoveryStats.serverDataCandidates}, nextDataCandidates=${discoveryStats.nextDataCandidates}`
             : '';
         console.log(
-            `🤖 AI Web: URL discovery stats for ${sourceUrl || 'unknown URL'} -> hrefCandidates=${discoveryStats.hrefCandidates}, configuredPatternMatches=${discoveryStats.configuredPatternMatches}, rawHtmlCandidates=${discoveryStats.rawHtmlCandidates}, jsonLdCandidates=${discoveryStats.jsonLdCandidates}${extraSources}, rejected=${discoveryStats.rejectedCandidates}, rejectedTopReasons=${rejectedTopReasons}, uniqueValid=${rankedUrls.length}, limit=${limitText}, returned=${limitedUrls.length}`
+            `🤖 AI Web: URL discovery stats for ${sourceUrl || 'unknown URL'} -> hrefCandidates=${discoveryStats.hrefCandidates}, configuredPatternMatches=${discoveryStats.configuredPatternMatches}, rawHtmlCandidates=${discoveryStats.rawHtmlCandidates}, jsonLdCandidates=${discoveryStats.jsonLdCandidates}${extraSources}, rejected=${discoveryStats.rejectedCandidates}, rejectedTopReasons=${rejectedTopReasons}, uniqueValid=${dedupedRankedUrls.length}, limit=${limitText}, returned=${limitedUrls.length}`
         );
         if (discoveryStats.rejectedCandidates > 0) {
             const rejectedPreview = this.formatRejectedSamples(discoveryStats.rejectedSamples);
@@ -432,6 +442,15 @@ class AiWebParser {
         const lowerUrl = url.toLowerCase();
         const blockedPattern = invalidUrlPatterns.find(invalid => lowerUrl.includes(invalid));
         if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
+
+        // For Eventbrite URLs, only allow /e/ (event detail) and /o/ (organizer) paths
+        if (/eventbrite\./i.test(parsedUrl.hostname)) {
+            const path = String(parsedUrl.pathname || '');
+            if (!/^\/[eo]\//i.test(path)) {
+                return { valid: false, reason: 'eventbrite-non-eo-path' };
+            }
+        }
+
         return { valid: true, reason: 'valid' };
     }
 
@@ -1386,10 +1405,6 @@ class AiWebParser {
 
     buildFieldContextText(fields, cityConfig) {
         const allFields = Array.isArray(fields) ? [...fields] : [];
-        const normalizedFields = allFields.map(f => this.normalizePromptFieldName(f));
-        if (!normalizedFields.includes('city')) {
-            allFields.push('city');
-        }
         return allFields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
