@@ -452,8 +452,15 @@ class SharedCore {
                     : (parserName || 'generic');
                 const urlParser = parsers[urlParserName];
                 
+                // Reduce urlDiscoveryDepth so detail pages at the final depth extract events
+                // rather than running URL discovery again.  At intermediate depths we still
+                // want discovery so the recursion can go deeper.
+                const detailParserConfig = {
+                    ...parserConfig,
+                    urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
+                };
                 const parseResult = await Promise.resolve(
-                    urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
+                    urlParser.parseEvents(htmlData, detailParserConfig, mainConfig?.cities || null)
                 );
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery

@@ -56,7 +56,7 @@ const scraperConfig = {
       },
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
-      urlDiscoveryDepth: 0,
+      urlDiscoveryDepth: 1,    // Depth 1: discover /e/ event links from the /o/ organizer listing
       dryRun: false,
       fieldPriorities: {
         title: { priority: ["eventbrite"], merge: "clobber" },
