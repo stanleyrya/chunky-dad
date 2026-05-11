@@ -672,6 +672,7 @@ class AiWebParser {
         const rawUrl = node.url || node.event_url || node.vanity_url || node.public_url ||
             node.eventUrl || node.eventURL || node.event_link || node.eventLink ||
             node.href || node.link || node.canonical_url || node.canonicalUrl || '';
+        // Include both eventUrl and eventURL because upstream payloads are inconsistent.
         const hasName = !!(node.name || node.title || node.event_name);
         const hasDate = !!(node.start || node.starts_at || node.start_date || node.startDate ||
             node.start_time || node.date || node.datetime || node.start_utc || node.start_local ||
@@ -697,7 +698,7 @@ class AiWebParser {
         try {
             const parsed = new URL(normalized);
             const path = String(parsed.pathname || '').toLowerCase();
-            return /^\/e\/[^/?#]+/.test(path) || /\/(?:events?|party|parties|shows?|tickets?)\/[^/?#]+/.test(path);
+            return /^\/e\/[^/?#]+/.test(path) || /\/(?:events?|part(?:y|ies)|shows?|tickets?)\/[^/?#]+/.test(path);
         } catch (_) {
             return false;
         }
@@ -711,6 +712,7 @@ class AiWebParser {
             .join('|');
         const patterns = [
             new RegExp(`"(?:${keyPattern})"\\s*:\\s*"([^"]+)"`, 'gi'),
+            // Handles double-escaped JSON strings embedded in script payloads.
             new RegExp(`\\\\?"(?:${keyPattern})\\\\?"\\s*:\\s*\\\\?"([^"\\\\]+)\\\\?"`, 'gi')
         ];
         for (const pattern of patterns) {
