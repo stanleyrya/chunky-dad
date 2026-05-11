@@ -339,28 +339,55 @@ class AiWebParser {
         }
     }
 
+    parseUrlComponents(url) {
+        if (!url || typeof url !== 'string') return null;
+        try {
+            if (typeof URL === 'function') {
+                const parsed = new URL(url);
+                return {
+                    protocol: String(parsed.protocol || '').toLowerCase(),
+                    hostname: String(parsed.hostname || '').toLowerCase(),
+                    pathname: parsed.pathname || '/',
+                    search: parsed.search || '',
+                    hash: parsed.hash || '',
+                    href: parsed.toString()
+                };
+            }
+        } catch (_) {}
+
+        const match = String(url).match(/^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i);
+        if (!match) return null;
+        const [, protocol = '', host = '', pathname = '', search = '', hash = ''] = match;
+        return {
+            protocol: String(protocol || '').toLowerCase(),
+            hostname: String(host || '').toLowerCase().split(':')[0],
+            pathname: pathname || '/',
+            search: search || '',
+            hash: hash || '',
+            href: `${protocol}//${host}${pathname || ''}${search || ''}${hash || ''}`
+        };
+    }
+
     scoreAdditionalUrl(url, sourceUrl, context = '') {
         let score = 0;
-        try {
-            const parsedUrl = new URL(url);
-            const parsedSource = sourceUrl ? new URL(sourceUrl) : null;
-            const path = String(parsedUrl.pathname || '').toLowerCase();
-            const search = String(parsedUrl.search || '').toLowerCase();
-            const contextText = this.normalizeWhitespace(this.stripTags(context)).toLowerCase();
-            const haystack = `${path} ${search}`;
+        const parsedUrl = this.parseUrlComponents(url);
+        const parsedSource = sourceUrl ? this.parseUrlComponents(sourceUrl) : null;
+        const path = String(parsedUrl?.pathname || '').toLowerCase();
+        const search = String(parsedUrl?.search || '').toLowerCase();
+        const contextText = this.normalizeWhitespace(this.stripTags(context)).toLowerCase();
+        const haystack = `${path} ${search}`;
 
-            if (parsedSource && parsedUrl.hostname === parsedSource.hostname) score += 10;
-            if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname)) score += 15;
-            if (/\/e\/[^/?#]+/i.test(path)) score += 95;
-            if (/\/events?\/[^/?#]+/i.test(path)) score += 85;
-            if (/\/(?:party|parties|show|shows|ticket|tickets|calendar)\/[^/?#]+/i.test(path)) score += 60;
-            if (/(event|ticket|party|show|festival|concert|dance|night|rsvp|register)/i.test(haystack)) score += 40;
-            if (/(event|ticket|party|show|festival|concert|dance|night|rsvp|register|details|learn more)/i.test(contextText)) score += 30;
-            if (/\b(20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]20\d{2})\b/.test(haystack)) score += 25;
-            if (/[?&](?:event|event_id|eventid|eid|id|ticket|ticket_id)=/i.test(search)) score += 20;
-            if (/^\/(?:events?|calendar|tickets?|shows?)\/?$/i.test(path) && !search) score -= 45;
-            if (/\/(?:about|contact|privacy|terms|login|signin|signup|search|tag|category|blog)(?:\/|$)/i.test(path)) score -= 35;
-        } catch (_) {}
+        if (parsedSource && parsedUrl && parsedUrl.hostname === parsedSource.hostname) score += 10;
+        if (parsedUrl && /(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname)) score += 15;
+        if (/\/e\/[^/?#]+/i.test(path)) score += 95;
+        if (/\/events?\/[^/?#]+/i.test(path)) score += 85;
+        if (/\/(?:party|parties|show|shows|ticket|tickets|calendar)\/[^/?#]+/i.test(path)) score += 60;
+        if (/(event|ticket|party|show|festival|concert|dance|night|rsvp|register)/i.test(haystack)) score += 40;
+        if (/(event|ticket|party|show|festival|concert|dance|night|rsvp|register|details|learn more)/i.test(contextText)) score += 30;
+        if (/\b(20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]20\d{2})\b/.test(haystack)) score += 25;
+        if (/[?&](?:event|event_id|eventid|eid|id|ticket|ticket_id)=/i.test(search)) score += 20;
+        if (/^\/(?:events?|calendar|tickets?|shows?)\/?$/i.test(path) && !search) score -= 45;
+        if (/\/(?:about|contact|privacy|terms|login|signin|signup|search|tag|category|blog)(?:\/|$)/i.test(path)) score -= 35;
         return score;
     }
 
@@ -371,38 +398,35 @@ class AiWebParser {
     validateEventUrl(url, sourceUrl) {
         if (!url || typeof url !== 'string') return { valid: false, reason: 'missing-or-invalid-url' };
 
-        try {
-            const parsedUrl = new URL(url);
-            if (!/^https?:$/.test(parsedUrl.protocol)) return { valid: false, reason: 'invalid-protocol' };
-            if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(this.normalizeUrl(sourceUrl, sourceUrl))) {
-                return { valid: false, reason: 'same-as-source' };
-            }
-            const lowerPath = (parsedUrl.pathname || '').toLowerCase();
-            if (parsedUrl.hash && (!parsedUrl.search || parsedUrl.search.length === 0) && (lowerPath === '' || lowerPath === '/')) {
-                return { valid: false, reason: 'fragment-only-root-url' };
-            }
-            const staticAssetExtensions = [
-                '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tif', '.tiff',
-                '.css', '.js', '.mjs', '.map', '.json', '.xml', '.txt', '.pdf', '.zip', '.gz', '.tgz',
-                '.mp3', '.m4a', '.wav', '.mp4', '.webm', '.mov', '.avi', '.woff', '.woff2', '.ttf'
-            ];
-            if (staticAssetExtensions.some(ext => lowerPath.endsWith(ext))) return { valid: false, reason: 'static-asset-extension' };
-            const staticAssetPathHints = ['/touch_icons/', '/images/', '/image/', '/img/', '/assets/', '/static/'];
-            if (staticAssetPathHints.some(segment => lowerPath.includes(segment))) return { valid: false, reason: 'static-asset-path' };
-
-            const invalidUrlPatterns = [
-                '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
-                'javascript:', 'mailto:', 'tel:', 'sms:',
-                'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
-            ];
-
-            const lowerUrl = url.toLowerCase();
-            const blockedPattern = invalidUrlPatterns.find(invalid => lowerUrl.includes(invalid));
-            if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
-            return { valid: true, reason: 'valid' };
-        } catch (error) {
-            return { valid: false, reason: 'invalid-url' };
+        const parsedUrl = this.parseUrlComponents(url);
+        if (!parsedUrl) return { valid: false, reason: 'invalid-url' };
+        if (!/^https?:$/.test(parsedUrl.protocol)) return { valid: false, reason: 'invalid-protocol' };
+        if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(this.normalizeUrl(sourceUrl, sourceUrl))) {
+            return { valid: false, reason: 'same-as-source' };
         }
+        const lowerPath = (parsedUrl.pathname || '').toLowerCase();
+        if (parsedUrl.hash && (!parsedUrl.search || parsedUrl.search.length === 0) && (lowerPath === '' || lowerPath === '/')) {
+            return { valid: false, reason: 'fragment-only-root-url' };
+        }
+        const staticAssetExtensions = [
+            '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tif', '.tiff',
+            '.css', '.js', '.mjs', '.map', '.json', '.xml', '.txt', '.pdf', '.zip', '.gz', '.tgz',
+            '.mp3', '.m4a', '.wav', '.mp4', '.webm', '.mov', '.avi', '.woff', '.woff2', '.ttf'
+        ];
+        if (staticAssetExtensions.some(ext => lowerPath.endsWith(ext))) return { valid: false, reason: 'static-asset-extension' };
+        const staticAssetPathHints = ['/touch_icons/', '/images/', '/image/', '/img/', '/assets/', '/static/'];
+        if (staticAssetPathHints.some(segment => lowerPath.includes(segment))) return { valid: false, reason: 'static-asset-path' };
+
+        const invalidUrlPatterns = [
+            '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
+            'javascript:', 'mailto:', 'tel:', 'sms:',
+            'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
+        ];
+
+        const lowerUrl = url.toLowerCase();
+        const blockedPattern = invalidUrlPatterns.find(invalid => lowerUrl.includes(invalid));
+        if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
+        return { valid: true, reason: 'valid' };
     }
 
     recordRejectedCandidate(discoveryStats, reason, rawUrl, normalizedUrl = null) {
@@ -695,13 +719,10 @@ class AiWebParser {
         if (!rawUrl || typeof rawUrl !== 'string') return false;
         const normalized = this.normalizeUrl(rawUrl, sourceUrl);
         if (!normalized) return false;
-        try {
-            const parsed = new URL(normalized);
-            const path = String(parsed.pathname || '').toLowerCase();
-            return /^\/e\/[^/?#]+/.test(path) || /\/(?:events?|part(?:y|ies)|shows?|tickets?)\/[^/?#]+/.test(path);
-        } catch (_) {
-            return false;
-        }
+        const parsed = this.parseUrlComponents(normalized);
+        if (!parsed) return false;
+        const path = String(parsed.pathname || '').toLowerCase();
+        return /^\/e\/[^/?#]+/.test(path) || /\/(?:events?|part(?:y|ies)|shows?|tickets?)\/[^/?#]+/.test(path);
     }
 
     extractLikelyEventUrlsFromSerializedJson(rawJson, sourceUrl) {
