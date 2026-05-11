@@ -564,10 +564,14 @@ class SharedCore {
     getUrlDedupeKey(url) {
         if (!url || typeof url !== 'string') return '';
 
-        const normalized = this.normalizeUrl(url, url) || String(url);
+        const normalized = this.normalizeUrl(url) || String(url);
         const parsed = this.parseUrl(normalized);
         if (!parsed) {
-            return String(normalized).trim().replace(/#.*$/, '').replace(/\/$/, '').toLowerCase();
+            const trimmed = String(normalized).trim().replace(/#.*$/, '');
+            const queryIndex = trimmed.indexOf('?');
+            const path = (queryIndex >= 0 ? trimmed.slice(0, queryIndex) : trimmed).replace(/\/$/, '');
+            const search = queryIndex >= 0 ? this.stripTrackingSearch(trimmed.slice(queryIndex)) : '';
+            return `${path || '/'}${search}`.toLowerCase();
         }
 
         const protocol = String(parsed.protocol || '').toLowerCase();
