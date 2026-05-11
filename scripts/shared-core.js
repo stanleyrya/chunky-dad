@@ -2436,20 +2436,29 @@ class SharedCore {
         if (parserConfig?.metadata) {
             Object.keys(parserConfig.metadata).forEach(key => {
                 const metaValue = parserConfig.metadata[key];
-                if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
+                if (typeof metaValue === 'object' && metaValue !== null) {
+                    const hasDirectValue = Object.prototype.hasOwnProperty.call(metaValue, 'value');
+                    const hasDefaultValue = Object.prototype.hasOwnProperty.call(metaValue, 'defaultValue');
+                    const hasConditionalValues = Array.isArray(metaValue.conditionalValues);
+                    if (!hasDirectValue && !hasDefaultValue && !hasConditionalValues) {
+                        return;
+                    }
                     const priorityConfig = fieldPriorities[key];
+                    const selectedValue = this.resolveStaticMetadataValue(metaValue, event);
+                    if (selectedValue === undefined) {
+                        return;
+                    }
+                    const resolvedValue = this.applyMetadataTemplate(selectedValue, event);
                     
                     // Check if "static" has priority for this field
                     if (priorityConfig && priorityConfig.priority && priorityConfig.priority.includes('static')) {
                         // Apply static value since it's in the priority list
-                        const resolvedValue = this.applyMetadataTemplate(metaValue.value, event);
                         event[key] = resolvedValue;
                         // Mark this field as coming from static source
                         if (!event._staticFields) event._staticFields = {};
                         event._staticFields[key] = resolvedValue;
                     } else {
                         // Fallback: if no priority config, apply static value (backward compatibility)
-                        const resolvedValue = this.applyMetadataTemplate(metaValue.value, event);
                         event[key] = resolvedValue;
                         if (!event._staticFields) event._staticFields = {};
                         event._staticFields[key] = resolvedValue;
@@ -2889,6 +2898,88 @@ class SharedCore {
     
     // Apply simple template tokens in metadata values using event date
     // Supported tokens: ${year}, ${month}, ${day}, ${date} (YYYY-MM-DD)
+    resolveStaticMetadataValue(metaValue, event) {
+        if (!metaValue || typeof metaValue !== 'object') {
+            return undefined;
+        }
+
+        const hasValue = Object.prototype.hasOwnProperty.call(metaValue, 'value');
+        const hasDefaultValue = Object.prototype.hasOwnProperty.call(metaValue, 'defaultValue');
+        const fallbackValue = hasDefaultValue ? metaValue.defaultValue : (hasValue ? metaValue.value : undefined);
+
+        if (!Array.isArray(metaValue.conditionalValues) || metaValue.conditionalValues.length === 0) {
+            return fallbackValue;
+        }
+
+        const searchText = this.buildStaticMetadataSearchText(event);
+        if (!searchText) {
+            return fallbackValue;
+        }
+
+        for (const condition of metaValue.conditionalValues) {
+            if (!condition || typeof condition !== 'object') continue;
+            if (!Object.prototype.hasOwnProperty.call(condition, 'value')) continue;
+            const keywords = this.normalizeStaticMetadataKeywords(condition.keywords || []);
+            if (keywords.length === 0) continue;
+            if (keywords.some(keyword => searchText.includes(keyword))) {
+                return condition.value;
+            }
+        }
+
+        return fallbackValue;
+    }
+
+    normalizeStaticMetadataKeywords(keywords) {
+        const keywordList = Array.isArray(keywords) ? keywords : [keywords];
+        return keywordList
+            .map(keyword => String(keyword || '').trim().toLowerCase())
+            .filter(Boolean);
+    }
+
+    buildStaticMetadataSearchText(event) {
+        // Keep traversal bounded to avoid deep/cyclic payload costs while still covering nested parser data.
+        const MAX_SEARCH_DEPTH = 10;
+        const INTERNAL_FIELD_PREFIX = '_';
+        const parts = [];
+        const visited = new Set();
+
+        const collect = (value, depth = 0) => {
+            if (value === null || value === undefined || depth > MAX_SEARCH_DEPTH) return;
+            const valueType = typeof value;
+
+            if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
+                const normalized = String(value).trim().toLowerCase();
+                if (normalized) {
+                    parts.push(normalized);
+                }
+                return;
+            }
+
+            if (valueType !== 'object') {
+                return;
+            }
+
+            if (visited.has(value)) {
+                return;
+            }
+            visited.add(value);
+
+            if (Array.isArray(value)) {
+                value.forEach(item => collect(item, depth + 1));
+                return;
+            }
+
+            Object.keys(value).forEach(key => {
+                // Internal shared-core metadata keys are underscore-prefixed and should not drive matching.
+                if (String(key).startsWith(INTERNAL_FIELD_PREFIX)) return;
+                collect(value[key], depth + 1);
+            });
+        };
+
+        collect(event, 0);
+        return parts.join(' ');
+    }
+
     applyMetadataTemplate(value, event) {
         if (typeof value !== 'string' || !value.includes('${')) {
             return value;

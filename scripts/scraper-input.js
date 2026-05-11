@@ -48,33 +48,60 @@ const scraperConfig = {
       }
     },
     {
-      name: "Bear Happy Hour",
+      name: "Coach After Dark",
       iconUrl: "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64",
       enabled: true,
       automation: {
         automationEnabled: true
       },
+      parser: "ai-web",
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
       urlDiscoveryDepth: 1,    // Depth 1: discover /e/ event links from the /o/ organizer listing
       dryRun: false,
+      ai: {
+        enabled: true,
+        endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
+        model: "qwen3.5:4b",
+        maxHtmlChars: 12000,
+        numCtx: 8192,
+        numPredict: 512,
+        timeoutSeconds: 120,
+        keepAlive: "5m"
+      },
       fieldPriorities: {
-        title: { priority: ["eventbrite"], merge: "clobber" },
+        title: { priority: ["ai-web"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["eventbrite"], merge: "clobber" },
-        bar: { priority: ["eventbrite"], merge: "clobber" },
-        address: { priority: ["eventbrite"], merge: "clobber" },
-        startDate: { priority: ["eventbrite"], merge: "clobber" },
-        endDate: { priority: ["eventbrite"], merge: "clobber" },
-        url: { priority: ["eventbrite"], merge: "clobber" },
-        location: { priority: ["eventbrite"], merge: "clobber" },
-        gmaps: { priority: ["eventbrite"], merge: "clobber" },
-        image: { priority: ["eventbrite"], merge: "clobber" },
-        cover: { priority: ["eventbrite"], merge: "clobber" }
+        description: { priority: ["ai-web"], merge: "clobber" },
+        bar: { priority: ["ai-web"], merge: "clobber" },
+        address: { priority: ["ai-web"], merge: "clobber" },
+        startDate: { priority: ["ai-web"], merge: "clobber" },
+        endDate: { priority: ["ai-web"], merge: "clobber" },
+        location: { priority: ["ai-web"], merge: "clobber" },
+        gmaps: { priority: ["ai-web"], merge: "clobber" },
+        image: { priority: ["ai-web"], merge: "clobber" },
+        cover: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {
-        instagram: { value: "https://www.instagram.com/coachafterdark" }
+        shortName: {
+          value: "COACH",
+          conditionalValues: [
+            {
+              keywords: ["beefwitch"],
+              value: "BEEFWITCH"
+            }
+          ]
+        },
+        instagram: {
+          value: "https://www.instagram.com/coachafterdark",
+          conditionalValues: [
+            {
+              keywords: ["beefwitch"],
+              value: "https://www.instagram.com/thebeefwitch"
+            }
+          ]
+        }
       }
     },
     {
