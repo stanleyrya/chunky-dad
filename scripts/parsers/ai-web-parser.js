@@ -933,13 +933,6 @@ class AiWebParser {
         }
         console.log(`🤖 AI Web: Prompt fields selected (${promptFields.length}): ${promptFields.join(', ')}`);
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
-        const sectionBundle = this.getPromptSectionBundle(htmlData.html, aiConfig);
-        const previewSnippet = this.buildPromptSnippets(
-            [],
-            [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean),
-            Math.max(500, Number(aiConfig.maxHtmlChars))
-        )[0] || '';
-        console.log(`🤖 AI Web: Page data sent to AI for ${htmlData.url || 'unknown URL'} (${previewSnippet.length} chars)\n${previewSnippet}`);
         return await this.extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
     }
 
