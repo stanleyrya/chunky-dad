@@ -392,6 +392,8 @@ class AiWebParser {
         if (/[?&](?:event|event_id|eventid|eid|id|ticket|ticket_id)=/i.test(search)) score += 20;
         if (/^\/(?:events?|calendar|tickets?|shows?)\/?$/i.test(path) && !search) score -= 45;
         if (/\/(?:about|contact|privacy|terms|login|signin|signup|search|tag|category|blog)(?:\/|$)/i.test(path)) score -= 35;
+        // Eventbrite /l/ paths are marketing/landing pages, not event detail or listing pages
+        if (/eventbrite\./i.test(parsedUrl.hostname) && /^\/l\//i.test(path)) score -= 100;
         return score;
     }
 
