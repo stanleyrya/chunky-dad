@@ -570,18 +570,19 @@ class AiWebParser {
             localDiagnostics.urlSamples = [];
         }
         const patterns = [
-            /window\.__SERVER_DATA__\s*=\s*/,
-            /window\.__INITIAL_STATE__\s*=\s*/,
-            /window\.__PRELOADED_STATE__\s*=\s*/,
-            /window\.__APP_INITIAL_STATE__\s*=\s*/,
-            /window\.__APP_STATE__\s*=\s*/,
-            /window\.__REDUX_STATE__\s*=\s*/,
-            /window\.__STATE__\s*=\s*/,
+            { name: '__SERVER_DATA__', regex: /window\.__SERVER_DATA__\s*=\s*/ },
+            { name: '__INITIAL_STATE__', regex: /window\.__INITIAL_STATE__\s*=\s*/ },
+            { name: '__PRELOADED_STATE__', regex: /window\.__PRELOADED_STATE__\s*=\s*/ },
+            { name: '__APP_INITIAL_STATE__', regex: /window\.__APP_INITIAL_STATE__\s*=\s*/ },
+            { name: '__APP_STATE__', regex: /window\.__APP_STATE__\s*=\s*/ },
+            { name: '__REDUX_STATE__', regex: /window\.__REDUX_STATE__\s*=\s*/ },
+            { name: '__STATE__', regex: /window\.__STATE__\s*=\s*/ },
         ];
-        for (const startPattern of patterns) {
+        for (const patternEntry of patterns) {
+            const startPattern = patternEntry.regex;
             const startMatch = html.match(startPattern);
             if (!startMatch) continue;
-            const varName = (startPattern.source.match(/window\.([\w_]+)/) || [])[1] || 'unknown';
+            const varName = patternEntry.name || 'unknown';
             if (localDiagnostics) localDiagnostics.containersFound.push(varName);
             try {
                 const startIndex = startMatch.index + startMatch[0].length;
