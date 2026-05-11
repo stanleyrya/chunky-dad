@@ -6174,7 +6174,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
         const deduped = [];
         for (const entry of entries) {
             if (!entry || typeof entry !== 'object') continue;
-            const key = `${entry.pass || ''}::${entry.model || ''}::${entry.prompt || ''}`;
+            const promptText = String(entry.prompt || '');
+            const promptFingerprint = `${promptText.length}:${promptText.slice(0, 120)}:${promptText.slice(-120)}`;
+            const key = `${entry.pass || ''}::${entry.model || ''}::${promptFingerprint}`;
             if (seen.has(key)) continue;
             seen.add(key);
             deduped.push(entry);
