@@ -75,6 +75,7 @@ class AiWebParser {
             /^twitter:(label\d+|data\d+)$/i
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
+        this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         this.proxyImagePathPrefixes = ['/e/_next/image?', '/_next/image?'];
         this.jsonLdCandidatePoolSizeMultiplier = 2;
         this.relativeUrlParsingBase = 'https://placeholder.example';
@@ -308,7 +309,7 @@ class AiWebParser {
     }
 
     addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '', discoveryStats = null) {
-        const url = this.normalizeUrl(rawUrl, sourceUrl);
+        const url = this.stripTrackingParams(this.normalizeUrl(rawUrl, sourceUrl));
         const validation = this.validateEventUrl(url, sourceUrl);
         if (!validation.valid) {
             if (discoveryStats && typeof discoveryStats === 'object') {
@@ -344,9 +345,31 @@ class AiWebParser {
         try {
             const parsed = new URL(url);
             parsed.hash = '';
+            // Strip tracking/affiliate params so the same event with different tracking
+            // suffixes (e.g. ?aff=ebdsoporgprofile, ?utm_source=…) deduplicates correctly.
+            for (const key of [...parsed.searchParams.keys()]) {
+                if (this.trackingParamPattern.test(key)) {
+                    parsed.searchParams.delete(key);
+                }
+            }
             return parsed.toString().replace(/\/$/, '').toLowerCase();
         } catch (_) {
             return String(url || '').replace(/#.*$/, '').replace(/\/$/, '').toLowerCase();
+        }
+    }
+
+    stripTrackingParams(url) {
+        if (!url) return url;
+        try {
+            const parsed = new URL(url);
+            for (const key of [...parsed.searchParams.keys()]) {
+                if (this.trackingParamPattern.test(key)) {
+                    parsed.searchParams.delete(key);
+                }
+            }
+            return parsed.toString();
+        } catch (_) {
+            return url;
         }
     }
 
@@ -436,7 +459,9 @@ class AiWebParser {
         const invalidUrlPatterns = [
             '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
             'javascript:', 'mailto:', 'tel:', 'sms:',
-            'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
+            'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com',
+            'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
+            'analytics.google.com'
         ];
 
         const lowerUrl = url.toLowerCase();
@@ -908,13 +933,6 @@ class AiWebParser {
         }
         console.log(`🤖 AI Web: Prompt fields selected (${promptFields.length}): ${promptFields.join(', ')}`);
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
-        const sectionBundle = this.getPromptSectionBundle(htmlData.html, aiConfig);
-        const previewSnippet = this.buildPromptSnippets(
-            [],
-            [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean),
-            Math.max(500, Number(aiConfig.maxHtmlChars))
-        )[0] || '';
-        console.log(`🤖 AI Web: Page data sent to AI for ${htmlData.url || 'unknown URL'} (${previewSnippet.length} chars)\n${previewSnippet}`);
         return await this.extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
     }
 
