@@ -63,7 +63,7 @@ class AiWebParser {
             ]
         };
         const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
-            .map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
+            .map(prefix => this.escapeRegex(prefix).replace(/\s+/g, '\\s+'))
             .join('|');
         this.noiseLineRegex = new RegExp(`^(${noisePrefixPattern})\\b`, 'i');
         this.excludedMetaKeyRegexes = [
@@ -697,7 +697,7 @@ class AiWebParser {
         try {
             const parsed = new URL(normalized);
             const path = String(parsed.pathname || '').toLowerCase();
-            return /^\/e\/[^/?#]+/i.test(path) || /\/(?:events?|party|parties|shows?|tickets?)\/[^/?#]+/i.test(path);
+            return /^\/e\/[^/?#]+/.test(path) || /\/(?:events?|party|parties|shows?|tickets?)\/[^/?#]+/.test(path);
         } catch (_) {
             return false;
         }
@@ -707,7 +707,7 @@ class AiWebParser {
         if (!rawJson) return [];
         const urls = new Set();
         const keyPattern = this.structuredUrlKeys
-            .map(key => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+            .map(key => this.escapeRegex(key))
             .join('|');
         const patterns = [
             new RegExp(`"(?:${keyPattern})"\\s*:\\s*"([^"]+)"`, 'gi'),
@@ -770,6 +770,10 @@ class AiWebParser {
         return Object.entries(values)
             .map(([key, value]) => `${key}=${value}`)
             .join(', ');
+    }
+
+    escapeRegex(value) {
+        return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     extractJsonObject(html, startIndex) {
