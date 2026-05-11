@@ -546,7 +546,9 @@ class AiWebParser {
                     if (resolved) urls.push(resolved);
                 }
             }
-        } catch (_) {}
+        } catch (error) {
+            console.warn(`🤖 AI Web: Error extracting URLs from window.__SERVER_DATA__: ${error}`);
+        }
         return urls;
     }
 
@@ -558,7 +560,9 @@ class AiWebParser {
             if (!scriptMatch) return [];
             const nextData = JSON.parse((scriptMatch[1] || '').trim());
             this.collectEventUrlsFromNextDataObject(nextData, sourceUrl, urls, new Set(), 0);
-        } catch (_) {}
+        } catch (error) {
+            console.warn(`🤖 AI Web: Error extracting URLs from __NEXT_DATA__: ${error}`);
+        }
         return urls;
     }
 
@@ -593,12 +597,8 @@ class AiWebParser {
     extractJsonObject(html, startIndex) {
         let braceCount = 0;
         let inString = false;
-        let i = startIndex;
-
-        while (i < html.length && html[i] !== '{') {
-            i++;
-        }
-        if (i >= html.length) return null;
+        let i = html.indexOf('{', startIndex);
+        if (i === -1) return null;
         braceCount = 1;
         i++;
 
@@ -617,9 +617,9 @@ class AiWebParser {
         }
 
         if (braceCount !== 0) return null;
-        let jsonString = html.substring(startIndex, i);
-        jsonString = this.escapeJsonControlCharacters(jsonString);
-        return jsonString;
+        const rawSubstring = html.substring(startIndex, i);
+        const cleanedJson = this.escapeJsonControlCharacters(rawSubstring);
+        return cleanedJson;
     }
 
     escapeJsonControlCharacters(jsonString) {
