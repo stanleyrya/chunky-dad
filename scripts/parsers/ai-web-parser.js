@@ -60,7 +60,11 @@ class AiWebParser {
                 'read more',
                 'get tickets',
                 'buy tickets'
-            ]
+            ],
+            evidenceCompactMinLength: 4,
+            fuzzyDescriptionMinTokenLength: 4,
+            fuzzyDescriptionMinTokenMatches: 2,
+            fuzzyDescriptionTokenMatchRatio: 0.45
         };
         const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
             .map(prefix => this.escapeRegex(prefix).replace(/\s+/g, '\\s+'))
@@ -1747,12 +1751,16 @@ ${String(rawResponse || '')}`;
     }
 
     normalizeEvidenceText(value) {
+        const htmlEntityMap = {
+            amp: '&',
+            nbsp: ' ',
+            '#39': '\'',
+            apos: '\'',
+            quot: '"'
+        };
         return String(value || '')
             .toLowerCase()
-            .replace(/&amp;/g, '&')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&#39;|&apos;/g, '\'')
-            .replace(/&quot;/g, '"')
+            .replace(/&(amp|nbsp|#39|apos|quot);/g, (match, token) => htmlEntityMap[token] || match)
             .replace(/\s+/g, ' ')
             .trim();
     }
@@ -1823,7 +1831,7 @@ ${String(rawResponse || '')}`;
         if (!normalizedValue) return false;
         if (evidenceContext.normalized.includes(normalizedValue)) return true;
         const compactValue = normalizedValue.replace(/[^a-z0-9]+/g, '');
-        if (compactValue.length >= 4 && evidenceContext.compact.includes(compactValue)) return true;
+        if (compactValue.length >= this.extractionLimits.evidenceCompactMinLength && evidenceContext.compact.includes(compactValue)) return true;
         return false;
     }
 
@@ -1832,10 +1840,13 @@ ${String(rawResponse || '')}`;
         const tokens = this.normalizeEvidenceText(value)
             .split(' ')
             .map(token => token.replace(/[^a-z0-9]/g, ''))
-            .filter(token => token.length >= 4);
+            .filter(token => token.length >= this.extractionLimits.fuzzyDescriptionMinTokenLength);
         if (tokens.length === 0) return false;
         const matched = tokens.filter(token => evidenceContext.tokenSet.has(token)).length;
-        const required = Math.max(2, Math.ceil(tokens.length * 0.45));
+        const required = Math.max(
+            this.extractionLimits.fuzzyDescriptionMinTokenMatches,
+            Math.ceil(tokens.length * this.extractionLimits.fuzzyDescriptionTokenMatchRatio)
+        );
         return matched >= required;
     }
 
@@ -1843,8 +1854,9 @@ ${String(rawResponse || '')}`;
         const text = this.normalizeEvidenceText(value);
         if (!text) return false;
 
-        const containsFree = /\bfree\b/i.test(text);
-        if (containsFree && !/\bfree\b/i.test(evidenceContext.normalized)) {
+        const freePattern = /\bfree\b/i;
+        const containsFree = freePattern.test(text);
+        if (containsFree && !freePattern.test(evidenceContext.normalized)) {
             return false;
         }
 
@@ -1864,7 +1876,7 @@ ${String(rawResponse || '')}`;
             const allNumbersFound = nums.every(num => this.coordinateVariants(num).some(candidate => raw.includes(candidate)));
             if (allNumbersFound) {
                 if (!containsFree) return true;
-                return /\bfree\b/i.test(evidenceContext.normalized);
+                return freePattern.test(evidenceContext.normalized);
             }
         }
 
