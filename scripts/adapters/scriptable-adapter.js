@@ -3772,9 +3772,11 @@ class ScriptableAdapter {
             }
         }
 
+        const EMPTY_AI_PROMPTS_ENCODED = '%5B%5D';
+
         function showAiPromptPicker(button) {
             if (!button) return;
-            const raw = button.getAttribute('data-ai-prompts') || '%5B%5D';
+            const raw = button.getAttribute('data-ai-prompts') || EMPTY_AI_PROMPTS_ENCODED;
             let prompts = [];
             try {
                 prompts = JSON.parse(decodeURIComponent(raw));
@@ -3806,8 +3808,16 @@ class ScriptableAdapter {
                 const item = document.createElement('button');
                 item.type = 'button';
                 item.style.cssText = 'text-align:left;border:1px solid rgba(148,163,184,0.25);border-radius:12px;background:var(--card-bg,#fff);padding:12px 14px;cursor:pointer;';
-                item.innerHTML = '<div style="font-weight:700;color:var(--text-color,#111827);">' + pass + '</div>'
-                    + (meta ? '<div style="margin-top:4px;font-size:12px;color:var(--text-secondary,#64748b);">' + meta + '</div>' : '');
+                const passLabel = document.createElement('div');
+                passLabel.style.cssText = 'font-weight:700;color:var(--text-color,#111827);';
+                passLabel.textContent = pass;
+                item.appendChild(passLabel);
+                if (meta) {
+                    const metaLabel = document.createElement('div');
+                    metaLabel.style.cssText = 'margin-top:4px;font-size:12px;color:var(--text-secondary,#64748b);';
+                    metaLabel.textContent = meta;
+                    item.appendChild(metaLabel);
+                }
                 item.onclick = () => {
                     modal.preview.value = promptText;
                     copyTextWithFeedback(promptText, button, () => {
