@@ -64,7 +64,8 @@ class AiWebParser {
             evidenceCompactMinLength: 4,
             fuzzyDescriptionMinTokenLength: 4,
             fuzzyDescriptionMinTokenMatches: 2,
-            fuzzyDescriptionTokenMatchRatio: 0.45
+            fuzzyDescriptionTokenMatchRatio: 0.45,
+            validationReportValueMaxLength: 140
         };
         const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
             .map(prefix => this.escapeRegex(prefix).replace(/\s+/g, '\\s+'))
@@ -1813,7 +1814,7 @@ ${String(rawResponse || '')}`;
         if (!text) return [];
         const variants = new Set([text]);
         if (text.includes('.')) {
-            variants.add(text.replace(/0+$/g, '').replace(/\.$/g, ''));
+            variants.add(text.replace(/0+$/, '').replace(/\.$/, ''));
         }
         return Array.from(variants).filter(Boolean);
     }
@@ -1837,15 +1838,21 @@ ${String(rawResponse || '')}`;
 
     hasFuzzyEvidence(evidenceContext, value) {
         if (this.hasExactEvidence(evidenceContext, value)) return true;
-        const tokens = this.normalizeEvidenceText(value)
-            .split(' ')
-            .map(token => token.replace(/[^a-z0-9]/g, ''))
-            .filter(token => token.length >= this.extractionLimits.fuzzyDescriptionMinTokenLength);
-        if (tokens.length === 0) return false;
-        const matched = tokens.filter(token => evidenceContext.tokenSet.has(token)).length;
+        const rawTokens = this.normalizeEvidenceText(value).split(' ');
+        let tokenCount = 0;
+        let matched = 0;
+        for (const rawToken of rawTokens) {
+            const token = String(rawToken || '').replace(/[^a-z0-9]/g, '');
+            if (token.length < this.extractionLimits.fuzzyDescriptionMinTokenLength) continue;
+            tokenCount++;
+            if (evidenceContext.tokenSet.has(token)) {
+                matched++;
+            }
+        }
+        if (tokenCount === 0) return false;
         const required = Math.max(
             this.extractionLimits.fuzzyDescriptionMinTokenMatches,
-            Math.ceil(tokens.length * this.extractionLimits.fuzzyDescriptionTokenMatchRatio)
+            Math.ceil(tokenCount * this.extractionLimits.fuzzyDescriptionTokenMatchRatio)
         );
         return matched >= required;
     }
@@ -1873,7 +1880,13 @@ ${String(rawResponse || '')}`;
         const nums = this.extractNumberTokens(text);
         if (nums.length > 0) {
             const raw = String(evidenceContext.raw || '');
-            const allNumbersFound = nums.every(num => this.coordinateVariants(num).some(candidate => raw.includes(candidate)));
+            const variantCache = new Map();
+            const allNumbersFound = nums.every(num => {
+                if (!variantCache.has(num)) {
+                    variantCache.set(num, this.coordinateVariants(num));
+                }
+                return variantCache.get(num).some(candidate => raw.includes(candidate));
+            });
             if (allNumbersFound) {
                 if (!containsFree) return true;
                 return freePattern.test(evidenceContext.normalized);
@@ -1957,7 +1970,7 @@ ${String(rawResponse || '')}`;
                     field: rule.field,
                     key,
                     mode: rule.mode,
-                    value: this.trimToMaxLength(String(value), 140)
+                    value: this.trimToMaxLength(String(value), this.extractionLimits.validationReportValueMaxLength)
                 });
                 delete validated[key];
                 return;
