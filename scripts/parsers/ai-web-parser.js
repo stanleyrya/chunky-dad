@@ -60,7 +60,12 @@ class AiWebParser {
                 'read more',
                 'get tickets',
                 'buy tickets'
-            ]
+            ],
+            evidenceCompactMinLength: 4,
+            fuzzyDescriptionMinTokenLength: 4,
+            fuzzyDescriptionMinTokenMatches: 2,
+            fuzzyDescriptionTokenMatchRatio: 0.45,
+            validationReportValueMaxLength: 140
         };
         const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
             .map(prefix => this.escapeRegex(prefix).replace(/\s+/g, '\\s+'))
@@ -119,10 +124,14 @@ class AiWebParser {
                 return this.buildEmptyResult(htmlData);
             }
 
-            const event = this.normalizeAiEvent(aiEvent, parserConfig, htmlData, cityConfig, promptFields);
+            const validationResult = this.validateAiEventEvidence(aiEvent, htmlData, parserConfig, promptFields);
+            const event = this.normalizeAiEvent(validationResult.event, parserConfig, htmlData, cityConfig, promptFields);
             if (!event || !event.title || !event.startDate) {
                 console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
                 return this.buildEmptyResult(htmlData);
+            }
+            if (validationResult.report) {
+                event._aiValidation = validationResult.report;
             }
 
             return {
@@ -1683,6 +1692,301 @@ ${String(rawResponse || '')}`;
                 return null;
             }
         }
+    }
+
+    getAiValidationConfig(parserConfig = {}) {
+        const aiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
+            ? parserConfig.ai
+            : {};
+        const rawValidation = aiConfig.validation && typeof aiConfig.validation === 'object'
+            ? aiConfig.validation
+            : {};
+        const allowWithoutEvidence = new Set(
+            (Array.isArray(rawValidation.allowWithoutEvidence) ? rawValidation.allowWithoutEvidence : [])
+                .map(field => this.normalizePromptFieldName(field))
+                .filter(Boolean)
+        );
+        return {
+            enabled: rawValidation.enabled !== false,
+            strictDefault: rawValidation.strict !== false,
+            fuzzyDescription: rawValidation.fuzzyDescription !== false,
+            perField: rawValidation.perField && typeof rawValidation.perField === 'object'
+                ? rawValidation.perField
+                : {},
+            allowWithoutEvidence
+        };
+    }
+
+    buildAiEvidenceContext(htmlData, parserConfig = {}) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) {
+            return {
+                raw: '',
+                normalized: '',
+                compact: '',
+                tokenSet: new Set()
+            };
+        }
+        const aiConfig = this.getAiConfig(parserConfig);
+        const bundle = this.getPromptSectionBundle(html, aiConfig);
+        const sections = [bundle.title, bundle.jsonLd, bundle.metaPrimary, bundle.metaFallback, bundle.content].filter(Boolean);
+        const seen = new Set();
+        const sectionText = sections
+            .map(section => this.sectionToText(section))
+            .filter(Boolean)
+            .filter(text => {
+                if (seen.has(text)) return false;
+                seen.add(text);
+                return true;
+            })
+            .join('\n\n');
+        const raw = sectionText || this.cleanHtml(html, aiConfig) || html;
+        const normalized = this.normalizeEvidenceText(raw);
+        const compact = normalized.replace(/[^a-z0-9]+/g, '');
+        return {
+            raw,
+            normalized,
+            compact,
+            tokenSet: new Set(
+                normalized
+                    .split(' ')
+                    .map(token => token.replace(/[^a-z0-9]/g, ''))
+                    .filter(Boolean)
+            )
+        };
+    }
+
+    normalizeEvidenceText(value) {
+        const htmlEntityMap = {
+            amp: '&',
+            nbsp: ' ',
+            '#39': '\'',
+            apos: '\'',
+            quot: '"'
+        };
+        return String(value || '')
+            .toLowerCase()
+            .replace(/&(amp|nbsp|#39|apos|quot);/g, (match, token) => htmlEntityMap[token] || match)
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    getFieldValidationRule(fieldName, validationConfig) {
+        const normalizedField = this.normalizePromptFieldName(fieldName);
+        const rawRule = validationConfig.perField && validationConfig.perField[normalizedField] && typeof validationConfig.perField[normalizedField] === 'object'
+            ? validationConfig.perField[normalizedField]
+            : {};
+        const strict = validationConfig.allowWithoutEvidence.has(normalizedField)
+            ? false
+            : (Object.prototype.hasOwnProperty.call(rawRule, 'strict')
+                ? Boolean(rawRule.strict)
+                : Boolean(validationConfig.strictDefault));
+
+        let mode = typeof rawRule.mode === 'string' ? rawRule.mode.trim().toLowerCase() : '';
+        if (!mode) {
+            if (normalizedField === 'location') mode = 'coords';
+            else if (normalizedField === 'cover') mode = 'cover';
+            else if (normalizedField === 'description') mode = validationConfig.fuzzyDescription ? 'fuzzy' : 'exact';
+            else if (normalizedField === 'url' || normalizedField === 'ticketurl' || normalizedField === 'instagram' || normalizedField === 'facebook' || normalizedField === 'gmaps' || normalizedField === 'image') mode = 'url';
+            else mode = 'exact';
+        }
+
+        return {
+            field: normalizedField,
+            strict,
+            mode
+        };
+    }
+
+    normalizePriceText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/\b(us\$|usd|us dollars?|dollars?)\b/g, ' usd ')
+            .replace(/\$/g, ' usd ')
+            .replace(/\s*-\s*/g, '-')
+            .replace(/[^a-z0-9.\- ]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    extractNumberTokens(text) {
+        const matches = String(text || '').match(/-?\d+(?:\.\d+)?/g) || [];
+        return Array.from(new Set(matches));
+    }
+
+    coordinateVariants(value) {
+        const text = String(value || '').trim();
+        if (!text) return [];
+        const variants = new Set([text]);
+        if (text.includes('.')) {
+            variants.add(text.replace(/0+$/, '').replace(/\.$/, ''));
+        }
+        return Array.from(variants).filter(Boolean);
+    }
+
+    hasCoordinateEvidence(evidenceContext, value) {
+        const coords = this.extractNumberTokens(value);
+        if (coords.length < 2) return false;
+        const raw = String(evidenceContext.raw || '');
+        const firstTwo = coords.slice(0, 2);
+        return firstTwo.every(coord => this.coordinateVariants(coord).some(candidate => raw.includes(candidate)));
+    }
+
+    hasExactEvidence(evidenceContext, value) {
+        const normalizedValue = this.normalizeEvidenceText(value);
+        if (!normalizedValue) return false;
+        if (evidenceContext.normalized.includes(normalizedValue)) return true;
+        const compactValue = normalizedValue.replace(/[^a-z0-9]+/g, '');
+        if (compactValue.length >= this.extractionLimits.evidenceCompactMinLength && evidenceContext.compact.includes(compactValue)) return true;
+        return false;
+    }
+
+    hasFuzzyEvidence(evidenceContext, value) {
+        if (this.hasExactEvidence(evidenceContext, value)) return true;
+        const rawTokens = this.normalizeEvidenceText(value).split(' ');
+        let tokenCount = 0;
+        let matched = 0;
+        for (const rawToken of rawTokens) {
+            const token = String(rawToken || '').replace(/[^a-z0-9]/g, '');
+            if (token.length < this.extractionLimits.fuzzyDescriptionMinTokenLength) continue;
+            tokenCount++;
+            if (evidenceContext.tokenSet.has(token)) {
+                matched++;
+            }
+        }
+        if (tokenCount === 0) return false;
+        const required = Math.max(
+            this.extractionLimits.fuzzyDescriptionMinTokenMatches,
+            Math.ceil(tokenCount * this.extractionLimits.fuzzyDescriptionTokenMatchRatio)
+        );
+        return matched >= required;
+    }
+
+    hasCoverEvidence(evidenceContext, value) {
+        const text = this.normalizeEvidenceText(value);
+        if (!text) return false;
+
+        const freePattern = /\bfree\b/i;
+        const containsFree = freePattern.test(text);
+        if (containsFree && !freePattern.test(evidenceContext.normalized)) {
+            return false;
+        }
+
+        if (this.hasExactEvidence(evidenceContext, text)) {
+            return true;
+        }
+
+        const normalizedPrice = this.normalizePriceText(text);
+        const normalizedEvidencePrice = this.normalizePriceText(evidenceContext.raw);
+        if (normalizedPrice && normalizedEvidencePrice.includes(normalizedPrice)) {
+            return true;
+        }
+
+        const nums = this.extractNumberTokens(text);
+        if (nums.length > 0) {
+            const raw = String(evidenceContext.raw || '');
+            const variantCache = new Map();
+            const allNumbersFound = nums.every(num => {
+                if (!variantCache.has(num)) {
+                    variantCache.set(num, this.coordinateVariants(num));
+                }
+                return variantCache.get(num).some(candidate => raw.includes(candidate));
+            });
+            if (allNumbersFound) {
+                if (!containsFree) return true;
+                return freePattern.test(evidenceContext.normalized);
+            }
+        }
+
+        return false;
+    }
+
+    hasUrlEvidence(evidenceContext, value) {
+        const normalized = this.normalizeUrl(value, '');
+        if (normalized && this.hasExactEvidence(evidenceContext, normalized)) {
+            return true;
+        }
+        return this.hasExactEvidence(evidenceContext, value);
+    }
+
+    hasFieldEvidence(evidenceContext, value, mode) {
+        if (value === null || value === undefined) return false;
+        const valueText = String(value).trim();
+        if (!valueText) return false;
+        switch (mode) {
+            case 'none':
+                return true;
+            case 'coords':
+                return this.hasCoordinateEvidence(evidenceContext, valueText);
+            case 'cover':
+                return this.hasCoverEvidence(evidenceContext, valueText);
+            case 'fuzzy':
+                return this.hasFuzzyEvidence(evidenceContext, valueText);
+            case 'url':
+                return this.hasUrlEvidence(evidenceContext, valueText);
+            case 'exact':
+            default:
+                return this.hasExactEvidence(evidenceContext, valueText);
+        }
+    }
+
+    validateAiEventEvidence(aiEvent, htmlData, parserConfig = {}, promptFields = null) {
+        if (!aiEvent || typeof aiEvent !== 'object') {
+            return { event: aiEvent, report: null };
+        }
+        const validationConfig = this.getAiValidationConfig(parserConfig);
+        if (!validationConfig.enabled) {
+            return { event: aiEvent, report: null };
+        }
+
+        const evidenceContext = this.buildAiEvidenceContext(htmlData, parserConfig);
+        const validated = { ...aiEvent };
+        const report = {
+            strict: validationConfig.strictDefault,
+            sourceChars: evidenceContext.raw.length,
+            kept: [],
+            dropped: [],
+            bypassed: []
+        };
+        const requestedFields = Array.isArray(promptFields) && promptFields.length > 0
+            ? new Set(promptFields.map(field => this.normalizePromptFieldName(field)))
+            : null;
+
+        Object.keys(aiEvent).forEach(key => {
+            if (key.startsWith('__')) return;
+            const rule = this.getFieldValidationRule(key, validationConfig);
+            const value = aiEvent[key];
+            const usable = this.isUsableAiFieldValue(value);
+            if (!usable) {
+                delete validated[key];
+                return;
+            }
+            if (requestedFields && !requestedFields.has(rule.field)) {
+                report.bypassed.push({ field: rule.field, key, reason: 'not-requested' });
+                return;
+            }
+            if (!rule.strict) {
+                report.bypassed.push({ field: rule.field, key, reason: 'override-allow-without-evidence' });
+                return;
+            }
+            const hasEvidence = this.hasFieldEvidence(evidenceContext, value, rule.mode);
+            if (!hasEvidence) {
+                report.dropped.push({
+                    field: rule.field,
+                    key,
+                    mode: rule.mode,
+                    value: this.trimToMaxLength(String(value), this.extractionLimits.validationReportValueMaxLength)
+                });
+                delete validated[key];
+                return;
+            }
+            report.kept.push({ field: rule.field, key, mode: rule.mode });
+        });
+
+        if (report.dropped.length > 0) {
+            console.warn(`🤖 AI Web: Dropped ${report.dropped.length} field(s) lacking source evidence: ${report.dropped.map(entry => entry.key).join(', ')}`);
+        }
+        return { event: validated, report };
     }
 
     normalizeRruleValue(value) {
