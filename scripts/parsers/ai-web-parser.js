@@ -82,6 +82,7 @@ class AiWebParser {
         this.maxUrlUnwrapDepth = 3;
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
+        this.aiPromptHistory = [];
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         this.structuredUrlKeys = [
             'url',
@@ -97,6 +98,7 @@ class AiWebParser {
 
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
+            this.aiPromptHistory = [];
             const html = htmlData && htmlData.html ? htmlData.html : '';
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
 
@@ -960,7 +962,50 @@ class AiWebParser {
         }
         console.log(`🤖 AI Web: Prompt fields selected (${promptFields.length}): ${promptFields.join(', ')}`);
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
-        return await this.extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
+        const extracted = await this.extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
+        if (!extracted || typeof extracted !== 'object') {
+            return extracted;
+        }
+        const promptHistory = this.consumeAiPromptHistory();
+        if (promptHistory.length > 0) {
+            extracted.__aiPrompts = promptHistory;
+        }
+        return extracted;
+    }
+
+    recordAiPrompt(prompt, passLabel, aiConfig = {}) {
+        if (!prompt) return;
+        const normalizedPassLabel = String(passLabel || 'extraction').trim() || 'extraction';
+        this.aiPromptHistory.push({
+            pass: normalizedPassLabel,
+            model: String(aiConfig.model || ''),
+            endpoint: String(aiConfig.endpoint || ''),
+            chars: prompt.length,
+            prompt: String(prompt)
+        });
+    }
+
+    consumeAiPromptHistory() {
+        if (!Array.isArray(this.aiPromptHistory) || this.aiPromptHistory.length === 0) {
+            this.aiPromptHistory = [];
+            return [];
+        }
+        const prompts = this.aiPromptHistory
+            .map(entry => {
+                if (!entry || typeof entry !== 'object') return null;
+                const promptText = String(entry.prompt || '');
+                if (!promptText) return null;
+                return {
+                    pass: String(entry.pass || 'extraction'),
+                    model: String(entry.model || ''),
+                    endpoint: String(entry.endpoint || ''),
+                    chars: Number.isFinite(Number(entry.chars)) ? Number(entry.chars) : promptText.length,
+                    prompt: promptText
+                };
+            })
+            .filter(Boolean);
+        this.aiPromptHistory = [];
+        return prompts;
     }
 
     getAiConfig(parserConfig = {}) {
@@ -1516,6 +1561,7 @@ ${String(rawResponse || '')}`;
         if (!prompt) return null;
         const label = passLabel ? ` (${passLabel} pass)` : '';
         const promptChars = prompt.length;
+        this.recordAiPrompt(prompt, passLabel, aiConfig);
         const payload = {
             model: aiConfig.model,
             prompt,
@@ -1684,6 +1730,7 @@ ${String(rawResponse || '')}`;
         const image = this.firstNonEmpty(aiEvent.image, aiEvent.img, '');
         const cover = this.firstNonEmpty(aiEvent.cover, '');
         const shortName = this.firstNonEmpty(aiEvent.shortName, aiEvent.short, '');
+        const aiPrompts = Array.isArray(aiEvent.__aiPrompts) ? aiEvent.__aiPrompts.filter(entry => entry && entry.prompt) : [];
         const recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields)
             ? this.normalizeRruleValue(this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, ''))
             : '';
@@ -1718,6 +1765,10 @@ ${String(rawResponse || '')}`;
             source: this.config.source,
             isBearEvent: false
         };
+
+        if (aiPrompts.length > 0) {
+            event._aiPrompts = aiPrompts;
+        }
 
         if (parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object') {
             Object.keys(parserConfig.metadata).forEach(key => {

@@ -122,8 +122,8 @@ class FileLogger {
     constructor(options = {}) {
         this.entries = [];
         this.totalBytes = 0;
-        this.maxLines = Number.isFinite(options.maxLines) ? options.maxLines : 2000;
-        this.maxBytes = Number.isFinite(options.maxBytes) ? options.maxBytes : 250000;
+        this.maxLines = Number.isFinite(options.maxLines) ? options.maxLines : 8000;
+        this.maxBytes = Number.isFinite(options.maxBytes) ? options.maxBytes : 1000000;
         this.captureMode = options.captureMode || 'all';
         this.consoleWrapped = false;
         this.originalConsole = null;
@@ -2361,7 +2361,8 @@ class ScriptableAdapter {
             : `Run: ${runContextLabel}`;
         const shouldShowLogs = results?._isDisplayingSavedRun === true;
         const runLogInfo = shouldShowLogs ? await this.loadRunLogsForDisplay(results) : null;
-        const logSectionHtml = shouldShowLogs ? this.buildRunLogSectionHtml(runLogInfo) : '';
+        const runPromptInfo = shouldShowLogs ? this.loadAiPromptsForDisplay(results, runLogInfo) : null;
+        const logSectionHtml = shouldShowLogs ? this.buildRunLogSectionHtml(runLogInfo, runPromptInfo) : '';
         const headerLogoData = await this.loadHeaderLogoData();
         const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
         
@@ -3646,6 +3647,53 @@ class ScriptableAdapter {
             }
         }
 
+        function showAiPromptPicker(button) {
+            if (!button) return;
+            const raw = button.getAttribute('data-ai-prompts') || '[]';
+            let prompts = [];
+            try {
+                prompts = JSON.parse(raw);
+            } catch (error) {
+                console.error('Failed to parse AI prompt payload:', error);
+                return;
+            }
+            if (!Array.isArray(prompts) || prompts.length === 0) {
+                alert('No AI prompts found for this run.');
+                return;
+            }
+            const options = prompts.map((entry, index) => {
+                const pass = entry && entry.pass ? String(entry.pass) : 'prompt ' + (index + 1);
+                const chars = Number.isFinite(Number(entry?.chars)) ? String(Number(entry.chars)) + ' chars' : '';
+                const model = entry && entry.model ? String(entry.model) : '';
+                const charsLabel = chars ? ' (' + chars + ')' : '';
+                const modelLabel = model ? ' [' + model + ']' : '';
+                return String(index + 1) + '. ' + pass + charsLabel + modelLabel;
+            }).join('\\n');
+            const selected = prompt('Copy which AI prompt?\\n\\n' + options + '\\n\\nEnter number (1-' + prompts.length + ')', '1');
+            if (selected === null) return;
+            const index = Number(selected) - 1;
+            if (!Number.isInteger(index) || index < 0 || index >= prompts.length) {
+                alert('Invalid selection.');
+                return;
+            }
+            const chosen = prompts[index];
+            const promptText = chosen && typeof chosen.prompt === 'string' ? chosen.prompt : '';
+            if (!promptText) {
+                alert('Selected prompt is empty.');
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(promptText).then(() => {
+                    showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(promptText, button);
+                });
+            } else {
+                copyToClipboardFallback(promptText, button);
+            }
+        }
+
         function copyRawOutput() {
             // Get all event cards
             const eventCards = document.querySelectorAll('.event-card');
@@ -3951,7 +3999,7 @@ class ScriptableAdapter {
         return html;
     }
 
-    buildRunLogSectionHtml(logInfo) {
+    buildRunLogSectionHtml(logInfo, promptInfo = null) {
         if (!logInfo) {
             return '';
         }
@@ -3985,6 +4033,13 @@ class ScriptableAdapter {
             ? `Showing last ${shownLines} of ${totalLines} lines`
             : `Showing ${totalLines} lines`;
         const logText = logInfo.text || '';
+        const prompts = Array.isArray(promptInfo?.prompts) ? promptInfo.prompts : [];
+        const promptCount = prompts.length;
+        const promptDataJson = JSON.stringify(prompts);
+        const promptCountBadge = promptCount > 0 ? ` • AI prompts: ${promptCount}` : '';
+        const promptButtonHtml = promptCount > 0
+            ? `<button onclick="showAiPromptPicker(this)" class="log-copy-btn" data-ai-prompts='${this.escapeHtml(promptDataJson)}'>🤖 AI Prompts</button>`
+            : '';
 
         return `
     <div class="section log-section">
@@ -3994,9 +4049,10 @@ class ScriptableAdapter {
             <span class="section-count">${totalLines}</span>
             <button onclick="copyLogs(this)" class="log-copy-btn">📋 Copy</button>
             <button onclick="copyCompactLogs(this)" class="log-copy-btn">📋 Compact</button>
+            ${promptButtonHtml}
         </div>
         <details class="log-details">
-            <summary>${this.escapeHtml(summaryLabel)}</summary>
+            <summary>${this.escapeHtml(`${summaryLabel}${promptCountBadge}`)}</summary>
             <pre class="log-output">${this.escapeHtml(logText)}</pre>
         </details>
     </div>
@@ -6054,12 +6110,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             ? logging.maxLines
             : Number.isFinite(configRoot.logMaxLines)
                 ? configRoot.logMaxLines
-                : 2000;
+                : 8000;
         const maxBytes = Number.isFinite(logging.maxBytes)
             ? logging.maxBytes
             : Number.isFinite(configRoot.logMaxBytes)
                 ? configRoot.logMaxBytes
-                : 250000;
+                : 1000000;
         return { mode, maxLines, maxBytes };
     }
     
@@ -6101,6 +6157,102 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             || null;
     }
 
+    normalizeAiPromptEntry(entry, fallbackPass = 'extraction') {
+        if (!entry || typeof entry !== 'object') return null;
+        const prompt = typeof entry.prompt === 'string' ? entry.prompt : '';
+        if (!prompt) return null;
+        const pass = String(entry.pass || fallbackPass || 'extraction').trim() || 'extraction';
+        const model = String(entry.model || '').trim();
+        const endpoint = String(entry.endpoint || '').trim();
+        const chars = Number.isFinite(Number(entry.chars)) ? Number(entry.chars) : prompt.length;
+        return { pass, model, endpoint, chars, prompt };
+    }
+
+    dedupeAiPromptEntries(entries) {
+        if (!Array.isArray(entries)) return [];
+        const seen = new Set();
+        const deduped = [];
+        for (const entry of entries) {
+            if (!entry || typeof entry !== 'object') continue;
+            const promptText = String(entry.prompt || '');
+            const promptFingerprint = `${promptText.length}:${promptText.slice(0, 120)}:${promptText.slice(-120)}`;
+            const key = `${entry.pass || ''}::${entry.model || ''}::${promptFingerprint}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(entry);
+        }
+        return deduped;
+    }
+
+    extractAiPromptsFromLogText(logText) {
+        const text = typeof logText === 'string' ? logText : '';
+        if (!text) return [];
+        const lines = text.split(/\r?\n/);
+        const promptHeaderRegex = /🤖 AI Web: Full prompt(?: \(([^)]+)\))?(?: \((\d+) chars\))?/;
+        const nextLogEntryRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z \[[A-Z]+\] /;
+        const prompts = [];
+
+        for (let i = 0; i < lines.length; i += 1) {
+            const line = lines[i];
+            const headerMatch = line.match(promptHeaderRegex);
+            if (!headerMatch) continue;
+
+            const pass = String(headerMatch[1] || 'extraction').trim() || 'extraction';
+            const chars = Number.isFinite(Number(headerMatch[2])) ? Number(headerMatch[2]) : null;
+            const promptLines = [];
+            let cursor = i + 1;
+            while (cursor < lines.length) {
+                const candidate = lines[cursor];
+                if (candidate.match(nextLogEntryRegex) || candidate.includes('🤖 AI Web: Full prompt')) {
+                    break;
+                }
+                promptLines.push(candidate);
+                cursor += 1;
+            }
+            i = cursor - 1;
+            const prompt = promptLines.join('\n').trim();
+            if (!prompt) continue;
+            prompts.push({
+                pass,
+                model: '',
+                endpoint: '',
+                chars: chars || prompt.length,
+                prompt
+            });
+        }
+
+        return prompts;
+    }
+
+    loadAiPromptsForDisplay(results, logInfo = null) {
+        const collected = [];
+        const events = Array.isArray(results?.analyzedEvents) ? results.analyzedEvents : [];
+        events.forEach(event => {
+            const eventPrompts = Array.isArray(event?._aiPrompts) ? event._aiPrompts : [];
+            eventPrompts.forEach(entry => {
+                const normalized = this.normalizeAiPromptEntry(entry);
+                if (normalized) {
+                    collected.push(normalized);
+                }
+            });
+        });
+
+        if (collected.length === 0 && logInfo?.exists && typeof logInfo.text === 'string') {
+            this.extractAiPromptsFromLogText(logInfo.text).forEach(entry => {
+                const normalized = this.normalizeAiPromptEntry(entry);
+                if (normalized) {
+                    collected.push(normalized);
+                }
+            });
+        }
+
+        const prompts = this.dedupeAiPromptEntries(collected);
+        return {
+            count: prompts.length,
+            prompts
+        };
+    }
+
     async loadRunLogsForDisplay(results) {
         const runId = this.getRunIdForLogs(results);
         if (!runId) {
@@ -6130,7 +6282,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                 lines = lines.slice(0, -1);
             }
             const totalLines = lines.length;
-            const maxLines = 2000;
+            const logConfig = this.resolveLogConfig(results?.config || {});
+            const maxLines = Number.isFinite(logConfig.maxLines) && logConfig.maxLines > 0
+                ? logConfig.maxLines
+                : 8000;
             let displayLines = lines;
             let truncated = false;
             if (lines.length > maxLines) {
