@@ -88,8 +88,10 @@ class AiWebParser {
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
         this.supportedImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff'];
-        this.likelyImagePathRegex = /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i;
+        this.likelyImagePathRegex = /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/iu;
+        // Common CDN/image-transform query keys (width, height, quality, fit/crop, format, signature).
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
+        this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         this.structuredUrlKeys = [
@@ -1175,6 +1177,10 @@ class AiWebParser {
         });
     }
 
+    isInternalAiFieldKey(key) {
+        return String(key || '').startsWith('__');
+    }
+
     getRemainingPromptFields(fields, aiEvent) {
         const requestedFields = Array.isArray(fields) ? fields : [];
         return requestedFields.filter(field => !this.hasResolvedFieldValue(aiEvent, this.normalizePromptFieldName(field)));
@@ -1221,6 +1227,9 @@ class AiWebParser {
         let merged = {};
         const promptFields = Array.isArray(fields) ? fields : [];
         const promptSnippets = Array.isArray(snippets) ? snippets.filter(Boolean) : [];
+        if (validationState && !(validationState.validatedFields instanceof Set)) {
+            validationState.validatedFields = new Set();
+        }
         const validatedFields = validationState && validationState.validatedFields instanceof Set
             ? validationState.validatedFields
             : new Set();
@@ -1256,7 +1265,7 @@ class AiWebParser {
                 ? partialValidation.event
                 : {};
             Object.keys(validatedPartial).forEach(key => {
-                if (key.startsWith('__')) return;
+                if (this.isInternalAiFieldKey(key)) return;
                 validatedFields.add(this.normalizePromptFieldName(key));
             });
             merged = this.mergeAiEventFields(merged, validatedPartial);
@@ -2085,8 +2094,7 @@ ${String(rawResponse || '')}`;
         const imageUrls = new Set();
         if (!source) return imageUrls;
         const rawCandidates = new Set(this.extractUrlCandidatesFromRawHtml(source));
-        const inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
-        for (const match of source.matchAll(inlineUrlPattern)) {
+        for (const match of source.matchAll(this.inlineUrlPattern)) {
             const candidate = String(match[0] || '').trim();
             if (candidate) rawCandidates.add(candidate);
         }
@@ -2195,7 +2203,7 @@ ${String(rawResponse || '')}`;
             : null;
 
         Object.keys(aiEvent).forEach(key => {
-            if (key.startsWith('__')) return;
+            if (this.isInternalAiFieldKey(key)) return;
             const rule = this.getFieldValidationRule(key, validationConfig);
             const value = aiEvent[key];
             const usable = this.isUsableAiFieldValue(value);
