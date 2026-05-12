@@ -275,11 +275,21 @@
     .layout-banner .event-cta { background: #fff; color: #111; padding: 16px 40px; border-radius: 50px; font-size: 24px; font-weight: 700; margin-top: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 
     /* === Pattern Layouts with Rim Effect === */
+    .artboard.layout-css-pattern,
     .artboard.layout-pattern-dots,
     .artboard.layout-pattern-stripes,
     .artboard.layout-pattern-grid,
     .artboard.layout-pattern-zigzag { background: #000; position: relative; overflow: hidden; }
 
+    .layout-css-pattern .css-pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+    }
+    .layout-css-pattern .pattern-vignette {
+      position: absolute; inset: 0; z-index: 1;
+      background: radial-gradient(circle at 50% 45%, rgba(0,0,0,0) 0 45%, rgba(0,0,0,0.35) 100%);
+      pointer-events: none;
+    }
     .layout-pattern-dots .pattern-bg {
       position: absolute; inset: 0; z-index: 0;
       background-color: #06060a;
@@ -303,6 +313,7 @@
       background-image: linear-gradient(135deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%) -10px 0, linear-gradient(225deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%) -10px 0, linear-gradient(315deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%), linear-gradient(45deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%);
       background-size: 20px 20px;
     }
+    .layout-css-pattern .content-box,
     .layout-pattern-dots .content-box,
     .layout-pattern-stripes .content-box,
     .layout-pattern-grid .content-box,
@@ -316,6 +327,8 @@
       padding: 60px 72px;
       color: #fff;
     }
+    .layout-css-pattern .content-box { z-index: 2; }
+    .layout-css-pattern .brand,
     .layout-pattern-dots .brand,
     .layout-pattern-stripes .brand,
     .layout-pattern-grid .brand,
@@ -323,14 +336,17 @@
       font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
       color: var(--rim-color, #667eea); margin-bottom: 18px;
     }
+    .layout-css-pattern .event-title,
     .layout-pattern-dots .event-title,
     .layout-pattern-stripes .event-title,
     .layout-pattern-grid .event-title,
     .layout-pattern-zigzag .event-title { font-size: 66px; line-height: 0.95; font-weight: 900; margin-bottom: 20px; }
+    .layout-css-pattern .event-date,
     .layout-pattern-dots .event-date,
     .layout-pattern-stripes .event-date,
     .layout-pattern-grid .event-date,
     .layout-pattern-zigzag .event-date { font-size: 26px; opacity: 0.9; margin-bottom: 8px; }
+    .layout-css-pattern .event-venue,
     .layout-pattern-dots .event-venue,
     .layout-pattern-stripes .event-venue,
     .layout-pattern-grid .event-venue,
@@ -340,6 +356,7 @@
     .favicon-colors-info { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 14px; background: var(--background-light); border-radius: 10px; font-size: 13px; color: var(--text-secondary); }
     .favicon-color-swatch { width: 28px; height: 28px; border-radius: 6px; border: 2px solid var(--border-lighter); flex-shrink: 0; }
     .favicon-colors-info .no-colors { opacity: 0.65; }
+    .pattern-source-note { margin-top: 10px; color: var(--text-secondary); font-size: 13px; line-height: 1.4; }
 
     @media (max-width: 768px) {
       .controls-grid { grid-template-columns: 1fr; }
@@ -364,7 +381,7 @@
       <div class="page-title">
         <div>
           <h2>🎨 OpenGraph Image Studio</h2>
-          <div class="subtitle">Create stunning social media preview images for your events • 17 beautiful layouts including 5 simple designs</div>
+          <div class="subtitle">Create stunning social media preview images for your events • downloaded CSS Pattern backgrounds included</div>
         </div>
       </div>
 
@@ -480,6 +497,23 @@
         </div>
 
         <div class="controls-section">
+          <h3>🧩 CSS Pattern Background</h3>
+          <div class="controls-grid">
+            <div class="control-field" style="grid-column: span 2;">
+              <label for="cssPatternSelect">Downloaded pattern</label>
+              <select id="cssPatternSelect">
+                <option>Loading CSS patterns...</option>
+              </select>
+            </div>
+            <div class="control-field">
+              <label for="cssPatternSize">Pattern size</label>
+              <input id="cssPatternSize" type="range" min="20" max="260" value="90">
+            </div>
+          </div>
+          <div class="pattern-source-note" id="cssPatternMeta">Patterns load from the local downloaded CSS Pattern data file.</div>
+        </div>
+
+        <div class="controls-section">
           <h3>🖼️ Cover Image</h3>
           <div class="control-field full">
             <label for="coverInput">Image URL (optional - uses event image if available)</label>
@@ -510,6 +544,9 @@
       const randomBtn = document.getElementById('randomBtn');
       const customA = document.getElementById('customA');
       const customB = document.getElementById('customB');
+      const cssPatternSelect = document.getElementById('cssPatternSelect');
+      const cssPatternSize = document.getElementById('cssPatternSize');
+      const cssPatternMeta = document.getElementById('cssPatternMeta');
       const coverInput = document.getElementById('coverInput');
       const grid = document.getElementById('variantsGrid');
       const themeOptions = document.querySelectorAll('.theme-option');
@@ -524,6 +561,8 @@
           this.selectedEvent = null;
           this.eventColorsMap = new Map();
           this.barColorsMap = new Map();
+          this.cssPatterns = [];
+          this.currentCssPattern = null;
         }
 
         getInitialCityFromUrl() {
@@ -538,6 +577,7 @@
 
         async init() {
           this.populateCities();
+          await this.loadCssPatterns();
           await this.loadCity(this.currentCity);
           this.attachHandlers();
           this.updateThemeVars();
@@ -549,6 +589,52 @@
           const cities = getAvailableCities();
           citySelect.innerHTML = cities.map(c => `<option value="${c.key}">${c.emoji} ${c.name}</option>`).join('');
           citySelect.value = this.currentCity;
+        }
+
+        async loadCssPatterns() {
+          try {
+            const response = await fetch('../data/css-patterns.json');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const data = await response.json();
+            this.cssPatterns = Array.isArray(data.patterns)
+              ? data.patterns.filter(pattern => this.isSafeCssPattern(pattern))
+              : [];
+            this.currentCssPattern = this.cssPatterns[0] || null;
+            this.populateCssPatternSelect();
+            logger.componentLoad(COMPONENT, 'Loaded CSS Pattern backgrounds', { count: this.cssPatterns.length });
+          } catch (e) {
+            this.cssPatterns = [];
+            this.currentCssPattern = null;
+            cssPatternSelect.innerHTML = '<option>No CSS patterns loaded</option>';
+            cssPatternSelect.disabled = true;
+            cssPatternMeta.textContent = 'Could not load downloaded CSS Pattern data.';
+            logger.componentError(COMPONENT, 'Failed to load CSS Pattern backgrounds', e);
+          }
+        }
+
+        populateCssPatternSelect() {
+          if (!this.cssPatterns.length) {
+            cssPatternSelect.innerHTML = '<option>No CSS patterns loaded</option>';
+            cssPatternSelect.disabled = true;
+            return;
+          }
+
+          cssPatternSelect.disabled = false;
+          cssPatternSelect.innerHTML = this.cssPatterns
+            .map(pattern => `<option value="${pattern.id}">${pattern.name}</option>`)
+            .join('');
+          cssPatternSelect.value = this.currentCssPattern.id;
+          this.syncCssPatternControls();
+        }
+
+        syncCssPatternControls() {
+          if (!this.currentCssPattern) return;
+
+          if (this.currentCssPattern.size) {
+            cssPatternSize.value = Math.max(20, Math.min(260, this.currentCssPattern.size));
+          }
+          cssPatternMeta.textContent = `${this.cssPatterns.length} downloaded patterns available. Current source: ${this.currentCssPattern.source}`;
         }
 
         async loadCity(cityKey) {
@@ -675,6 +761,64 @@
           return THEME_COLORS[currentTheme] || '#667eea';
         }
 
+        isSafeCssPattern(pattern) {
+          return pattern
+            && typeof pattern.id === 'string'
+            && typeof pattern.name === 'string'
+            && typeof pattern.declarations === 'string'
+            && !/url\s*\(|@|<|>|expression\s*\(|javascript\s*:/i.test(pattern.declarations)
+            && this.parseCssDeclarations(pattern.declarations).length > 0;
+        }
+
+        parseCssDeclarations(declarations) {
+          return declarations
+            .split(';')
+            .map(part => part.trim())
+            .filter(Boolean)
+            .map(part => {
+              const separator = part.indexOf(':');
+              if (separator === -1) return null;
+              return {
+                property: part.slice(0, separator).trim(),
+                value: part.slice(separator + 1).trim()
+              };
+            })
+            .filter(item => item && (
+              item.property === 'background'
+              || item.property === 'background-color'
+              || item.property === 'background-image'
+              || item.property === 'background-position'
+              || item.property === 'background-size'
+              || item.property === 'background-repeat'
+              || /^--[a-zA-Z0-9_-]+$/.test(item.property)
+            ));
+        }
+
+        getCssPatternPalette(pattern) {
+          const fc = this.getFaviconColors();
+          const defaults = Object.values(pattern?.colors || {}).filter(color => /^#[0-9a-fA-F]{6}$/.test(color));
+          const themed = currentTheme === 'favicon' && fc
+            ? [fc.bg, fc.fg || '#ffffff', '#06060a']
+            : [this.getRimColorForTheme(), customB.value || '#06060a', '#06060a', '#f8f8ff'];
+          return [...themed, ...defaults];
+        }
+
+        applyCssPattern(element) {
+          if (!element || !this.currentCssPattern) return;
+
+          element.removeAttribute('style');
+          this.parseCssDeclarations(this.currentCssPattern.declarations).forEach(({ property, value }) => {
+            element.style.setProperty(property, value);
+          });
+
+          const palette = this.getCssPatternPalette(this.currentCssPattern);
+          Object.keys(this.currentCssPattern.colors || {}).forEach((key, index) => {
+            const color = palette[index] || this.currentCssPattern.colors[key];
+            element.style.setProperty(`--css-pattern-color-${index + 1}`, color);
+          });
+          element.style.setProperty('--css-pattern-size', `${cssPatternSize.value}px`);
+        }
+
         attachHandlers() {
           citySelect.addEventListener('change', async () => {
             const cityKey = citySelect.value;
@@ -705,6 +849,12 @@
           });
 
           coverInput.addEventListener('input', () => this.render());
+          cssPatternSelect.addEventListener('change', () => {
+            this.currentCssPattern = this.cssPatterns.find(pattern => pattern.id === cssPatternSelect.value) || this.cssPatterns[0] || null;
+            this.syncCssPatternControls();
+            this.render();
+          });
+          cssPatternSize.addEventListener('input', () => this.render());
 
           // Theme selection
           themeOptions.forEach(option => {
@@ -932,6 +1082,7 @@ Loading... <span class="cursor">█</span>`;
               if (bg && data.cover) bg.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
+            case 'css-pattern':
             case 'pattern-dots':
             case 'pattern-stripes':
             case 'pattern-grid':
@@ -939,9 +1090,11 @@ Loading... <span class="cursor">█</span>`;
               const t = artboard.querySelector('.event-title');
               const d = artboard.querySelector('.event-date');
               const v = artboard.querySelector('.event-venue');
+              const cssBg = artboard.querySelector('.css-pattern-bg');
               if (t) t.textContent = data.event;
               if (d) d.textContent = `${data.date} · ${data.time}`;
               if (v) v.textContent = `@ ${data.venue}`;
+              if (cssBg) this.applyCssPattern(cssBg);
               break;
             }
           }
@@ -1158,6 +1311,16 @@ Loading... <span class="cursor">█</span>`;
                 <div class="event-cta">Get Tickets</div>
               </div>
             `,
+            'css-pattern': `
+              <div class="css-pattern-bg"></div>
+              <div class="pattern-vignette"></div>
+              <div class="content-box">
+                <div class="brand">chunky.dad</div>
+                <div class="event-title"></div>
+                <div class="event-date"></div>
+                <div class="event-venue"></div>
+              </div>
+            `,
             'pattern-dots': `
               <div class="pattern-bg"></div>
               <div class="content-box">
@@ -1239,6 +1402,7 @@ Loading... <span class="cursor">█</span>`;
             { key: 'speech-discord', name: 'Discord', class: 'layout-speech-discord', description: 'Gaming chat style' },
 
             // Pattern Layouts with Colored Rim
+            { key: 'css-pattern', name: '🧩 CSS Pattern.com', class: 'layout-css-pattern', description: 'Downloaded gradient pattern background' },
             { key: 'pattern-dots', name: '🔵 Pattern: Dots', class: 'layout-pattern-dots', description: 'Polka dot background with colored rim' },
             { key: 'pattern-stripes', name: '🔷 Pattern: Stripes', class: 'layout-pattern-stripes', description: 'Diagonal stripe background with colored rim' },
             { key: 'pattern-grid', name: '⬜ Pattern: Grid', class: 'layout-pattern-grid', description: 'Blueprint grid background with colored rim' },
