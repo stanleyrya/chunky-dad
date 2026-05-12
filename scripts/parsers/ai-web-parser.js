@@ -1990,15 +1990,15 @@ ${String(rawResponse || '')}`;
         ];
         for (const pattern of attrPatterns) {
             for (const match of html.matchAll(pattern)) {
-                const raw = String(match[1] || '').trim();
-                if (!raw) continue;
+                const attributeValue = String(match[1] || '').trim();
+                if (!attributeValue) continue;
                 if (pattern.source.includes('srcset')) {
-                    raw.split(',').forEach(part => {
+                    attributeValue.split(',').forEach(part => {
                         const candidate = String(part || '').trim().split(/\s+/)[0];
                         if (candidate) rawCandidates.add(candidate);
                     });
                 } else {
-                    rawCandidates.add(raw);
+                    rawCandidates.add(attributeValue);
                 }
             }
         }
