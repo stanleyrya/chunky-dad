@@ -88,6 +88,8 @@ class AiWebParser {
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
         this.supportedImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff'];
+        this.likelyImagePathRegex = /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i;
+        this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.aiPromptHistory = [];
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         this.structuredUrlKeys = [
@@ -1221,7 +1223,7 @@ class AiWebParser {
         const promptSnippets = Array.isArray(snippets) ? snippets.filter(Boolean) : [];
         const validatedFields = validationState && validationState.validatedFields instanceof Set
             ? validationState.validatedFields
-            : null;
+            : new Set();
         for (let index = 0; index < promptSnippets.length; index++) {
             const remainingFields = this.getRemainingPromptFields(promptFields, merged);
             if (remainingFields.length === 0) break;
@@ -1253,12 +1255,10 @@ class AiWebParser {
             const validatedPartial = partialValidation && partialValidation.event && typeof partialValidation.event === 'object'
                 ? partialValidation.event
                 : {};
-            if (validatedFields) {
-                Object.keys(validatedPartial).forEach(key => {
-                    if (String(key || '').startsWith('__')) return;
-                    validatedFields.add(this.normalizePromptFieldName(key));
-                });
-            }
+            Object.keys(validatedPartial).forEach(key => {
+                if (key.startsWith('__')) return;
+                validatedFields.add(this.normalizePromptFieldName(key));
+            });
             merged = this.mergeAiEventFields(merged, validatedPartial);
         }
         return merged;
@@ -2113,10 +2113,10 @@ ${String(rawResponse || '')}`;
         })) {
             return true;
         }
-        if (/(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i.test(path)) {
+        if (this.likelyImagePathRegex.test(path)) {
             return true;
         }
-        if (/(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/.test(search)) {
+        if (this.likelyImageQueryRegex.test(search)) {
             return true;
         }
         return false;
