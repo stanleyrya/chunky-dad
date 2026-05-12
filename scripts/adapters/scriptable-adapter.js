@@ -353,6 +353,10 @@ class FileLogger {
 const logger = new FileLogger();
 logger.captureConsole();
 
+const DEFAULT_CAPTURE_LOG_MAX_LINES = 30000;
+const DEFAULT_CAPTURE_LOG_MAX_BYTES = 10 * 1024 * 1024;
+const DEFAULT_DISPLAY_LOG_MAX_LINES = 12000;
+
 const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
 const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -3647,51 +3651,179 @@ class ScriptableAdapter {
             }
         }
 
+        function ensureAiPromptModal() {
+            let overlay = document.getElementById('ai-prompt-modal-overlay');
+            if (overlay) {
+                return {
+                    overlay,
+                    title: document.getElementById('ai-prompt-modal-title'),
+                    subtitle: document.getElementById('ai-prompt-modal-subtitle'),
+                    list: document.getElementById('ai-prompt-modal-list'),
+                    preview: document.getElementById('ai-prompt-modal-preview'),
+                    status: document.getElementById('ai-prompt-modal-status')
+                };
+            }
+
+            overlay = document.createElement('div');
+            overlay.id = 'ai-prompt-modal-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999;';
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'width:min(900px,100%);max-height:90vh;overflow:hidden;background:var(--card-bg,#fff);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.25);display:flex;flex-direction:column;';
+            overlay.appendChild(modal);
+
+            const header = document.createElement('div');
+            header.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 12px;border-bottom:1px solid rgba(148,163,184,0.2);';
+            modal.appendChild(header);
+
+            const headerText = document.createElement('div');
+            header.appendChild(headerText);
+
+            const title = document.createElement('div');
+            title.id = 'ai-prompt-modal-title';
+            title.style.cssText = 'font-size:18px;font-weight:700;color:var(--text-color,#111827);';
+            title.textContent = 'AI Prompts';
+            headerText.appendChild(title);
+
+            const subtitle = document.createElement('div');
+            subtitle.id = 'ai-prompt-modal-subtitle';
+            subtitle.style.cssText = 'margin-top:4px;font-size:13px;color:var(--text-secondary,#64748b);';
+            headerText.appendChild(subtitle);
+
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.textContent = '✕';
+            closeButton.style.cssText = 'border:none;background:transparent;color:var(--text-secondary,#64748b);font-size:20px;cursor:pointer;padding:2px 6px;';
+            closeButton.onclick = () => closeAiPromptModal();
+            header.appendChild(closeButton);
+
+            const body = document.createElement('div');
+            body.style.cssText = 'display:flex;flex-direction:column;gap:14px;padding:16px 20px 20px;overflow:auto;';
+            modal.appendChild(body);
+
+            const status = document.createElement('div');
+            status.id = 'ai-prompt-modal-status';
+            status.style.cssText = 'display:none;padding:10px 12px;border-radius:12px;background:rgba(34,197,94,0.12);color:#166534;font-size:13px;font-weight:600;';
+            body.appendChild(status);
+
+            const list = document.createElement('div');
+            list.id = 'ai-prompt-modal-list';
+            list.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+            body.appendChild(list);
+
+            const preview = document.createElement('textarea');
+            preview.id = 'ai-prompt-modal-preview';
+            preview.readOnly = true;
+            preview.style.cssText = 'width:100%;min-height:220px;border:1px solid rgba(148,163,184,0.3);border-radius:12px;padding:12px;font:12px/1.5 Menlo,Monaco,monospace;color:var(--text-color,#111827);background:var(--input-bg,#f8fafc);resize:vertical;';
+            body.appendChild(preview);
+
+            overlay.addEventListener('click', event => {
+                if (event.target === overlay) {
+                    closeAiPromptModal();
+                }
+            });
+
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    closeAiPromptModal();
+                }
+            });
+
+            document.body.appendChild(overlay);
+
+            return { overlay, title, subtitle, list, preview, status };
+        }
+
+        function closeAiPromptModal() {
+            const overlay = document.getElementById('ai-prompt-modal-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+
+        function setAiPromptModalStatus(message, isError) {
+            const status = document.getElementById('ai-prompt-modal-status');
+            if (!status) return;
+            if (!message) {
+                status.style.display = 'none';
+                status.textContent = '';
+                return;
+            }
+            status.textContent = message;
+            status.style.display = 'block';
+            status.style.background = isError ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)';
+            status.style.color = isError ? '#991b1b' : '#166534';
+        }
+
+        function copyTextWithFeedback(text, button, onSuccess) {
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    if (typeof onSuccess === 'function') onSuccess();
+                    if (button) showCopySuccess(button);
+                }).catch(err => {
+                    console.error('Modern clipboard failed, trying fallback: ', err);
+                    copyToClipboardFallback(text, button);
+                    if (typeof onSuccess === 'function') onSuccess();
+                });
+            } else {
+                copyToClipboardFallback(text, button);
+                if (typeof onSuccess === 'function') onSuccess();
+            }
+        }
+
         function showAiPromptPicker(button) {
             if (!button) return;
-            const raw = button.getAttribute('data-ai-prompts') || '[]';
+            const raw = button.getAttribute('data-ai-prompts') || '%5B%5D';
             let prompts = [];
             try {
-                prompts = JSON.parse(raw);
+                prompts = JSON.parse(decodeURIComponent(raw));
             } catch (error) {
                 console.error('Failed to parse AI prompt payload:', error);
+                alert('Could not load AI prompts for this run.');
                 return;
             }
             if (!Array.isArray(prompts) || prompts.length === 0) {
                 alert('No AI prompts found for this run.');
                 return;
             }
-            const options = prompts.map((entry, index) => {
+            const modal = ensureAiPromptModal();
+            modal.title.textContent = 'AI Prompts';
+            modal.subtitle.textContent = prompts.length + ' prompt' + (prompts.length === 1 ? '' : 's') + ' available. Tap one to preview and copy it to the clipboard.';
+            modal.list.innerHTML = '';
+            modal.preview.value = '';
+            setAiPromptModalStatus('', false);
+
+            prompts.forEach((entry, index) => {
+                const promptText = entry && typeof entry.prompt === 'string' ? entry.prompt : '';
+                if (!promptText) return;
                 const pass = entry && entry.pass ? String(entry.pass) : 'prompt ' + (index + 1);
                 const chars = Number.isFinite(Number(entry?.chars)) ? String(Number(entry.chars)) + ' chars' : '';
                 const model = entry && entry.model ? String(entry.model) : '';
-                const charsLabel = chars ? ' (' + chars + ')' : '';
-                const modelLabel = model ? ' [' + model + ']' : '';
-                return String(index + 1) + '. ' + pass + charsLabel + modelLabel;
-            }).join('\\n');
-            const selected = prompt('Copy which AI prompt?\\n\\n' + options + '\\n\\nEnter number (1-' + prompts.length + ')', '1');
-            if (selected === null) return;
-            const index = Number(selected) - 1;
-            if (!Number.isInteger(index) || index < 0 || index >= prompts.length) {
-                alert('Invalid selection.');
+                const endpoint = entry && entry.endpoint ? String(entry.endpoint) : '';
+                const meta = [chars, model, endpoint].filter(Boolean).join(' • ');
+
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.style.cssText = 'text-align:left;border:1px solid rgba(148,163,184,0.25);border-radius:12px;background:var(--card-bg,#fff);padding:12px 14px;cursor:pointer;';
+                item.innerHTML = '<div style="font-weight:700;color:var(--text-color,#111827);">' + pass + '</div>'
+                    + (meta ? '<div style="margin-top:4px;font-size:12px;color:var(--text-secondary,#64748b);">' + meta + '</div>' : '');
+                item.onclick = () => {
+                    modal.preview.value = promptText;
+                    copyTextWithFeedback(promptText, button, () => {
+                        setAiPromptModalStatus('Copied "' + pass + '" to the clipboard.', false);
+                    });
+                };
+                modal.list.appendChild(item);
+            });
+
+            if (!modal.list.children.length) {
+                alert('No AI prompts found for this run.');
                 return;
             }
-            const chosen = prompts[index];
-            const promptText = chosen && typeof chosen.prompt === 'string' ? chosen.prompt : '';
-            if (!promptText) {
-                alert('Selected prompt is empty.');
-                return;
-            }
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(promptText).then(() => {
-                    showCopySuccess(button);
-                }).catch(err => {
-                    console.error('Modern clipboard failed, trying fallback: ', err);
-                    copyToClipboardFallback(promptText, button);
-                });
-            } else {
-                copyToClipboardFallback(promptText, button);
-            }
+
+            modal.preview.value = prompts[0] && typeof prompts[0].prompt === 'string' ? prompts[0].prompt : '';
+            modal.overlay.style.display = 'flex';
         }
 
         function copyRawOutput() {
@@ -4035,7 +4167,7 @@ class ScriptableAdapter {
         const logText = logInfo.text || '';
         const prompts = Array.isArray(promptInfo?.prompts) ? promptInfo.prompts : [];
         const promptCount = prompts.length;
-        const promptDataJson = JSON.stringify(prompts);
+        const promptDataJson = encodeURIComponent(JSON.stringify(prompts));
         const promptCountBadge = promptCount > 0 ? ` • AI prompts: ${promptCount}` : '';
         const promptButtonHtml = promptCount > 0
             ? `<button onclick="showAiPromptPicker(this)" class="log-copy-btn" data-ai-prompts='${this.escapeHtml(promptDataJson)}'>🤖 AI Prompts</button>`
@@ -6110,13 +6242,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             ? logging.maxLines
             : Number.isFinite(configRoot.logMaxLines)
                 ? configRoot.logMaxLines
-                : 8000;
+                : DEFAULT_CAPTURE_LOG_MAX_LINES;
         const maxBytes = Number.isFinite(logging.maxBytes)
             ? logging.maxBytes
             : Number.isFinite(configRoot.logMaxBytes)
                 ? configRoot.logMaxBytes
-                : 1000000;
-        return { mode, maxLines, maxBytes };
+                : DEFAULT_CAPTURE_LOG_MAX_BYTES;
+        const displayMaxLines = Number.isFinite(logging.displayMaxLines)
+            ? logging.displayMaxLines
+            : Number.isFinite(configRoot.logDisplayMaxLines)
+                ? configRoot.logDisplayMaxLines
+                : DEFAULT_DISPLAY_LOG_MAX_LINES;
+        return { mode, maxLines, maxBytes, displayMaxLines };
     }
     
     applyLogConfig(config) {
@@ -6283,9 +6420,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             }
             const totalLines = lines.length;
             const logConfig = this.resolveLogConfig(results?.config || {});
-            const maxLines = Number.isFinite(logConfig.maxLines) && logConfig.maxLines > 0
-                ? logConfig.maxLines
-                : 8000;
+            const maxLines = Number.isFinite(logConfig.displayMaxLines) && logConfig.displayMaxLines > 0
+                ? logConfig.displayMaxLines
+                : DEFAULT_DISPLAY_LOG_MAX_LINES;
             let displayLines = lines;
             let truncated = false;
             if (lines.length > maxLines) {
@@ -6337,11 +6474,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             const summaryLine = `${new Date().toISOString()} - ${JSON.stringify(summary)}`;
             const logConfig = this.resolveLogConfig(results?.config || {});
             const outputMode = this.resolveLogOutputMode(logConfig, results);
-            const logText = logger.getLogText({
-                mode: outputMode,
-                maxLines: logConfig.maxLines,
-                maxBytes: logConfig.maxBytes
-            });
+            const logText = logger.getLogText({ mode: outputMode });
             const content = logText ? `${summaryLine}\n${logText}` : `${summaryLine}\n`;
             
             const fm = this.fm || FileManager.iCloud();
