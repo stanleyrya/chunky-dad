@@ -88,8 +88,8 @@ class AiWebParser {
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
         this.supportedImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff'];
-        this.likelyImagePathRegex = /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/iu;
-        // Common CDN/image-transform query keys (width, height, quality, fit/crop, format, signature).
+        this.likelyImagePathRegex = /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i;
+        // Common CDN/image-transform query keys (w=width, h=height, q=quality, fit/crop/auto/fm/format, s=signature).
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
@@ -1230,9 +1230,7 @@ class AiWebParser {
         if (validationState && !(validationState.validatedFields instanceof Set)) {
             validationState.validatedFields = new Set();
         }
-        const validatedFields = validationState && validationState.validatedFields instanceof Set
-            ? validationState.validatedFields
-            : new Set();
+        const validatedFields = validationState ? validationState.validatedFields : new Set();
         for (let index = 0; index < promptSnippets.length; index++) {
             const remainingFields = this.getRemainingPromptFields(promptFields, merged);
             if (remainingFields.length === 0) break;
