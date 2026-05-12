@@ -125,7 +125,9 @@ class AiWebParser {
                 return this.buildEmptyResult(htmlData);
             }
 
-            const validationResult = this.validateAiEventEvidence(aiEvent, htmlData, parserConfig, promptFields);
+            const validationResult = this.validateAiEventEvidence(aiEvent, htmlData, parserConfig, promptFields, {
+                trustedFields: aiEvent && Array.isArray(aiEvent.__preValidatedFields) ? aiEvent.__preValidatedFields : []
+            });
             const event = this.normalizeAiEvent(validationResult.event, parserConfig, htmlData, cityConfig, promptFields);
             if (!event || !event.title || !event.startDate) {
                 console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
@@ -1213,23 +1215,51 @@ class AiWebParser {
         return groups.filter(Boolean);
     }
 
-    async extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, fields, snippets, passLabelPrefix) {
+    async extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, fields, snippets, passLabelPrefix, validationState = null) {
         let merged = {};
         const promptFields = Array.isArray(fields) ? fields : [];
         const promptSnippets = Array.isArray(snippets) ? snippets.filter(Boolean) : [];
+        const validatedFields = validationState && validationState.validatedFields instanceof Set
+            ? validationState.validatedFields
+            : null;
         for (let index = 0; index < promptSnippets.length; index++) {
             const remainingFields = this.getRemainingPromptFields(promptFields, merged);
             if (remainingFields.length === 0) break;
+            const snippetText = String(promptSnippets[index] || '');
             const partial = await this.extractEventWithTwoPassAi(
                 htmlData,
                 aiConfig,
                 cityConfig,
                 parserConfig,
                 remainingFields,
-                promptSnippets[index],
+                snippetText,
                 `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim()
             );
-            merged = this.mergeAiEventFields(merged, partial);
+            const partialValidation = this.validateAiEventEvidence(
+                partial,
+                htmlData,
+                parserConfig,
+                remainingFields,
+                {
+                    evidenceContext: this.buildAiEvidenceContextFromText(snippetText),
+                    validationContext: {
+                        imageEvidenceUrls: this.buildImageEvidenceContextFromText(
+                            snippetText,
+                            htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
+                        )
+                    }
+                }
+            );
+            const validatedPartial = partialValidation && partialValidation.event && typeof partialValidation.event === 'object'
+                ? partialValidation.event
+                : {};
+            if (validatedFields) {
+                Object.keys(validatedPartial).forEach(key => {
+                    if (String(key || '').startsWith('__')) return;
+                    validatedFields.add(this.normalizePromptFieldName(key));
+                });
+            }
+            merged = this.mergeAiEventFields(merged, validatedPartial);
         }
         return merged;
     }
@@ -1239,14 +1269,23 @@ class AiWebParser {
         const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
         const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
+        const validationState = { validatedFields: new Set() };
 
         if (payloadMode === 'jsonld') {
             const snippets = this.buildPromptSnippets([], sectionBundle.jsonLd ? [sectionBundle.jsonLd] : [], maxHtmlChars);
-            return await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'jsonld');
+            const merged = await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'jsonld', validationState);
+            if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
+                merged.__preValidatedFields = Array.from(validationState.validatedFields);
+            }
+            return merged;
         }
         if (payloadMode === 'meta') {
             const snippets = this.buildPromptSnippets([], sectionBundle.metaPrimary ? [sectionBundle.metaPrimary] : [], maxHtmlChars);
-            return await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'meta');
+            const merged = await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'meta', validationState);
+            if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
+                merged.__preValidatedFields = Array.from(validationState.validatedFields);
+            }
+            return merged;
         }
         if (payloadMode === 'exhaustive') {
             let merged = {};
@@ -1265,9 +1304,13 @@ class AiWebParser {
                     parserConfig,
                     remainingField,
                     fallbackSnippets,
-                    `exhaustive ${field}`
+                    `exhaustive ${field}`,
+                    validationState
                 );
                 merged = this.mergeAiEventFields(merged, partial);
+            }
+            if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
+                merged.__preValidatedFields = Array.from(validationState.validatedFields);
             }
             return merged;
         }
@@ -1285,9 +1328,13 @@ class AiWebParser {
                 parserConfig,
                 remainingFields,
                 snippets,
-                `best ${group.label}`
+                `best ${group.label}`,
+                validationState
             );
             merged = this.mergeAiEventFields(merged, partial);
+        }
+        if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
+            merged.__preValidatedFields = Array.from(validationState.validatedFields);
         }
         return merged;
     }
@@ -1757,6 +1804,23 @@ ${String(rawResponse || '')}`;
         };
     }
 
+    buildAiEvidenceContextFromText(text) {
+        const raw = String(text || '');
+        const normalized = this.normalizeEvidenceText(raw);
+        const compact = normalized.replace(/[^a-z0-9]+/g, '');
+        return {
+            raw,
+            normalized,
+            compact,
+            tokenSet: new Set(
+                normalized
+                    .split(' ')
+                    .map(token => token.replace(/[^a-z0-9]/g, ''))
+                    .filter(Boolean)
+            )
+        };
+    }
+
     normalizeEvidenceText(value) {
         const htmlEntityMap = {
             amp: '&',
@@ -2009,11 +2073,53 @@ ${String(rawResponse || '')}`;
             const unwrapped = this.unwrapImageProxyUrl(normalized);
             const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
             if (!finalUrl) return;
-            if (!this.hasSupportedImageFilenameAtEnd(finalUrl)) return;
+            if (!this.hasSupportedImageFilenameAtEnd(finalUrl) && !this.hasLikelyImageUrl(finalUrl)) return;
             imageUrls.add(finalUrl);
         });
 
         return imageUrls;
+    }
+
+    buildImageEvidenceContextFromText(text, sourceUrl = '') {
+        const source = String(text || '');
+        const imageUrls = new Set();
+        if (!source) return imageUrls;
+        const rawCandidates = new Set(this.extractUrlCandidatesFromRawHtml(source));
+        const inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
+        for (const match of source.matchAll(inlineUrlPattern)) {
+            const candidate = String(match[0] || '').trim();
+            if (candidate) rawCandidates.add(candidate);
+        }
+        rawCandidates.forEach(candidate => {
+            const normalized = this.normalizeUrl(candidate, sourceUrl);
+            if (!normalized) return;
+            const unwrapped = this.unwrapImageProxyUrl(normalized);
+            const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
+            if (!finalUrl) return;
+            if (!this.hasSupportedImageFilenameAtEnd(finalUrl) && !this.hasLikelyImageUrl(finalUrl)) return;
+            imageUrls.add(finalUrl);
+        });
+        return imageUrls;
+    }
+
+    hasLikelyImageUrl(url) {
+        const parsed = this.parseUrlComponents(String(url || ''));
+        if (!parsed) return false;
+        const path = String(parsed.pathname || '').toLowerCase();
+        const search = String(parsed.search || '').toLowerCase();
+        if (this.proxyImagePathPrefixes.some(prefix => {
+            const normalizedPrefix = String(prefix || '').replace(/\?.*$/, '').toLowerCase();
+            return normalizedPrefix && path.startsWith(normalizedPrefix);
+        })) {
+            return true;
+        }
+        if (/(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i.test(path)) {
+            return true;
+        }
+        if (/(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/.test(search)) {
+            return true;
+        }
+        return false;
     }
 
     hasImageEvidence(validationContext, value) {
@@ -2027,7 +2133,7 @@ ${String(rawResponse || '')}`;
         const unwrapped = this.unwrapImageProxyUrl(normalized);
         const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
         if (!finalUrl) return false;
-        if (!this.hasSupportedImageFilenameAtEnd(finalUrl)) return false;
+        if (!this.hasSupportedImageFilenameAtEnd(finalUrl) && !this.hasLikelyImageUrl(finalUrl)) return false;
         return imageContext.has(finalUrl);
     }
 
@@ -2054,7 +2160,7 @@ ${String(rawResponse || '')}`;
         }
     }
 
-    validateAiEventEvidence(aiEvent, htmlData, parserConfig = {}, promptFields = null) {
+    validateAiEventEvidence(aiEvent, htmlData, parserConfig = {}, promptFields = null, options = {}) {
         if (!aiEvent || typeof aiEvent !== 'object') {
             return { event: aiEvent, report: null };
         }
@@ -2063,11 +2169,20 @@ ${String(rawResponse || '')}`;
             return { event: aiEvent, report: null };
         }
 
-        const evidenceContext = this.buildAiEvidenceContext(htmlData, parserConfig);
-        const validationContext = {
-            imageEvidenceUrls: this.buildImageEvidenceContext(htmlData)
-        };
+        const evidenceContext = options && options.evidenceContext && typeof options.evidenceContext === 'object'
+            ? options.evidenceContext
+            : this.buildAiEvidenceContext(htmlData, parserConfig);
+        const validationContext = options && options.validationContext && typeof options.validationContext === 'object'
+            ? options.validationContext
+            : {
+                imageEvidenceUrls: this.buildImageEvidenceContext(htmlData)
+            };
         const validated = { ...aiEvent };
+        const trustedFields = new Set(
+            (Array.isArray(options && options.trustedFields) ? options.trustedFields : [])
+                .map(field => this.normalizePromptFieldName(field))
+                .filter(Boolean)
+        );
         const report = {
             strict: validationConfig.strictDefault,
             sourceChars: evidenceContext.raw.length,
@@ -2095,6 +2210,10 @@ ${String(rawResponse || '')}`;
             }
             if (!rule.strict) {
                 report.bypassed.push({ field: rule.field, key, reason: 'override-allow-without-evidence' });
+                return;
+            }
+            if (trustedFields.has(rule.field)) {
+                report.bypassed.push({ field: rule.field, key, reason: 'previous-step-validated' });
                 return;
             }
             const hasEvidence = this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
@@ -2512,7 +2631,7 @@ ${String(rawResponse || '')}`;
         if (!normalizedValue) return '';
         const likelyUrlKey = /(url|image|video|audio)/.test(normalizedKey);
         if (likelyUrlKey || this.isLikelyUrlValue(normalizedValue)) {
-            return this.simplifyUrlValue(normalizedValue, { stripQuery: true });
+            return this.simplifyUrlValue(normalizedValue, { stripQuery: false });
         }
         return this.trimToMaxLength(normalizedValue, 320);
     }
@@ -2558,7 +2677,7 @@ ${String(rawResponse || '')}`;
             if (!normalized) return '';
             const lowerKey = String(keyName || '').toLowerCase();
             if (this.isLikelyUrlValue(normalized) || /(url|image|logo|sameas|@id)/.test(lowerKey)) {
-                return this.simplifyUrlValue(normalized, { stripQuery: true });
+                return this.simplifyUrlValue(normalized, { stripQuery: false });
             }
             const maxLength = /(description)/.test(lowerKey) ? 500 : 240;
             return this.trimToMaxLength(normalized, maxLength);
