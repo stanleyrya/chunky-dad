@@ -362,7 +362,7 @@ const AI_PROMPT_FIELDS = [
     { param: 'fb',      desc: 'Facebook event or page URL' },
     { param: 'gmaps',   desc: 'Google Maps link' },
     { param: 'img',     desc: 'The promotional image URL exactly as shown.' },
-    { param: 'cover',   desc: 'Exact offer/cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). May be a range, omit if not stated. Do not include "FREE" unless explicitly in source text.' }
+    { param: 'cover',   desc: 'Exact offer/cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). May be a range built from low/high price offers, omit if not stated. Do not include "FREE" unless explicitly in source text.' }
 ];
 
 const EventSchema = {
