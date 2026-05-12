@@ -87,6 +87,7 @@ class AiWebParser {
         this.maxUrlUnwrapDepth = 3;
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
+        this.supportedImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff'];
         this.aiPromptHistory = [];
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         this.structuredUrlKeys = [
@@ -1787,7 +1788,8 @@ ${String(rawResponse || '')}`;
             if (normalizedField === 'location') mode = 'coords';
             else if (normalizedField === 'cover') mode = 'cover';
             else if (normalizedField === 'description') mode = validationConfig.fuzzyDescription ? 'fuzzy' : 'exact';
-            else if (normalizedField === 'url' || normalizedField === 'ticketurl' || normalizedField === 'instagram' || normalizedField === 'facebook' || normalizedField === 'gmaps' || normalizedField === 'image') mode = 'url';
+            else if (normalizedField === 'image') mode = 'image';
+            else if (normalizedField === 'url' || normalizedField === 'ticketurl' || normalizedField === 'instagram' || normalizedField === 'facebook' || normalizedField === 'gmaps') mode = 'url';
             else mode = 'exact';
         }
 
@@ -1902,14 +1904,134 @@ ${String(rawResponse || '')}`;
     }
 
     hasUrlEvidence(evidenceContext, value) {
-        const normalized = this.normalizeUrl(value, '');
-        if (normalized && this.hasExactEvidence(evidenceContext, normalized)) {
+        const normalized = this.normalizeHttpUrlValue(value);
+        if (!normalized) return false;
+        if (this.hasExactEvidence(evidenceContext, normalized)) {
             return true;
         }
-        return this.hasExactEvidence(evidenceContext, value);
+        return this.hasExactEvidence(evidenceContext, String(value || '').trim());
     }
 
-    hasFieldEvidence(evidenceContext, value, mode) {
+    normalizeHttpUrlValue(value) {
+        const normalized = this.normalizeUrl(String(value || '').trim(), '');
+        if (!normalized) return '';
+        const parsed = this.parseUrlComponents(normalized);
+        if (!parsed) return '';
+        if (!/^https?:$/.test(String(parsed.protocol || '').toLowerCase())) return '';
+        return String(parsed.href || '').trim();
+    }
+
+    extractSearchParamValue(search, key) {
+        if (!search || !key) return '';
+        const normalizedKey = String(key).trim().toLowerCase();
+        const searchText = String(search).replace(/^\?/, '');
+        if (!normalizedKey || !searchText) return '';
+        const pairs = searchText.split('&');
+        for (const pair of pairs) {
+            if (!pair) continue;
+            const separatorIndex = pair.indexOf('=');
+            const rawKey = separatorIndex >= 0 ? pair.slice(0, separatorIndex) : pair;
+            const rawValue = separatorIndex >= 0 ? pair.slice(separatorIndex + 1) : '';
+            let decodedKey = rawKey;
+            try {
+                decodedKey = decodeURIComponent(rawKey.replace(/\+/g, ' '));
+            } catch (_) {}
+            if (String(decodedKey || '').trim().toLowerCase() !== normalizedKey) continue;
+            try {
+                return decodeURIComponent(rawValue.replace(/\+/g, ' '));
+            } catch (_) {
+                return rawValue;
+            }
+        }
+        return '';
+    }
+
+    unwrapImageProxyUrl(url, unwrapDepth = 0) {
+        const normalized = this.normalizeHttpUrlValue(url);
+        if (!normalized) return '';
+        if (unwrapDepth > this.maxUrlUnwrapDepth) return normalized;
+
+        const parsed = this.parseUrlComponents(normalized);
+        if (!parsed) return normalized;
+        const path = String(parsed.pathname || '');
+        const search = String(parsed.search || '');
+        const isProxyPath = this.proxyImagePathPrefixes.some(prefix => {
+            const normalizedPrefix = String(prefix || '').replace(/\?.*$/, '');
+            return normalizedPrefix && path.startsWith(normalizedPrefix);
+        });
+        if (!isProxyPath) return normalized;
+
+        const wrapped = this.extractSearchParamValue(search, 'url');
+        if (!wrapped) return normalized;
+        const decodedWrapped = this.decodeUrlEscapes(this.decodeBasicEntities(wrapped));
+        const wrappedNormalized = this.normalizeUrl(decodedWrapped, normalized);
+        if (!wrappedNormalized) return normalized;
+        return this.unwrapImageProxyUrl(wrappedNormalized, unwrapDepth + 1);
+    }
+
+    hasSupportedImageFilenameAtEnd(url) {
+        const parsed = this.parseUrlComponents(url);
+        if (!parsed) return false;
+        const pathname = String(parsed.pathname || '').toLowerCase();
+        if (!pathname || pathname.endsWith('/')) return false;
+        return this.supportedImageExtensions.some(ext => pathname.endsWith(ext));
+    }
+
+    buildImageEvidenceContext(htmlData) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const imageUrls = new Set();
+        if (!html) return imageUrls;
+
+        const rawCandidates = new Set(this.extractUrlCandidatesFromRawHtml(html));
+        const attrPatterns = [
+            /\b(?:src|data-src|data-lazy-src|poster|content)=["']([^"']+)["']/gi,
+            /\bsrcset=["']([^"']+)["']/gi
+        ];
+        for (const pattern of attrPatterns) {
+            for (const match of html.matchAll(pattern)) {
+                const attributeValue = String(match[1] || '').trim();
+                if (!attributeValue) continue;
+                if (pattern.source.includes('srcset')) {
+                    attributeValue.split(',').forEach(part => {
+                        const candidate = String(part || '').trim().split(/\s+/)[0];
+                        if (candidate) rawCandidates.add(candidate);
+                    });
+                } else {
+                    rawCandidates.add(attributeValue);
+                }
+            }
+        }
+
+        rawCandidates.forEach(candidate => {
+            const normalized = this.normalizeUrl(candidate, sourceUrl);
+            if (!normalized) return;
+            const unwrapped = this.unwrapImageProxyUrl(normalized);
+            const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
+            if (!finalUrl) return;
+            if (!this.hasSupportedImageFilenameAtEnd(finalUrl)) return;
+            imageUrls.add(finalUrl);
+        });
+
+        return imageUrls;
+    }
+
+    hasImageEvidence(validationContext, value) {
+        const imageContext = validationContext && validationContext.imageEvidenceUrls instanceof Set
+            ? validationContext.imageEvidenceUrls
+            : null;
+        if (!imageContext || imageContext.size === 0) return false;
+
+        const normalized = this.normalizeHttpUrlValue(value);
+        if (!normalized) return false;
+        const unwrapped = this.unwrapImageProxyUrl(normalized);
+        const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
+        if (!finalUrl) return false;
+        if (!this.hasSupportedImageFilenameAtEnd(finalUrl)) return false;
+        return imageContext.has(finalUrl);
+    }
+
+    hasFieldEvidence(evidenceContext, value, mode, validationContext = null) {
         if (value === null || value === undefined) return false;
         const valueText = String(value).trim();
         if (!valueText) return false;
@@ -1924,6 +2046,8 @@ ${String(rawResponse || '')}`;
                 return this.hasFuzzyEvidence(evidenceContext, valueText);
             case 'url':
                 return this.hasUrlEvidence(evidenceContext, valueText);
+            case 'image':
+                return this.hasImageEvidence(validationContext, valueText);
             case 'exact':
             default:
                 return this.hasExactEvidence(evidenceContext, valueText);
@@ -1940,6 +2064,9 @@ ${String(rawResponse || '')}`;
         }
 
         const evidenceContext = this.buildAiEvidenceContext(htmlData, parserConfig);
+        const validationContext = {
+            imageEvidenceUrls: this.buildImageEvidenceContext(htmlData)
+        };
         const validated = { ...aiEvent };
         const report = {
             strict: validationConfig.strictDefault,
@@ -1962,14 +2089,15 @@ ${String(rawResponse || '')}`;
                 return;
             }
             if (requestedFields && !requestedFields.has(rule.field)) {
-                report.bypassed.push({ field: rule.field, key, reason: 'not-requested' });
+                report.dropped.push({ field: rule.field, key, mode: rule.mode, reason: 'not-requested' });
+                delete validated[key];
                 return;
             }
             if (!rule.strict) {
                 report.bypassed.push({ field: rule.field, key, reason: 'override-allow-without-evidence' });
                 return;
             }
-            const hasEvidence = this.hasFieldEvidence(evidenceContext, value, rule.mode);
+            const hasEvidence = this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
             if (!hasEvidence) {
                 report.dropped.push({
                     field: rule.field,
