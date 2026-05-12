@@ -1747,7 +1747,12 @@ ${String(rawResponse || '')}`;
             raw,
             normalized,
             compact,
-            tokenSet: new Set(normalized.split(' ').filter(Boolean))
+            tokenSet: new Set(
+                normalized
+                    .split(' ')
+                    .map(token => token.replace(/[^a-z0-9]/g, ''))
+                    .filter(Boolean)
+            )
         };
     }
 
@@ -1981,7 +1986,6 @@ ${String(rawResponse || '')}`;
         if (report.dropped.length > 0) {
             console.warn(`🤖 AI Web: Dropped ${report.dropped.length} field(s) lacking source evidence: ${report.dropped.map(entry => entry.key).join(', ')}`);
         }
-        validated.__aiValidation = report;
         return { event: validated, report };
     }
 
@@ -2031,9 +2035,6 @@ ${String(rawResponse || '')}`;
         const cover = this.firstNonEmpty(aiEvent.cover, '');
         const shortName = this.firstNonEmpty(aiEvent.shortName, aiEvent.short, '');
         const aiPrompts = Array.isArray(aiEvent.__aiPrompts) ? aiEvent.__aiPrompts.filter(entry => entry && entry.prompt) : [];
-        const aiValidation = aiEvent && aiEvent.__aiValidation && typeof aiEvent.__aiValidation === 'object'
-            ? aiEvent.__aiValidation
-            : null;
         const recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields)
             ? this.normalizeRruleValue(this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, ''))
             : '';
@@ -2071,9 +2072,6 @@ ${String(rawResponse || '')}`;
 
         if (aiPrompts.length > 0) {
             event._aiPrompts = aiPrompts;
-        }
-        if (aiValidation) {
-            event._aiValidation = aiValidation;
         }
 
         if (parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object') {
