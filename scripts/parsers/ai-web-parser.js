@@ -87,7 +87,7 @@ class AiWebParser {
         this.maxUrlUnwrapDepth = 3;
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
-        this.supportedImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff', '.svg'];
+        this.supportedImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff'];
         this.aiPromptHistory = [];
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         this.structuredUrlKeys = [
@@ -1923,14 +1923,27 @@ ${String(rawResponse || '')}`;
 
     extractSearchParamValue(search, key) {
         if (!search || !key) return '';
-        const escapedKey = this.escapeRegex(String(key).toLowerCase());
-        const match = String(search).match(new RegExp(`(?:^|[?&])${escapedKey}=([^&]+)`, 'i'));
-        if (!match || !match[1]) return '';
-        try {
-            return decodeURIComponent(match[1].replace(/\+/g, ' '));
-        } catch (_) {
-            return match[1];
+        const normalizedKey = String(key).trim().toLowerCase();
+        const searchText = String(search).replace(/^\?/, '');
+        if (!normalizedKey || !searchText) return '';
+        const pairs = searchText.split('&');
+        for (const pair of pairs) {
+            if (!pair) continue;
+            const separatorIndex = pair.indexOf('=');
+            const rawKey = separatorIndex >= 0 ? pair.slice(0, separatorIndex) : pair;
+            const rawValue = separatorIndex >= 0 ? pair.slice(separatorIndex + 1) : '';
+            let decodedKey = rawKey;
+            try {
+                decodedKey = decodeURIComponent(rawKey.replace(/\+/g, ' '));
+            } catch (_) {}
+            if (String(decodedKey || '').trim().toLowerCase() !== normalizedKey) continue;
+            try {
+                return decodeURIComponent(rawValue.replace(/\+/g, ' '));
+            } catch (_) {
+                return rawValue;
+            }
         }
+        return '';
     }
 
     unwrapImageProxyUrl(url, unwrapDepth = 0) {
