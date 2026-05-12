@@ -3717,17 +3717,21 @@ class ScriptableAdapter {
             preview.style.cssText = 'width:100%;min-height:220px;border:1px solid rgba(148,163,184,0.3);border-radius:12px;padding:12px;font:12px/1.5 Menlo,Monaco,monospace;color:var(--text-color,#111827);background:var(--input-bg,#f8fafc);resize:vertical;';
             body.appendChild(preview);
 
-            overlay.addEventListener('click', event => {
+            overlay.onclick = event => {
                 if (event.target === overlay) {
                     closeAiPromptModal();
                 }
-            });
+            };
 
-            document.addEventListener('keydown', event => {
-                if (event.key === 'Escape') {
-                    closeAiPromptModal();
-                }
-            });
+            if (!window.__aiPromptModalKeyHandlerAttached) {
+                document.addEventListener('keydown', event => {
+                    const modalOverlay = document.getElementById('ai-prompt-modal-overlay');
+                    if (event.key === 'Escape' && modalOverlay && modalOverlay.style.display !== 'none') {
+                        closeAiPromptModal();
+                    }
+                });
+                window.__aiPromptModalKeyHandlerAttached = true;
+            }
 
             document.body.appendChild(overlay);
 
@@ -3763,12 +3767,12 @@ class ScriptableAdapter {
                     if (button) showCopySuccess(button);
                 }).catch(err => {
                     console.error('Modern clipboard failed, trying fallback: ', err);
-                    copyToClipboardFallback(text, button);
-                    if (typeof onSuccess === 'function') onSuccess();
+                    const fallbackSucceeded = copyToClipboardFallback(text, button);
+                    if (fallbackSucceeded && typeof onSuccess === 'function') onSuccess();
                 });
             } else {
-                copyToClipboardFallback(text, button);
-                if (typeof onSuccess === 'function') onSuccess();
+                const fallbackSucceeded = copyToClipboardFallback(text, button);
+                if (fallbackSucceeded && typeof onSuccess === 'function') onSuccess();
             }
         }
 
@@ -3989,6 +3993,7 @@ class ScriptableAdapter {
                 
                 if (successful) {
                     showCopySuccess(button);
+                    return true;
                 } else {
                     throw new Error('execCommand failed');
                 }
@@ -3996,6 +4001,7 @@ class ScriptableAdapter {
                 console.error('Fallback copy failed: ', err);
                 // Show the JSON in an alert as last resort
                 alert('Copy failed. Here is the JSON data:\\n\\n' + text.substring(0, 500) + (text.length > 500 ? '...' : ''));
+                return false;
             }
         }
         
