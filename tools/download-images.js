@@ -73,7 +73,7 @@ global.logger = {
 
 // Import calendar core for parsing
 const { EventSchema } = require('../js/event-schema.js');
-if (typeof globalThis !== 'undefined' && !globalThis.EventSchema) {
+if (!globalThis.EventSchema) {
   globalThis.EventSchema = EventSchema;
 }
 const CalendarCore = require('../js/calendar-core.js');
