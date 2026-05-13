@@ -1136,46 +1136,26 @@ class AiWebParser {
         const normalizedFields = Array.from(
             new Set((Array.isArray(promptFields) ? promptFields : []).map(field => this.normalizePromptFieldName(field)).filter(Boolean))
         );
-        const schemaExpectations = this.getEventSchemaFieldExpectations();
         normalizedFields.forEach(field => {
-            const schemaRule = schemaExpectations && typeof schemaExpectations[field] === 'object'
-                ? schemaExpectations[field]
-                : null;
             const expected = this.normalizeConfidencePartitionList(
-                schemaRule && Array.isArray(schemaRule.expected) ? schemaRule.expected : null,
+                null,
                 ['content']
             );
             const strong = this.normalizeConfidencePartitionList(
-                schemaRule && Array.isArray(schemaRule.strong) ? schemaRule.strong : null,
+                null,
                 expected
             );
             defaults[field] = {
                 expected,
                 strong,
                 applied: [{
-                    source: schemaRule ? 'event-schema-defaults' : 'global-defaults',
+                    source: 'global-defaults',
                     expected: [...expected],
                     strong: [...strong]
                 }]
             };
         });
         return defaults;
-    }
-
-    getEventSchemaFieldExpectations() {
-        if (ImportedEventSchema && ImportedEventSchema.AI_CONFIDENCE_FIELD_EXPECTATIONS
-            && typeof ImportedEventSchema.AI_CONFIDENCE_FIELD_EXPECTATIONS === 'object') {
-            return ImportedEventSchema.AI_CONFIDENCE_FIELD_EXPECTATIONS;
-        }
-        return {};
-    }
-
-    getEventSchemaFieldSignalPatterns() {
-        if (ImportedEventSchema && ImportedEventSchema.AI_CONFIDENCE_FIELD_SIGNAL_PATTERNS
-            && typeof ImportedEventSchema.AI_CONFIDENCE_FIELD_SIGNAL_PATTERNS === 'object') {
-            return ImportedEventSchema.AI_CONFIDENCE_FIELD_SIGNAL_PATTERNS;
-        }
-        return {};
     }
 
     normalizeFieldExpectationRule(rawRule, currentRule = null) {
@@ -1337,29 +1317,6 @@ class AiWebParser {
     }
 
     getFieldSignalRegexes(normalizedField) {
-        const schemaPatterns = this.getEventSchemaFieldSignalPatterns();
-        const patternList = schemaPatterns && Array.isArray(schemaPatterns[normalizedField])
-            ? schemaPatterns[normalizedField]
-            : [];
-        if (patternList.length > 0) {
-            const regexes = patternList
-                .map(pattern => {
-                    if (pattern instanceof RegExp) {
-                        return pattern;
-                    }
-                    try {
-                        const patternText = String(pattern || '').trim();
-                        if (!patternText) return null;
-                        return new RegExp(patternText, 'i');
-                    } catch (_) {
-                        return null;
-                    }
-                })
-                .filter(Boolean);
-            if (regexes.length > 0) {
-                return regexes;
-            }
-        }
         return [new RegExp(`\\b${this.escapeRegex(normalizedField)}\\b`, 'i')];
     }
 

@@ -366,43 +366,6 @@ const AI_PROMPT_FIELDS = [
     { param: 'cover',   desc: 'Exact offer/cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). May be a range built from low/high price offers, omit if not stated. Do not include "FREE" unless explicitly in source text.' }
 ];
 
-const AI_CONFIDENCE_EXPECTED_PRIMARY = Object.freeze({
-    expected: Object.freeze(['jsonld', 'meta', 'content']),
-    strong: Object.freeze(['jsonld', 'meta'])
-});
-
-const AI_CONFIDENCE_FIELD_EXPECTATIONS = Object.freeze({
-    title: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    description: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    bar: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    address: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    startdate: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    enddate: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    website: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    ticketurl: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    image: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    cover: AI_CONFIDENCE_EXPECTED_PRIMARY,
-    location: Object.freeze({ expected: Object.freeze(['meta', 'jsonld', 'content']), strong: Object.freeze(['meta']) }),
-    city: Object.freeze({ expected: Object.freeze(['meta', 'content']), strong: Object.freeze(['meta']) }),
-    recurrence: Object.freeze({ expected: Object.freeze(['content', 'jsonld']), strong: Object.freeze(['content']) })
-});
-
-const AI_CONFIDENCE_FIELD_SIGNAL_PATTERNS = Object.freeze({
-    title: Object.freeze([/"name"\s*:/i, /\b(?:og:title|twitter:title|event:name)\b/i, /\btitle\b/i]),
-    description: Object.freeze([/"description"\s*:/i, /\b(?:og:description|twitter:description|event:description)\b/i, /\bdescription\b/i]),
-    bar: Object.freeze([/"location"\s*:/i, /\b(?:venue|location|event:location)\b/i]),
-    address: Object.freeze([/"address"\s*:/i, /\b(?:streetaddress|addresslocality|geo\.placename|address)\b/i]),
-    location: Object.freeze([/\bgeo\.position\b/i, /\b(?:latitude|longitude)\b/i, /\b-?\d{1,3}\.\d+\s*,\s*-?\d{1,3}\.\d+\b/i]),
-    startdate: Object.freeze([/"startdate"\s*:/i, /\b(?:event:start_time|startdate|start time)\b/i]),
-    enddate: Object.freeze([/"enddate"\s*:/i, /\b(?:event:end_time|enddate|end time)\b/i]),
-    website: Object.freeze([/"url"\s*:/i, /\b(?:og:url|canonical|sameas|event:url)\b/i]),
-    ticketurl: Object.freeze([/"offers"\s*:/i, /\b(?:ticket|tickets|checkout|buy)\b/i]),
-    image: Object.freeze([/"image"\s*:/i, /\b(?:og:image|twitter:image|poster|src=|data-src=)\b/i]),
-    cover: Object.freeze([/\b(?:offers|pricecurrency|lowprice|highprice|price|cover|admission)\b/i]),
-    city: Object.freeze([/\b(?:city|addresslocality|geo\.placename)\b/i]),
-    recurrence: Object.freeze([/\b(?:rrule|freq=|byday|weekly|monthly)\b/i])
-});
-
 const EventSchema = {
     EVENT_KEY_ALIASES,
     URL_LIKE_FIELDS,
@@ -410,8 +373,6 @@ const EventSchema = {
     EVENT_PARAM_MAP: EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
     EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
     AI_PROMPT_FIELDS,
-    AI_CONFIDENCE_FIELD_EXPECTATIONS,
-    AI_CONFIDENCE_FIELD_SIGNAL_PATTERNS,
     normalizeAliasKey,
     canonicalizeEventKey,
     findUnescaped,
