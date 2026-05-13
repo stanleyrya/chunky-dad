@@ -10,7 +10,24 @@
 const scraperConfig = {
   config: {
     dryRun: false,
-    daysToLookAhead: null
+    daysToLookAhead: null,
+    aiConfidenceDefaults: {
+      confidence: {
+        expectations: {
+          urlPatterns: [
+            {
+              pattern: "^https?://(?:www\\.)?eventbrite\\.com/e/",
+              fields: {
+                cover: { expected: ["jsonld"], strong: ["jsonld"] },
+                image: { expected: ["jsonld"], strong: ["jsonld"] },
+                ticketUrl: { expected: ["jsonld"], strong: ["jsonld"] },
+                location: { expected: ["meta"], strong: ["meta"] }
+              }
+            }
+          ]
+        }
+      }
+    }
   },
   parsers: [
     {
@@ -38,7 +55,8 @@ const scraperConfig = {
         location: { priority: ["eventbrite"], merge: "clobber" },
         gmaps: { priority: ["eventbrite"], merge: "clobber" },
         image: { priority: ["eventbrite"], merge: "clobber" },
-        cover: { priority: ["eventbrite"], merge: "clobber" }
+        cover: { priority: ["eventbrite"], merge: "clobber" },
+        ticketUrl: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
         title: { value: "MEGAWOOF" },
@@ -81,7 +99,8 @@ const scraperConfig = {
         location: { priority: ["ai-web"], merge: "clobber" },
         gmaps: { priority: ["ai-web"], merge: "clobber" },
         image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" }
+        cover: { priority: ["ai-web"], merge: "clobber" },
+        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {
         shortName: {
@@ -324,7 +343,8 @@ const scraperConfig = {
         location: { priority: ["eventbrite"], merge: "clobber" },
         gmaps: { priority: ["eventbrite"], merge: "clobber" },
         image: { priority: ["eventbrite"], merge: "clobber" },
-        cover: { priority: ["eventbrite"], merge: "clobber" }
+        cover: { priority: ["eventbrite"], merge: "clobber" },
+        ticketUrl: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
         shortName: { value: "TWIST-ED BEAR" },
@@ -359,7 +379,8 @@ const scraperConfig = {
         location: { priority: ["eventbrite"], merge: "clobber" },
         gmaps: { priority: ["eventbrite"], merge: "clobber" },
         image: { priority: ["eventbrite"], merge: "clobber" },
-        cover: { priority: ["eventbrite"], merge: "clobber" }
+        cover: { priority: ["eventbrite"], merge: "clobber" },
+        ticketUrl: { priority: ["eventbrite"], merge: "clobber" }
       },
       metadata: {
         website: { value: "https://www.thedallaseagle.com" },
@@ -403,7 +424,9 @@ const scraperConfig = {
         endDate: { priority: ["ai-web"], merge: "clobber" },
         city: { priority: ["ai-web"], merge: "clobber" },
         url: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" }
+        image: { priority: ["ai-web"], merge: "clobber" },
+        cover: { priority: ["ai-web"], merge: "clobber" },
+        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {}
     }

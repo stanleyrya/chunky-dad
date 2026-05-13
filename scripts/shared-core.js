@@ -283,12 +283,14 @@ class SharedCore {
     }
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers, globalProcessedUrls = new Set()) {
+        const effectiveParserConfig = this.applyGlobalAiConfidenceDefaults(parserConfig, mainConfig);
+
         // Prefer explicit parser selection from config; otherwise auto-detect from URL.
-        const configuredParserName = this.normalizeParserName(parserConfig && parserConfig.parser);
+        const configuredParserName = this.normalizeParserName(effectiveParserConfig && effectiveParserConfig.parser);
         const allowParserAutoSwitch = !configuredParserName;
         let parserName = configuredParserName;
-        if (!parserName && parserConfig.urls && parserConfig.urls.length > 0) {
-            parserName = this.detectParserFromUrl(parserConfig.urls[0]);
+        if (!parserName && effectiveParserConfig.urls && effectiveParserConfig.urls.length > 0) {
+            parserName = this.detectParserFromUrl(effectiveParserConfig.urls[0]);
         }
         
         // Fallback to generic parser if still no parser found
@@ -304,18 +306,18 @@ class SharedCore {
             throw new Error(`Parser '${parserName}' not found`);
         }
 
-        const urlCount = parserConfig.urls?.length || 0;
-        const urlSuffix = urlCount === 1 ? `: ${parserConfig.urls[0]}` : '';
-        await displayAdapter.logInfo(`SYSTEM: ${parserConfig.name} → ${parserName} (${urlCount} URL${urlCount === 1 ? '' : 's'})${urlSuffix}`);
+        const urlCount = effectiveParserConfig.urls?.length || 0;
+        const urlSuffix = urlCount === 1 ? `: ${effectiveParserConfig.urls[0]}` : '';
+        await displayAdapter.logInfo(`SYSTEM: ${effectiveParserConfig.name} → ${parserName} (${urlCount} URL${urlCount === 1 ? '' : 's'})${urlSuffix}`);
         
         const parserStartedAt = Date.now();
         const allEvents = [];
-        const hasInlineInput = parserConfig.input && typeof parserConfig.input === 'object';
+        const hasInlineInput = effectiveParserConfig.input && typeof effectiveParserConfig.input === 'object';
         // Use global processedUrls to prevent duplicate processing across all parsers
 
         // Process main URLs
-        for (let i = 0; i < (parserConfig.urls || []).length; i++) {
-            const url = parserConfig.urls[i];
+        for (let i = 0; i < (effectiveParserConfig.urls || []).length; i++) {
+            const url = effectiveParserConfig.urls[i];
             if (this.hasProcessedUrl(globalProcessedUrls, url)) {
                 await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
                 continue;
@@ -328,7 +330,7 @@ class SharedCore {
                 }
 
                 const htmlData = hasInlineInput
-                    ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
+                    ? { html: '', url, statusCode: 200, headers: {}, input: effectiveParserConfig.input }
                     : await httpAdapter.fetchData(url);
                 
                 // Detect parser for this specific URL (allows mid-run switching)
@@ -344,7 +346,7 @@ class SharedCore {
                 
                 // Parse events (consolidated logging)
                 let parseResult = await Promise.resolve(
-                    urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null)
+                    urlParser.parseEvents(htmlData, effectiveParserConfig, mainConfig?.cities || null)
                 );
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
@@ -354,7 +356,7 @@ class SharedCore {
                 if (parseResult.events) {
                     // Apply field priorities to determine which parser data to trust
                     const filteredEvents = parseResult.events.map(event => 
-                        this.applyFieldPriorities(event, parserConfig, mainConfig)
+                        this.applyFieldPriorities(event, effectiveParserConfig, mainConfig)
                     );
                     
                     // Normalize text fields and enrich events with location data (Google Maps links, city extraction)
@@ -375,7 +377,7 @@ class SharedCore {
                         allEvents,
                         deduplicatedUrls, 
                         parsers, 
-                        parserConfig, 
+                        effectiveParserConfig, 
                         httpAdapter, 
                         displayAdapter,
                         globalProcessedUrls,
@@ -398,8 +400,8 @@ class SharedCore {
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events
-        const futureEvents = this.filterFutureEvents(allEvents, parserConfig.daysToLookAhead, parserConfig.allowPastEvents);
-        const bearEvents = this.filterBearEvents(futureEvents, parserConfig);
+        const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
+        const bearEvents = this.filterBearEvents(futureEvents, effectiveParserConfig);
         const deduplicatedEvents = this.deduplicateEvents(bearEvents);
         
         // Calculate deduplication stats
@@ -408,7 +410,7 @@ class SharedCore {
         await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${deduplicatedEvents.length} final`);
 
         return {
-            name: parserConfig.name,
+            name: effectiveParserConfig.name,
             parserType: parserName,
             urlCount,
             totalEvents: allEvents.length,
@@ -417,7 +419,72 @@ class SharedCore {
             duplicatesRemoved: duplicatesRemoved,
             durationMs: Date.now() - parserStartedAt,
             events: deduplicatedEvents,
-            config: parserConfig // Include config for orchestrator to use
+            config: effectiveParserConfig // Include config for orchestrator to use
+        };
+    }
+
+    applyGlobalAiConfidenceDefaults(parserConfig, mainConfig) {
+        const parser = parserConfig && typeof parserConfig === 'object' ? parserConfig : {};
+        const globalDefaults = mainConfig
+            && mainConfig.config
+            && mainConfig.config.aiConfidenceDefaults
+            && typeof mainConfig.config.aiConfidenceDefaults === 'object'
+            ? mainConfig.config.aiConfidenceDefaults
+            : null;
+        if (!globalDefaults) return parser;
+
+        const globalConfidence = globalDefaults.confidence && typeof globalDefaults.confidence === 'object'
+            ? globalDefaults.confidence
+            : null;
+        if (!globalConfidence) return parser;
+
+        const parserAi = parser.ai && typeof parser.ai === 'object' ? parser.ai : {};
+        const parserConfidence = parserAi.confidence && typeof parserAi.confidence === 'object'
+            ? parserAi.confidence
+            : {};
+
+        const globalExpectations = globalConfidence.expectations && typeof globalConfidence.expectations === 'object'
+            ? globalConfidence.expectations
+            : {};
+        const parserExpectations = parserConfidence.expectations && typeof parserConfidence.expectations === 'object'
+            ? parserConfidence.expectations
+            : {};
+        const globalFields = globalExpectations.fields && typeof globalExpectations.fields === 'object'
+            ? globalExpectations.fields
+            : {};
+        const parserFields = parserExpectations.fields && typeof parserExpectations.fields === 'object'
+            ? parserExpectations.fields
+            : {};
+
+        const globalUrlPatterns = Array.isArray(globalExpectations.urlPatterns) ? globalExpectations.urlPatterns : [];
+        const parserUrlPatterns = Array.isArray(parserExpectations.urlPatterns) ? parserExpectations.urlPatterns : [];
+
+        const mergedExpectations = {
+            ...globalExpectations,
+            ...parserExpectations
+        };
+        if (Object.keys(globalFields).length > 0 || Object.keys(parserFields).length > 0) {
+            mergedExpectations.fields = {
+                ...globalFields,
+                ...parserFields
+            };
+        }
+        if (globalUrlPatterns.length > 0 || parserUrlPatterns.length > 0) {
+            mergedExpectations.urlPatterns = [...globalUrlPatterns, ...parserUrlPatterns];
+        }
+
+        const mergedConfidence = {
+            ...globalConfidence,
+            ...parserConfidence,
+            expectations: mergedExpectations
+        };
+
+        return {
+            ...parser,
+            ai: {
+                ...parserAi,
+                confidence: mergedConfidence
+            }
         };
     }
 

@@ -315,6 +315,7 @@ function formatEventNotes(event, options = {}) {
     const notes = [];
 
     Object.keys(event).forEach(fieldName => {
+        if (String(fieldName).startsWith('_')) return;
         if (excludeFields.has(fieldName)) return;
         const value = event[fieldName];
         if (value === undefined || value === null || value === '') return;
@@ -365,6 +366,104 @@ const AI_PROMPT_FIELDS = [
     { param: 'cover',   desc: 'Exact offer/cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). May be a range built from low/high price offers, omit if not stated. Do not include "FREE" unless explicitly in source text.' }
 ];
 
+const AI_FIELD_SIGNAL_REGEXES = {
+    name: [
+        '\\bname\\b',
+        '\\btitle\\b',
+        '\\bheadline\\b'
+    ],
+    short: [
+        '\\bshort(?:\\s*title|\\s*name)?\\b',
+        '\\bsubtitle\\b',
+        '\\bteaser\\b'
+    ],
+    desc: [
+        '\\bdescription\\b',
+        '\\bsummary\\b',
+        '\\bdetails?\\b',
+        '\\babout\\b'
+    ],
+    city: [
+        '\\bcity\\b',
+        '\\baddress(?:_|\\s|-)?locality\\b',
+        '\\blocality\\b'
+    ],
+    venue: [
+        '\\bvenue\\b',
+        '\\blocation\\b',
+        '\\bplace\\b'
+    ],
+    addr: [
+        '\\baddress\\b',
+        '\\bstreet(?:_|\\s|-)?address\\b',
+        '\\baddress(?:_|\\s|-)?line\\b'
+    ],
+    coords: [
+        '\\bcoordinates?\\b',
+        '\\bgeo\\b',
+        '\\blat(?:itude)?\\b',
+        '\\blng\\b',
+        '\\blon(?:gitude)?\\b'
+    ],
+    start: [
+        '\\bstart(?:_|\\s|-)?date\\b',
+        '\\bstart(?:_|\\s|-)?time\\b',
+        '\\bdoor(?:_|\\s|-)?time\\b',
+        '\\bdatetime\\b'
+    ],
+    end: [
+        '\\bend(?:_|\\s|-)?date\\b',
+        '\\bend(?:_|\\s|-)?time\\b'
+    ],
+    rrule: [
+        '\\brrule\\b',
+        '\\brecurr(?:ence|ing)?\\b',
+        '\\bfreq\\b',
+        '\\bbyday\\b'
+    ],
+    web: [
+        '\\burl\\b',
+        '\\bwebsite\\b',
+        '\\bcanonical\\b'
+    ],
+    tickets: [
+        '\\btickets?\\b',
+        '\\bticket(?:_|\\s|-)?url\\b',
+        '\\bbooking\\b',
+        '\\breserve\\b'
+    ],
+    insta: [
+        '\\binstagram\\b',
+        '\\binsta\\b'
+    ],
+    fb: [
+        '\\bfacebook\\b',
+        '\\bfb\\b'
+    ],
+    gmaps: [
+        '\\bgoogle\\s*maps?\\b',
+        '\\bgmaps?\\b',
+        '\\bmaps?\\.google\\b'
+    ],
+    img: [
+        '\\bimage\\b',
+        '\\bthumbnail\\b',
+        '\\bphoto\\b',
+        '\\bog:image\\b',
+        '\\btwitter:image\\b'
+    ],
+    cover: [
+        '\\boffers?\\b',
+        '\\bprice\\b',
+        '\\bprice(?:_|\\s|-)?currency(?=\\W|$)',
+        '\\blow\\s*price\\b',
+        '\\bhigh\\s*price\\b',
+        '\\bcover\\b',
+        '\\badmission\\b',
+        '\\btickets?\\b'
+    ]
+};
+
 const EventSchema = {
     EVENT_KEY_ALIASES,
     URL_LIKE_FIELDS,
@@ -372,6 +471,7 @@ const EventSchema = {
     EVENT_PARAM_MAP: EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
     EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
     AI_PROMPT_FIELDS,
+    AI_FIELD_SIGNAL_REGEXES,
     normalizeAliasKey,
     canonicalizeEventKey,
     findUnescaped,
