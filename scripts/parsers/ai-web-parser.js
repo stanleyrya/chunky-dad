@@ -1216,20 +1216,6 @@ class AiWebParser {
         return normalized;
     }
 
-    getDefaultConfidenceUrlPatternOverrides() {
-        return [
-            {
-                pattern: '^https?://(?:www\\.)?eventbrite\\.com/e/',
-                fields: {
-                    cover: { expected: ['jsonld'], strong: ['jsonld'] },
-                    image: { expected: ['jsonld'], strong: ['jsonld'] },
-                    ticketUrl: { expected: ['jsonld'], strong: ['jsonld'] },
-                    location: { expected: ['meta'], strong: ['meta'] }
-                }
-            }
-        ];
-    }
-
     getAiConfidenceExpectations(parserConfig = {}, sourceUrl = '', promptFields = []) {
         const aiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
             ? parserConfig.ai
@@ -1249,10 +1235,7 @@ class AiWebParser {
         const configuredUrlPatternOverrides = Array.isArray(rootExpectations.urlPatterns)
             ? rootExpectations.urlPatterns
             : [];
-        const urlPatternOverrides = [
-            ...this.getDefaultConfidenceUrlPatternOverrides(),
-            ...configuredUrlPatternOverrides
-        ];
+        const urlPatternOverrides = configuredUrlPatternOverrides;
         const normalizedFields = Array.from(
             new Set((Array.isArray(promptFields) ? promptFields : []).map(field => this.normalizePromptFieldName(field)).filter(Boolean))
         );
