@@ -367,6 +367,91 @@ const AI_PROMPT_FIELDS = [
 ];
 
 const AI_FIELD_SIGNAL_REGEXES = {
+    name: [
+        '\\bname\\b',
+        '\\btitle\\b',
+        '\\bheadline\\b'
+    ],
+    short: [
+        '\\bshort(?:\\s*title|\\s*name)?\\b',
+        '\\bsubtitle\\b',
+        '\\bteaser\\b'
+    ],
+    desc: [
+        '\\bdescription\\b',
+        '\\bsummary\\b',
+        '\\bdetails?\\b',
+        '\\babout\\b'
+    ],
+    city: [
+        '\\bcity\\b',
+        '\\baddress(?:_|\\s|-)?locality\\b',
+        '\\blocality\\b'
+    ],
+    venue: [
+        '\\bvenue\\b',
+        '\\blocation\\b',
+        '\\bplace\\b'
+    ],
+    addr: [
+        '\\baddress\\b',
+        '\\bstreet(?:_|\\s|-)?address\\b',
+        '\\baddress(?:_|\\s|-)?line\\b'
+    ],
+    coords: [
+        '\\bcoordinates?\\b',
+        '\\bgeo\\b',
+        '\\blat(?:itude)?\\b',
+        '\\blng\\b',
+        '\\blon(?:gitude)?\\b'
+    ],
+    start: [
+        '\\bstart(?:_|\\s|-)?date\\b',
+        '\\bstart(?:_|\\s|-)?time\\b',
+        '\\bdoor(?:_|\\s|-)?time\\b',
+        '\\bdatetime\\b'
+    ],
+    end: [
+        '\\bend(?:_|\\s|-)?date\\b',
+        '\\bend(?:_|\\s|-)?time\\b'
+    ],
+    rrule: [
+        '\\brrule\\b',
+        '\\brecurr(?:ence|ing)?\\b',
+        '\\bfreq\\b',
+        '\\bbyday\\b'
+    ],
+    web: [
+        '\\burl\\b',
+        '\\bwebsite\\b',
+        '\\bcanonical\\b'
+    ],
+    tickets: [
+        '\\btickets?\\b',
+        '\\bticket(?:_|\\s|-)?url\\b',
+        '\\bbooking\\b',
+        '\\breserve\\b'
+    ],
+    insta: [
+        '\\binstagram\\b',
+        '\\binsta\\b'
+    ],
+    fb: [
+        '\\bfacebook\\b',
+        '\\bfb\\b'
+    ],
+    gmaps: [
+        '\\bgoogle\\s*maps?\\b',
+        '\\bgmaps?\\b',
+        '\\bmaps?\\.google\\b'
+    ],
+    img: [
+        '\\bimage\\b',
+        '\\bthumbnail\\b',
+        '\\bphoto\\b',
+        '\\bog:image\\b',
+        '\\btwitter:image\\b'
+    ],
     cover: [
         '\\boffers?\\b',
         '\\bprice\\b',
