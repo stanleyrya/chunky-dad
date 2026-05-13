@@ -1,5 +1,11 @@
 [
   {
+    "slug": "bear-happy-hour-66e240de",
+    "url": "https://linktr.ee/bearhappyhour",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6b6661"
+  },
+  {
     "slug": "bears-are-animals-4cf796ee",
     "url": "https://animal.nyc",
     "faviconBg": "#e51a1a",
@@ -22,5 +28,11 @@
     "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
     "faviconBg": "#f6f4f5",
     "faviconFg": "#2e2933"
+  },
+  {
+    "slug": "fuzzy-0380f9f1",
+    "url": "https://fuzzy.nyc/",
+    "faviconBg": "#e69dc7",
+    "faviconFg": "#140b10"
   }
 ]
