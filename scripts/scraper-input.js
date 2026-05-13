@@ -67,26 +67,7 @@ const scraperConfig = {
         numCtx: 8192,
         numPredict: 512,
         timeoutSeconds: 120,
-        keepAlive: "5m",
-        confidence: {
-          maxRetryCycles: 1,
-          maxRetryPasses: 6,
-          expectations: {
-            fields: {
-              cover: { expected: ["jsonld", "meta"], strong: ["jsonld"] },
-              location: { expected: ["meta", "jsonld"], strong: ["meta"] }
-            },
-            urlPatterns: [
-              {
-                pattern: "/e/",
-                fields: {
-                  cover: { expected: ["jsonld"], strong: ["jsonld"] },
-                  location: { expected: ["meta"], strong: ["meta"] }
-                }
-              }
-            ]
-          }
-        }
+        keepAlive: "5m"
       },
       fieldPriorities: {
         title: { priority: ["ai-web"], merge: "clobber" },
@@ -100,7 +81,8 @@ const scraperConfig = {
         location: { priority: ["ai-web"], merge: "clobber" },
         gmaps: { priority: ["ai-web"], merge: "clobber" },
         image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" }
+        cover: { priority: ["ai-web"], merge: "clobber" },
+        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {
         shortName: {
@@ -411,7 +393,24 @@ const scraperConfig = {
         temperature: 0,
         think: false,
         timeoutSeconds: 120,
-        keepAlive: "5m"
+        keepAlive: "5m",
+        confidence: {
+          maxRetryCycles: 1,
+          maxRetryPasses: 6,
+          expectations: {
+            urlPatterns: [
+              {
+                pattern: "^https?://(?:www\\.)?eventbrite\\.com/e/",
+                fields: {
+                  cover: { expected: ["jsonld"], strong: ["jsonld"] },
+                  image: { expected: ["jsonld"], strong: ["jsonld"] },
+                  ticketurl: { expected: ["jsonld"], strong: ["jsonld"] },
+                  location: { expected: ["meta"], strong: ["meta"] }
+                }
+              }
+            ]
+          }
+        }
       },
       fieldPriorities: {
         title: { priority: ["ai-web"], merge: "clobber" },
@@ -422,7 +421,9 @@ const scraperConfig = {
         endDate: { priority: ["ai-web"], merge: "clobber" },
         city: { priority: ["ai-web"], merge: "clobber" },
         url: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" }
+        image: { priority: ["ai-web"], merge: "clobber" },
+        cover: { priority: ["ai-web"], merge: "clobber" },
+        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {}
     }

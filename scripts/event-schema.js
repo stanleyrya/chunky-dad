@@ -315,6 +315,7 @@ function formatEventNotes(event, options = {}) {
     const notes = [];
 
     Object.keys(event).forEach(fieldName => {
+        if (String(fieldName).startsWith('_')) return;
         if (excludeFields.has(fieldName)) return;
         const value = event[fieldName];
         if (value === undefined || value === null || value === '') return;
