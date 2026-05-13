@@ -366,6 +366,19 @@ const AI_PROMPT_FIELDS = [
     { param: 'cover',   desc: 'Exact offer/cover/admission/ticket price text from source (e.g. Free, $15, $15-$25). May be a range built from low/high price offers, omit if not stated. Do not include "FREE" unless explicitly in source text.' }
 ];
 
+const AI_FIELD_SIGNAL_REGEXES = {
+    cover: [
+        '\\boffers?\\b',
+        '\\bprice\\b',
+        '\\bprice\\s*currency\\b',
+        '\\blow\\s*price\\b',
+        '\\bhigh\\s*price\\b',
+        '\\bcover\\b',
+        '\\badmission\\b',
+        '\\btickets?\\b'
+    ]
+};
+
 const EventSchema = {
     EVENT_KEY_ALIASES,
     URL_LIKE_FIELDS,
@@ -373,6 +386,7 @@ const EventSchema = {
     EVENT_PARAM_MAP: EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
     EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY,
     AI_PROMPT_FIELDS,
+    AI_FIELD_SIGNAL_REGEXES,
     normalizeAliasKey,
     canonicalizeEventKey,
     findUnescaped,

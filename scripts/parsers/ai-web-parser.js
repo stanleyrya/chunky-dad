@@ -35,6 +35,8 @@ class AiWebParser {
         this.cachedEventSchemaPromptFields = [];
         this.cachedEventSchemaPromptFieldDescriptions = new Map();
         this.eventSchemaPromptFieldsLoaded = false;
+        this.cachedEventSchemaFieldSignalRegexMap = new Map();
+        this.eventSchemaFieldSignalRegexMapLoaded = false;
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
@@ -1317,7 +1319,19 @@ class AiWebParser {
     }
 
     getFieldSignalRegexes(normalizedField) {
-        return [new RegExp(`\\b${this.escapeRegex(normalizedField)}\\b`, 'i')];
+        const compiledRegexes = [];
+        const addRegex = patternText => {
+            const normalizedPattern = String(patternText || '').trim();
+            if (!normalizedPattern) return;
+            try {
+                compiledRegexes.push(new RegExp(normalizedPattern, 'i'));
+            } catch (_) {}
+        };
+
+        const configuredPatterns = this.getEventSchemaFieldSignalRegexes(normalizedField);
+        configuredPatterns.forEach(addRegex);
+        addRegex(`\\b${this.escapeRegex(normalizedField)}\\b`);
+        return compiledRegexes;
     }
 
     detectFieldSignalInText(normalizedField, text) {
@@ -1994,6 +2008,31 @@ class AiWebParser {
             this.getEventSchemaPromptFields();
         }
         return this.cachedEventSchemaPromptFieldDescriptions.get(fieldName) || null;
+    }
+
+    getEventSchemaFieldSignalRegexes(fieldName) {
+        const normalizedField = this.normalizePromptFieldName(fieldName);
+        if (!normalizedField) return [];
+        if (!this.eventSchemaFieldSignalRegexMapLoaded) {
+            const schema = this.getEventSchema();
+            const rawMap = schema && schema.AI_FIELD_SIGNAL_REGEXES && typeof schema.AI_FIELD_SIGNAL_REGEXES === 'object'
+                ? schema.AI_FIELD_SIGNAL_REGEXES
+                : {};
+            this.cachedEventSchemaFieldSignalRegexMap = new Map();
+            Object.keys(rawMap).forEach(rawFieldName => {
+                const normalizedMapField = this.normalizePromptFieldName(rawFieldName);
+                if (!normalizedMapField) return;
+                const rawPatterns = rawMap[rawFieldName];
+                const patterns = (Array.isArray(rawPatterns) ? rawPatterns : [rawPatterns])
+                    .map(pattern => String(pattern || '').trim())
+                    .filter(Boolean);
+                if (patterns.length > 0) {
+                    this.cachedEventSchemaFieldSignalRegexMap.set(normalizedMapField, patterns);
+                }
+            });
+            this.eventSchemaFieldSignalRegexMapLoaded = true;
+        }
+        return this.cachedEventSchemaFieldSignalRegexMap.get(normalizedField) || [];
     }
 
     getDefaultExtractionFields() {
