@@ -67,7 +67,26 @@ const scraperConfig = {
         numCtx: 8192,
         numPredict: 512,
         timeoutSeconds: 120,
-        keepAlive: "5m"
+        keepAlive: "5m",
+        confidence: {
+          maxRetryCycles: 1,
+          maxRetryPasses: 6,
+          expectations: {
+            fields: {
+              cover: { expected: ["jsonld", "meta"], strong: ["jsonld"] },
+              location: { expected: ["meta", "jsonld"], strong: ["meta"] }
+            },
+            urlPatterns: [
+              {
+                pattern: "/e/",
+                fields: {
+                  cover: { expected: ["jsonld"], strong: ["jsonld"] },
+                  location: { expected: ["meta"], strong: ["meta"] }
+                }
+              }
+            ]
+          }
+        }
       },
       fieldPriorities: {
         title: { priority: ["ai-web"], merge: "clobber" },

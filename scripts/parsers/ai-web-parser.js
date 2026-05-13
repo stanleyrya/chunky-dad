@@ -137,8 +137,27 @@ class AiWebParser {
                 console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
                 return this.buildEmptyResult(htmlData);
             }
-            if (validationResult.report) {
-                event._aiValidation = validationResult.report;
+            const confidenceDiagnostics = aiEvent && aiEvent.__confidenceDiagnostics && typeof aiEvent.__confidenceDiagnostics === 'object'
+                ? aiEvent.__confidenceDiagnostics
+                : null;
+            if (validationResult.report || confidenceDiagnostics) {
+                const report = validationResult.report && typeof validationResult.report === 'object'
+                    ? { ...validationResult.report }
+                    : { strict: null, sourceChars: 0, kept: [], dropped: [], bypassed: [] };
+                if (confidenceDiagnostics) {
+                    const finalValidatedFields = Object.keys(validationResult.event || {})
+                        .filter(key => !this.isInternalAiFieldKey(key))
+                        .map(key => this.normalizePromptFieldName(key))
+                        .filter(Boolean);
+                    report.confidence = {
+                        ...confidenceDiagnostics,
+                        extractionOutcome: {
+                            ...(confidenceDiagnostics.extractionOutcome || {}),
+                            finalValidatedFields: Array.from(new Set(finalValidatedFields))
+                        }
+                    };
+                }
+                event._aiValidation = report;
             }
 
             return {
@@ -1079,6 +1098,435 @@ class AiWebParser {
         };
     }
 
+    normalizeConfidencePartition(partition) {
+        const normalized = String(partition || '').trim().toLowerCase();
+        if (normalized === 'jsonld' || normalized === 'meta' || normalized === 'content' || normalized === 'mixed') {
+            return normalized;
+        }
+        return 'unknown';
+    }
+
+    normalizeConfidencePartitionList(partitions, fallback = []) {
+        const source = Array.isArray(partitions) ? partitions : fallback;
+        const normalized = source
+            .map(partition => this.normalizeConfidencePartition(partition))
+            .filter(partition => partition === 'jsonld' || partition === 'meta' || partition === 'content');
+        return Array.from(new Set(normalized));
+    }
+
+    getAiConfidenceRuntimeConfig(parserConfig = {}) {
+        const aiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
+            ? parserConfig.ai
+            : {};
+        const confidence = aiConfig.confidence && typeof aiConfig.confidence === 'object'
+            ? aiConfig.confidence
+            : {};
+        return {
+            maxRetryCycles: Number.isFinite(Number(confidence.maxRetryCycles))
+                ? Math.max(0, Math.min(3, Number(confidence.maxRetryCycles)))
+                : 1,
+            maxRetryPasses: Number.isFinite(Number(confidence.maxRetryPasses))
+                ? Math.max(0, Math.min(12, Number(confidence.maxRetryPasses)))
+                : 6
+        };
+    }
+
+    getGlobalFieldExpectations(promptFields = []) {
+        const defaults = {};
+        const normalizedFields = Array.from(
+            new Set((Array.isArray(promptFields) ? promptFields : []).map(field => this.normalizePromptFieldName(field)).filter(Boolean))
+        );
+        normalizedFields.forEach(field => {
+            let expected = ['content'];
+            let strong = ['content'];
+            if (['title', 'description', 'bar', 'address', 'startdate', 'enddate', 'website', 'ticketurl', 'image', 'cover'].includes(field)) {
+                expected = ['jsonld', 'meta', 'content'];
+                strong = ['jsonld', 'meta'];
+            } else if (field === 'location') {
+                expected = ['meta', 'jsonld', 'content'];
+                strong = ['meta'];
+            } else if (field === 'city') {
+                expected = ['meta', 'content'];
+                strong = ['meta'];
+            } else if (field === 'recurrence') {
+                expected = ['content', 'jsonld'];
+                strong = ['content'];
+            }
+            defaults[field] = {
+                expected,
+                strong,
+                applied: [{
+                    source: 'global-defaults',
+                    expected: [...expected],
+                    strong: [...strong]
+                }]
+            };
+        });
+        return defaults;
+    }
+
+    normalizeFieldExpectationRule(rawRule, currentRule = null) {
+        const fallbackExpected = currentRule && Array.isArray(currentRule.expected) ? currentRule.expected : [];
+        const fallbackStrong = currentRule && Array.isArray(currentRule.strong) ? currentRule.strong : fallbackExpected;
+        if (Array.isArray(rawRule)) {
+            const expected = this.normalizeConfidencePartitionList(rawRule, fallbackExpected);
+            return {
+                expected,
+                strong: expected
+            };
+        }
+        if (!rawRule || typeof rawRule !== 'object') {
+            return {
+                expected: [...fallbackExpected],
+                strong: [...fallbackStrong]
+            };
+        }
+        const expected = this.normalizeConfidencePartitionList(rawRule.expected, fallbackExpected);
+        const strong = this.normalizeConfidencePartitionList(rawRule.strong, expected);
+        return {
+            expected,
+            strong
+        };
+    }
+
+    matchesConfidenceUrlPattern(patternEntry, sourceUrl) {
+        const url = String(sourceUrl || '');
+        if (!url || !patternEntry || typeof patternEntry !== 'object') return false;
+        const contains = String(patternEntry.contains || '').trim();
+        if (contains && url.includes(contains)) return true;
+        const patternText = String(patternEntry.pattern || patternEntry.regex || '').trim();
+        if (!patternText) return false;
+        try {
+            const flags = String(patternEntry.flags || patternEntry.regexFlags || 'i').trim() || 'i';
+            const regex = new RegExp(patternText, flags);
+            return regex.test(url);
+        } catch (_) {
+            return url.includes(patternText);
+        }
+    }
+
+    getAiConfidenceExpectations(parserConfig = {}, sourceUrl = '', promptFields = []) {
+        const aiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
+            ? parserConfig.ai
+            : {};
+        const confidence = aiConfig.confidence && typeof aiConfig.confidence === 'object'
+            ? aiConfig.confidence
+            : {};
+        const rootExpectations = confidence.expectations && typeof confidence.expectations === 'object'
+            ? confidence.expectations
+            : (aiConfig.expectations && typeof aiConfig.expectations === 'object'
+                ? aiConfig.expectations
+                : {});
+        const parserDefaultsRaw = rootExpectations.fields && typeof rootExpectations.fields === 'object'
+            ? rootExpectations.fields
+            : {};
+        const urlPatternOverrides = Array.isArray(rootExpectations.urlPatterns)
+            ? rootExpectations.urlPatterns
+            : [];
+        const normalizedFields = Array.from(
+            new Set((Array.isArray(promptFields) ? promptFields : []).map(field => this.normalizePromptFieldName(field)).filter(Boolean))
+        );
+        const expectationMap = this.getGlobalFieldExpectations(normalizedFields);
+        const matchedOverrides = urlPatternOverrides
+            .filter(entry => this.matchesConfidenceUrlPattern(entry, sourceUrl))
+            .map(entry => {
+                const patternLabel = String(entry.pattern || entry.regex || entry.contains || '').trim() || 'unknown-pattern';
+                return {
+                    source: `url-pattern:${patternLabel}`,
+                    fields: entry.fields && typeof entry.fields === 'object' ? entry.fields : {}
+                };
+            });
+
+        normalizedFields.forEach(field => {
+            const current = expectationMap[field] || {
+                expected: [],
+                strong: [],
+                applied: []
+            };
+            const parserRuleRaw = Object.prototype.hasOwnProperty.call(parserDefaultsRaw, field)
+                ? parserDefaultsRaw[field]
+                : null;
+            if (parserRuleRaw !== null) {
+                const parserRule = this.normalizeFieldExpectationRule(parserRuleRaw, current);
+                current.expected = parserRule.expected;
+                current.strong = parserRule.strong;
+                current.applied.push({
+                    source: 'parser-defaults',
+                    expected: [...parserRule.expected],
+                    strong: [...parserRule.strong]
+                });
+            }
+            matchedOverrides.forEach(override => {
+                if (!Object.prototype.hasOwnProperty.call(override.fields, field)) return;
+                const overrideRule = this.normalizeFieldExpectationRule(override.fields[field], current);
+                current.expected = overrideRule.expected;
+                current.strong = overrideRule.strong;
+                current.applied.push({
+                    source: override.source,
+                    expected: [...overrideRule.expected],
+                    strong: [...overrideRule.strong]
+                });
+            });
+            expectationMap[field] = current;
+        });
+
+        return expectationMap;
+    }
+
+    getPartitionSectionMap(sectionBundle) {
+        return {
+            jsonld: sectionBundle && sectionBundle.jsonLd ? [sectionBundle.jsonLd] : [],
+            meta: sectionBundle && sectionBundle.metaPrimary ? [sectionBundle.metaPrimary] : [],
+            content: sectionBundle && sectionBundle.content ? [sectionBundle.content] : []
+        };
+    }
+
+    getPartitionSourceText(sectionBundle) {
+        const partitionSections = this.getPartitionSectionMap(sectionBundle);
+        const partitionText = {};
+        Object.keys(partitionSections).forEach(partition => {
+            partitionText[partition] = partitionSections[partition]
+                .map(section => this.sectionToText(section))
+                .filter(Boolean)
+                .join('\n\n');
+        });
+        return partitionText;
+    }
+
+    getPartitionStrengths(sectionBundle) {
+        const contentLineCount = sectionBundle && sectionBundle.content && Array.isArray(sectionBundle.content.lines)
+            ? sectionBundle.content.lines.length
+            : 0;
+        return {
+            jsonld: sectionBundle && sectionBundle.jsonLd
+                ? this.isSnippetSourceFull(sectionBundle.jsonLdScore, this.extractionLimits.jsonLdFullnessMinSignals)
+                : false,
+            meta: sectionBundle && sectionBundle.metaPrimary
+                ? this.isSnippetSourceFull(sectionBundle.metaScore, this.extractionLimits.metaFullnessMinSignals)
+                : false,
+            content: contentLineCount >= 20
+        };
+    }
+
+    getFieldSignalRegexes(normalizedField) {
+        switch (normalizedField) {
+            case 'title':
+                return [/"name"\s*:/i, /\b(?:og:title|twitter:title|event:name)\b/i, /\btitle\b/i];
+            case 'description':
+                return [/"description"\s*:/i, /\b(?:og:description|twitter:description|event:description)\b/i, /\bdescription\b/i];
+            case 'bar':
+                return [/"location"\s*:/i, /\b(?:venue|location|event:location)\b/i];
+            case 'address':
+                return [/"address"\s*:/i, /\b(?:streetaddress|addresslocality|geo\.placename|address)\b/i];
+            case 'location':
+                return [/\bgeo\.position\b/i, /\b(?:latitude|longitude)\b/i, /\b-?\d{1,3}\.\d+\s*,\s*-?\d{1,3}\.\d+\b/i];
+            case 'startdate':
+                return [/"startdate"\s*:/i, /\b(?:event:start_time|startdate|start time)\b/i];
+            case 'enddate':
+                return [/"enddate"\s*:/i, /\b(?:event:end_time|enddate|end time)\b/i];
+            case 'website':
+                return [/"url"\s*:/i, /\b(?:og:url|canonical|sameas|event:url)\b/i];
+            case 'ticketurl':
+                return [/"offers"\s*:/i, /\b(?:ticket|tickets|checkout|buy)\b/i];
+            case 'image':
+                return [/"image"\s*:/i, /\b(?:og:image|twitter:image|poster|src=|data-src=)\b/i];
+            case 'cover':
+                return [/\b(?:offers|pricecurrency|lowprice|highprice|price|cover|admission)\b/i];
+            case 'city':
+                return [/\b(?:city|addresslocality|geo\.placename)\b/i];
+            case 'recurrence':
+                return [/\b(?:rrule|freq=|byday|weekly|monthly)\b/i];
+            default:
+                return [new RegExp(`\\b${this.escapeRegex(normalizedField)}\\b`, 'i')];
+        }
+    }
+
+    detectFieldSignalInText(normalizedField, text) {
+        const sourceText = String(text || '');
+        if (!sourceText) return false;
+        const regexes = this.getFieldSignalRegexes(normalizedField);
+        return regexes.some(regex => regex.test(sourceText));
+    }
+
+    collectPartitionFieldSignals(sectionBundle, promptFields = []) {
+        const partitionText = this.getPartitionSourceText(sectionBundle);
+        const normalizedFields = Array.from(
+            new Set((Array.isArray(promptFields) ? promptFields : []).map(field => this.normalizePromptFieldName(field)).filter(Boolean))
+        );
+        const signals = {};
+        normalizedFields.forEach(field => {
+            signals[field] = {
+                jsonld: this.detectFieldSignalInText(field, partitionText.jsonld),
+                meta: this.detectFieldSignalInText(field, partitionText.meta),
+                content: this.detectFieldSignalInText(field, partitionText.content)
+            };
+        });
+        return signals;
+    }
+
+    buildPartitionStatusesForField(fieldSignals = {}, expectation = {}) {
+        const expected = new Set(Array.isArray(expectation.expected) ? expectation.expected : []);
+        const statuses = {};
+        ['jsonld', 'meta', 'content'].forEach(partition => {
+            const observed = Boolean(fieldSignals[partition]);
+            if (expected.has(partition) && observed) {
+                statuses[partition] = 'expected-and-found';
+            } else if (expected.has(partition) && !observed) {
+                statuses[partition] = 'expected-but-missing';
+            } else if (!expected.has(partition) && observed) {
+                statuses[partition] = 'found-without-expectation';
+            } else {
+                statuses[partition] = 'not-expected';
+            }
+        });
+        return statuses;
+    }
+
+    evaluateFieldConfidence(fieldName, statuses, extractionSource, extracted, expectation, partitionStrengths) {
+        const expectedSet = new Set(Array.isArray(expectation.expected) ? expectation.expected : []);
+        const strongSet = new Set(Array.isArray(expectation.strong) ? expectation.strong : []);
+        const sourcePartition = this.normalizeConfidencePartition(extractionSource);
+        if (extracted) {
+            if (expectedSet.has(sourcePartition)) {
+                return {
+                    level: 'high',
+                    reason: 'expected-source-produced-validated-value',
+                    sourcePartition
+                };
+            }
+            return {
+                level: 'medium',
+                reason: sourcePartition === 'mixed'
+                    ? 'validated-value-from-mixed-source'
+                    : 'validated-value-from-non-expected-source',
+                sourcePartition
+            };
+        }
+
+        const retryCandidates = [];
+        ['jsonld', 'meta', 'content'].forEach(partition => {
+            if (!expectedSet.has(partition)) return;
+            if (!strongSet.has(partition)) return;
+            if (!partitionStrengths[partition]) return;
+            if (statuses[partition] !== 'expected-and-found') return;
+            retryCandidates.push(partition);
+        });
+        if (retryCandidates.length > 0) {
+            return {
+                level: 'low',
+                reason: 'expected-strong-signal-missing-validated-value',
+                sourcePartition: null,
+                retryCandidates
+            };
+        }
+
+        return {
+            level: 'low',
+            reason: 'no-validated-value',
+            sourcePartition: null
+        };
+    }
+
+    buildConfidenceDiagnostics(sectionBundle, promptFields, parserConfig, htmlData, mergedEvent, extractionTrace) {
+        const normalizedFields = Array.from(
+            new Set((Array.isArray(promptFields) ? promptFields : []).map(field => this.normalizePromptFieldName(field)).filter(Boolean))
+        );
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const fieldSignals = this.collectPartitionFieldSignals(sectionBundle, normalizedFields);
+        const expectations = this.getAiConfidenceExpectations(parserConfig, sourceUrl, normalizedFields);
+        const partitionStrengths = this.getPartitionStrengths(sectionBundle);
+        const extractionSources = extractionTrace && extractionTrace.fieldSources && typeof extractionTrace.fieldSources === 'object'
+            ? extractionTrace.fieldSources
+            : {};
+
+        const partitionStatuses = {};
+        const fieldConfidence = {};
+        const resolvedFields = [];
+        const missingFields = [];
+
+        normalizedFields.forEach(field => {
+            const extracted = this.hasResolvedFieldValue(mergedEvent, field);
+            if (extracted) resolvedFields.push(field);
+            else missingFields.push(field);
+            const expectation = expectations[field] || { expected: [], strong: [], applied: [] };
+            const statuses = this.buildPartitionStatusesForField(fieldSignals[field] || {}, expectation);
+            partitionStatuses[field] = statuses;
+            fieldConfidence[field] = this.evaluateFieldConfidence(
+                field,
+                statuses,
+                extractionSources[field] && extractionSources[field].partition,
+                extracted,
+                expectation,
+                partitionStrengths
+            );
+        });
+
+        return {
+            version: 1,
+            partitionStrengths,
+            observedSignals: fieldSignals,
+            expectedSignals: Object.fromEntries(
+                normalizedFields.map(field => [field, {
+                    expected: expectations[field] && Array.isArray(expectations[field].expected) ? expectations[field].expected : [],
+                    strong: expectations[field] && Array.isArray(expectations[field].strong) ? expectations[field].strong : [],
+                    applied: expectations[field] && Array.isArray(expectations[field].applied) ? expectations[field].applied : []
+                }])
+            ),
+            partitionStatuses,
+            fieldConfidence,
+            extractionOutcome: {
+                resolvedFields: Array.from(new Set(resolvedFields)),
+                missingFields: Array.from(new Set(missingFields)),
+                fieldSources: extractionSources
+            },
+            retry: {
+                decisions: [],
+                summary: {
+                    cycles: 0,
+                    passes: 0,
+                    attempted: 0,
+                    recoveredFields: []
+                }
+            }
+        };
+    }
+
+    planConfidenceRetries(confidenceDiagnostics) {
+        if (!confidenceDiagnostics || typeof confidenceDiagnostics !== 'object') {
+            return [];
+        }
+        const confidenceByField = confidenceDiagnostics.fieldConfidence && typeof confidenceDiagnostics.fieldConfidence === 'object'
+            ? confidenceDiagnostics.fieldConfidence
+            : {};
+        const grouped = {
+            jsonld: new Set(),
+            meta: new Set(),
+            content: new Set()
+        };
+        Object.keys(confidenceByField).forEach(field => {
+            const confidence = confidenceByField[field];
+            if (!confidence || confidence.level !== 'low' || !Array.isArray(confidence.retryCandidates)) return;
+            confidence.retryCandidates.forEach(partition => {
+                if (!grouped[partition]) return;
+                grouped[partition].add(field);
+            });
+        });
+        return ['jsonld', 'meta', 'content']
+            .map(partition => ({
+                partition,
+                fields: Array.from(grouped[partition])
+            }))
+            .filter(entry => entry.fields.length > 0);
+    }
+
+    getSectionsForPartition(sectionBundle, partition) {
+        const normalized = this.normalizeConfidencePartition(partition);
+        if (normalized === 'jsonld') return sectionBundle && sectionBundle.jsonLd ? [sectionBundle.jsonLd] : [];
+        if (normalized === 'meta') return sectionBundle && sectionBundle.metaPrimary ? [sectionBundle.metaPrimary] : [];
+        if (normalized === 'content') return sectionBundle && sectionBundle.content ? [sectionBundle.content] : [];
+        return [];
+    }
+
     splitSectionForPrompt(section, maxChars, repeatedSections = []) {
         if (!section) return [];
         const repeatedText = repeatedSections
@@ -1223,10 +1671,17 @@ class AiWebParser {
         return groups.filter(Boolean);
     }
 
-    async extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, fields, snippets, passLabelPrefix, validationState = null) {
+    async extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, fields, snippets, passLabelPrefix, validationState = null, options = {}) {
         let merged = {};
         const promptFields = Array.isArray(fields) ? fields : [];
         const promptSnippets = Array.isArray(snippets) ? snippets.filter(Boolean) : [];
+        const extractionTrace = options && options.extractionTrace && typeof options.extractionTrace === 'object'
+            ? options.extractionTrace
+            : null;
+        if (extractionTrace && (!extractionTrace.fieldSources || typeof extractionTrace.fieldSources !== 'object')) {
+            extractionTrace.fieldSources = {};
+        }
+        const partitionLabel = this.normalizeConfidencePartition(options && options.partitionLabel);
         if (validationState && !(validationState.validatedFields instanceof Set)) {
             validationState.validatedFields = new Set();
         }
@@ -1264,7 +1719,15 @@ class AiWebParser {
                 : {};
             Object.keys(validatedPartial).forEach(key => {
                 if (this.isInternalAiFieldKey(key)) return;
-                validatedFields.add(this.normalizePromptFieldName(key));
+                const normalizedField = this.normalizePromptFieldName(key);
+                validatedFields.add(normalizedField);
+                if (extractionTrace && extractionTrace.fieldSources && !extractionTrace.fieldSources[normalizedField]) {
+                    extractionTrace.fieldSources[normalizedField] = {
+                        partition: partitionLabel,
+                        pass: `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim(),
+                        snippet: index + 1
+                    };
+                }
             });
             merged = this.mergeAiEventFields(merged, validatedPartial);
         }
@@ -1277,25 +1740,36 @@ class AiWebParser {
         const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
         const validationState = { validatedFields: new Set() };
+        const extractionTrace = { fieldSources: {} };
+        const confidenceRuntime = this.getAiConfidenceRuntimeConfig(parserConfig);
+        let merged = {};
+
+        const runPartitionExtraction = async (fieldsToExtract, partition, passLabel) => {
+            const sections = this.getSectionsForPartition(sectionBundle, partition);
+            const snippets = this.buildPromptSnippets([], sections, maxHtmlChars);
+            return this.extractFieldsAcrossSnippets(
+                htmlData,
+                aiConfig,
+                cityConfig,
+                parserConfig,
+                fieldsToExtract,
+                snippets,
+                passLabel,
+                validationState,
+                {
+                    partitionLabel: partition,
+                    extractionTrace
+                }
+            );
+        };
 
         if (payloadMode === 'jsonld') {
-            const snippets = this.buildPromptSnippets([], sectionBundle.jsonLd ? [sectionBundle.jsonLd] : [], maxHtmlChars);
-            const merged = await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'jsonld', validationState);
-            if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
-                merged.__preValidatedFields = Array.from(validationState.validatedFields);
-            }
-            return merged;
-        }
-        if (payloadMode === 'meta') {
-            const snippets = this.buildPromptSnippets([], sectionBundle.metaPrimary ? [sectionBundle.metaPrimary] : [], maxHtmlChars);
-            const merged = await this.extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, promptFields, snippets, 'meta', validationState);
-            if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
-                merged.__preValidatedFields = Array.from(validationState.validatedFields);
-            }
-            return merged;
-        }
-        if (payloadMode === 'exhaustive') {
-            let merged = {};
+            const partial = await runPartitionExtraction(promptFields, 'jsonld', 'jsonld');
+            merged = this.mergeAiEventFields(merged, partial);
+        } else if (payloadMode === 'meta') {
+            const partial = await runPartitionExtraction(promptFields, 'meta', 'meta');
+            merged = this.mergeAiEventFields(merged, partial);
+        } else if (payloadMode === 'exhaustive') {
             const sharedSections = [sectionBundle.jsonLd, sectionBundle.metaFallback].filter(Boolean);
             const snippets = this.buildPromptSnippets(sharedSections, sectionBundle.content ? [sectionBundle.content] : [], maxHtmlChars);
             const fallbackSnippets = snippets.length > 0
@@ -1312,36 +1786,100 @@ class AiWebParser {
                     remainingField,
                     fallbackSnippets,
                     `exhaustive ${field}`,
-                    validationState
+                    validationState,
+                    {
+                        partitionLabel: 'mixed',
+                        extractionTrace
+                    }
                 );
                 merged = this.mergeAiEventFields(merged, partial);
             }
-            if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
-                merged.__preValidatedFields = Array.from(validationState.validatedFields);
+        } else {
+            const promptGroups = this.getBestModePromptGroups(sectionBundle);
+            for (const group of promptGroups) {
+                const remainingFields = this.getRemainingPromptFields(promptFields, merged);
+                if (remainingFields.length === 0) break;
+                const partial = await runPartitionExtraction(remainingFields, group.label, `best ${group.label}`);
+                merged = this.mergeAiEventFields(merged, partial);
             }
-            return merged;
         }
 
-        let merged = {};
-        const promptGroups = this.getBestModePromptGroups(sectionBundle);
-        for (const group of promptGroups) {
-            const remainingFields = this.getRemainingPromptFields(promptFields, merged);
-            if (remainingFields.length === 0) break;
-            const snippets = this.buildPromptSnippets([], group.sections, maxHtmlChars);
-            const partial = await this.extractFieldsAcrossSnippets(
-                htmlData,
-                aiConfig,
-                cityConfig,
+        const retryDecisions = [];
+        let retryPasses = 0;
+        let retryCycles = 0;
+        for (let cycle = 0; cycle < confidenceRuntime.maxRetryCycles; cycle++) {
+            const confidenceDiagnostics = this.buildConfidenceDiagnostics(
+                sectionBundle,
+                promptFields,
                 parserConfig,
-                remainingFields,
-                snippets,
-                `best ${group.label}`,
-                validationState
+                htmlData,
+                merged,
+                extractionTrace
             );
-            merged = this.mergeAiEventFields(merged, partial);
+            const retryPlan = this.planConfidenceRetries(confidenceDiagnostics);
+            if (retryPlan.length === 0) break;
+            const cycleMissingFields = this.getRemainingPromptFields(promptFields, merged).map(field => this.normalizePromptFieldName(field));
+            if (cycleMissingFields.length === 0) break;
+            retryCycles++;
+            for (const entry of retryPlan) {
+                if (retryPasses >= confidenceRuntime.maxRetryPasses) break;
+                const missingNow = this.getRemainingPromptFields(promptFields, merged)
+                    .map(field => this.normalizePromptFieldName(field));
+                const targetFields = entry.fields.filter(field => missingNow.includes(field));
+                if (targetFields.length === 0) continue;
+                const partial = await runPartitionExtraction(
+                    targetFields,
+                    entry.partition,
+                    `confidence retry ${cycle + 1} ${entry.partition}`
+                );
+                const beforeMissing = this.getRemainingPromptFields(promptFields, merged)
+                    .map(field => this.normalizePromptFieldName(field));
+                merged = this.mergeAiEventFields(merged, partial);
+                const afterMissing = this.getRemainingPromptFields(promptFields, merged)
+                    .map(field => this.normalizePromptFieldName(field));
+                const recoveredFields = beforeMissing.filter(field => !afterMissing.includes(field));
+                retryDecisions.push({
+                    cycle: cycle + 1,
+                    partition: entry.partition,
+                    targetedFields: targetFields,
+                    missingBefore: beforeMissing,
+                    missingAfter: afterMissing,
+                    recoveredFields
+                });
+                retryPasses++;
+            }
+            if (retryPasses >= confidenceRuntime.maxRetryPasses) break;
         }
+
+        const confidenceDiagnostics = this.buildConfidenceDiagnostics(
+            sectionBundle,
+            promptFields,
+            parserConfig,
+            htmlData,
+            merged,
+            extractionTrace
+        );
+        confidenceDiagnostics.retry = {
+            decisions: retryDecisions,
+            summary: {
+                cycles: retryCycles,
+                passes: retryPasses,
+                attempted: retryDecisions.length,
+                recoveredFields: Array.from(new Set(
+                    retryDecisions.reduce((all, entry) => all.concat(Array.isArray(entry.recoveredFields) ? entry.recoveredFields : []), [])
+                ))
+            },
+            limits: {
+                maxRetryCycles: confidenceRuntime.maxRetryCycles,
+                maxRetryPasses: confidenceRuntime.maxRetryPasses
+            }
+        };
+
         if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
             merged.__preValidatedFields = Array.from(validationState.validatedFields);
+        }
+        if (merged && typeof merged === 'object') {
+            merged.__confidenceDiagnostics = confidenceDiagnostics;
         }
         return merged;
     }
