@@ -37,6 +37,7 @@ class AiWebParser {
         this.eventSchemaPromptFieldsLoaded = false;
         this.cachedEventSchemaFieldSignalRegexMap = new Map();
         this.eventSchemaFieldSignalRegexMapLoaded = false;
+        this.invalidFieldSignalPatternWarnings = new Set();
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
@@ -1325,7 +1326,15 @@ class AiWebParser {
             if (!normalizedPattern) return;
             try {
                 compiledRegexes.push(new RegExp(normalizedPattern, 'i'));
-            } catch (_) {}
+            } catch (error) {
+                if (!this.invalidFieldSignalPatternWarnings.has(normalizedPattern)) {
+                    this.invalidFieldSignalPatternWarnings.add(normalizedPattern);
+                    console.warn('🤖 AI Web: Invalid EventSchema AI field signal regex pattern skipped', {
+                        pattern: normalizedPattern,
+                        error: error && error.message ? error.message : String(error || '')
+                    });
+                }
+            }
         };
 
         const configuredPatterns = this.getEventSchemaFieldSignalRegexes(normalizedField);

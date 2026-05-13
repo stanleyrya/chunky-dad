@@ -370,7 +370,7 @@ const AI_FIELD_SIGNAL_REGEXES = {
     cover: [
         '\\boffers?\\b',
         '\\bprice\\b',
-        '\\bprice\\s*currency\\b',
+        '\\bprice(?:_|\\s|-)?currency(?=\\W|$)',
         '\\blow\\s*price\\b',
         '\\bhigh\\s*price\\b',
         '\\bcover\\b',
