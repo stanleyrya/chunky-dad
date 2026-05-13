@@ -1142,11 +1142,11 @@ class AiWebParser {
                 ? schemaExpectations[field]
                 : null;
             const expected = this.normalizeConfidencePartitionList(
-                schemaRule && Array.isArray(schemaRule.expected) ? schemaRule.expected : ['content'],
+                schemaRule && Array.isArray(schemaRule.expected) ? schemaRule.expected : null,
                 ['content']
             );
             const strong = this.normalizeConfidencePartitionList(
-                schemaRule && Array.isArray(schemaRule.strong) ? schemaRule.strong : expected,
+                schemaRule && Array.isArray(schemaRule.strong) ? schemaRule.strong : null,
                 expected
             );
             defaults[field] = {
@@ -1344,8 +1344,13 @@ class AiWebParser {
         if (patternList.length > 0) {
             const regexes = patternList
                 .map(pattern => {
+                    if (pattern instanceof RegExp) {
+                        return pattern;
+                    }
                     try {
-                        return new RegExp(String(pattern || ''), 'i');
+                        const patternText = String(pattern || '').trim();
+                        if (!patternText) return null;
+                        return new RegExp(patternText, 'i');
                     } catch (_) {
                         return null;
                     }
