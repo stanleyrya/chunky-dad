@@ -5,30 +5,4 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dallas
 X-WR-TIMEZONE:America/Chicago
-BEGIN:VEVENT
-DTSTART:20260516T000000Z
-DTSTAMP:20260507T030545Z
-UID:7C2DBDE8-2298-4CF9-9989-B62DCCA075A8
-CREATED:20260507T023950Z
-DESCRIPTION:bar: Dallas Eagle\naddress: 525 South Riverfront Boulevard\, Da
- llas\, TX 75207\ntimezone: America/Chicago\nticketUrl: https://www.eventbri
- te.com/e/furball-dallas-underwear-gear-party-featuring-dj-alex-lo-tickets-1
- 987473652195\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fim
- ages%2F1182198950%2F1830349048683%2F1%2Foriginal.20260415-032954?crop=focal
- point&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.509&
- fp-y=0.145&s=acc21e89ed886e9e35c204752bd7a814\nwebsite: https://www.thedall
- aseagle.com\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: h
- ttps://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social
- /@dallaseagle\n_staticFields: [object Object]\ngmaps: https://www.google.co
- m/maps/search/?api=1&query=Dallas%20Eagle%2C%20525%20South%20Riverfront%20B
- oulevard%2C%20Dallas%2C%20TX%2075207\nkey: furball-dallas-underwear-gear-pa
- rty-featuring-dj-alex-lo|2026-05-16|dallas eagle
-LAST-MODIFIED:20260507T023950Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FURBALL Dallas Underwear + Gear Party featuring DJ Alex Lo
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
 END:VCALENDAR
