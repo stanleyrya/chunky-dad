@@ -4181,12 +4181,9 @@
         const baseEvents = [];
         const singleEvents = [];
         const overrides = [];
+        const pendingOverrides = [];
         const baseByUid = new Map();
         normalized.forEach(event => {
-          if (event.recurrenceId) {
-            overrides.push(event);
-            return;
-          }
           if (event.recurring && event.recurrence) {
             baseEvents.push(event);
             if (event.uid && !baseByUid.has(event.uid)) {
@@ -4194,7 +4191,18 @@
             }
             return;
           }
+          if (event.recurrenceId) {
+            pendingOverrides.push(event);
+            return;
+          }
           singleEvents.push(event);
+        });
+        pendingOverrides.forEach(override => {
+          if (override.uid && baseByUid.has(override.uid)) {
+            overrides.push(override);
+            return;
+          }
+          singleEvents.push(override);
         });
         const overridesByUidDateKey = new Map();
         overrides.forEach(override => {
