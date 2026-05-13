@@ -1205,6 +1205,17 @@ class AiWebParser {
         }
     }
 
+    normalizeConfidenceExpectationFieldMap(rawFields) {
+        const source = rawFields && typeof rawFields === 'object' ? rawFields : {};
+        const normalized = {};
+        Object.keys(source).forEach(fieldName => {
+            const normalizedField = this.normalizePromptFieldName(fieldName);
+            if (!normalizedField) return;
+            normalized[normalizedField] = source[fieldName];
+        });
+        return normalized;
+    }
+
     getAiConfidenceExpectations(parserConfig = {}, sourceUrl = '', promptFields = []) {
         const aiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
             ? parserConfig.ai
@@ -1220,6 +1231,7 @@ class AiWebParser {
         const parserDefaultsRaw = rootExpectations.fields && typeof rootExpectations.fields === 'object'
             ? rootExpectations.fields
             : {};
+        const parserDefaults = this.normalizeConfidenceExpectationFieldMap(parserDefaultsRaw);
         const urlPatternOverrides = Array.isArray(rootExpectations.urlPatterns)
             ? rootExpectations.urlPatterns
             : [];
@@ -1233,7 +1245,9 @@ class AiWebParser {
                 const patternLabel = String(entry.pattern || entry.regex || entry.contains || '').trim() || 'unknown-pattern';
                 return {
                     source: `url-pattern:${patternLabel}`,
-                    fields: entry.fields && typeof entry.fields === 'object' ? entry.fields : {}
+                    fields: this.normalizeConfidenceExpectationFieldMap(
+                        entry.fields && typeof entry.fields === 'object' ? entry.fields : {}
+                    )
                 };
             });
 
@@ -1243,8 +1257,8 @@ class AiWebParser {
                 strong: [],
                 applied: []
             };
-            const parserRuleRaw = Object.prototype.hasOwnProperty.call(parserDefaultsRaw, field)
-                ? parserDefaultsRaw[field]
+            const parserRuleRaw = Object.prototype.hasOwnProperty.call(parserDefaults, field)
+                ? parserDefaults[field]
                 : null;
             if (parserRuleRaw !== null) {
                 const parserRule = this.normalizeFieldExpectationRule(parserRuleRaw, current);

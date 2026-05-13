@@ -404,7 +404,7 @@ const scraperConfig = {
                 fields: {
                   cover: { expected: ["jsonld"], strong: ["jsonld"] },
                   image: { expected: ["jsonld"], strong: ["jsonld"] },
-                  ticketurl: { expected: ["jsonld"], strong: ["jsonld"] },
+                  ticketUrl: { expected: ["jsonld"], strong: ["jsonld"] },
                   location: { expected: ["meta"], strong: ["meta"] }
                 }
               }
