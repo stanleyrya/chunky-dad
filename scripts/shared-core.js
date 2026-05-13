@@ -449,6 +449,12 @@ class SharedCore {
         const parserExpectations = parserConfidence.expectations && typeof parserConfidence.expectations === 'object'
             ? parserConfidence.expectations
             : {};
+        const globalFields = globalExpectations.fields && typeof globalExpectations.fields === 'object'
+            ? globalExpectations.fields
+            : {};
+        const parserFields = parserExpectations.fields && typeof parserExpectations.fields === 'object'
+            ? parserExpectations.fields
+            : {};
 
         const globalUrlPatterns = Array.isArray(globalExpectations.urlPatterns) ? globalExpectations.urlPatterns : [];
         const parserUrlPatterns = Array.isArray(parserExpectations.urlPatterns) ? parserExpectations.urlPatterns : [];
@@ -457,6 +463,12 @@ class SharedCore {
             ...globalExpectations,
             ...parserExpectations
         };
+        if (Object.keys(globalFields).length > 0 || Object.keys(parserFields).length > 0) {
+            mergedExpectations.fields = {
+                ...globalFields,
+                ...parserFields
+            };
+        }
         if (globalUrlPatterns.length > 0 || parserUrlPatterns.length > 0) {
             mergedExpectations.urlPatterns = [...globalUrlPatterns, ...parserUrlPatterns];
         }
