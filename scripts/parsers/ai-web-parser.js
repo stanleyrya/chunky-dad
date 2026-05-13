@@ -1136,33 +1136,46 @@ class AiWebParser {
         const normalizedFields = Array.from(
             new Set((Array.isArray(promptFields) ? promptFields : []).map(field => this.normalizePromptFieldName(field)).filter(Boolean))
         );
+        const schemaExpectations = this.getEventSchemaFieldExpectations();
         normalizedFields.forEach(field => {
-            let expected = ['content'];
-            let strong = ['content'];
-            if (['title', 'description', 'bar', 'address', 'startdate', 'enddate', 'website', 'ticketurl', 'image', 'cover'].includes(field)) {
-                expected = ['jsonld', 'meta', 'content'];
-                strong = ['jsonld', 'meta'];
-            } else if (field === 'location') {
-                expected = ['meta', 'jsonld', 'content'];
-                strong = ['meta'];
-            } else if (field === 'city') {
-                expected = ['meta', 'content'];
-                strong = ['meta'];
-            } else if (field === 'recurrence') {
-                expected = ['content', 'jsonld'];
-                strong = ['content'];
-            }
+            const schemaRule = schemaExpectations && typeof schemaExpectations[field] === 'object'
+                ? schemaExpectations[field]
+                : null;
+            const expected = this.normalizeConfidencePartitionList(
+                schemaRule && Array.isArray(schemaRule.expected) ? schemaRule.expected : ['content'],
+                ['content']
+            );
+            const strong = this.normalizeConfidencePartitionList(
+                schemaRule && Array.isArray(schemaRule.strong) ? schemaRule.strong : expected,
+                expected
+            );
             defaults[field] = {
                 expected,
                 strong,
                 applied: [{
-                    source: 'global-defaults',
+                    source: schemaRule ? 'event-schema-defaults' : 'global-defaults',
                     expected: [...expected],
                     strong: [...strong]
                 }]
             };
         });
         return defaults;
+    }
+
+    getEventSchemaFieldExpectations() {
+        if (ImportedEventSchema && ImportedEventSchema.AI_CONFIDENCE_FIELD_EXPECTATIONS
+            && typeof ImportedEventSchema.AI_CONFIDENCE_FIELD_EXPECTATIONS === 'object') {
+            return ImportedEventSchema.AI_CONFIDENCE_FIELD_EXPECTATIONS;
+        }
+        return {};
+    }
+
+    getEventSchemaFieldSignalPatterns() {
+        if (ImportedEventSchema && ImportedEventSchema.AI_CONFIDENCE_FIELD_SIGNAL_PATTERNS
+            && typeof ImportedEventSchema.AI_CONFIDENCE_FIELD_SIGNAL_PATTERNS === 'object') {
+            return ImportedEventSchema.AI_CONFIDENCE_FIELD_SIGNAL_PATTERNS;
+        }
+        return {};
     }
 
     normalizeFieldExpectationRule(rawRule, currentRule = null) {
@@ -1324,36 +1337,25 @@ class AiWebParser {
     }
 
     getFieldSignalRegexes(normalizedField) {
-        switch (normalizedField) {
-            case 'title':
-                return [/"name"\s*:/i, /\b(?:og:title|twitter:title|event:name)\b/i, /\btitle\b/i];
-            case 'description':
-                return [/"description"\s*:/i, /\b(?:og:description|twitter:description|event:description)\b/i, /\bdescription\b/i];
-            case 'bar':
-                return [/"location"\s*:/i, /\b(?:venue|location|event:location)\b/i];
-            case 'address':
-                return [/"address"\s*:/i, /\b(?:streetaddress|addresslocality|geo\.placename|address)\b/i];
-            case 'location':
-                return [/\bgeo\.position\b/i, /\b(?:latitude|longitude)\b/i, /\b-?\d{1,3}\.\d+\s*,\s*-?\d{1,3}\.\d+\b/i];
-            case 'startdate':
-                return [/"startdate"\s*:/i, /\b(?:event:start_time|startdate|start time)\b/i];
-            case 'enddate':
-                return [/"enddate"\s*:/i, /\b(?:event:end_time|enddate|end time)\b/i];
-            case 'website':
-                return [/"url"\s*:/i, /\b(?:og:url|canonical|sameas|event:url)\b/i];
-            case 'ticketurl':
-                return [/"offers"\s*:/i, /\b(?:ticket|tickets|checkout|buy)\b/i];
-            case 'image':
-                return [/"image"\s*:/i, /\b(?:og:image|twitter:image|poster|src=|data-src=)\b/i];
-            case 'cover':
-                return [/\b(?:offers|pricecurrency|lowprice|highprice|price|cover|admission)\b/i];
-            case 'city':
-                return [/\b(?:city|addresslocality|geo\.placename)\b/i];
-            case 'recurrence':
-                return [/\b(?:rrule|freq=|byday|weekly|monthly)\b/i];
-            default:
-                return [new RegExp(`\\b${this.escapeRegex(normalizedField)}\\b`, 'i')];
+        const schemaPatterns = this.getEventSchemaFieldSignalPatterns();
+        const patternList = schemaPatterns && Array.isArray(schemaPatterns[normalizedField])
+            ? schemaPatterns[normalizedField]
+            : [];
+        if (patternList.length > 0) {
+            const regexes = patternList
+                .map(pattern => {
+                    try {
+                        return new RegExp(String(pattern || ''), 'i');
+                    } catch (_) {
+                        return null;
+                    }
+                })
+                .filter(Boolean);
+            if (regexes.length > 0) {
+                return regexes;
+            }
         }
+        return [new RegExp(`\\b${this.escapeRegex(normalizedField)}\\b`, 'i')];
     }
 
     detectFieldSignalInText(normalizedField, text) {
