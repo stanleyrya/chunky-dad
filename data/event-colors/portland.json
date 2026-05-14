@@ -6,8 +6,20 @@
     "faviconFg": "#ff5000"
   },
   {
+    "slug": "bearracuda-portland-boner-garage-3e1b185e",
+    "url": "https://bearracuda.com/events/portland-gear/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
     "slug": "bearracuda-portland-crotch-carnival-553c66fc",
     "url": "https://bearracuda.com/events/portlandfeb/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "bearracuda-portland-pride-saturday-17cdfbd9",
+    "url": "https://bearracuda.com/events/portland-pride-saturday/",
     "faviconBg": "#ff1901",
     "faviconFg": "#ff5000"
   },
@@ -36,8 +48,26 @@
     "faviconFg": "#2e2933"
   },
   {
+    "slug": "hot-take-portland-46ec04ba",
+    "url": "https://bearracuda.com/events/hottakepdx/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
     "slug": "treasure-trail-portland-1043b353",
     "url": "https://bearracuda.com/events/treasure-trailpdx/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "treasure-trail-portland-backcountry-33f45281",
+    "url": "https://bearracuda.com/events/treasure-trail-portland/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "treasure-trail-portland-pride-0c12f2cc",
+    "url": "https://bearracuda.com/events/portland-pridefriday/",
     "faviconBg": "#ff1901",
     "faviconFg": "#ff5000"
   },

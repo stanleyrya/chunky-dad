@@ -12,6 +12,12 @@
     "faviconFg": "#ff5000"
   },
   {
+    "slug": "bearracuda-sf-beefcake-pride-2d1a3a4d",
+    "url": "https://bearracuda.com/events/sf-pride/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
     "slug": "bearracuda-sf-presents-horse-meat-disco-151154b5",
     "url": "https://bearracuda.com/events/flsm-friday/",
     "faviconBg": "#ff1901",
@@ -52,5 +58,11 @@
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
     "faviconFg": "#abb2ba"
+  },
+  {
+    "slug": "treasure-trail-san-francisco-1a2ef0fe",
+    "url": "https://bearracuda.com/events/treasure-trail-sf/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
   }
 ]
