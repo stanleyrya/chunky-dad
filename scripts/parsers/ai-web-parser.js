@@ -455,7 +455,7 @@ class AiWebParser {
         const haystack = `${path} ${search}`;
 
         if (parsedSource && parsedUrl.hostname === parsedSource.hostname) score += 10;
-        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname)) score += 15;
+        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor|sickening)\./i.test(parsedUrl.hostname)) score += 15;
         if (/\/e\/[^/?#]+/i.test(path)) score += 95;
         if (/\/events?\/[^/?#]+/i.test(path)) score += 85;
         if (/\/(?:party|parties|show|shows|ticket|tickets|calendar)\/[^/?#]+/i.test(path)) score += 60;
