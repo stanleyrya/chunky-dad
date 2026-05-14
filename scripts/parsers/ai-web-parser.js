@@ -510,6 +510,7 @@ class AiWebParser {
 
         const invalidUrlPatterns = [
             '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
+            '/wp-content', '/terms', '/privacy',
             'javascript:', 'mailto:', 'tel:', 'sms:',
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
@@ -531,6 +532,20 @@ class AiWebParser {
             'cdn.evbstatic.com',
             'img.evbuc.com',
             'w3.org',
+            'dot.cards',
+            'gmpg.org',
+            'yoast.com',
+            'api.w.org',
+            'schema.org',
+            'cocomo.dev',
+            'wordpress.org',
+            'elementor.com',
+            'gravity.com',
+            'crocoblock.com',
+            'advancedcustomfields.com',
+            'greengeeks.com',
+            'trello.com',
+            'wordfence.com',
             // Email newsletter / marketing services — not event pages
             'constantcontact.com',
             'mailchimp.com',
@@ -551,6 +566,14 @@ class AiWebParser {
         const configBlockedHosts = Array.isArray(parserConfig.discoveryBlockedHosts) ? parserConfig.discoveryBlockedHosts : [];
         const configBlockedHost = configBlockedHosts.find(host => hostname === host.toLowerCase() || hostname.endsWith(`.${host.toLowerCase()}`));
         if (configBlockedHost) return { valid: false, reason: `config-blocked-host:${configBlockedHost}` };
+        const configBlockedPatterns = Array.isArray(parserConfig.discoveryBlockedPatterns) ? parserConfig.discoveryBlockedPatterns : [];
+        const configBlockedPattern = configBlockedPatterns.find(pattern => {
+            if (typeof pattern !== 'string') return false;
+            const normalizedPattern = pattern.trim().toLowerCase();
+            if (!normalizedPattern) return false;
+            return lowerUrl.includes(normalizedPattern);
+        });
+        if (configBlockedPattern) return { valid: false, reason: `config-blocked-pattern:${configBlockedPattern}` };
         const lowerSearch = String(parsedUrl.search || '').toLowerCase();
         if (/^\/(?:sharer(?:\.php)?|share(?:\/url)?|dialog\/send)$/i.test(lowerPath)) {
             return { valid: false, reason: 'share-endpoint-path' };
