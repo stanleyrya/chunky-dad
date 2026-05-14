@@ -403,6 +403,7 @@ const scraperConfig = {
       urlDiscoveryDepth: 1,
       maxAdditionalUrls: 15,
       discoveryOnly: false,  // Set true to map the URL tree without extracting events (useful for debugging discovery)
+      discoveryBlockedHosts: [],  // Hostnames to suppress during URL discovery (e.g. ["example.com"] blocks links back to the source site)
       dryRun: true,
       ai: {
         enabled: true,
