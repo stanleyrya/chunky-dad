@@ -535,7 +535,10 @@ class AiWebParser {
             'constantcontact.com',
             'mailchimp.com',
             'list-manage.com',
-            'campaign-archive.com'
+            'campaign-archive.com',
+            // External promotional / artist sites that are not event listing pages
+            'jphardyofficial.com',
+            'heymistr.com'
         ];
 
         const lowerUrl = url.toLowerCase();
