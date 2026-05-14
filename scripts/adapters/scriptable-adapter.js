@@ -3288,6 +3288,39 @@ class ScriptableAdapter {
             color: var(--text-primary);
         }
 
+        .discovery-output {
+            background: ${isDarkMode ? '#1e1e1e' : '#f8f8f8'};
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            color: var(--text-primary);
+        }
+
+        .disc-tab-btn {
+            padding: 4px 12px;
+            background: var(--background-light);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .disc-tab-btn.disc-tab-active {
+            background: var(--primary-color);
+            color: var(--text-inverse);
+            border-color: var(--primary-color);
+        }
+
         .log-line {
             display: block;
             padding: 2px 4px;
@@ -3545,7 +3578,7 @@ class ScriptableAdapter {
     </div>
     ` : ''}
     
-    ${allEvents.length === 0 ? `
+    ${allEvents.length === 0 && !results.parserResults?.some(r => r.discoveryOnly) ? `
     <div class="section">
         <div class="empty-state">
             <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
@@ -3554,9 +3587,27 @@ class ScriptableAdapter {
     </div>
     ` : ''}
 
+    ${this.generateDiscoverySection(results)}
+
     ${logSectionHtml}
     
     <script>
+        function copyDiscoveryText(btn) {
+            const encoded = btn.getAttribute('data-encoded') || '';
+            const text = decodeURIComponent(encoded);
+            copyTextWithFeedback(text, btn, null);
+        }
+
+        function switchDiscoveryTab(btn, tabId) {
+            const parser = btn.closest('.discovery-parser');
+            if (!parser) return;
+            parser.querySelectorAll('.disc-tab-btn').forEach(b => b.classList.remove('disc-tab-active'));
+            parser.querySelectorAll('.disc-tab-panel').forEach(t => { t.style.display = 'none'; });
+            btn.classList.add('disc-tab-active');
+            const panel = document.getElementById(tabId);
+            if (panel) panel.style.display = 'block';
+        }
+
         function toggleDisplayMode() {
             const toggle = document.getElementById('displayToggle');
             const eventCards = document.querySelectorAll('.event-card');
@@ -4207,6 +4258,62 @@ class ScriptableAdapter {
         `;
     }
     
+    // Generate HTML for URL discovery section (discoveryOnly mode results)
+    generateDiscoverySection(results) {
+        const parserResults = Array.isArray(results && results.parserResults) ? results.parserResults : [];
+        const discoveryParsers = parserResults.filter(r => r && r.discoveryOnly && r.mermaidGraph);
+        if (discoveryParsers.length === 0) return '';
+
+        const sections = discoveryParsers.map(r => {
+            const safeId = (r.name || 'parser').replace(/[^a-zA-Z0-9]/g, '_');
+            const nodeCount = (r.discoveryTree && r.discoveryTree.allNodes) ? r.discoveryTree.allNodes.length : 0;
+            const mermaidEncoded = encodeURIComponent(r.mermaidGraph || '');
+            const asciiEncoded = encodeURIComponent(r.asciiTree || '');
+            const urlListItems = (r.discoveryTree && Array.isArray(r.discoveryTree.allNodes))
+                ? r.discoveryTree.allNodes.map(u => `<li>${this.escapeHtml(u)}</li>`).join('')
+                : '';
+
+            return `
+        <div class="discovery-parser" style="margin-bottom:16px;">
+            <div style="font-weight:600; margin-bottom:8px;">${this.escapeHtml(r.name || 'Parser')} <span style="font-weight:400; opacity:0.7;">— ${nodeCount} URL(s) found</span></div>
+            <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+                <button onclick="switchDiscoveryTab(this,'mermaid_${safeId}')" class="disc-tab-btn disc-tab-active" data-tab="mermaid_${safeId}">Mermaid Graph</button>
+                <button onclick="switchDiscoveryTab(this,'ascii_${safeId}')" class="disc-tab-btn" data-tab="ascii_${safeId}">ASCII Tree</button>
+                <button onclick="switchDiscoveryTab(this,'urls_${safeId}')" class="disc-tab-btn" data-tab="urls_${safeId}">URL List</button>
+            </div>
+            <div id="mermaid_${safeId}" class="disc-tab-panel">
+                <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                    <button onclick="copyDiscoveryText(this)" class="log-copy-btn" data-encoded="${this.escapeHtml(mermaidEncoded)}">📋 Copy Mermaid</button>
+                    <a href="https://mermaid.live" target="_blank" style="padding:4px 10px; background:var(--background-light); border:1px solid var(--border-color); border-radius:6px; font-size:12px; color:var(--primary-color); text-decoration:none;">Open mermaid.live ↗</a>
+                </div>
+                <pre class="discovery-output">${this.escapeHtml(r.mermaidGraph || '')}</pre>
+            </div>
+            <div id="ascii_${safeId}" class="disc-tab-panel" style="display:none">
+                <div style="margin-bottom:6px;">
+                    <button onclick="copyDiscoveryText(this)" class="log-copy-btn" data-encoded="${this.escapeHtml(asciiEncoded)}">📋 Copy Tree</button>
+                </div>
+                <pre class="discovery-output">${this.escapeHtml(r.asciiTree || '')}</pre>
+            </div>
+            <div id="urls_${safeId}" class="disc-tab-panel" style="display:none">
+                <ul style="margin:0; padding-left:18px; font-size:12px; font-family:monospace;">${urlListItems}</ul>
+            </div>
+        </div>
+            `;
+        }).join('');
+
+        return `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🔍</span>
+            <span class="section-title">URL Discovery</span>
+            <span class="section-count">${discoveryParsers.length}</span>
+        </div>
+        <p style="font-size:12px; color:var(--text-secondary); margin:0 0 12px;">Discovery-only mode: links found up to configured depth. Paste the Mermaid graph at <a href="https://mermaid.live" target="_blank">mermaid.live</a> to visualize.</p>
+        ${sections}
+    </div>
+        `;
+    }
+
     // Generate HTML for individual event card
     generateEventCard(event) {
         const intentAction = this.normalizeIntentAction(event) || 'other';

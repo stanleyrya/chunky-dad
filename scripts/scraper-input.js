@@ -401,6 +401,7 @@ const scraperConfig = {
       alwaysBear: false,
       urlDiscoveryDepth: 1,
       maxAdditionalUrls: 15,
+      discoveryOnly: false,  // Set true to map the URL tree without extracting events (useful for debugging discovery)
       dryRun: true,
       ai: {
         enabled: true,

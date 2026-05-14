@@ -315,6 +315,40 @@ class SharedCore {
         const hasInlineInput = effectiveParserConfig.input && typeof effectiveParserConfig.input === 'object';
         // Use global processedUrls to prevent duplicate processing across all parsers
 
+        // Discovery-only mode: collect the URL tree without extracting events from leaf pages.
+        if (effectiveParserConfig.discoveryOnly === true) {
+            const depth = effectiveParserConfig.urlDiscoveryDepth || 1;
+            await displayAdapter.logInfo(`SYSTEM: ${effectiveParserConfig.name} → Discovery only mode (depth ${depth})`);
+            const discoveryProcessedUrls = new Set([...globalProcessedUrls]);
+            const discoveryTree = await this.discoverUrlTree(
+                effectiveParserConfig.urls || [],
+                parsers,
+                effectiveParserConfig,
+                httpAdapter,
+                displayAdapter,
+                discoveryProcessedUrls
+            );
+            const mermaidGraph = this.buildMermaidGraph(discoveryTree);
+            const asciiTree = this.buildAsciiTree(discoveryTree);
+            await displayAdapter.logInfo(`SYSTEM: Discovery complete: ${discoveryTree.allNodes.length} URL(s) found across ${discoveryTree.edges.length} link(s)`);
+            return {
+                name: effectiveParserConfig.name,
+                parserType: parserName,
+                urlCount,
+                totalEvents: 0,
+                rawBearEvents: 0,
+                bearEvents: 0,
+                duplicatesRemoved: 0,
+                durationMs: Date.now() - parserStartedAt,
+                events: [],
+                discoveryOnly: true,
+                discoveryTree,
+                mermaidGraph,
+                asciiTree,
+                config: effectiveParserConfig
+            };
+        }
+
         // Process main URLs
         for (let i = 0; i < (effectiveParserConfig.urls || []).length; i++) {
             const url = effectiveParserConfig.urls[i];
@@ -579,6 +613,111 @@ class SharedCore {
                 await displayAdapter.logError(`SYSTEM: Failed to process detail page ${url}: ${error.message}`);
             }
         }
+    }
+
+    // Discovery-only mode: traverse URL tree up to configured depth, collect links without extracting events.
+    // Returns { rootUrls, edges, allNodes } for graph rendering.
+    async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls) {
+        const maxDepth = parserConfig.urlDiscoveryDepth || 1;
+        const edges = []; // { from: string, to: string }
+        const allNodes = new Set(rootUrls);
+
+        // BFS queue: { url, depth, parent }
+        const queue = rootUrls.map(url => ({ url, depth: 0, parent: null }));
+
+        while (queue.length > 0) {
+            const { url, depth, parent } = queue.shift();
+
+            if (this.hasProcessedUrl(processedUrls, url)) continue;
+            this.markProcessedUrl(processedUrls, url);
+
+            if (parent !== null) {
+                edges.push({ from: parent, to: url });
+            }
+
+            // Don't fetch children beyond max depth
+            if (depth >= maxDepth) continue;
+
+            try {
+                const htmlData = await httpAdapter.fetchData(url);
+                const detectedParser = this.detectParserFromUrl(url) || 'generic';
+                const urlParser = parsers[detectedParser];
+                if (!urlParser) continue;
+
+                // Request link discovery but skip deep recursion — we manage depth ourselves
+                const discoveryConfig = { ...parserConfig, urlDiscoveryDepth: 1 };
+                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null));
+
+                const childLinks = parseResult.additionalLinks || [];
+                const deduped = this.deduplicateUrls(childLinks, processedUrls);
+                for (const childUrl of deduped) {
+                    allNodes.add(childUrl);
+                    queue.push({ url: childUrl, depth: depth + 1, parent: url });
+                }
+
+                await displayAdapter.logInfo(`SYSTEM: [Discovery] ${url} → ${deduped.length} links (depth ${depth + 1}/${maxDepth})`);
+            } catch (error) {
+                await displayAdapter.logError(`SYSTEM: [Discovery] Failed to fetch ${url}: ${error.message}`);
+            }
+        }
+
+        return { rootUrls, edges, allNodes: [...allNodes] };
+    }
+
+    // Build a Mermaid graph TD string from a URL tree returned by discoverUrlTree.
+    buildMermaidGraph(treeData) {
+        const { allNodes, edges } = treeData;
+        if (!allNodes || allNodes.length === 0) return 'graph LR\n    A["No URLs discovered"]';
+
+        const nodeIds = new Map();
+        allNodes.forEach((url, i) => nodeIds.set(url, `N${i}`));
+
+        const stripProto = url => String(url || '').replace(/^https?:\/\//, '');
+        const truncate = (s, max) => s.length > max ? s.substring(0, max - 1) + '…' : s;
+
+        const lines = ['graph LR'];
+        for (const url of allNodes) {
+            const id = nodeIds.get(url);
+            const label = truncate(stripProto(url), 70).replace(/"/g, "'");
+            lines.push(`    ${id}["${label}"]`);
+        }
+        for (const { from, to } of (edges || [])) {
+            const fromId = nodeIds.get(from);
+            const toId = nodeIds.get(to);
+            if (fromId && toId) lines.push(`    ${fromId} --> ${toId}`);
+        }
+        return lines.join('\n');
+    }
+
+    // Build an ASCII tree from a URL tree returned by discoverUrlTree.
+    buildAsciiTree(treeData) {
+        const { rootUrls, edges } = treeData;
+        if (!rootUrls || rootUrls.length === 0) return '(no URLs discovered)';
+
+        const children = new Map();
+        for (const { from, to } of (edges || [])) {
+            if (!children.has(from)) children.set(from, []);
+            children.get(from).push(to);
+        }
+
+        const stripProto = url => String(url || '').replace(/^https?:\/\//, '');
+        const lines = [];
+
+        const printNode = (url, prefix, isLast) => {
+            const connector = isLast ? '└── ' : '├── ';
+            lines.push(`${prefix}${connector}${stripProto(url)}`);
+            const kids = children.get(url) || [];
+            const newPrefix = prefix + (isLast ? '    ' : '│   ');
+            kids.forEach((kid, i) => printNode(kid, newPrefix, i === kids.length - 1));
+        };
+
+        rootUrls.forEach(root => {
+            lines.push(stripProto(root));
+            const kids = children.get(root) || [];
+            kids.forEach((kid, i) => printNode(kid, '', i === kids.length - 1));
+        });
+
+        return lines.join('\n');
     }
 
     // Generic URL deduplication utility
