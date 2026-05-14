@@ -127,6 +127,7 @@ const scraperConfig = {
       name: "Bearracuda Events",
       iconUrl: "https://www.google.com/s2/favicons?domain=bearracuda.com&sz=64",
       enabled: true,
+      parser: "ai-web",
       automation: {
         automationEnabled: true
       },
