@@ -137,6 +137,7 @@ const scraperConfig = {
       ],
       alwaysBear: true,
       urlDiscoveryDepth: 2,
+      discoveryBlockedPatterns: ["bearracuda.com/?p="],
       dryRun: false,
       keyTemplate: "bearracuda-${date}-${city}",
       fieldPriorities: {
@@ -404,6 +405,7 @@ const scraperConfig = {
       maxAdditionalUrls: 15,
       discoveryOnly: false,  // Set true to map the URL tree without extracting events (useful for debugging discovery)
       discoveryBlockedHosts: [],  // Hostnames to suppress during URL discovery (e.g. ["example.com"] blocks links back to the source site)
+      discoveryBlockedPatterns: [],  // Case-insensitive URL substrings to suppress during discovery (e.g. ["example.com/?p="])
       dryRun: true,
       ai: {
         enabled: true,
