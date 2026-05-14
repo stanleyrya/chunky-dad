@@ -196,7 +196,7 @@ class AiWebParser {
             const hrefCandidates = this.extractHrefCandidates(html);
             discoveryStats.hrefCandidates = hrefCandidates.length;
             for (const candidate of hrefCandidates) {
-                this.addAdditionalUrlCandidate(urls, candidate.url, sourceUrl, candidate.context, discoveryStats);
+                this.addAdditionalUrlCandidate(urls, candidate.url, sourceUrl, candidate.context, discoveryStats, parserConfig);
             }
 
             const configuredPatterns = parserConfig.urlPatterns;
@@ -214,7 +214,7 @@ class AiWebParser {
 
                 while ((match = regex.exec(html)) !== null && matchCount < maxMatches) {
                     const matchedUrl = match[1] || match[0];
-                    if (this.addAdditionalUrlCandidate(urls, matchedUrl, sourceUrl, match[0], discoveryStats)) {
+                    if (this.addAdditionalUrlCandidate(urls, matchedUrl, sourceUrl, match[0], discoveryStats, parserConfig)) {
                         matchCount++;
                     }
                 }
@@ -224,7 +224,7 @@ class AiWebParser {
             const rawUrlCandidates = this.extractUrlCandidatesFromRawHtml(html);
             discoveryStats.rawHtmlCandidates = rawUrlCandidates.length;
             for (const candidate of rawUrlCandidates) {
-                this.addAdditionalUrlCandidate(urls, candidate.url || candidate, sourceUrl, candidate.context || '', discoveryStats);
+                this.addAdditionalUrlCandidate(urls, candidate.url || candidate, sourceUrl, candidate.context || '', discoveryStats, parserConfig);
             }
 
             const jsonLdDiagnostics = {};
@@ -232,7 +232,7 @@ class AiWebParser {
             discoveryStats.jsonLdCandidates = jsonLdUrlCandidates.length;
             discoveryStats.jsonLdDiagnostics = jsonLdDiagnostics;
             for (const candidate of jsonLdUrlCandidates) {
-                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld', discoveryStats);
+                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, 'json-ld', discoveryStats, parserConfig);
             }
 
             // Extract from common JS-embedded data objects (window.__SERVER_DATA__, __INITIAL_STATE__, etc.)
@@ -241,7 +241,7 @@ class AiWebParser {
             discoveryStats.serverDataCandidates = serverDataUrls.length;
             discoveryStats.serverDataDiagnostics = serverDataDiagnostics;
             for (const candidate of serverDataUrls) {
-                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__server-data__', discoveryStats);
+                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__server-data__', discoveryStats, parserConfig);
             }
 
             // Extract from __NEXT_DATA__ (Next.js pages)
@@ -250,7 +250,7 @@ class AiWebParser {
             discoveryStats.nextDataCandidates = nextDataUrls.length;
             discoveryStats.nextDataDiagnostics = nextDataDiagnostics;
             for (const candidate of nextDataUrls) {
-                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__next-data__', discoveryStats);
+                this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__next-data__', discoveryStats, parserConfig);
             }
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
@@ -348,9 +348,9 @@ class AiWebParser {
         return candidates;
     }
 
-    addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '', discoveryStats = null) {
+    addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '', discoveryStats = null, parserConfig = {}) {
         const url = this.stripTrackingParams(this.normalizeUrl(rawUrl, sourceUrl));
-        const validation = this.validateEventUrl(url, sourceUrl);
+        const validation = this.validateEventUrl(url, sourceUrl, parserConfig);
         if (!validation.valid) {
             if (discoveryStats && typeof discoveryStats === 'object') {
                 this.recordRejectedCandidate(discoveryStats, validation.reason, rawUrl, url);
@@ -455,7 +455,7 @@ class AiWebParser {
         const haystack = `${path} ${search}`;
 
         if (parsedSource && parsedUrl.hostname === parsedSource.hostname) score += 10;
-        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor)\./i.test(parsedUrl.hostname)) score += 15;
+        if (/(eventbrite|ticketleap|redeyetickets|tickets?|dice|ra|residentadvisor|sickening)\./i.test(parsedUrl.hostname)) score += 15;
         if (/\/e\/[^/?#]+/i.test(path)) score += 95;
         if (/\/events?\/[^/?#]+/i.test(path)) score += 85;
         if (/\/(?:party|parties|show|shows|ticket|tickets|calendar)\/[^/?#]+/i.test(path)) score += 60;
@@ -474,7 +474,7 @@ class AiWebParser {
         return this.validateEventUrl(url, sourceUrl).valid;
     }
 
-    validateEventUrl(url, sourceUrl) {
+    validateEventUrl(url, sourceUrl, parserConfig = {}) {
         if (!url || typeof url !== 'string') return { valid: false, reason: 'missing-or-invalid-url' };
 
         const parsedUrl = this.parseUrlComponents(url);
@@ -547,6 +547,10 @@ class AiWebParser {
         const hostname = String(parsedUrl.hostname || '').toLowerCase();
         const blockedHost = blockedHosts.find(host => hostname === host || hostname.endsWith(`.${host}`));
         if (blockedHost) return { valid: false, reason: `blocked-pattern:${blockedHost}` };
+        // Per-config discovery blocked hosts (e.g. discoveryBlockedHosts: ["bearracuda.com"])
+        const configBlockedHosts = Array.isArray(parserConfig.discoveryBlockedHosts) ? parserConfig.discoveryBlockedHosts : [];
+        const configBlockedHost = configBlockedHosts.find(host => hostname === host.toLowerCase() || hostname.endsWith(`.${host.toLowerCase()}`));
+        if (configBlockedHost) return { valid: false, reason: `config-blocked-host:${configBlockedHost}` };
         const lowerSearch = String(parsedUrl.search || '').toLowerCase();
         if (/^\/(?:sharer(?:\.php)?|share(?:\/url)?|dialog\/send)$/i.test(lowerPath)) {
             return { valid: false, reason: 'share-endpoint-path' };
@@ -668,10 +672,23 @@ class AiWebParser {
             /\b(?:url|href|link|eventUrl|event_url|ticketUrl|ticket_url)\s*=\s*["']([^"']+)["']/gi
         ];
 
-        for (const pattern of patterns) {
-            for (const match of html.matchAll(pattern)) {
-                const candidate = match[1] || match[0];
-                if (candidate) candidates.add(candidate);
+        // Scan both the raw HTML and the entity-decoded version so that URLs embedded
+        // inside HTML-entity-encoded attributes (e.g. data-settings="...&quot;url&quot;:
+        // &quot;https://sickening.events/...&quot;...") are correctly extracted.
+        // In the raw HTML the &quot; sequences are not quote delimiters, so the pattern
+        // [^\s"'<>\\] overshoots and produces a garbage URL that fails validation.
+        // Decoding entities first restores the real " delimiters and lets the same
+        // patterns stop at the right place.
+        const htmlSources = [html];
+        const decodedHtml = this.decodeBasicEntities(html);
+        if (decodedHtml !== html) htmlSources.push(decodedHtml);
+
+        for (const source of htmlSources) {
+            for (const pattern of patterns) {
+                for (const match of source.matchAll(pattern)) {
+                    const candidate = match[1] || match[0];
+                    if (candidate) candidates.add(candidate);
+                }
             }
         }
 

@@ -326,7 +326,8 @@ class SharedCore {
                 effectiveParserConfig,
                 httpAdapter,
                 displayAdapter,
-                discoveryProcessedUrls
+                discoveryProcessedUrls,
+                configuredParserName || null
             );
             const mermaidGraph = this.buildMermaidGraph(discoveryTree);
             const asciiTree = this.buildAsciiTree(discoveryTree);
@@ -622,7 +623,7 @@ class SharedCore {
 
     // Discovery-only mode: traverse URL tree up to configured depth, collect links without extracting events.
     // Returns { rootUrls, edges, allNodes } for graph rendering.
-    async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls) {
+    async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName = null) {
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
         const edges = []; // { from: string, to: string }
         const allNodes = new Set(rootUrls);
@@ -648,7 +649,10 @@ class SharedCore {
 
             try {
                 const htmlData = await httpAdapter.fetchData(url);
-                const detectedParser = this.detectParserFromUrl(url) || 'generic';
+                // Use the forced parser when the config explicitly names one; otherwise
+                // fall back to URL-based auto-detection so that the right specialised
+                // parser is used for each discovered URL.
+                const detectedParser = forcedParserName || this.detectParserFromUrl(url) || 'generic';
                 const urlParser = parsers[detectedParser];
                 if (!urlParser) continue;
 
