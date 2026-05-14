@@ -85,6 +85,10 @@ class SharedCore {
                 parser: 'ticketleap'
             },
             {
+                pattern: /(?:sickening\.events|sickeningevents\.com|tickets\.sdevents\.com)/i,
+                parser: 'ai-web'
+            },
+            {
                 pattern: /bearracuda\.com/i,
                 parser: 'bearracuda'
             },

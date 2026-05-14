@@ -57,8 +57,8 @@ class BearraccudaParser {
 
                     events.push(event);
                     
-                    // If ticket URL is found and it's an eventbrite URL, add it as an additional link
-                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.urlDiscoveryDepth > 0) {
+                    // Follow detail-page ticket links so discovery/enrichment can reach the real ticket host.
+                    if (event.ticketUrl && /^https?:\/\//i.test(event.ticketUrl) && parserConfig.urlDiscoveryDepth > 0) {
                         additionalLinks.push(event.ticketUrl);
 
                     }
