@@ -6,32 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-phoenix
 X-WR-TIMEZONE:America/Phoenix
 BEGIN:VEVENT
-DTSTART:20260524T043000Z
-DTEND:20260524T090000Z
-DTSTAMP:20260507T003210Z
-UID:9165A83C-32B2-497F-A522-7C5ADF7B9A2A
-CREATED:20260507T001637Z
-DESCRIPTION:description: Music & Entertainment\n• DJ FREDDY KING OF PANTS (
- Seattle)\nbar: Kobalt\naddress: 3110 N. Central Ave\, Phoenix\, AZ\ntimezon
- e: America/Phoenix\nimage: https://bearracuda.com/wp-content/uploads/2026/0
- 4/cudaphdxfinal.jpg\nfacebook: https://www.facebook.com/events/919970720916
- 515\nticketUrl: https://sickening.events/e/bearracuda-phoenix-relaunch-part
- y\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda
- \n_staticFields: [object Object]\ngmaps: https://www.google.com/maps/search
- /?api=1&query=Kobalt%2C%203110%20N.%20Central%20Ave%2C%20Phoenix%2C%20AZ\nk
- ey: bearracuda-2026-05-24-phoenix
-LAST-MODIFIED:20260507T001637Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:PHOENIX
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20251005T040000Z
 DTEND:20251005T090000Z
-DTSTAMP:20260507T003210Z
+DTSTAMP:20260514T030536Z
 UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
 CREATED:20251001T000958Z
 DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
@@ -51,6 +28,33 @@ LOCATION:33.4833086\, -112.0754149
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260524T043000Z
+DTSTAMP:20260514T030536Z
+UID:9165A83C-32B2-497F-A522-7C5ADF7B9A2A
+CREATED:20260507T001637Z
+DESCRIPTION:description: Bearracuda PhoenixRELAUNCH PARTYSaturday\, May 23t
+ h\, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 
+ N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9\\:
+ 30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Joi
+ n 100s of guys dancing til late\, with sexy GoGos\, chunky visuals and YOU!
+ \nbar: Kobalt\naddress: 3110 N Central Ave\nticketUrl: https://www.sickenin
+ g.events/e/bearracuda-phoenix-relaunch-party/tickets\ninstagram: https://ww
+ w.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/
+ image/upload/q_auto\,f_auto/v1775591376/saas/logos/image_1775591369401_a4de
+ mr8jg.webp\ncover: EARLY BEAR\nshortName: Bear-rac-uda\nwebsite: https://be
+ arracuda.com/events/phoenix/\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=Kobalt%2C%203110%20N%20Central%20Ave\nkey: bearracuda-2026-05-24-
+ phoenix\ntimezone: America/Phoenix
+LAST-MODIFIED:20260514T012021Z
+LOCATION:3110 N Central Ave\, Phoenix\, AZ 85012\, United States
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Bearracuda Phoenix RELAUNCH Party!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

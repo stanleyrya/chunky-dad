@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T070000Z
-DTSTAMP:20251009T214746Z
+DTSTAMP:20260514T030537Z
 UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
 CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
@@ -25,6 +25,29 @@ LAST-MODIFIED:20250830T003601Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260905T020000Z
+DTEND:20260905T070000Z
+DTSTAMP:20260514T030537Z
+UID:74648B34-07A1-4BD2-8E78-D67B991A920E
+CREATED:20260514T005857Z
+DESCRIPTION:description: Music & Entertainment\n• DJ MATEO SEGADE\n• KELLY 
+ (Shoes) LIVE!\nbar: Joy Theater\naddress: 1200 Canal Street\, New Orleans\,
+  LA\ntimezone: America/Chicago\nimage: https://bearracuda.com/wp-content/up
+ loads/2026/03/webnola-2.jpg\nfacebook: https://www.facebook.com/events/8396
+ 99329141079\nticketUrl: https://www.ticketmaster.com/event/1B006454A32CE162
+ \nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\
+ nwebsite: https://bearracuda.com/events/decadence/\ngmaps: https://www.goog
+ le.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20Street%2C
+ %20New%20Orleans%2C%20LA\nkey: bearracuda-2026-09-05-nola
+LAST-MODIFIED:20260514T005857Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:New Orleans⚜️
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

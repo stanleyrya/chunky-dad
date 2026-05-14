@@ -27,7 +27,7 @@ BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20251002T170000
 DTEND;TZID=America/Los_Angeles:20251002T210000
 RRULE:FREQ=WEEKLY
-DTSTAMP:20260514T003742Z
+DTSTAMP:20260514T030537Z
 UID:dkep613fqcsi8tlh6bfsp12h50@google.com
 CREATED:20250930T210125Z
 DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
@@ -40,68 +40,48 @@ SUMMARY:Bear Happy Hour
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260704T013000Z
-DTEND:20260704T060000Z
-DTSTAMP:20260514T003742Z
-UID:1FB109E7-0355-4D65-AB9C-85F56D1E2502
-CREATED:20260512T171306Z
-DESCRIPTION:description: MEGAWOOF AMERICA RETURNS to SAN FRANCISCO\nbar: Th
- e Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 94103\ninstagram: 
- https://www.instagram.com/megawoof_america\ncover: $11.58-$22.10\nshortName
- : MEGA-WOOF\n_aiPrompts\\: [object Object]\,[object Object]\,[object Object
- ]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_am
- erica\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stud%2C
- %201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103\nkey: megawo
- of-america-san-francisco|2026-07-04|the stud
-LAST-MODIFIED:20260512T175533Z
-LOCATION:37.7761825\,-122.4083567
-SEQUENCE:0
+DTSTART:20250927T040000Z
+DTEND:20250927T100000Z
+DTSTAMP:20260514T030537Z
+UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
+CREATED:20250817T231656Z
+DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
+ isco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningha
+ m\nbar: The Public Works SF\naddress: 161 Erie Street\, San Francisco\, CA 
+ 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/fl
+ sm-friday/\ncover: $57.79 - $99.99 (as of 9/20)\nimage: https://bearracuda.
+ com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.
+ com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearra
+ cuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagr
+ am: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/map
+ s/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nke
+ y: bearracuda-2025-09-27-sf
+LAST-MODIFIED:20250920T210918Z
+LOCATION:37.7689137\, -122.4192514
+SEQUENCE:2
 STATUS:CONFIRMED
-SUMMARY:MEGAWOOF AMERICA SAN FRANCISCO
+SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260627T040000Z
-DTEND:20260627T100000Z
-DTSTAMP:20260514T003742Z
-UID:77CEB24A-C15A-4D66-82A3-E51D9C5804D4
-CREATED:20260123T030753Z
-DESCRIPTION:description: Music & Entertainment\n• TONY MORAN\n• DJ Mateo Se
- gade (Solid Pink Disco)\nbar: Public Works\naddress: 161 Erie St\, San Fran
- cisco\, CA\ntimezone: America/Los_Angeles\nimage: https://bearracuda.com/wp
- -content/uploads/2025/12/cuda-sf_pride_2026-revised-web.jpg\nfacebook: http
- s://www.facebook.com/events/4158014157743645\nticketUrl: https://sickening.
- events/e/bearracuda-sf-pride-2026-beefcakes\nshortName: Bear-rac-uda\ninsta
- gram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/m
- aps/search/?api=1&query=Public%20Works%2C%20161%20Erie%20St%2C%20San%20Fran
- cisco%2C%20CA\nkey: bearracuda-2026-06-27-sf
-LAST-MODIFIED:20260507T001633Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:SF⛓️ BEEFCAKE PRIDE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260516T050000Z
 DTEND:20260516T090000Z
-DTSTAMP:20260514T003742Z
+DTSTAMP:20260514T030537Z
 UID:BBE7F872-30A1-40EC-AB3C-BCDAF9342658
 CREATED:20260510T025246Z
 DESCRIPTION:description: The Occult Leather Party Returns to The Stud Frida
  y May 15. Are you ready to live deliciously?\nbar: The Stud\naddress: 1123 
- Folsom Street\, San Francisco\, CA 94103\nimage: https://img.evbuc.com/http
- s%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183146702%2F2198683436473%2F1%2Forigina
- l.20260427-173849?crop=focalpoint&fit=crop&w=480&auto=format%2Ccompress&q=7
- 5&sharp=10&fp-x=0.5&fp-y=0.5&s=e694d3047288092ed0794d8b588d5139\ncover: $10
- .38-$17.85\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20St
- ud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103\nkey: b
- eefwitch|2026-05-16|the stud\nticketUrl: https://www.eventbrite.com/e/beefw
- itch-tickets-1988340517011\nshortName: BEEFWITCH
-LAST-MODIFIED:20260511T205849Z
+ Folsom Street\, San Francisco\, CA 94103\nticketUrl: https://www.eventbrite
+ .com/e/beefwitch-tickets-1988340517011\ninstagram: https://www.instagram.co
+ m/thebeefwitch\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2F
+ images%2F1183146702%2F2198683436473%2F1%2Foriginal.20260427-173849?crop=foc
+ alpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0
+ .5&s=d4ebc964c2b00b6625c9a810da2199de\ncover: $10.38-$17.85\nshortName: BEE
+ FWITCH\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stud%2
+ C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103\nkey: beefw
+ itch|2026-05-16|the stud
+LAST-MODIFIED:20260514T004503Z
 LOCATION:37.7761825\,-122.4083567
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -111,9 +91,37 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260704T043000Z
+DTEND:20260704T090000Z
+DTSTAMP:20260514T030537Z
+UID:1FB109E7-0355-4D65-AB9C-85F56D1E2502
+CREATED:20260512T171306Z
+DESCRIPTION:description: MEGAWOOF AMERICA RETURNS to SAN FRANCISCO\nbar: Th
+ e Stud\naddress: 1123 Folsom Street\, San Francisco\, CA 94103\nticketUrl: 
+ https://www.eventbrite.com/e/megawoof-america-san-francisco-tickets-1988522
+ 943654\ninstagram: https://www.instagram.com/megawoof_america\nimage: https
+ ://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1184030413%2F185013
+ 722403%2F1%2Foriginal.20260507-154720?crop=focalpoint&fit=crop&w=940&auto=f
+ ormat%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=69d71feb01b7e2d1a442a2d0
+ 27def793\ncover: $11.58-$22.1\nshortName: MEGA-WOOF\n_aiPrompts\\: [object 
+ Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object Object]
+ \nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.co
+ m/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%
+ 20Francisco%2C%20CA%2094103\nkey: megawoof-america-san-francisco|2026-07-04
+ |the stud
+LAST-MODIFIED:20260514T005406Z
+LOCATION:37.7761825\,-122.4083567
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA SAN FRANCISCO
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20250928T050000Z
 DTEND:20250928T110000Z
-DTSTAMP:20260514T003742Z
+DTSTAMP:20260514T030537Z
 UID:9D1A1197-0811-4645-ABAE-ECF5464CC76F
 CREATED:20250901T054018Z
 DESCRIPTION:description: CHUNK SF presents BEARS IN SPACE (LA/CDMX) 5 DJS /
@@ -139,34 +147,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250927T040000Z
-DTEND:20250927T100000Z
-DTSTAMP:20260514T003742Z
-UID:5E26BD3A-6828-47B9-9E16-D6D7D4970A79
-CREATED:20250817T231656Z
-DESCRIPTION:description: Music & Entertainment\n• Main Floor - Horse Meat D
- isco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningha
- m\nbar: The Public Works SF\naddress: 161 Erie Street\, San Francisco\, CA 
- 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/fl
- sm-friday/\ncover: $57.79 - $99.99 (as of 9/20)\nimage: https://bearracuda.
- com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.
- com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearra
- cuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagr
- am: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/map
- s/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nke
- y: bearracuda-2025-09-27-sf
-LAST-MODIFIED:20250920T210918Z
-LOCATION:37.7689137\, -122.4192514
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:Bearracuda SF presents: HORSE MEAT DISCO
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260329T040000Z
 DTEND:20260329T090000Z
-DTSTAMP:20260514T003742Z
+DTSTAMP:20260514T030537Z
 UID:9D681FB7-DEDE-43CA-82D9-23985C241DAD
 CREATED:20260123T030752Z
 DESCRIPTION:description: Photos & Decor by Dusti Cunningham\nbar: THE STUD\
@@ -188,59 +171,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260118T060000Z
-DTEND:20260118T120000Z
-DTSTAMP:20260514T003742Z
-UID:7F66ECD5-BDAB-4CA8-BBC0-AAC031F6E4DB
-CREATED:20260117T205137Z
-DESCRIPTION:description: CHUNK SF celebrates MLK JR Weekend  - Atlanta LEGE
- ND Vicki Powell from DEEP SOUTH DJ Collective. Resident DJs MR PICKLES & DR
-  TIME & BEN FONIK. Cavalcade of HOT GOGO BEARS - 2 rooms f8 NIGHTCLUB 10-4a
- m\nbar: San Francisco\naddress: 1192 Folsom St\, San Francisco\, CA 94103\,
-  USA\ntimezone: America/Los_Angeles\nurl: https://www.chunk-party.com/event
- -details/chunk-san-francisco-saturday-january-17th\nticketUrl: https://www.
- chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th\nco
- ver: $20.50 - $41.00\nimage: https://static.wixstatic.com/media/42b6cb_8466
- 22553967483cb81ea3b1a938bc04~mv2.jpg/v1/fill/w_809\,h_1012\,al_c\,q_85/42b6
- cb_846622553967483cb81ea3b1a938bc04~mv2.jpg\nshortName: CHUNK\ninstagram: h
- ttps://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=37.7
- 7526599999999\,-122.4100374\nkey: chunk-san-francisco-saturday-january-17th
- |2026-01-18|san francisco|chunk
-LAST-MODIFIED:20260117T205137Z
-LOCATION:37.77526599999999\, -122.4100374
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CHUNK San Francisco - Saturday January 17th
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260614T040000Z
-DTEND:20260614T090000Z
-DTSTAMP:20260514T003742Z
-UID:C0CE53B6-54E8-4E7E-AD3D-95DF514E0382
-CREATED:20260507T001632Z
-DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
- am\nbar: The Stud\ntimezone: America/Los_Angeles\nimage: https://bearracuda
- .com/wp-content/uploads/2026/05/11x17-3.png\nfacebook: https://www.facebook
- .com/events/1493031212472079\nticketUrl: https://sickening.events/e/treasur
- esf\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracu
- da\n_staticFields: [object Object]\ngmaps: https://www.google.com/maps/sear
- ch/?api=1&query=The%20Stud%2C%20san%20francisco\nkey: bearracuda-2026-06-14
- -sf
-LAST-MODIFIED:20260507T001632Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Treasure Trail SF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260503T050000Z
 DTEND:20260503T103000Z
-DTSTAMP:20260514T003742Z
+DTSTAMP:20260514T030537Z
 UID:56CFF5FC-B1E1-4512-8FBC-EDBD2064A2E6
 CREATED:20260204T221331Z
 DESCRIPTION:description: New Orleans DADDY Father Figure joins us for CHUNK
@@ -265,9 +198,62 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260614T040000Z
+DTEND:20260614T090000Z
+DTSTAMP:20260514T030537Z
+UID:C0CE53B6-54E8-4E7E-AD3D-95DF514E0382
+CREATED:20260507T001632Z
+DESCRIPTION:description: Saturday\, June 13th\, 2025 Doors at 9pm\, Party t
+ il 2amClothes Check encouraged1123 FOLSOMSteamy Go-Go&rsquo\;s\, Heavy Crui
+ singHard Sounds by Paul Goodyear Hosted byJP Hardy➲➲https\\://www.jphardyof
+ ficial.comSPRING has sprung and we are ready to strip down! Grab a wristban
+ d when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband
+  BOTTOM White Wristband SIDE You can choose one when you purchase tix and a
+ re free to change your mind (or go without a wristband) when you arrive.\nb
+ ar: The Stud\naddress: 1123 Folsom Street\nticketUrl: https://www.sickening
+ .events/e/treasuresf/tickets\ninstagram: https://www.instagram.com/bearracu
+ da\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto\,f_a
+ uto/v1777842694/saas/logos/image_1777842674799_zsjr6b8zx.webp\ncover: 15.00
+ \nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/treasure-
+ trail-sf/\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stu
+ d%2C%201123%20Folsom%20Street\nkey: bearracuda-2026-06-14-sf\ntimezone: Ame
+ rica/Los_Angeles
+LAST-MODIFIED:20260514T012023Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Treasure Trail: San Francisco
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260627T040000Z
+DTEND:20260627T100000Z
+DTSTAMP:20260514T030537Z
+UID:77CEB24A-C15A-4D66-82A3-E51D9C5804D4
+CREATED:20260123T030753Z
+DESCRIPTION:description: Bearracuda SF Pride! Friday\, June 26th\, 2026 wit
+ h TONY MORANBEEFCAKE\nbar: Public Works\naddress: 161 Erie Street\nticketUr
+ l: https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/ticket
+ s\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.clou
+ dinary.com/eventservice/image/upload/q_auto\,f_auto/v1776730474/saas/logos/
+ image_1776730463946_w2htw6xrh.webp\ncover: General Admission $40.00-$50.00\
+ nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/sf-pride/\
+ ngmaps: https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%2
+ 0161%20Erie%20Street\nkey: bearracuda-2026-06-27-sf\ntimezone: America/Los_
+ Angeles
+LAST-MODIFIED:20260514T012023Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda SF: BEEFCAKE Pride
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20251019T040000Z
 DTEND:20251019T090000Z
-DTSTAMP:20260514T003742Z
+DTSTAMP:20260514T030537Z
 UID:3F9230E0-3F04-4F12-98C1-311ACA95E3D8
 CREATED:20250930T014036Z
 DESCRIPTION:description: The Occult Underwear Party returns to SF for Bearr
@@ -287,6 +273,34 @@ LOCATION:37.7761825\, -122.4083567
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEEFWITCH
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260118T060000Z
+DTEND:20260118T120000Z
+DTSTAMP:20260514T030537Z
+UID:7F66ECD5-BDAB-4CA8-BBC0-AAC031F6E4DB
+CREATED:20260117T205137Z
+DESCRIPTION:description: CHUNK SF celebrates MLK JR Weekend  - Atlanta LEGE
+ ND Vicki Powell from DEEP SOUTH DJ Collective. Resident DJs MR PICKLES & DR
+  TIME & BEN FONIK. Cavalcade of HOT GOGO BEARS - 2 rooms f8 NIGHTCLUB 10-4a
+ m\nbar: San Francisco\naddress: 1192 Folsom St\, San Francisco\, CA 94103\,
+  USA\ntimezone: America/Los_Angeles\nurl: https://www.chunk-party.com/event
+ -details/chunk-san-francisco-saturday-january-17th\nticketUrl: https://www.
+ chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th\nco
+ ver: $20.50 - $41.00\nimage: https://static.wixstatic.com/media/42b6cb_8466
+ 22553967483cb81ea3b1a938bc04~mv2.jpg/v1/fill/w_809\,h_1012\,al_c\,q_85/42b6
+ cb_846622553967483cb81ea3b1a938bc04~mv2.jpg\nshortName: CHUNK\ninstagram: h
+ ttps://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=37.7
+ 7526599999999\,-122.4100374\nkey: chunk-san-francisco-saturday-january-17th
+ |2026-01-18|san francisco|chunk
+LAST-MODIFIED:20260117T205137Z
+LOCATION:37.77526599999999\, -122.4100374
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CHUNK San Francisco - Saturday January 17th
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
