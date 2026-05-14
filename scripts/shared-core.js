@@ -615,6 +615,11 @@ class SharedCore {
         }
     }
 
+    // Strip protocol prefix from a URL for compact display labels.
+    stripUrlProtocol(url) {
+        return String(url || '').replace(/^https?:\/\//, '');
+    }
+
     // Discovery-only mode: traverse URL tree up to configured depth, collect links without extracting events.
     // Returns { rootUrls, edges, allNodes } for graph rendering.
     async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls) {
@@ -623,6 +628,9 @@ class SharedCore {
         const allNodes = new Set(rootUrls);
 
         // BFS queue: { url, depth, parent }
+        // depth=0 are root URLs; links discovered from them are depth=1, etc.
+        // We fetch a node only when depth < maxDepth so that the final depth
+        // of nodes (depth === maxDepth) are recorded in the tree but not crawled.
         const queue = rootUrls.map(url => ({ url, depth: 0, parent: null }));
 
         while (queue.length > 0) {
@@ -635,7 +643,7 @@ class SharedCore {
                 edges.push({ from: parent, to: url });
             }
 
-            // Don't fetch children beyond max depth
+            // Leaf nodes at maxDepth are recorded but not fetched for further links
             if (depth >= maxDepth) continue;
 
             try {
@@ -664,7 +672,7 @@ class SharedCore {
         return { rootUrls, edges, allNodes: [...allNodes] };
     }
 
-    // Build a Mermaid graph TD string from a URL tree returned by discoverUrlTree.
+    // Build a Mermaid graph LR string from a URL tree returned by discoverUrlTree.
     buildMermaidGraph(treeData) {
         const { allNodes, edges } = treeData;
         if (!allNodes || allNodes.length === 0) return 'graph LR\n    A["No URLs discovered"]';
@@ -672,13 +680,12 @@ class SharedCore {
         const nodeIds = new Map();
         allNodes.forEach((url, i) => nodeIds.set(url, `N${i}`));
 
-        const stripProto = url => String(url || '').replace(/^https?:\/\//, '');
         const truncate = (s, max) => s.length > max ? s.substring(0, max - 1) + '…' : s;
 
         const lines = ['graph LR'];
         for (const url of allNodes) {
             const id = nodeIds.get(url);
-            const label = truncate(stripProto(url), 70).replace(/"/g, "'");
+            const label = truncate(this.stripUrlProtocol(url), 70).replace(/"/g, "'");
             lines.push(`    ${id}["${label}"]`);
         }
         for (const { from, to } of (edges || [])) {
@@ -700,19 +707,18 @@ class SharedCore {
             children.get(from).push(to);
         }
 
-        const stripProto = url => String(url || '').replace(/^https?:\/\//, '');
         const lines = [];
 
         const printNode = (url, prefix, isLast) => {
             const connector = isLast ? '└── ' : '├── ';
-            lines.push(`${prefix}${connector}${stripProto(url)}`);
+            lines.push(`${prefix}${connector}${this.stripUrlProtocol(url)}`);
             const kids = children.get(url) || [];
             const newPrefix = prefix + (isLast ? '    ' : '│   ');
             kids.forEach((kid, i) => printNode(kid, newPrefix, i === kids.length - 1));
         };
 
         rootUrls.forEach(root => {
-            lines.push(stripProto(root));
+            lines.push(this.stripUrlProtocol(root));
             const kids = children.get(root) || [];
             kids.forEach((kid, i) => printNode(kid, '', i === kids.length - 1));
         });

@@ -3594,7 +3594,14 @@ class ScriptableAdapter {
     <script>
         function copyDiscoveryText(btn) {
             const encoded = btn.getAttribute('data-encoded') || '';
-            const text = decodeURIComponent(encoded);
+            let text = '';
+            try {
+                text = decodeURIComponent(encoded);
+            } catch (e) {
+                console.error('copyDiscoveryText: failed to decode data', e);
+                alert('Could not decode graph data for copying.');
+                return;
+            }
             copyTextWithFeedback(text, btn, null);
         }
 
@@ -4264,8 +4271,9 @@ class ScriptableAdapter {
         const discoveryParsers = parserResults.filter(r => r && r.discoveryOnly && r.mermaidGraph);
         if (discoveryParsers.length === 0) return '';
 
-        const sections = discoveryParsers.map(r => {
-            const safeId = (r.name || 'parser').replace(/[^a-zA-Z0-9]/g, '_');
+        const sections = discoveryParsers.map((r, index) => {
+            // Include index to guarantee unique IDs even when multiple parsers share a name
+            const safeId = `${(r.name || 'parser').replace(/[^a-zA-Z0-9]/g, '_')}_${index}`;
             const nodeCount = (r.discoveryTree && r.discoveryTree.allNodes) ? r.discoveryTree.allNodes.length : 0;
             const mermaidEncoded = encodeURIComponent(r.mermaidGraph || '');
             const asciiEncoded = encodeURIComponent(r.asciiTree || '');

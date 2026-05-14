@@ -496,10 +496,13 @@ class AiWebParser {
         const staticAssetPathHints = ['/touch_icons/', '/images/', '/image/', '/img/', '/assets/', '/static/'];
         if (staticAssetPathHints.some(segment => lowerPath.includes(segment))) return { valid: false, reason: 'static-asset-path' };
 
-        // WordPress infrastructure paths that are not event pages (feeds, REST API, XML-RPC, sitemap)
-        if (/^\/(?:feed|comments\/feed|wp-json|wp-sitemap(?:\.xml)?|xmlrpc\.php)(?:\/|$)/i.test(lowerPath)) {
-            return { valid: false, reason: 'wordpress-infrastructure' };
-        }
+        // WordPress infrastructure paths — not event pages (feeds, REST API, XML-RPC, sitemaps)
+        const wordpressInfraPaths = ['/feed', '/comments/feed', '/wp-json', '/wp-sitemap', '/wp-sitemap.xml', '/xmlrpc.php'];
+        const isWordPressInfra = wordpressInfraPaths.some(p => {
+            const lp = p.toLowerCase();
+            return lowerPath === lp || lowerPath.startsWith(lp + '/');
+        });
+        if (isWordPressInfra) return { valid: false, reason: 'wordpress-infrastructure' };
         // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages
         if (/\{[^}]+\}/.test(url)) {
             return { valid: false, reason: 'template-url' };
