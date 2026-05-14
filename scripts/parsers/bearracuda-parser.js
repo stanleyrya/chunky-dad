@@ -57,14 +57,10 @@ class BearraccudaParser {
 
                     events.push(event);
                     
-                    // If a ticket URL is found from a known ticket provider, follow it as an additional link
-                    // so that ai-web-parser can extract richer event data (e.g. cover price, descriptions).
-                    // Exclude social-media and generic promotional links.
-                    if (event.ticketUrl && parserConfig.urlDiscoveryDepth > 0) {
-                        const socialDomains = ['facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com'];
-                        if (!socialDomains.some(d => event.ticketUrl.includes(d))) {
-                            additionalLinks.push(event.ticketUrl);
-                        }
+                    // If ticket URL is found and it's an eventbrite URL, add it as an additional link
+                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.urlDiscoveryDepth > 0) {
+                        additionalLinks.push(event.ticketUrl);
+
                     }
                 } else {
 
@@ -732,36 +728,26 @@ class BearraccudaParser {
 
     // Extract ALL buttons using consistent elementor structure - future-proof for any ticket provider
     extractAllButtons(html, sections) {
-        // Find elementor buttons regardless of whether href comes before or after class.
-        // Run two passes: class-first and href-first attribute orderings.
-        const processButton = (url, buttonHtml) => {
-            if (!url) return;
-            const invalidPaths = ['/admin', '/login', '/wp-admin', '/wp-login', '#', 'javascript:', 'mailto:'];
-            if (invalidPaths.some(inv => url.includes(inv))) return;
-            const textMatch = /<span[^>]*elementor-button-text[^>]*>([^<]+)<\/span>/i.exec(buttonHtml);
-            const text = (textMatch ? textMatch[1] : '').trim().toLowerCase();
+        // Find all elementor buttons and categorize by text content
+        const buttonPattern = /<a[^>]*class="[^"]*elementor-button[^"]*"[^>]*href="([^"]+)"[^>]*>[\s\S]*?<span[^>]*elementor-button-text[^>]*>([^<]+)<\/span>[\s\S]*?<\/a>/gi;
+        let match;
+        
+        while ((match = buttonPattern.exec(html)) !== null) {
+            const url = match[1];
+            const text = match[2].trim().toLowerCase();
+            
             // Categorize based on button text (flexible for future providers)
             if (text.includes('rsvp')) {
                 sections.links.facebook = url;
             } else if (text.includes('ticket') || text.includes('buy') || text.includes('purchase')) {
                 sections.links.tickets = url;
+                
                 // Also categorize by URL domain for specific tracking
                 if (url.includes('eventbrite.com')) {
                     sections.links.eventbrite = url;
                 }
+                // Future: could add ticketmaster.com, stubhub.com, etc.
             }
-        };
-
-        let match;
-        // Pattern 1: class attribute appears before href attribute
-        const classFirstPattern = /<a[^>]*class="[^"]*elementor-button[^"]*"[^>]*href="([^"]+)"[^>]*>[\s\S]*?<\/a>/gi;
-        while ((match = classFirstPattern.exec(html)) !== null) {
-            processButton(match[1], match[0]);
-        }
-        // Pattern 2: href attribute appears before class attribute
-        const hrefFirstPattern = /<a[^>]*href="([^"]+)"[^>]*class="[^"]*elementor-button[^"]*"[^>]*>[\s\S]*?<\/a>/gi;
-        while ((match = hrefFirstPattern.exec(html)) !== null) {
-            processButton(match[1], match[0]);
         }
     }
 
