@@ -354,8 +354,9 @@ const AI_PROMPT_FIELDS = [
     { param: 'venue',   desc: 'Venue or bar name exactly as stated. Do not infer using address or coordinates.' },
     { param: 'addr',    desc: 'Street address exactly as shown. Do not infer using coordinates, bar/venue name, or other data.' },
     { param: 'coords',  desc: 'Coordinates if they are explicitly stored in the page on its own in the format "lat,lng", not using the address or bar/venue' },
-    { param: 'start',   desc: 'Start datetime in local time: YYYY-MM-DDTHH:MM.' },
-    { param: 'end',     desc: 'End datetime in local time: YYYY-MM-DDTHH:MM.' },
+    { param: 'start',    desc: 'Start datetime in local time: YYYY-MM-DDTHH:MM.' },
+    { param: 'end',      desc: 'End datetime in local time: YYYY-MM-DDTHH:MM.' },
+    { param: 'timezone', desc: 'IANA timezone name (e.g. America/New_York) only if explicitly stated in the source; never infer from city or address.' },
     { param: 'rrule',   desc: 'Valid iCal RRULE value (e.g. FREQ=WEEKLY;BYDAY=FR) ONLY when an explicit repeat schedule is stated; never infer from vague words like "returns" or "back", and never return natural-language/date-range text' },
     { param: 'web',     desc: 'Event or organizer website URL from page metadata/content.' },
     { param: 'tickets', desc: 'Ticket purchase URL only when explicitly present' },
@@ -414,6 +415,12 @@ const AI_FIELD_SIGNAL_REGEXES = {
     end: [
         '\\bend(?:_|\\s|-)?date\\b',
         '\\bend(?:_|\\s|-)?time\\b'
+    ],
+    timezone: [
+        '\\btimezone\\b',
+        '\\btime.?zone\\b',
+        '\\btzid\\b',
+        '\\btz(?=\\W|$)'
     ],
     rrule: [
         '\\brrule\\b',

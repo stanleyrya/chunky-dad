@@ -1699,7 +1699,8 @@ class AiWebParser {
                 parserConfig,
                 remainingFields,
                 snippetText,
-                `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim()
+                `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim(),
+                options
             );
             const partialValidation = this.validateAiEventEvidence(
                 partial,
@@ -1746,7 +1747,7 @@ class AiWebParser {
         const confidenceRuntime = this.getAiConfidenceRuntimeConfig(parserConfig);
         let merged = {};
 
-        const runPartitionExtraction = async (fieldsToExtract, partition, passLabel) => {
+        const runPartitionExtraction = async (fieldsToExtract, partition, passLabel, extractionOptions = {}) => {
             const sections = this.getSectionsForPartition(sectionBundle, partition);
             const snippets = this.buildPromptSnippets([], sections, maxHtmlChars);
             return this.extractFieldsAcrossSnippets(
@@ -1760,7 +1761,8 @@ class AiWebParser {
                 validationState,
                 {
                     partitionLabel: partition,
-                    extractionTrace
+                    extractionTrace,
+                    ...extractionOptions
                 }
             );
         };
@@ -1832,7 +1834,8 @@ class AiWebParser {
                 const partial = await runPartitionExtraction(
                     targetFields,
                     entry.partition,
-                    `confidence retry ${cycle + 1} ${entry.partition}`
+                    `confidence retry ${cycle + 1} ${entry.partition}`,
+                    { promptVariant: 'alternate' }
                 );
                 const beforeMissing = this.getRemainingPromptFields(promptFields, merged)
                     .map(field => this.normalizePromptFieldName(field));
@@ -2143,6 +2146,23 @@ Rules:
 ${String(snippet || '')}`;
     }
 
+    buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet) {
+        const promptFields = Array.isArray(fields) && fields.length > 0
+            ? fields
+            : this.getAiPromptFields(parserConfig);
+        const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
+        return `You are extracting specific event fields from web page source data. Carefully search the entire provided text for the listed fields — they may appear in metadata, structured data, or body text. Return only what you find as a single valid JSON object.
+Fields to find:
+${fieldContext}
+Rules:
+- Return a single JSON object only
+- Include only fields whose values are found verbatim in the text below
+- Do not guess, invent, or infer missing values
+- Omit any field not explicitly present in the source
+
+${String(snippet || '')}`;
+    }
+
     buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields) {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
@@ -2163,9 +2183,12 @@ TEXT:
 ${String(rawResponse || '')}`;
     }
 
-    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, passLabel = '') {
+    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, passLabel = '', options = {}) {
         const passSuffix = passLabel ? ` ${passLabel}` : '';
-        const extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet);
+        const useAlternate = options && options.promptVariant === 'alternate';
+        const extractPrompt = useAlternate
+            ? this.buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet)
+            : this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet);
         const firstPass = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
         if (!firstPass) return null;
         const parsedFirstPass = this.parseAiEventResponse(firstPass);
