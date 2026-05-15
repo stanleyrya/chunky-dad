@@ -313,7 +313,7 @@ class ChunkParser {
                     }
                     
                     // Only add valid event detail URLs
-                    if (this.isValidChunkEventDetailUrl(url)) {
+                    if (url.includes('chunk-party.com') && url.includes('/event-details/')) {
                         urls.add(url);
                     }
                 }
@@ -325,18 +325,6 @@ class ChunkParser {
         
         // Return all found URLs (no limit if maxAdditionalUrls is null)
         return Array.from(urls);
-    }
-
-    isValidChunkEventDetailUrl(url) {
-        try {
-            const parsed = new URL(String(url || ''));
-            const hostname = String(parsed.hostname || '').toLowerCase();
-            const pathname = String(parsed.pathname || '').toLowerCase();
-            const isChunkHost = hostname === 'chunk-party.com' || hostname.endsWith('.chunk-party.com');
-            return isChunkHost && pathname.startsWith('/event-details/');
-        } catch (_) {
-            return false;
-        }
     }
 
     // Detect city from address using centralized city configuration
