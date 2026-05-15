@@ -531,6 +531,9 @@ class AiWebParser {
             '/wp-content', '/terms', '/privacy',
             'javascript:', 'mailto:', 'tel:', 'sms:',
             /^https?:\/\/(?:[^/]+\.)?soundcloud\.com\/player\//i,
+            /^https?:\/\/(?:www\.)?calendar\.google\.com\/calendar\/render(?:[/?#]|$).*?[?&]action=template(?:[&#]|$)/i,
+            /\/[^/?#\s]+@[^/?#\s]+\.[a-z]{2,}(?:[/?#]|$)/i,
+            '/static./services/auto-frontend-modules/',
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
         ];
@@ -571,6 +574,18 @@ class AiWebParser {
             'list-manage.com',
             'campaign-archive.com',
             'linksynergy.com',
+            'sellticketsapp.com',
+            'wix.com',
+            'wixapps.net',
+            'wixevents.com',
+            'wix-code.com',
+            'wixpress.com',
+            'wixstatic.com',
+            'filesusr.com',
+            'parastorage.com',
+            'editorx.io',
+            'sentry.io',
+            'localhost',
             'samsclub.com',
             'fabfitfun.com',
             'pixieset.com',
@@ -580,6 +595,9 @@ class AiWebParser {
         ];
 
         const lowerUrl = url.toLowerCase();
+        if (lowerPath === '/empty' || lowerUrl.endsWith('/empty')) {
+            return { valid: false, reason: 'empty-placeholder-url' };
+        }
         const blockedPattern = invalidUrlPatterns.find(invalid => {
             if (invalid instanceof RegExp) return invalid.test(lowerUrl);
             return lowerUrl.includes(String(invalid || '').toLowerCase());
