@@ -530,7 +530,7 @@ class AiWebParser {
             '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
             '/wp-content', '/terms', '/privacy',
             'javascript:', 'mailto:', 'tel:', 'sms:',
-            'soundcloud.com/player/',
+            '://soundcloud.com/player/',
             '.soundcloud.com/player/',
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
