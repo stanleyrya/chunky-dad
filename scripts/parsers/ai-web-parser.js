@@ -531,6 +531,7 @@ class AiWebParser {
             '/wp-content', '/terms', '/privacy',
             'javascript:', 'mailto:', 'tel:', 'sms:',
             'soundcloud.com/player/',
+            '.soundcloud.com/player/',
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
         ];
