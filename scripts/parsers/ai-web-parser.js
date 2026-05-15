@@ -560,6 +560,10 @@ class AiWebParser {
         const blockedPattern = invalidUrlPatterns.find(invalid => lowerUrl.includes(invalid));
         if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
         const hostname = String(parsedUrl.hostname || '').toLowerCase();
+        if (this.isGoogleMapsUrl(parsedUrl)) return { valid: false, reason: 'google-maps-url' };
+        if ((hostname === 'soundcloud.com' || hostname.endsWith('.soundcloud.com')) && lowerPath.startsWith('/player/')) {
+            return { valid: false, reason: 'soundcloud-player-url' };
+        }
         const blockedHost = blockedHosts.find(host => hostname === host || hostname.endsWith(`.${host}`));
         if (blockedHost) return { valid: false, reason: `blocked-pattern:${blockedHost}` };
         // Per-config discovery blocked hosts (e.g. discoveryBlockedHosts: ["bearracuda.com"])
@@ -3414,6 +3418,16 @@ ${String(rawResponse || '')}`;
         return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
     }
 
+    isGoogleMapsUrl(parsedUrl) {
+        if (!parsedUrl) return false;
+        const host = String(parsedUrl.hostname || '').toLowerCase();
+        const path = String(parsedUrl.pathname || '').toLowerCase();
+        const isMapsGoogleHost = host === 'maps.google.com' || host.endsWith('.maps.google.com');
+        const isMapsAppHost = host === 'maps.app.goo.gl' || host.endsWith('.maps.app.goo.gl');
+        const isGoogleMapsPath = (host === 'google.com' || host.endsWith('.google.com')) && path.startsWith('/maps');
+        return isMapsGoogleHost || isMapsAppHost || isGoogleMapsPath;
+    }
+
     extractLinksFromPage(html, sourceUrl) {
         if (!html) return { instagram: '', facebook: '', gmaps: '' };
         const links = [];
@@ -3440,13 +3454,9 @@ ${String(rawResponse || '')}`;
                 continue;
             }
             const host = String(parsedUrl.hostname || '').toLowerCase();
-            const path = String(parsedUrl.pathname || '').toLowerCase();
             const isInstagram = host === 'instagram.com' || host.endsWith('.instagram.com');
             const isFacebook = host === 'facebook.com' || host.endsWith('.facebook.com');
-            const isGoogleMaps = host === 'maps.app.goo.gl' || host.endsWith('.maps.app.goo.gl') || (
-                (host === 'google.com' || host.endsWith('.google.com')) &&
-                path.startsWith('/maps')
-            );
+            const isGoogleMaps = this.isGoogleMapsUrl(parsedUrl);
             if (!instagram && isInstagram) instagram = normalized;
             if (!facebook && isFacebook) facebook = normalized;
             if (!gmaps && isGoogleMaps) gmaps = normalized;
