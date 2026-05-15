@@ -539,6 +539,7 @@ class AiWebParser {
             'x.com',
             'instagram.com',
             'youtube.com',
+            'soundcloud.com',
             'linkedin.com',
             'tiktok.com',
             't.me',
@@ -583,9 +584,6 @@ class AiWebParser {
         if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
         const hostname = String(parsedUrl.hostname || '').toLowerCase();
         if (this.isGoogleMapsUrl(parsedUrl)) return { valid: false, reason: 'google-maps-url' };
-        if ((hostname === 'soundcloud.com' || hostname.endsWith('.soundcloud.com')) && lowerPath.startsWith('/player/')) {
-            return { valid: false, reason: 'soundcloud-player-url' };
-        }
         const blockedHost = blockedHosts.find(host => hostname === host || hostname.endsWith(`.${host}`));
         if (blockedHost) return { valid: false, reason: `blocked-pattern:${blockedHost}` };
         // Per-config discovery blocked hosts (e.g. discoveryBlockedHosts: ["bearracuda.com"])
