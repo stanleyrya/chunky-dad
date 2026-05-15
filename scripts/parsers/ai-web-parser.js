@@ -349,6 +349,12 @@ class AiWebParser {
     }
 
     addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '', discoveryStats = null, parserConfig = {}) {
+        if (this.looksLikeNonUrlJsFragment(rawUrl)) {
+            if (discoveryStats && typeof discoveryStats === 'object') {
+                this.recordRejectedCandidate(discoveryStats, 'non-url-js-fragment', rawUrl);
+            }
+            return false;
+        }
         const url = this.stripTrackingParams(this.normalizeUrl(rawUrl, sourceUrl));
         const validation = this.validateEventUrl(url, sourceUrl, parserConfig);
         if (!validation.valid) {
@@ -370,6 +376,18 @@ class AiWebParser {
             existing.score = score;
         }
         return false;
+    }
+
+    looksLikeNonUrlJsFragment(rawUrl) {
+        const text = String(rawUrl || '').trim();
+        if (!text) return false;
+        if (/^https?:\/\//i.test(text) || /^\/[^\s]/.test(text)) return false;
+
+        const hasJsConfigTokens = /(beforesend|attachstacktrace|function\s*\(|\bvar\b|\bconst\b|\blet\b)/i.test(text);
+        const hasRegexTokens = /\\[dDsSwWbB.]|\[[^\]]+\]\+/.test(text) || (text.includes('\\.') && /[+*?]/.test(text));
+        const hasConfigDelimiter = /],\s*[a-z_$][\w$]*\s*:/.test(text);
+
+        return hasJsConfigTokens || (hasRegexTokens && hasConfigDelimiter);
     }
 
     rankAdditionalUrls(urls, sourceUrl) {
@@ -512,6 +530,7 @@ class AiWebParser {
             '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
             '/wp-content', '/terms', '/privacy',
             'javascript:', 'mailto:', 'tel:', 'sms:',
+            /^https?:\/\/(?:[^/]+\.)?soundcloud\.com\/player\//i,
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
         ];
@@ -551,15 +570,28 @@ class AiWebParser {
             'mailchimp.com',
             'list-manage.com',
             'campaign-archive.com',
+            'linksynergy.com',
+            'samsclub.com',
+            'fabfitfun.com',
+            'pixieset.com',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
             'heymistr.com'
         ];
 
         const lowerUrl = url.toLowerCase();
-        const blockedPattern = invalidUrlPatterns.find(invalid => lowerUrl.includes(invalid));
-        if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
+        const blockedPattern = invalidUrlPatterns.find(invalid => {
+            if (invalid instanceof RegExp) return invalid.test(lowerUrl);
+            return lowerUrl.includes(String(invalid || '').toLowerCase());
+        });
+        if (blockedPattern) {
+            const blockedPatternReason = typeof blockedPattern === 'string'
+                ? blockedPattern
+                : blockedPattern.source;
+            return { valid: false, reason: `blocked-pattern:${blockedPatternReason}` };
+        }
         const hostname = String(parsedUrl.hostname || '').toLowerCase();
+        if (this.isGoogleMapsUrl(parsedUrl)) return { valid: false, reason: 'google-maps-url' };
         const blockedHost = blockedHosts.find(host => hostname === host || hostname.endsWith(`.${host}`));
         if (blockedHost) return { valid: false, reason: `blocked-pattern:${blockedHost}` };
         // Per-config discovery blocked hosts (e.g. discoveryBlockedHosts: ["bearracuda.com"])
@@ -3414,6 +3446,16 @@ ${String(rawResponse || '')}`;
         return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
     }
 
+    isGoogleMapsUrl(parsedUrl) {
+        if (!parsedUrl) return false;
+        const host = String(parsedUrl.hostname || '').toLowerCase();
+        const path = String(parsedUrl.pathname || '').toLowerCase();
+        const isMapsGoogleHost = host === 'maps.google.com' || host.endsWith('.maps.google.com');
+        const isMapsAppHost = host === 'maps.app.goo.gl' || host.endsWith('.maps.app.goo.gl');
+        const isGoogleMapsPath = (host === 'google.com' || host.endsWith('.google.com')) && path.startsWith('/maps');
+        return isMapsGoogleHost || isMapsAppHost || isGoogleMapsPath;
+    }
+
     extractLinksFromPage(html, sourceUrl) {
         if (!html) return { instagram: '', facebook: '', gmaps: '' };
         const links = [];
@@ -3440,13 +3482,9 @@ ${String(rawResponse || '')}`;
                 continue;
             }
             const host = String(parsedUrl.hostname || '').toLowerCase();
-            const path = String(parsedUrl.pathname || '').toLowerCase();
             const isInstagram = host === 'instagram.com' || host.endsWith('.instagram.com');
             const isFacebook = host === 'facebook.com' || host.endsWith('.facebook.com');
-            const isGoogleMaps = host === 'maps.app.goo.gl' || host.endsWith('.maps.app.goo.gl') || (
-                (host === 'google.com' || host.endsWith('.google.com')) &&
-                path.startsWith('/maps')
-            );
+            const isGoogleMaps = this.isGoogleMapsUrl(parsedUrl);
             if (!instagram && isInstagram) instagram = normalized;
             if (!facebook && isFacebook) facebook = normalized;
             if (!gmaps && isGoogleMaps) gmaps = normalized;

@@ -253,7 +253,7 @@ class LinktreeParser {
             // Extract all ticket links as additional URLs for processing
             const links = this.getLinkCandidates(html, sourceUrl);
             links.forEach(link => {
-                if (link.url && this.isValidAdditionalUrl(link.url)) {
+                if (link.url && this.isValidAdditionalUrl(link.url, parserConfig)) {
                     urls.add(link.url);
                 }
             });
@@ -266,7 +266,7 @@ class LinktreeParser {
     }
 
     // Validate if URL is a valid additional URL
-    isValidAdditionalUrl(url) {
+    isValidAdditionalUrl(url, parserConfig = {}) {
         if (!url || typeof url !== 'string') return false;
         
         try {
@@ -290,6 +290,15 @@ class LinktreeParser {
             
             // Skip anchor links and javascript
             if (url.startsWith('#') || url.startsWith('javascript:')) return false;
+
+            const configBlockedPatterns = Array.isArray(parserConfig.discoveryBlockedPatterns)
+                ? parserConfig.discoveryBlockedPatterns
+                : [];
+            const lowerUrl = url.toLowerCase();
+            const hasConfigBlockedPattern = configBlockedPatterns.some(pattern =>
+                typeof pattern === 'string' && lowerUrl.includes(pattern.toLowerCase())
+            );
+            if (hasConfigBlockedPattern) return false;
             
             return true;
             

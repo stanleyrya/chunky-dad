@@ -214,6 +214,7 @@ const scraperConfig = {
       alwaysBear: true,
       urlDiscoveryDepth: 0,
       maxAdditionalUrls: 0,
+      discoveryBlockedPatterns: ["furball.nyc/"],
       defaultCity: "nyc",
       dryRun: false,
       fieldPriorities: {
@@ -250,6 +251,7 @@ const scraperConfig = {
       alwaysBear: true,        // Cubhouse events are always bear events
       urlDiscoveryDepth: 2,    // Depth 2 to follow ticket links and their detail pages
       maxAdditionalUrls: 10,   // Limit additional URLs discovered
+      discoveryBlockedPatterns: ["www.eventbrite.com/o/"],
       dryRun: false,           // Override global dryRun if needed
       
       // Field priorities for merging data from different sources
