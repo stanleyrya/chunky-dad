@@ -349,6 +349,12 @@ class AiWebParser {
     }
 
     addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '', discoveryStats = null, parserConfig = {}) {
+        if (this.looksLikeNonUrlJsFragment(rawUrl)) {
+            if (discoveryStats && typeof discoveryStats === 'object') {
+                this.recordRejectedCandidate(discoveryStats, 'non-url-js-fragment', rawUrl);
+            }
+            return false;
+        }
         const url = this.stripTrackingParams(this.normalizeUrl(rawUrl, sourceUrl));
         const validation = this.validateEventUrl(url, sourceUrl, parserConfig);
         if (!validation.valid) {
@@ -370,6 +376,18 @@ class AiWebParser {
             existing.score = score;
         }
         return false;
+    }
+
+    looksLikeNonUrlJsFragment(rawUrl) {
+        const text = String(rawUrl || '').trim();
+        if (!text) return false;
+        if (/^https?:\/\//i.test(text) || /^\/[^\s]/.test(text)) return false;
+
+        const hasJsConfigTokens = /(beforesend|attachstacktrace|function\s*\(|\bvar\b|\bconst\b|\blet\b)/i.test(text);
+        const hasRegexTokens = /\\[dDsSwWbB.]|\[[^\]]+\]\+/.test(text) || (text.includes('\\.') && /[+*?]/.test(text));
+        const hasConfigDelimiter = /],\s*[a-z_$][\w$]*\s*:/.test(text);
+
+        return hasJsConfigTokens || (hasRegexTokens && hasConfigDelimiter);
     }
 
     rankAdditionalUrls(urls, sourceUrl) {
