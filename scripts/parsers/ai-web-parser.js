@@ -531,6 +531,10 @@ class AiWebParser {
             '/wp-content', '/terms', '/privacy',
             'javascript:', 'mailto:', 'tel:', 'sms:',
             /^https?:\/\/(?:[^/]+\.)?soundcloud\.com\/player\//i,
+            // Block email-like path segments (e.g. /8c4075...@sentry.io/1865790) found in telemetry artifacts.
+            /\/[^/?#\s]+@[^/?#\s]+\.[a-z]{2,}(?:[/?#]|$)/i,
+            // Block Wix auto-frontend module paths including malformed static./services variant.
+            /\/static\.?\/services\/auto-frontend-modules\//i,
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
         ];
@@ -571,6 +575,19 @@ class AiWebParser {
             'list-manage.com',
             'campaign-archive.com',
             'linksynergy.com',
+            'calendar.google.com',
+            'sellticketsapp.com',
+            'wix.com',
+            'wixapps.net',
+            'wixevents.com',
+            'wix-code.com',
+            'wixpress.com',
+            'wixstatic.com',
+            'filesusr.com',
+            'parastorage.com',
+            'editorx.io',
+            'sentry.io',
+            'localhost',
             'samsclub.com',
             'fabfitfun.com',
             'pixieset.com',
@@ -580,6 +597,9 @@ class AiWebParser {
         ];
 
         const lowerUrl = url.toLowerCase();
+        if (lowerPath === '/empty' || lowerUrl.endsWith('/empty')) {
+            return { valid: false, reason: 'empty-placeholder-url' };
+        }
         const blockedPattern = invalidUrlPatterns.find(invalid => {
             if (invalid instanceof RegExp) return invalid.test(lowerUrl);
             return lowerUrl.includes(String(invalid || '').toLowerCase());
