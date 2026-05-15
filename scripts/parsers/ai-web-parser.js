@@ -532,7 +532,8 @@ class AiWebParser {
             'javascript:', 'mailto:', 'tel:', 'sms:',
             /^https?:\/\/(?:[^/]+\.)?soundcloud\.com\/player\//i,
             // Google Calendar "Add to calendar" template links are share widgets, not canonical event pages.
-            /^https?:\/\/(?:www\.)?calendar\.google\.com\/calendar\/render(?:[?#]|$).*?[?&]action=template(?:[&#]|$)/i,
+            /^https?:\/\/(?:www\.)?calendar\.google\.com\/calendar\/render(?:[?#]|$)[^#]*[?&]action=template(?:[&#]|$)/i,
+            // Block email-like path segments (e.g. /8c4075...@sentry.io/1865790) found in telemetry artifacts.
             /\/[^/?#\s]+@[^/?#\s]+\.[a-z]{2,}(?:[/?#]|$)/i,
             '/static/services/auto-frontend-modules/',
             // Keep malformed "static./services/..." variant because it appears in scraped Wix payloads.
