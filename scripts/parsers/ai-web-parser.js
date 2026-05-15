@@ -530,8 +530,7 @@ class AiWebParser {
             '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
             '/wp-content', '/terms', '/privacy',
             'javascript:', 'mailto:', 'tel:', 'sms:',
-            '://soundcloud.com/player/',
-            '.soundcloud.com/player/',
+            /^https?:\/\/(?:[^/]+\.)?soundcloud\.com\/player\//i,
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
         ];
@@ -581,8 +580,16 @@ class AiWebParser {
         ];
 
         const lowerUrl = url.toLowerCase();
-        const blockedPattern = invalidUrlPatterns.find(invalid => lowerUrl.includes(invalid));
-        if (blockedPattern) return { valid: false, reason: `blocked-pattern:${blockedPattern}` };
+        const blockedPattern = invalidUrlPatterns.find(invalid => {
+            if (invalid instanceof RegExp) return invalid.test(lowerUrl);
+            return lowerUrl.includes(String(invalid || '').toLowerCase());
+        });
+        if (blockedPattern) {
+            const blockedPatternReason = typeof blockedPattern === 'string'
+                ? blockedPattern
+                : blockedPattern.source;
+            return { valid: false, reason: `blocked-pattern:${blockedPatternReason}` };
+        }
         const hostname = String(parsedUrl.hostname || '').toLowerCase();
         if (this.isGoogleMapsUrl(parsedUrl)) return { valid: false, reason: 'google-maps-url' };
         const blockedHost = blockedHosts.find(host => hostname === host || hostname.endsWith(`.${host}`));
