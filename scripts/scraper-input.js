@@ -214,6 +214,7 @@ const scraperConfig = {
       alwaysBear: true,
       urlDiscoveryDepth: 0,
       maxAdditionalUrls: 0,
+      discoveryBlockedPatterns: ["furball.nyc/"],
       defaultCity: "nyc",
       dryRun: false,
       fieldPriorities: {
