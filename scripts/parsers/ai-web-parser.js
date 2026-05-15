@@ -552,6 +552,9 @@ class AiWebParser {
             'list-manage.com',
             'campaign-archive.com',
             'linksynergy.com',
+            'samsclub.com',
+            'fabfitfun.com',
+            'pixieset.com',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
             'heymistr.com'
