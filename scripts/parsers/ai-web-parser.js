@@ -593,7 +593,12 @@ class AiWebParser {
             'pixieset.com',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
-            'heymistr.com'
+            'heymistr.com',
+            'pinterest.com',
+            'mixcloud.com',
+            'light-tech.online',
+            'rolloverfx.com',
+            'armra.com'
         ];
 
         const lowerUrl = url.toLowerCase();

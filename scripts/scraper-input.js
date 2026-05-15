@@ -175,6 +175,13 @@ const scraperConfig = {
       urlDiscoveryDepth: 1,    // Depth 1 to find detail pages from main page
       maxAdditionalUrls: null, // No limit on additional URLs discovered
       dryRun: false,           // Override global dryRun if needed
+      discoveryBlockedPatterns: [
+        "chunk-party.com/chunkbearandcubsocial",
+        "chunk-party.com/shop",
+        "chunk-party.com/chunk",
+        "chunk-party.com/_api/",
+        "chunk-party.com/contact"
+      ],
       
       // Field priorities for merging data from different sources
       fieldPriorities: {
@@ -251,7 +258,7 @@ const scraperConfig = {
       alwaysBear: true,        // Cubhouse events are always bear events
       urlDiscoveryDepth: 2,    // Depth 2 to follow ticket links and their detail pages
       maxAdditionalUrls: 10,   // Limit additional URLs discovered
-      discoveryBlockedPatterns: ["www.eventbrite.com/o/"],
+      discoveryBlockedPatterns: ["www.eventbrite.com/o/", "linktr.ee"],
       dryRun: false,           // Override global dryRun if needed
       
       // Field priorities for merging data from different sources
