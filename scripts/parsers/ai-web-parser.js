@@ -551,6 +551,7 @@ class AiWebParser {
             'mailchimp.com',
             'list-manage.com',
             'campaign-archive.com',
+            'linksynergy.com',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
             'heymistr.com'
