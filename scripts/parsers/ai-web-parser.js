@@ -529,7 +529,7 @@ class AiWebParser {
         const invalidUrlPatterns = [
             '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
             '/wp-content', '/terms', '/privacy',
-            'javascript:', 'mailto:', 'tel:', 'sms:',
+            'javascript:', 'mailto:', 'tel:', 'sms:', 'localhost:',
             /^https?:\/\/(?:[^/]+\.)?soundcloud\.com\/player\//i,
             // Block email-like path segments (e.g. /8c4075...@sentry.io/1865790) found in telemetry artifacts.
             /\/[^/?#\s]+@[^/?#\s]+\.[a-z]{2,}(?:[/?#]|$)/i,
@@ -593,7 +593,12 @@ class AiWebParser {
             'pixieset.com',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
-            'heymistr.com'
+            'heymistr.com',
+            'pinterest.com',
+            'mixcloud.com',
+            'light-tech.online',
+            'rolloverfx.com',
+            'armra.com'
         ];
 
         const lowerUrl = url.toLowerCase();
