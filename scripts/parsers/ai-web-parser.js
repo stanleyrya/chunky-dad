@@ -591,6 +591,8 @@ class AiWebParser {
             'samsclub.com',
             'fabfitfun.com',
             'pixieset.com',
+            'fonts.googleapis.com',
+            'fonts.gstatic.com',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
             'heymistr.com',
