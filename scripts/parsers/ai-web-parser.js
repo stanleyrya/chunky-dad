@@ -122,7 +122,8 @@ class AiWebParser {
                     events: [],
                     additionalLinks: additionalLinks,
                     source: this.config.source,
-                    url: sourceUrl
+                    url: sourceUrl,
+                    pageType: 'non_event'
                 };
             }
 
@@ -167,7 +168,8 @@ class AiWebParser {
                 events: [event],
                 additionalLinks: [],
                 source: this.config.source,
-                url: htmlData && htmlData.url ? htmlData.url : ''
+                url: htmlData && htmlData.url ? htmlData.url : '',
+                pageType: 'single_event'
             };
         } catch (error) {
             console.warn(`🤖 AI Web: Failed to parse AI event: ${error}`);
@@ -1096,7 +1098,8 @@ class AiWebParser {
             events: [],
             additionalLinks: [],
             source: this.config.source,
-            url: htmlData && htmlData.url ? htmlData.url : ''
+            url: htmlData && htmlData.url ? htmlData.url : '',
+            pageType: 'unknown'
         };
     }
 

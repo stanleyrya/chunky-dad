@@ -14,6 +14,8 @@ scripts/
 ├── scraper-input.js                    # Runtime configuration
 ├── bear-event-scraper-unified.js       # Lightweight orchestrator (environment detection only)
 ├── shared-core.js                      # Pure JavaScript business logic (NO environment code)
+├── pipeline/                           # Shared pipeline orchestration helpers
+│   └── discovery-orchestrator.js       # URL discovery traversal orchestration
 ├── adapters/                           # Environment-specific implementations
 │   ├── scriptable-adapter.js           # iOS/Scriptable ONLY code
 │   └── web-adapter.js                  # Browser/Web ONLY code

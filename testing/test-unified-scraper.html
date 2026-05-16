@@ -532,6 +532,7 @@
     <!-- Load all required modules in correct order -->
     <script src="../scripts/event-schema.js" onerror="handleScriptError('event-schema.js', event)"></script>
     <script src="../scripts/shared-core.js" onerror="handleScriptError('shared-core.js', event)"></script>
+    <script src="../scripts/pipeline/discovery-orchestrator.js" onerror="handleScriptError('discovery-orchestrator.js', event)"></script>
     <script src="../scripts/adapters/web-adapter.js" onerror="handleScriptError('web-adapter.js', event)"></script>
     <script src="../scripts/parsers/eventbrite-parser.js" onerror="handleScriptError('eventbrite-parser.js', event)"></script>
     <script src="../scripts/parsers/bearracuda-parser.js" onerror="handleScriptError('bearracuda-parser.js', event)"></script>
@@ -719,6 +720,7 @@
             const requiredModules = {
                 'EventSchema': typeof EventSchema !== 'undefined',
                 'SharedCore': typeof SharedCore !== 'undefined',
+                'DiscoveryOrchestrator': typeof DiscoveryOrchestrator !== 'undefined',
                 'WebAdapter': typeof WebAdapter !== 'undefined',
                 'EventbriteParser': typeof EventbriteParser !== 'undefined',
                 'BearraccudaParser': typeof BearraccudaParser !== 'undefined',
@@ -758,7 +760,8 @@
                         ? window.scraperConfig.cities
                         : { test: { patterns: ['test'] } };
                     const sharedCore = new SharedCore(testCities, {
-                        eventSchema: EventSchema
+                        eventSchema: EventSchema,
+                        discoveryOrchestrator: DiscoveryOrchestrator
                     });
                     console.success('✅ SharedCore instantiated successfully');
                 } catch (error) {

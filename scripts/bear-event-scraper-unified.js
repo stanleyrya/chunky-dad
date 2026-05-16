@@ -71,6 +71,7 @@ class BearEventScraperOrchestrator {
             // Load core modules
             const sharedCoreModule = importModule('shared-core');
             const eventSchemaModule = importModule('event-schema');
+            const discoveryOrchestratorModule = importModule('pipeline/discovery-orchestrator');
             const scriptableAdapterModule = importModule('adapters/scriptable-adapter');
             
             // Load parsers
@@ -89,6 +90,7 @@ class BearEventScraperOrchestrator {
             this.modules = {
                 SharedCore: sharedCoreModule.SharedCore,
                 EventSchema: eventSchemaModule.EventSchema,
+                DiscoveryOrchestrator: discoveryOrchestratorModule.DiscoveryOrchestrator,
                 adapter: scriptableAdapterModule.ScriptableAdapter,
                 parsers: {
                     eventbrite: eventbriteParserModule.EventbriteParser,
@@ -117,6 +119,7 @@ class BearEventScraperOrchestrator {
             // Load core modules using require
             const sharedCoreModule = require('./shared-core');
             const eventSchemaModule = require('./event-schema');
+            const discoveryOrchestratorModule = require('./pipeline/discovery-orchestrator');
             const webAdapterModule = require('./adapters/web-adapter');
             
             // Load parsers
@@ -135,6 +138,7 @@ class BearEventScraperOrchestrator {
             this.modules = {
                 SharedCore: sharedCoreModule.SharedCore,
                 EventSchema: eventSchemaModule.EventSchema,
+                DiscoveryOrchestrator: discoveryOrchestratorModule.DiscoveryOrchestrator,
                 adapter: webAdapterModule.WebAdapter,
                 parsers: {
                     eventbrite: eventbriteParserModule.EventbriteParser,
@@ -162,7 +166,7 @@ class BearEventScraperOrchestrator {
             
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
-                'EventSchema', 'SharedCore', 'WebAdapter',
+                'EventSchema', 'SharedCore', 'DiscoveryOrchestrator', 'WebAdapter',
                 'EventbriteParser', 'BearraccudaParser', 'GenericParser', 'ChunkParser', 'FurballParser', 'LinktreeParser', 'RedEyeTicketsParser', 'TicketleapParser'
             ];
             
@@ -194,6 +198,7 @@ class BearEventScraperOrchestrator {
             this.modules = {
                 EventSchema: window.EventSchema,
                 SharedCore: window.SharedCore,
+                DiscoveryOrchestrator: window.DiscoveryOrchestrator,
                 adapter: window.WebAdapter,
                 parsers
             };
@@ -243,7 +248,8 @@ class BearEventScraperOrchestrator {
             // Create shared core instance with cities configuration
             const sharedCore = new this.modules.SharedCore(config.cities, {
                 eventSchema: this.modules.EventSchema,
-                additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS
+                additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
+                discoveryOrchestrator: this.modules.DiscoveryOrchestrator
             });
             
             // Create adapter with cities configuration

@@ -106,6 +106,8 @@ class SharedCore {
             }
             // Generic parser will be used as fallback if no pattern matches
         ];
+
+        this.discoveryOrchestrator = this.initializeDiscoveryOrchestrator(options.discoveryOrchestrator);
     }
 
     // Convert cities config format to internal cityMappings format
@@ -160,6 +162,46 @@ class SharedCore {
         if (parserName === null || parserName === undefined) return null;
         const normalized = String(parserName).trim().toLowerCase();
         return normalized.length > 0 ? normalized : null;
+    }
+
+    initializeDiscoveryOrchestrator(discoveryOrchestratorOption) {
+        const orchestrationDependencies = {
+            hasProcessedUrl: this.hasProcessedUrl.bind(this),
+            markProcessedUrl: this.markProcessedUrl.bind(this),
+            detectParserFromUrl: this.detectParserFromUrl.bind(this),
+            deduplicateUrls: this.deduplicateUrls.bind(this),
+            normalizePageType: this.normalizePageType.bind(this),
+            normalizeParserStageResult: this.normalizeParserStageResult.bind(this)
+        };
+
+        if (typeof discoveryOrchestratorOption === 'function') {
+            return new discoveryOrchestratorOption(orchestrationDependencies);
+        }
+
+        if (discoveryOrchestratorOption && typeof discoveryOrchestratorOption.discoverUrlTree === 'function') {
+            return discoveryOrchestratorOption;
+        }
+
+        return null;
+    }
+
+    normalizePageType(pageType) {
+        const normalized = String(pageType || '').trim().toLowerCase();
+        if (normalized === 'non_event' || normalized === 'single_event' || normalized === 'multi_event') {
+            return normalized;
+        }
+        return 'unknown';
+    }
+
+    normalizeParserStageResult(parseResult, defaultUrl = '') {
+        const result = parseResult && typeof parseResult === 'object' ? parseResult : {};
+        return {
+            ...result,
+            events: Array.isArray(result.events) ? result.events : [],
+            additionalLinks: Array.isArray(result.additionalLinks) ? result.additionalLinks : [],
+            pageType: this.normalizePageType(result.pageType),
+            url: result.url || defaultUrl || ''
+        };
     }
 
     resolveAutomationContext(config) {
@@ -343,6 +385,17 @@ class SharedCore {
                 durationMs: Date.now() - parserStartedAt,
                 events: [],
                 discoveryOnly: true,
+                pipeline: {
+                    crawlResult: {
+                        rootUrlCount: urlCount,
+                        discoveredNodeCount: discoveryTree.allNodes.length,
+                        discoveredEdgeCount: discoveryTree.edges.length
+                    },
+                    segmentedPageType: 'unknown',
+                    extractedEventCount: 0,
+                    normalizedEventCount: 0,
+                    dedupedEventCount: 0
+                },
                 discoveryTree,
                 mermaidGraph,
                 asciiTree,
@@ -380,33 +433,34 @@ class SharedCore {
                 }
                 
                 // Parse events (consolidated logging)
-                let parseResult = await Promise.resolve(
+                const crawlResult = this.normalizeParserStageResult(await Promise.resolve(
                     urlParser.parseEvents(htmlData, effectiveParserConfig, mainConfig?.cities || null)
-                );
-                const eventCount = parseResult?.events?.length || 0;
-                const linkCount = parseResult?.additionalLinks?.length || 0;
+                ), url);
+                const segmentedPageType = crawlResult.pageType;
+                const eventCount = crawlResult.events.length;
+                const linkCount = crawlResult.additionalLinks.length;
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
-                await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
+                await displayAdapter.logInfo(`SYSTEM: Parsed ${url} [depth 0, ${segmentedPageType}] → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
                 
-                if (parseResult.events) {
+                if (crawlResult.events.length > 0) {
                     // Apply field priorities to determine which parser data to trust
-                    const filteredEvents = parseResult.events.map(event => 
+                    const extractedEvents = crawlResult.events.map(event => 
                         this.applyFieldPriorities(event, effectiveParserConfig, mainConfig)
                     );
                     
                     // Normalize text fields and enrich events with location data (Google Maps links, city extraction)
-                    const enrichedEvents = filteredEvents.map(event => 
+                    const normalizedEvents = extractedEvents.map(event => 
                         this.enrichEventLocation(this.normalizeEventTextFields(event))
                     );
                     
-                    allEvents.push(...enrichedEvents);
+                    allEvents.push(...normalizedEvents);
                 }
 
                 // Process additional URLs if we have them (for enriching existing events, not creating new ones)
-                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                if (crawlResult.additionalLinks.length > 0) {
                     // Deduplicate additional URLs before processing
-                    const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, globalProcessedUrls);
-                    await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
+                    const deduplicatedUrls = this.deduplicateUrls(crawlResult.additionalLinks, globalProcessedUrls);
+                    await displayAdapter.logInfo(`SYSTEM: Processing ${crawlResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
                     
                     await this.enrichEventsWithDetailPages(
                         allEvents,
@@ -435,25 +489,35 @@ class SharedCore {
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events
-        const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
-        const bearEvents = this.filterBearEvents(futureEvents, effectiveParserConfig);
-        const deduplicatedEvents = this.deduplicateEvents(bearEvents);
+        const extractedEvents = allEvents;
+        const normalizedEvents = this.filterFutureEvents(extractedEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
+        const bearFilteredEvents = this.filterBearEvents(normalizedEvents, effectiveParserConfig);
+        const deduplicatedEvents = this.deduplicateEvents(bearFilteredEvents);
         
         // Calculate deduplication stats
-        const duplicatesRemoved = bearEvents.length - deduplicatedEvents.length;
+        const duplicatesRemoved = bearFilteredEvents.length - deduplicatedEvents.length;
         
-        await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${deduplicatedEvents.length} final`);
+        await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${extractedEvents.length} extracted → ${normalizedEvents.length} normalized/future → ${bearFilteredEvents.length} bear → ${deduplicatedEvents.length} deduped`);
 
         return {
             name: effectiveParserConfig.name,
             parserType: parserName,
             urlCount,
             totalEvents: allEvents.length,
-            rawBearEvents: bearEvents.length,
+            rawBearEvents: bearFilteredEvents.length,
             bearEvents: deduplicatedEvents.length,
             duplicatesRemoved: duplicatesRemoved,
             durationMs: Date.now() - parserStartedAt,
             events: deduplicatedEvents,
+            pipeline: {
+                crawlResult: {
+                    rootUrlCount: urlCount
+                },
+                segmentedPageType: 'mixed',
+                extractedEventCount: extractedEvents.length,
+                normalizedEventCount: normalizedEvents.length,
+                dedupedEventCount: deduplicatedEvents.length
+            },
             config: effectiveParserConfig // Include config for orchestrator to use
         };
     }
@@ -562,20 +626,21 @@ class SharedCore {
                     ...parserConfig,
                     urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
                 };
-                const parseResult = await Promise.resolve(
+                const crawlResult = this.normalizeParserStageResult(await Promise.resolve(
                     urlParser.parseEvents(htmlData, detailParserConfig, mainConfig?.cities || null)
-                );
+                ), url);
+                const segmentedPageType = crawlResult.pageType;
+                await displayAdapter.logInfo(`SYSTEM: Detail page parsed ${url} [depth ${currentDepth}, ${segmentedPageType}]`);
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery
-                const shouldProcessUrls = parseResult.additionalLinks && 
-                                        parseResult.additionalLinks.length > 0 &&
+                const shouldProcessUrls = crawlResult.additionalLinks.length > 0 &&
                                         currentDepth < maxDepth &&
                                         parserConfig.urlDiscoveryDepth > 0;
                 
                 if (shouldProcessUrls) {
                         // Deduplicate URLs before recursive processing
-                        const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
-                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
+                        const deduplicatedUrls = this.deduplicateUrls(crawlResult.additionalLinks, processedUrls);
+                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${crawlResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
                         
                         // Recursively process additional URLs if we haven't reached max depth
                         if (deduplicatedUrls.length > 0) {
@@ -593,21 +658,21 @@ class SharedCore {
                                 allowParserAutoSwitch
                             );
                         }
-                } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
-                    await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
+                } else if (crawlResult.additionalLinks.length > 0) {
+                    await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${crawlResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
                 }
                 
                 // Process detail page events - either enrich existing or add new events
-                if (parseResult.events && parseResult.events.length > 0) {
+                if (crawlResult.events.length > 0) {
                     // Apply field priorities to detail page events (same as main page events)
                     // CRITICAL FIX: Detail page events need the same enrichment as main page events
-                    const enrichedDetailEvents = parseResult.events.map(event => 
+                    const extractedEvents = crawlResult.events.map(event => 
                         this.enrichEventLocation(this.normalizeEventTextFields(this.applyFieldPriorities(event, parserConfig, mainConfig)))
                     );
                     
                     // Add these events to the existing events collection for potential merging
-                    existingEvents.push(...enrichedDetailEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
+                    existingEvents.push(...extractedEvents);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${crawlResult.events.length} new events from detail page ${url}`);
                 }
                 
             } catch (error) {
@@ -624,6 +689,22 @@ class SharedCore {
     // Discovery-only mode: traverse URL tree up to configured depth, collect links without extracting events.
     // Returns { rootUrls, edges, allNodes } for graph rendering.
     async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName = null) {
+        if (this.discoveryOrchestrator && typeof this.discoveryOrchestrator.discoverUrlTree === 'function') {
+            return this.discoveryOrchestrator.discoverUrlTree({
+                rootUrls,
+                parsers,
+                parserConfig,
+                httpAdapter,
+                displayAdapter,
+                processedUrls,
+                forcedParserName
+            });
+        }
+
+        return this.discoverUrlTreeLegacy(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName);
+    }
+
+    async discoverUrlTreeLegacy(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName = null) {
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
         const edges = []; // { from: string, to: string }
         const allNodes = new Set(rootUrls);
@@ -658,9 +739,13 @@ class SharedCore {
 
                 // Request link discovery but skip deep recursion — we manage depth ourselves
                 const discoveryConfig = { ...parserConfig, urlDiscoveryDepth: 1 };
-                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null));
+                const crawlResult = this.normalizeParserStageResult(
+                    await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null)),
+                    url
+                );
+                await displayAdapter.logInfo(`SYSTEM: [Discovery] Segment ${url} [depth ${depth}, ${crawlResult.pageType}]`);
 
-                const childLinks = parseResult.additionalLinks || [];
+                const childLinks = crawlResult.additionalLinks || [];
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);
                 for (const childUrl of deduped) {
                     allNodes.add(childUrl);
