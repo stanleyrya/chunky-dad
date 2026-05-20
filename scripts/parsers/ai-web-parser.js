@@ -112,24 +112,18 @@ class AiWebParser {
     async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
         try {
             this.aiPromptHistory = [];
-            const html = htmlData && htmlData.html ? htmlData.html : '';
-            const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
-
-            if (parserConfig.urlDiscoveryDepth > 0) {
-                const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
-                console.log(`🤖 AI Web: Discovery mode found ${additionalLinks.length} additional links`);
-                return {
-                    events: [],
-                    additionalLinks: additionalLinks,
-                    source: this.config.source,
-                    url: sourceUrl
-                };
+            const parseContext = this.buildParseContext(htmlData, parserConfig);
+            const discoveryResult = this.runDiscoveryPhase(parseContext);
+            if (discoveryResult) {
+                return discoveryResult;
             }
 
-            const promptFields = this.getAiPromptFields(parserConfig);
+            const promptFields = parseContext.promptFields;
             const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig, promptFields);
             if (!aiEvent) {
-                return this.buildEmptyResult(htmlData);
+                return this.buildEmptyResult(htmlData, {
+                    phase: 'extraction'
+                });
             }
 
             const validationResult = this.validateAiEventEvidence(aiEvent, htmlData, parserConfig, promptFields, {
@@ -138,7 +132,9 @@ class AiWebParser {
             const event = this.normalizeAiEvent(validationResult.event, parserConfig, htmlData, cityConfig, promptFields);
             if (!event || !event.title || !event.startDate) {
                 console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
-                return this.buildEmptyResult(htmlData);
+                return this.buildEmptyResult(htmlData, {
+                    phase: 'extraction'
+                });
             }
             const confidenceDiagnostics = aiEvent && aiEvent.__confidenceDiagnostics && typeof aiEvent.__confidenceDiagnostics === 'object'
                 ? aiEvent.__confidenceDiagnostics
@@ -163,16 +159,58 @@ class AiWebParser {
                 event._aiValidation = report;
             }
 
-            return {
-                events: [event],
-                additionalLinks: [],
-                source: this.config.source,
-                url: htmlData && htmlData.url ? htmlData.url : ''
-            };
+            return this.buildParserResult(htmlData, [event], [], {
+                phase: 'extraction'
+            });
         } catch (error) {
             console.warn(`🤖 AI Web: Failed to parse AI event: ${error}`);
             return this.buildEmptyResult(htmlData);
         }
+    }
+
+    buildParseContext(htmlData, parserConfig = {}) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        return {
+            html,
+            sourceUrl,
+            parserConfig,
+            promptFields: this.getAiPromptFields(parserConfig)
+        };
+    }
+
+    runDiscoveryPhase(parseContext) {
+        if (!parseContext || !parseContext.parserConfig || parseContext.parserConfig.urlDiscoveryDepth <= 0) {
+            return null;
+        }
+        const additionalLinks = this.extractAdditionalUrls(parseContext.html, parseContext.sourceUrl, parseContext.parserConfig);
+        console.log(`🤖 AI Web: Discovery mode found ${additionalLinks.length} additional links`);
+        return this.buildParserResult(
+            { url: parseContext.sourceUrl },
+            [],
+            additionalLinks,
+            { phase: 'discovery' }
+        );
+    }
+
+    buildParserFlowPlaceholders(flow = {}) {
+        return {
+            phase: flow.phase || 'unknown',
+            pageState: null,
+            pageType: null,
+            pageStateHint: null,
+            pageTypeHint: null
+        };
+    }
+
+    buildParserResult(htmlData, events = [], additionalLinks = [], flow = {}) {
+        return {
+            events: Array.isArray(events) ? events : [],
+            additionalLinks: Array.isArray(additionalLinks) ? additionalLinks : [],
+            source: this.config.source,
+            url: htmlData && htmlData.url ? htmlData.url : '',
+            parserFlow: this.buildParserFlowPlaceholders(flow)
+        };
     }
 
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
@@ -1092,13 +1130,8 @@ class AiWebParser {
         return result;
     }
 
-    buildEmptyResult(htmlData) {
-        return {
-            events: [],
-            additionalLinks: [],
-            source: this.config.source,
-            url: htmlData && htmlData.url ? htmlData.url : ''
-        };
+    buildEmptyResult(htmlData, flow = {}) {
+        return this.buildParserResult(htmlData, [], [], flow);
     }
 
     async getAiEvent(htmlData, parserConfig, cityConfig, selectedPromptFields = null) {

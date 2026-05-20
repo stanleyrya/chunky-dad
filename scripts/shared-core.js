@@ -380,15 +380,16 @@ class SharedCore {
                 }
                 
                 // Parse events (consolidated logging)
-                let parseResult = await Promise.resolve(
+                const rawParseResult = await Promise.resolve(
                     urlParser.parseEvents(htmlData, effectiveParserConfig, mainConfig?.cities || null)
                 );
+                const parseResult = this.normalizeParserResult(rawParseResult, url);
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
                 await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
                 
-                if (parseResult.events) {
+                if (parseResult.events.length > 0) {
                     // Apply field priorities to determine which parser data to trust
                     const filteredEvents = parseResult.events.map(event => 
                         this.applyFieldPriorities(event, effectiveParserConfig, mainConfig)
@@ -403,7 +404,7 @@ class SharedCore {
                 }
 
                 // Process additional URLs if we have them (for enriching existing events, not creating new ones)
-                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                if (parseResult.additionalLinks.length > 0) {
                     // Deduplicate additional URLs before processing
                     const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, globalProcessedUrls);
                     await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
@@ -523,6 +524,29 @@ class SharedCore {
         };
     }
 
+    buildParserFlowPlaceholders(parserFlow) {
+        const flow = parserFlow && typeof parserFlow === 'object' ? parserFlow : {};
+        return {
+            phase: flow.phase || null,
+            pageState: flow.pageState || null,
+            pageType: flow.pageType || null,
+            pageStateHint: flow.pageStateHint || null,
+            pageTypeHint: flow.pageTypeHint || null
+        };
+    }
+
+    normalizeParserResult(parseResult, fallbackUrl = '') {
+        const normalized = parseResult && typeof parseResult === 'object' ? parseResult : {};
+        return {
+            ...normalized,
+            events: Array.isArray(normalized.events) ? normalized.events : [],
+            additionalLinks: Array.isArray(normalized.additionalLinks) ? normalized.additionalLinks : [],
+            source: normalized.source || null,
+            url: normalized.url || fallbackUrl || '',
+            parserFlow: this.buildParserFlowPlaceholders(normalized.parserFlow)
+        };
+    }
+
     async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null, allowParserAutoSwitch = true) {
         const configuredMaxUrls = parserConfig.maxAdditionalUrls;
         let maxUrls = 12;
@@ -562,13 +586,13 @@ class SharedCore {
                     ...parserConfig,
                     urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
                 };
-                const parseResult = await Promise.resolve(
+                const rawParseResult = await Promise.resolve(
                     urlParser.parseEvents(htmlData, detailParserConfig, mainConfig?.cities || null)
                 );
+                const parseResult = this.normalizeParserResult(rawParseResult, url);
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery
-                const shouldProcessUrls = parseResult.additionalLinks && 
-                                        parseResult.additionalLinks.length > 0 &&
+                const shouldProcessUrls = parseResult.additionalLinks.length > 0 &&
                                         currentDepth < maxDepth &&
                                         parserConfig.urlDiscoveryDepth > 0;
                 
@@ -593,12 +617,12 @@ class SharedCore {
                                 allowParserAutoSwitch
                             );
                         }
-                } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
+                } else if (parseResult.additionalLinks.length > 0) {
                     await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
                 }
                 
                 // Process detail page events - either enrich existing or add new events
-                if (parseResult.events && parseResult.events.length > 0) {
+                if (parseResult.events.length > 0) {
                     // Apply field priorities to detail page events (same as main page events)
                     // CRITICAL FIX: Detail page events need the same enrichment as main page events
                     const enrichedDetailEvents = parseResult.events.map(event => 
@@ -658,9 +682,10 @@ class SharedCore {
 
                 // Request link discovery but skip deep recursion — we manage depth ourselves
                 const discoveryConfig = { ...parserConfig, urlDiscoveryDepth: 1 };
-                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null));
+                const rawParseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null));
+                const parseResult = this.normalizeParserResult(rawParseResult, url);
 
-                const childLinks = parseResult.additionalLinks || [];
+                const childLinks = parseResult.additionalLinks;
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);
                 for (const childUrl of deduped) {
                     allNodes.add(childUrl);
