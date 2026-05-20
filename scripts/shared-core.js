@@ -81,10 +81,6 @@ class SharedCore {
                 parser: 'eventbrite'
             },
             {
-                pattern: /ticketleap\.events/i,
-                parser: 'ticketleap'
-            },
-            {
                 pattern: /bearracuda\.com/i,
                 parser: 'bearracuda'
             },
@@ -143,7 +139,7 @@ class SharedCore {
     // This enables configurations to omit the 'parser' field and have it auto-detected
     detectParserFromUrl(url) {
         if (!url) {
-            return 'generic';
+            return 'ai-web';
         }
         
         for (const mapping of this.urlParserMappings) {
@@ -152,8 +148,8 @@ class SharedCore {
             }
         }
         
-        // Default to generic parser if no pattern matches
-        return 'generic';
+        // Default to ai-web parser if no pattern matches
+        return 'ai-web';
     }
 
     normalizeParserName(parserName) {
@@ -295,8 +291,8 @@ class SharedCore {
         
         // Fallback to generic parser if still no parser found
         if (!parserName) {
-            parserName = 'generic';
-            await displayAdapter.logInfo('SYSTEM: No parser specified and no URLs provided, using generic parser');
+            parserName = 'ai-web';
+            await displayAdapter.logInfo('SYSTEM: No parser specified and no URLs provided, using ai-web parser');
         }
         
         const parser = parsers[parserName];
@@ -551,8 +547,8 @@ class SharedCore {
                 // Detect parser for this specific URL (allows mid-run switching)
                 const detectedParserName = this.detectParserFromUrl(url);
                 const urlParserName = allowParserAutoSwitch
-                    ? (detectedParserName || parserName || 'generic')
-                    : (parserName || 'generic');
+                    ? (detectedParserName || parserName || 'ai-web')
+                    : (parserName || 'ai-web');
                 const urlParser = parsers[urlParserName];
                 
                 // Reduce urlDiscoveryDepth so detail pages at the final depth extract events
@@ -652,7 +648,7 @@ class SharedCore {
                 // Use the forced parser when the config explicitly names one; otherwise
                 // fall back to URL-based auto-detection so that the right specialised
                 // parser is used for each discovered URL.
-                const detectedParser = forcedParserName || this.detectParserFromUrl(url) || 'generic';
+                const detectedParser = forcedParserName || this.detectParserFromUrl(url) || 'ai-web';
                 const urlParser = parsers[detectedParser];
                 if (!urlParser) continue;
 
@@ -3279,7 +3275,7 @@ class SharedCore {
         
         if (!source && urlCandidate) {
             const detectedSource = this.detectParserFromUrl(urlCandidate);
-            if (detectedSource && detectedSource !== 'generic') {
+            if (detectedSource && detectedSource !== 'ai-web') {
                 source = detectedSource;
             }
         }
@@ -3336,7 +3332,7 @@ class SharedCore {
             
             if (!targetSource && targetEventOrKey.url) {
                 const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
-                if (detectedSource && detectedSource !== 'generic') {
+                if (detectedSource && detectedSource !== 'ai-web') {
                     targetSource = detectedSource;
                 }
             }
