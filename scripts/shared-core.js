@@ -389,7 +389,7 @@ class SharedCore {
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
                 await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
                 
-                if (parseResult.events.length > 0) {
+                if (parseResult.events) {
                     // Apply field priorities to determine which parser data to trust
                     const filteredEvents = parseResult.events.map(event => 
                         this.applyFieldPriorities(event, effectiveParserConfig, mainConfig)
@@ -538,11 +538,10 @@ class SharedCore {
     normalizeParserResult(parseResult, fallbackUrl = '') {
         const normalized = parseResult && typeof parseResult === 'object' ? parseResult : {};
         return {
-            ...normalized,
             events: Array.isArray(normalized.events) ? normalized.events : [],
             additionalLinks: Array.isArray(normalized.additionalLinks) ? normalized.additionalLinks : [],
             source: normalized.source || null,
-            url: normalized.url || fallbackUrl || '',
+            url: normalized.url || fallbackUrl,
             parserFlow: this.buildParserFlowPlaceholders(normalized.parserFlow)
         };
     }

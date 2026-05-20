@@ -194,8 +194,9 @@ class AiWebParser {
     }
 
     buildParserFlowPlaceholders(flow = {}) {
+        // Keep parser-local to avoid introducing a shared-core dependency inside parser modules.
         return {
-            phase: flow.phase || 'unknown',
+            phase: flow.phase || null,
             pageState: null,
             pageType: null,
             pageStateHint: null,
