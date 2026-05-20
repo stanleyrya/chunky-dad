@@ -97,6 +97,10 @@ class AiWebParser {
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
+        // NOTE/TODO: If we need to support additional structured payload URL fields,
+        // add alias keys here and mirror them in collectEventUrlsFromDataObject().
+        // Keep this URL-discovery focused (schema-agnostic) and avoid deterministic
+        // per-field event extraction fallbacks from __NEXT_DATA__/__SERVER_DATA__.
         this.structuredUrlKeys = [
             'url',
             'event_url',
