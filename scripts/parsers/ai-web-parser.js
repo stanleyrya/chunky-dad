@@ -594,6 +594,14 @@ class AiWebParser {
             'samsclub.com',
             'fabfitfun.com',
             'pixieset.com',
+            // Social media platforms not already listed above
+            'bsky.app',
+            'snapchat.com',
+            // Affiliate / monetization tracking networks — never event pages
+            'thanks.is',
+            'kqzyfj.com',
+            'sjv.io',
+            'pxf.io',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
             'heymistr.com',

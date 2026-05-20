@@ -83,7 +83,6 @@ const STATUS_ICONS = {
 const PARSER_ICON_RULES = [
   { match: ['eventbrite'], symbol: 'ticket.fill' },
   { match: ['bearracuda'], symbol: 'music.note.list' },
-  { match: ['ticketleap'], symbol: 'ticket' },
   { match: ['linktree', 'linktr.ee'], symbol: 'link' }
 ];
 
