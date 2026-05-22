@@ -3339,7 +3339,7 @@ ${String(rawResponse || '')}`;
     }
 
     looksLikeCssContent(line) {
-        if (!line.includes('{') && !line.includes(':')) return false;
+        if (!line.includes(':')) return false;
         this.cssContentLineRegex.lastIndex = 0;
         let hits = 0;
         while (this.cssContentLineRegex.exec(line) !== null) {
