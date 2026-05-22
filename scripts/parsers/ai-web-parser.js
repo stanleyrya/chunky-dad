@@ -84,6 +84,9 @@ class AiWebParser {
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
         this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
+        // Detects lines that are primarily CSS content (e.g. leaked from unclosed or inline <style> blocks).
+        // Matches 3+ occurrences of a CSS property name immediately followed by ":" with no space before the colon.
+        this.cssContentLineRegex = /\b(cursor|color|background-color|background-image|background-size|font-size|font-weight|font-family|font-style|border-radius|border-color|border-width|border-style|margin|margin-top|margin-bottom|margin-left|margin-right|padding|padding-top|padding-bottom|padding-left|padding-right|display|position|overflow|z-index|box-sizing|box-shadow|flex|flex-shrink|flex-grow|flex-basis|align-items|justify-content|line-height|text-decoration|text-align|text-transform|opacity|min-width|max-width|min-height|max-height|width|height|top|left|right|bottom|transform|transition|animation|white-space|word-break|word-wrap|outline|visibility|pointer-events|vertical-align|letter-spacing|gap):/gi;
         this.proxyImagePathPrefixes = ['/e/_next/image?', '/_next/image?'];
         this.jsonLdCandidatePoolSizeMultiplier = 2;
         this.relativeUrlParsingBase = 'https://placeholder.example';
@@ -3326,12 +3329,24 @@ ${String(rawResponse || '')}`;
             const lower = line.toLowerCase();
             if (line.length < 3) continue;
             if (this.noiseLineRegex.test(line)) continue;
+            if (this.looksLikeCssContent(line)) continue;
             if (seen.has(lower)) continue;
             seen.add(lower);
             results.push(line);
             if (results.length >= this.extractionLimits.maxBodyParts) break;
         }
         return results;
+    }
+
+    looksLikeCssContent(line) {
+        if (!line.includes('{') && !line.includes(':')) return false;
+        this.cssContentLineRegex.lastIndex = 0;
+        let hits = 0;
+        while (this.cssContentLineRegex.exec(line) !== null) {
+            hits++;
+            if (hits >= 3) return true;
+        }
+        return false;
     }
 
     decodeBasicEntities(text) {
