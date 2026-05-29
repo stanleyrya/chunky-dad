@@ -18,6 +18,8 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+const { cleanUrl } = require('./ai-web-parser');
+
 class ScriptableUrlParser {
     constructor(config = {}, options = {}) {
         this.config = {
@@ -252,6 +254,12 @@ class ScriptableUrlParser {
         const trimmed = value.trim();
         if (!trimmed) {
             return trimmed;
+        }
+        if (/^https?:\/\//i.test(trimmed) || /^\/\//.test(trimmed)) {
+            const cleaned = cleanUrl(trimmed);
+            if (cleaned) {
+                return cleaned;
+            }
         }
         const hashIndex = trimmed.indexOf('#');
         const hash = hashIndex >= 0 ? trimmed.slice(hashIndex + 1) : '';

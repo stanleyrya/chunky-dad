@@ -505,7 +505,7 @@ class AiWebParser {
         const parsedUrl = this.parseUrlComponents(url);
         if (!parsedUrl) return { valid: false, reason: 'invalid-url' };
         if (!/^https?:$/.test(parsedUrl.protocol)) return { valid: false, reason: 'invalid-protocol' };
-        if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(this.normalizeUrl(sourceUrl, sourceUrl))) {
+        if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(cleanUrl(sourceUrl, sourceUrl))) {
             return { valid: false, reason: 'same-as-source' };
         }
         const lowerPath = (parsedUrl.pathname || '').toLowerCase();
@@ -955,7 +955,7 @@ class AiWebParser {
             node.startDateTime || node.start_datetime || node.event_date || node.eventDate);
         const looksLikeEventUrl = this.isLikelyEventPath(rawUrl, sourceUrl);
         if (rawUrl && typeof rawUrl === 'string' && (looksLikeEventUrl || (hasName && hasDate))) {
-            const resolved = this.normalizeUrl(String(rawUrl), sourceUrl);
+            const resolved = cleanUrl(String(rawUrl), sourceUrl);
             if (resolved) urls.push(resolved);
         }
 
@@ -969,7 +969,7 @@ class AiWebParser {
 
     isLikelyEventPath(rawUrl, sourceUrl) {
         if (!rawUrl || typeof rawUrl !== 'string') return false;
-        const normalized = this.normalizeUrl(rawUrl, sourceUrl);
+        const normalized = cleanUrl(rawUrl, sourceUrl);
         if (!normalized) return false;
         const parsed = this.parseUrlComponents(normalized);
         if (!parsed) return false;
@@ -991,7 +991,7 @@ class AiWebParser {
         for (const pattern of patterns) {
             let match;
             while ((match = pattern.exec(rawJson)) !== null) {
-                const candidate = this.normalizeUrl(match[1], sourceUrl);
+                const candidate = cleanUrl(match[1], sourceUrl);
                 if (!candidate) continue;
                 if (this.isLikelyEventPath(candidate, sourceUrl)) {
                     urls.add(candidate);
@@ -2798,7 +2798,7 @@ ${String(rawResponse || '')}`;
         }
 
         rawCandidates.forEach(candidate => {
-            const normalized = this.normalizeUrl(candidate, sourceUrl);
+            const normalized = cleanUrl(candidate, sourceUrl);
             if (!normalized) return;
             const unwrapped = this.unwrapImageProxyUrl(normalized);
             const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
@@ -2820,7 +2820,7 @@ ${String(rawResponse || '')}`;
             if (candidate) rawCandidates.add(candidate);
         }
         rawCandidates.forEach(candidate => {
-            const normalized = this.normalizeUrl(candidate, sourceUrl);
+            const normalized = cleanUrl(candidate, sourceUrl);
             if (!normalized) return;
             const unwrapped = this.unwrapImageProxyUrl(normalized);
             const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
@@ -3528,7 +3528,7 @@ ${String(rawResponse || '')}`;
         let gmaps = '';
 
         for (const link of links) {
-            const normalized = this.normalizeUrl(link, sourceUrl);
+            const normalized = cleanUrl(link, sourceUrl);
             if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
             let parsedUrl = null;
             try {
@@ -3550,8 +3550,78 @@ ${String(rawResponse || '')}`;
     }
 }
 
+function cleanUrl(rawUrl, baseUrl = '') {
+    const trimmedUrl = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+    if (!trimmedUrl) {
+        return '';
+    }
+
+    let normalizedUrl = '';
+    try {
+        normalizedUrl = baseUrl
+            ? new URL(trimmedUrl, baseUrl).toString()
+            : (/^https?:\/\//i.test(trimmedUrl)
+                ? trimmedUrl
+                : (/^\/\//.test(trimmedUrl)
+                    ? `https:${trimmedUrl}`
+                    : `https://${trimmedUrl.replace(/^\/+/, '')}`));
+    } catch (_) {
+        return '';
+    }
+
+    try {
+        const parsedUrl = new URL(normalizedUrl);
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+            return '';
+        }
+
+        parsedUrl.hash = '';
+
+        if ((parsedUrl.protocol === 'http:' && parsedUrl.port === '80') ||
+            (parsedUrl.protocol === 'https:' && parsedUrl.port === '443')) {
+            parsedUrl.port = '';
+        }
+
+        if (parsedUrl.pathname.endsWith('/') && parsedUrl.pathname !== '/') {
+            parsedUrl.pathname = parsedUrl.pathname.replace(/\/+$/, '');
+        }
+
+        return parsedUrl.toString();
+    } catch (_) {
+        return '';
+    }
+}
+
+function parseJsonResponse(rawResponse) {
+    if (rawResponse && typeof rawResponse === 'object') {
+        if (typeof rawResponse.content === 'string') {
+            return parseJsonResponse(rawResponse.content);
+        }
+
+        const content = rawResponse.choices?.[0]?.message?.content;
+        if (typeof content === 'string') {
+            return parseJsonResponse(content);
+        }
+    }
+
+    if (typeof rawResponse !== 'string') {
+        return {};
+    }
+
+    const trimmed = rawResponse.trim();
+    if (!trimmed) {
+        return {};
+    }
+
+    try {
+        return JSON.parse(trimmed);
+    } catch (_) {
+        return {};
+    }
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AiWebParser };
+    module.exports = { AiWebParser, cleanUrl, parseJsonResponse };
 } else if (typeof window !== 'undefined') {
     window.AiWebParser = AiWebParser;
 } else {
