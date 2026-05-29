@@ -754,7 +754,7 @@ class ScriptableAdapter {
 
     joinPathSegments(segments) {
         if (!Array.isArray(segments) || segments.length === 0) {
-            throw new Error('joinPathSegments requires at least one path segment');
+            throw new Error('joinPathSegments requires a non-empty array of path segments');
         }
         return segments.slice(1).reduce((currentPath, segment) => this.fm.joinPath(currentPath, segment), segments[0]);
     }
@@ -774,8 +774,10 @@ class ScriptableAdapter {
         ];
         const queryHash = parsed.search ? `--q-${this.hashString(parsed.search.slice(1))}` : '';
         const fileName = `${fileStem}${queryHash}--${this.hashString(normalizedUrl)}.json`;
+        const directoryPath = this.joinPathSegments(directoryParts);
         return {
-            cachePath: this.joinPathSegments([...directoryParts, fileName]),
+            cachePath: this.fm.joinPath(directoryPath, fileName),
+            directoryPath,
             normalizedUrl
         };
     }
@@ -830,10 +832,10 @@ class ScriptableAdapter {
             return;
         }
         try {
-            const { cachePath, normalizedUrl } = this.getPageCachePath(url);
+            const { cachePath, directoryPath, normalizedUrl } = this.getPageCachePath(url);
             const fetchedAt = new Date();
             const expiresAt = new Date(fetchedAt.getTime() + (this.pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000));
-            this.fm.createDirectory(cachePath.replace(/\/[^/]+$/, ''), true);
+            this.fm.createDirectory(directoryPath, true);
             const payload = {
                 version: 1,
                 type: 'page',
