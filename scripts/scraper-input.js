@@ -208,6 +208,45 @@ const scraperConfig = {
       }
     },
     {
+      name: "Furball",
+      iconUrl: "https://www.google.com/s2/favicons?domain=www.furball.nyc&sz=64",
+      enabled: true,
+      automation: {
+        automationEnabled: false
+      },
+      parser: "ai-web",
+      urls: [
+        "https://www.furball.nyc"
+      ],
+      alwaysBear: true,
+      urlDiscoveryDepth: 0,
+      maxAdditionalUrls: 0,
+      discoveryBlockedPatterns: ["furball.nyc/"],
+      defaultCity: "nyc",
+      dryRun: false,
+      fieldPriorities: {
+        title: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        shortName: { priority: ["static"], merge: "upsert" },
+        instagram: { priority: ["static"], merge: "clobber" },
+        description: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        bar: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        address: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        startDate: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        endDate: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        url: { priority: ["furball", "eventbrite"], merge: "clobber" },
+        location: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        ticketUrl: { priority: ["eventbrite", "linktree", "furball"], merge: "clobber" },
+        gmaps: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        image: { priority: ["eventbrite", "furball"], merge: "clobber" },
+        cover: { priority: ["eventbrite", "furball"], merge: "clobber" }
+      },
+      metadata: {
+        title: { value: "FURBALL" },
+        shortName: { value: "FUR-BALL" },
+        instagram: { value: "https://instagram.com/furballnyc/" }
+      }
+    },
+    {
       name: "Cubhouse",
       iconUrl: "https://ugc.production.linktr.ee/48e9facd-5c7d-41e3-a7d0-04752baa27f1_IMG-5519.jpeg?io=true&size=avatar-v3_0",
       enabled: true,
