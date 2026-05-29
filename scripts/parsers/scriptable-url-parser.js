@@ -255,11 +255,9 @@ class ScriptableUrlParser {
         if (!trimmed) {
             return trimmed;
         }
-        if (/^https?:\/\//i.test(trimmed) || /^\/\//.test(trimmed)) {
-            const cleaned = cleanUrl(trimmed);
-            if (cleaned) {
-                return cleaned;
-            }
+        const cleaned = cleanUrl(trimmed);
+        if (cleaned) {
+            return cleaned;
         }
         const hashIndex = trimmed.indexOf('#');
         const hash = hashIndex >= 0 ? trimmed.slice(hashIndex + 1) : '';

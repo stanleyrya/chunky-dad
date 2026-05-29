@@ -505,7 +505,7 @@ class AiWebParser {
         const parsedUrl = this.parseUrlComponents(url);
         if (!parsedUrl) return { valid: false, reason: 'invalid-url' };
         if (!/^https?:$/.test(parsedUrl.protocol)) return { valid: false, reason: 'invalid-protocol' };
-        if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(cleanUrl(sourceUrl, sourceUrl))) {
+        if (sourceUrl && this.getUrlDedupeKey(url) === this.getUrlDedupeKey(cleanUrl(sourceUrl))) {
             return { valid: false, reason: 'same-as-source' };
         }
         const lowerPath = (parsedUrl.pathname || '').toLowerCase();
