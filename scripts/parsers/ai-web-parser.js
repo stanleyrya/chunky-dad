@@ -3550,6 +3550,12 @@ ${String(rawResponse || '')}`;
     }
 }
 
+/**
+ * Canonicalize an HTTP(S) URL for parser reuse.
+ * Resolves relative inputs against an optional base URL, removes hashes,
+ * strips default ports, and trims trailing slashes on non-root paths.
+ * Returns an empty string when the input cannot be normalized to HTTP(S).
+ */
 function cleanUrl(rawUrl, baseUrl = '') {
     const trimmedUrl = typeof rawUrl === 'string' ? rawUrl.trim() : '';
     if (!trimmedUrl) {
@@ -3592,6 +3598,10 @@ function cleanUrl(rawUrl, baseUrl = '') {
     }
 }
 
+/**
+ * Parse JSON responses from either raw strings or chat-completion style objects.
+ * Returns the parsed object on success, or an empty object when parsing fails.
+ */
 function parseJsonResponse(rawResponse) {
     if (rawResponse && typeof rawResponse === 'object') {
         if (typeof rawResponse.content === 'string') {
