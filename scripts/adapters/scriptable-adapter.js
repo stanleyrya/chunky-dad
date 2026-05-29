@@ -389,6 +389,9 @@ class ScriptableAdapter {
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
         this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
         this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
+        this.pagesCacheDir = this.fm.joinPath(this.cacheDir, 'pages');
+        this.runtimeConfig = config.runtimeConfig || {};
+        this.pageCacheConfig = this.normalizePageCacheConfig(this.runtimeConfig.pageCache);
         
         this.runtimeContext = this.getScriptableRuntimeContext();
         this.runStartedAt = new Date();
@@ -679,9 +682,192 @@ class ScriptableAdapter {
         }
     }
 
+    normalizePageCacheConfig(pageCacheConfig = {}) {
+        const ttlDays = Number(pageCacheConfig && pageCacheConfig.ttlDays);
+        return {
+            enabled: pageCacheConfig?.enabled !== false,
+            ttlDays: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays : 7
+        };
+    }
+
+    shouldUsePageCache(url, options = {}) {
+        if (!this.pageCacheConfig.enabled) {
+            return false;
+        }
+        if (options.forceRefresh === true || options.useCache === false) {
+            return false;
+        }
+        if ((options.method || 'GET').toUpperCase() !== 'GET' || options.body) {
+            return false;
+        }
+        return /^https?:\/\//i.test(String(url || ''));
+    }
+
+    getTrackingParamPattern() {
+        return /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
+    }
+
+    normalizeCacheUrl(url) {
+        const parsed = new URL(url);
+        const normalized = new URL(parsed.toString());
+        normalized.protocol = normalized.protocol.toLowerCase();
+        normalized.hostname = normalized.hostname.toLowerCase();
+
+        const keptParams = Array.from(normalized.searchParams.entries())
+            .filter(([key]) => !this.getTrackingParamPattern().test(key))
+            .sort(([aKey, aValue], [bKey, bValue]) => {
+                if (aKey === bKey) {
+                    return String(aValue).localeCompare(String(bValue));
+                }
+                return String(aKey).localeCompare(String(bKey));
+            });
+
+        normalized.search = '';
+        keptParams.forEach(([key, value]) => normalized.searchParams.append(key, value));
+
+        if (normalized.pathname.length > 1) {
+            normalized.pathname = normalized.pathname.replace(/\/+$/, '');
+        }
+
+        return normalized.toString();
+    }
+
+    sanitizeCachePathPart(value, fallback = '__root__') {
+        const normalized = String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9._-]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 80);
+        return normalized || fallback;
+    }
+
+    hashString(value) {
+        let hash = 0;
+        const input = String(value || '');
+        for (let i = 0; i < input.length; i += 1) {
+            hash = ((hash << 5) - hash) + input.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash).toString(36);
+    }
+
+    joinPathSegments(segments) {
+        if (!Array.isArray(segments) || segments.length === 0) {
+            throw new Error('joinPathSegments requires at least one path segment');
+        }
+        return segments.slice(1).reduce((currentPath, segment) => this.fm.joinPath(currentPath, segment), segments[0]);
+    }
+
+    getPageCachePath(url) {
+        const normalizedUrl = this.normalizeCacheUrl(url);
+        const parsed = new URL(normalizedUrl);
+        const pathSegments = parsed.pathname.split('/').filter(Boolean);
+        const sanitizedSegments = pathSegments.map(segment => this.sanitizeCachePathPart(segment));
+        const fileStem = sanitizedSegments.length > 0
+            ? sanitizedSegments[sanitizedSegments.length - 1]
+            : '__root__';
+        const directoryParts = [
+            this.pagesCacheDir,
+            this.sanitizeCachePathPart(parsed.hostname, 'unknown-host'),
+            ...sanitizedSegments.slice(0, -1)
+        ];
+        const queryHash = parsed.search ? `--q-${this.hashString(parsed.search.slice(1))}` : '';
+        const fileName = `${fileStem}${queryHash}--${this.hashString(normalizedUrl)}.json`;
+        return {
+            cachePath: this.joinPathSegments([...directoryParts, fileName]),
+            normalizedUrl
+        };
+    }
+
+    buildCachedResponse(cacheEntry) {
+        return {
+            html: cacheEntry.html,
+            url: cacheEntry.url,
+            statusCode: cacheEntry.statusCode,
+            headers: cacheEntry.headers || {},
+            cache: {
+                hit: true,
+                stale: false,
+                fetchedAt: cacheEntry.fetchedAt,
+                expiresAt: cacheEntry.expiresAt,
+                normalizedUrl: cacheEntry.normalizedUrl,
+                path: cacheEntry.path || null
+            }
+        };
+    }
+
+    readPageCache(url, options = {}) {
+        if (!this.shouldUsePageCache(url, options)) {
+            return null;
+        }
+        try {
+            const { cachePath } = this.getPageCachePath(url);
+            if (!this.fm.fileExists(cachePath) || this.fm.isDirectory(cachePath)) {
+                return null;
+            }
+            this.fm.downloadFileFromiCloud(cachePath);
+            const content = this.fm.readString(cachePath);
+            const cacheEntry = JSON.parse(content);
+            if (!cacheEntry || typeof cacheEntry.html !== 'string') {
+                return null;
+            }
+            const expiresAt = Date.parse(cacheEntry.expiresAt || '');
+            if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+                return null;
+            }
+            cacheEntry.path = cachePath;
+            console.log(`📱 Scriptable: Using cached page for ${url}`);
+            return this.buildCachedResponse(cacheEntry);
+        } catch (error) {
+            console.log(`📱 Scriptable: Page cache read failed for ${url}: ${error.message}`);
+            return null;
+        }
+    }
+
+    writePageCache(url, responseData, options = {}) {
+        if (!this.shouldUsePageCache(url, options) || !responseData || typeof responseData.html !== 'string') {
+            return;
+        }
+        try {
+            const { cachePath, normalizedUrl } = this.getPageCachePath(url);
+            const fetchedAt = new Date();
+            const expiresAt = new Date(fetchedAt.getTime() + (this.pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000));
+            this.fm.createDirectory(cachePath.replace(/\/[^/]+$/, ''), true);
+            const payload = {
+                version: 1,
+                type: 'page',
+                url,
+                normalizedUrl,
+                fetchedAt: fetchedAt.toISOString(),
+                expiresAt: expiresAt.toISOString(),
+                statusCode: responseData.statusCode,
+                headers: responseData.headers || {},
+                html: responseData.html
+            };
+            this.fm.writeString(cachePath, JSON.stringify(payload));
+            responseData.cache = {
+                hit: false,
+                stale: false,
+                fetchedAt: payload.fetchedAt,
+                expiresAt: payload.expiresAt,
+                normalizedUrl,
+                path: cachePath
+            };
+            console.log(`📱 Scriptable: Cached page for ${url}`);
+        } catch (error) {
+            console.log(`📱 Scriptable: Page cache write failed for ${url}: ${error.message}`);
+        }
+    }
+
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
+            const cachedResponse = this.readPageCache(url, options);
+            if (cachedResponse) {
+                return cachedResponse;
+            }
+
             const request = new Request(url);
             request.method = options.method || 'GET';
             request.headers = {
@@ -704,12 +890,14 @@ class ScriptableAdapter {
             }
             
             if (response && response.length > 0) {
-                return {
+                const responseData = {
                     html: response,
                     url: url,
                     statusCode: statusCode,
                     headers: request.response ? request.response.headers : {}
                 };
+                this.writePageCache(url, responseData, options);
+                return responseData;
             } else {
                 console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
                 throw new Error(`Empty response from ${url}`);
@@ -5630,6 +5818,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
             if (!fm.fileExists(this.logsDir)) fm.createDirectory(this.logsDir, true);
             if (!fm.fileExists(this.metricsDir)) fm.createDirectory(this.metricsDir, true);
             if (!fm.fileExists(this.cacheDir)) fm.createDirectory(this.cacheDir, true);
+            if (!fm.fileExists(this.pagesCacheDir)) fm.createDirectory(this.pagesCacheDir, true);
         } catch (e) {
             console.log(`📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`);
         }

@@ -227,13 +227,11 @@ class BearEventScraperOrchestrator {
             });
             
             // Create adapter with cities configuration
-            let finalAdapter = adapter;
-            if (config.cities) {
-                finalAdapter = new this.modules.adapter({
-                    cities: config.cities,
-                    ...this.config
-                });
-            }
+            const finalAdapter = new this.modules.adapter({
+                ...this.config,
+                cities: config.cities,
+                runtimeConfig: config.config || {}
+            });
 
             // Create parser instances
             const parsers = {};
