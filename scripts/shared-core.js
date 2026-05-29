@@ -77,20 +77,12 @@ class SharedCore {
                 parser: 'ai-web'
             },
             {
-                pattern: /eventbrite\.com/i,
-                parser: 'eventbrite'
-            },
-            {
                 pattern: /bearracuda\.com/i,
                 parser: 'bearracuda'
             },
             {
                 pattern: /chunk-party\.com/i,
                 parser: 'chunk'
-            },
-            {
-                pattern: /furball\.nyc/i,
-                parser: 'furball'
             },
             {
                 pattern: /linktr\.ee/i,
@@ -156,6 +148,21 @@ class SharedCore {
         if (parserName === null || parserName === undefined) return null;
         const normalized = String(parserName).trim().toLowerCase();
         return normalized.length > 0 ? normalized : null;
+    }
+
+    normalizeParserResult(parseResult, fallbackSource, fallbackUrl) {
+        const sourceResult = parseResult && typeof parseResult === 'object' ? parseResult : {};
+        const events = Array.isArray(sourceResult.events) ? sourceResult.events : [];
+        const additionalLinks = Array.isArray(sourceResult.additionalLinks) ? sourceResult.additionalLinks : [];
+        const source = sourceResult.source || fallbackSource || null;
+        const url = sourceResult.url || fallbackUrl || '';
+        return {
+            ...sourceResult,
+            events,
+            additionalLinks,
+            source,
+            url
+        };
     }
 
     resolveAutomationContext(config) {
@@ -379,6 +386,7 @@ class SharedCore {
                 let parseResult = await Promise.resolve(
                     urlParser.parseEvents(htmlData, effectiveParserConfig, mainConfig?.cities || null)
                 );
+                parseResult = this.normalizeParserResult(parseResult, urlParserName, url);
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
@@ -558,9 +566,10 @@ class SharedCore {
                     ...parserConfig,
                     urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
                 };
-                const parseResult = await Promise.resolve(
+                let parseResult = await Promise.resolve(
                     urlParser.parseEvents(htmlData, detailParserConfig, mainConfig?.cities || null)
                 );
+                parseResult = this.normalizeParserResult(parseResult, urlParserName, url);
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery
                 const shouldProcessUrls = parseResult.additionalLinks && 
@@ -654,7 +663,8 @@ class SharedCore {
 
                 // Request link discovery but skip deep recursion — we manage depth ourselves
                 const discoveryConfig = { ...parserConfig, urlDiscoveryDepth: 1 };
-                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null));
+                let parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null));
+                parseResult = this.normalizeParserResult(parseResult, detectedParser, url);
 
                 const childLinks = parseResult.additionalLinks || [];
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);

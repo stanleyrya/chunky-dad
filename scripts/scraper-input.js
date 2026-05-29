@@ -206,45 +206,6 @@ const scraperConfig = {
         shortName: { value: "CHUNK" },
         instagram: { value: "https://www.instagram.com/chunkparty" }
       }
-    }
-    ,
-    {
-      name: "Furball",
-      iconUrl: "https://www.google.com/s2/favicons?domain=www.furball.nyc&sz=64",
-      enabled: true,
-      automation: {
-        automationEnabled: false
-      },
-      urls: [
-        "https://www.furball.nyc"
-      ],
-      alwaysBear: true,
-      urlDiscoveryDepth: 0,
-      maxAdditionalUrls: 0,
-      discoveryBlockedPatterns: ["furball.nyc/"],
-      defaultCity: "nyc",
-      dryRun: false,
-      fieldPriorities: {
-        title: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
-        instagram: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        bar: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        address: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        startDate: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        endDate: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        url: { priority: ["furball", "eventbrite"], merge: "clobber" },
-        location: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        ticketUrl: { priority: ["eventbrite", "linktree", "furball"], merge: "clobber" },
-        gmaps: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        image: { priority: ["eventbrite", "furball"], merge: "clobber" },
-        cover: { priority: ["eventbrite", "furball"], merge: "clobber" }
-      },
-      metadata: {
-        title: { value: "FURBALL" },
-        shortName: { value: "FUR-BALL" },
-        instagram: { value: "https://instagram.com/furballnyc/" }
-      }
     },
     {
       name: "Cubhouse",

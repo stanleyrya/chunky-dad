@@ -74,10 +74,8 @@ class BearEventScraperOrchestrator {
             const scriptableAdapterModule = importModule('adapters/scriptable-adapter');
             
             // Load parsers
-            const eventbriteParserModule = importModule('parsers/eventbrite-parser');
             const bearracudaParserModule = importModule('parsers/bearracuda-parser');
             const chunkParserModule = importModule('parsers/chunk-parser');
-            const furballParserModule = importModule('parsers/furball-parser');
             const linktreeParserModule = importModule('parsers/linktree-parser');
             const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
             const scriptableUrlParserModule = importModule('parsers/scriptable-url-parser');
@@ -89,10 +87,8 @@ class BearEventScraperOrchestrator {
                 EventSchema: eventSchemaModule.EventSchema,
                 adapter: scriptableAdapterModule.ScriptableAdapter,
                 parsers: {
-                    eventbrite: eventbriteParserModule.EventbriteParser,
                     bearracuda: bearracudaParserModule.BearraccudaParser,
                     chunk: chunkParserModule.ChunkParser,
-                    furball: furballParserModule.FurballParser,
                     linktree: linktreeParserModule.LinktreeParser,
                     redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
                     'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser,
@@ -116,10 +112,8 @@ class BearEventScraperOrchestrator {
             const webAdapterModule = require('./adapters/web-adapter');
             
             // Load parsers
-            const eventbriteParserModule = require('./parsers/eventbrite-parser');
             const bearracudaParserModule = require('./parsers/bearracuda-parser');
             const chunkParserModule = require('./parsers/chunk-parser');
-            const furballParserModule = require('./parsers/furball-parser');
             const linktreeParserModule = require('./parsers/linktree-parser');
             const redeyeticketsParserModule = require('./parsers/redeyetickets-parser');
             const scriptableUrlParserModule = require('./parsers/scriptable-url-parser');
@@ -131,10 +125,8 @@ class BearEventScraperOrchestrator {
                 EventSchema: eventSchemaModule.EventSchema,
                 adapter: webAdapterModule.WebAdapter,
                 parsers: {
-                    eventbrite: eventbriteParserModule.EventbriteParser,
                     bearracuda: bearracudaParserModule.BearraccudaParser,
                     chunk: chunkParserModule.ChunkParser,
-                    furball: furballParserModule.FurballParser,
                     linktree: linktreeParserModule.LinktreeParser,
                     redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
                     'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser,
@@ -155,7 +147,7 @@ class BearEventScraperOrchestrator {
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
                 'EventSchema', 'SharedCore', 'WebAdapter',
-                'EventbriteParser', 'BearraccudaParser', 'ChunkParser', 'FurballParser', 'LinktreeParser', 'RedEyeTicketsParser'
+                'BearraccudaParser', 'ChunkParser', 'LinktreeParser', 'RedEyeTicketsParser'
             ];
             
             const missingModules = requiredModules.filter(module => !window[module]);
@@ -166,10 +158,8 @@ class BearEventScraperOrchestrator {
             
             // Store modules
             const parsers = {
-                eventbrite: window.EventbriteParser,
                 bearracuda: window.BearraccudaParser,
                 chunk: window.ChunkParser,
-                furball: window.FurballParser,
                 linktree: window.LinktreeParser,
                 redeyetickets: window.RedEyeTicketsParser
             };

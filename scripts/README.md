@@ -18,9 +18,12 @@ scripts/
 │   ├── scriptable-adapter.js           # iOS/Scriptable ONLY code
 │   └── web-adapter.js                  # Browser/Web ONLY code
 └── parsers/                            # Pure parsing logic (NO environment code)
-    ├── eventbrite-parser.js            # Eventbrite venue parsing
+    ├── ai-web-parser.js                # AI-based parsing and URL discovery
     ├── bearracuda-parser.js            # Bearracuda venue parsing
-    └── generic-parser.js               # Generic/fallback parsing
+    ├── chunk-parser.js                 # Chunk venue parsing
+    ├── linktree-parser.js              # Linktree ticket-link parsing
+    ├── redeyetickets-parser.js         # Red Eye Tickets API parsing
+    └── scriptable-url-parser.js        # Scriptable URL-input parsing
 ```
 
 ## 🚨 CRITICAL RULES - AI ASSISTANTS MUST FOLLOW
@@ -110,9 +113,12 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 ## 📋 CURRENT FUNCTIONALITY
 
 ### Supported Venues
-- **Eventbrite** (including Megawoof America) - Uses `eventbrite-parser.js`
+- **AI Web** (including Eventbrite pages) - Uses `ai-web-parser.js`
 - **Bearracuda** - Multi-city bear dance parties - Uses `bearracuda-parser.js`
-- **Generic venues** - Fallback parsing - Uses `generic-parser.js`
+- **CHUNK** - Uses `chunk-parser.js`
+- **Linktree** - Uses `linktree-parser.js`
+- **RedEyeTickets** - Uses `redeyetickets-parser.js`
+- **Scriptable URL Input** - Uses `scriptable-url-parser.js`
 
 ### Features
 - Multi-site parsing with venue-specific logic
@@ -233,15 +239,18 @@ metadata: {
 
 ### For Scriptable (iOS)
 1. Install [Scriptable](https://scriptable.app/) on iOS
-2. Copy ALL scriptable files to Scriptable (7 files total from ROOT directory):
+2. Copy ALL scriptable files to Scriptable:
    - `bear-event-scraper-unified.js`
    - `display-saved-run.js`
    - `shared-core.js`
    - `adapters/scriptable-adapter.js`
    - `adapters/web-adapter.js` (needed for unified script)
-   - `parsers/eventbrite-parser.js`
+   - `parsers/ai-web-parser.js`
    - `parsers/bearracuda-parser.js`
-   - `parsers/generic-parser.js`
+   - `parsers/chunk-parser.js`
+   - `parsers/linktree-parser.js`
+   - `parsers/redeyetickets-parser.js`
+   - `parsers/scriptable-url-parser.js`
 3. Copy `scraper-input.js` to **iCloud Drive/Scriptable/** folder
 4. Run `bear-event-scraper-unified.js` or `display-saved-run.js`
 5. Set `dryRun: false` when ready for live calendar updates
