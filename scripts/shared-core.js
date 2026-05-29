@@ -77,20 +77,12 @@ class SharedCore {
                 parser: 'ai-web'
             },
             {
-                pattern: /eventbrite\.com/i,
-                parser: 'eventbrite'
-            },
-            {
                 pattern: /bearracuda\.com/i,
                 parser: 'bearracuda'
             },
             {
                 pattern: /chunk-party\.com/i,
                 parser: 'chunk'
-            },
-            {
-                pattern: /furball\.nyc/i,
-                parser: 'furball'
             },
             {
                 pattern: /linktr\.ee/i,
@@ -376,7 +368,7 @@ class SharedCore {
                 }
                 
                 // Parse events (consolidated logging)
-                let parseResult = await Promise.resolve(
+                const parseResult = await Promise.resolve(
                     urlParser.parseEvents(htmlData, effectiveParserConfig, mainConfig?.cities || null)
                 );
                 const eventCount = parseResult?.events?.length || 0;

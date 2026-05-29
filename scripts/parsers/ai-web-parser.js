@@ -116,7 +116,7 @@ class AiWebParser {
         ];
     }
 
-    async parseEvents(htmlData, parserConfig = {}, cityConfig = null) {
+    async parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null) {
         try {
             this.aiPromptHistory = [];
             const html = htmlData && htmlData.html ? htmlData.html : '';
