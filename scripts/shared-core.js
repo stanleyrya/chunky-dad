@@ -518,7 +518,7 @@ class SharedCore {
                     await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
                 }
 
-                const normalizedUrl = this.normalizeUrl(url, effectiveParserConfig.urls?.[0] || '') || url;
+                const normalizedUrl = this.normalizeUrl(url, effectiveParserConfig.urls?.[0] || '');
                 if (!this.isValidUrl(normalizedUrl)) {
                     await displayAdapter.logWarn(`SYSTEM: Skipping invalid URL after normalization: ${url}`);
                     continue;
@@ -707,7 +707,7 @@ class SharedCore {
             this.markProcessedUrl(processedUrls, url);
 
             try {
-                const normalizedUrl = this.normalizeUrl(url, parserConfig.urls?.[0] || '') || url;
+                const normalizedUrl = this.normalizeUrl(url, parserConfig.urls?.[0] || '');
                 if (!this.isValidUrl(normalizedUrl)) {
                     await displayAdapter.logWarn(`SYSTEM: Skipping invalid detail URL after normalization: ${url}`);
                     continue;
@@ -795,7 +795,7 @@ class SharedCore {
         const pageCacheConfig = this.resolvePageCacheConfig(parserConfig, mainConfig);
         const normalizedRootUrls = this.deduplicateUrls(
             (rootUrls || [])
-                .map(url => this.normalizeUrl(url, '') || url)
+                .map(url => this.normalizeUrl(url, ''))
                 .filter(url => this.isValidUrl(url)),
             new Set()
         );
@@ -810,7 +810,7 @@ class SharedCore {
 
         while (queue.length > 0) {
             const { url, depth, parent } = queue.shift();
-            const normalizedUrl = this.normalizeUrl(url, parent || '') || url;
+            const normalizedUrl = this.normalizeUrl(url, parent || '');
             if (!this.isValidUrl(normalizedUrl)) continue;
 
             if (this.hasProcessedUrl(processedUrls, normalizedUrl)) continue;
@@ -839,8 +839,10 @@ class SharedCore {
                 const childLinks = parseResult.additionalLinks || [];
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);
                 for (const childUrl of deduped) {
-                    allNodes.add(childUrl);
-                    queue.push({ url: childUrl, depth: depth + 1, parent: normalizedUrl });
+                    const normalizedChildUrl = this.normalizeUrl(childUrl, normalizedUrl);
+                    if (!this.isValidUrl(normalizedChildUrl)) continue;
+                    allNodes.add(normalizedChildUrl);
+                    queue.push({ url: normalizedChildUrl, depth: depth + 1, parent: normalizedUrl });
                 }
 
                 await displayAdapter.logInfo(`SYSTEM: [Discovery] ${normalizedUrl} → ${deduped.length} links (depth ${depth + 1}/${maxDepth})`);
