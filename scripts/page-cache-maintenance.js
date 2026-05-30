@@ -78,7 +78,8 @@ class PageCacheMaintenance {
 
   parseDaysValue(value) {
     const parsed = Number.parseInt(String(value || '').trim(), 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    if (Number.isNaN(parsed) || parsed <= 0) return null;
+    return parsed;
   }
 
   parseDaysParameter(rawValue) {
