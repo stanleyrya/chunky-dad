@@ -750,6 +750,9 @@ class ScriptableAdapter {
 
     hashCacheKey(value) {
         const text = String(value || '');
+        if (SharedCore && typeof SharedCore.hashString === 'function') {
+            return SharedCore.hashString(text);
+        }
         let hashA = 0x811c9dc5;
         let hashB = 0x1b873593;
         for (let i = 0; i < text.length; i++) {

@@ -150,6 +150,9 @@ class WebAdapter {
 
     hashCacheKey(value) {
         const text = String(value || '');
+        if (ImportedSharedCore && typeof ImportedSharedCore.hashString === 'function') {
+            return ImportedSharedCore.hashString(text);
+        }
         let hashA = 0x811c9dc5;
         let hashB = 0x1b873593;
         for (let i = 0; i < text.length; i++) {
