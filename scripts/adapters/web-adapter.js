@@ -16,6 +16,9 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+const PAGE_CACHE_MAX_FILE_BASENAME = 120;
+const PAGE_CACHE_TRUNCATED_PREFIX_LENGTH = 80;
+
 class WebAdapter {
     constructor(config = {}) {
         this.config = {
@@ -26,7 +29,7 @@ class WebAdapter {
         
         // Store cities configuration for calendar mapping
         this.cities = config.cities || {};
-        this.isNode = typeof window === 'undefined' && typeof require === 'function';
+        this.isNode = typeof process !== 'undefined' && !!(process.versions && process.versions.node);
         this.fs = null;
         this.path = null;
         this.pageStorageDir = null;
@@ -84,6 +87,7 @@ class WebAdapter {
     }
 
     hashPageCacheValue(value) {
+        // FNV-1a 32-bit hash for compact deterministic cache keys.
         let hash = 2166136261;
         const input = String(value || '');
         for (let i = 0; i < input.length; i++) {
@@ -108,8 +112,8 @@ class WebAdapter {
             if (parsed.search) {
                 fileBase += `--q-${this.hashPageCacheValue(parsed.search)}`;
             }
-            if (fileBase.length > 120) {
-                fileBase = `${fileBase.slice(0, 80)}--${this.hashPageCacheValue(fileBase)}`;
+            if (fileBase.length > PAGE_CACHE_MAX_FILE_BASENAME) {
+                fileBase = `${fileBase.slice(0, PAGE_CACHE_TRUNCATED_PREFIX_LENGTH)}--${this.hashPageCacheValue(fileBase)}`;
             }
 
             return {

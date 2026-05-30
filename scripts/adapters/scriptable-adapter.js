@@ -723,6 +723,7 @@ class ScriptableAdapter {
     }
 
     hashPageCacheValue(value) {
+        // FNV-1a 32-bit hash for compact deterministic cache keys.
         let hash = 2166136261;
         const input = String(value || '');
         for (let i = 0; i < input.length; i++) {
