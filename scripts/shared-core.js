@@ -20,6 +20,65 @@
 // ============================================================================
 
 class SharedCore {
+    static decodeUrlEscapes(url) {
+        return String(url || '')
+            .replace(/\\u002f/gi, '/')
+            .replace(/\\u0026/gi, '&')
+            .replace(/\\u003a/gi, ':')
+            .replace(/\\\//g, '/')
+            .replace(/^['"]+|['"]+$/g, '')
+            .trim();
+    }
+
+    static decodeBasicEntities(text) {
+        return String(text || '')
+            .replace(/&quot;/g, '"')
+            .replace(/&#34;/g, '"')
+            .replace(/&apos;/g, '\'')
+            .replace(/&#39;/g, '\'')
+            .replace(/&amp;/g, '&')
+            .replace(/&#38;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&#60;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&#62;/g, '>');
+    }
+
+    static normalizeUrl(url, baseUrl = '') {
+        if (!url) return null;
+
+        let normalized = SharedCore.decodeBasicEntities(SharedCore.decodeUrlEscapes(url))
+            .replace(/&amp;/g, '&')
+            .replace(/[),.;]+$/, '')
+            .trim();
+        if (!normalized) return null;
+
+        if (/^(#|javascript:|mailto:|tel:|sms:)/i.test(normalized)) {
+            return null;
+        }
+
+        if (normalized.startsWith('//')) {
+            const protocolMatch = String(baseUrl || '').match(/^(https?:)/i);
+            if (protocolMatch) {
+                return `${protocolMatch[1]}${normalized}`;
+            }
+        }
+
+        try {
+            if (baseUrl) return new URL(normalized, baseUrl).toString();
+            return new URL(normalized).toString();
+        } catch (_) {}
+
+        if (normalized.startsWith('/')) {
+            const match = String(baseUrl || '').match(/^(https?:)\/\/([^\/]+)/i);
+            if (match) {
+                return `${match[1]}//${match[2]}${normalized}`;
+            }
+        }
+
+        return normalized;
+    }
+
     static parseUrlComponents(url) {
         if (!url || typeof url !== 'string') return null;
         try {
@@ -461,19 +520,25 @@ class SharedCore {
                     await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
                 }
 
+                const normalizedUrl = this.normalizeUrl(url, effectiveParserConfig.urls?.[0] || '') || url;
+                if (!this.isValidUrl(normalizedUrl)) {
+                    await displayAdapter.logWarn(`SYSTEM: Skipping invalid URL after normalization: ${url}`);
+                    continue;
+                }
+
                 const htmlData = hasInlineInput
-                    ? { html: '', url, statusCode: 200, headers: {}, input: effectiveParserConfig.input }
-                    : await httpAdapter.fetchData(url, { pageCache: pageCacheConfig });
+                    ? { html: '', url: normalizedUrl, statusCode: 200, headers: {}, input: effectiveParserConfig.input }
+                    : await httpAdapter.fetchData(normalizedUrl, { pageCache: pageCacheConfig });
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const detectedParserName = this.detectParserFromUrl(url);
+                const detectedParserName = this.detectParserFromUrl(normalizedUrl);
                 const urlParserName = allowParserAutoSwitch
                     ? (detectedParserName || parserName)
                     : parserName;
                 const urlParser = parsers[urlParserName];
                 
                 if (allowParserAutoSwitch && urlParserName !== parserName) {
-                    await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
+                    await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${normalizedUrl}`);
                 }
                 
                 // Parse events (consolidated logging)
@@ -483,7 +548,7 @@ class SharedCore {
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
-                await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
+                await displayAdapter.logInfo(`SYSTEM: Parsed ${normalizedUrl} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
                 
                 if (parseResult.events) {
                     // Apply field priorities to determine which parser data to trust
@@ -644,10 +709,15 @@ class SharedCore {
             this.markProcessedUrl(processedUrls, url);
 
             try {
-                const htmlData = await httpAdapter.fetchData(url, { pageCache: pageCacheConfig });
+                const normalizedUrl = this.normalizeUrl(url, parserConfig.urls?.[0] || '') || url;
+                if (!this.isValidUrl(normalizedUrl)) {
+                    await displayAdapter.logWarn(`SYSTEM: Skipping invalid detail URL after normalization: ${url}`);
+                    continue;
+                }
+                const htmlData = await httpAdapter.fetchData(normalizedUrl, { pageCache: pageCacheConfig });
                 
                 // Detect parser for this specific URL (allows mid-run switching)
-                const detectedParserName = this.detectParserFromUrl(url);
+                const detectedParserName = this.detectParserFromUrl(normalizedUrl);
                 const urlParserName = allowParserAutoSwitch
                     ? (detectedParserName || parserName || 'ai-web')
                     : (parserName || 'ai-web');
@@ -673,7 +743,7 @@ class SharedCore {
                 if (shouldProcessUrls) {
                         // Deduplicate URLs before recursive processing
                         const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
-                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
+                        await displayAdapter.logInfo(`SYSTEM: Detail page ${normalizedUrl} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
                         
                         // Recursively process additional URLs if we haven't reached max depth
                         if (deduplicatedUrls.length > 0) {
@@ -693,7 +763,7 @@ class SharedCore {
                             );
                         }
                 } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
-                    await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
+                    await displayAdapter.logInfo(`SYSTEM: Detail page ${normalizedUrl} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
                 }
                 
                 // Process detail page events - either enrich existing or add new events
@@ -706,7 +776,7 @@ class SharedCore {
                     
                     // Add these events to the existing events collection for potential merging
                     existingEvents.push(...enrichedDetailEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
+                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${normalizedUrl}`);
                 }
                 
             } catch (error) {
@@ -725,34 +795,42 @@ class SharedCore {
     async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName = null, mainConfig = null) {
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
         const pageCacheConfig = this.resolvePageCacheConfig(parserConfig, mainConfig);
+        const normalizedRootUrls = this.deduplicateUrls(
+            (rootUrls || [])
+                .map(url => this.normalizeUrl(url, '') || url)
+                .filter(url => this.isValidUrl(url)),
+            new Set()
+        );
         const edges = []; // { from: string, to: string }
-        const allNodes = new Set(rootUrls);
+        const allNodes = new Set(normalizedRootUrls);
 
         // BFS queue: { url, depth, parent }
         // depth=0 are root URLs; links discovered from them are depth=1, etc.
         // We fetch a node only when depth < maxDepth so that the final depth
         // of nodes (depth === maxDepth) are recorded in the tree but not crawled.
-        const queue = rootUrls.map(url => ({ url, depth: 0, parent: null }));
+        const queue = normalizedRootUrls.map(url => ({ url, depth: 0, parent: null }));
 
         while (queue.length > 0) {
             const { url, depth, parent } = queue.shift();
+            const normalizedUrl = this.normalizeUrl(url, parent || '') || url;
+            if (!this.isValidUrl(normalizedUrl)) continue;
 
-            if (this.hasProcessedUrl(processedUrls, url)) continue;
-            this.markProcessedUrl(processedUrls, url);
+            if (this.hasProcessedUrl(processedUrls, normalizedUrl)) continue;
+            this.markProcessedUrl(processedUrls, normalizedUrl);
 
             if (parent !== null) {
-                edges.push({ from: parent, to: url });
+                edges.push({ from: parent, to: normalizedUrl });
             }
 
             // Leaf nodes at maxDepth are recorded but not fetched for further links
             if (depth >= maxDepth) continue;
 
             try {
-                const htmlData = await httpAdapter.fetchData(url, { pageCache: pageCacheConfig });
+                const htmlData = await httpAdapter.fetchData(normalizedUrl, { pageCache: pageCacheConfig });
                 // Use the forced parser when the config explicitly names one; otherwise
                 // fall back to URL-based auto-detection so that the right specialised
                 // parser is used for each discovered URL.
-                const detectedParser = forcedParserName || this.detectParserFromUrl(url) || 'ai-web';
+                const detectedParser = forcedParserName || this.detectParserFromUrl(normalizedUrl) || 'ai-web';
                 const urlParser = parsers[detectedParser];
                 if (!urlParser) continue;
 
@@ -764,16 +842,16 @@ class SharedCore {
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);
                 for (const childUrl of deduped) {
                     allNodes.add(childUrl);
-                    queue.push({ url: childUrl, depth: depth + 1, parent: url });
+                    queue.push({ url: childUrl, depth: depth + 1, parent: normalizedUrl });
                 }
 
-                await displayAdapter.logInfo(`SYSTEM: [Discovery] ${url} → ${deduped.length} links (depth ${depth + 1}/${maxDepth})`);
+                await displayAdapter.logInfo(`SYSTEM: [Discovery] ${normalizedUrl} → ${deduped.length} links (depth ${depth + 1}/${maxDepth})`);
             } catch (error) {
-                await displayAdapter.logError(`SYSTEM: [Discovery] Failed to fetch ${url}: ${error.message}`);
+                await displayAdapter.logError(`SYSTEM: [Discovery] Failed to fetch ${normalizedUrl}: ${error.message}`);
             }
         }
 
-        return { rootUrls, edges, allNodes: [...allNodes] };
+        return { rootUrls: normalizedRootUrls, edges, allNodes: [...allNodes] };
     }
 
     // Build a Mermaid graph LR string from a URL tree returned by discoverUrlTree.
@@ -1764,28 +1842,7 @@ class SharedCore {
     }
 
     normalizeUrl(url, baseUrl) {
-        if (!url) return null;
-        
-        // Remove HTML entities
-        url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        
-        // Handle relative URLs
-        if (url.startsWith('/')) {
-            const base = this.parseUrl(baseUrl);
-            if (base) {
-                return `${base.protocol}//${base.host}${url}`;
-            }
-        }
-        
-        // Handle protocol-relative URLs
-        if (url.startsWith('//')) {
-            const base = this.parseUrl(baseUrl);
-            if (base) {
-                return `${base.protocol}${url}`;
-            }
-        }
-        
-        return url;
+        return SharedCore.normalizeUrl(url, baseUrl);
     }
 
     isValidUrl(url) {
