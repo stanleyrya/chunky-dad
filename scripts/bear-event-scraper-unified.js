@@ -243,6 +243,10 @@ class BearEventScraperOrchestrator {
                         parsers[name] = new ParserClass({}, {
                             eventSchema: this.modules.EventSchema
                         });
+                    } else if (name === 'ai-web') {
+                        parsers[name] = new ParserClass({
+                            normalizeUrl: sharedCore.normalizeUrl.bind(sharedCore)
+                        });
                     } else {
                         parsers[name] = new ParserClass();
                     }

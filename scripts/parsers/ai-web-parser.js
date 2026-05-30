@@ -114,6 +114,9 @@ class AiWebParser {
             'href',
             'link'
         ];
+        if (typeof this.config.normalizeUrl !== 'function') {
+            throw new Error('AiWebParser requires config.normalizeUrl from SharedCore');
+        }
     }
 
     async parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null) {
@@ -711,42 +714,7 @@ class AiWebParser {
     }
 
     normalizeUrl(url, baseUrl) {
-        if (!url) return null;
-
-        url = this.decodeBasicEntities(this.decodeUrlEscapes(url)).replace(/&amp;/g, '&');
-        url = url.replace(/[),.;]+$/, '');
-        url = url.trim();
-
-        if (/^(#|javascript:|mailto:|tel:|sms:)/i.test(url)) {
-            return null;
-        }
-
-        if (url.startsWith('//')) {
-            const urlPattern = /^(https?:)/;
-            const match = String(baseUrl || '').match(urlPattern);
-            if (match) {
-                const [, protocol] = match;
-                return `${protocol}${url}`;
-            }
-        }
-
-        try {
-            if (baseUrl) {
-                return new URL(url, baseUrl).toString();
-            }
-            return new URL(url).toString();
-        } catch (_) {}
-
-        if (url.startsWith('/')) {
-            const urlPattern = /^(https?:)\/\/([^\/]+)/;
-            const match = String(baseUrl || '').match(urlPattern);
-            if (match) {
-                const [, protocol, host] = match;
-                return `${protocol}//${host}${url}`;
-            }
-        }
-
-        return url;
+        return this.config.normalizeUrl(url, baseUrl);
     }
 
     decodeUrlEscapes(url) {
