@@ -745,7 +745,8 @@ class AiWebParser {
         if (ImportedSharedCore && typeof ImportedSharedCore.normalizeUrl === 'function') {
             return ImportedSharedCore.normalizeUrl(url, baseUrl);
         }
-        return null;
+        const fallback = String(url || '').trim();
+        return fallback || null;
     }
 
     decodeUrlEscapes(url) {

@@ -36,8 +36,6 @@ class SharedCore {
             .replace(/&#34;/g, '"')
             .replace(/&apos;/g, '\'')
             .replace(/&#39;/g, '\'')
-            .replace(/&amp;/g, '&')
-            .replace(/&#38;/g, '&')
             .replace(/&lt;/g, '<')
             .replace(/&#60;/g, '<')
             .replace(/&gt;/g, '>')
