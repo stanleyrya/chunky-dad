@@ -788,7 +788,8 @@ class ScriptableAdapter {
         }
 
         const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
-        const cachePath = this.fm.joinPath(this.fm.joinPath(this.pageStorageDir, hostDir), fileName);
+        const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+        const cachePath = this.fm.joinPath(hostDirPath, fileName);
 
         try {
             if (!this.fm.fileExists(cachePath)) {
