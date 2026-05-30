@@ -758,10 +758,11 @@ class ScriptableAdapter {
                 fileName: `${fileBase}.json`
             };
         } catch (_) {
+            const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
             return {
                 normalizedUrl,
                 hostDir: 'unknown-host',
-                fileName: `${this.hashPageCacheValue(normalizedUrl || url)}.json`
+                fileName: fallbackName
             };
         }
     }
