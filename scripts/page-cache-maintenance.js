@@ -30,6 +30,7 @@ const FONT_SIZES = {
 const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const DEFAULT_PRUNE_DAYS = 7;
 const QUICK_DAY_OPTIONS = [3, 7, 14, 30, 60];
+const MAX_HOST_ROWS = 40;
 
 class PageCacheMaintenance {
   constructor() {
@@ -466,7 +467,7 @@ class PageCacheMaintenance {
 
     const hostRows = analysis.hosts
       .filter(host => host.totalFileCount > 0 || host.removableAfterPrune)
-      .slice(0, 40)
+      .slice(0, MAX_HOST_ROWS)
       .map(host => {
         const hostStatus = host.oldFileCount > 0
           ? `${this.formatNumber(host.oldFileCount)} old • ${this.formatNumber(host.recentFileCount)} recent`
