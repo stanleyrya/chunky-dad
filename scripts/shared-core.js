@@ -340,7 +340,12 @@ class SharedCore {
 
         // Process main URLs
         for (let i = 0; i < (effectiveParserConfig.urls || []).length; i++) {
-            const url = effectiveParserConfig.urls[i];
+            const rawUrl = effectiveParserConfig.urls[i];
+            const url = this.normalizeUrl(rawUrl, rawUrl);
+            if (!url) {
+                await displayAdapter.logWarn(`SYSTEM: Skipping invalid URL: ${rawUrl}`);
+                continue;
+            }
             if (this.hasProcessedUrl(globalProcessedUrls, url)) {
                 await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
                 continue;
@@ -526,7 +531,11 @@ class SharedCore {
 
         await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
 
-        for (const url of urlsToProcess) {
+        for (const rawUrl of urlsToProcess) {
+            const url = this.normalizeUrl(rawUrl, rawUrl);
+            if (!url) {
+                continue;
+            }
             if (this.hasProcessedUrl(processedUrls, url)) {
                 continue; // Skip already processed URLs without logging each one
             }
@@ -620,7 +629,10 @@ class SharedCore {
         // depth=0 are root URLs; links discovered from them are depth=1, etc.
         // We fetch a node only when depth < maxDepth so that the final depth
         // of nodes (depth === maxDepth) are recorded in the tree but not crawled.
-        const queue = rootUrls.map(url => ({ url, depth: 0, parent: null }));
+        const queue = rootUrls
+            .map(url => this.normalizeUrl(url, url))
+            .filter(Boolean)
+            .map(url => ({ url, depth: 0, parent: null }));
 
         while (queue.length > 0) {
             const { url, depth, parent } = queue.shift();
@@ -651,8 +663,12 @@ class SharedCore {
                 const childLinks = parseResult.additionalLinks || [];
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);
                 for (const childUrl of deduped) {
-                    allNodes.add(childUrl);
-                    queue.push({ url: childUrl, depth: depth + 1, parent: url });
+                    const normalizedChildUrl = this.normalizeUrl(childUrl, childUrl);
+                    if (!normalizedChildUrl) {
+                        continue;
+                    }
+                    allNodes.add(normalizedChildUrl);
+                    queue.push({ url: normalizedChildUrl, depth: depth + 1, parent: url });
                 }
 
                 await displayAdapter.logInfo(`SYSTEM: [Discovery] ${url} → ${deduped.length} links (depth ${depth + 1}/${maxDepth})`);
@@ -1653,27 +1669,55 @@ class SharedCore {
 
     normalizeUrl(url, baseUrl) {
         if (!url) return null;
-        
-        // Remove HTML entities
-        url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        
-        // Handle relative URLs
-        if (url.startsWith('/')) {
+
+        let normalized = this.decodeBasicEntities(this.decodeUrlEscapes(String(url))).replace(/&amp;/g, '&');
+        normalized = normalized.replace(/[),.;]+$/, '').trim();
+        if (!normalized) return null;
+
+        if (/^(#|javascript:|mailto:|tel:|sms:)/i.test(normalized)) {
+            return null;
+        }
+
+        if (normalized.startsWith('//')) {
             const base = this.parseUrl(baseUrl);
-            if (base) {
-                return `${base.protocol}//${base.host}${url}`;
+            if (base && base.protocol) {
+                return `${base.protocol}${normalized}`;
+            }
+            return `https:${normalized}`;
+        }
+
+        try {
+            const resolved = baseUrl ? new URL(normalized, baseUrl).toString() : new URL(normalized).toString();
+            return resolved;
+        } catch (_) {}
+
+        if (normalized.startsWith('/')) {
+            const base = this.parseUrl(baseUrl);
+            if (base && base.protocol && base.host) {
+                return `${base.protocol}//${base.host}${normalized}`;
             }
         }
-        
-        // Handle protocol-relative URLs
-        if (url.startsWith('//')) {
-            const base = this.parseUrl(baseUrl);
-            if (base) {
-                return `${base.protocol}${url}`;
-            }
-        }
-        
-        return url;
+
+        return normalized;
+    }
+
+    decodeUrlEscapes(url) {
+        return String(url || '')
+            .replace(/\\u002f/gi, '/')
+            .replace(/\\u0026/gi, '&')
+            .replace(/\\u003a/gi, ':')
+            .replace(/\\\//g, '/')
+            .replace(/^['"]+|['"]+$/g, '')
+            .trim();
+    }
+
+    decodeBasicEntities(text) {
+        return String(text || '')
+            .replace(/&amp;/gi, '&')
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/&quot;/gi, '"')
+            .replace(/&#39;/gi, "'");
     }
 
     isValidUrl(url) {
