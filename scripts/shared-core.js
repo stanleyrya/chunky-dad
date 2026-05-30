@@ -417,7 +417,8 @@ class SharedCore {
                 httpAdapter,
                 displayAdapter,
                 discoveryProcessedUrls,
-                configuredParserName || null
+                configuredParserName || null,
+                mainConfig
             );
             const mermaidGraph = this.buildMermaidGraph(discoveryTree);
             const asciiTree = this.buildAsciiTree(discoveryTree);
@@ -715,9 +716,9 @@ class SharedCore {
 
     // Discovery-only mode: traverse URL tree up to configured depth, collect links without extracting events.
     // Returns { rootUrls, edges, allNodes } for graph rendering.
-    async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName = null) {
+    async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName = null, mainConfig = null) {
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
-        const pageCacheConfig = this.resolvePageCacheConfig(parserConfig, null);
+        const pageCacheConfig = this.resolvePageCacheConfig(parserConfig, mainConfig);
         const edges = []; // { from: string, to: string }
         const allNodes = new Set(rootUrls);
 
