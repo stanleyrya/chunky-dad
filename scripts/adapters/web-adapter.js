@@ -32,6 +32,7 @@ const ImportedSharedCore = (() => {
     } catch (_) {}
     return null;
 })();
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 class WebAdapter {
     constructor(config = {}) {
@@ -122,7 +123,7 @@ class WebAdapter {
                     statusCode: response.status,
                     headers: Object.fromEntries(response.headers.entries())
                 };
-                this.writeCachedPage(url, result, pageCacheConfig);
+                await this.writeCachedPage(url, result, pageCacheConfig);
                 return result;
             } else {
                 console.error(`🌐 Web: ✗ Empty response from ${url}`);
@@ -195,7 +196,7 @@ class WebAdapter {
             const raw = this.nodeFs.readFileSync(cachePath.filePath, 'utf8');
             const cached = JSON.parse(raw);
             const fetchedAt = cached?.fetchedAt ? new Date(cached.fetchedAt).getTime() : NaN;
-            const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
+            const maxAgeMs = pageCacheConfig.ttlDays * MS_PER_DAY;
             if (!Number.isFinite(fetchedAt) || (Date.now() - fetchedAt) > maxAgeMs) {
                 return null;
             }
@@ -211,13 +212,13 @@ class WebAdapter {
         }
     }
 
-    writeCachedPage(url, payload, pageCacheConfig) {
+    async writeCachedPage(url, payload, pageCacheConfig) {
         if (!pageCacheConfig.enabled || !this.nodeFs || !this.nodePath) return;
         const cachePath = this.getNodePageCacheFilePath(url);
         if (!cachePath) return;
         try {
-            this.nodeFs.mkdirSync(cachePath.folder, { recursive: true });
-            this.nodeFs.writeFileSync(cachePath.filePath, JSON.stringify({
+            await this.nodeFs.promises.mkdir(cachePath.folder, { recursive: true });
+            await this.nodeFs.promises.writeFile(cachePath.filePath, JSON.stringify({
                 fetchedAt: new Date().toISOString(),
                 normalizedUrl: cachePath.identity.normalizedUrl,
                 url: payload.url || url,

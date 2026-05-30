@@ -356,6 +356,7 @@ logger.captureConsole();
 const DEFAULT_CAPTURE_LOG_MAX_LINES = 30000;
 const DEFAULT_CAPTURE_LOG_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_DISPLAY_LOG_MAX_LINES = 12000;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
@@ -791,7 +792,7 @@ class ScriptableAdapter {
             const raw = this.fm.readString(cachePath.filePath);
             const cached = JSON.parse(raw);
             const fetchedAt = cached?.fetchedAt ? new Date(cached.fetchedAt).getTime() : NaN;
-            const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
+            const maxAgeMs = pageCacheConfig.ttlDays * MS_PER_DAY;
             if (!Number.isFinite(fetchedAt) || (Date.now() - fetchedAt) > maxAgeMs) {
                 return null;
             }
