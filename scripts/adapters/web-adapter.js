@@ -148,6 +148,20 @@ class WebAdapter {
         };
     }
 
+    hashCacheKey(value) {
+        const text = String(value || '');
+        let hashA = 0x811c9dc5;
+        let hashB = 0x1b873593;
+        for (let i = 0; i < text.length; i++) {
+            const code = text.charCodeAt(i);
+            hashA = Math.imul(hashA ^ code, 16777619);
+            hashB = Math.imul(hashB ^ code, 2246822519);
+        }
+        hashA ^= text.length;
+        hashB ^= text.length;
+        return `${(hashA >>> 0).toString(16).padStart(8, '0')}${(hashB >>> 0).toString(16).padStart(8, '0')}`;
+    }
+
     getPageCacheIdentity(url) {
         if (ImportedSharedCore && typeof ImportedSharedCore.getUrlCacheIdentity === 'function') {
             return ImportedSharedCore.getUrlCacheIdentity(url);
@@ -155,7 +169,7 @@ class WebAdapter {
         return {
             normalizedUrl: String(url || ''),
             hostFolder: 'unknown-host',
-            fileKey: String(url || '').length.toString(16)
+            fileKey: this.hashCacheKey(url)
         };
     }
 

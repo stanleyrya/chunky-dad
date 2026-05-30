@@ -82,21 +82,27 @@ class SharedCore {
 
     static hashString(value) {
         const text = String(value || '');
-        let hash = 2166136261;
+        let hashA = 0x811c9dc5;
+        let hashB = 0x1b873593;
         for (let i = 0; i < text.length; i++) {
-            hash ^= text.charCodeAt(i);
-            hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+            const code = text.charCodeAt(i);
+            hashA = Math.imul(hashA ^ code, 16777619);
+            hashB = Math.imul(hashB ^ code, 2246822519);
         }
-        return (hash >>> 0).toString(16).padStart(8, '0');
+        hashA ^= text.length;
+        hashB ^= text.length;
+        const partA = (hashA >>> 0).toString(16).padStart(8, '0');
+        const partB = (hashB >>> 0).toString(16).padStart(8, '0');
+        return `${partA}${partB}`;
     }
 
     static getUrlCacheIdentity(url, trackingParamPattern = null) {
         const normalizedUrl = SharedCore.getUrlDedupeKey(url, trackingParamPattern);
         const parsed = SharedCore.parseUrlComponents(normalizedUrl);
-        const hostFolder = String(parsed?.hostname || 'unknown-host')
+        const hostFolder = (String(parsed?.hostname || 'unknown-host')
             .replace(/[^a-z0-9.-]+/gi, '-')
             .replace(/^-+|-+$/g, '')
-            .toLowerCase() || 'unknown-host';
+            .toLowerCase()) || 'unknown-host';
         const fileKey = SharedCore.hashString(normalizedUrl || String(url || ''));
         return { normalizedUrl, hostFolder, fileKey };
     }
