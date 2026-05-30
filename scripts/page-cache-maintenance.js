@@ -28,6 +28,7 @@ const FONT_SIZES = {
 };
 
 const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
+const LOGO_CACHE_TTL_DAYS = 7;
 const DEFAULT_PRUNE_DAYS = 7;
 const QUICK_DAY_OPTIONS = [3, 7, 14, 30, 60];
 const MAX_HOST_ROWS = 40;
@@ -134,7 +135,7 @@ class PageCacheMaintenance {
     try {
       if (this.fm.fileExists(cachePath)) {
         const mtime = this.fm.modificationDate(cachePath);
-        if (mtime && (Date.now() - mtime.getTime()) < (7 * 24 * 60 * 60 * 1000)) {
+        if (mtime && (Date.now() - mtime.getTime()) < (LOGO_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000)) {
           return Image.fromFile(cachePath);
         }
       }
