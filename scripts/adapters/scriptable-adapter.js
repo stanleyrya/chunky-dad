@@ -388,6 +388,8 @@ class ScriptableAdapter {
         this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
         this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
+        this.storageDir = this.fm.joinPath(this.baseDir, 'storage');
+        this.pageStorageDir = this.fm.joinPath(this.storageDir, 'pages');
         this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
         
         this.runtimeContext = this.getScriptableRuntimeContext();
@@ -680,8 +682,183 @@ class ScriptableAdapter {
     }
 
     // HTTP Adapter Implementation
+    getPageCacheConfig() {
+        const pageCache = this.config.pageCache || {};
+        const ttlDays = Number(pageCache.ttlDays);
+        return {
+            enabled: pageCache.enabled === true,
+            ttlDays: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays : 3
+        };
+    }
+
+    normalizePageCacheUrl(url) {
+        try {
+            const normalized = new URL(String(url));
+            normalized.hash = '';
+            normalized.protocol = normalized.protocol.toLowerCase();
+            normalized.hostname = normalized.hostname.toLowerCase();
+
+            const searchEntries = Array.from(normalized.searchParams.entries())
+                .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+                    if (leftKey === rightKey) {
+                        return leftValue.localeCompare(rightValue);
+                    }
+                    return leftKey.localeCompare(rightKey);
+                });
+
+            normalized.search = '';
+            searchEntries.forEach(([key, value]) => normalized.searchParams.append(key, value));
+
+            return normalized.toString();
+        } catch (_) {
+            return String(url || '').trim();
+        }
+    }
+
+    sanitizePageCacheSegment(segment) {
+        return String(segment || 'index')
+            .toLowerCase()
+            .replace(/[^a-z0-9._-]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'index';
+    }
+
+    hashPageCacheValue(value) {
+        // FNV-1a 32-bit hash for compact deterministic cache keys.
+        let hash = 2166136261;
+        const input = String(value || '');
+        for (let i = 0; i < input.length; i++) {
+            hash ^= input.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return (hash >>> 0).toString(36);
+    }
+
+    getPageCachePathParts(url) {
+        const normalizedUrl = this.normalizePageCacheUrl(url);
+
+        try {
+            const parsed = new URL(normalizedUrl);
+            const hostDir = this.sanitizePageCacheSegment(parsed.host || parsed.hostname || 'unknown-host');
+            const pathSegments = parsed.pathname
+                .split('/')
+                .filter(Boolean)
+                .map(segment => this.sanitizePageCacheSegment(segment));
+
+            let fileBase = pathSegments.length > 0 ? pathSegments.join('__') : 'index';
+            if (parsed.search) {
+                fileBase += `--q-${this.hashPageCacheValue(parsed.search)}`;
+            }
+            if (fileBase.length > 120) {
+                fileBase = `${fileBase.slice(0, 80)}--${this.hashPageCacheValue(fileBase)}`;
+            }
+
+            return {
+                normalizedUrl,
+                hostDir,
+                fileName: `${fileBase}.json`
+            };
+        } catch (_) {
+            const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
+            return {
+                normalizedUrl,
+                hostDir: 'unknown-host',
+                fileName: fallbackName
+            };
+        }
+    }
+
+    ensureDirectoryExists(path) {
+        if (!this.fm.fileExists(path)) {
+            this.fm.createDirectory(path, true);
+        }
+    }
+
+    ensurePageCacheDir(hostDir) {
+        this.ensureDirectoryExists(this.baseDir);
+        this.ensureDirectoryExists(this.storageDir);
+        this.ensureDirectoryExists(this.pageStorageDir);
+        const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+        this.ensureDirectoryExists(hostDirPath);
+        return hostDirPath;
+    }
+
+    async readCachedPage(url, pageCacheConfig) {
+        if (!pageCacheConfig.enabled) {
+            return null;
+        }
+
+        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
+        const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+        const cachePath = this.fm.joinPath(hostDirPath, fileName);
+
+        try {
+            if (!this.fm.fileExists(cachePath)) {
+                return null;
+            }
+
+            const modifiedAt = this.fm.modificationDate(cachePath);
+            const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
+            if (modifiedAt && (Date.now() - modifiedAt.getTime()) > maxAgeMs) {
+                return null;
+            }
+
+            try {
+                await this.fm.downloadFileFromiCloud(cachePath);
+            } catch (_) {}
+
+            const cached = JSON.parse(this.fm.readString(cachePath));
+            if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
+                return null;
+            }
+
+            return {
+                html: cached.html,
+                url: cached.url || normalizedUrl,
+                statusCode: cached.statusCode || 200,
+                headers: cached.headers || {},
+                fetchedAt: cached.fetchedAt || null,
+                cachePath
+            };
+        } catch (error) {
+            console.log(`📱 Scriptable: Page cache read failed for ${url}: ${error.message}`);
+            return null;
+        }
+    }
+
+    async writeCachedPage(url, responseData, pageCacheConfig) {
+        if (!pageCacheConfig.enabled || !responseData || typeof responseData.html !== 'string' || responseData.html.length === 0) {
+            return;
+        }
+
+        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
+        const hostDirPath = this.ensurePageCacheDir(hostDir);
+        const cachePath = this.fm.joinPath(hostDirPath, fileName);
+        const payload = {
+            url: normalizedUrl,
+            fetchedAt: new Date().toISOString(),
+            statusCode: responseData.statusCode || 200,
+            headers: responseData.headers || {},
+            html: responseData.html
+        };
+
+        try {
+            this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+        } catch (error) {
+            console.log(`📱 Scriptable: Page cache write failed for ${url}: ${error.message}`);
+        }
+    }
+
     async fetchData(url, options = {}) {
         try {
+            const pageCacheConfig = this.getPageCacheConfig();
+            const canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
+            if (canUseCache) {
+                const cachedPage = await this.readCachedPage(url, pageCacheConfig);
+                if (cachedPage) {
+                    return cachedPage;
+                }
+            }
+
             const request = new Request(url);
             request.method = options.method || 'GET';
             request.headers = {
@@ -704,12 +881,18 @@ class ScriptableAdapter {
             }
             
             if (response && response.length > 0) {
-                return {
+                const responseData = {
                     html: response,
                     url: url,
                     statusCode: statusCode,
                     headers: request.response ? request.response.headers : {}
                 };
+
+                if (canUseCache) {
+                    await this.writeCachedPage(url, responseData, pageCacheConfig);
+                }
+
+                return responseData;
             } else {
                 console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
                 throw new Error(`Empty response from ${url}`);

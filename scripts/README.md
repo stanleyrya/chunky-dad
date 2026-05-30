@@ -242,6 +242,7 @@ metadata: {
 2. Copy ALL scriptable files to Scriptable:
    - `bear-event-scraper-unified.js`
    - `display-saved-run.js`
+   - `page-cache-maintenance.js`
    - `shared-core.js`
    - `adapters/scriptable-adapter.js`
    - `adapters/web-adapter.js` (needed for unified script)
@@ -252,7 +253,7 @@ metadata: {
    - `parsers/redeyetickets-parser.js`
    - `parsers/scriptable-url-parser.js`
 3. Copy `scraper-input.js` to **iCloud Drive/Scriptable/** folder
-4. Run `bear-event-scraper-unified.js` or `display-saved-run.js`
+4. Run `bear-event-scraper-unified.js`, `display-saved-run.js`, or `page-cache-maintenance.js`
 5. Set `dryRun: false` when ready for live calendar updates
 
 ### Scriptable URL Input (x-callback-url)
