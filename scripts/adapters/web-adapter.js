@@ -16,6 +16,23 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+const ImportedSharedCore = (() => {
+    try {
+        if (typeof require === 'function') {
+            const sharedModule = require('../shared-core');
+            if (sharedModule && sharedModule.SharedCore) {
+                return sharedModule.SharedCore;
+            }
+        }
+    } catch (_) {}
+    try {
+        if (typeof window !== 'undefined' && window.SharedCore) {
+            return window.SharedCore;
+        }
+    } catch (_) {}
+    return null;
+})();
+
 class WebAdapter {
     constructor(config = {}) {
         this.config = {
@@ -26,6 +43,22 @@ class WebAdapter {
         
         // Store cities configuration for calendar mapping
         this.cities = config.cities || {};
+        this.pageCacheDefaults = {
+            enabled: false,
+            ttlDays: 3,
+            ...(config.pageCache || {})
+        };
+        this.nodePageCacheRoot = null;
+        this.nodeFs = null;
+        this.nodePath = null;
+        if (typeof window === 'undefined' && typeof require === 'function') {
+            try {
+                const os = require('os');
+                this.nodeFs = require('fs');
+                this.nodePath = require('path');
+                this.nodePageCacheRoot = this.nodePath.join(os.homedir(), '.chunky-dad-scraper', 'cache', 'pages');
+            } catch (_) {}
+        }
     }
     
     getRunContext() {
@@ -50,6 +83,12 @@ class WebAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
+            const pageCacheConfig = this.resolvePageCacheConfig(options.pageCache);
+            const cached = this.readCachedPage(url, pageCacheConfig);
+            if (cached) {
+                return cached;
+            }
+
             const fetchUrl = this.config.corsProxy
                 ? `${this.config.corsProxy}${encodeURIComponent(url)}`
                 : url;
@@ -77,12 +116,14 @@ class WebAdapter {
             const html = await response.text();
             
             if (html && html.length > 0) {
-                return {
+                const result = {
                     html: html,
                     url: url,
                     statusCode: response.status,
                     headers: Object.fromEntries(response.headers.entries())
                 };
+                this.writeCachedPage(url, result, pageCacheConfig);
+                return result;
             } else {
                 console.error(`🌐 Web: ✗ Empty response from ${url}`);
                 throw new Error(`Empty response from ${url}`);
@@ -93,6 +134,81 @@ class WebAdapter {
             console.log(errorMessage);
             throw new Error(`HTTP request failed for ${url}: ${error.message}`);
         }
+    }
+
+    resolvePageCacheConfig(config = {}) {
+        const merged = {
+            ...this.pageCacheDefaults,
+            ...(config || {})
+        };
+        const ttlDays = Number(merged.ttlDays);
+        return {
+            enabled: merged.enabled === true,
+            ttlDays: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays : 3
+        };
+    }
+
+    getPageCacheIdentity(url) {
+        if (ImportedSharedCore && typeof ImportedSharedCore.getUrlCacheIdentity === 'function') {
+            return ImportedSharedCore.getUrlCacheIdentity(url);
+        }
+        return {
+            normalizedUrl: String(url || ''),
+            hostFolder: 'unknown-host',
+            fileKey: String(url || '').length.toString(16)
+        };
+    }
+
+    getNodePageCacheFilePath(url) {
+        if (!this.nodePath || !this.nodePageCacheRoot) return null;
+        const identity = this.getPageCacheIdentity(url);
+        const folder = this.nodePath.join(this.nodePageCacheRoot, identity.hostFolder);
+        return {
+            identity,
+            folder,
+            filePath: this.nodePath.join(folder, `${identity.fileKey}.json`)
+        };
+    }
+
+    readCachedPage(url, pageCacheConfig) {
+        if (!pageCacheConfig.enabled || !this.nodeFs || !this.nodePath) return null;
+        const cachePath = this.getNodePageCacheFilePath(url);
+        if (!cachePath || !this.nodeFs.existsSync(cachePath.filePath)) return null;
+        try {
+            const raw = this.nodeFs.readFileSync(cachePath.filePath, 'utf8');
+            const cached = JSON.parse(raw);
+            const fetchedAt = cached?.fetchedAt ? new Date(cached.fetchedAt).getTime() : NaN;
+            const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
+            if (!Number.isFinite(fetchedAt) || (Date.now() - fetchedAt) > maxAgeMs) {
+                return null;
+            }
+            if (!cached?.html) return null;
+            return {
+                html: cached.html,
+                url: cached.url || url,
+                statusCode: Number(cached.statusCode) || 200,
+                headers: cached.headers && typeof cached.headers === 'object' ? cached.headers : {}
+            };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    writeCachedPage(url, payload, pageCacheConfig) {
+        if (!pageCacheConfig.enabled || !this.nodeFs || !this.nodePath) return;
+        const cachePath = this.getNodePageCacheFilePath(url);
+        if (!cachePath) return;
+        try {
+            this.nodeFs.mkdirSync(cachePath.folder, { recursive: true });
+            this.nodeFs.writeFileSync(cachePath.filePath, JSON.stringify({
+                fetchedAt: new Date().toISOString(),
+                normalizedUrl: cachePath.identity.normalizedUrl,
+                url: payload.url || url,
+                statusCode: Number(payload.statusCode) || 200,
+                headers: payload.headers && typeof payload.headers === 'object' ? payload.headers : {},
+                html: String(payload.html || '')
+            }));
+        } catch (_) {}
     }
 
     // Configuration Loading

@@ -25,6 +25,31 @@ const ImportedEventSchema = (() => {
     return null;
 })();
 
+const ImportedSharedCore = (() => {
+    try {
+        if (typeof importModule === 'function') {
+            const sharedModule = importModule('shared-core');
+            if (sharedModule && sharedModule.SharedCore) {
+                return sharedModule.SharedCore;
+            }
+        }
+    } catch (_) {}
+    try {
+        if (typeof require === 'function') {
+            const sharedModule = require('../shared-core');
+            if (sharedModule && sharedModule.SharedCore) {
+                return sharedModule.SharedCore;
+            }
+        }
+    } catch (_) {}
+    try {
+        if (typeof window !== 'undefined' && window.SharedCore) {
+            return window.SharedCore;
+        }
+    } catch (_) {}
+    return null;
+})();
+
 class AiWebParser {
     constructor(config = {}) {
         this.config = {
@@ -407,6 +432,9 @@ class AiWebParser {
     }
 
     getUrlDedupeKey(url) {
+        if (ImportedSharedCore && typeof ImportedSharedCore.getUrlDedupeKey === 'function') {
+            return ImportedSharedCore.getUrlDedupeKey(url, this.trackingParamPattern);
+        }
         try {
             const parsed = new URL(url);
             parsed.hash = '';
@@ -425,6 +453,9 @@ class AiWebParser {
 
     stripTrackingParams(url) {
         if (!url) return url;
+        if (ImportedSharedCore && typeof ImportedSharedCore.stripTrackingParams === 'function') {
+            return ImportedSharedCore.stripTrackingParams(url, this.trackingParamPattern);
+        }
         try {
             const parsed = new URL(url);
             for (const key of [...parsed.searchParams.keys()]) {

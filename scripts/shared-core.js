@@ -20,6 +20,87 @@
 // ============================================================================
 
 class SharedCore {
+    static parseUrlComponents(url) {
+        if (!url || typeof url !== 'string') return null;
+        try {
+            if (typeof URL === 'function') {
+                const parsed = new URL(url);
+                return {
+                    protocol: String(parsed.protocol || '').toLowerCase(),
+                    hostname: String(parsed.hostname || '').toLowerCase(),
+                    pathname: parsed.pathname || '/',
+                    search: parsed.search || '',
+                    hash: parsed.hash || '',
+                    href: parsed.toString()
+                };
+            }
+        } catch (_) {}
+
+        const match = String(url).match(/^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i);
+        if (!match) return null;
+        const [, protocol = '', hostname = '', pathname = '', search = '', hash = ''] = match;
+        return {
+            protocol: String(protocol || '').toLowerCase(),
+            hostname: String(hostname || '').toLowerCase(),
+            pathname: pathname || '/',
+            search: search || '',
+            hash: hash || '',
+            href: `${protocol}//${hostname}${pathname || '/'}${search}${hash}`
+        };
+    }
+
+    static stripTrackingParams(url, trackingParamPattern = null) {
+        if (!url) return url;
+        const trackingPattern = trackingParamPattern instanceof RegExp
+            ? trackingParamPattern
+            : /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
+        try {
+            const parsed = new URL(url);
+            for (const key of [...parsed.searchParams.keys()]) {
+                if (trackingPattern.test(key)) {
+                    parsed.searchParams.delete(key);
+                }
+            }
+            return parsed.toString();
+        } catch (_) {
+            return String(url);
+        }
+    }
+
+    static normalizeUrlForDedupe(url) {
+        return String(url || '')
+            .trim()
+            .replace(/#.*$/, '')
+            .replace(/\/$/, '')
+            .toLowerCase();
+    }
+
+    static getUrlDedupeKey(url, trackingParamPattern = null) {
+        const withoutTracking = SharedCore.stripTrackingParams(url, trackingParamPattern);
+        return SharedCore.normalizeUrlForDedupe(withoutTracking);
+    }
+
+    static hashString(value) {
+        const text = String(value || '');
+        let hash = 2166136261;
+        for (let i = 0; i < text.length; i++) {
+            hash ^= text.charCodeAt(i);
+            hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+        }
+        return (hash >>> 0).toString(16).padStart(8, '0');
+    }
+
+    static getUrlCacheIdentity(url, trackingParamPattern = null) {
+        const normalizedUrl = SharedCore.getUrlDedupeKey(url, trackingParamPattern);
+        const parsed = SharedCore.parseUrlComponents(normalizedUrl);
+        const hostFolder = String(parsed?.hostname || 'unknown-host')
+            .replace(/[^a-z0-9.-]+/gi, '-')
+            .replace(/^-+|-+$/g, '')
+            .toLowerCase() || 'unknown-host';
+        const fileKey = SharedCore.hashString(normalizedUrl || String(url || ''));
+        return { normalizedUrl, hostFolder, fileKey };
+    }
+
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
             throw new Error('SharedCore requires cities configuration - pass config.cities from scraper-cities.js');
@@ -173,6 +254,26 @@ class SharedCore {
         return { shouldRun: true, reason: null };
     }
 
+    resolvePageCacheConfig(parserConfig, mainConfig) {
+        const globalCacheConfig = mainConfig?.config?.pageCache && typeof mainConfig.config.pageCache === 'object'
+            ? mainConfig.config.pageCache
+            : {};
+        const parserCacheConfig = parserConfig?.pageCache && typeof parserConfig.pageCache === 'object'
+            ? parserConfig.pageCache
+            : {};
+        const merged = {
+            enabled: false,
+            ttlDays: 3,
+            ...globalCacheConfig,
+            ...parserCacheConfig
+        };
+        const ttlDays = Number(merged.ttlDays);
+        return {
+            enabled: merged.enabled === true,
+            ttlDays: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays : 3
+        };
+    }
+
     // Pure business logic for processing events
     async processEvents(config, httpAdapter, displayAdapter, parsers) {
         const parserCount = config.parsers?.length || 0;
@@ -301,6 +402,7 @@ class SharedCore {
         const parserStartedAt = Date.now();
         const allEvents = [];
         const hasInlineInput = effectiveParserConfig.input && typeof effectiveParserConfig.input === 'object';
+        const pageCacheConfig = this.resolvePageCacheConfig(effectiveParserConfig, mainConfig);
         // Use global processedUrls to prevent duplicate processing across all parsers
 
         // Discovery-only mode: collect the URL tree without extracting events from leaf pages.
@@ -354,7 +456,7 @@ class SharedCore {
 
                 const htmlData = hasInlineInput
                     ? { html: '', url, statusCode: 200, headers: {}, input: effectiveParserConfig.input }
-                    : await httpAdapter.fetchData(url);
+                    : await httpAdapter.fetchData(url, { pageCache: pageCacheConfig });
                 
                 // Detect parser for this specific URL (allows mid-run switching)
                 const detectedParserName = this.detectParserFromUrl(url);
@@ -407,7 +509,8 @@ class SharedCore {
                         undefined,
                         mainConfig,
                         parserName,
-                        allowParserAutoSwitch
+                        allowParserAutoSwitch,
+                        pageCacheConfig
                     );
                     await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
                 }
@@ -511,7 +614,7 @@ class SharedCore {
         };
     }
 
-    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null, allowParserAutoSwitch = true) {
+    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null, allowParserAutoSwitch = true, pageCacheConfig = null) {
         const configuredMaxUrls = parserConfig.maxAdditionalUrls;
         let maxUrls = 12;
         if (configuredMaxUrls === null) {
@@ -534,7 +637,7 @@ class SharedCore {
             this.markProcessedUrl(processedUrls, url);
 
             try {
-                const htmlData = await httpAdapter.fetchData(url);
+                const htmlData = await httpAdapter.fetchData(url, { pageCache: pageCacheConfig });
                 
                 // Detect parser for this specific URL (allows mid-run switching)
                 const detectedParserName = this.detectParserFromUrl(url);
@@ -578,7 +681,8 @@ class SharedCore {
                                 currentDepth + 1,
                                 mainConfig,
                                 urlParserName,
-                                allowParserAutoSwitch
+                                allowParserAutoSwitch,
+                                pageCacheConfig
                             );
                         }
                 } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
@@ -613,6 +717,7 @@ class SharedCore {
     // Returns { rootUrls, edges, allNodes } for graph rendering.
     async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName = null) {
         const maxDepth = parserConfig.urlDiscoveryDepth || 1;
+        const pageCacheConfig = this.resolvePageCacheConfig(parserConfig, null);
         const edges = []; // { from: string, to: string }
         const allNodes = new Set(rootUrls);
 
@@ -636,7 +741,7 @@ class SharedCore {
             if (depth >= maxDepth) continue;
 
             try {
-                const htmlData = await httpAdapter.fetchData(url);
+                const htmlData = await httpAdapter.fetchData(url, { pageCache: pageCacheConfig });
                 // Use the forced parser when the config explicitly names one; otherwise
                 // fall back to URL-based auto-detection so that the right specialised
                 // parser is used for each discovered URL.

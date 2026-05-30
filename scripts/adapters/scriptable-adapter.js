@@ -389,6 +389,12 @@ class ScriptableAdapter {
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
         this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
         this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
+        this.pageCacheDir = this.fm.joinPath(this.cacheDir, 'pages');
+        this.pageCacheDefaults = {
+            enabled: false,
+            ttlDays: 3,
+            ...(config.pageCache || {})
+        };
         
         this.runtimeContext = this.getScriptableRuntimeContext();
         this.runStartedAt = new Date();
@@ -682,6 +688,12 @@ class ScriptableAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
+            const pageCacheConfig = this.resolvePageCacheConfig(options.pageCache);
+            const cached = this.readCachedPage(url, pageCacheConfig);
+            if (cached) {
+                return cached;
+            }
+
             const request = new Request(url);
             request.method = options.method || 'GET';
             request.headers = {
@@ -704,12 +716,14 @@ class ScriptableAdapter {
             }
             
             if (response && response.length > 0) {
-                return {
+                const result = {
                     html: response,
                     url: url,
                     statusCode: statusCode,
                     headers: request.response ? request.response.headers : {}
                 };
+                this.writeCachedPage(url, result, pageCacheConfig);
+                return result;
             } else {
                 console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
                 throw new Error(`Empty response from ${url}`);
@@ -720,6 +734,78 @@ class ScriptableAdapter {
             console.log(errorMessage);
             throw new Error(`HTTP request failed for ${url}: ${error.message}`);
         }
+    }
+
+    resolvePageCacheConfig(config = {}) {
+        const merged = {
+            ...this.pageCacheDefaults,
+            ...(config || {})
+        };
+        const ttlDays = Number(merged.ttlDays);
+        return {
+            enabled: merged.enabled === true,
+            ttlDays: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays : 3
+        };
+    }
+
+    getPageCacheIdentity(url) {
+        if (SharedCore && typeof SharedCore.getUrlCacheIdentity === 'function') {
+            return SharedCore.getUrlCacheIdentity(url);
+        }
+        return {
+            normalizedUrl: String(url || ''),
+            hostFolder: 'unknown-host',
+            fileKey: String(url || '').length.toString(16)
+        };
+    }
+
+    getPageCacheFilePath(url) {
+        const identity = this.getPageCacheIdentity(url);
+        const folder = this.fm.joinPath(this.pageCacheDir, identity.hostFolder);
+        const filePath = this.fm.joinPath(folder, `${identity.fileKey}.json`);
+        return { identity, folder, filePath };
+    }
+
+    readCachedPage(url, pageCacheConfig) {
+        if (!pageCacheConfig.enabled) return null;
+        const cachePath = this.getPageCacheFilePath(url);
+        try {
+            if (!this.fm.fileExists(cachePath.filePath)) return null;
+            const raw = this.fm.readString(cachePath.filePath);
+            const cached = JSON.parse(raw);
+            const fetchedAt = cached?.fetchedAt ? new Date(cached.fetchedAt).getTime() : NaN;
+            const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
+            if (!Number.isFinite(fetchedAt) || (Date.now() - fetchedAt) > maxAgeMs) {
+                return null;
+            }
+            if (!cached?.html) return null;
+            return {
+                html: cached.html,
+                url: cached.url || url,
+                statusCode: Number(cached.statusCode) || 200,
+                headers: cached.headers && typeof cached.headers === 'object' ? cached.headers : {}
+            };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    writeCachedPage(url, payload, pageCacheConfig) {
+        if (!pageCacheConfig.enabled) return;
+        const cachePath = this.getPageCacheFilePath(url);
+        try {
+            if (!this.fm.fileExists(cachePath.folder)) {
+                this.fm.createDirectory(cachePath.folder, true);
+            }
+            this.fm.writeString(cachePath.filePath, JSON.stringify({
+                fetchedAt: new Date().toISOString(),
+                normalizedUrl: cachePath.identity.normalizedUrl,
+                url: payload.url || url,
+                statusCode: Number(payload.statusCode) || 200,
+                headers: payload.headers && typeof payload.headers === 'object' ? payload.headers : {},
+                html: String(payload.html || '')
+            }));
+        } catch (_) {}
     }
 
     hasNonEmptyValue(value) {
