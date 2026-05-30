@@ -291,11 +291,9 @@ class ScriptableUrlParser {
         }).join('&');
 
         const normalized = `${encodedBase}?${normalizedParams}`;
-        if (/^https?:\/\//i.test(normalized)) {
-            const cleaned = cleanUrl(normalized);
-            return hash ? `${cleaned}#${hash}` : cleaned;
-        }
-        return hash ? `${normalized}#${hash}` : normalized;
+        const cleaned = cleanUrl(normalized);
+        const finalUrl = cleaned || normalized;
+        return hash ? `${finalUrl}#${hash}` : finalUrl;
     }
 
     orderFields(fields) {
