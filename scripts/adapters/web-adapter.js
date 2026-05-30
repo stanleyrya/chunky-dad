@@ -26,6 +26,166 @@ class WebAdapter {
         
         // Store cities configuration for calendar mapping
         this.cities = config.cities || {};
+        this.isNode = typeof window === 'undefined' && typeof require === 'function';
+        this.fs = null;
+        this.path = null;
+        this.pageStorageDir = null;
+
+        if (this.isNode) {
+            try {
+                this.fs = require('fs');
+                this.path = require('path');
+                const os = require('os');
+                this.pageStorageDir = this.path.join(os.homedir(), '.chunky-dad-scraper', 'storage', 'pages');
+            } catch (error) {
+                console.log(`🟢 Node.js: Page cache setup unavailable: ${error.message}`);
+            }
+        }
+    }
+
+    getPageCacheConfig() {
+        const pageCache = this.config.pageCache || {};
+        const ttlDays = Number(pageCache.ttlDays);
+        return {
+            enabled: pageCache.enabled === true && this.isNode && !!this.fs && !!this.path && !!this.pageStorageDir,
+            ttlDays: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays : 3
+        };
+    }
+
+    normalizePageCacheUrl(url) {
+        try {
+            const normalized = new URL(String(url));
+            normalized.hash = '';
+            normalized.protocol = normalized.protocol.toLowerCase();
+            normalized.hostname = normalized.hostname.toLowerCase();
+
+            const searchEntries = Array.from(normalized.searchParams.entries())
+                .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+                    if (leftKey === rightKey) {
+                        return leftValue.localeCompare(rightValue);
+                    }
+                    return leftKey.localeCompare(rightKey);
+                });
+
+            normalized.search = '';
+            searchEntries.forEach(([key, value]) => normalized.searchParams.append(key, value));
+
+            return normalized.toString();
+        } catch (_) {
+            return String(url || '').trim();
+        }
+    }
+
+    sanitizePageCacheSegment(segment) {
+        return String(segment || 'index')
+            .toLowerCase()
+            .replace(/[^a-z0-9._-]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'index';
+    }
+
+    hashPageCacheValue(value) {
+        let hash = 2166136261;
+        const input = String(value || '');
+        for (let i = 0; i < input.length; i++) {
+            hash ^= input.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return (hash >>> 0).toString(36);
+    }
+
+    getPageCachePathParts(url) {
+        const normalizedUrl = this.normalizePageCacheUrl(url);
+
+        try {
+            const parsed = new URL(normalizedUrl);
+            const hostDir = this.sanitizePageCacheSegment(parsed.host || parsed.hostname || 'unknown-host');
+            const pathSegments = parsed.pathname
+                .split('/')
+                .filter(Boolean)
+                .map(segment => this.sanitizePageCacheSegment(segment));
+
+            let fileBase = pathSegments.length > 0 ? pathSegments.join('__') : 'index';
+            if (parsed.search) {
+                fileBase += `--q-${this.hashPageCacheValue(parsed.search)}`;
+            }
+            if (fileBase.length > 120) {
+                fileBase = `${fileBase.slice(0, 80)}--${this.hashPageCacheValue(fileBase)}`;
+            }
+
+            return {
+                normalizedUrl,
+                hostDir,
+                fileName: `${fileBase}.json`
+            };
+        } catch (_) {
+            const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
+            return {
+                normalizedUrl,
+                hostDir: 'unknown-host',
+                fileName: fallbackName
+            };
+        }
+    }
+
+    async readCachedPage(url, pageCacheConfig) {
+        if (!pageCacheConfig.enabled) {
+            return null;
+        }
+
+        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
+        const cachePath = this.path.join(this.pageStorageDir, hostDir, fileName);
+
+        try {
+            const stats = await this.fs.promises.stat(cachePath);
+            const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
+            if ((Date.now() - stats.mtimeMs) > maxAgeMs) {
+                return null;
+            }
+
+            const cachedText = await this.fs.promises.readFile(cachePath, 'utf8');
+            const cached = JSON.parse(cachedText);
+            if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
+                return null;
+            }
+
+            return {
+                html: cached.html,
+                url: cached.url || normalizedUrl,
+                statusCode: cached.statusCode || 200,
+                headers: cached.headers || {},
+                fetchedAt: cached.fetchedAt || null,
+                cachePath
+            };
+        } catch (error) {
+            if (error && error.code !== 'ENOENT') {
+                console.log(`🟢 Node.js: Page cache read failed for ${url}: ${error.message}`);
+            }
+            return null;
+        }
+    }
+
+    async writeCachedPage(url, responseData, pageCacheConfig) {
+        if (!pageCacheConfig.enabled || !responseData || typeof responseData.html !== 'string' || responseData.html.length === 0) {
+            return;
+        }
+
+        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
+        const cacheDir = this.path.join(this.pageStorageDir, hostDir);
+        const cachePath = this.path.join(cacheDir, fileName);
+        const payload = {
+            url: normalizedUrl,
+            fetchedAt: new Date().toISOString(),
+            statusCode: responseData.statusCode || 200,
+            headers: responseData.headers || {},
+            html: responseData.html
+        };
+
+        try {
+            await this.fs.promises.mkdir(cacheDir, { recursive: true });
+            await this.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+        } catch (error) {
+            console.log(`🟢 Node.js: Page cache write failed for ${url}: ${error.message}`);
+        }
     }
     
     getRunContext() {
@@ -50,6 +210,15 @@ class WebAdapter {
     // HTTP Adapter Implementation
     async fetchData(url, options = {}) {
         try {
+            const pageCacheConfig = this.getPageCacheConfig();
+            const canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
+            if (canUseCache) {
+                const cachedPage = await this.readCachedPage(url, pageCacheConfig);
+                if (cachedPage) {
+                    return cachedPage;
+                }
+            }
+
             const fetchUrl = this.config.corsProxy
                 ? `${this.config.corsProxy}${encodeURIComponent(url)}`
                 : url;
@@ -77,12 +246,18 @@ class WebAdapter {
             const html = await response.text();
             
             if (html && html.length > 0) {
-                return {
+                const responseData = {
                     html: html,
                     url: url,
                     statusCode: response.status,
                     headers: Object.fromEntries(response.headers.entries())
                 };
+
+                if (canUseCache) {
+                    await this.writeCachedPage(url, responseData, pageCacheConfig);
+                }
+
+                return responseData;
             } else {
                 console.error(`🌐 Web: ✗ Empty response from ${url}`);
                 throw new Error(`Empty response from ${url}`);

@@ -11,6 +11,10 @@ const scraperConfig = {
   config: {
     dryRun: false,
     daysToLookAhead: null,
+    pageCache: {
+      enabled: true,
+      ttlDays: 3
+    },
     aiConfidenceDefaults: {
       confidence: {
         expectations: {

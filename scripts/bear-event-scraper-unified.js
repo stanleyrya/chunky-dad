@@ -231,6 +231,7 @@ class BearEventScraperOrchestrator {
             if (config.cities) {
                 finalAdapter = new this.modules.adapter({
                     cities: config.cities,
+                    pageCache: config.config?.pageCache || null,
                     ...this.config
                 });
             }
