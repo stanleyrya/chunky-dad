@@ -1670,7 +1670,7 @@ class SharedCore {
     normalizeUrl(url, baseUrl) {
         if (!url) return null;
 
-        let normalized = this.decodeBasicEntities(this.decodeUrlEscapes(String(url))).replace(/&amp;/g, '&');
+        let normalized = this.decodeBasicEntities(this.decodeUrlEscapes(String(url))).replace(/&amp;/gi, '&');
         normalized = normalized.replace(/[),.;]+$/, '').trim();
         if (!normalized) return null;
 
@@ -1687,7 +1687,7 @@ class SharedCore {
         }
 
         try {
-            const resolved = baseUrl ? new URL(normalized, baseUrl).toString() : new URL(normalized).toString();
+            const resolved = new URL(normalized, baseUrl).toString();
             return resolved;
         } catch (_) {}
 
@@ -1713,7 +1713,6 @@ class SharedCore {
 
     decodeBasicEntities(text) {
         return String(text || '')
-            .replace(/&amp;/gi, '&')
             .replace(/&lt;/gi, '<')
             .replace(/&gt;/gi, '>')
             .replace(/&quot;/gi, '"')
