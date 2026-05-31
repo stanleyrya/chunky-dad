@@ -684,11 +684,11 @@ class SharedCore {
             await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
         }
         const detectedParserName = this.detectParserFromUrl(url);
-        const fallbackParserName = parserName || 'ai-web';
+        const baseParserName = parserName || 'ai-web';
         const urlParserName = allowParserAutoSwitch
-            ? (detectedParserName || fallbackParserName)
-            : fallbackParserName;
-        if (logParserSwitch && allowParserAutoSwitch && urlParserName !== fallbackParserName) {
+            ? (detectedParserName || baseParserName)
+            : baseParserName;
+        if (logParserSwitch && allowParserAutoSwitch && urlParserName !== baseParserName) {
             await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
         }
         const urlParser = parsers[urlParserName];
