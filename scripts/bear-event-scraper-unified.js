@@ -223,7 +223,8 @@ class BearEventScraperOrchestrator {
             // Create shared core instance with cities configuration
             const sharedCore = new this.modules.SharedCore(config.cities, {
                 eventSchema: this.modules.EventSchema,
-                additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS
+                additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
+                pageClassificationRules: config.config?.pageClassificationRules || []
             });
             
             // Create adapter with cities configuration
