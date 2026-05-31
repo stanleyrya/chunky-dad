@@ -2653,7 +2653,9 @@ ${String(rawResponse || '')}`;
             return true;
         }
 
-        const nums = this.extractNumberTokens(text);
+        const nums = this.extractNumberTokens(text)
+            .map(num => String(num || '').replace(/^-/, ''))
+            .filter(Boolean);
         if (nums.length > 0) {
             const raw = String(evidenceContext.raw || '');
             const variantCache = new Map();
