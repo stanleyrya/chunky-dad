@@ -94,6 +94,16 @@ class SharedCore {
             }
             // Generic parser will be used as fallback if no pattern matches
         ];
+
+        // URL pattern rules for page classification (checked in order, first match wins)
+        this.pageClassificationRules = [
+            { pattern: /eventbrite\.com\/e\//i,                     classification: 'event-page' },
+            { pattern: /eventbrite\.com\/o\//i,                     classification: 'multi-event-page' },
+            { pattern: /furball\.nyc/i,                             classification: 'multi-event-page' },
+            { pattern: /bearracuda\.com\/events\/[^/?&#\s]+/i,      classification: 'event-page' },
+            { pattern: /bearracuda\.com/i,                          classification: 'link-aggregator' },
+            { pattern: /linktr\.ee/i,                               classification: 'link-aggregator' },
+        ];
     }
 
     // Convert cities config format to internal cityMappings format
@@ -142,6 +152,28 @@ class SharedCore {
         
         // Default to ai-web parser if no pattern matches
         return 'ai-web';
+    }
+
+    // Classify a page as one of: 'event-page', 'link-aggregator', 'multi-event-page', 'ad', 'unknown'
+    // Priority: URL pattern rules → HTML heuristics → 'unknown'
+    classifyPage(url, html) {
+        // 1. URL pattern rules (deterministic, no HTML needed)
+        if (url) {
+            for (const rule of this.pageClassificationRules) {
+                if (rule.pattern.test(url)) {
+                    return rule.classification;
+                }
+            }
+        }
+
+        // 2. HTML heuristics for unknown URLs
+        if (html) {
+            const monthMatches = html.match(/\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi) || [];
+            if (monthMatches.length >= 6) return 'multi-event-page';
+            if (monthMatches.length >= 1) return 'event-page';
+        }
+
+        return 'unknown';
     }
 
     normalizeParserName(parserName) {
@@ -300,6 +332,7 @@ class SharedCore {
         
         const parserStartedAt = Date.now();
         const allEvents = [];
+        const urlClassifications = {};
         const hasInlineInput = effectiveParserConfig.input && typeof effectiveParserConfig.input === 'object';
         // Use global processedUrls to prevent duplicate processing across all parsers
 
@@ -361,6 +394,11 @@ class SharedCore {
                     ? { html: '', url, statusCode: 200, headers: {}, input: effectiveParserConfig.input }
                     : await httpAdapter.fetchData(url);
                 
+                // Classify the page before parsing
+                const pageClassification = this.classifyPage(url, htmlData.html);
+                urlClassifications[url] = pageClassification;
+                await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
+
                 // Detect parser for this specific URL (allows mid-run switching)
                 const detectedParserName = this.detectParserFromUrl(url);
                 const urlParserName = allowParserAutoSwitch
@@ -391,7 +429,8 @@ class SharedCore {
                     const enrichedEvents = filteredEvents.map(event => 
                         this.enrichEventLocation(this.normalizeEventTextFields(event))
                     );
-                    
+
+                    enrichedEvents.forEach(event => { event._pageClassification = pageClassification; });
                     allEvents.push(...enrichedEvents);
                 }
 
@@ -447,6 +486,7 @@ class SharedCore {
             duplicatesRemoved: duplicatesRemoved,
             durationMs: Date.now() - parserStartedAt,
             events: deduplicatedEvents,
+            urlClassifications,
             config: effectiveParserConfig // Include config for orchestrator to use
         };
     }
@@ -544,7 +584,11 @@ class SharedCore {
 
             try {
                 const htmlData = await httpAdapter.fetchData(url);
-                
+
+                // Classify the page before parsing
+                const pageClassification = this.classifyPage(url, htmlData.html);
+                await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
+
                 // Detect parser for this specific URL (allows mid-run switching)
                 const detectedParserName = this.detectParserFromUrl(url);
                 const urlParserName = allowParserAutoSwitch
@@ -601,6 +645,8 @@ class SharedCore {
                     const enrichedDetailEvents = parseResult.events.map(event => 
                         this.enrichEventLocation(this.normalizeEventTextFields(this.applyFieldPriorities(event, parserConfig, mainConfig)))
                     );
+
+                    enrichedDetailEvents.forEach(event => { event._pageClassification = pageClassification; });
                     
                     // Add these events to the existing events collection for potential merging
                     existingEvents.push(...enrichedDetailEvents);
