@@ -356,6 +356,7 @@ logger.captureConsole();
 const DEFAULT_CAPTURE_LOG_MAX_LINES = 30000;
 const DEFAULT_CAPTURE_LOG_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_DISPLAY_LOG_MAX_LINES = 12000;
+const SIMPLE_URL_PARSE_REGEX = /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i;
 
 const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
@@ -725,16 +726,29 @@ class ScriptableAdapter {
             return new URL(input);
         } catch (_) {}
 
-        const match = input.match(/^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i);
+        const match = input.match(SIMPLE_URL_PARSE_REGEX);
         if (!match) {
             return null;
         }
 
         const authority = String(match[2] || '').toLowerCase();
-        const host = authority.includes('@') ? authority.split('@').pop() : authority;
+        let host = authority;
+        const authSeparatorIndex = host.lastIndexOf('@');
+        if (authSeparatorIndex >= 0) {
+            host = host.slice(authSeparatorIndex + 1);
+        }
+
+        let hostname = host;
+        if (host.startsWith('[')) {
+            const ipv6EndIndex = host.indexOf(']');
+            hostname = ipv6EndIndex > 0 ? host.slice(0, ipv6EndIndex + 1) : host;
+        } else {
+            hostname = host.split(':')[0] || '';
+        }
+
         return {
             host,
-            hostname: host.split(':')[0] || '',
+            hostname,
             pathname: match[3] || '/',
             search: match[4] || ''
         };
