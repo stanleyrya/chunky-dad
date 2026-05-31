@@ -2178,6 +2178,13 @@ class AiWebParser {
             }
             return true;
         });
+        const hasCitySelected = selected.some(field => this.normalizePromptFieldName(field) === 'city');
+        const cityOverriddenByMetadata = !hasCitySelected
+            && Object.keys(metadata).some(field => this.normalizePromptFieldName(field) === 'city');
+        if (!hasCitySelected && !cityOverriddenByMetadata) {
+            selected.push('city');
+            console.log('🤖 AI Web: Added special prompt field => city');
+        }
         const aiPromptFields = selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
         const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
