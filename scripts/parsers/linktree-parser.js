@@ -29,7 +29,7 @@ class LinktreeParser {
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
-    parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null) {
+    parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
         try {
             const events = [];
             const html = htmlData.html;

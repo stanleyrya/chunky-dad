@@ -96,14 +96,7 @@ class SharedCore {
         ];
 
         // URL pattern rules for page classification (checked in order, first match wins)
-        this.pageClassificationRules = [
-            { pattern: /eventbrite\.com\/e\//i,                     classification: 'event-page' },
-            { pattern: /eventbrite\.com\/o\//i,                     classification: 'multi-event-page' },
-            { pattern: /furball\.nyc/i,                             classification: 'multi-event-page' },
-            { pattern: /bearracuda\.com\/events\/[^/?&#\s]+/i,      classification: 'event-page' },
-            { pattern: /bearracuda\.com/i,                          classification: 'link-aggregator' },
-            { pattern: /linktr\.ee/i,                               classification: 'link-aggregator' },
-        ];
+        this.pageClassificationRules = options.pageClassificationRules || [];
 
         // Compiled regex and thresholds for HTML heuristics in classifyPage
         this.pageClassificationMonthPattern = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi;
@@ -429,7 +422,7 @@ class SharedCore {
                 
                 // Parse events (consolidated logging)
                 const parseResult = await Promise.resolve(
-                    urlParser.parseEvents(htmlData, effectiveParserConfig, mainConfig?.cities || null)
+                    urlParser.parseEvents(htmlData, effectiveParserConfig, mainConfig?.cities || null, pageClassification)
                 );
                 const eventCount = parseResult?.events?.length || 0;
                 const linkCount = parseResult?.additionalLinks?.length || 0;
@@ -621,7 +614,7 @@ class SharedCore {
                     urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
                 };
                 const parseResult = await Promise.resolve(
-                    urlParser.parseEvents(htmlData, detailParserConfig, mainConfig?.cities || null)
+                    urlParser.parseEvents(htmlData, detailParserConfig, mainConfig?.cities || null, pageClassification)
                 );
                 
                 // Handle additional URLs if depth allows and parser wants URL discovery
@@ -721,7 +714,7 @@ class SharedCore {
 
                 // Request link discovery but skip deep recursion — we manage depth ourselves
                 const discoveryConfig = { ...parserConfig, urlDiscoveryDepth: 1 };
-                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null));
+                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null, null));
 
                 const childLinks = parseResult.additionalLinks || [];
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);

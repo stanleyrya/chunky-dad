@@ -31,7 +31,15 @@ const scraperConfig = {
           ]
         }
       }
-    }
+    },
+    pageClassificationRules: [
+      { pattern: /eventbrite\.com\/e\//i,                classification: "event-page" },
+      { pattern: /eventbrite\.com\/o\//i,                classification: "multi-event-page" },
+      { pattern: /furball\.nyc/i,                        classification: "multi-event-page" },
+      { pattern: /bearracuda\.com\/events\/[^/?&#\s]+/i, classification: "event-page" },
+      { pattern: /bearracuda\.com/i,                     classification: "link-aggregator" },
+      { pattern: /linktr\.ee/i,                          classification: "link-aggregator" }
+    ]
   },
   parsers: [
     {
