@@ -2161,7 +2161,6 @@ class AiWebParser {
         const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object'
             ? parserConfig.metadata
             : {};
-        const metadataFieldNames = Object.keys(metadata).map(field => this.normalizePromptFieldName(field)).filter(Boolean);
         const skippedFieldReasons = [];
         const selected = Object.keys(priorities).filter(field => {
             const rule = priorities[field];
@@ -2180,7 +2179,9 @@ class AiWebParser {
             return true;
         });
         const hasCitySelected = selected.some(field => this.normalizePromptFieldName(field) === 'city');
-        const cityOverriddenByMetadata = metadataFieldNames.includes('city');
+        const cityOverriddenByMetadata = !hasCitySelected
+            ? Object.keys(metadata).some(field => this.normalizePromptFieldName(field) === 'city')
+            : false;
         if (!hasCitySelected && !cityOverriddenByMetadata) {
             selected.push('city');
             console.log('🤖 AI Web: Added special prompt field => city');
