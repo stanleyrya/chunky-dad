@@ -104,6 +104,11 @@ class SharedCore {
             { pattern: /bearracuda\.com/i,                          classification: 'link-aggregator' },
             { pattern: /linktr\.ee/i,                               classification: 'link-aggregator' },
         ];
+
+        // Compiled regex and thresholds for HTML heuristics in classifyPage
+        this.pageClassificationMonthPattern = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi;
+        this.pageClassificationMultiEventThreshold = 6;  // >= 6 month mentions → multi-event-page
+        this.pageClassificationEventPageThreshold = 1;   // >= 1 month mention  → event-page
     }
 
     // Convert cities config format to internal cityMappings format
@@ -154,8 +159,18 @@ class SharedCore {
         return 'ai-web';
     }
 
-    // Classify a page as one of: 'event-page', 'link-aggregator', 'multi-event-page', 'ad', 'unknown'
-    // Priority: URL pattern rules → HTML heuristics → 'unknown'
+    /**
+     * Classify a page URL/HTML into one of: 'event-page', 'link-aggregator', 'multi-event-page', 'ad', 'unknown'.
+     *
+     * Priority order:
+     *   1. pageClassificationRules — deterministic URL pattern match (no HTML required).
+     *   2. HTML heuristics — count month-name occurrences to distinguish single vs. multi-event pages.
+     *   3. Default — returns 'unknown' when no rule or heuristic applies.
+     *
+     * @param {string|null} url  - Absolute URL of the page being classified.
+     * @param {string|null} html - Raw HTML of the page (used only when URL patterns don't match).
+     * @returns {'event-page'|'link-aggregator'|'multi-event-page'|'ad'|'unknown'}
+     */
     classifyPage(url, html) {
         // 1. URL pattern rules (deterministic, no HTML needed)
         if (url) {
@@ -168,9 +183,11 @@ class SharedCore {
 
         // 2. HTML heuristics for unknown URLs
         if (html) {
-            const monthMatches = html.match(/\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi) || [];
-            if (monthMatches.length >= 6) return 'multi-event-page';
-            if (monthMatches.length >= 1) return 'event-page';
+            // Reset lastIndex since the pattern is reused across calls (global flag)
+            this.pageClassificationMonthPattern.lastIndex = 0;
+            const monthMatches = html.match(this.pageClassificationMonthPattern) || [];
+            if (monthMatches.length >= this.pageClassificationMultiEventThreshold) return 'multi-event-page';
+            if (monthMatches.length >= this.pageClassificationEventPageThreshold) return 'event-page';
         }
 
         return 'unknown';
