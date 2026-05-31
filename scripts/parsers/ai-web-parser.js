@@ -2161,6 +2161,7 @@ class AiWebParser {
         const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object'
             ? parserConfig.metadata
             : {};
+        const metadataFieldNames = Object.keys(metadata).map(field => this.normalizePromptFieldName(field)).filter(Boolean);
         const skippedFieldReasons = [];
         const selected = Object.keys(priorities).filter(field => {
             const rule = priorities[field];
@@ -2178,6 +2179,12 @@ class AiWebParser {
             }
             return true;
         });
+        const hasCitySelected = selected.some(field => this.normalizePromptFieldName(field) === 'city');
+        const cityOverriddenByMetadata = metadataFieldNames.includes('city');
+        if (!hasCitySelected && !cityOverriddenByMetadata) {
+            selected.push('city');
+            console.log('🤖 AI Web: Added special prompt field => city');
+        }
         const aiPromptFields = selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
         const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
