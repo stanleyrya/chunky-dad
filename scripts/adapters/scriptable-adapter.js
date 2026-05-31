@@ -356,6 +356,7 @@ logger.captureConsole();
 const DEFAULT_CAPTURE_LOG_MAX_LINES = 30000;
 const DEFAULT_CAPTURE_LOG_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_DISPLAY_LOG_MAX_LINES = 12000;
+// Captures: 1=scheme, 2=authority, 3=path, 4=query (without fragment).
 const SIMPLE_URL_PARSE_REGEX = /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i;
 
 const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
@@ -778,7 +779,7 @@ class ScriptableAdapter {
 
         if (parsed) {
             const hostDir = this.sanitizePageCacheSegment(parsed.host || parsed.hostname || 'unknown-host');
-            const pathSegments = String(parsed.pathname || '/')
+            const pathSegments = (parsed.pathname || '/')
                 .split('/')
                 .filter(Boolean)
                 .map(segment => this.sanitizePageCacheSegment(segment));
