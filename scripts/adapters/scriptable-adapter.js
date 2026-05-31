@@ -356,6 +356,8 @@ logger.captureConsole();
 const DEFAULT_CAPTURE_LOG_MAX_LINES = 30000;
 const DEFAULT_CAPTURE_LOG_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_DISPLAY_LOG_MAX_LINES = 12000;
+// Captures: 1=scheme, 2=authority, 3=path, 4=query (without fragment).
+const SIMPLE_URL_PARSE_REGEX = /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i;
 
 const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
@@ -715,6 +717,44 @@ class ScriptableAdapter {
         }
     }
 
+    parsePageCacheUrl(url) {
+        const input = String(url || '').trim();
+        if (!input) {
+            return null;
+        }
+
+        try {
+            return new URL(input);
+        } catch (_) {}
+
+        const match = input.match(SIMPLE_URL_PARSE_REGEX);
+        if (!match) {
+            return null;
+        }
+
+        const authority = String(match[2] || '').toLowerCase();
+        let host = authority;
+        const authSeparatorIndex = host.lastIndexOf('@');
+        if (authSeparatorIndex >= 0) {
+            host = host.slice(authSeparatorIndex + 1);
+        }
+
+        let hostname = host;
+        if (host.startsWith('[')) {
+            const ipv6EndIndex = host.indexOf(']');
+            hostname = ipv6EndIndex > 0 ? host.slice(0, ipv6EndIndex + 1) : host;
+        } else {
+            hostname = host.split(':')[0] || '';
+        }
+
+        return {
+            host,
+            hostname,
+            pathname: match[3] || '/',
+            search: match[4] || ''
+        };
+    }
+
     sanitizePageCacheSegment(segment) {
         return String(segment || 'index')
             .toLowerCase()
@@ -735,11 +775,11 @@ class ScriptableAdapter {
 
     getPageCachePathParts(url) {
         const normalizedUrl = this.normalizePageCacheUrl(url);
+        const parsed = this.parsePageCacheUrl(normalizedUrl);
 
-        try {
-            const parsed = new URL(normalizedUrl);
+        if (parsed) {
             const hostDir = this.sanitizePageCacheSegment(parsed.host || parsed.hostname || 'unknown-host');
-            const pathSegments = parsed.pathname
+            const pathSegments = (parsed.pathname || '/')
                 .split('/')
                 .filter(Boolean)
                 .map(segment => this.sanitizePageCacheSegment(segment));
@@ -757,14 +797,14 @@ class ScriptableAdapter {
                 hostDir,
                 fileName: `${fileBase}.json`
             };
-        } catch (_) {
-            const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
-            return {
-                normalizedUrl,
-                hostDir: 'unknown-host',
-                fileName: fallbackName
-            };
         }
+
+        const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
+        return {
+            normalizedUrl,
+            hostDir: 'unknown-host',
+            fileName: fallbackName
+        };
     }
 
     ensureDirectoryExists(path) {
