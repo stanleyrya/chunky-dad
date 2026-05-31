@@ -37,6 +37,7 @@ class ChunkParser {
             const events = [];
             const html = htmlData.html;
             const url = htmlData.url;
+            const discoveryOnly = parserConfig.discoveryOnly === true;
             
             if (!html) {
                 console.warn('🎉 Chunk: No HTML content to parse');
@@ -46,7 +47,7 @@ class ChunkParser {
             // ONLY TWO PATHS: Detail page with JSON-LD, or main page for URL extraction
             const isDetailPage = url.includes('/event-details/');
             
-            if (isDetailPage) {
+            if (isDetailPage && !discoveryOnly) {
                 // Detail pages ALWAYS have JSON-LD - this is the ONLY way we parse them
                 const event = this.parseDetailPageJsonLD(html, url, parserConfig, cityConfig);
                 if (event) {

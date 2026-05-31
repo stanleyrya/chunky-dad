@@ -426,7 +426,7 @@ const scraperConfig = {
       alwaysBear: false,
       urlDiscoveryDepth: 1,
       maxAdditionalUrls: 15,
-      discoveryOnly: false,  // Set true to map the URL tree without extracting events (useful for debugging discovery)
+      discoveryOnly: false,  // Set true to run normal crawl/discovery flow while skipping event extraction
       discoveryBlockedHosts: [],  // Hostnames to suppress during URL discovery (e.g. ["example.com"] blocks links back to the source site)
       discoveryBlockedPatterns: [],  // Case-insensitive URL substrings to suppress during discovery (e.g. ["example.com/?p="])
       dryRun: true,

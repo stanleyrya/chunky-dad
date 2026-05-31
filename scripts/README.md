@@ -125,7 +125,7 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 - Smart bear event detection using keywords and allowlists
 - Duplicate prevention and event merging
 - City detection and calendar routing
-- Scalable URL processing with detail page support
+- Unified recursive URL crawl (single fetch/parse flow for root + discovered pages)
 - Performance tracking and detailed reporting
 - Parser enable/disable functionality for selective processing
 
@@ -159,8 +159,8 @@ const scraperConfig = {
       enabled: true,         // Set to false to temporarily disable parser
       urls: ["https://venue.com/events"],
       alwaysBear: true,      // Skip bear keyword filtering
-      urlDiscoveryDepth: 1,  // Depth for following additional URLs (0 = no discovery)
-      maxAdditionalUrls: 20, // Optional: limit additional URLs (uses parser default if omitted)
+      urlDiscoveryDepth: 1,  // Recursive crawl depth for discovered URLs (0 = no discovery crawl)
+      maxAdditionalUrls: 20, // Optional: per-page cap for discovered URLs (uses parser default if omitted)
       dryRun: false,         // Optional: override global dryRun setting for this parser
       allowlist: ["keyword1", "keyword2"],
       city: "nyc"

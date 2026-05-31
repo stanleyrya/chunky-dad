@@ -32,6 +32,9 @@ class ScriptableUrlParser {
 
     parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
         try {
+            if (parserConfig.discoveryOnly === true) {
+                return this.buildEmptyResult(htmlData);
+            }
             const payload = this.getInputPayload(htmlData, parserConfig);
             if (!payload) {
                 console.warn('🔗 Scriptable URL: No input payload provided');

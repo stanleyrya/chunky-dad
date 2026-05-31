@@ -39,6 +39,7 @@ class BearraccudaParser {
         try {
             const events = [];
             const html = htmlData.html;
+            const discoveryOnly = parserConfig.discoveryOnly === true;
             
             if (!html) {
                 console.warn('🐻 Bearracuda: No HTML content to parse');
@@ -50,7 +51,7 @@ class BearraccudaParser {
             
             let additionalLinks = [];
             
-            if (isDetailPage) {
+            if (isDetailPage && !discoveryOnly) {
 
                 const event = this.parseEventDetailPage(html, htmlData.url, parserConfig, cityConfig);
                 if (event) {
@@ -68,7 +69,9 @@ class BearraccudaParser {
             } else {
                 // Try to parse as a listing page (though main /events/ returns 404)
 
-                const listingEvents = this.parseEventListingPage(html, htmlData.url, parserConfig, cityConfig);
+                const listingEvents = discoveryOnly
+                    ? []
+                    : this.parseEventListingPage(html, htmlData.url, parserConfig, cityConfig);
 
                 events.push(...listingEvents);
             }

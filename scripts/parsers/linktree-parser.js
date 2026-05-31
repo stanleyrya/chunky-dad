@@ -33,6 +33,7 @@ class LinktreeParser {
         try {
             const events = [];
             const html = htmlData.html;
+            const discoveryOnly = parserConfig.discoveryOnly === true;
             
             if (!html) {
                 console.warn('🔗 Linktree: No HTML content to parse');
@@ -43,10 +44,12 @@ class LinktreeParser {
             const ticketLinks = this.extractTicketLinks(html, htmlData.url);
             
             // For each ticket link, create an event placeholder
-            for (const ticketLink of ticketLinks) {
-                const event = this.createEventFromLink(ticketLink, htmlData.url, parserConfig);
-                if (event) {
-                    events.push(event);
+            if (!discoveryOnly) {
+                for (const ticketLink of ticketLinks) {
+                    const event = this.createEventFromLink(ticketLink, htmlData.url, parserConfig);
+                    if (event) {
+                        events.push(event);
+                    }
                 }
             }
             
