@@ -389,7 +389,7 @@ class SharedCore {
             };
         }
 
-        const maxDepth = effectiveParserConfig.urlDiscoveryDepth || 1;
+        const maxDepth = effectiveParserConfig.urlDiscoveryDepth ?? 1;
         await this.crawlUrlsForEvents({
             urls: effectiveParserConfig.urls || [],
             allEvents,
@@ -593,8 +593,7 @@ class SharedCore {
                 }
 
                 const deduplicatedUrls = this.deduplicateUrls(additionalLinks, processedUrls);
-                const shouldFollowLinks = currentDepth === 0 ||
-                    (currentDepth < maxDepth && parserConfig.urlDiscoveryDepth > 0);
+                const shouldFollowLinks = currentDepth < maxDepth;
 
                 if (shouldFollowLinks) {
                     await displayAdapter.logInfo(
@@ -709,7 +708,7 @@ class SharedCore {
     // Discovery-only mode: traverse URL tree up to configured depth, collect links without extracting events.
     // Returns { rootUrls, edges, allNodes } for graph rendering.
     async discoverUrlTree(rootUrls, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, forcedParserName = null) {
-        const maxDepth = parserConfig.urlDiscoveryDepth || 1;
+        const maxDepth = parserConfig.urlDiscoveryDepth ?? 1;
         const edges = []; // { from: string, to: string }
         const allNodes = new Set(rootUrls);
 
@@ -721,6 +720,13 @@ class SharedCore {
             .map(url => this.normalizeUrl(url, url))
             .filter(Boolean)
             .map(url => ({ url, depth: 0, parent: null }));
+
+        // Track all keys queued (or already processed) to prevent duplicate queue entries
+        const queuedKeys = new Set(processedUrls);
+        for (const item of queue) {
+            const key = this.getUrlDedupeKey(item.url);
+            if (key) queuedKeys.add(key);
+        }
 
         while (queue.length > 0) {
             const { url, depth, parent } = queue.shift();
@@ -752,12 +758,13 @@ class SharedCore {
                 });
 
                 const childLinks = parseResult.additionalLinks || [];
-                const deduped = this.deduplicateUrls(childLinks, processedUrls);
+                const deduped = this.deduplicateUrls(childLinks, queuedKeys);
                 for (const childUrl of deduped) {
                     const normalizedChildUrl = this.normalizeUrl(childUrl, childUrl);
-                    if (!normalizedChildUrl) {
-                        continue;
-                    }
+                    if (!normalizedChildUrl) continue;
+                    const key = this.getUrlDedupeKey(normalizedChildUrl);
+                    if (!key) continue;
+                    queuedKeys.add(key);
                     allNodes.add(normalizedChildUrl);
                     queue.push({ url: normalizedChildUrl, depth: depth + 1, parent: url });
                 }
