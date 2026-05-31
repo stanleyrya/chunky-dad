@@ -32,6 +32,8 @@ const scraperConfig = {
         }
       }
     },
+    // URL pattern rules for page classification. Checked in order — first match wins.
+    // More specific patterns (e.g. /events/:slug) must come before broader ones (e.g. domain root).
     pageClassificationRules: [
       { pattern: /eventbrite\.com\/e\//i,                classification: "event-page" },
       { pattern: /eventbrite\.com\/o\//i,                classification: "multi-event-page" },
