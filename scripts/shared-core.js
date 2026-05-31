@@ -714,7 +714,8 @@ class SharedCore {
 
                 // Request link discovery but skip deep recursion — we manage depth ourselves
                 const discoveryConfig = { ...parserConfig, urlDiscoveryDepth: 1 };
-                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null, null));
+                const pageClassification = this.classifyPage(url, htmlData.html);
+                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null, pageClassification));
 
                 const childLinks = parseResult.additionalLinks || [];
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);
