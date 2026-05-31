@@ -2180,8 +2180,7 @@ class AiWebParser {
         });
         const hasCitySelected = selected.some(field => this.normalizePromptFieldName(field) === 'city');
         const cityOverriddenByMetadata = !hasCitySelected
-            ? Object.keys(metadata).some(field => this.normalizePromptFieldName(field) === 'city')
-            : false;
+            && Object.keys(metadata).some(field => this.normalizePromptFieldName(field) === 'city');
         if (!hasCitySelected && !cityOverriddenByMetadata) {
             selected.push('city');
             console.log('🤖 AI Web: Added special prompt field => city');
