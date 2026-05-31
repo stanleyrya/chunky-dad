@@ -621,7 +621,7 @@ class SharedCore {
                         });
                     }
                 } else {
-                    await displayAdapter.logInfo(`SYSTEM: Crawl page ${url} found ${additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
+                    await displayAdapter.logInfo(`SYSTEM: Crawl page ${url} found ${deduplicatedUrls.length} unique additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
                 }
             } catch (error) {
                 const message = error?.message || 'Unknown error';
@@ -688,7 +688,7 @@ class SharedCore {
         const urlParserName = allowParserAutoSwitch
             ? (detectedParserName || fallbackParserName)
             : fallbackParserName;
-        if (logParserSwitch && allowParserAutoSwitch && parserName && urlParserName !== parserName) {
+        if (logParserSwitch && allowParserAutoSwitch && urlParserName !== fallbackParserName) {
             await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
         }
         const urlParser = parsers[urlParserName];
