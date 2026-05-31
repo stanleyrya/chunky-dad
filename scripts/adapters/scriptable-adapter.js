@@ -715,6 +715,31 @@ class ScriptableAdapter {
         }
     }
 
+    parsePageCacheUrl(url) {
+        const input = String(url || '').trim();
+        if (!input) {
+            return null;
+        }
+
+        try {
+            return new URL(input);
+        } catch (_) {}
+
+        const match = input.match(/^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i);
+        if (!match) {
+            return null;
+        }
+
+        const authority = String(match[2] || '').toLowerCase();
+        const host = authority.includes('@') ? authority.split('@').pop() : authority;
+        return {
+            host,
+            hostname: host.split(':')[0] || '',
+            pathname: match[3] || '/',
+            search: match[4] || ''
+        };
+    }
+
     sanitizePageCacheSegment(segment) {
         return String(segment || 'index')
             .toLowerCase()
@@ -735,11 +760,11 @@ class ScriptableAdapter {
 
     getPageCachePathParts(url) {
         const normalizedUrl = this.normalizePageCacheUrl(url);
+        const parsed = this.parsePageCacheUrl(normalizedUrl);
 
-        try {
-            const parsed = new URL(normalizedUrl);
+        if (parsed) {
             const hostDir = this.sanitizePageCacheSegment(parsed.host || parsed.hostname || 'unknown-host');
-            const pathSegments = parsed.pathname
+            const pathSegments = String(parsed.pathname || '/')
                 .split('/')
                 .filter(Boolean)
                 .map(segment => this.sanitizePageCacheSegment(segment));
@@ -757,14 +782,14 @@ class ScriptableAdapter {
                 hostDir,
                 fileName: `${fileBase}.json`
             };
-        } catch (_) {
-            const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
-            return {
-                normalizedUrl,
-                hostDir: 'unknown-host',
-                fileName: fallbackName
-            };
         }
+
+        const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
+        return {
+            normalizedUrl,
+            hostDir: 'unknown-host',
+            fileName: fallbackName
+        };
     }
 
     ensureDirectoryExists(path) {
