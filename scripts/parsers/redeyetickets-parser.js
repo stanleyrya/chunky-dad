@@ -32,6 +32,7 @@ class RedEyeTicketsParser {
     parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
         try {
             const rawText = htmlData.html;
+            const discoveryOnly = parserConfig.discoveryOnly === true;
             
             if (!rawText) {
                 console.warn('🎫 RedEyeTickets: No response content to parse');
@@ -44,7 +45,7 @@ class RedEyeTicketsParser {
                 return { events: [], additionalLinks: [], source: this.config.source, url: htmlData.url };
             }
             
-            const jsonEvents = jsonParseResult.events || [];
+            const jsonEvents = discoveryOnly ? [] : (jsonParseResult.events || []);
             const additionalLinks = parserConfig.urlDiscoveryDepth > 0 ? (jsonParseResult.additionalLinks || []) : [];
             console.log(`🎫 RedEyeTickets: Parsed API payload -> ${jsonEvents.length} events, ${additionalLinks.length} additional links`);
             

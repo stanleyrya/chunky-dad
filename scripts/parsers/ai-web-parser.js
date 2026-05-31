@@ -125,7 +125,7 @@ class AiWebParser {
             const html = htmlData && htmlData.html ? htmlData.html : '';
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
 
-            if (parserConfig.urlDiscoveryDepth > 0) {
+            if (parserConfig.discoveryOnly === true || parserConfig.urlDiscoveryDepth > 0) {
                 const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
                 console.log(`🤖 AI Web: Discovery mode found ${additionalLinks.length} additional links`);
                 return {

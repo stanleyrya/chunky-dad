@@ -355,9 +355,9 @@ class SharedCore {
         // Use global processedUrls to prevent duplicate processing across all parsers
 
         const discoveryOnly = effectiveParserConfig.discoveryOnly === true;
+        const maxDepth = effectiveParserConfig.urlDiscoveryDepth ?? 1;
         if (discoveryOnly) {
-            const depth = effectiveParserConfig.urlDiscoveryDepth ?? 1;
-            await displayAdapter.logInfo(`SYSTEM: ${effectiveParserConfig.name} → Discovery only mode (depth ${depth})`);
+            await displayAdapter.logInfo(`SYSTEM: ${effectiveParserConfig.name} → Discovery only mode (depth ${maxDepth})`);
         }
 
         const discoveryTreeCollector = discoveryOnly
@@ -369,7 +369,6 @@ class SharedCore {
             }
             : null;
 
-        const maxDepth = effectiveParserConfig.urlDiscoveryDepth ?? 1;
         await this.crawlUrlsForEvents({
             urls: effectiveParserConfig.urls || [],
             allEvents,
@@ -532,13 +531,11 @@ class SharedCore {
                 continue;
             }
 
-            if (discoveryTreeCollector && currentDepth === 0) {
-                if (!discoveryTreeCollector.rootUrlSet.has(url)) {
+            if (discoveryTreeCollector) {
+                if (currentDepth === 0 && !discoveryTreeCollector.rootUrlSet.has(url)) {
                     discoveryTreeCollector.rootUrlSet.add(url);
                     discoveryTreeCollector.rootUrls.push(url);
                 }
-            }
-            if (discoveryTreeCollector) {
                 discoveryTreeCollector.allNodes.add(url);
             }
             if (this.hasProcessedUrl(processedUrls, url)) {
@@ -615,7 +612,7 @@ class SharedCore {
                     }
                     await displayAdapter.logInfo(
                         currentDepth === 0
-                            ? `SYSTEM: Following ${additionalLinks.length} discovered URLs → ${deduplicatedUrls.length} unique for crawl depth 1`
+                            ? `SYSTEM: Following ${additionalLinks.length} discovered URLs → ${deduplicatedUrls.length} unique for crawl depth ${currentDepth + 1}`
                             : `SYSTEM: Crawl page ${url} found ${additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`
                     );
                     if (deduplicatedUrls.length > 0) {
