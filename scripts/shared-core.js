@@ -389,98 +389,23 @@ class SharedCore {
             };
         }
 
-        // Process main URLs
-        for (let i = 0; i < (effectiveParserConfig.urls || []).length; i++) {
-            const rawUrl = effectiveParserConfig.urls[i];
-            const url = this.normalizeUrl(rawUrl, rawUrl);
-            if (!url) {
-                await displayAdapter.logWarn(`SYSTEM: Skipping invalid URL: ${rawUrl}`);
-                continue;
-            }
-            if (this.hasProcessedUrl(globalProcessedUrls, url)) {
-                await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
-                continue;
-            }
-            this.markProcessedUrl(globalProcessedUrls, url);
-
-            try {
-                if (hasInlineInput && i === 0) {
-                    await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
-                }
-
-                const htmlData = hasInlineInput
-                    ? { html: '', url, statusCode: 200, headers: {}, input: effectiveParserConfig.input }
-                    : await httpAdapter.fetchData(url);
-                
-                // Classify the page before parsing
-                const pageClassification = this.classifyPage(url, htmlData.html);
-                urlClassifications[url] = pageClassification;
-                await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
-
-                // Detect parser for this specific URL (allows mid-run switching)
-                const detectedParserName = this.detectParserFromUrl(url);
-                const urlParserName = allowParserAutoSwitch
-                    ? (detectedParserName || parserName)
-                    : parserName;
-                const urlParser = parsers[urlParserName];
-                
-                if (allowParserAutoSwitch && urlParserName !== parserName) {
-                    await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
-                }
-                
-                // Parse events (consolidated logging)
-                const parseResult = await Promise.resolve(
-                    urlParser.parseEvents(htmlData, effectiveParserConfig, mainConfig?.cities || null, pageClassification)
-                );
-                const eventCount = parseResult?.events?.length || 0;
-                const linkCount = parseResult?.additionalLinks?.length || 0;
-                const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
-                await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
-                
-                if (parseResult.events) {
-                    // Apply field priorities to determine which parser data to trust
-                    const filteredEvents = parseResult.events.map(event => 
-                        this.applyFieldPriorities(event, effectiveParserConfig, mainConfig)
-                    );
-                    
-                    // Normalize text fields and enrich events with location data (Google Maps links, city extraction)
-                    const enrichedEvents = filteredEvents.map(event => 
-                        this.enrichEventLocation(this.normalizeEventTextFields(event))
-                    );
-
-                    enrichedEvents.forEach(event => { event._pageClassification = pageClassification; });
-                    allEvents.push(...enrichedEvents);
-                }
-
-                // Process additional URLs if we have them (for enriching existing events, not creating new ones)
-                if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
-                    // Deduplicate additional URLs before processing
-                    const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, globalProcessedUrls);
-                    await displayAdapter.logInfo(`SYSTEM: Processing ${parseResult.additionalLinks.length} additional URLs → ${deduplicatedUrls.length} unique for detail pages`);
-                    
-                    await this.enrichEventsWithDetailPages(
-                        allEvents,
-                        deduplicatedUrls, 
-                        parsers, 
-                        effectiveParserConfig, 
-                        httpAdapter, 
-                        displayAdapter,
-                        globalProcessedUrls,
-                        undefined,
-                        mainConfig,
-                        parserName,
-                        allowParserAutoSwitch
-                    );
-                    await displayAdapter.logSuccess(`SYSTEM: Enriched ${allEvents.length} events with detail page information`);
-                }
-            } catch (error) {
-                await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${error.message || 'Unknown error'}`);
-                // Only log stack trace if it exists and is meaningful
-                if (error.stack && error.stack.trim()) {
-                    await displayAdapter.logError(`SYSTEM: URL processing stack trace: ${error.stack}`);
-                }
-            }
-        }
+        const maxDepth = effectiveParserConfig.urlDiscoveryDepth || 1;
+        await this.crawlUrlsForEvents({
+            urls: effectiveParserConfig.urls || [],
+            allEvents,
+            parsers,
+            parserConfig: effectiveParserConfig,
+            httpAdapter,
+            displayAdapter,
+            processedUrls: globalProcessedUrls,
+            maxDepth,
+            currentDepth: 0,
+            parserName,
+            allowParserAutoSwitch,
+            mainConfig,
+            urlClassifications,
+            includeInlineInput: hasInlineInput
+        });
 
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
@@ -574,7 +499,148 @@ class SharedCore {
         };
     }
 
-    async enrichEventsWithDetailPages(existingEvents, additionalLinks, parsers, parserConfig, httpAdapter, displayAdapter, processedUrls, currentDepth = 1, mainConfig = null, parserName = null, allowParserAutoSwitch = true) {
+    async crawlUrlsForEvents({
+        urls,
+        allEvents,
+        parsers,
+        parserConfig,
+        httpAdapter,
+        displayAdapter,
+        processedUrls,
+        maxDepth = 1,
+        currentDepth = 0,
+        mainConfig = null,
+        parserName = null,
+        allowParserAutoSwitch = true,
+        urlClassifications = null,
+        includeInlineInput = false
+    }) {
+        const urlsToProcess = currentDepth > 0
+            ? this.limitAdditionalUrls(urls, parserConfig)
+            : (Array.isArray(urls) ? urls : []);
+
+        if (currentDepth > 0) {
+            await displayAdapter.logInfo(`SYSTEM: Crawling ${urlsToProcess.length} discovered URLs (depth ${currentDepth}/${maxDepth})`);
+        }
+
+        for (let i = 0; i < urlsToProcess.length; i++) {
+            const rawUrl = urlsToProcess[i];
+            const url = this.normalizeUrl(rawUrl, rawUrl);
+            if (!url) {
+                if (currentDepth === 0) {
+                    await displayAdapter.logWarn(`SYSTEM: Skipping invalid URL: ${rawUrl}`);
+                }
+                continue;
+            }
+            if (this.hasProcessedUrl(processedUrls, url)) {
+                if (currentDepth === 0) {
+                    await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
+                }
+                continue;
+            }
+
+            this.markProcessedUrl(processedUrls, url);
+
+            try {
+                const shouldUseInlineInput = includeInlineInput &&
+                    currentDepth === 0 &&
+                    i === 0 &&
+                    parserConfig.input &&
+                    typeof parserConfig.input === 'object';
+                if (shouldUseInlineInput) {
+                    await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
+                }
+
+                const htmlData = shouldUseInlineInput
+                    ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
+                    : await httpAdapter.fetchData(url);
+
+                const perPageParserConfig = currentDepth === 0
+                    ? parserConfig
+                    : {
+                        ...parserConfig,
+                        urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
+                    };
+
+                const { pageClassification, parseResult, urlParserName } = await this.parsePageForCrawl({
+                    url,
+                    htmlData,
+                    parsers,
+                    parserName,
+                    allowParserAutoSwitch,
+                    parserConfig: perPageParserConfig,
+                    mainConfig,
+                    displayAdapter
+                });
+
+                if (currentDepth === 0 && urlClassifications && typeof urlClassifications === 'object') {
+                    urlClassifications[url] = pageClassification;
+                }
+
+                const eventCount = parseResult?.events?.length || 0;
+                const linkCount = parseResult?.additionalLinks?.length || 0;
+                const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
+                await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
+
+                const parsedEvents = this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification);
+                if (parsedEvents.length > 0) {
+                    allEvents.push(...parsedEvents);
+                }
+
+                const additionalLinks = parseResult?.additionalLinks || [];
+                if (additionalLinks.length === 0) {
+                    continue;
+                }
+
+                const deduplicatedUrls = this.deduplicateUrls(additionalLinks, processedUrls);
+                const shouldFollowLinks = currentDepth === 0 ||
+                    (currentDepth < maxDepth && parserConfig.urlDiscoveryDepth > 0);
+
+                if (shouldFollowLinks) {
+                    await displayAdapter.logInfo(
+                        currentDepth === 0
+                            ? `SYSTEM: Following ${additionalLinks.length} discovered URLs → ${deduplicatedUrls.length} unique for crawl depth 1`
+                            : `SYSTEM: Crawl page ${url} found ${additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`
+                    );
+                    if (deduplicatedUrls.length > 0) {
+                        await this.crawlUrlsForEvents({
+                            urls: deduplicatedUrls,
+                            allEvents,
+                            parsers,
+                            parserConfig,
+                            httpAdapter,
+                            displayAdapter,
+                            processedUrls,
+                            maxDepth,
+                            currentDepth: currentDepth + 1,
+                            mainConfig,
+                            parserName: urlParserName,
+                            allowParserAutoSwitch,
+                            urlClassifications: null,
+                            includeInlineInput: false
+                        });
+                    }
+                } else {
+                    await displayAdapter.logInfo(`SYSTEM: Crawl page ${url} found ${additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
+                }
+            } catch (error) {
+                const message = error?.message || 'Unknown error';
+                if (currentDepth === 0) {
+                    await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${message}`);
+                    if (error.stack && error.stack.trim()) {
+                        await displayAdapter.logError(`SYSTEM: URL processing stack trace: ${error.stack}`);
+                    }
+                } else {
+                    await displayAdapter.logError(`SYSTEM: Failed to process crawl page ${url}: ${message}`);
+                }
+            }
+        }
+    }
+
+    limitAdditionalUrls(additionalLinks, parserConfig) {
+        if (!Array.isArray(additionalLinks) || additionalLinks.length === 0) {
+            return [];
+        }
         const configuredMaxUrls = parserConfig.maxAdditionalUrls;
         let maxUrls = 12;
         if (configuredMaxUrls === null) {
@@ -582,99 +648,57 @@ class SharedCore {
         } else if (Number.isInteger(configuredMaxUrls) && configuredMaxUrls >= 0) {
             maxUrls = configuredMaxUrls;
         }
-        const urlsToProcess = Number.isFinite(maxUrls)
+        return Number.isFinite(maxUrls)
             ? additionalLinks.slice(0, maxUrls)
             : additionalLinks;
-        const maxDepth = parserConfig.urlDiscoveryDepth || 1;
+    }
 
-        await displayAdapter.logInfo(`SYSTEM: Processing ${urlsToProcess.length} additional URLs for event enrichment (depth: ${currentDepth}/${maxDepth})`);
-
-        for (const rawUrl of urlsToProcess) {
-            const url = this.normalizeUrl(rawUrl, rawUrl);
-            if (!url) {
-                continue;
-            }
-            if (this.hasProcessedUrl(processedUrls, url)) {
-                continue; // Skip already processed URLs without logging each one
-            }
-
-            this.markProcessedUrl(processedUrls, url);
-
-            try {
-                const htmlData = await httpAdapter.fetchData(url);
-
-                // Classify the page before parsing
-                const pageClassification = this.classifyPage(url, htmlData.html);
-                await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
-
-                // Detect parser for this specific URL (allows mid-run switching)
-                const detectedParserName = this.detectParserFromUrl(url);
-                const urlParserName = allowParserAutoSwitch
-                    ? (detectedParserName || parserName || 'ai-web')
-                    : (parserName || 'ai-web');
-                const urlParser = parsers[urlParserName];
-                
-                // Reduce urlDiscoveryDepth so detail pages at the final depth extract events
-                // rather than running URL discovery again.  At intermediate depths we still
-                // want discovery so the recursion can go deeper.
-                const detailParserConfig = {
-                    ...parserConfig,
-                    urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
-                };
-                const parseResult = await Promise.resolve(
-                    urlParser.parseEvents(htmlData, detailParserConfig, mainConfig?.cities || null, pageClassification)
-                );
-                
-                // Handle additional URLs if depth allows and parser wants URL discovery
-                const shouldProcessUrls = parseResult.additionalLinks && 
-                                        parseResult.additionalLinks.length > 0 &&
-                                        currentDepth < maxDepth &&
-                                        parserConfig.urlDiscoveryDepth > 0;
-                
-                if (shouldProcessUrls) {
-                        // Deduplicate URLs before recursive processing
-                        const deduplicatedUrls = this.deduplicateUrls(parseResult.additionalLinks, processedUrls);
-                        await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`);
-                        
-                        // Recursively process additional URLs if we haven't reached max depth
-                        if (deduplicatedUrls.length > 0) {
-                            await this.enrichEventsWithDetailPages(
-                                existingEvents,
-                                deduplicatedUrls,
-                                parsers,
-                                parserConfig,
-                                httpAdapter,
-                                displayAdapter,
-                                processedUrls,
-                                currentDepth + 1,
-                                mainConfig,
-                                urlParserName,
-                                allowParserAutoSwitch
-                            );
-                        }
-                } else if (parseResult.additionalLinks && parseResult.additionalLinks.length > 0) {
-                    await displayAdapter.logInfo(`SYSTEM: Detail page ${url} found ${parseResult.additionalLinks.length} additional URLs, but depth limit (${maxDepth}) reached or URL discovery disabled - ignoring`);
-                }
-                
-                // Process detail page events - either enrich existing or add new events
-                if (parseResult.events && parseResult.events.length > 0) {
-                    // Apply field priorities to detail page events (same as main page events)
-                    // CRITICAL FIX: Detail page events need the same enrichment as main page events
-                    const enrichedDetailEvents = parseResult.events.map(event => 
-                        this.enrichEventLocation(this.normalizeEventTextFields(this.applyFieldPriorities(event, parserConfig, mainConfig)))
-                    );
-
-                    enrichedDetailEvents.forEach(event => { event._pageClassification = pageClassification; });
-                    
-                    // Add these events to the existing events collection for potential merging
-                    existingEvents.push(...enrichedDetailEvents);
-                    await displayAdapter.logSuccess(`SYSTEM: Added ${parseResult.events.length} new events from detail page ${url}`);
-                }
-                
-            } catch (error) {
-                await displayAdapter.logError(`SYSTEM: Failed to process detail page ${url}: ${error.message}`);
-            }
+    prepareParsedEvents(events, parserConfig, mainConfig, pageClassification) {
+        if (!Array.isArray(events) || events.length === 0) {
+            return [];
         }
+        const filteredEvents = events.map(event =>
+            this.applyFieldPriorities(event, parserConfig, mainConfig)
+        );
+        const enrichedEvents = filteredEvents.map(event =>
+            this.enrichEventLocation(this.normalizeEventTextFields(event))
+        );
+        enrichedEvents.forEach(event => { event._pageClassification = pageClassification; });
+        return enrichedEvents;
+    }
+
+    async parsePageForCrawl({
+        url,
+        htmlData,
+        parsers,
+        parserName = null,
+        allowParserAutoSwitch = true,
+        parserConfig,
+        mainConfig = null,
+        displayAdapter,
+        logClassification = true,
+        logParserSwitch = true
+    }) {
+        const pageClassification = this.classifyPage(url, htmlData.html);
+        if (logClassification) {
+            await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
+        }
+        const detectedParserName = this.detectParserFromUrl(url);
+        const fallbackParserName = parserName || 'ai-web';
+        const urlParserName = allowParserAutoSwitch
+            ? (detectedParserName || fallbackParserName)
+            : fallbackParserName;
+        if (logParserSwitch && allowParserAutoSwitch && parserName && urlParserName !== parserName) {
+            await displayAdapter.logInfo(`SYSTEM: Switching to ${urlParserName} parser for URL: ${url}`);
+        }
+        const urlParser = parsers[urlParserName];
+        if (!urlParser) {
+            throw new Error(`Parser '${urlParserName}' not found`);
+        }
+        const parseResult = await Promise.resolve(
+            urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null, pageClassification)
+        );
+        return { pageClassification, parseResult, urlParserName };
     }
 
     // Strip protocol prefix from a URL for compact display labels.
@@ -713,17 +737,19 @@ class SharedCore {
 
             try {
                 const htmlData = await httpAdapter.fetchData(url);
-                // Use the forced parser when the config explicitly names one; otherwise
-                // fall back to URL-based auto-detection so that the right specialised
-                // parser is used for each discovered URL.
-                const detectedParser = forcedParserName || this.detectParserFromUrl(url) || 'ai-web';
-                const urlParser = parsers[detectedParser];
-                if (!urlParser) continue;
-
-                // Request link discovery but skip deep recursion — we manage depth ourselves
                 const discoveryConfig = { ...parserConfig, urlDiscoveryDepth: 1 };
-                const pageClassification = this.classifyPage(url, htmlData.html);
-                const parseResult = await Promise.resolve(urlParser.parseEvents(htmlData, discoveryConfig, null, pageClassification));
+                const { parseResult } = await this.parsePageForCrawl({
+                    url,
+                    htmlData,
+                    parsers,
+                    parserName: forcedParserName || null,
+                    allowParserAutoSwitch: !forcedParserName,
+                    parserConfig: discoveryConfig,
+                    mainConfig: null,
+                    displayAdapter,
+                    logClassification: false,
+                    logParserSwitch: false
+                });
 
                 const childLinks = parseResult.additionalLinks || [];
                 const deduped = this.deduplicateUrls(childLinks, processedUrls);
