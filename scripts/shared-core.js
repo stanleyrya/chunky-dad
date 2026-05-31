@@ -100,7 +100,8 @@ class SharedCore {
 
         // Compiled regex and thresholds for HTML heuristics in classifyPage
         this.pageClassificationMonthPattern = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi;
-        this.pageClassificationMultiEventThreshold = 6;  // >= 6 month mentions → multi-event-page
+        this.pageClassificationNumericDatePattern = /\b\d{1,2}\/\d{1,2}\b/g;
+        this.pageClassificationMultiEventThreshold = 3;  // >= 3 month mentions → multi-event-page
         this.pageClassificationEventPageThreshold = 1;   // >= 1 month mention  → event-page
     }
 
@@ -157,7 +158,7 @@ class SharedCore {
      *
      * Priority order:
      *   1. pageClassificationRules — deterministic URL pattern match (no HTML required).
-     *   2. HTML heuristics — count month-name occurrences to distinguish single vs. multi-event pages.
+     *   2. HTML heuristics — count month-name occurrences and numeric date (M/D) occurrences to distinguish single vs. multi-event pages.
      *   3. Default — returns 'unknown' when no rule or heuristic applies.
      *
      * @param {string|null} url  - Absolute URL of the page being classified.
@@ -176,11 +177,18 @@ class SharedCore {
 
         // 2. HTML heuristics for unknown URLs
         if (html) {
-            // Reset lastIndex since the pattern is reused across calls (global flag)
+            // Reset lastIndex since the patterns are reused across calls (global flag)
             this.pageClassificationMonthPattern.lastIndex = 0;
             const monthMatches = html.match(this.pageClassificationMonthPattern) || [];
-            if (monthMatches.length >= this.pageClassificationMultiEventThreshold) return 'multi-event-page';
-            if (monthMatches.length >= this.pageClassificationEventPageThreshold) return 'event-page';
+
+            // Numeric short-date patterns like "7/25" or "8/15" (common on listing pages like Furball)
+            this.pageClassificationNumericDatePattern.lastIndex = 0;
+            const numericDateMatches = html.match(this.pageClassificationNumericDatePattern) || [];
+
+            if (monthMatches.length >= this.pageClassificationMultiEventThreshold ||
+                numericDateMatches.length >= this.pageClassificationMultiEventThreshold) return 'multi-event-page';
+            if (monthMatches.length >= this.pageClassificationEventPageThreshold ||
+                numericDateMatches.length >= this.pageClassificationEventPageThreshold) return 'event-page';
         }
 
         return 'unknown';
