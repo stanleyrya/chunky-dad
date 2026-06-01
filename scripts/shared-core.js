@@ -174,10 +174,6 @@ class SharedCore {
                 }
             }
 
-            // Bearracuda city pages under /events/{city}/ are detail pages.
-            if (/bearracuda\.com\/events\/[^/?#]+\/?$/i.test(url)) {
-                return 'event-page';
-            }
         }
 
         // 2. HTML heuristics for unknown URLs
