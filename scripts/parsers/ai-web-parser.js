@@ -74,7 +74,13 @@ class AiWebParser {
             multiEventMinSegmentLines: 3,
             multiEventMaxSegmentLines: 24,
             multiEventMinSegmentChars: 120,
-            multiEventMaxSegmentChars: 3200
+            multiEventMaxSegmentChars: 3200,
+            multiEventContextMetaParts: 4,
+            multiEventLineMaxChars: 240,
+            multiEventTitleMinChars: 8,
+            multiEventTitleMaxChars: 140,
+            multiEventTitleMinWords: 2,
+            multiEventPartialLineMinChars: 20
         };
         const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
             .map(prefix => this.escapeRegex(prefix).replace(/\s+/g, '\\s+'))
@@ -236,7 +242,7 @@ class AiWebParser {
     buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments) {
         const sourceHtml = htmlData && htmlData.html ? htmlData.html : '';
         const pageTitle = this.extractTitlePart(sourceHtml);
-        const pageMetaParts = this.extractMetaParts(sourceHtml).slice(0, 4);
+        const pageMetaParts = this.extractMetaParts(sourceHtml).slice(0, this.extractionLimits.multiEventContextMetaParts);
         const contextLines = [
             pageTitle ? `PAGE_TITLE: ${pageTitle}` : '',
             ...pageMetaParts.map((part, metaIndex) => `PAGE_META_${metaIndex + 1}: ${part}`),
@@ -266,7 +272,7 @@ class AiWebParser {
         };
 
         for (const rawLine of bodyParts) {
-            const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), 240);
+            const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), this.extractionLimits.multiEventLineMaxChars);
             if (!line) continue;
             const startsNewSegment = this.hasMultiEventDateSignal(line) &&
                 currentLines.length >= minSegmentLines &&
@@ -303,7 +309,12 @@ class AiWebParser {
     }
 
     trimSegmentLinesToChars(lines, maxChars) {
-        const limit = Math.max(120, Number(maxChars) || 0);
+        const numericMaxChars = Number(maxChars);
+        const hasExplicitLimit = maxChars !== null && maxChars !== undefined && Number.isFinite(numericMaxChars);
+        const limit = hasExplicitLimit
+            ? Math.max(0, numericMaxChars)
+            : this.extractionLimits.multiEventMinSegmentChars;
+        if (limit <= 0) return [];
         const kept = [];
         let used = 0;
         for (const line of Array.isArray(lines) ? lines : []) {
@@ -315,7 +326,7 @@ class AiWebParser {
                 continue;
             }
             const remaining = limit - used - separator;
-            if (remaining >= 20) {
+            if (remaining >= this.extractionLimits.multiEventPartialLineMinChars) {
                 kept.push(this.trimToMaxLength(line, remaining));
             }
             break;
@@ -342,13 +353,13 @@ class AiWebParser {
 
     isLikelyEventTitleLine(value) {
         const line = this.normalizeWhitespace(value);
-        if (!line || line.length < 8 || line.length > 140) return false;
+        if (!line || line.length < this.extractionLimits.multiEventTitleMinChars || line.length > this.extractionLimits.multiEventTitleMaxChars) return false;
         if (this.hasMultiEventDateSignal(line)) return false;
         if (/^https?:\/\//i.test(line)) return false;
         if (!/[a-z]/i.test(line)) return false;
         if (/^(ticket|tickets|buy|register|details|learn more)\b/i.test(line)) return false;
         const wordCount = line.split(/\s+/).length;
-        if (wordCount < 2) return false;
+        if (wordCount < this.extractionLimits.multiEventTitleMinWords) return false;
         if (/^[^a-z0-9]+$/i.test(line)) return false;
         return true;
     }
