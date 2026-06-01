@@ -71,9 +71,9 @@ class AiWebParser {
             validationReportValueMaxLength: 140,
             multiEventScanLineLimit: 500,
             multiEventMaxSegments: 12,
-            multiEventMinSegmentLines: 3,
+            multiEventMinSegmentLines: 2,
             multiEventMaxSegmentLines: 24,
-            multiEventMinSegmentChars: 120,
+            multiEventMinSegmentChars: 25,
             multiEventMaxSegmentChars: 3200,
             multiEventContextMetaParts: 4,
             multiEventLineMaxChars: 240,
@@ -292,8 +292,11 @@ class AiWebParser {
         for (const rawLine of bodyParts) {
             const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), this.extractionLimits.multiEventLineMaxChars);
             if (!line) continue;
+            // Compact event lines (date + event name in one line) can start a new segment
+            // with just 1 prior line that has a date signal, rather than minSegmentLines.
+            const effectiveSplitMin = this.isCompactEventLine(line) ? 1 : minSegmentLines;
             const startsNewSegment = this.hasMultiEventDateSignal(line) &&
-                currentLines.length >= minSegmentLines &&
+                currentLines.length >= effectiveSplitMin &&
                 this.segmentHasDateSignal(currentLines);
             if (startsNewSegment) {
                 pushCurrent();
@@ -311,7 +314,12 @@ class AiWebParser {
             const normalizedLines = Array.isArray(lines)
                 ? lines.map(line => this.normalizeWhitespace(line)).filter(Boolean)
                 : [];
-            if (normalizedLines.length < minSegmentLines) continue;
+            // Compact-only segments (every line is a self-contained dated event) require
+            // only 1 line; regular segments require minSegmentLines.
+            const isCompactOnly = normalizedLines.length > 0 &&
+                normalizedLines.every(l => this.isCompactEventLine(l));
+            const effectiveMinLines = isCompactOnly ? 1 : minSegmentLines;
+            if (normalizedLines.length < effectiveMinLines) continue;
             if (!this.segmentHasDateSignal(normalizedLines)) continue;
             if (!this.segmentHasTitleSignal(normalizedLines)) continue;
             const trimmedLines = this.trimSegmentLinesToChars(normalizedLines, this.extractionLimits.multiEventMaxSegmentChars);
@@ -357,7 +365,21 @@ class AiWebParser {
     }
 
     segmentHasTitleSignal(lines) {
-        return (Array.isArray(lines) ? lines : []).some(line => this.isLikelyEventTitleLine(line));
+        return (Array.isArray(lines) ? lines : []).some(
+            line => this.isLikelyEventTitleLine(line) || this.isCompactEventLine(line)
+        );
+    }
+
+    // A compact event line combines date + event name (and often venue) in a single line,
+    // e.g. "7/25 FURBALL NYC @ Eagle Bar" or "Aug 8 - FURBALL Chicago @ Metro".
+    isCompactEventLine(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!line || !this.hasMultiEventDateSignal(line)) return false;
+        if (line.length < 20) return false;
+        if (/^https?:\/\//i.test(line)) return false;
+        if (!/[a-z]/i.test(line)) return false;
+        const wordCount = line.split(/\s+/).length;
+        return wordCount >= 4;
     }
 
     hasMultiEventDateSignal(value) {
