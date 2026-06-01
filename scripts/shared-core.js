@@ -707,7 +707,7 @@ class SharedCore {
                         currentDepth === 0 ? 'root-page' : 'crawl-page'
                     );
                 } catch (noteError) {
-                    await displayAdapter.logWarn(`SYSTEM: Failed to save non-retryable failure cache entry for ${url}: ${noteError.message}`);
+                    await displayAdapter.logWarn(`SYSTEM: Failed to save cache entry for non-retryable error at ${url}: ${noteError.message}`);
                 }
                 if (currentDepth === 0) {
                     await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${message}`);
