@@ -125,9 +125,9 @@ class AiWebParser {
             const html = htmlData && htmlData.html ? htmlData.html : '';
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
 
-            if (parserConfig.discoveryOnly === true || parserConfig.urlDiscoveryDepth > 0) {
+            if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
                 const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
-                console.log(`🤖 AI Web: Discovery mode found ${additionalLinks.length} additional links`);
+                console.log(`🤖 AI Web: Link-finding mode (${parserConfig.discoveryOnly ? 'discoveryOnly' : pageClassification}) found ${additionalLinks.length} additional links`);
                 return {
                     events: [],
                     additionalLinks: additionalLinks,

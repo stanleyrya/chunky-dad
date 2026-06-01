@@ -818,6 +818,10 @@ class SharedCore {
         if (logClassification) {
             await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
         }
+        if (pageClassification === 'ad') {
+            await displayAdapter.logInfo(`SYSTEM: Skipping parser for ad page: ${url}`);
+            return { pageClassification, parseResult: { events: [], additionalLinks: [] }, urlParserName: null };
+        }
         const detectedParserName = this.detectParserFromUrl(url);
         const baseParserName = parserName || 'ai-web';
         const urlParserName = allowParserAutoSwitch
