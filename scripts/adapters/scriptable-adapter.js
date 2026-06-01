@@ -4552,6 +4552,27 @@ class ScriptableAdapter {
         `;
     }
     
+    // Generate HTML for the segments panel in discovery section
+    generateDiscoverySegmentsPanel(safeId, segmentsByUrl) {
+        const segmentUrlEntries = Object.entries(segmentsByUrl);
+        if (segmentUrlEntries.length === 0) return { button: '', panel: '', totalSegments: 0 };
+
+        const totalSegments = segmentUrlEntries.reduce((sum, [, segs]) => sum + segs.length, 0);
+        const urlBlocks = segmentUrlEntries.map(([url, segs]) => {
+            const segmentItems = segs.map(seg =>
+                `<div style="padding:4px 8px; background:var(--background-light); border-left:3px solid var(--border-color); margin-bottom:4px; font-size:11px; font-family:monospace;"><span style="opacity:0.6;">Segment ${seg.index} (${seg.lineCount} lines):</span> ${this.escapeHtml(seg.preview)}</div>`
+            ).join('');
+            return `<div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-family:monospace; opacity:0.7; margin-bottom:4px;">${this.escapeHtml(url)} — ${segs.length} segment(s)</div>
+                ${segmentItems}
+            </div>`;
+        }).join('');
+
+        const button = `<button onclick="switchDiscoveryTab(this,'segments_${safeId}')" class="disc-tab-btn" data-tab="segments_${safeId}">Segments (${totalSegments})</button>`;
+        const panel = `<div id="segments_${safeId}" class="disc-tab-panel" style="display:none">${urlBlocks}</div>`;
+        return { button, panel, totalSegments };
+    }
+
     // Generate HTML for URL discovery section (discoveryOnly mode results)
     generateDiscoverySection(results) {
         const parserResults = Array.isArray(results && results.parserResults) ? results.parserResults : [];
@@ -4569,21 +4590,8 @@ class ScriptableAdapter {
                 : '';
 
             const segmentsByUrl = (r.discoveryTree && r.discoveryTree.segmentsByUrl) ? r.discoveryTree.segmentsByUrl : {};
-            const segmentUrlEntries = Object.entries(segmentsByUrl);
-            const hasSegments = segmentUrlEntries.length > 0;
-            const totalSegments = segmentUrlEntries.reduce((sum, [, segs]) => sum + segs.length, 0);
-            const segmentsTabButton = hasSegments
-                ? `<button onclick="switchDiscoveryTab(this,'segments_${safeId}')" class="disc-tab-btn" data-tab="segments_${safeId}">Segments (${totalSegments})</button>`
-                : '';
-            const segmentsPanel = hasSegments
-                ? `<div id="segments_${safeId}" class="disc-tab-panel" style="display:none">
-                ${segmentUrlEntries.map(([url, segs]) => `
-                    <div style="margin-bottom:10px;">
-                        <div style="font-size:11px; font-family:monospace; opacity:0.7; margin-bottom:4px;">${this.escapeHtml(url)} — ${segs.length} segment(s)</div>
-                        ${segs.map(seg => `<div style="padding:4px 8px; background:var(--background-light); border-left:3px solid var(--border-color); margin-bottom:4px; font-size:11px; font-family:monospace;"><span style="opacity:0.6;">Segment ${seg.index} (${seg.lineCount} lines):</span> ${this.escapeHtml(seg.preview)}</div>`).join('')}
-                    </div>`).join('')}
-            </div>`
-                : '';
+            const { button: segmentsTabButton, panel: segmentsPanel, totalSegments } = this.generateDiscoverySegmentsPanel(safeId, segmentsByUrl);
+            const hasSegments = totalSegments > 0;
 
             return `
         <div class="discovery-parser" style="margin-bottom:16px;">
