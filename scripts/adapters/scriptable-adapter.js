@@ -848,7 +848,10 @@ class ScriptableAdapter {
 
             const cached = JSON.parse(this.fm.readString(cachePath));
             const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
-            if (fetchState === 'failed' || (cached.failure && cached.failure.nonRetryable === true)) {
+            if (fetchState !== 'downloaded') {
+                return null;
+            }
+            if (cached.failure && cached.failure.nonRetryable === true) {
                 return null;
             }
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
