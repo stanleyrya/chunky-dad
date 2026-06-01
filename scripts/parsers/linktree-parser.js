@@ -53,11 +53,8 @@ class LinktreeParser {
                 }
             }
             
-            // Extract additional URLs if urlDiscoveryDepth > 0 (depth checking is handled by shared-core)
-            let additionalLinks = [];
-            if (parserConfig.urlDiscoveryDepth > 0) {
-                additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
-            }
+            // Always extract additional URLs (SharedCore controls whether to follow them)
+            let additionalLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
             
             console.log(`🔗 Linktree: Found ${events.length} events, ${additionalLinks.length} additional links`);
             

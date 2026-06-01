@@ -58,8 +58,8 @@ class BearraccudaParser {
 
                     events.push(event);
                     
-                    // If ticket URL is found and it's an eventbrite URL, add it as an additional link
-                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite') && parserConfig.urlDiscoveryDepth > 0) {
+                    // Always add eventbrite ticket URLs as additional links for crawling
+                    if (event.ticketUrl && event.ticketUrl.includes('eventbrite')) {
                         additionalLinks.push(event.ticketUrl);
 
                     }
@@ -76,13 +76,10 @@ class BearraccudaParser {
                 events.push(...listingEvents);
             }
             
-            // Extract additional URLs if urlDiscoveryDepth > 0 (for listing pages)
-            if (parserConfig.urlDiscoveryDepth > 0 && !isDetailPage) {
-
+            // Extract additional URLs from listing pages (SharedCore controls whether to follow them)
+            if (!isDetailPage) {
                 const extractedLinks = this.extractAdditionalUrls(html, htmlData.url, parserConfig);
                 additionalLinks.push(...extractedLinks);
-            } else if (!isDetailPage) {
-
             }
             
             console.log(`🐻 Bearracuda: Found ${events.length} events, ${additionalLinks.length} additional links`);

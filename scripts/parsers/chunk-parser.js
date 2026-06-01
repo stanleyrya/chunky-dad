@@ -55,11 +55,8 @@ class ChunkParser {
                 }
             }
             
-            // Extract additional event detail URLs (works on both main and detail pages)
-            let additionalLinks = [];
-            if (parserConfig.urlDiscoveryDepth > 0) {
-                additionalLinks = this.extractEventDetailUrls(html);
-            }
+            // Extract additional event detail URLs (SharedCore controls whether to follow them)
+            const additionalLinks = this.extractEventDetailUrls(html);
 
             const linkSuffix = additionalLinks.length > 0
                 ? `, ${additionalLinks.length} link${additionalLinks.length === 1 ? '' : 's'}`
