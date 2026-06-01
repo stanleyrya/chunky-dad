@@ -851,9 +851,6 @@ class ScriptableAdapter {
             if (fetchState !== 'downloaded') {
                 return null;
             }
-            if (cached.failure && cached.failure.nonRetryable === true) {
-                return null;
-            }
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
                 return null;
             }
