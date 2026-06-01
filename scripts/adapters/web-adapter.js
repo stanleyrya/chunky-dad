@@ -179,7 +179,7 @@ class WebAdapter {
                 cachePath
             };
         } catch (error) {
-            if (error && error.cachedFailure === true) {
+            if (error?.cachedFailure) {
                 throw error;
             }
             if (error && error.code !== 'ENOENT') {
@@ -290,6 +290,9 @@ class WebAdapter {
             }
             
         } catch (error) {
+            if (error?.cachedFailure) {
+                throw error;
+            }
             const errorMessage = `🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`;
             console.log(errorMessage);
             throw new Error(`HTTP request failed for ${url}: ${error.message}`);

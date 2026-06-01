@@ -219,12 +219,11 @@ class SharedCore {
                     this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Invalid page classification pattern at index ${i}: ${error.message}`);
                     continue;
                 }
-            }
-            if (this.isRegExpLike(pattern)) {
+            } else if (pattern instanceof RegExp) {
                 try {
                     pattern = new RegExp(pattern.source, pattern.flags);
                 } catch (error) {
-                    this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Failed to convert page classification regex-like pattern at index ${i}: ${error.message}`);
+                    this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Failed to compile page classification regex at index ${i}: ${error.message}`);
                     continue;
                 }
             } else {
@@ -237,25 +236,6 @@ class SharedCore {
             });
         }
         return normalized;
-    }
-
-    isRegExpLike(value) {
-        if (!value || typeof value !== 'object') {
-            return false;
-        }
-        if (value instanceof RegExp || Object.prototype.toString.call(value) === '[object RegExp]') {
-            return true;
-        }
-        const constructorName = value.constructor && typeof value.constructor.name === 'string'
-            ? value.constructor.name
-            : '';
-        return typeof value.source === 'string' &&
-            typeof value.flags === 'string' &&
-            typeof value.test === 'function' &&
-            typeof value.lastIndex === 'number' &&
-            typeof value.ignoreCase === 'boolean' &&
-            typeof value.multiline === 'boolean' &&
-            constructorName === 'RegExp';
     }
 
     pageClassificationRuleMatchesUrl(rule, url) {
@@ -769,12 +749,14 @@ class SharedCore {
             } catch (error) {
                 const message = error?.message || 'Unknown error';
                 try {
-                    await this.saveNonRetryableFailureNote(
-                        httpAdapter,
-                        url,
-                        error,
-                        currentDepth === 0 ? 'root-page' : 'crawl-page'
-                    );
+                    if (!(error && error.cachedFailure === true)) {
+                        await this.saveNonRetryableFailureNote(
+                            httpAdapter,
+                            url,
+                            error,
+                            currentDepth === 0 ? 'root-page' : 'crawl-page'
+                        );
+                    }
                 } catch (noteError) {
                     await displayAdapter.logWarn(`SYSTEM: Failed to save cache entry for non-retryable error at ${url}: ${noteError.message}`);
                 }

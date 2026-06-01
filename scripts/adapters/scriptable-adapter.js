@@ -878,7 +878,7 @@ class ScriptableAdapter {
                 cachePath
             };
         } catch (error) {
-            if (error && error.cachedFailure === true) {
+            if (error?.cachedFailure) {
                 throw error;
             }
             console.log(`📱 Scriptable: Page cache read failed for ${url}: ${error.message}`);
@@ -1000,6 +1000,9 @@ class ScriptableAdapter {
             }
             
         } catch (error) {
+            if (error?.cachedFailure) {
+                throw error;
+            }
             const errorMessage = `📱 Scriptable: ✗ HTTP request failed for ${url}: ${error.message}`;
             console.log(errorMessage);
             throw new Error(`HTTP request failed for ${url}: ${error.message}`);
