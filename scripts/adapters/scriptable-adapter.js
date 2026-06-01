@@ -848,6 +848,10 @@ class ScriptableAdapter {
             } catch (_) {}
 
             const cached = JSON.parse(this.fm.readString(cachePath));
+            const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
+            if (fetchState === 'failed' || (cached.failure && cached.failure.nonRetryable === true)) {
+                return null;
+            }
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
                 return null;
             }
@@ -879,6 +883,7 @@ class ScriptableAdapter {
             fetchedAt: new Date().toISOString(),
             statusCode: responseData.statusCode || 200,
             headers: responseData.headers || {},
+            fetchState: 'downloaded',
             html: responseData.html
         };
 
@@ -899,33 +904,32 @@ class ScriptableAdapter {
         return Number.isFinite(statusCode) ? statusCode : null;
     }
 
-    createFailureNoteFileName(url) {
-        const datePart = new Date().toISOString().slice(0, 10);
-        const hash = this.hashPageCacheValue(url || '');
-        return `failed-fetch-${datePart}-${hash}.txt`;
-    }
-
     async saveFailureNote(url, error, metadata = {}) {
         if (metadata && metadata.retryable === true) {
             return false;
         }
 
+        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
+        const hostDirPath = this.ensurePageCacheDir(hostDir);
+        const cachePath = this.fm.joinPath(hostDirPath, fileName);
         const statusCode = Number.isFinite(metadata.statusCode)
             ? metadata.statusCode
             : this.extractHttpStatusCodeFromError(error);
-        const noteContent = [
-            `Non-retryable fetch failure for ${url}`,
-            `Context: ${metadata.context || 'crawl'}`,
-            `Timestamp: ${new Date().toISOString()}`,
-            `StatusCode: ${Number.isFinite(statusCode) ? statusCode : 'unknown'}`,
-            `Error: ${error && error.message ? error.message : 'Unknown error'}`
-        ].join('\n');
+        const payload = {
+            url: normalizedUrl,
+            fetchedAt: new Date().toISOString(),
+            statusCode: Number.isFinite(statusCode) ? statusCode : null,
+            headers: {},
+            fetchState: 'failed',
+            failure: {
+                nonRetryable: true,
+                context: metadata.context || 'crawl',
+                error: error && error.message ? error.message : 'Unknown error'
+            }
+        };
 
-        this.ensureDirectoryExists(this.baseDir);
-        this.ensureDirectoryExists(this.outputDir);
-        const notePath = this.fm.joinPath(this.outputDir, this.createFailureNoteFileName(url));
-        this.fm.writeString(notePath, `${noteContent}\n`);
-        console.log(`📱 Scriptable: 📝 Saved failure note to ${notePath}`);
+        this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+        console.log(`📱 Scriptable: 📝 Saved non-retryable failure cache entry to ${cachePath}`);
         return true;
     }
 

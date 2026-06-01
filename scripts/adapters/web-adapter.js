@@ -150,6 +150,10 @@ class WebAdapter {
 
             const cachedText = await this.fs.promises.readFile(cachePath, 'utf8');
             const cached = JSON.parse(cachedText);
+            const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
+            if (fetchState === 'failed' || (cached.failure && cached.failure.nonRetryable === true)) {
+                return null;
+            }
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
                 return null;
             }
@@ -183,6 +187,7 @@ class WebAdapter {
             fetchedAt: new Date().toISOString(),
             statusCode: responseData.statusCode || 200,
             headers: responseData.headers || {},
+            fetchState: 'downloaded',
             html: responseData.html
         };
 
@@ -286,35 +291,36 @@ class WebAdapter {
         return Number.isFinite(statusCode) ? statusCode : null;
     }
 
-    createFailureNoteFileName(url) {
-        const datePart = new Date().toISOString().slice(0, 10);
-        const hash = this.hashPageCacheValue(url || '');
-        return `failed-fetch-${datePart}-${hash}.txt`;
-    }
-
     async saveFailureNote(url, error, metadata = {}) {
         if (metadata && metadata.retryable === true) {
             return false;
         }
-        if (!this.isNode || !this.fs || !this.path || !this.outputDir) {
+        if (!this.isNode || !this.fs || !this.path || !this.pageStorageDir) {
             return false;
         }
 
+        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
+        const cacheDir = this.path.join(this.pageStorageDir, hostDir);
+        const cachePath = this.path.join(cacheDir, fileName);
         const statusCode = Number.isFinite(metadata.statusCode)
             ? metadata.statusCode
             : this.extractHttpStatusCodeFromError(error);
-        const noteContent = [
-            `Non-retryable fetch failure for ${url}`,
-            `Context: ${metadata.context || 'crawl'}`,
-            `Timestamp: ${new Date().toISOString()}`,
-            `StatusCode: ${Number.isFinite(statusCode) ? statusCode : 'unknown'}`,
-            `Error: ${error && error.message ? error.message : 'Unknown error'}`
-        ].join('\n');
+        const payload = {
+            url: normalizedUrl,
+            fetchedAt: new Date().toISOString(),
+            statusCode: Number.isFinite(statusCode) ? statusCode : null,
+            headers: {},
+            fetchState: 'failed',
+            failure: {
+                nonRetryable: true,
+                context: metadata.context || 'crawl',
+                error: error && error.message ? error.message : 'Unknown error'
+            }
+        };
 
-        this.ensureDir(this.outputDir);
-        const notePath = this.path.join(this.outputDir, this.createFailureNoteFileName(url));
-        await this.fs.promises.writeFile(notePath, `${noteContent}\n`, 'utf8');
-        console.log(`🌐 Web: 📝 Saved failure note to ${notePath}`);
+        await this.fs.promises.mkdir(cacheDir, { recursive: true });
+        await this.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+        console.log(`🌐 Web: 📝 Saved non-retryable failure cache entry to ${cachePath}`);
         return true;
     }
 
