@@ -68,7 +68,19 @@ class AiWebParser {
             fuzzyDescriptionMinTokenLength: 4,
             fuzzyDescriptionMinTokenMatches: 2,
             fuzzyDescriptionTokenMatchRatio: 0.45,
-            validationReportValueMaxLength: 140
+            validationReportValueMaxLength: 140,
+            multiEventScanLineLimit: 500,
+            multiEventMaxSegments: 12,
+            multiEventMinSegmentLines: 3,
+            multiEventMaxSegmentLines: 24,
+            multiEventMinSegmentChars: 120,
+            multiEventMaxSegmentChars: 3200,
+            multiEventContextMetaParts: 4,
+            multiEventLineMaxChars: 240,
+            multiEventTitleMinChars: 8,
+            multiEventTitleMaxChars: 140,
+            multiEventTitleMinWords: 2,
+            multiEventPartialLineMinChars: 20
         };
         const noisePrefixPattern = this.extractionLimits.noisyLinePrefixes
             .map(prefix => this.escapeRegex(prefix).replace(/\s+/g, '\\s+'))
@@ -124,9 +136,9 @@ class AiWebParser {
             this.aiPromptHistory = [];
             const html = htmlData && htmlData.html ? htmlData.html : '';
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+            const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
 
             if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
-                const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
                 console.log(`🤖 AI Web: Link-finding mode (${parserConfig.discoveryOnly ? 'discoveryOnly' : 'link-aggregator'}) found ${additionalLinks.length} additional links`);
                 return {
                     events: [],
@@ -137,52 +149,219 @@ class AiWebParser {
             }
 
             const promptFields = this.getAiPromptFields(parserConfig);
-            const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig, promptFields);
-            if (!aiEvent) {
-                return this.buildEmptyResult(htmlData);
-            }
-
-            const validationResult = this.validateAiEventEvidence(aiEvent, htmlData, parserConfig, promptFields, {
-                trustedFields: aiEvent && Array.isArray(aiEvent.__preValidatedFields) ? aiEvent.__preValidatedFields : []
-            });
-            const event = this.normalizeAiEvent(validationResult.event, parserConfig, htmlData, cityConfig, promptFields);
-            if (!event || !event.title || !event.startDate) {
-                console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
-                return this.buildEmptyResult(htmlData);
-            }
-            const confidenceDiagnostics = aiEvent && aiEvent.__confidenceDiagnostics && typeof aiEvent.__confidenceDiagnostics === 'object'
-                ? aiEvent.__confidenceDiagnostics
-                : null;
-            if (validationResult.report || confidenceDiagnostics) {
-                const report = validationResult.report && typeof validationResult.report === 'object'
-                    ? { ...validationResult.report }
-                    : { strict: null, sourceChars: 0, kept: [], dropped: [], bypassed: [] };
-                if (confidenceDiagnostics) {
-                    const finalValidatedFields = Object.keys(validationResult.event || {})
-                        .filter(key => !this.isInternalAiFieldKey(key))
-                        .map(key => this.normalizePromptFieldName(key))
-                        .filter(Boolean);
-                    report.confidence = {
-                        ...confidenceDiagnostics,
-                        extractionOutcome: {
-                            ...(confidenceDiagnostics.extractionOutcome || {}),
-                            finalValidatedFields: Array.from(new Set(finalValidatedFields))
-                        }
-                    };
-                }
-                event._aiValidation = report;
-            }
+            const events = pageClassification === 'multi-event-page'
+                ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields)
+                : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields);
 
             return {
-                events: [event],
-                additionalLinks: [],
+                events,
+                additionalLinks,
                 source: this.config.source,
                 url: htmlData && htmlData.url ? htmlData.url : ''
             };
         } catch (error) {
             console.warn(`🤖 AI Web: Failed to parse AI event: ${error}`);
-            return this.buildEmptyResult(htmlData);
+            const html = htmlData && htmlData.html ? htmlData.html : '';
+            const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+            return {
+                events: [],
+                additionalLinks: this.extractAdditionalUrls(html, sourceUrl, parserConfig),
+                source: this.config.source,
+                url: sourceUrl
+            };
         }
+    }
+
+    async extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields) {
+        const event = await this.extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields);
+        return event ? [event] : [];
+    }
+
+    async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const segments = this.buildMultiEventSegments(html);
+        if (segments.length === 0) {
+            console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
+            return [];
+        }
+        console.log(`🤖 AI Web: multi-event-page split into ${segments.length} candidate segment${segments.length === 1 ? '' : 's'}`);
+        const events = [];
+        for (let i = 0; i < segments.length; i++) {
+            const segment = segments[i];
+            const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length);
+            const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields);
+            if (!event) continue;
+            event._multiEventSegment = {
+                index: i + 1,
+                total: segments.length,
+                lineCount: segment.lines.length
+            };
+            events.push(event);
+        }
+        return events;
+    }
+
+    async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields) {
+        const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig, promptFields);
+        if (!aiEvent) {
+            return null;
+        }
+        const validationResult = this.validateAiEventEvidence(aiEvent, htmlData, parserConfig, promptFields, {
+            trustedFields: aiEvent && Array.isArray(aiEvent.__preValidatedFields) ? aiEvent.__preValidatedFields : []
+        });
+        const event = this.normalizeAiEvent(validationResult.event, parserConfig, htmlData, cityConfig, promptFields);
+        if (!event || !event.title || !event.startDate) {
+            console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
+            return null;
+        }
+        const confidenceDiagnostics = aiEvent && aiEvent.__confidenceDiagnostics && typeof aiEvent.__confidenceDiagnostics === 'object'
+            ? aiEvent.__confidenceDiagnostics
+            : null;
+        if (validationResult.report || confidenceDiagnostics) {
+            const report = validationResult.report && typeof validationResult.report === 'object'
+                ? { ...validationResult.report }
+                : { strict: null, sourceChars: 0, kept: [], dropped: [], bypassed: [] };
+            if (confidenceDiagnostics) {
+                const finalValidatedFields = Object.keys(validationResult.event || {})
+                    .filter(key => !this.isInternalAiFieldKey(key))
+                    .map(key => this.normalizePromptFieldName(key))
+                    .filter(Boolean);
+                report.confidence = {
+                    ...confidenceDiagnostics,
+                    extractionOutcome: {
+                        ...(confidenceDiagnostics.extractionOutcome || {}),
+                        finalValidatedFields: Array.from(new Set(finalValidatedFields))
+                    }
+                };
+            }
+            event._aiValidation = report;
+        }
+        return event;
+    }
+
+    buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments) {
+        const sourceHtml = htmlData && htmlData.html ? htmlData.html : '';
+        const pageTitle = this.extractTitlePart(sourceHtml);
+        const pageMetaParts = this.extractMetaParts(sourceHtml).slice(0, this.extractionLimits.multiEventContextMetaParts);
+        const contextLines = [
+            pageTitle ? `PAGE_TITLE: ${pageTitle}` : '',
+            ...pageMetaParts.map((part, metaIndex) => `PAGE_META_${metaIndex + 1}: ${part}`),
+            `SEGMENT_INDEX: ${index + 1}/${totalSegments}`
+        ].filter(Boolean);
+        return {
+            ...htmlData,
+            html: `${contextLines.join('\n')}\n${segment.lines.join('\n')}`,
+            aiEvent: null,
+            aiExtraction: null
+        };
+    }
+
+    buildMultiEventSegments(html) {
+        const bodyParts = this.extractBodyParts(html).slice(0, this.extractionLimits.multiEventScanLineLimit);
+        if (bodyParts.length === 0) return [];
+        const rawSegments = [];
+        let currentLines = [];
+        const minSegmentLines = this.extractionLimits.multiEventMinSegmentLines;
+        const maxSegmentLines = this.extractionLimits.multiEventMaxSegmentLines;
+
+        const pushCurrent = () => {
+            if (currentLines.length > 0) {
+                rawSegments.push(currentLines);
+                currentLines = [];
+            }
+        };
+
+        for (const rawLine of bodyParts) {
+            const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), this.extractionLimits.multiEventLineMaxChars);
+            if (!line) continue;
+            const startsNewSegment = this.hasMultiEventDateSignal(line) &&
+                currentLines.length >= minSegmentLines &&
+                this.segmentHasDateSignal(currentLines);
+            if (startsNewSegment) {
+                pushCurrent();
+            }
+            currentLines.push(line);
+            if (currentLines.length >= maxSegmentLines) {
+                pushCurrent();
+            }
+        }
+        pushCurrent();
+
+        const uniqueSegments = [];
+        const seen = new Set();
+        for (const lines of rawSegments) {
+            const normalizedLines = Array.isArray(lines)
+                ? lines.map(line => this.normalizeWhitespace(line)).filter(Boolean)
+                : [];
+            if (normalizedLines.length < minSegmentLines) continue;
+            if (!this.segmentHasDateSignal(normalizedLines)) continue;
+            if (!this.segmentHasTitleSignal(normalizedLines)) continue;
+            const trimmedLines = this.trimSegmentLinesToChars(normalizedLines, this.extractionLimits.multiEventMaxSegmentChars);
+            const segmentText = trimmedLines.join('\n');
+            if (segmentText.length < this.extractionLimits.multiEventMinSegmentChars) continue;
+            const dedupeKey = segmentText.toLowerCase();
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+            uniqueSegments.push({ lines: trimmedLines });
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+        }
+        return uniqueSegments;
+    }
+
+    trimSegmentLinesToChars(lines, maxChars) {
+        const numericMaxChars = Number(maxChars);
+        const hasExplicitLimit = maxChars !== null && maxChars !== undefined && Number.isFinite(numericMaxChars);
+        const limit = hasExplicitLimit
+            ? Math.max(0, numericMaxChars)
+            : this.extractionLimits.multiEventMinSegmentChars;
+        if (limit <= 0) return [];
+        const kept = [];
+        let used = 0;
+        for (const line of Array.isArray(lines) ? lines : []) {
+            if (!line) continue;
+            const separator = kept.length === 0 ? 0 : 1;
+            if (used + separator + line.length <= limit) {
+                kept.push(line);
+                used += separator + line.length;
+                continue;
+            }
+            const remaining = limit - used - separator;
+            if (remaining >= this.extractionLimits.multiEventPartialLineMinChars) {
+                kept.push(this.trimToMaxLength(line, remaining));
+            }
+            break;
+        }
+        return kept;
+    }
+
+    segmentHasDateSignal(lines) {
+        return (Array.isArray(lines) ? lines : []).some(line => this.hasMultiEventDateSignal(line));
+    }
+
+    segmentHasTitleSignal(lines) {
+        return (Array.isArray(lines) ? lines : []).some(line => this.isLikelyEventTitleLine(line));
+    }
+
+    hasMultiEventDateSignal(value) {
+        const line = String(value || '');
+        if (!line) return false;
+        const monthDatePattern = /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+\d{1,2})?(?:,?\s+\d{4})?\b/i;
+        if (monthDatePattern.test(line)) return true;
+        const numericDatePattern = /\b(?:0?[1-9]|1[0-2])[\/.-](?:0?[1-9]|[12]\d|3[01])(?:[\/.-](?:\d{2}|\d{4}))?\b/;
+        return numericDatePattern.test(line);
+    }
+
+    isLikelyEventTitleLine(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!line || line.length < this.extractionLimits.multiEventTitleMinChars || line.length > this.extractionLimits.multiEventTitleMaxChars) return false;
+        if (this.hasMultiEventDateSignal(line)) return false;
+        if (/^https?:\/\//i.test(line)) return false;
+        if (!/[a-z]/i.test(line)) return false;
+        if (/^(ticket|tickets|buy|register|details|learn more)\b/i.test(line)) return false;
+        const wordCount = line.split(/\s+/).length;
+        if (wordCount < this.extractionLimits.multiEventTitleMinWords) return false;
+        if (/^[^a-z0-9]+$/i.test(line)) return false;
+        return true;
     }
 
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
