@@ -375,11 +375,11 @@ class AiWebParser {
     isCompactEventLine(value) {
         const line = this.normalizeWhitespace(value);
         if (!line || !this.hasMultiEventDateSignal(line)) return false;
-        if (line.length < 20) return false;
+        if (line.length < 20) return false; // bare dates like "July 25" are too short to be an event line
         if (/^https?:\/\//i.test(line)) return false;
         if (!/[a-z]/i.test(line)) return false;
         const wordCount = line.split(/\s+/).length;
-        return wordCount >= 4;
+        return wordCount >= 4; // needs date + event name (e.g. "7/25 FURBALL NYC @ Eagle Bar" = 5 words)
     }
 
     hasMultiEventDateSignal(value) {
