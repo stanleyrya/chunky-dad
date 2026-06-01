@@ -224,7 +224,7 @@ class SharedCore {
                 try {
                     pattern = new RegExp(pattern.source, pattern.flags);
                 } catch (error) {
-                    this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Invalid page classification regex at index ${i}: ${error.message}`);
+                    this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Failed to convert page classification regex-like pattern at index ${i}: ${error.message}`);
                     continue;
                 }
             } else {
@@ -248,7 +248,10 @@ class SharedCore {
         }
         return typeof value.source === 'string' &&
             typeof value.flags === 'string' &&
-            typeof value.test === 'function';
+            typeof value.test === 'function' &&
+            typeof value.lastIndex === 'number' &&
+            typeof value.ignoreCase === 'boolean' &&
+            typeof value.multiline === 'boolean';
     }
 
     pageClassificationRuleMatchesUrl(rule, url) {

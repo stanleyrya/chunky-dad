@@ -174,6 +174,9 @@ class WebAdapter {
                 cachePath
             };
         } catch (error) {
+            if (error && error.cachedFailure === true) {
+                throw error;
+            }
             if (error && error.code !== 'ENOENT') {
                 console.log(`🟢 Node.js: Page cache read failed for ${url}: ${error.message}`);
             }
