@@ -33,6 +33,7 @@ class WebAdapter {
         this.fs = null;
         this.path = null;
         this.pageStorageDir = null;
+        this.outputDir = null;
 
         if (this.isNode) {
             try {
@@ -40,6 +41,7 @@ class WebAdapter {
                 this.path = require('path');
                 const os = require('os');
                 this.pageStorageDir = this.path.join(os.homedir(), '.chunky-dad-scraper', 'storage', 'pages');
+                this.outputDir = this.path.join(__dirname, '..', 'output');
             } catch (error) {
                 console.log(`🟢 Node.js: Page cache setup unavailable: ${error.message}`);
             }
@@ -272,6 +274,48 @@ class WebAdapter {
             console.log(errorMessage);
             throw new Error(`HTTP request failed for ${url}: ${error.message}`);
         }
+    }
+
+    extractHttpStatusCodeFromError(error) {
+        const message = error && typeof error.message === 'string' ? error.message : '';
+        const match = message.match(/HTTP\s+(\d{3})/i);
+        if (!match) {
+            return null;
+        }
+        const statusCode = Number(match[1]);
+        return Number.isFinite(statusCode) ? statusCode : null;
+    }
+
+    createFailureNoteFileName(url) {
+        const datePart = new Date().toISOString().slice(0, 10);
+        const hash = this.hashPageCacheValue(url || '');
+        return `failed-fetch-${datePart}-${hash}.txt`;
+    }
+
+    async saveFailureNote(url, error, metadata = {}) {
+        if (metadata && metadata.retryable === true) {
+            return false;
+        }
+        if (!this.isNode || !this.fs || !this.path || !this.outputDir) {
+            return false;
+        }
+
+        const statusCode = Number.isFinite(metadata.statusCode)
+            ? metadata.statusCode
+            : this.extractHttpStatusCodeFromError(error);
+        const noteContent = [
+            `Non-retryable fetch failure for ${url}`,
+            `Context: ${metadata.context || 'crawl'}`,
+            `Timestamp: ${new Date().toISOString()}`,
+            `StatusCode: ${Number.isFinite(statusCode) ? statusCode : 'unknown'}`,
+            `Error: ${error && error.message ? error.message : 'Unknown error'}`
+        ].join('\n');
+
+        this.ensureDir(this.outputDir);
+        const notePath = this.path.join(this.outputDir, this.createFailureNoteFileName(url));
+        await this.fs.promises.writeFile(notePath, `${noteContent}\n`, 'utf8');
+        console.log(`🌐 Web: 📝 Saved failure note to ${notePath}`);
+        return true;
     }
 
     // Configuration Loading

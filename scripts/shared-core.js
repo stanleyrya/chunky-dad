@@ -173,6 +173,11 @@ class SharedCore {
                     return rule.classification;
                 }
             }
+
+            // Bearracuda city pages under /events/{city}/ are detail pages.
+            if (/bearracuda\.com\/events\/[^/?#]+\/?$/i.test(url)) {
+                return 'event-page';
+            }
         }
 
         // 2. HTML heuristics for unknown URLs
@@ -495,6 +500,61 @@ class SharedCore {
         };
     }
 
+    extractHttpStatusCodeFromError(error) {
+        const message = error && typeof error.message === 'string' ? error.message : '';
+        const match = message.match(/HTTP\s+(\d{3})/i);
+        if (!match) {
+            return null;
+        }
+        const statusCode = Number(match[1]);
+        return Number.isFinite(statusCode) ? statusCode : null;
+    }
+
+    isRetryableFailure(error) {
+        if (error && typeof error.retryable === 'boolean') {
+            return error.retryable;
+        }
+
+        const statusCode = this.extractHttpStatusCodeFromError(error);
+        if (typeof statusCode === 'number') {
+            return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
+        }
+
+        const message = error && typeof error.message === 'string'
+            ? error.message.toLowerCase()
+            : '';
+        const retryablePatterns = [
+            /timed?\s*out/i,
+            /timeout/i,
+            /network request failed/i,
+            /failed to fetch/i,
+            /connection\s+(lost|reset|refused)/i,
+            /dns/i,
+            /socket/i,
+            /temporary/i,
+            /unavailable/i,
+            /econnreset/i,
+            /enotfound/i,
+            /eai_again/i
+        ];
+        return retryablePatterns.some(pattern => pattern.test(message));
+    }
+
+    async saveNonRetryableFailureNote(httpAdapter, url, error, context) {
+        if (this.isRetryableFailure(error)) {
+            return false;
+        }
+        if (!httpAdapter || typeof httpAdapter.saveFailureNote !== 'function') {
+            return false;
+        }
+        await httpAdapter.saveFailureNote(url, error, {
+            context,
+            retryable: false,
+            statusCode: this.extractHttpStatusCodeFromError(error)
+        });
+        return true;
+    }
+
     async crawlUrlsForEvents({
         urls,
         allEvents,
@@ -640,6 +700,16 @@ class SharedCore {
                 }
             } catch (error) {
                 const message = error?.message || 'Unknown error';
+                try {
+                    await this.saveNonRetryableFailureNote(
+                        httpAdapter,
+                        url,
+                        error,
+                        currentDepth === 0 ? 'root-page' : 'crawl-page'
+                    );
+                } catch (noteError) {
+                    await displayAdapter.logWarn(`SYSTEM: Failed to save failure note for ${url}: ${noteError.message}`);
+                }
                 if (currentDepth === 0) {
                     await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${message}`);
                     if (error.stack && error.stack.trim()) {

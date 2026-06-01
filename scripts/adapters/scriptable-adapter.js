@@ -387,6 +387,7 @@ class ScriptableAdapter {
         // Initialize directory paths
         const documentsDir = this.fm.documentsDirectory();
         this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
+        this.outputDir = this.fm.joinPath(this.baseDir, 'output');
         this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
         this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
@@ -886,6 +887,46 @@ class ScriptableAdapter {
         } catch (error) {
             console.log(`📱 Scriptable: Page cache write failed for ${url}: ${error.message}`);
         }
+    }
+
+    extractHttpStatusCodeFromError(error) {
+        const message = error && typeof error.message === 'string' ? error.message : '';
+        const match = message.match(/HTTP\s+(\d{3})/i);
+        if (!match) {
+            return null;
+        }
+        const statusCode = Number(match[1]);
+        return Number.isFinite(statusCode) ? statusCode : null;
+    }
+
+    createFailureNoteFileName(url) {
+        const datePart = new Date().toISOString().slice(0, 10);
+        const hash = this.hashPageCacheValue(url || '');
+        return `failed-fetch-${datePart}-${hash}.txt`;
+    }
+
+    async saveFailureNote(url, error, metadata = {}) {
+        if (metadata && metadata.retryable === true) {
+            return false;
+        }
+
+        const statusCode = Number.isFinite(metadata.statusCode)
+            ? metadata.statusCode
+            : this.extractHttpStatusCodeFromError(error);
+        const noteContent = [
+            `Non-retryable fetch failure for ${url}`,
+            `Context: ${metadata.context || 'crawl'}`,
+            `Timestamp: ${new Date().toISOString()}`,
+            `StatusCode: ${Number.isFinite(statusCode) ? statusCode : 'unknown'}`,
+            `Error: ${error && error.message ? error.message : 'Unknown error'}`
+        ].join('\n');
+
+        this.ensureDirectoryExists(this.baseDir);
+        this.ensureDirectoryExists(this.outputDir);
+        const notePath = this.fm.joinPath(this.outputDir, this.createFailureNoteFileName(url));
+        this.fm.writeString(notePath, `${noteContent}\n`);
+        console.log(`📱 Scriptable: 📝 Saved failure note to ${notePath}`);
+        return true;
     }
 
     async fetchData(url, options = {}) {
