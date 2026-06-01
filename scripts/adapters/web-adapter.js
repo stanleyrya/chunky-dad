@@ -149,6 +149,15 @@ class WebAdapter {
             const cachedText = await this.fs.promises.readFile(cachePath, 'utf8');
             const cached = JSON.parse(cachedText);
             const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
+            if (fetchState === 'failed' && cached.failure && cached.failure.nonRetryable === true) {
+                const failureError = new Error(cached.failure.error || `Cached non-retryable failure for ${normalizedUrl}`);
+                failureError.retryable = false;
+                failureError.cachedFailure = true;
+                if (Number.isFinite(cached.statusCode)) {
+                    failureError.statusCode = cached.statusCode;
+                }
+                throw failureError;
+            }
             if (fetchState !== 'downloaded') {
                 return null;
             }
