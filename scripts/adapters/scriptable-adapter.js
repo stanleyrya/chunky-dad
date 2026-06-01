@@ -4568,13 +4568,31 @@ class ScriptableAdapter {
                 ? r.discoveryTree.allNodes.map(u => `<li>${this.escapeHtml(u)}</li>`).join('')
                 : '';
 
+            const segmentsByUrl = (r.discoveryTree && r.discoveryTree.segmentsByUrl) ? r.discoveryTree.segmentsByUrl : {};
+            const segmentUrlEntries = Object.entries(segmentsByUrl);
+            const hasSegments = segmentUrlEntries.length > 0;
+            const totalSegments = segmentUrlEntries.reduce((sum, [, segs]) => sum + segs.length, 0);
+            const segmentsTabButton = hasSegments
+                ? `<button onclick="switchDiscoveryTab(this,'segments_${safeId}')" class="disc-tab-btn" data-tab="segments_${safeId}">Segments (${totalSegments})</button>`
+                : '';
+            const segmentsPanel = hasSegments
+                ? `<div id="segments_${safeId}" class="disc-tab-panel" style="display:none">
+                ${segmentUrlEntries.map(([url, segs]) => `
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:11px; font-family:monospace; opacity:0.7; margin-bottom:4px;">${this.escapeHtml(url)} — ${segs.length} segment(s)</div>
+                        ${segs.map(seg => `<div style="padding:4px 8px; background:var(--background-light); border-left:3px solid var(--border-color); margin-bottom:4px; font-size:11px; font-family:monospace;"><span style="opacity:0.6;">Segment ${seg.index} (${seg.lineCount} lines):</span> ${this.escapeHtml(seg.preview)}</div>`).join('')}
+                    </div>`).join('')}
+            </div>`
+                : '';
+
             return `
         <div class="discovery-parser" style="margin-bottom:16px;">
-            <div style="font-weight:600; margin-bottom:8px;">${this.escapeHtml(r.name || 'Parser')} <span style="font-weight:400; opacity:0.7;">— ${nodeCount} URL(s) found</span></div>
+            <div style="font-weight:600; margin-bottom:8px;">${this.escapeHtml(r.name || 'Parser')} <span style="font-weight:400; opacity:0.7;">— ${nodeCount} URL(s) found${hasSegments ? `, ${totalSegments} segment(s)` : ''}</span></div>
             <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
                 <button onclick="switchDiscoveryTab(this,'mermaid_${safeId}')" class="disc-tab-btn disc-tab-active" data-tab="mermaid_${safeId}">Mermaid Graph</button>
                 <button onclick="switchDiscoveryTab(this,'ascii_${safeId}')" class="disc-tab-btn" data-tab="ascii_${safeId}">ASCII Tree</button>
                 <button onclick="switchDiscoveryTab(this,'urls_${safeId}')" class="disc-tab-btn" data-tab="urls_${safeId}">URL List</button>
+                ${segmentsTabButton}
             </div>
             <div id="mermaid_${safeId}" class="disc-tab-panel">
                 <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
@@ -4592,6 +4610,7 @@ class ScriptableAdapter {
             <div id="urls_${safeId}" class="disc-tab-panel" style="display:none">
                 <ul style="margin:0; padding-left:18px; font-size:12px; font-family:monospace;">${urlListItems}</ul>
             </div>
+            ${segmentsPanel}
         </div>
             `;
         }).join('');

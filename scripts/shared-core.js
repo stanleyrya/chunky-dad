@@ -419,7 +419,8 @@ class SharedCore {
                 rootUrls: [],
                 rootUrlSet: new Set(),
                 allNodes: new Set(),
-                edges: []
+                edges: [],
+                segmentsByUrl: {}
             }
             : null;
 
@@ -472,13 +473,17 @@ class SharedCore {
             const discoveryTree = {
                 rootUrls: discoveryTreeCollector.rootUrls,
                 edges: discoveryTreeCollector.edges,
-                allNodes: [...discoveryTreeCollector.allNodes]
+                allNodes: [...discoveryTreeCollector.allNodes],
+                segmentsByUrl: discoveryTreeCollector.segmentsByUrl
             };
             result.discoveryOnly = true;
             result.discoveryTree = discoveryTree;
             result.mermaidGraph = this.buildMermaidGraph(discoveryTree);
             result.asciiTree = this.buildAsciiTree(discoveryTree);
-            await displayAdapter.logInfo(`SYSTEM: Discovery complete: ${discoveryTree.allNodes.length} URL(s) found across ${discoveryTree.edges.length} link(s)`);
+            const segmentUrlCount = Object.keys(discoveryTree.segmentsByUrl).length;
+            const totalSegmentCount = Object.values(discoveryTree.segmentsByUrl).reduce((sum, segs) => sum + segs.length, 0);
+            const segmentSuffix = segmentUrlCount > 0 ? `, ${totalSegmentCount} segment(s) on ${segmentUrlCount} multi-event page(s)` : '';
+            await displayAdapter.logInfo(`SYSTEM: Discovery complete: ${discoveryTree.allNodes.length} URL(s) found across ${discoveryTree.edges.length} link(s)${segmentSuffix}`);
         }
 
         return result;
@@ -693,8 +698,14 @@ class SharedCore {
 
                 const eventCount = discoveryOnly ? 0 : (parseResult?.events?.length || 0);
                 const linkCount = parseResult?.additionalLinks?.length || 0;
+                const segmentCount = discoveryOnly && Array.isArray(parseResult?.discoveredSegments) ? parseResult.discoveredSegments.length : 0;
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
-                await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}`);
+                const segmentSuffix = segmentCount > 0 ? `, ${segmentCount} segment${segmentCount === 1 ? '' : 's'}` : '';
+                await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}${segmentSuffix}`);
+
+                if (discoveryTreeCollector && segmentCount > 0) {
+                    discoveryTreeCollector.segmentsByUrl[url] = parseResult.discoveredSegments;
+                }
 
                 if (!discoveryOnly) {
                     const parsedEvents = this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification);

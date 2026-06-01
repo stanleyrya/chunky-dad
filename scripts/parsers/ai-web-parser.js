@@ -139,10 +139,21 @@ class AiWebParser {
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
 
             if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
+                let discoveredSegments = null;
+                if (parserConfig.discoveryOnly === true && pageClassification === 'multi-event-page') {
+                    const segments = this.buildMultiEventSegments(html);
+                    discoveredSegments = segments.map((segment, i) => ({
+                        index: i + 1,
+                        lineCount: segment.lines.length,
+                        preview: segment.lines.slice(0, 3).join(' | ')
+                    }));
+                    console.log(`🤖 AI Web: Segment discovery found ${discoveredSegments.length} segment(s) on multi-event page`);
+                }
                 console.log(`🤖 AI Web: Link-finding mode (${parserConfig.discoveryOnly ? 'discoveryOnly' : 'link-aggregator'}) found ${additionalLinks.length} additional links`);
                 return {
                     events: [],
                     additionalLinks: additionalLinks,
+                    discoveredSegments,
                     source: this.config.source,
                     url: sourceUrl
                 };
