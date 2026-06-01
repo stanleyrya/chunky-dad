@@ -524,8 +524,7 @@ class SharedCore {
             ? error.message.toLowerCase()
             : '';
         const retryablePatterns = [
-            /timed?\s*out/i,
-            /timeout/i,
+            /time(d)?\s*out/i,
             /network request failed/i,
             /failed to fetch/i,
             /connection\s+(lost|reset|refused)/i,
