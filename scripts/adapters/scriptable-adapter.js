@@ -848,6 +848,20 @@ class ScriptableAdapter {
 
             const cached = JSON.parse(this.fm.readString(cachePath));
             const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
+            if (fetchState === 'failed' && cached.failure && cached.failure.nonRetryable === true) {
+                const failureMessage = typeof cached.failure.error === 'string'
+                    ? cached.failure.error
+                    : (cached.failure.error && typeof cached.failure.error.message === 'string'
+                        ? cached.failure.error.message
+                        : `Cached non-retryable failure for ${normalizedUrl}`);
+                const failureError = new Error(failureMessage);
+                failureError.retryable = false;
+                failureError.cachedFailure = true;
+                if (Number.isFinite(cached.statusCode)) {
+                    failureError.statusCode = cached.statusCode;
+                }
+                throw failureError;
+            }
             if (fetchState !== 'downloaded') {
                 return null;
             }
@@ -864,6 +878,9 @@ class ScriptableAdapter {
                 cachePath
             };
         } catch (error) {
+            if (error && error.cachedFailure === true) {
+                throw error;
+            }
             console.log(`📱 Scriptable: Page cache read failed for ${url}: ${error.message}`);
             return null;
         }

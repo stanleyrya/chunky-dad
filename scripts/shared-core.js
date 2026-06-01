@@ -220,7 +220,14 @@ class SharedCore {
                     continue;
                 }
             }
-            if (!(pattern instanceof RegExp)) {
+            if (this.isRegExpLike(pattern)) {
+                try {
+                    pattern = new RegExp(pattern.source, pattern.flags);
+                } catch (error) {
+                    this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Failed to convert page classification regex-like pattern at index ${i}: ${error.message}`);
+                    continue;
+                }
+            } else {
                 this.warnOnce(`page-classification-rule-pattern-type-${i}`, `⚠️ SharedCore: Skipping page classification rule ${i} - pattern must be RegExp or string`);
                 continue;
             }
@@ -230,6 +237,25 @@ class SharedCore {
             });
         }
         return normalized;
+    }
+
+    isRegExpLike(value) {
+        if (!value || typeof value !== 'object') {
+            return false;
+        }
+        if (value instanceof RegExp || Object.prototype.toString.call(value) === '[object RegExp]') {
+            return true;
+        }
+        const constructorName = value.constructor && typeof value.constructor.name === 'string'
+            ? value.constructor.name
+            : '';
+        return typeof value.source === 'string' &&
+            typeof value.flags === 'string' &&
+            typeof value.test === 'function' &&
+            typeof value.lastIndex === 'number' &&
+            typeof value.ignoreCase === 'boolean' &&
+            typeof value.multiline === 'boolean' &&
+            constructorName === 'RegExp';
     }
 
     pageClassificationRuleMatchesUrl(rule, url) {
