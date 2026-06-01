@@ -219,7 +219,7 @@ class SharedCore {
                     this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Invalid page classification pattern at index ${i}: ${error.message}`);
                     continue;
                 }
-            } else if (pattern instanceof RegExp) {
+            } else if (pattern instanceof RegExp || Object.prototype.toString.call(pattern) === '[object RegExp]') {
                 try {
                     pattern = new RegExp(pattern.source, pattern.flags);
                 } catch (error) {
