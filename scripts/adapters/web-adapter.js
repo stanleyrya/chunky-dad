@@ -150,7 +150,12 @@ class WebAdapter {
             const cached = JSON.parse(cachedText);
             const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
             if (fetchState === 'failed' && cached.failure && cached.failure.nonRetryable === true) {
-                const failureError = new Error(cached.failure.error || `Cached non-retryable failure for ${normalizedUrl}`);
+                const failureMessage = typeof cached.failure.error === 'string'
+                    ? cached.failure.error
+                    : (cached.failure.error && typeof cached.failure.error.message === 'string'
+                        ? cached.failure.error.message
+                        : `Cached non-retryable failure for ${normalizedUrl}`);
+                const failureError = new Error(failureMessage);
                 failureError.retryable = false;
                 failureError.cachedFailure = true;
                 if (Number.isFinite(cached.statusCode)) {

@@ -243,15 +243,19 @@ class SharedCore {
         if (!value || typeof value !== 'object') {
             return false;
         }
-        if (Object.prototype.toString.call(value) === '[object RegExp]') {
+        if (value instanceof RegExp || Object.prototype.toString.call(value) === '[object RegExp]') {
             return true;
         }
+        const constructorName = value.constructor && typeof value.constructor.name === 'string'
+            ? value.constructor.name
+            : '';
         return typeof value.source === 'string' &&
             typeof value.flags === 'string' &&
             typeof value.test === 'function' &&
             typeof value.lastIndex === 'number' &&
             typeof value.ignoreCase === 'boolean' &&
-            typeof value.multiline === 'boolean';
+            typeof value.multiline === 'boolean' &&
+            constructorName === 'RegExp';
     }
 
     pageClassificationRuleMatchesUrl(rule, url) {
