@@ -209,7 +209,7 @@ class SharedCore {
             let pattern = rule.pattern;
             if (typeof pattern === 'string') {
                 try {
-                    const regexLiteralMatch = pattern.match(/^\/([\s\S]*)\/([a-z]*)$/i);
+                    const regexLiteralMatch = pattern.match(/^\/([\s\S]*)\/([a-z]*)$/);
                     if (regexLiteralMatch) {
                         pattern = new RegExp(regexLiteralMatch[1], regexLiteralMatch[2]);
                     } else {
@@ -225,8 +225,8 @@ class SharedCore {
                 continue;
             }
             normalized.push({
-                ...rule,
-                pattern
+                classification: rule.classification,
+                pattern: pattern
             });
         }
         return normalized;
