@@ -387,7 +387,6 @@ class ScriptableAdapter {
         // Initialize directory paths
         const documentsDir = this.fm.documentsDirectory();
         this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
-        this.outputDir = this.fm.joinPath(this.baseDir, 'output');
         this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
         this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
         this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');

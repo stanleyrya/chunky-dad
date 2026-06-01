@@ -33,7 +33,6 @@ class WebAdapter {
         this.fs = null;
         this.path = null;
         this.pageStorageDir = null;
-        this.outputDir = null;
 
         if (this.isNode) {
             try {
@@ -41,7 +40,6 @@ class WebAdapter {
                 this.path = require('path');
                 const os = require('os');
                 this.pageStorageDir = this.path.join(os.homedir(), '.chunky-dad-scraper', 'storage', 'pages');
-                this.outputDir = this.path.join(__dirname, '..', 'output');
             } catch (error) {
                 console.log(`🟢 Node.js: Page cache setup unavailable: ${error.message}`);
             }
