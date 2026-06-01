@@ -209,7 +209,12 @@ class SharedCore {
             let pattern = rule.pattern;
             if (typeof pattern === 'string') {
                 try {
-                    pattern = new RegExp(pattern, 'i');
+                    const regexLiteralMatch = pattern.match(/^\/([\s\S]*)\/([a-z]*)$/i);
+                    if (regexLiteralMatch) {
+                        pattern = new RegExp(regexLiteralMatch[1], regexLiteralMatch[2]);
+                    } else {
+                        pattern = new RegExp(pattern, 'i');
+                    }
                 } catch (error) {
                     this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Invalid page classification pattern at index ${i}: ${error.message}`);
                     continue;
@@ -231,7 +236,9 @@ class SharedCore {
         if (!rule || !(rule.pattern instanceof RegExp)) {
             return false;
         }
-        rule.pattern.lastIndex = 0;
+        if (rule.pattern.global || rule.pattern.sticky) {
+            rule.pattern.lastIndex = 0;
+        }
         return rule.pattern.test(url);
     }
 
