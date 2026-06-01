@@ -148,6 +148,10 @@ class WebAdapter {
 
             const cachedText = await this.fs.promises.readFile(cachePath, 'utf8');
             const cached = JSON.parse(cachedText);
+            const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
+            if (fetchState !== 'downloaded') {
+                return null;
+            }
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
                 return null;
             }
@@ -181,6 +185,7 @@ class WebAdapter {
             fetchedAt: new Date().toISOString(),
             statusCode: responseData.statusCode || 200,
             headers: responseData.headers || {},
+            fetchState: 'downloaded',
             html: responseData.html
         };
 
@@ -272,6 +277,49 @@ class WebAdapter {
             console.log(errorMessage);
             throw new Error(`HTTP request failed for ${url}: ${error.message}`);
         }
+    }
+
+    extractHttpStatusCodeFromError(error) {
+        const message = error && typeof error.message === 'string' ? error.message : '';
+        const match = message.match(/HTTP\s+(\d{3})/i);
+        if (!match) {
+            return null;
+        }
+        const statusCode = Number(match[1]);
+        return Number.isFinite(statusCode) ? statusCode : null;
+    }
+
+    async saveFailureNote(url, error, metadata = {}) {
+        if (metadata && metadata.retryable === true) {
+            return false;
+        }
+        if (!this.isNode || !this.fs || !this.path || !this.pageStorageDir) {
+            return false;
+        }
+
+        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
+        const cacheDir = this.path.join(this.pageStorageDir, hostDir);
+        const cachePath = this.path.join(cacheDir, fileName);
+        const statusCode = Number.isFinite(metadata.statusCode)
+            ? metadata.statusCode
+            : this.extractHttpStatusCodeFromError(error);
+        const payload = {
+            url: normalizedUrl,
+            fetchedAt: new Date().toISOString(),
+            statusCode: Number.isFinite(statusCode) ? statusCode : null,
+            headers: {},
+            fetchState: 'failed',
+            failure: {
+                nonRetryable: true,
+                context: metadata.context || 'crawl',
+                error: error && error.message ? error.message : 'Unknown error'
+            }
+        };
+
+        await this.fs.promises.mkdir(cacheDir, { recursive: true });
+        await this.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+        console.log(`🌐 Web: 📝 Saved non-retryable failure cache entry to ${cachePath}`);
+        return true;
     }
 
     // Configuration Loading

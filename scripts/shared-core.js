@@ -96,7 +96,7 @@ class SharedCore {
         ];
 
         // URL pattern rules for page classification (checked in order, first match wins)
-        this.pageClassificationRules = options.pageClassificationRules || [];
+        this.pageClassificationRules = this.normalizePageClassificationRules(options.pageClassificationRules || []);
 
         // Compiled regex and thresholds for HTML heuristics in classifyPage
         this.pageClassificationMonthPattern = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi;
@@ -169,10 +169,11 @@ class SharedCore {
         // 1. URL pattern rules (deterministic, no HTML needed)
         if (url) {
             for (const rule of this.pageClassificationRules) {
-                if (rule.pattern.test(url)) {
+                if (this.pageClassificationRuleMatchesUrl(rule, url)) {
                     return rule.classification;
                 }
             }
+
         }
 
         // 2. HTML heuristics for unknown URLs
@@ -192,6 +193,53 @@ class SharedCore {
         }
 
         return 'unknown';
+    }
+
+    normalizePageClassificationRules(rules) {
+        if (!Array.isArray(rules)) {
+            return [];
+        }
+        const normalized = [];
+        for (let i = 0; i < rules.length; i++) {
+            const rule = rules[i];
+            if (!rule || typeof rule !== 'object' || typeof rule.classification !== 'string') {
+                this.warnOnce(`page-classification-rule-invalid-${i}`, `⚠️ SharedCore: Skipping invalid page classification rule at index ${i}`);
+                continue;
+            }
+            let pattern = rule.pattern;
+            if (typeof pattern === 'string') {
+                try {
+                    const regexLiteralMatch = pattern.match(/^\/([\s\S]*)\/([a-z]*)$/);
+                    if (regexLiteralMatch) {
+                        pattern = new RegExp(regexLiteralMatch[1], regexLiteralMatch[2]);
+                    } else {
+                        pattern = new RegExp(pattern, 'i');
+                    }
+                } catch (error) {
+                    this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Invalid page classification pattern at index ${i}: ${error.message}`);
+                    continue;
+                }
+            }
+            if (!(pattern instanceof RegExp)) {
+                this.warnOnce(`page-classification-rule-pattern-type-${i}`, `⚠️ SharedCore: Skipping page classification rule ${i} - pattern must be RegExp or string`);
+                continue;
+            }
+            normalized.push({
+                classification: rule.classification,
+                pattern: pattern
+            });
+        }
+        return normalized;
+    }
+
+    pageClassificationRuleMatchesUrl(rule, url) {
+        if (!rule || !(rule.pattern instanceof RegExp)) {
+            return false;
+        }
+        if (rule.pattern.global || rule.pattern.sticky) {
+            rule.pattern.lastIndex = 0;
+        }
+        return rule.pattern.test(url);
     }
 
     normalizeParserName(parserName) {
@@ -495,6 +543,60 @@ class SharedCore {
         };
     }
 
+    extractHttpStatusCodeFromError(error) {
+        const message = error && typeof error.message === 'string' ? error.message : '';
+        const match = message.match(/HTTP\s+(\d{3})/i);
+        if (!match) {
+            return null;
+        }
+        const statusCode = Number(match[1]);
+        return Number.isFinite(statusCode) ? statusCode : null;
+    }
+
+    isRetryableFailure(error) {
+        if (error && typeof error.retryable === 'boolean') {
+            return error.retryable;
+        }
+
+        const statusCode = this.extractHttpStatusCodeFromError(error);
+        if (typeof statusCode === 'number') {
+            return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
+        }
+
+        const message = error && typeof error.message === 'string'
+            ? error.message.toLowerCase()
+            : '';
+        const retryablePatterns = [
+            /time(d)?\s*out/i,
+            /network request failed/i,
+            /failed to fetch/i,
+            /connection\s+(lost|reset|refused)/i,
+            /dns/i,
+            /socket/i,
+            /temporary/i,
+            /unavailable/i,
+            /econnreset/i,
+            /enotfound/i,
+            /eai_again/i
+        ];
+        return retryablePatterns.some(pattern => pattern.test(message));
+    }
+
+    async saveNonRetryableFailureNote(httpAdapter, url, error, context) {
+        if (this.isRetryableFailure(error)) {
+            return false;
+        }
+        if (!httpAdapter || typeof httpAdapter.saveFailureNote !== 'function') {
+            return false;
+        }
+        await httpAdapter.saveFailureNote(url, error, {
+            context,
+            retryable: false,
+            statusCode: this.extractHttpStatusCodeFromError(error)
+        });
+        return true;
+    }
+
     async crawlUrlsForEvents({
         urls,
         allEvents,
@@ -640,6 +742,16 @@ class SharedCore {
                 }
             } catch (error) {
                 const message = error?.message || 'Unknown error';
+                try {
+                    await this.saveNonRetryableFailureNote(
+                        httpAdapter,
+                        url,
+                        error,
+                        currentDepth === 0 ? 'root-page' : 'crawl-page'
+                    );
+                } catch (noteError) {
+                    await displayAdapter.logWarn(`SYSTEM: Failed to save cache entry for non-retryable error at ${url}: ${noteError.message}`);
+                }
                 if (currentDepth === 0) {
                     await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${message}`);
                     if (error.stack && error.stack.trim()) {

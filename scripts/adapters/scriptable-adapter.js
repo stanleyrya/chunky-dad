@@ -847,6 +847,10 @@ class ScriptableAdapter {
             } catch (_) {}
 
             const cached = JSON.parse(this.fm.readString(cachePath));
+            const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
+            if (fetchState !== 'downloaded') {
+                return null;
+            }
             if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
                 return null;
             }
@@ -878,6 +882,7 @@ class ScriptableAdapter {
             fetchedAt: new Date().toISOString(),
             statusCode: responseData.statusCode || 200,
             headers: responseData.headers || {},
+            fetchState: 'downloaded',
             html: responseData.html
         };
 
@@ -886,6 +891,45 @@ class ScriptableAdapter {
         } catch (error) {
             console.log(`📱 Scriptable: Page cache write failed for ${url}: ${error.message}`);
         }
+    }
+
+    extractHttpStatusCodeFromError(error) {
+        const message = error && typeof error.message === 'string' ? error.message : '';
+        const match = message.match(/HTTP\s+(\d{3})/i);
+        if (!match) {
+            return null;
+        }
+        const statusCode = Number(match[1]);
+        return Number.isFinite(statusCode) ? statusCode : null;
+    }
+
+    async saveFailureNote(url, error, metadata = {}) {
+        if (metadata && metadata.retryable === true) {
+            return false;
+        }
+
+        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
+        const hostDirPath = this.ensurePageCacheDir(hostDir);
+        const cachePath = this.fm.joinPath(hostDirPath, fileName);
+        const statusCode = Number.isFinite(metadata.statusCode)
+            ? metadata.statusCode
+            : this.extractHttpStatusCodeFromError(error);
+        const payload = {
+            url: normalizedUrl,
+            fetchedAt: new Date().toISOString(),
+            statusCode: Number.isFinite(statusCode) ? statusCode : null,
+            headers: {},
+            fetchState: 'failed',
+            failure: {
+                nonRetryable: true,
+                context: metadata.context || 'crawl',
+                error: error && error.message ? error.message : 'Unknown error'
+            }
+        };
+
+        this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+        console.log(`📱 Scriptable: 📝 Saved non-retryable failure cache entry to ${cachePath}`);
+        return true;
     }
 
     async fetchData(url, options = {}) {
