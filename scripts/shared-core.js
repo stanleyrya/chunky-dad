@@ -96,7 +96,7 @@ class SharedCore {
         ];
 
         // URL pattern rules for page classification (checked in order, first match wins)
-        this.pageClassificationRules = options.pageClassificationRules || [];
+        this.pageClassificationRules = this.normalizePageClassificationRules(options.pageClassificationRules || []);
 
         // Compiled regex and thresholds for HTML heuristics in classifyPage
         this.pageClassificationMonthPattern = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi;
@@ -169,7 +169,7 @@ class SharedCore {
         // 1. URL pattern rules (deterministic, no HTML needed)
         if (url) {
             for (const rule of this.pageClassificationRules) {
-                if (rule.pattern.test(url)) {
+                if (this.pageClassificationRuleMatchesUrl(rule, url)) {
                     return rule.classification;
                 }
             }
@@ -193,6 +193,46 @@ class SharedCore {
         }
 
         return 'unknown';
+    }
+
+    normalizePageClassificationRules(rules) {
+        if (!Array.isArray(rules)) {
+            return [];
+        }
+        const normalized = [];
+        for (let i = 0; i < rules.length; i++) {
+            const rule = rules[i];
+            if (!rule || typeof rule !== 'object' || typeof rule.classification !== 'string') {
+                this.warnOnce(`page-classification-rule-invalid-${i}`, `⚠️ SharedCore: Skipping invalid page classification rule at index ${i}`);
+                continue;
+            }
+            let pattern = rule.pattern;
+            if (typeof pattern === 'string') {
+                try {
+                    pattern = new RegExp(pattern, 'i');
+                } catch (error) {
+                    this.warnOnce(`page-classification-rule-pattern-${i}`, `⚠️ SharedCore: Invalid page classification pattern at index ${i}: ${error.message}`);
+                    continue;
+                }
+            }
+            if (!(pattern instanceof RegExp)) {
+                this.warnOnce(`page-classification-rule-pattern-type-${i}`, `⚠️ SharedCore: Skipping page classification rule ${i} - pattern must be RegExp or string`);
+                continue;
+            }
+            normalized.push({
+                ...rule,
+                pattern
+            });
+        }
+        return normalized;
+    }
+
+    pageClassificationRuleMatchesUrl(rule, url) {
+        if (!rule || !(rule.pattern instanceof RegExp)) {
+            return false;
+        }
+        rule.pattern.lastIndex = 0;
+        return rule.pattern.test(url);
     }
 
     normalizeParserName(parserName) {
