@@ -737,7 +737,11 @@ class AiWebParser {
         }
 
         const rawStart = this.findMultiEventSegmentResourceStart(source, firstStart);
-        const rawEnd = this.findMultiEventSegmentResourceEnd(source, lastEnd);
+        // If we already captured an image block before the segment text, stop at the
+        // text boundary so we do not accidentally absorb the next segment's image.
+        const rawEnd = rawStart < firstStart
+            ? lastEnd
+            : this.findMultiEventSegmentResourceEnd(source, lastEnd);
         return source.slice(rawStart, rawEnd);
     }
 
@@ -1480,9 +1484,16 @@ class AiWebParser {
     parseOcrResponse(rawText) {
         const parsed = this.parseAiEventResponse(rawText);
         const text = parsed && typeof parsed.text === 'string' ? parsed.text : '';
-        return text
+        const normalizedText = text
             .replace(/\r\n?/g, '\n')
             .trim();
+        return this.isLikelyEmptyOcrText(normalizedText) ? '' : normalizedText;
+    }
+
+    isLikelyEmptyOcrText(text) {
+        const normalized = this.normalizeWhitespace(String(text || '')).toLowerCase();
+        if (!normalized) return true;
+        return normalized === 'text' || normalized === 'ocr text';
     }
 
     collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
@@ -1585,6 +1596,10 @@ class AiWebParser {
         if (Array.isArray(ocrConfig.targetFields) && ocrConfig.targetFields.length > 0) {
             const configuredFields = new Set(ocrConfig.targetFields);
             missingTargetFields = missingTargetFields.filter(field => configuredFields.has(field));
+        }
+        if (Array.isArray(ocrConfig.blockedFields) && ocrConfig.blockedFields.length > 0) {
+            const blockedFields = new Set(ocrConfig.blockedFields);
+            missingTargetFields = missingTargetFields.filter(field => !blockedFields.has(field));
         }
         diagnostics.attemptedFields = [...missingTargetFields];
         if (ocrConfig.requireMissingFields && missingTargetFields.length === 0) {
@@ -2366,6 +2381,12 @@ class AiWebParser {
         const rawOcr = parserAiConfig.ocr && typeof parserAiConfig.ocr === 'object'
             ? parserAiConfig.ocr
             : {};
+        const blockedFields = Array.from(new Set(
+            ['image', 'cover', 'location', 'gmaps']
+                .concat(Array.isArray(rawOcr.blockedFields) ? rawOcr.blockedFields : [])
+                .map(field => this.normalizePromptFieldName(field))
+                .filter(Boolean)
+        ));
         const targetFields = Array.isArray(rawOcr.targetFields) && rawOcr.targetFields.length > 0
             ? Array.from(new Set(
                 rawOcr.targetFields
@@ -2406,6 +2427,7 @@ class AiWebParser {
             maxTextChars,
             cacheEnabled: rawOcr.cache !== false,
             requireMissingFields: rawOcr.requireMissingFields !== false,
+            blockedFields,
             targetFields
         };
     }
@@ -3825,7 +3847,8 @@ ${String(rawResponse || '')}`;
 
         let mode = typeof rawRule.mode === 'string' ? rawRule.mode.trim().toLowerCase() : '';
         if (!mode) {
-            if (normalizedField === 'location') mode = 'coords';
+            if (normalizedField === 'startdate' || normalizedField === 'enddate') mode = 'date';
+            else if (normalizedField === 'location') mode = 'coords';
             else if (normalizedField === 'cover') mode = 'cover';
             else if (normalizedField === 'description') mode = validationConfig.fuzzyDescription ? 'fuzzy' : 'exact';
             else if (normalizedField === 'image') mode = 'image';
@@ -3952,6 +3975,104 @@ ${String(rawResponse || '')}`;
             return true;
         }
         return this.hasExactEvidence(evidenceContext, String(value || '').trim());
+    }
+
+    extractDateEvidenceParts(value) {
+        const rawValue = String(value || '').trim();
+        if (!rawValue) return null;
+        const isoMatch = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2})(?::?(\d{2}))?(?::?(\d{2}))?)?/);
+        if (isoMatch) {
+            return {
+                year: parseInt(isoMatch[1], 10),
+                month: parseInt(isoMatch[2], 10),
+                day: parseInt(isoMatch[3], 10),
+                hour: parseInt(isoMatch[4] || '0', 10),
+                minute: parseInt(isoMatch[5] || '0', 10),
+                hasTime: Boolean(isoMatch[4])
+            };
+        }
+        const parsed = this.parseDateValue(rawValue);
+        if (!(parsed instanceof Date) || Number.isNaN(parsed.getTime())) return null;
+        return {
+            year: parsed.getFullYear(),
+            month: parsed.getMonth() + 1,
+            day: parsed.getDate(),
+            hour: parsed.getHours(),
+            minute: parsed.getMinutes(),
+            hasTime: /\d{1,2}:\d{2}|\b\d{1,2}\s*(?:am|pm)\b/i.test(rawValue)
+        };
+    }
+
+    buildDateEvidenceVariants(dateParts) {
+        if (!dateParts) return [];
+        const monthIndex = Number(dateParts.month) - 1;
+        if (!Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11) return [];
+        const day = Number(dateParts.day);
+        if (!Number.isFinite(day) || day <= 0 || day > 31) return [];
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        const monthShortNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const month = Number(dateParts.month);
+        const year = Number(dateParts.year);
+        const variants = new Set([
+            `${monthNames[monthIndex]} ${day}`,
+            `${monthShortNames[monthIndex]} ${day}`,
+            `${month}/${day}`,
+            `${String(month).padStart(2, '0')}/${day}`,
+            `${month}/${String(day).padStart(2, '0')}`,
+            `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`,
+            `${month}-${day}`,
+            `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+        ]);
+        if (Number.isFinite(year) && year > 0) {
+            variants.add(`${monthNames[monthIndex]} ${day}, ${year}`);
+            variants.add(`${monthShortNames[monthIndex]} ${day}, ${year}`);
+            variants.add(`${month}/${day}/${year}`);
+            variants.add(`${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`);
+        }
+        return Array.from(variants).filter(Boolean);
+    }
+
+    buildTimeEvidenceVariants(dateParts) {
+        if (!dateParts || !dateParts.hasTime) return [];
+        const hour24 = Number(dateParts.hour);
+        const minute = Number(dateParts.minute);
+        if (!Number.isFinite(hour24) || !Number.isFinite(minute)) return [];
+        const suffix = hour24 >= 12 ? 'pm' : 'am';
+        const hour12Base = hour24 % 12;
+        const hour12 = hour12Base === 0 ? 12 : hour12Base;
+        const paddedMinute = String(Math.max(0, minute)).padStart(2, '0');
+        const variants = new Set([
+            `${hour24}:${paddedMinute}`,
+            `${String(hour24).padStart(2, '0')}:${paddedMinute}`
+        ]);
+        if (minute === 0) {
+            variants.add(`${hour12}${suffix}`);
+            variants.add(`${hour12} ${suffix}`);
+            variants.add(`${hour12}:00${suffix}`);
+            variants.add(`${hour12}:00 ${suffix}`);
+        } else {
+            variants.add(`${hour12}:${paddedMinute}${suffix}`);
+            variants.add(`${hour12}:${paddedMinute} ${suffix}`);
+        }
+        return Array.from(variants).filter(Boolean);
+    }
+
+    hasDateEvidence(evidenceContext, value) {
+        const dateParts = this.extractDateEvidenceParts(value);
+        if (!dateParts) {
+            return this.hasExactEvidence(evidenceContext, value);
+        }
+        const normalizedEvidence = String(evidenceContext && evidenceContext.normalized ? evidenceContext.normalized : '');
+        if (!normalizedEvidence) return false;
+        const hasDateMatch = this.buildDateEvidenceVariants(dateParts)
+            .some(variant => normalizedEvidence.includes(variant));
+        if (!hasDateMatch) return false;
+        if (!dateParts.hasTime) return true;
+        const evidenceHasTimeSignal = /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}:\d{2}\b|\b(?:noon|midnight)\b/i.test(normalizedEvidence);
+        if (!evidenceHasTimeSignal) return true;
+        const timeVariants = this.buildTimeEvidenceVariants(dateParts);
+        if (timeVariants.length === 0) return true;
+        return timeVariants.some(variant => normalizedEvidence.includes(variant));
     }
 
     normalizeHttpUrlValue(value) {
@@ -4123,6 +4244,8 @@ ${String(rawResponse || '')}`;
                 return true;
             case 'coords':
                 return this.hasCoordinateEvidence(evidenceContext, valueText);
+            case 'date':
+                return this.hasDateEvidence(evidenceContext, valueText);
             case 'cover':
                 return this.hasCoverEvidence(evidenceContext, valueText);
             case 'fuzzy':
