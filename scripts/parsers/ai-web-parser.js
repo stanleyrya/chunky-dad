@@ -141,7 +141,7 @@ class AiWebParser {
             if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
                 let discoveredSegments = null;
                 if (parserConfig.discoveryOnly === true && pageClassification === 'multi-event-page') {
-                    const segments = this.buildMultiEventSegments(html);
+                    const segments = this.buildMultiEventSegments(html, sourceUrl);
                     if (segments.length === 0) {
                         console.warn('🤖 AI Web: Segment discovery found no valid segments on multi-event page (check date/title signals and extraction limits)');
                     } else {
@@ -197,7 +197,7 @@ class AiWebParser {
 
     async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
-        const segments = this.buildMultiEventSegments(html);
+        const segments = this.buildMultiEventSegments(html, htmlData && htmlData.url ? htmlData.url : '');
         if (segments.length === 0) {
             console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
             return [];
@@ -274,8 +274,11 @@ class AiWebParser {
         };
     }
 
-    buildMultiEventSegments(html) {
-        const bodyParts = this.extractBodyParts(html).slice(0, this.extractionLimits.multiEventScanLineLimit);
+    buildMultiEventSegments(html, pageUrl = '') {
+        const bodyParts = this.extractBodyParts(html, {
+            includeMediaTokens: true,
+            baseUrl: pageUrl
+        }).slice(0, this.extractionLimits.multiEventScanLineLimit);
         if (bodyParts.length === 0) return [];
         const rawSegments = [];
         let currentLines = [];
@@ -292,10 +295,12 @@ class AiWebParser {
         for (const rawLine of bodyParts) {
             const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), this.extractionLimits.multiEventLineMaxChars);
             if (!line) continue;
+            if (this.isLikelyPageChromeLine(line)) continue;
+            if (currentLines.length === 0 && !this.looksLikeEventSignalLine(line)) continue;
             // Compact event lines (date + event name in one line) can start a new segment
             // with just 1 prior line that has a date signal, rather than minSegmentLines.
             const effectiveSplitMin = this.isCompactEventLine(line) ? 1 : minSegmentLines;
-            const startsNewSegment = this.hasMultiEventDateSignal(line) &&
+            const startsNewSegment = this.isLikelyMultiEventBoundaryLine(line, currentLines) &&
                 currentLines.length >= effectiveSplitMin &&
                 this.segmentHasDateSignal(currentLines);
             if (startsNewSegment) {
@@ -401,6 +406,29 @@ class AiWebParser {
         const wordCount = line.split(/\s+/).length;
         if (wordCount < this.extractionLimits.multiEventTitleMinWords) return false;
         if (/^[^a-z0-9]+$/i.test(line)) return false;
+        return true;
+    }
+
+    isLikelyPageChromeLine(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!line) return true;
+        if (/^(top of page|bottom of page)$/i.test(line)) return true;
+        if (/^(upcoming events!?|upcoming furball events)$/i.test(line)) return true;
+        if (/^where bears dance$/i.test(line)) return true;
+        if (/^(one weekend|two parties|one weekend!!!|two parties, one weekend!!!)$/i.test(line)) return true;
+        return false;
+    }
+
+    isLikelyMultiEventBoundaryLine(line, currentLines = []) {
+        const normalized = this.normalizeWhitespace(line);
+        if (!normalized) return false;
+        if (this.hasMultiEventDateSignal(normalized)) return true;
+        if (!this.segmentHasDateSignal(currentLines)) return false;
+        if (this.isLikelyPageChromeLine(normalized)) return true;
+        if (!this.isLikelyEventTitleLine(normalized)) return false;
+        if (/^(get your tickets?|book your spot today|book your spot|tickets?|register|learn more)\b/i.test(normalized)) {
+            return false;
+        }
         return true;
     }
 
@@ -3504,13 +3532,38 @@ ${String(rawResponse || '')}`;
         return results;
     }
 
-    extractBodyParts(html) {
+    extractBodyParts(html, options = {}) {
+        const includeMediaTokens = options && options.includeMediaTokens === true;
+        const baseUrl = options && typeof options.baseUrl === 'string'
+            ? options.baseUrl
+            : '';
         let text = String(html);
         text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
         text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
         text = text.replace(/<!--[\s\S]*?-->/g, ' ');
         text = text.replace(/<(nav|header|footer|aside|noscript|form|button)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
         text = text.replace(/<[a-z0-9]+\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]{0,12000}?<\/[a-z0-9]+>/gi, ' ');
+        if (includeMediaTokens) {
+            text = text.replace(/<img\b[^>]*>/gi, (tag) => {
+                const srcMatch = tag.match(/\bsrc=["']([^"']+)["']/i);
+                const altMatch = tag.match(/\balt=["']([^"']+)["']/i);
+                const rawSrc = srcMatch && srcMatch[1] ? srcMatch[1] : '';
+                const normalizedSrc = this.normalizeUrl(rawSrc, baseUrl) || this.normalizeWhitespace(this.decodeBasicEntities(rawSrc));
+                const normalizedAlt = this.normalizeWhitespace(this.decodeBasicEntities(altMatch && altMatch[1] ? altMatch[1] : ''));
+                const lines = [];
+                if (normalizedAlt) lines.push(`Image Alt: ${normalizedAlt}`);
+                if (normalizedSrc) lines.push(`Image URL: ${normalizedSrc}`);
+                return lines.join('\n');
+            });
+            text = text.replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_match, href, inner) => {
+                const normalizedHref = this.normalizeUrl(href, baseUrl) || this.normalizeWhitespace(this.decodeBasicEntities(href));
+                const anchorText = this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(inner)));
+                const lines = [];
+                if (anchorText) lines.push(anchorText);
+                if (normalizedHref) lines.push(`Link URL: ${normalizedHref}`);
+                return lines.join('\n');
+            });
+        }
         text = text.replace(/<(br|\/p|\/div|\/li|\/section|\/article|\/h[1-6]|\/tr|\/td)\b[^>]*>/gi, '\n');
         text = text.replace(/<[^>]+>/g, ' ');
 
