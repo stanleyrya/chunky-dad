@@ -280,6 +280,11 @@ class AiWebParser {
     }
 
     buildMultiEventSegments(html) {
+        const structuredSegments = this.buildStructuredMultiEventSegments(html);
+        if (structuredSegments.length >= 2) {
+            return structuredSegments;
+        }
+
         const bodyParts = this.trimLeadingMultiEventNoise(
             this.extractBodyParts(html).slice(0, this.extractionLimits.multiEventScanLineLimit)
         );
@@ -299,7 +304,6 @@ class AiWebParser {
         for (const rawLine of bodyParts) {
             const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), this.extractionLimits.multiEventLineMaxChars);
             if (!line) continue;
-            if (this.isMultiEventSectionNoiseLine(line)) continue;
             // Compact event lines (date + event name in one line) can start a new segment
             // with just 1 prior line that has a date signal, rather than minSegmentLines.
             const effectiveSplitMin = this.isCompactEventLine(line) ? 1 : minSegmentLines;
@@ -357,6 +361,278 @@ class AiWebParser {
         return uniqueSegments;
     }
 
+
+    buildStructuredMultiEventSegments(html) {
+        const groups = this.extractRepeatedMultiEventStructureGroups(html);
+        for (const group of groups) {
+            const segments = this.buildSegmentsFromStructureGroup(group);
+            if (segments.length >= 2) return segments;
+        }
+        return [];
+    }
+
+
+    extractRepeatedMultiEventStructureGroups(html) {
+        const source = String(html || '');
+        if (!source) return [];
+
+        const grouped = new Map();
+        const addCandidate = (signature, entry) => {
+            if (!signature || !entry || !entry.html) return;
+            if (!grouped.has(signature)) grouped.set(signature, []);
+            grouped.get(signature).push(entry);
+        };
+
+        const containerPatterns = [
+            /<(section|article|li)\b([^>]*)>[\s\S]*?<\/\1>/gi,
+            /<(div)\b([^>]*)>[\s\S]*?<\/\1>/gi
+        ];
+
+        for (const pattern of containerPatterns) {
+            pattern.lastIndex = 0;
+            let match;
+            while ((match = pattern.exec(source)) !== null) {
+                const tagName = String(match[1] || '').toLowerCase();
+                const attrs = match[2] || '';
+                if (tagName === 'div' && !this.hasMultiEventStructureHint(attrs)) continue;
+                const containerHtml = match[0];
+                if (containerHtml.length > this.extractionLimits.multiEventMaxSegmentChars * 4) continue;
+                const signature = this.getMultiEventStructureSignature(tagName, attrs);
+                addCandidate(`container:${signature}`, {
+                    html: containerHtml,
+                    start: match.index,
+                    end: match.index + containerHtml.length,
+                    kind: 'container'
+                });
+            }
+        }
+
+        for (const resourceGroup of this.extractRepeatedMultiEventResourceGroups(source)) {
+            grouped.set(resourceGroup.signature, resourceGroup.entries);
+        }
+
+        return Array.from(grouped.entries())
+            .map(([signature, entries]) => ({
+                signature,
+                entries: entries.sort((a, b) => a.start - b.start),
+                eventLikeCount: entries.filter(entry => this.isMultiEventLikeHtml(entry.html)).length
+            }))
+            .filter(group => group.entries.length >= 2 && group.eventLikeCount >= 2)
+            .sort((a, b) => {
+                if (b.eventLikeCount !== a.eventLikeCount) return b.eventLikeCount - a.eventLikeCount;
+                if (b.entries.length !== a.entries.length) return b.entries.length - a.entries.length;
+                return a.entries[0].start - b.entries[0].start;
+            });
+    }
+
+
+    buildSegmentsFromStructureGroup(group) {
+        const entries = group && Array.isArray(group.entries) ? group.entries : [];
+        const uniqueSegments = [];
+        const seen = new Set();
+        const addSegment = (segment) => {
+            if (!segment || !Array.isArray(segment.lines)) return;
+            const segmentText = segment.lines.join('\n');
+            if (segmentText.length < this.extractionLimits.multiEventMinSegmentChars) return;
+            const dedupeKey = segmentText.toLowerCase();
+            if (seen.has(dedupeKey)) return;
+            seen.add(dedupeKey);
+            uniqueSegments.push(segment);
+        };
+
+        for (const entry of entries) {
+            const normalizedLines = this.extractBodyParts(entry.html)
+                .map(line => this.normalizeWhitespace(line))
+                .filter(Boolean);
+            if (normalizedLines.length < this.extractionLimits.multiEventMinSegmentLines) continue;
+            if (this.hasMultiEventScriptLikeText(normalizedLines)) continue;
+            if (this.countMultiEventDateSignals(normalizedLines) > 2) continue;
+            if (!this.segmentHasDateSignal(normalizedLines)) continue;
+            if (!this.segmentHasTitleSignal(normalizedLines)) continue;
+
+            const splitSegments = this.buildTextMultiEventSegmentsFromLines(normalizedLines, entry.html);
+            if (splitSegments.length > 1) {
+                splitSegments.forEach(addSegment);
+            } else {
+                const segmentLines = splitSegments.length === 1 ? splitSegments[0].lines : normalizedLines;
+                const trimmedLines = this.trimSegmentLinesToChars(
+                    this.trimLinesAfterTerminalCallToAction(segmentLines),
+                    this.extractionLimits.multiEventMaxSegmentChars
+                );
+                addSegment({ lines: trimmedLines, html: entry.html });
+            }
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+        }
+        return uniqueSegments;
+    }
+
+    buildTextMultiEventSegmentsFromLines(lines, html = '') {
+        const rawSegments = [];
+        let currentLines = [];
+        const minSegmentLines = this.extractionLimits.multiEventMinSegmentLines;
+        const maxSegmentLines = this.extractionLimits.multiEventMaxSegmentLines;
+        const pushCurrent = () => {
+            if (currentLines.length > 0) {
+                rawSegments.push(currentLines);
+                currentLines = [];
+            }
+        };
+
+        for (const rawLine of Array.isArray(lines) ? lines : []) {
+            const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), this.extractionLimits.multiEventLineMaxChars);
+            if (!line) continue;
+            const effectiveSplitMin = this.isCompactEventLine(line) ? 1 : minSegmentLines;
+            const startsNewByDate = this.hasMultiEventDateSignal(line) &&
+                currentLines.length >= effectiveSplitMin &&
+                this.segmentHasDateSignal(currentLines);
+            const startsNewByTitle = this.isStrongMultiEventTitleLine(line) &&
+                currentLines.length >= minSegmentLines &&
+                this.segmentHasDateSignal(currentLines) &&
+                !this.hasMultiEventDateSignal(currentLines[currentLines.length - 1]);
+            if (startsNewByDate) {
+                const trailingStartIndex = this.findTrailingMultiEventStartIndex(currentLines);
+                if (trailingStartIndex > 0) {
+                    rawSegments.push(currentLines.slice(0, trailingStartIndex));
+                    currentLines = currentLines.slice(trailingStartIndex);
+                } else {
+                    pushCurrent();
+                }
+            } else if (startsNewByTitle) {
+                pushCurrent();
+            }
+            currentLines.push(line);
+            if (currentLines.length >= maxSegmentLines) pushCurrent();
+        }
+        pushCurrent();
+
+        const segments = [];
+        for (const segmentLines of rawSegments) {
+            const normalizedLines = segmentLines.map(line => this.normalizeWhitespace(line)).filter(Boolean);
+            if (normalizedLines.length < minSegmentLines) continue;
+            if (!this.segmentHasDateSignal(normalizedLines)) continue;
+            if (!this.segmentHasTitleSignal(normalizedLines)) continue;
+            const trimmedLines = this.trimSegmentLinesToChars(
+                this.trimLinesAfterTerminalCallToAction(normalizedLines),
+                this.extractionLimits.multiEventMaxSegmentChars
+            );
+            const segmentHtml = html ? this.extractRawHtmlForMultiEventSegment(html, trimmedLines) : trimmedLines.join('\n');
+            segments.push({
+                lines: trimmedLines,
+                html: segmentHtml || html || trimmedLines.join('\n')
+            });
+        }
+        return segments;
+    }
+
+    countMultiEventDateSignals(lines) {
+        return (Array.isArray(lines) ? lines : []).filter(line => this.hasMultiEventDateSignal(line)).length;
+    }
+
+    hasMultiEventScriptLikeText(lines) {
+        return (Array.isArray(lines) ? lines : []).some(line => {
+            const text = String(line || '');
+            return text.length > this.extractionLimits.multiEventLineMaxChars * 2 ||
+                /=>|function\s*\(|\b(var|let|const)\s+[a-z_$][\w$]*\s*=|webpack|rspack|strict";var/i.test(text);
+        });
+    }
+
+    isMultiEventLikeHtml(html) {
+        const lines = this.extractBodyParts(html);
+        return this.segmentHasDateSignal(lines) && this.segmentHasTitleSignal(lines);
+    }
+
+    hasMultiEventStructureHint(attrs) {
+        const text = String(attrs || '').toLowerCase();
+        return /(?:^|[\s_-])(event|events|card|item|poster|photo|media|gallery|listing|list|slide|repeater|image|img)(?:[\s_-]|$)/i.test(text);
+    }
+
+    getMultiEventStructureSignature(tagName, attrs) {
+        const tag = String(tagName || '').toLowerCase() || 'node';
+        const tokens = this.extractStructureTokens(attrs);
+        const semanticParts = new Set();
+        tokens.forEach(token => {
+            token.split(/[-_]+/).forEach(part => {
+                if (/^(event|events|card|item|poster|photo|media|gallery|listing|list|slide|repeater|image|img)$/.test(part)) {
+                    semanticParts.add(part);
+                }
+            });
+            if (/image|img|poster|photo|media|gallery/.test(token)) semanticParts.add('image');
+            if (/event|card|listing|repeater|slide/.test(token)) semanticParts.add('event');
+        });
+        const semanticTokens = Array.from(semanticParts).sort();
+        if (semanticTokens.length > 0) return `${tag}:${semanticTokens.join('.')}`;
+
+        const reusableTokens = tokens
+            .filter(token => !/^comp[-_]/i.test(token))
+            .filter(token => !/[a-f0-9]{8,}/i.test(token))
+            .slice(0, 4);
+        return `${tag}:${reusableTokens.join('.') || 'plain'}`;
+    }
+
+    extractStructureTokens(attrs) {
+        const text = String(attrs || '');
+        const tokens = [];
+        const attrRegex = /\b(?:class|data-testid|data-hook|role)\s*=\s*["']([^"']+)["']/gi;
+        let match;
+        while ((match = attrRegex.exec(text)) !== null) {
+            String(match[1] || '')
+                .split(/\s+/)
+                .map(token => token.toLowerCase().replace(/[^a-z0-9_-]+/g, ''))
+                .filter(token => token.length >= 2 && token.length <= 40)
+                .forEach(token => tokens.push(token));
+        }
+        return Array.from(new Set(tokens)).sort();
+    }
+
+    extractRepeatedMultiEventResourceGroups(html) {
+        const source = String(html || '');
+        const anchors = [];
+        const addAnchorsForPattern = (pattern, fallbackTag) => {
+            pattern.lastIndex = 0;
+            let match;
+            while ((match = pattern.exec(source)) !== null) {
+                const openTag = match[0];
+                const tagMatch = openTag.match(/^<([a-z0-9]+)\b([^>]*)>/i);
+                const tagName = tagMatch ? tagMatch[1] : fallbackTag;
+                const attrs = tagMatch ? tagMatch[2] : '';
+                const signature = `resource:${this.getMultiEventStructureSignature(tagName, attrs)}`;
+                const start = match.index;
+                if (anchors.some(anchor => Math.abs(anchor.start - start) < 200)) continue;
+                anchors.push({ start, signature });
+            }
+        };
+
+        addAnchorsForPattern(this.multiEventImageContainerRegex(), 'div');
+        if (anchors.length < 2) {
+            addAnchorsForPattern(/<a\b[^>]*>\s*<img\b[^>]*>/gi, 'a');
+            addAnchorsForPattern(/<img\b[^>]*>/gi, 'img');
+        }
+
+        const bySignature = new Map();
+        anchors.sort((a, b) => a.start - b.start).forEach(anchor => {
+            if (!bySignature.has(anchor.signature)) bySignature.set(anchor.signature, []);
+            bySignature.get(anchor.signature).push(anchor);
+        });
+
+        const groups = [];
+        for (const [signature, groupAnchors] of bySignature.entries()) {
+            if (groupAnchors.length < 2) continue;
+            const entries = groupAnchors.map((anchor, index) => {
+                const nextAnchor = groupAnchors[index + 1];
+                const end = nextAnchor
+                    ? nextAnchor.start
+                    : Math.min(source.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
+                return {
+                    html: source.slice(anchor.start, end),
+                    start: anchor.start,
+                    end,
+                    kind: 'resource'
+                };
+            });
+            groups.push({ signature, entries });
+        }
+        return groups;
+    }
     trimLeadingMultiEventNoise(lines) {
         const normalizedLines = (Array.isArray(lines) ? lines : [])
             .map(line => this.normalizeWhitespace(line))
@@ -366,16 +642,12 @@ class AiWebParser {
             ? normalizedLines.slice(firstStrongTitleIndex)
             : normalizedLines;
     }
-
-    isMultiEventSectionNoiseLine(value) {
-        const line = this.normalizeWhitespace(String(value || '').replace(/[\u200b\u00a0]/g, ' '));
-        if (!line) return true;
-        if (/^(top of page|bottom of page|where bears dance)$/i.test(line)) return true;
-        if (/^upcoming(?:\s+furball)?\s+events[:!]*$/i.test(line)) return true;
-        if (/^(two parties,?|one weekend!!!|furball posters|more|jmf productions)$/i.test(line)) return true;
-        if (/^furball\s*\|\s*furball nyc$/i.test(line)) return true;
-        if (/^(furball,\s*nyc's infamous|loved by bears)/i.test(line)) return true;
-        return false;
+    trimLinesAfterTerminalCallToAction(lines) {
+        const normalizedLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        const ctaIndex = normalizedLines.findIndex(line => this.isMultiEventCallToActionLine(line));
+        return ctaIndex >= 0 ? normalizedLines.slice(0, ctaIndex + 1) : normalizedLines;
     }
 
     isMultiEventCallToActionLine(value) {
@@ -388,13 +660,32 @@ class AiWebParser {
     isStrongMultiEventTitleLine(value) {
         const line = this.normalizeWhitespace(String(value || '').replace(/[\u200b\u00a0]/g, ' '));
         if (!line) return false;
-        if (this.isMultiEventSectionNoiseLine(line)) return false;
         if (this.isMultiEventCallToActionLine(line)) return false;
         if (this.hasMultiEventDateSignal(line)) return false;
         if (/^@/.test(line)) return false;
         if (/[.!?]$/.test(line)) return false;
         if (line.includes('|')) return false;
-        return /\b(furball|bear|mad\.?bear|campout|party|week|debut)\b/i.test(line);
+        if (this.isLikelyMultiEventLocationLine(line)) return false;
+        const words = line.split(/\s+/).filter(Boolean);
+        const lowerCaseLetterMatches = line.match(/[a-z]/g) || [];
+        const upperCaseLetterMatches = line.match(/[A-Z]/g) || [];
+        if (upperCaseLetterMatches.length === 0 && lowerCaseLetterMatches.length > 0) return false;
+        if (words.length > 8) return false;
+        if (/\b(party|parties|festival|weekend|week|night|social|dance|disco|debut|camp|celebration|anniversary|opening|pride)\b/i.test(line)) return true;
+        const letterMatches = line.match(/[A-Za-z]/g) || [];
+        const uppercaseMatches = line.match(/[A-Z]/g) || [];
+        const uppercaseRatio = letterMatches.length > 0 ? uppercaseMatches.length / letterMatches.length : 0;
+        const hasBrandedToken = words.some(word => /[A-Z]{2,}/.test(word));
+        return hasBrandedToken || uppercaseRatio >= 0.55;
+    }
+
+    isLikelyMultiEventLocationLine(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!line) return false;
+        if (/, ?[A-Z]{2}(?:\b|$)/.test(line)) return true;
+        if (/,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?$/.test(line) && line.split(/\s+/).length <= 5) return true;
+        if (/^[A-Z][A-Za-z .'-]+\s+-\s+[A-Z][A-Za-z .'-]+(?:,\s*[A-Z]{2})?$/.test(line)) return true;
+        return false;
     }
 
     findTrailingMultiEventStartIndex(lines) {
@@ -482,7 +773,7 @@ class AiWebParser {
         const start = Math.max(0, textStart - 6000);
         const prefix = source.slice(start, textStart);
         const candidates = [
-            this.findLastRegexIndex(prefix, /<div\b[^>]*(?:class|id)=["'][^"']*wixui-image[^"']*["'][^>]*>/gi),
+            this.findLastRegexIndex(prefix, this.multiEventImageContainerRegex()),
             this.findLastRegexIndex(prefix, /<a\b[^>]*>\s*<img\b/gi),
             this.findLastRegexIndex(prefix, /<img\b/gi)
         ].filter(index => index >= 0);
@@ -501,7 +792,7 @@ class AiWebParser {
         const endLimit = Math.min(source.length, textEnd + 8000);
         const suffix = source.slice(textEnd, endLimit);
         const candidates = [];
-        const nextImageIndex = this.findFirstRegexIndex(suffix, /<div\b[^>]*(?:class|id)=["'][^"']*wixui-image[^"']*["'][^>]*>/gi);
+        const nextImageIndex = this.findFirstRegexIndex(suffix, this.multiEventImageContainerRegex());
         if (nextImageIndex >= 0) candidates.push(textEnd + nextImageIndex);
 
         const suffixRecords = this.extractBodyPartRecords(suffix);
@@ -513,6 +804,10 @@ class AiWebParser {
         if (candidates.length === 0) return textEnd;
         const rawEnd = Math.min(...candidates.filter(value => value > textEnd));
         return Number.isFinite(rawEnd) && rawEnd > textEnd ? rawEnd : textEnd;
+    }
+
+    multiEventImageContainerRegex() {
+        return /<(?:div|figure|picture|a)\b[^>]*(?:class|id)=["'][^"']*(?:image|img|poster|photo|media|gallery)[^"']*["'][^>]*>/gi;
     }
 
     findLastRegexIndex(text, pattern) {
@@ -603,7 +898,7 @@ class AiWebParser {
     }
 
     // A compact event line combines date + event name (and often venue) in a single line,
-    // e.g. "7/25 FURBALL NYC @ Eagle Bar" or "Aug 8 - FURBALL Chicago @ Metro".
+    // e.g. "7/25 Pride Dance @ Eagle Bar" or "Aug 8 - Summer Party @ Metro".
     isCompactEventLine(value) {
         const line = this.normalizeWhitespace(value);
         if (!line || !this.hasMultiEventDateSignal(line)) return false;
@@ -611,7 +906,7 @@ class AiWebParser {
         if (/^https?:\/\//i.test(line)) return false;
         if (!/[a-z]/i.test(line)) return false;
         const wordCount = line.split(/\s+/).length;
-        return wordCount >= 4; // needs date + event name (e.g. "7/25 FURBALL NYC @ Eagle Bar" = 5 words)
+        return wordCount >= 4; // needs date + event name (e.g. "7/25 Pride Dance @ Eagle Bar" = 5 words)
     }
 
     hasMultiEventDateSignal(value) {
