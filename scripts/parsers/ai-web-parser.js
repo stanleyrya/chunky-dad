@@ -1280,7 +1280,23 @@ class AiWebParser {
     getOcrCachePathParts(imageUrl, ocrConfig = {}) {
         const rawUrl = String(imageUrl || '').trim();
         const normalizedSource = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
-        const normalizedUrl = normalizedSource || rawUrl;
+        let normalizedUrl = normalizedSource || rawUrl;
+        try {
+            if (typeof URL === 'function' && normalizedUrl) {
+                const parsed = new URL(normalizedUrl);
+                parsed.hash = '';
+                parsed.protocol = String(parsed.protocol || '').toLowerCase();
+                parsed.hostname = String(parsed.hostname || '').toLowerCase();
+                const searchEntries = Array.from(parsed.searchParams.entries())
+                    .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+                        if (leftKey === rightKey) return leftValue.localeCompare(rightValue);
+                        return leftKey.localeCompare(rightKey);
+                    });
+                parsed.search = '';
+                searchEntries.forEach(([key, value]) => parsed.searchParams.append(key, value));
+                normalizedUrl = parsed.toString();
+            }
+        } catch (_) {}
         const parsed = this.parseUrlComponents(normalizedUrl);
         const requestSignature = JSON.stringify({
             model: String(ocrConfig.model || ''),
