@@ -111,6 +111,8 @@ class AiWebParser {
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
+        this.defaultOcrTargetFields = ['startDate', 'endDate', 'title', 'description', 'bar', 'address', 'location'];
+        this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears. Return a JSON object with a single key 'text' containing the full extracted text, preserving line breaks as \\n. Do not add commentary.";
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         // NOTE/TODO: If we need to support additional structured payload URL fields,
         // add alias keys here and mirror them in collectEventUrlsFromDataObject().
@@ -1218,6 +1220,427 @@ class AiWebParser {
         };
     }
 
+    sanitizeCacheSegment(segment) {
+        return String(segment || 'index')
+            .toLowerCase()
+            .replace(/[^a-z0-9._-]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'index';
+    }
+
+    hashCacheValue(value) {
+        let hash = 2166136261;
+        const input = String(value || '');
+        for (let i = 0; i < input.length; i++) {
+            hash ^= input.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return (hash >>> 0).toString(36);
+    }
+
+    getOcrCacheRuntime() {
+        if (typeof FileManager !== 'undefined') {
+            try {
+                const fm = FileManager.iCloud();
+                const documentsDir = fm.documentsDirectory();
+                const baseDir = this.config.ocrCacheDir
+                    ? String(this.config.ocrCacheDir)
+                    : fm.joinPath(fm.joinPath(fm.joinPath(documentsDir, 'chunky-dad-scraper'), 'storage'), 'ocr');
+                return {
+                    type: 'scriptable',
+                    fm,
+                    baseDir
+                };
+            } catch (error) {
+                console.log(`🤖 AI Web: OCR cache setup unavailable in Scriptable: ${error.message}`);
+                return null;
+            }
+        }
+        if (typeof require === 'function') {
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                const os = require('os');
+                const baseDir = this.config.ocrCacheDir
+                    ? String(this.config.ocrCacheDir)
+                    : path.join(os.homedir(), '.chunky-dad-scraper', 'storage', 'ocr');
+                return {
+                    type: 'node',
+                    fs,
+                    path,
+                    baseDir
+                };
+            } catch (error) {
+                console.log(`🤖 AI Web: OCR cache setup unavailable in Node: ${error.message}`);
+                return null;
+            }
+        }
+        return null;
+    }
+
+    getOcrCachePathParts(imageUrl, ocrConfig = {}) {
+        const rawUrl = String(imageUrl || '').trim();
+        const normalizedSource = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
+        const normalizedUrl = normalizedSource || rawUrl;
+        const parsed = this.parseUrlComponents(normalizedUrl);
+        const requestSignature = JSON.stringify({
+            model: String(ocrConfig.model || ''),
+            prompt: String(ocrConfig.prompt || ''),
+            options: {
+                numCtx: Number.isFinite(Number(ocrConfig.numCtx)) ? Number(ocrConfig.numCtx) : null,
+                numPredict: Number.isFinite(Number(ocrConfig.numPredict)) ? Number(ocrConfig.numPredict) : null,
+                temperature: Number.isFinite(Number(ocrConfig.temperature)) ? Number(ocrConfig.temperature) : null,
+                think: Boolean(ocrConfig.think),
+                keepAlive: String(ocrConfig.keepAlive || '')
+            }
+        });
+        const signatureHash = this.hashCacheValue(requestSignature);
+
+        if (parsed) {
+            const hostDir = this.sanitizeCacheSegment(parsed.hostname || 'unknown-host');
+            const pathSegments = String(parsed.pathname || '/')
+                .split('/')
+                .filter(Boolean)
+                .map(segment => this.sanitizeCacheSegment(segment))
+                .filter(Boolean);
+            let fileBase = pathSegments.length > 0 ? pathSegments.join('__') : 'index';
+            if (parsed.search) {
+                fileBase += `--q-${this.hashCacheValue(parsed.search)}`;
+            }
+            fileBase += `--ocr-${signatureHash}`;
+            if (fileBase.length > 140) {
+                fileBase = `${fileBase.slice(0, 96)}--${this.hashCacheValue(fileBase)}`;
+            }
+            return {
+                normalizedUrl,
+                hostDir,
+                fileName: `${fileBase}.json`,
+                signatureHash
+            };
+        }
+
+        return {
+            normalizedUrl,
+            hostDir: 'unknown-host',
+            fileName: `${this.hashCacheValue(`${normalizedUrl}|${signatureHash}`)}.json`,
+            signatureHash
+        };
+    }
+
+    async readCachedOcrResult(imageUrl, ocrConfig = {}) {
+        if (!ocrConfig.cacheEnabled) return null;
+        const runtime = this.getOcrCacheRuntime();
+        if (!runtime) return null;
+        const { normalizedUrl, hostDir, fileName } = this.getOcrCachePathParts(imageUrl, ocrConfig);
+
+        try {
+            let cachePath;
+            let rawPayload = null;
+            if (runtime.type === 'scriptable') {
+                const hostDirPath = runtime.fm.joinPath(runtime.baseDir, hostDir);
+                cachePath = runtime.fm.joinPath(hostDirPath, fileName);
+                if (!runtime.fm.fileExists(cachePath)) return null;
+                try {
+                    await runtime.fm.downloadFileFromiCloud(cachePath);
+                } catch (_) {}
+                rawPayload = runtime.fm.readString(cachePath);
+            } else {
+                cachePath = runtime.path.join(runtime.baseDir, hostDir, fileName);
+                rawPayload = await runtime.fs.promises.readFile(cachePath, 'utf8');
+            }
+            const cached = JSON.parse(rawPayload);
+            const responseText = cached && cached.response && typeof cached.response.text === 'string'
+                ? cached.response.text
+                : (typeof cached.text === 'string' ? cached.text : '');
+            if (!responseText) return null;
+            return {
+                imageUrl: cached.url || normalizedUrl,
+                text: responseText,
+                cachePath,
+                cached: true
+            };
+        } catch (error) {
+            const missingFile = error && (error.code === 'ENOENT' || /does not exist/i.test(String(error.message || '')));
+            if (!missingFile) {
+                console.log(`🤖 AI Web: OCR cache read failed for ${imageUrl}: ${error.message}`);
+            }
+            return null;
+        }
+    }
+
+    async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '') {
+        if (!ocrConfig.cacheEnabled) return null;
+        const resultText = String(text || '').trim();
+        if (!resultText) return null;
+        const runtime = this.getOcrCacheRuntime();
+        if (!runtime) return null;
+        const { normalizedUrl, hostDir, fileName, signatureHash } = this.getOcrCachePathParts(imageUrl, ocrConfig);
+        const payload = {
+            url: normalizedUrl,
+            cachedAt: new Date().toISOString(),
+            cacheKeyVersion: 1,
+            request: {
+                endpoint: String(ocrConfig.endpoint || ''),
+                model: String(ocrConfig.model || ''),
+                prompt: String(ocrConfig.prompt || ''),
+                signatureHash,
+                options: {
+                    numCtx: Number.isFinite(Number(ocrConfig.numCtx)) ? Number(ocrConfig.numCtx) : null,
+                    numPredict: Number.isFinite(Number(ocrConfig.numPredict)) ? Number(ocrConfig.numPredict) : null,
+                    temperature: Number.isFinite(Number(ocrConfig.temperature)) ? Number(ocrConfig.temperature) : null,
+                    think: Boolean(ocrConfig.think),
+                    keepAlive: String(ocrConfig.keepAlive || '')
+                }
+            },
+            response: {
+                text: resultText
+            }
+        };
+
+        try {
+            let cachePath;
+            if (runtime.type === 'scriptable') {
+                const hostDirPath = runtime.fm.joinPath(runtime.baseDir, hostDir);
+                if (!runtime.fm.fileExists(runtime.baseDir)) runtime.fm.createDirectory(runtime.baseDir, true);
+                if (!runtime.fm.fileExists(hostDirPath)) runtime.fm.createDirectory(hostDirPath, true);
+                cachePath = runtime.fm.joinPath(hostDirPath, fileName);
+                runtime.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+            } else {
+                const hostDirPath = runtime.path.join(runtime.baseDir, hostDir);
+                await runtime.fs.promises.mkdir(hostDirPath, { recursive: true });
+                cachePath = runtime.path.join(hostDirPath, fileName);
+                await runtime.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+            }
+            return cachePath;
+        } catch (error) {
+            console.log(`🤖 AI Web: OCR cache write failed for ${imageUrl}: ${error.message}`);
+            return null;
+        }
+    }
+
+    async loadImageAsBase64(imageUrl, timeoutSeconds) {
+        const rawUrl = String(imageUrl || '').trim();
+        const normalizedUrl = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
+        if (!normalizedUrl) {
+            throw new Error('Missing image URL');
+        }
+        if (typeof Request !== 'undefined') {
+            const request = new Request(normalizedUrl);
+            request.timeoutInterval = timeoutSeconds;
+            const image = await request.loadImage();
+            const jpegData = Data.fromJPEG(image);
+            return jpegData.toBase64String();
+        }
+        if (typeof fetch === 'function') {
+            const response = await fetch(normalizedUrl, {
+                signal: AbortSignal.timeout(timeoutSeconds * 1000)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status} while downloading OCR image`);
+            }
+            const buffer = await response.arrayBuffer();
+            if (typeof Buffer !== 'undefined') {
+                return Buffer.from(buffer).toString('base64');
+            }
+            if (typeof btoa === 'function') {
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                for (let i = 0; i < bytes.length; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+            }
+        }
+        throw new Error('No image HTTP client available');
+    }
+
+    parseOcrResponse(rawText) {
+        const parsed = this.parseAiEventResponse(rawText);
+        const text = parsed && typeof parsed.text === 'string' ? parsed.text : '';
+        return text
+            .replace(/\r\n?/g, '\n')
+            .trim();
+    }
+
+    getMissingOcrFields(promptFields, mergedEvent, ocrConfig = {}) {
+        const configuredFields = new Set(Array.isArray(ocrConfig.targetFields) ? ocrConfig.targetFields : []);
+        return this.getRemainingPromptFields(promptFields, mergedEvent)
+            .map(field => this.normalizePromptFieldName(field))
+            .filter(field => field && configuredFields.has(field));
+    }
+
+    collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const candidates = [];
+        const seen = new Set();
+        const addImageUrl = rawUrl => {
+            const normalized = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(String(rawUrl || '').trim()) || String(rawUrl || '').trim());
+            if (!normalized) return;
+            if (!this.hasSupportedImageFilenameAtEnd(normalized) && !this.hasLikelyImageUrl(normalized)) return;
+            if (seen.has(normalized)) return;
+            seen.add(normalized);
+            candidates.push(normalized);
+        };
+        const preferred = this.buildImageEvidenceContextFromText(
+            htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
+            sourceUrl
+        );
+        preferred.forEach(addImageUrl);
+        this.buildImageEvidenceContext(htmlData).forEach(addImageUrl);
+        return candidates.slice(0, Math.max(1, Number(ocrConfig.maxImages) || 1));
+    }
+
+    buildOcrSnippet(imageUrl, text) {
+        return [
+            `OCR_IMAGE_URL: ${String(imageUrl || '').trim()}`,
+            'OCR_IMAGE_TEXT',
+            String(text || '').trim()
+        ].filter(Boolean).join('\n');
+    }
+
+    async getOcrTextForImage(imageUrl, ocrConfig = {}, passLabel = 'ocr') {
+        const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
+        if (cached && cached.text) {
+            console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
+            return cached;
+        }
+
+        const base64Image = await this.loadImageAsBase64(imageUrl, ocrConfig.timeoutSeconds);
+        const payload = {
+            model: ocrConfig.model,
+            prompt: ocrConfig.prompt,
+            images: [base64Image],
+            format: 'json',
+            stream: false,
+            think: ocrConfig.think,
+            keep_alive: ocrConfig.keepAlive,
+            options: {
+                num_ctx: ocrConfig.numCtx,
+                num_predict: ocrConfig.numPredict,
+                temperature: ocrConfig.temperature
+            }
+        };
+        const historyPrompt = `${ocrConfig.prompt}\nOCR_IMAGE_URL: ${imageUrl}`;
+        const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, historyPrompt);
+        if (!rawResponse) return null;
+        const text = this.parseOcrResponse(rawResponse);
+        if (!text) {
+            console.warn(`🤖 AI Web: OCR response for ${imageUrl} did not include text`);
+            return null;
+        }
+        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, text);
+        return {
+            imageUrl,
+            text,
+            cachePath,
+            cached: false
+        };
+    }
+
+    async recoverMissingFieldsFromImages(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent, validationState, extractionTrace) {
+        const ocrConfig = this.getOcrConfig(parserConfig, aiConfig);
+        const missingBefore = this.getRemainingPromptFields(promptFields, mergedEvent)
+            .map(field => this.normalizePromptFieldName(field))
+            .filter(Boolean);
+        const diagnostics = {
+            enabled: ocrConfig.enabled,
+            model: String(ocrConfig.model || ''),
+            missingBefore,
+            missingAfter: [...missingBefore],
+            attemptedFields: [],
+            recoveredFields: [],
+            attemptedImageCount: 0,
+            processedImageCount: 0,
+            cacheHits: 0,
+            images: [],
+            skippedReason: null
+        };
+        if (!ocrConfig.enabled) {
+            diagnostics.skippedReason = 'disabled';
+            return { merged: mergedEvent, diagnostics };
+        }
+        if (!ocrConfig.endpoint || !ocrConfig.model) {
+            diagnostics.skippedReason = 'missing-endpoint-or-model';
+            return { merged: mergedEvent, diagnostics };
+        }
+        const missingTargetFields = this.getMissingOcrFields(promptFields, mergedEvent, ocrConfig);
+        diagnostics.attemptedFields = [...missingTargetFields];
+        if (ocrConfig.requireMissingFields && missingTargetFields.length === 0) {
+            diagnostics.skippedReason = 'no-target-fields-missing';
+            return { merged: mergedEvent, diagnostics };
+        }
+        const imageUrls = this.collectOcrCandidateImageUrls(htmlData, ocrConfig);
+        diagnostics.attemptedImageCount = imageUrls.length;
+        if (imageUrls.length === 0) {
+            diagnostics.skippedReason = 'no-image-candidates';
+            return { merged: mergedEvent, diagnostics };
+        }
+
+        const snippets = [];
+        for (let index = 0; index < imageUrls.length; index++) {
+            const imageUrl = imageUrls[index];
+            try {
+                const ocrResult = await this.getOcrTextForImage(imageUrl, ocrConfig, `ocr ${index + 1}/${imageUrls.length}`);
+                if (!ocrResult || !ocrResult.text) {
+                    diagnostics.images.push({
+                        url: imageUrl,
+                        textChars: 0,
+                        cached: false,
+                        status: 'empty'
+                    });
+                    continue;
+                }
+                const trimmedText = ocrResult.text.length > ocrConfig.maxTextChars
+                    ? `${ocrResult.text.slice(0, ocrConfig.maxTextChars)}…`
+                    : ocrResult.text;
+                snippets.push(this.buildOcrSnippet(imageUrl, trimmedText));
+                diagnostics.processedImageCount += 1;
+                if (ocrResult.cached) diagnostics.cacheHits += 1;
+                diagnostics.images.push({
+                    url: imageUrl,
+                    textChars: trimmedText.length,
+                    cached: Boolean(ocrResult.cached),
+                    status: 'ok'
+                });
+            } catch (error) {
+                diagnostics.images.push({
+                    url: imageUrl,
+                    textChars: 0,
+                    cached: false,
+                    status: 'error',
+                    error: error && error.message ? error.message : String(error || '')
+                });
+                console.warn(`🤖 AI Web: OCR failed for ${imageUrl}: ${error.message}`);
+            }
+        }
+
+        if (snippets.length === 0) {
+            diagnostics.skippedReason = 'no-ocr-text';
+            return { merged: mergedEvent, diagnostics };
+        }
+
+        const partial = await this.extractFieldsAcrossSnippets(
+            htmlData,
+            aiConfig,
+            cityConfig,
+            parserConfig,
+            missingTargetFields,
+            snippets,
+            'ocr',
+            validationState,
+            {
+                partitionLabel: 'content',
+                extractionTrace,
+                promptVariant: 'alternate'
+            }
+        );
+        const merged = this.mergeAiEventFields(mergedEvent, partial);
+        diagnostics.missingAfter = this.getRemainingPromptFields(promptFields, merged)
+            .map(field => this.normalizePromptFieldName(field))
+            .filter(Boolean);
+        diagnostics.recoveredFields = missingBefore.filter(field => !diagnostics.missingAfter.includes(field));
+        return { merged, diagnostics };
+    }
+
     scoreAdditionalUrl(url, sourceUrl, context = '') {
         let score = 0;
         const parsedUrl = this.parseUrlComponents(url);
@@ -1909,6 +2332,59 @@ class AiWebParser {
             think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
+        };
+    }
+
+    getOcrConfig(parserConfig = {}, aiConfig = null) {
+        const baseAiConfig = aiConfig && typeof aiConfig === 'object' ? aiConfig : this.getAiConfig(parserConfig);
+        const parserAiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
+            ? parserConfig.ai
+            : {};
+        const rawOcr = parserAiConfig.ocr && typeof parserAiConfig.ocr === 'object'
+            ? parserAiConfig.ocr
+            : {};
+        const configuredTargetFields = Array.isArray(rawOcr.targetFields) && rawOcr.targetFields.length > 0
+            ? rawOcr.targetFields
+            : this.defaultOcrTargetFields;
+        const targetFields = Array.from(new Set(
+            configuredTargetFields
+                .map(field => this.normalizePromptFieldName(field))
+                .filter(Boolean)
+        ));
+        const maxImages = Number.isFinite(Number(rawOcr.maxImages))
+            ? Math.max(1, Math.min(4, Math.floor(Number(rawOcr.maxImages))))
+            : 2;
+        const maxTextChars = Number.isFinite(Number(rawOcr.maxTextChars))
+            ? Math.max(250, Math.floor(Number(rawOcr.maxTextChars)))
+            : 4000;
+        return {
+            enabled: rawOcr.enabled !== false,
+            endpoint: String(rawOcr.endpoint || baseAiConfig.endpoint || ''),
+            model: String(rawOcr.model || 'qwen2.5vl:3b'),
+            prompt: String(rawOcr.prompt || this.defaultOcrPrompt),
+            timeoutSeconds: Number.isFinite(Number(rawOcr.timeoutSeconds))
+                ? Number(rawOcr.timeoutSeconds)
+                : baseAiConfig.timeoutSeconds,
+            keepAlive: Object.prototype.hasOwnProperty.call(rawOcr, 'keepAlive')
+                ? String(rawOcr.keepAlive)
+                : baseAiConfig.keepAlive,
+            numCtx: Number.isFinite(Number(rawOcr.numCtx))
+                ? Number(rawOcr.numCtx)
+                : baseAiConfig.numCtx,
+            numPredict: Number.isFinite(Number(rawOcr.numPredict))
+                ? Number(rawOcr.numPredict)
+                : baseAiConfig.numPredict,
+            temperature: Number.isFinite(Number(rawOcr.temperature))
+                ? Number(rawOcr.temperature)
+                : baseAiConfig.temperature,
+            think: Object.prototype.hasOwnProperty.call(rawOcr, 'think')
+                ? Boolean(rawOcr.think)
+                : baseAiConfig.think,
+            maxImages,
+            maxTextChars,
+            cacheEnabled: rawOcr.cache !== false,
+            requireMissingFields: rawOcr.requireMissingFields !== false,
+            targetFields
         };
     }
 
@@ -2705,6 +3181,23 @@ class AiWebParser {
             if (retryPasses >= confidenceRuntime.maxRetryPasses) break;
         }
 
+        const ocrRecovery = await this.recoverMissingFieldsFromImages(
+            htmlData,
+            aiConfig,
+            cityConfig,
+            parserConfig,
+            promptFields,
+            merged,
+            validationState,
+            extractionTrace
+        );
+        merged = ocrRecovery && ocrRecovery.merged && typeof ocrRecovery.merged === 'object'
+            ? ocrRecovery.merged
+            : merged;
+        const ocrDiagnostics = ocrRecovery && ocrRecovery.diagnostics && typeof ocrRecovery.diagnostics === 'object'
+            ? ocrRecovery.diagnostics
+            : null;
+
         const confidenceDiagnostics = this.buildConfidenceDiagnostics(
             sectionBundle,
             promptFields,
@@ -2728,6 +3221,7 @@ class AiWebParser {
                 maxRetryPasses: confidenceRuntime.maxRetryPasses
             }
         };
+        confidenceDiagnostics.ocr = ocrDiagnostics;
 
         if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
             merged.__preValidatedFields = Array.from(validationState.validatedFields);
@@ -3065,26 +3559,17 @@ ${String(rawResponse || '')}`;
         return null;
     }
 
-    async callAiGenerate(aiConfig, prompt, passLabel) {
-        if (!prompt) return null;
+    async sendAiRequest(aiConfig, payload, passLabel, promptForHistory = '') {
         const label = passLabel ? ` (${passLabel} pass)` : '';
+        const prompt = String(promptForHistory || (payload && typeof payload.prompt === 'string' ? payload.prompt : ''));
         const promptChars = prompt.length;
-        this.recordAiPrompt(prompt, passLabel, aiConfig);
-        const payload = {
-            model: aiConfig.model,
-            prompt,
-            format: 'json',
-            stream: false,
-            think: aiConfig.think,
-            keep_alive: aiConfig.keepAlive,
-            options: {
-                num_ctx: aiConfig.numCtx,
-                num_predict: aiConfig.numPredict,
-                temperature: aiConfig.temperature
-            }
-        };
+        if (prompt) {
+            this.recordAiPrompt(prompt, passLabel, aiConfig);
+        }
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
-        console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
+        if (prompt) {
+            console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
+        }
         const startTime = Date.now();
         try {
             let responseText = null;
@@ -3139,6 +3624,24 @@ ${String(rawResponse || '')}`;
             console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
             return null;
         }
+    }
+
+    async callAiGenerate(aiConfig, prompt, passLabel) {
+        if (!prompt) return null;
+        const payload = {
+            model: aiConfig.model,
+            prompt,
+            format: 'json',
+            stream: false,
+            think: aiConfig.think,
+            keep_alive: aiConfig.keepAlive,
+            options: {
+                num_ctx: aiConfig.numCtx,
+                num_predict: aiConfig.numPredict,
+                temperature: aiConfig.temperature
+            }
+        };
+        return this.sendAiRequest(aiConfig, payload, passLabel, prompt);
     }
 
     extractFirstJsonObject(text) {

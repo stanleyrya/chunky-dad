@@ -40,6 +40,23 @@ class PageCacheMaintenance {
     this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
     this.storageDir = this.fm.joinPath(this.baseDir, 'storage');
     this.pageStorageDir = this.fm.joinPath(this.storageDir, 'pages');
+    this.ocrStorageDir = this.fm.joinPath(this.storageDir, 'ocr');
+    this.cacheScopes = [
+      {
+        key: 'pages',
+        label: 'Page cache',
+        dir: this.pageStorageDir,
+        emptyLabel: 'downloaded website files',
+        footerLabel: 'storage/pages'
+      },
+      {
+        key: 'ocr',
+        label: 'OCR cache',
+        dir: this.ocrStorageDir,
+        emptyLabel: 'saved OCR responses',
+        footerLabel: 'storage/ocr'
+      }
+    ];
     this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
     this.runtime = this.getRuntimeContext();
   }
@@ -232,7 +249,7 @@ class PageCacheMaintenance {
     }
   }
 
-  analyzeHostDirectory(hostName, hostPath, thresholdMs, nowMs) {
+  analyzeHostDirectory(hostName, hostPath, thresholdMs, nowMs, scope = null) {
     const entryNames = this.listDirectoryEntries(hostPath);
     const files = [];
     let oldFileCount = 0;
@@ -291,6 +308,8 @@ class PageCacheMaintenance {
     });
 
     return {
+      scopeKey: scope && scope.key ? scope.key : 'pages',
+      scopeLabel: scope && scope.label ? scope.label : 'Page cache',
       hostName,
       hostPath,
       totalFileCount: files.length,
@@ -303,14 +322,14 @@ class PageCacheMaintenance {
     };
   }
 
-  analyzePageCache(days) {
+  analyzeCacheScope(scope, days) {
     const nowMs = Date.now();
     const thresholdMs = days * 24 * 60 * 60 * 1000;
     const hosts = [];
-    const rootEntries = this.listDirectoryEntries(this.pageStorageDir);
+    const rootEntries = this.listDirectoryEntries(scope.dir);
 
     rootEntries.forEach(entryName => {
-      const entryPath = this.fm.joinPath(this.pageStorageDir, entryName);
+      const entryPath = this.fm.joinPath(scope.dir, entryName);
       let isDirectory = false;
       try {
         isDirectory = this.fm.isDirectory(entryPath);
@@ -318,7 +337,7 @@ class PageCacheMaintenance {
         isDirectory = false;
       }
       if (!isDirectory) return;
-      hosts.push(this.analyzeHostDirectory(entryName, entryPath, thresholdMs, nowMs));
+      hosts.push(this.analyzeHostDirectory(entryName, entryPath, thresholdMs, nowMs, scope));
     });
 
     hosts.sort((left, right) => {
@@ -328,10 +347,38 @@ class PageCacheMaintenance {
     });
 
     return {
+      key: scope.key,
+      label: scope.label,
+      dir: scope.dir,
+      exists: this.fm.fileExists(scope.dir),
+      hostCount: hosts.length,
+      totalFileCount: hosts.reduce((sum, host) => sum + host.totalFileCount, 0),
+      oldFileCount: hosts.reduce((sum, host) => sum + host.oldFileCount, 0),
+      recentFileCount: hosts.reduce((sum, host) => sum + host.recentFileCount, 0),
+      removableHostCount: hosts.filter(host => host.removableAfterPrune).length,
+      hosts
+    };
+  }
+
+  analyzePageCache(days) {
+    const scopes = this.cacheScopes.map(scope => this.analyzeCacheScope(scope, days));
+    const hosts = scopes.reduce((allHosts, scope) => allHosts.concat(scope.hosts), []);
+    hosts.sort((left, right) => {
+      if (right.oldFileCount !== left.oldFileCount) return right.oldFileCount - left.oldFileCount;
+      if (right.totalFileCount !== left.totalFileCount) return right.totalFileCount - left.totalFileCount;
+      if (String(left.scopeLabel) !== String(right.scopeLabel)) {
+        return String(left.scopeLabel).localeCompare(String(right.scopeLabel));
+      }
+      return String(left.hostName).localeCompare(String(right.hostName));
+    });
+
+    return {
       generatedAt: new Date(),
       days,
-      exists: this.fm.fileExists(this.pageStorageDir),
+      exists: scopes.some(scope => scope.exists),
       pageStorageDir: this.pageStorageDir,
+      ocrStorageDir: this.ocrStorageDir,
+      cacheScopes: scopes,
       hostCount: hosts.length,
       totalFileCount: hosts.reduce((sum, host) => sum + host.totalFileCount, 0),
       oldFileCount: hosts.reduce((sum, host) => sum + host.oldFileCount, 0),
@@ -351,7 +398,7 @@ class PageCacheMaintenance {
       messageLines.push(`${analysis.removableHostCount} host folder(s) can be removed if empty after pruning.`);
     }
     messageLines.push('');
-    messageLines.push('This only touches downloaded website cache files under storage/pages.');
+    messageLines.push('This only touches cache files under storage/pages and storage/ocr.');
     alert.message = messageLines.join('\n');
     alert.addAction(deleteHosts ? 'Delete files + hosts' : 'Delete files');
     alert.addCancelAction('Cancel');
@@ -474,6 +521,7 @@ class PageCacheMaintenance {
           ? `${this.formatNumber(host.oldFileCount)} old • ${this.formatNumber(host.recentFileCount)} recent`
           : `${this.formatNumber(host.recentFileCount)} recent`;
         const hostMeta = [
+          this.escapeHtml(host.scopeLabel),
           `Total ${this.formatNumber(host.totalFileCount)}`,
           `Oldest ${this.escapeHtml(this.formatFileDate(host.oldestDate))}`,
           `Newest ${this.escapeHtml(this.formatFileDate(host.newestDate))}`,
@@ -481,7 +529,7 @@ class PageCacheMaintenance {
         ].join(' • ');
         return `
           <tr>
-            <td>${this.escapeHtml(host.hostName)}</td>
+            <td>${this.escapeHtml(host.hostName)}<br><span style="color: var(--muted); font-size: 12px;">${this.escapeHtml(host.scopeLabel)}</span></td>
             <td><span class="badge ${host.oldFileCount > 0 ? 'danger' : 'success'}">${this.escapeHtml(hostStatus)}</span></td>
             <td>${hostMeta}</td>
           </tr>
@@ -489,9 +537,9 @@ class PageCacheMaintenance {
       }).join('');
 
     const emptyState = !analysis.exists
-      ? `<div class="empty-card">No page cache directory exists yet.<br><span>${this.escapeHtml(analysis.pageStorageDir)}</span></div>`
+      ? `<div class="empty-card">No cache directories exist yet.<br><span>${this.escapeHtml(`${analysis.pageStorageDir}\n${analysis.ocrStorageDir}`)}</span></div>`
       : (analysis.totalFileCount === 0
-        ? `<div class="empty-card">No downloaded website files found.<br><span>${this.escapeHtml(analysis.pageStorageDir)}</span></div>`
+        ? `<div class="empty-card">No cached page or OCR files found.<br><span>${this.escapeHtml(`${analysis.pageStorageDir}\n${analysis.ocrStorageDir}`)}</span></div>`
         : '');
 
     return `<!doctype html>
@@ -499,7 +547,7 @@ class PageCacheMaintenance {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Page Cache Maintenance</title>
+  <title>Cache Maintenance</title>
   <style>
     :root {
       color-scheme: dark;
@@ -704,8 +752,8 @@ class PageCacheMaintenance {
       <div class="hero-main">
         ${logoDataUri ? `<img class="logo" src="${logoDataUri}" alt="Chunky Dad">` : ''}
         <div>
-          <h1>Page Cache Maintenance</h1>
-          <div class="subtitle">Review and prune downloaded website files in storage/pages.</div>
+          <h1>Cache Maintenance</h1>
+          <div class="subtitle">Review and prune cached website files in storage/pages and OCR results in storage/ocr.</div>
         </div>
       </div>
       <div class="meta">
@@ -771,7 +819,7 @@ class PageCacheMaintenance {
       </div>
     `}
 
-    <div class="footer">${this.escapeHtml(analysis.pageStorageDir)}</div>
+    <div class="footer">${this.escapeHtml(`${analysis.pageStorageDir} • ${analysis.ocrStorageDir}`)}</div>
   </div>
 </body>
 </html>`;
@@ -788,7 +836,7 @@ class PageCacheMaintenance {
     widget.setPadding(12, 12, 12, 12);
     widget.url = this.buildSelfUrl({ days: analysis.days });
 
-    const title = widget.addText('Page Cache');
+    const title = widget.addText('Cache');
     title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
     title.textColor = new Color(BRAND.text);
 
@@ -820,6 +868,9 @@ class PageCacheMaintenance {
 }
 
 (async () => {
+  if (typeof module !== 'undefined' && module.exports) {
+    return;
+  }
   try {
     const maintenance = new PageCacheMaintenance();
     const days = maintenance.getSelectedDays();
@@ -838,7 +889,7 @@ class PageCacheMaintenance {
       const widget = new ListWidget();
       widget.backgroundColor = new Color(BRAND.primary);
       widget.setPadding(12, 12, 12, 12);
-      const title = widget.addText('Page Cache');
+      const title = widget.addText('Cache');
       title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
       title.textColor = new Color(BRAND.text);
       widget.addSpacer(4);
@@ -859,3 +910,7 @@ class PageCacheMaintenance {
     }
   }
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { PageCacheMaintenance };
+}
