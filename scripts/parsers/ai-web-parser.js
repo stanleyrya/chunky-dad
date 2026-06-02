@@ -261,21 +261,28 @@ class AiWebParser {
         const sourceHtml = htmlData && htmlData.html ? htmlData.html : '';
         const pageTitle = this.extractTitlePart(sourceHtml);
         const pageMetaParts = this.extractMetaParts(sourceHtml).slice(0, this.extractionLimits.multiEventContextMetaParts);
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
+        const resourceLines = this.extractMultiEventSegmentResourceLines(segmentHtml, sourceUrl);
         const contextLines = [
             pageTitle ? `PAGE_TITLE: ${pageTitle}` : '',
             ...pageMetaParts.map((part, metaIndex) => `PAGE_META_${metaIndex + 1}: ${part}`),
-            `SEGMENT_INDEX: ${index + 1}/${totalSegments}`
+            `SEGMENT_INDEX: ${index + 1}/${totalSegments}`,
+            ...resourceLines
         ].filter(Boolean);
+        const segmentContent = segmentHtml || (segment && Array.isArray(segment.lines) ? segment.lines.join('\n') : '');
         return {
             ...htmlData,
-            html: `${contextLines.join('\n')}\n${segment.lines.join('\n')}`,
+            html: `${contextLines.join('\n')}\n${segmentContent}`,
             aiEvent: null,
             aiExtraction: null
         };
     }
 
     buildMultiEventSegments(html) {
-        const bodyParts = this.extractBodyParts(html).slice(0, this.extractionLimits.multiEventScanLineLimit);
+        const bodyParts = this.trimLeadingMultiEventNoise(
+            this.extractBodyParts(html).slice(0, this.extractionLimits.multiEventScanLineLimit)
+        );
         if (bodyParts.length === 0) return [];
         const rawSegments = [];
         let currentLines = [];
@@ -292,13 +299,26 @@ class AiWebParser {
         for (const rawLine of bodyParts) {
             const line = this.trimToMaxLength(this.normalizeWhitespace(rawLine), this.extractionLimits.multiEventLineMaxChars);
             if (!line) continue;
+            if (this.isMultiEventSectionNoiseLine(line)) continue;
             // Compact event lines (date + event name in one line) can start a new segment
             // with just 1 prior line that has a date signal, rather than minSegmentLines.
             const effectiveSplitMin = this.isCompactEventLine(line) ? 1 : minSegmentLines;
-            const startsNewSegment = this.hasMultiEventDateSignal(line) &&
+            const startsNewByDate = this.hasMultiEventDateSignal(line) &&
                 currentLines.length >= effectiveSplitMin &&
                 this.segmentHasDateSignal(currentLines);
-            if (startsNewSegment) {
+            const startsNewByTitle = this.isStrongMultiEventTitleLine(line) &&
+                currentLines.length >= minSegmentLines &&
+                this.segmentHasDateSignal(currentLines) &&
+                !this.hasMultiEventDateSignal(currentLines[currentLines.length - 1]);
+            if (startsNewByDate) {
+                const trailingStartIndex = this.findTrailingMultiEventStartIndex(currentLines);
+                if (trailingStartIndex > 0) {
+                    rawSegments.push(currentLines.slice(0, trailingStartIndex));
+                    currentLines = currentLines.slice(trailingStartIndex);
+                } else {
+                    pushCurrent();
+                }
+            } else if (startsNewByTitle) {
                 pushCurrent();
             }
             currentLines.push(line);
@@ -328,10 +348,222 @@ class AiWebParser {
             const dedupeKey = segmentText.toLowerCase();
             if (seen.has(dedupeKey)) continue;
             seen.add(dedupeKey);
-            uniqueSegments.push({ lines: trimmedLines });
+            uniqueSegments.push({
+                lines: trimmedLines,
+                html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
+            });
             if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
         }
         return uniqueSegments;
+    }
+
+    trimLeadingMultiEventNoise(lines) {
+        const normalizedLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        const firstStrongTitleIndex = normalizedLines.findIndex(line => this.isStrongMultiEventTitleLine(line));
+        return firstStrongTitleIndex > 0
+            ? normalizedLines.slice(firstStrongTitleIndex)
+            : normalizedLines;
+    }
+
+    isMultiEventSectionNoiseLine(value) {
+        const line = this.normalizeWhitespace(String(value || '').replace(/[\u200b\u00a0]/g, ' '));
+        if (!line) return true;
+        if (/^(top of page|bottom of page|where bears dance)$/i.test(line)) return true;
+        if (/^upcoming(?:\s+furball)?\s+events[:!]*$/i.test(line)) return true;
+        if (/^(two parties,?|one weekend!!!|furball posters|more|jmf productions)$/i.test(line)) return true;
+        if (/^furball\s*\|\s*furball nyc$/i.test(line)) return true;
+        if (/^(furball,\s*nyc's infamous|loved by bears)/i.test(line)) return true;
+        return false;
+    }
+
+    isMultiEventCallToActionLine(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!line) return false;
+        return /^(get|buy|book|register|learn|more)\b.*\b(ticket|tickets|spot|today|here)\b/i.test(line) ||
+            /^(ticket|tickets|buy tickets|get tickets)$/i.test(line);
+    }
+
+    isStrongMultiEventTitleLine(value) {
+        const line = this.normalizeWhitespace(String(value || '').replace(/[\u200b\u00a0]/g, ' '));
+        if (!line) return false;
+        if (this.isMultiEventSectionNoiseLine(line)) return false;
+        if (this.isMultiEventCallToActionLine(line)) return false;
+        if (this.hasMultiEventDateSignal(line)) return false;
+        if (/^@/.test(line)) return false;
+        if (/[.!?]$/.test(line)) return false;
+        if (line.includes('|')) return false;
+        return /\b(furball|bear|mad\.?bear|campout|party|week|debut)\b/i.test(line);
+    }
+
+    findTrailingMultiEventStartIndex(lines) {
+        const normalizedLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        const lastDateIndex = this.lastMultiEventDateSignalIndex(normalizedLines);
+        if (lastDateIndex < 0 || lastDateIndex >= normalizedLines.length - 1) return -1;
+        for (let i = lastDateIndex + 1; i < normalizedLines.length; i++) {
+            if (this.isStrongMultiEventTitleLine(normalizedLines[i])) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    lastMultiEventDateSignalIndex(lines) {
+        for (let i = (Array.isArray(lines) ? lines.length : 0) - 1; i >= 0; i--) {
+            if (this.hasMultiEventDateSignal(lines[i])) return i;
+        }
+        return -1;
+    }
+
+    extractRawHtmlForMultiEventSegment(html, lines) {
+        const source = String(html || '');
+        const segmentLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        if (!source || segmentLines.length === 0) return '';
+
+        const records = this.extractBodyPartRecords(source);
+        const matchedRecords = this.findBodyPartRecordsForLines(records, segmentLines);
+        if (matchedRecords.length === 0) return segmentLines.join('\n');
+
+        const firstStart = Math.min(...matchedRecords.map(record => record.rawStart).filter(value => Number.isFinite(value)));
+        const lastEnd = Math.max(...matchedRecords.map(record => record.rawEnd).filter(value => Number.isFinite(value)));
+        if (!Number.isFinite(firstStart) || !Number.isFinite(lastEnd) || lastEnd <= firstStart) {
+            return segmentLines.join('\n');
+        }
+
+        const rawStart = this.findMultiEventSegmentResourceStart(source, firstStart);
+        const rawEnd = this.findMultiEventSegmentResourceEnd(source, lastEnd);
+        return source.slice(rawStart, rawEnd);
+    }
+
+    findBodyPartRecordsForLines(records, lines) {
+        const sourceRecords = Array.isArray(records) ? records : [];
+        const targetLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line).toLowerCase())
+            .filter(Boolean);
+        if (sourceRecords.length === 0 || targetLines.length === 0) return [];
+
+        for (let start = 0; start < sourceRecords.length; start++) {
+            if (this.normalizeWhitespace(sourceRecords[start].text).toLowerCase() !== targetLines[0]) continue;
+            const matched = [sourceRecords[start]];
+            let cursor = start + 1;
+            for (let targetIndex = 1; targetIndex < targetLines.length; targetIndex++) {
+                let found = false;
+                while (cursor < sourceRecords.length) {
+                    const recordText = this.normalizeWhitespace(sourceRecords[cursor].text).toLowerCase();
+                    const isMatch = recordText === targetLines[targetIndex];
+                    const isTooFar = matched.length > 0 &&
+                        Number.isFinite(sourceRecords[cursor].rawStart) &&
+                        Number.isFinite(matched[matched.length - 1].rawEnd) &&
+                        sourceRecords[cursor].rawStart - matched[matched.length - 1].rawEnd > 12000;
+                    if (isMatch) {
+                        matched.push(sourceRecords[cursor]);
+                        cursor++;
+                        found = true;
+                        break;
+                    }
+                    if (isTooFar) break;
+                    cursor++;
+                }
+                if (!found) break;
+            }
+            if (matched.length === targetLines.length) return matched;
+        }
+        return [];
+    }
+
+    findMultiEventSegmentResourceStart(html, firstTextStart) {
+        const source = String(html || '');
+        const textStart = Number(firstTextStart);
+        const start = Math.max(0, textStart - 6000);
+        const prefix = source.slice(start, textStart);
+        const candidates = [
+            this.findLastRegexIndex(prefix, /<div\b[^>]*(?:class|id)=["'][^"']*wixui-image[^"']*["'][^>]*>/gi),
+            this.findLastRegexIndex(prefix, /<a\b[^>]*>\s*<img\b/gi),
+            this.findLastRegexIndex(prefix, /<img\b/gi)
+        ].filter(index => index >= 0);
+        if (candidates.length === 0) return textStart;
+
+        const candidateStart = start + Math.max(...candidates);
+        const interveningText = this.extractBodyParts(source.slice(candidateStart, textStart));
+        const crossesPriorEvent = interveningText.some(line => this.isStrongMultiEventTitleLine(line)) &&
+            interveningText.some(line => this.hasMultiEventDateSignal(line));
+        return crossesPriorEvent ? textStart : candidateStart;
+    }
+
+    findMultiEventSegmentResourceEnd(html, lastTextEnd) {
+        const source = String(html || '');
+        const textEnd = Number(lastTextEnd);
+        const endLimit = Math.min(source.length, textEnd + 8000);
+        const suffix = source.slice(textEnd, endLimit);
+        const candidates = [];
+        const nextImageIndex = this.findFirstRegexIndex(suffix, /<div\b[^>]*(?:class|id)=["'][^"']*wixui-image[^"']*["'][^>]*>/gi);
+        if (nextImageIndex >= 0) candidates.push(textEnd + nextImageIndex);
+
+        const suffixRecords = this.extractBodyPartRecords(suffix);
+        const nextTitleRecord = suffixRecords.find(record => this.isStrongMultiEventTitleLine(record.text));
+        if (nextTitleRecord && Number.isFinite(nextTitleRecord.rawStart)) {
+            candidates.push(textEnd + nextTitleRecord.rawStart);
+        }
+
+        if (candidates.length === 0) return textEnd;
+        const rawEnd = Math.min(...candidates.filter(value => value > textEnd));
+        return Number.isFinite(rawEnd) && rawEnd > textEnd ? rawEnd : textEnd;
+    }
+
+    findLastRegexIndex(text, pattern) {
+        let lastIndex = -1;
+        let match;
+        pattern.lastIndex = 0;
+        while ((match = pattern.exec(text)) !== null) {
+            lastIndex = match.index;
+            if (match.index === pattern.lastIndex) pattern.lastIndex++;
+        }
+        return lastIndex;
+    }
+
+    findFirstRegexIndex(text, pattern) {
+        pattern.lastIndex = 0;
+        const match = pattern.exec(text);
+        return match ? match.index : -1;
+    }
+
+    extractMultiEventSegmentResourceLines(html, sourceUrl = '') {
+        const source = String(html || '');
+        if (!source) return [];
+        const lines = [];
+        const seen = new Set();
+        const addLine = (label, rawUrl) => {
+            const normalized = this.normalizeUrl(rawUrl, sourceUrl);
+            if (!normalized || !/^https?:\/\//i.test(normalized)) return;
+            const finalUrl = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(normalized) || normalized);
+            if (!finalUrl || seen.has(finalUrl)) return;
+            seen.add(finalUrl);
+            lines.push(`${label}: ${finalUrl}`);
+        };
+
+        for (const imageUrl of this.buildImageEvidenceContext({ html: source, url: sourceUrl })) {
+            addLine('SEGMENT_IMAGE_URL', imageUrl);
+            if (lines.length >= 4) break;
+        }
+
+        let linkCount = 0;
+        const candidates = this.extractUrlCandidatesFromRawHtml(source);
+        for (const candidate of candidates) {
+            if (lines.length >= 10 || linkCount >= 1) break;
+            const normalized = this.normalizeUrl(candidate, sourceUrl);
+            if (!normalized || !/^https?:\/\//i.test(normalized)) continue;
+            if (this.hasSupportedImageFilenameAtEnd(normalized) || this.hasLikelyImageUrl(normalized)) continue;
+            const beforeCount = lines.length;
+            addLine('SEGMENT_LINK_URL', normalized);
+            if (lines.length > beforeCount) linkCount++;
+        }
+
+        return lines;
     }
 
     trimSegmentLinesToChars(lines, maxChars) {
@@ -366,7 +598,7 @@ class AiWebParser {
 
     segmentHasTitleSignal(lines) {
         return (Array.isArray(lines) ? lines : []).some(
-            line => this.isLikelyEventTitleLine(line) || this.isCompactEventLine(line)
+            line => this.isLikelyEventTitleLine(line) || this.isCompactEventLine(line) || this.isStrongMultiEventTitleLine(line)
         );
     }
 
@@ -3532,6 +3764,121 @@ ${String(rawResponse || '')}`;
             if (results.length >= this.extractionLimits.maxBodyParts) break;
         }
         return results;
+    }
+
+    extractBodyPartRecords(html) {
+        const source = String(html || '');
+        if (!source) return [];
+
+        const bodyOpen = /<body\b[^>]*>/i.exec(source);
+        const bodyClose = /<\/body\s*>/i.exec(source);
+        const scanStart = bodyOpen ? bodyOpen.index + bodyOpen[0].length : 0;
+        const scanEnd = bodyClose ? bodyClose.index : source.length;
+        if (scanEnd <= scanStart) return [];
+
+        const skipRanges = [
+            ...this.collectHtmlRanges(source, /<script\b[^>]*>[\s\S]*?<\/script\s*>/gi),
+            ...this.collectHtmlRanges(source, /<style\b[^>]*>[\s\S]*?<\/style\s*>/gi),
+            ...this.collectHtmlRanges(source, /<!--[\s\S]*?-->/g),
+            ...this.collectHtmlRanges(source, /<(nav|header|footer|aside|noscript|form|button)\b[^>]*>[\s\S]*?<\/\1\s*>/gi),
+            ...this.collectHtmlRanges(source, /<[a-z0-9]+\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]{0,12000}?<\/[a-z0-9]+>/gi)
+        ].sort((a, b) => a[0] - b[0]);
+
+        const records = [];
+        const seen = new Set();
+        const tagPattern = /<[^>]+>/g;
+        let lastIndex = scanStart;
+        let blockStart = scanStart;
+        let pendingText = '';
+
+        const flush = (rawEnd) => {
+            const rawLines = this.decodeBasicEntities(pendingText)
+                .split('\n')
+                .map(line => this.normalizeWhitespace(line))
+                .filter(Boolean);
+            pendingText = '';
+            for (const line of rawLines) {
+                if (!line || line.length < 3) continue;
+                if (this.noiseLineRegex.test(line)) continue;
+                if (this.looksLikeCssContent(line)) continue;
+                const dedupeKey = line.toLowerCase();
+                if (seen.has(dedupeKey)) continue;
+                seen.add(dedupeKey);
+                records.push({
+                    text: line,
+                    rawStart: blockStart,
+                    rawEnd
+                });
+            }
+        };
+
+        tagPattern.lastIndex = scanStart;
+        let match;
+        while ((match = tagPattern.exec(source)) !== null && match.index < scanEnd) {
+            const textStart = lastIndex;
+            const textEnd = match.index;
+            if (
+                textEnd > textStart &&
+                !this.isPositionInRanges(textStart, skipRanges) &&
+                !this.isPositionInRanges(textEnd - 1, skipRanges)
+            ) {
+                const text = source.slice(textStart, textEnd);
+                if (text.trim()) pendingText += text;
+            }
+
+            const tag = match[0];
+            const isLineBreak = /<(?:br|\/p|\/div|\/li|\/section|\/article|\/h[1-6]|\/tr|\/td)\b[^>]*>/i.test(tag);
+            if (isLineBreak) {
+                if (pendingText.trim()) {
+                    flush(match.index + tag.length);
+                }
+                blockStart = match.index + tag.length;
+            }
+            lastIndex = tagPattern.lastIndex;
+        }
+
+        if (
+            lastIndex < scanEnd &&
+            !this.isPositionInRanges(lastIndex, skipRanges) &&
+            !this.isPositionInRanges(scanEnd - 1, skipRanges)
+        ) {
+            const text = source.slice(lastIndex, scanEnd);
+            if (text.trim()) pendingText += text;
+        }
+        if (pendingText.trim()) {
+            flush(scanEnd);
+        }
+
+        return records;
+    }
+
+    collectHtmlRanges(source, pattern) {
+        const ranges = [];
+        let match;
+        pattern.lastIndex = 0;
+        while ((match = pattern.exec(source)) !== null) {
+            ranges.push([match.index, pattern.lastIndex]);
+            if (match.index === pattern.lastIndex) pattern.lastIndex++;
+        }
+        return ranges;
+    }
+
+    isPositionInRanges(position, ranges) {
+        if (!Array.isArray(ranges) || ranges.length === 0) return false;
+        let low = 0;
+        let high = ranges.length - 1;
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            const range = ranges[mid];
+            if (position < range[0]) {
+                high = mid - 1;
+            } else if (position >= range[1]) {
+                low = mid + 1;
+            } else {
+                return true;
+            }
+        }
+        return false;
     }
 
     looksLikeCssContent(line) {
