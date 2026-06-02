@@ -46,19 +46,25 @@ class PageCacheMaintenance {
         key: 'pages',
         label: 'Page cache',
         dir: this.pageStorageDir,
-        emptyLabel: 'downloaded website files',
         footerLabel: 'storage/pages'
       },
       {
         key: 'ocr',
         label: 'OCR cache',
         dir: this.ocrStorageDir,
-        emptyLabel: 'saved OCR responses',
         footerLabel: 'storage/ocr'
       }
     ];
     this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
     this.runtime = this.getRuntimeContext();
+  }
+
+  getCacheScopeFooterSummary(separator = ' and ') {
+    return this.cacheScopes.map(scope => scope.footerLabel).join(separator);
+  }
+
+  getCacheScopeDirectorySummary(separator = '\n') {
+    return this.cacheScopes.map(scope => scope.dir).join(separator);
   }
 
   getRuntimeContext() {
@@ -376,8 +382,6 @@ class PageCacheMaintenance {
       generatedAt: new Date(),
       days,
       exists: scopes.some(scope => scope.exists),
-      pageStorageDir: this.pageStorageDir,
-      ocrStorageDir: this.ocrStorageDir,
       cacheScopes: scopes,
       hostCount: hosts.length,
       totalFileCount: hosts.reduce((sum, host) => sum + host.totalFileCount, 0),
@@ -398,7 +402,7 @@ class PageCacheMaintenance {
       messageLines.push(`${analysis.removableHostCount} host folder(s) can be removed if empty after pruning.`);
     }
     messageLines.push('');
-    messageLines.push('This only touches cache files under storage/pages and storage/ocr.');
+    messageLines.push(`This only touches cache files under ${this.getCacheScopeFooterSummary()}.`);
     alert.message = messageLines.join('\n');
     alert.addAction(deleteHosts ? 'Delete files + hosts' : 'Delete files');
     alert.addCancelAction('Cancel');
@@ -537,9 +541,9 @@ class PageCacheMaintenance {
       }).join('');
 
     const emptyState = !analysis.exists
-      ? `<div class="empty-card">No cache directories exist yet.<br><span>${this.escapeHtml(`${analysis.pageStorageDir}\n${analysis.ocrStorageDir}`)}</span></div>`
+      ? `<div class="empty-card">No cache directories exist yet.<br><span>${this.escapeHtml(this.getCacheScopeDirectorySummary())}</span></div>`
       : (analysis.totalFileCount === 0
-        ? `<div class="empty-card">No cached page or OCR files found.<br><span>${this.escapeHtml(`${analysis.pageStorageDir}\n${analysis.ocrStorageDir}`)}</span></div>`
+        ? `<div class="empty-card">No cached files found.<br><span>${this.escapeHtml(this.getCacheScopeDirectorySummary())}</span></div>`
         : '');
 
     return `<!doctype html>
@@ -753,7 +757,7 @@ class PageCacheMaintenance {
         ${logoDataUri ? `<img class="logo" src="${logoDataUri}" alt="Chunky Dad">` : ''}
         <div>
           <h1>Cache Maintenance</h1>
-          <div class="subtitle">Review and prune cached website files in storage/pages and OCR results in storage/ocr.</div>
+          <div class="subtitle">Review and prune cached files in ${this.escapeHtml(this.getCacheScopeFooterSummary())}.</div>
         </div>
       </div>
       <div class="meta">
@@ -819,7 +823,7 @@ class PageCacheMaintenance {
       </div>
     `}
 
-    <div class="footer">${this.escapeHtml(`${analysis.pageStorageDir} • ${analysis.ocrStorageDir}`)}</div>
+    <div class="footer">${this.escapeHtml(this.getCacheScopeDirectorySummary(' • '))}</div>
   </div>
 </body>
 </html>`;

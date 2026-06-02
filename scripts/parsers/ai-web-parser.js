@@ -111,7 +111,6 @@ class AiWebParser {
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
-        this.defaultOcrTargetFields = ['startDate', 'endDate', 'title', 'description', 'bar', 'address', 'location'];
         this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears. Return a JSON object with a single key 'text' containing the full extracted text, preserving line breaks as \\n. Do not add commentary.";
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         // NOTE/TODO: If we need to support additional structured payload URL fields,
@@ -1477,13 +1476,6 @@ class AiWebParser {
             .trim();
     }
 
-    getMissingOcrFields(promptFields, mergedEvent, ocrConfig = {}) {
-        const configuredFields = new Set(Array.isArray(ocrConfig.targetFields) ? ocrConfig.targetFields : []);
-        return this.getRemainingPromptFields(promptFields, mergedEvent)
-            .map(field => this.normalizePromptFieldName(field))
-            .filter(field => field && configuredFields.has(field));
-    }
-
     collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const candidates = [];
@@ -1578,7 +1570,13 @@ class AiWebParser {
             diagnostics.skippedReason = 'missing-endpoint-or-model';
             return { merged: mergedEvent, diagnostics };
         }
-        const missingTargetFields = this.getMissingOcrFields(promptFields, mergedEvent, ocrConfig);
+        let missingTargetFields = this.getRemainingPromptFields(promptFields, mergedEvent)
+            .map(field => this.normalizePromptFieldName(field))
+            .filter(Boolean);
+        if (Array.isArray(ocrConfig.targetFields) && ocrConfig.targetFields.length > 0) {
+            const configuredFields = new Set(ocrConfig.targetFields);
+            missingTargetFields = missingTargetFields.filter(field => configuredFields.has(field));
+        }
         diagnostics.attemptedFields = [...missingTargetFields];
         if (ocrConfig.requireMissingFields && missingTargetFields.length === 0) {
             diagnostics.skippedReason = 'no-target-fields-missing';
@@ -2359,14 +2357,13 @@ class AiWebParser {
         const rawOcr = parserAiConfig.ocr && typeof parserAiConfig.ocr === 'object'
             ? parserAiConfig.ocr
             : {};
-        const configuredTargetFields = Array.isArray(rawOcr.targetFields) && rawOcr.targetFields.length > 0
-            ? rawOcr.targetFields
-            : this.defaultOcrTargetFields;
-        const targetFields = Array.from(new Set(
-            configuredTargetFields
-                .map(field => this.normalizePromptFieldName(field))
-                .filter(Boolean)
-        ));
+        const targetFields = Array.isArray(rawOcr.targetFields) && rawOcr.targetFields.length > 0
+            ? Array.from(new Set(
+                rawOcr.targetFields
+                    .map(field => this.normalizePromptFieldName(field))
+                    .filter(Boolean)
+            ))
+            : null;
         const maxImages = Number.isFinite(Number(rawOcr.maxImages))
             ? Math.max(1, Math.min(4, Math.floor(Number(rawOcr.maxImages))))
             : 2;
