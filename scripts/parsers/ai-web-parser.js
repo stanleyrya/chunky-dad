@@ -111,7 +111,16 @@ class AiWebParser {
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
+        this.defaultOcrModel = 'qwen2.5vl:3b';
         this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears. Return a JSON object with a single key 'text' containing the full extracted text, preserving line breaks as \\n. Do not add commentary.";
+        this.defaultOcrRequestConfig = {
+            timeoutSeconds: 300,
+            keepAlive: '5m',
+            numCtx: 8192,
+            numPredict: 2000,
+            temperature: 0,
+            think: false
+        };
         this.urlParsePattern = /^(https?:)\/\/([^\/?#]+)([^?#]*)?(\?[^#]*)?(#.*)?$/i;
         // NOTE/TODO: If we need to support additional structured payload URL fields,
         // add alias keys here and mirror them in collectEventUrlsFromDataObject().
@@ -1513,6 +1522,7 @@ class AiWebParser {
         }
 
         const base64Image = await this.loadImageAsBase64(imageUrl, ocrConfig.timeoutSeconds);
+        console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars)`);
         const payload = {
             model: ocrConfig.model,
             prompt: ocrConfig.prompt,
@@ -1527,8 +1537,7 @@ class AiWebParser {
                 temperature: ocrConfig.temperature
             }
         };
-        const historyPrompt = `${ocrConfig.prompt}\nOCR_IMAGE_URL: ${imageUrl}`;
-        const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, historyPrompt);
+        const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, ocrConfig.prompt);
         if (!rawResponse) return null;
         const text = this.parseOcrResponse(rawResponse);
         if (!text) {
@@ -2373,26 +2382,26 @@ class AiWebParser {
         return {
             enabled: rawOcr.enabled !== false,
             endpoint: String(rawOcr.endpoint || baseAiConfig.endpoint || ''),
-            model: String(rawOcr.model || 'qwen2.5vl:3b'),
+            model: String(rawOcr.model || this.defaultOcrModel),
             prompt: String(rawOcr.prompt || this.defaultOcrPrompt),
             timeoutSeconds: Number.isFinite(Number(rawOcr.timeoutSeconds))
                 ? Number(rawOcr.timeoutSeconds)
-                : baseAiConfig.timeoutSeconds,
+                : this.defaultOcrRequestConfig.timeoutSeconds,
             keepAlive: Object.prototype.hasOwnProperty.call(rawOcr, 'keepAlive')
                 ? String(rawOcr.keepAlive)
-                : baseAiConfig.keepAlive,
+                : this.defaultOcrRequestConfig.keepAlive,
             numCtx: Number.isFinite(Number(rawOcr.numCtx))
                 ? Number(rawOcr.numCtx)
-                : baseAiConfig.numCtx,
+                : this.defaultOcrRequestConfig.numCtx,
             numPredict: Number.isFinite(Number(rawOcr.numPredict))
                 ? Number(rawOcr.numPredict)
-                : baseAiConfig.numPredict,
+                : this.defaultOcrRequestConfig.numPredict,
             temperature: Number.isFinite(Number(rawOcr.temperature))
                 ? Number(rawOcr.temperature)
-                : baseAiConfig.temperature,
+                : this.defaultOcrRequestConfig.temperature,
             think: Object.prototype.hasOwnProperty.call(rawOcr, 'think')
                 ? Boolean(rawOcr.think)
-                : baseAiConfig.think,
+                : this.defaultOcrRequestConfig.think,
             maxImages,
             maxTextChars,
             cacheEnabled: rawOcr.cache !== false,
