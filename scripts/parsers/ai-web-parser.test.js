@@ -4,8 +4,11 @@ const assert = require('node:assert/strict');
 const { AiWebParser } = require('./ai-web-parser');
 
 function normalizeUrl(url, baseUrl = 'https://furball.example/events') {
+  const value = String(url || '').trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value)) return value;
   try {
-    return new URL(String(url || '').trim(), baseUrl).toString();
+    return new URL(value, baseUrl || 'https://furball.example/events').toString();
   } catch (_) {
     return '';
   }
@@ -30,18 +33,16 @@ test('pairs nearby row-split event images to the matching multi-event segments',
           <div class="event-card-image"><img src="/images/event-2.jpg" alt="Furball Pool Party flyer" /></div>
         </section>
 
-        <section class="events-grid">
-          <article class="event-card-copy">
-            <p>July 10, 2026</p>
-            <h3>FURBALL BLACKOUT</h3>
-            <p>3 Dollar Bill</p>
-          </article>
-          <article class="event-card-copy">
-            <p>July 24, 2026</p>
-            <h3>FURBALL POOL PARTY</h3>
-            <p>Elsewhere Rooftop</p>
-          </article>
-        </section>
+        <article class="event-card-copy">
+          <p>July 10, 2026</p>
+          <h3>FURBALL BLACKOUT</h3>
+          <p>3 Dollar Bill</p>
+        </article>
+        <article class="event-card-copy">
+          <p>July 24, 2026</p>
+          <h3>FURBALL POOL PARTY</h3>
+          <p>Elsewhere Rooftop</p>
+        </article>
 
         <article class="event-card">
           <div class="event-card-image"><img src="/images/event-3.jpg" alt="Furball Summer Bash flyer" /></div>
