@@ -168,8 +168,11 @@ class PageCacheMaintenance {
     try {
       this.ensureCacheDir();
       const request = new Request(LOGO_URL);
+      request.timeoutInterval = 15;
       const image = await request.loadImage();
-      this.fm.writeImage(cachePath, image);
+      if (image) {
+        this.fm.writeImage(cachePath, image);
+      }
       return image;
     } catch (error) {
       console.log(`PageCacheMaintenance: Logo download failed: ${error.message}`);
@@ -242,11 +245,11 @@ class PageCacheMaintenance {
     return this.buildScriptableUrl(this.getSelfScriptName(), params);
   }
 
-  listDirectoryEntries(path) {
+  async listDirectoryEntries(path) {
     if (!this.fm.fileExists(path)) return [];
     try {
       try {
-        this.fm.downloadFileFromiCloud(path);
+        await this.fm.downloadFileFromiCloud(path);
       } catch (_) {}
       return this.fm.listContents(path) || [];
     } catch (error) {
@@ -255,15 +258,15 @@ class PageCacheMaintenance {
     }
   }
 
-  analyzeHostDirectory(hostName, hostPath, thresholdMs, nowMs, scope = null) {
-    const entryNames = this.listDirectoryEntries(hostPath);
+  async analyzeHostDirectory(hostName, hostPath, thresholdMs, nowMs, scope = null) {
+    const entryNames = await this.listDirectoryEntries(hostPath);
     const files = [];
     let oldFileCount = 0;
     let recentFileCount = 0;
     let oldestDate = null;
     let newestDate = null;
 
-    entryNames.forEach(entryName => {
+    for (const entryName of entryNames) {
       const entryPath = this.fm.joinPath(hostPath, entryName);
       let isDirectory = false;
       try {
@@ -271,7 +274,7 @@ class PageCacheMaintenance {
       } catch (_) {
         isDirectory = false;
       }
-      if (isDirectory || !String(entryName).toLowerCase().endsWith('.json')) return;
+      if (isDirectory || !String(entryName).toLowerCase().endsWith('.json')) continue;
 
       let modifiedAt = null;
       try {
@@ -304,7 +307,7 @@ class PageCacheMaintenance {
         ageDays,
         isOld
       });
-    });
+    }
 
     files.sort((left, right) => {
       const leftAge = Number.isFinite(left.ageDays) ? left.ageDays : -1;
@@ -328,13 +331,12 @@ class PageCacheMaintenance {
     };
   }
 
-  analyzeCacheScope(scope, days) {
+  async analyzeCacheScope(scope, days) {
     const nowMs = Date.now();
     const thresholdMs = days * 24 * 60 * 60 * 1000;
-    const hosts = [];
-    const rootEntries = this.listDirectoryEntries(scope.dir);
+    const rootEntries = await this.listDirectoryEntries(scope.dir);
 
-    rootEntries.forEach(entryName => {
+    const hostPromises = rootEntries.map(async entryName => {
       const entryPath = this.fm.joinPath(scope.dir, entryName);
       let isDirectory = false;
       try {
@@ -342,9 +344,11 @@ class PageCacheMaintenance {
       } catch (_) {
         isDirectory = false;
       }
-      if (!isDirectory) return;
-      hosts.push(this.analyzeHostDirectory(entryName, entryPath, thresholdMs, nowMs, scope));
+      if (!isDirectory) return null;
+      return this.analyzeHostDirectory(entryName, entryPath, thresholdMs, nowMs, scope);
     });
+
+    const hosts = (await Promise.all(hostPromises)).filter(Boolean);
 
     hosts.sort((left, right) => {
       if (right.oldFileCount !== left.oldFileCount) return right.oldFileCount - left.oldFileCount;
@@ -366,8 +370,9 @@ class PageCacheMaintenance {
     };
   }
 
-  analyzePageCache(days) {
-    const scopes = this.cacheScopes.map(scope => this.analyzeCacheScope(scope, days));
+  async analyzePageCache(days) {
+    const scopePromises = this.cacheScopes.map(scope => this.analyzeCacheScope(scope, days));
+    const scopes = await Promise.all(scopePromises);
     const hosts = scopes.reduce((allHosts, scope) => allHosts.concat(scope.hosts), []);
     hosts.sort((left, right) => {
       if (right.oldFileCount !== left.oldFileCount) return right.oldFileCount - left.oldFileCount;
@@ -457,7 +462,7 @@ class PageCacheMaintenance {
     const deleteHosts = this.parseBoolean(
       this.runtime.queryParameters?.deleteHosts || this.runtime.queryParameters?.pruneHosts
     );
-    const analysis = this.analyzePageCache(days);
+    const analysis = await this.analyzePageCache(days);
     if (analysis.oldFileCount === 0 && (!deleteHosts || analysis.removableHostCount === 0)) {
       return {
         days,
@@ -834,7 +839,8 @@ class PageCacheMaintenance {
     await WebView.loadHTML(html, null, null, true);
   }
 
-  async renderWidget(analysis) {
+  async renderWidget(days) {
+    const analysis = await this.analyzePageCache(days);
     const widget = new ListWidget();
     widget.backgroundColor = new Color(BRAND.primary);
     widget.setPadding(12, 12, 12, 12);
@@ -879,12 +885,12 @@ class PageCacheMaintenance {
     const maintenance = new PageCacheMaintenance();
     const days = maintenance.getSelectedDays();
     const actionResult = maintenance.runtime.runsInWidget ? null : await maintenance.maybeRunAction(days);
-    const analysis = maintenance.analyzePageCache(days);
 
     if (maintenance.runtime.runsInWidget) {
-      const widget = await maintenance.renderWidget(analysis);
+      const widget = await maintenance.renderWidget(days);
       Script.setWidget(widget);
     } else {
+      const analysis = await maintenance.analyzePageCache(days);
       await maintenance.renderApp(analysis, actionResult);
     }
   } catch (error) {
