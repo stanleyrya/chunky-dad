@@ -4559,11 +4559,20 @@ class ScriptableAdapter {
 
         const totalSegments = segmentUrlEntries.reduce((sum, [, segs]) => sum + segs.length, 0);
         const urlBlocks = segmentUrlEntries.map(([url, segs]) => {
-            const segmentItems = segs.map(seg =>
-                `<div style="padding:4px 8px; background:var(--background-light); border-left:3px solid var(--border-color); margin-bottom:4px; font-size:11px; font-family:monospace;"><span style="opacity:0.6;">Segment ${seg.index} (${seg.lineCount} lines):</span> ${this.escapeHtml(seg.preview)}</div>`
-            ).join('');
-            return `<div style="margin-bottom:10px;">
-                <div style="font-size:11px; font-family:monospace; opacity:0.7; margin-bottom:4px;">${this.escapeHtml(url)} — ${segs.length} segment(s)</div>
+            const segmentItems = segs.map(seg => {
+                const imageHtml = (Array.isArray(seg.imageUrls) && seg.imageUrls.length > 0)
+                    ? `<div style="margin-top:8px; display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
+                        ${seg.imageUrls.map(img => `<img src="${this.escapeHtml(img)}" style="height:80px; width:auto; border-radius:6px; border:1px solid var(--border-color); background:var(--background-primary); object-fit:cover;" onerror="this.style.display='none'">`).join('')}
+                       </div>`
+                    : '';
+                return `<div style="padding:8px; background:var(--background-light); border-left:3px solid var(--border-color); margin-bottom:6px; font-size:11px; font-family:monospace; border-radius:0 6px 6px 0;">
+                    <div style="margin-bottom:4px;"><span style="opacity:0.6; font-weight:bold;">Segment ${seg.index} (${seg.lineCount} lines):</span></div>
+                    <div style="line-height:1.4; color:var(--text-primary);">${this.escapeHtml(seg.preview)}</div>
+                    ${imageHtml}
+                </div>`;
+            }).join('');
+            return `<div style="margin-bottom:12px;">
+                <div style="font-size:11px; font-family:monospace; opacity:0.7; margin-bottom:6px; word-break:break-all; border-bottom:1px solid var(--border-color); padding-bottom:2px;">${this.escapeHtml(url)} — ${segs.length} segment(s)</div>
                 ${segmentItems}
             </div>`;
         }).join('');
