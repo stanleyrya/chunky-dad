@@ -675,8 +675,12 @@ class AiWebParser {
         const source = String(html || '');
         const sourceSegments = Array.isArray(segments) ? segments : [];
         if (!source || sourceSegments.length < 2) return sourceSegments;
-        const orderedPageImages = this.extractOrderedImageUrlsFromHtml(source, sourceUrl, sourceSegments.length + 2);
-        if (orderedPageImages.length < 2) return sourceSegments;
+        const pageImageRecords = this.extractOrderedImageRecordsFromHtml(
+            source,
+            sourceUrl,
+            Math.max(sourceSegments.length * 4, sourceSegments.length + 6)
+        );
+        if (pageImageRecords.length < 2) return sourceSegments;
 
         const primarySegmentImages = sourceSegments.map(segment => {
             const images = this.extractOrderedImageUrlsFromHtml(
@@ -693,8 +697,18 @@ class AiWebParser {
             return sourceSegments;
         }
 
+        const pageTextRecords = this.extractBodyPartRecords(source);
+        const segmentBounds = sourceSegments.map(segment => this.findMultiEventSegmentTextBounds(
+            source,
+            segment && Array.isArray(segment.lines) ? segment.lines : [],
+            pageTextRecords
+        ));
+        const matchedImageUrls = this.matchOrderedImagesToSegments(segmentBounds, pageImageRecords);
+        const orderedPageImages = pageImageRecords.map(record => record.url);
+        const fallbackSequentialImageUrls = orderedPageImages.slice(0, sourceSegments.length);
+
         return sourceSegments.map((segment, index) => {
-            const orderedImage = orderedPageImages[index];
+            const orderedImage = matchedImageUrls[index] || fallbackSequentialImageUrls[index];
             if (!orderedImage || !segment || typeof segment !== 'object') return segment;
             const existingImages = this.extractOrderedImageUrlsFromHtml(
                 segment && typeof segment.html === 'string' ? segment.html : '',
@@ -709,7 +723,111 @@ class AiWebParser {
         });
     }
 
-    extractOrderedImageUrlsFromHtml(html, sourceUrl = '', maxUrls = Infinity) {
+    matchOrderedImagesToSegments(segmentBounds, imageRecords) {
+        const boundsList = Array.isArray(segmentBounds) ? segmentBounds : [];
+        const records = Array.isArray(imageRecords) ? imageRecords : [];
+        if (boundsList.length === 0 || records.length === 0) return [];
+        if (!boundsList.some(bounds => bounds && Number.isFinite(bounds.rawStart) && Number.isFinite(bounds.rawEnd))) {
+            return [];
+        }
+
+        const betterState = (current, candidate) => {
+            if (!candidate) return current;
+            if (!current) return candidate;
+            if (candidate.matches !== current.matches) {
+                return candidate.matches > current.matches ? candidate : current;
+            }
+            if (candidate.cost !== current.cost) {
+                return candidate.cost < current.cost ? candidate : current;
+            }
+            return candidate.steps < current.steps ? candidate : current;
+        };
+
+        const dp = Array.from({ length: boundsList.length + 1 }, () => Array(records.length + 1).fill(null));
+        dp[0][0] = { matches: 0, cost: 0, steps: 0, prev: null, action: '' };
+
+        for (let segmentIndex = 0; segmentIndex <= boundsList.length; segmentIndex++) {
+            for (let imageIndex = 0; imageIndex <= records.length; imageIndex++) {
+                const state = dp[segmentIndex][imageIndex];
+                if (!state) continue;
+
+                if (segmentIndex < boundsList.length) {
+                    dp[segmentIndex + 1][imageIndex] = betterState(dp[segmentIndex + 1][imageIndex], {
+                        matches: state.matches,
+                        cost: state.cost,
+                        steps: state.steps + 1,
+                        prev: [segmentIndex, imageIndex],
+                        action: 'skip-segment'
+                    });
+                }
+
+                if (imageIndex < records.length) {
+                    dp[segmentIndex][imageIndex + 1] = betterState(dp[segmentIndex][imageIndex + 1], {
+                        matches: state.matches,
+                        cost: state.cost,
+                        steps: state.steps + 1,
+                        prev: [segmentIndex, imageIndex],
+                        action: 'skip-image'
+                    });
+                }
+
+                if (segmentIndex < boundsList.length && imageIndex < records.length) {
+                    const pairingCost = this.getSegmentImagePairingCost(boundsList[segmentIndex], records[imageIndex]);
+                    if (Number.isFinite(pairingCost)) {
+                        dp[segmentIndex + 1][imageIndex + 1] = betterState(dp[segmentIndex + 1][imageIndex + 1], {
+                            matches: state.matches + 1,
+                            cost: state.cost + pairingCost,
+                            steps: state.steps + 1,
+                            prev: [segmentIndex, imageIndex],
+                            action: 'match'
+                        });
+                    }
+                }
+            }
+        }
+
+        const matchedUrls = [];
+        let segmentIndex = boundsList.length;
+        let imageIndex = records.length;
+        let state = dp[segmentIndex][imageIndex];
+        while (state && state.prev) {
+            if (state.action === 'match') {
+                matchedUrls[segmentIndex - 1] = records[imageIndex - 1].url;
+            }
+            const [prevSegmentIndex, prevImageIndex] = state.prev;
+            segmentIndex = prevSegmentIndex;
+            imageIndex = prevImageIndex;
+            state = dp[segmentIndex][imageIndex];
+        }
+        return matchedUrls;
+    }
+
+    getSegmentImagePairingCost(segmentBounds, imageRecord) {
+        if (!segmentBounds || !imageRecord) return Infinity;
+        const segmentStart = Number(segmentBounds.rawStart);
+        const segmentEnd = Number(segmentBounds.rawEnd);
+        const imageStart = Number(imageRecord.start);
+        const rawImageEnd = Number(imageRecord.end);
+        const imageEnd = Number.isFinite(rawImageEnd) && rawImageEnd >= imageStart ? rawImageEnd : imageStart;
+        if (!Number.isFinite(segmentStart) || !Number.isFinite(segmentEnd) || !Number.isFinite(imageStart)) {
+            return Infinity;
+        }
+
+        if (imageStart <= segmentEnd && imageEnd >= segmentStart) {
+            return 0;
+        }
+        if (imageEnd <= segmentStart) {
+            const gap = segmentStart - imageEnd;
+            return gap <= 12000 ? gap : Infinity;
+        }
+        if (imageStart >= segmentEnd) {
+            const gap = imageStart - segmentEnd;
+            return gap <= 5000 ? gap + 2000 : Infinity;
+        }
+        return Infinity;
+    }
+
+    extractOrderedImageRecordsFromHtml(html, sourceUrl = '', maxUrls = Infinity) {
         const source = String(html || '');
         if (!source) return [];
         const limit = Number.isFinite(Number(maxUrls)) ? Math.max(0, Math.floor(Number(maxUrls))) : Infinity;
@@ -717,7 +835,7 @@ class AiWebParser {
 
         const results = [];
         const seen = new Set();
-        const addImageUrl = rawUrl => {
+        const addImageRecord = (rawUrl, start, end) => {
             const normalized = this.normalizeUrl(String(rawUrl || '').trim(), sourceUrl);
             if (!normalized) return;
             const unwrapped = this.unwrapImageProxyUrl(normalized);
@@ -725,7 +843,11 @@ class AiWebParser {
             if (!finalUrl || seen.has(finalUrl)) return;
             if (!this.hasSupportedImageFilenameAtEnd(finalUrl) && !this.hasLikelyImageUrl(finalUrl)) return;
             seen.add(finalUrl);
-            results.push(finalUrl);
+            results.push({
+                url: finalUrl,
+                start: Number.isFinite(Number(start)) ? Number(start) : -1,
+                end: Number.isFinite(Number(end)) ? Number(end) : (Number.isFinite(Number(start)) ? Number(start) : -1)
+            });
         };
 
         const attrPatterns = [
@@ -741,10 +863,10 @@ class AiWebParser {
                 if (pattern.source.includes('srcset')) {
                     attributeValue.split(',').forEach(part => {
                         const candidate = String(part || '').trim().split(/\s+/)[0];
-                        if (candidate) addImageUrl(candidate);
+                        if (candidate) addImageRecord(candidate, match.index, pattern.lastIndex);
                     });
                 } else {
-                    addImageUrl(attributeValue);
+                    addImageRecord(attributeValue, match.index, pattern.lastIndex);
                 }
                 if (results.length >= limit) return results.slice(0, limit);
             }
@@ -752,10 +874,17 @@ class AiWebParser {
 
         const rawCandidates = this.extractUrlCandidatesFromRawHtml(source);
         for (const candidate of rawCandidates) {
-            addImageUrl(candidate);
+            const rawUrl = candidate && typeof candidate === 'object' ? candidate.url : candidate;
+            addImageRecord(rawUrl, -1, -1);
             if (results.length >= limit) break;
         }
         return results.slice(0, limit);
+    }
+
+    extractOrderedImageUrlsFromHtml(html, sourceUrl = '', maxUrls = Infinity) {
+        return this.extractOrderedImageRecordsFromHtml(html, sourceUrl, maxUrls)
+            .map(record => record.url)
+            .filter(Boolean);
     }
     trimLeadingMultiEventNoise(lines) {
         const normalizedLines = (Array.isArray(lines) ? lines : [])
@@ -840,16 +969,13 @@ class AiWebParser {
             .filter(Boolean);
         if (!source || segmentLines.length === 0) return '';
 
-        const records = this.extractBodyPartRecords(source);
-        const matchedRecords = this.findBodyPartRecordsForLines(records, segmentLines);
-        if (matchedRecords.length === 0) return segmentLines.join('\n');
-
-        const firstStart = Math.min(...matchedRecords.map(record => record.rawStart).filter(value => Number.isFinite(value)));
-        const lastEnd = Math.max(...matchedRecords.map(record => record.rawEnd).filter(value => Number.isFinite(value)));
-        if (!Number.isFinite(firstStart) || !Number.isFinite(lastEnd) || lastEnd <= firstStart) {
+        const textBounds = this.findMultiEventSegmentTextBounds(source, segmentLines);
+        if (!textBounds) {
             return segmentLines.join('\n');
         }
 
+        const firstStart = textBounds.rawStart;
+        const lastEnd = textBounds.rawEnd;
         const rawStart = this.findMultiEventSegmentResourceStart(source, firstStart);
         // If we already captured an image block before the segment text, stop at the
         // text boundary so we do not accidentally absorb the next segment's image.
@@ -857,6 +983,30 @@ class AiWebParser {
             ? lastEnd
             : this.findMultiEventSegmentResourceEnd(source, lastEnd);
         return source.slice(rawStart, rawEnd);
+    }
+
+    findMultiEventSegmentTextBounds(html, lines, records = null) {
+        const source = String(html || '');
+        const segmentLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        if (!source || segmentLines.length === 0) return null;
+
+        const bodyPartRecords = Array.isArray(records) ? records : this.extractBodyPartRecords(source);
+        const matchedRecords = this.findBodyPartRecordsForLines(bodyPartRecords, segmentLines);
+        if (matchedRecords.length === 0) return null;
+
+        const firstStart = Math.min(...matchedRecords.map(record => record.rawStart).filter(value => Number.isFinite(value)));
+        const lastEnd = Math.max(...matchedRecords.map(record => record.rawEnd).filter(value => Number.isFinite(value)));
+        if (!Number.isFinite(firstStart) || !Number.isFinite(lastEnd) || lastEnd <= firstStart) {
+            return null;
+        }
+
+        return {
+            rawStart: firstStart,
+            rawEnd: lastEnd,
+            matchedRecords
+        };
     }
 
     findBodyPartRecordsForLines(records, lines) {
