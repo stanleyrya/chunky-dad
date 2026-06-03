@@ -151,18 +151,27 @@ class AiWebParser {
             if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
                 let discoveredSegments = null;
                 if (parserConfig.discoveryOnly === true && pageClassification === 'multi-event-page') {
-                    const segments = this.buildMultiEventSegments(html);
+                    const segments = this.buildMultiEventSegments(html, sourceUrl);
                     if (segments.length === 0) {
                         console.warn('🤖 AI Web: Segment discovery found no valid segments on multi-event page (check date/title signals and extraction limits)');
                     } else {
-                        discoveredSegments = segments.map((segment, i) => ({
-                            index: i + 1,
-                            lineCount: segment.lines.length,
-                            preview: segment.lines.slice(0, 3).join(' | ')
-                        }));
+                        discoveredSegments = segments.map((segment, i) => {
+                            const diagnostics = this.describeMultiEventSegment(segment, sourceUrl);
+                            return {
+                                index: i + 1,
+                                lineCount: diagnostics.lineCount,
+                                preview: diagnostics.preview,
+                                imageUrls: diagnostics.imageUrls,
+                                resourceLines: diagnostics.resourceLines
+                            };
+                        });
                         console.log(`🤖 AI Web: Segment discovery found ${segments.length} segment(s) on multi-event page`);
                         for (let i = 0; i < segments.length; i++) {
-                            console.log(`🤖 AI Web: Segment ${i + 1}/${segments.length} (${segments[i].lines.length} lines):\n${segments[i].lines.join('\n')}`);
+                            const diagnostics = this.describeMultiEventSegment(segments[i], sourceUrl);
+                            const resourceSummary = diagnostics.resourceLines.length > 0
+                                ? `\n${diagnostics.resourceLines.join('\n')}`
+                                : '';
+                            console.log(`🤖 AI Web: Segment ${i + 1}/${segments.length} (${diagnostics.lineCount} lines, images=${diagnostics.imageUrls.length}):\n${segments[i].lines.join('\n')}${resourceSummary}`);
                         }
                     }
                 }
@@ -207,7 +216,7 @@ class AiWebParser {
 
     async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
-        const segments = this.buildMultiEventSegments(html);
+        const segments = this.buildMultiEventSegments(html, htmlData && typeof htmlData.url === 'string' ? htmlData.url : '');
         if (segments.length === 0) {
             console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
             return [];
@@ -268,31 +277,30 @@ class AiWebParser {
     }
 
     buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments) {
-        const sourceHtml = htmlData && htmlData.html ? htmlData.html : '';
-        const pageTitle = this.extractTitlePart(sourceHtml);
-        const pageMetaParts = this.extractMetaParts(sourceHtml).slice(0, this.extractionLimits.multiEventContextMetaParts);
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
-        const resourceLines = this.extractMultiEventSegmentResourceLines(segmentHtml, sourceUrl);
+        const resourceLines = this.extractMultiEventSegmentResourceLines(
+            segmentHtml,
+            sourceUrl,
+            segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : []
+        );
         const contextLines = [
-            pageTitle ? `PAGE_TITLE: ${pageTitle}` : '',
-            ...pageMetaParts.map((part, metaIndex) => `PAGE_META_${metaIndex + 1}: ${part}`),
             `SEGMENT_INDEX: ${index + 1}/${totalSegments}`,
             ...resourceLines
         ].filter(Boolean);
         const segmentContent = segmentHtml || (segment && Array.isArray(segment.lines) ? segment.lines.join('\n') : '');
         return {
             ...htmlData,
-            html: `${contextLines.join('\n')}\n${segmentContent}`,
+            html: contextLines.length > 0 ? `${contextLines.join('\n')}\n${segmentContent}` : segmentContent,
             aiEvent: null,
             aiExtraction: null
         };
     }
 
-    buildMultiEventSegments(html) {
+    buildMultiEventSegments(html, sourceUrl = '') {
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
-            return structuredSegments;
+            return this.attachSequentialImageHintsToSegments(html, structuredSegments, sourceUrl);
         }
 
         const bodyParts = this.trimLeadingMultiEventNoise(
@@ -368,7 +376,7 @@ class AiWebParser {
             });
             if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
         }
-        return uniqueSegments;
+        return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl);
     }
 
 
@@ -643,6 +651,112 @@ class AiWebParser {
         }
         return groups;
     }
+
+    describeMultiEventSegment(segment, sourceUrl = '') {
+        const lines = segment && Array.isArray(segment.lines) ? segment.lines : [];
+        const resourceLines = this.extractMultiEventSegmentResourceLines(
+            segment && typeof segment.html === 'string' ? segment.html : '',
+            sourceUrl,
+            segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : []
+        );
+        const imageUrls = resourceLines
+            .filter(line => /^SEGMENT_IMAGE(?:_HINT)?_URL:/i.test(line))
+            .map(line => line.replace(/^SEGMENT_IMAGE(?:_HINT)?_URL:\s*/i, '').trim())
+            .filter(Boolean);
+        return {
+            lineCount: lines.length,
+            preview: lines.slice(0, 3).join(' | '),
+            imageUrls,
+            resourceLines
+        };
+    }
+
+    attachSequentialImageHintsToSegments(html, segments, sourceUrl = '') {
+        const source = String(html || '');
+        const sourceSegments = Array.isArray(segments) ? segments : [];
+        if (!source || sourceSegments.length < 2) return sourceSegments;
+        const orderedPageImages = this.extractOrderedImageUrlsFromHtml(source, sourceUrl, sourceSegments.length + 2);
+        if (orderedPageImages.length < 2) return sourceSegments;
+
+        const primarySegmentImages = sourceSegments.map(segment => {
+            const images = this.extractOrderedImageUrlsFromHtml(
+                segment && typeof segment.html === 'string' ? segment.html : '',
+                sourceUrl,
+                1
+            );
+            return images[0] || '';
+        });
+        const nonEmptyPrimaryImages = primarySegmentImages.filter(Boolean);
+        const hasMissingPrimaryImages = primarySegmentImages.some(url => !url);
+        const hasDuplicatePrimaryImages = new Set(nonEmptyPrimaryImages).size < nonEmptyPrimaryImages.length;
+        if (!hasMissingPrimaryImages && !hasDuplicatePrimaryImages) {
+            return sourceSegments;
+        }
+
+        return sourceSegments.map((segment, index) => {
+            const orderedImage = orderedPageImages[index];
+            if (!orderedImage || !segment || typeof segment !== 'object') return segment;
+            const existingImages = this.extractOrderedImageUrlsFromHtml(
+                segment && typeof segment.html === 'string' ? segment.html : '',
+                sourceUrl,
+                2
+            );
+            if (existingImages.includes(orderedImage)) return segment;
+            return {
+                ...segment,
+                imageHintUrls: [orderedImage]
+            };
+        });
+    }
+
+    extractOrderedImageUrlsFromHtml(html, sourceUrl = '', maxUrls = Infinity) {
+        const source = String(html || '');
+        if (!source) return [];
+        const limit = Number.isFinite(Number(maxUrls)) ? Math.max(0, Math.floor(Number(maxUrls))) : Infinity;
+        if (limit === 0) return [];
+
+        const results = [];
+        const seen = new Set();
+        const addImageUrl = rawUrl => {
+            const normalized = this.normalizeUrl(String(rawUrl || '').trim(), sourceUrl);
+            if (!normalized) return;
+            const unwrapped = this.unwrapImageProxyUrl(normalized);
+            const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
+            if (!finalUrl || seen.has(finalUrl)) return;
+            if (!this.hasSupportedImageFilenameAtEnd(finalUrl) && !this.hasLikelyImageUrl(finalUrl)) return;
+            seen.add(finalUrl);
+            results.push(finalUrl);
+        };
+
+        const attrPatterns = [
+            /\b(?:src|data-src|data-lazy-src|poster|content)=["']([^"']+)["']/gi,
+            /\bsrcset=["']([^"']+)["']/gi
+        ];
+        for (const pattern of attrPatterns) {
+            pattern.lastIndex = 0;
+            let match;
+            while ((match = pattern.exec(source)) !== null) {
+                const attributeValue = String(match[1] || '').trim();
+                if (!attributeValue) continue;
+                if (pattern.source.includes('srcset')) {
+                    attributeValue.split(',').forEach(part => {
+                        const candidate = String(part || '').trim().split(/\s+/)[0];
+                        if (candidate) addImageUrl(candidate);
+                    });
+                } else {
+                    addImageUrl(attributeValue);
+                }
+                if (results.length >= limit) return results.slice(0, limit);
+            }
+        }
+
+        const rawCandidates = this.extractUrlCandidatesFromRawHtml(source);
+        for (const candidate of rawCandidates) {
+            addImageUrl(candidate);
+            if (results.length >= limit) break;
+        }
+        return results.slice(0, limit);
+    }
     trimLeadingMultiEventNoise(lines) {
         const normalizedLines = (Array.isArray(lines) ? lines : [])
             .map(line => this.normalizeWhitespace(line))
@@ -841,9 +955,8 @@ class AiWebParser {
         return match ? match.index : -1;
     }
 
-    extractMultiEventSegmentResourceLines(html, sourceUrl = '') {
+    extractMultiEventSegmentResourceLines(html, sourceUrl = '', hintedImageUrls = []) {
         const source = String(html || '');
-        if (!source) return [];
         const lines = [];
         const seen = new Set();
         const addLine = (label, rawUrl) => {
@@ -855,9 +968,16 @@ class AiWebParser {
             lines.push(`${label}: ${finalUrl}`);
         };
 
-        for (const imageUrl of this.buildImageEvidenceContext({ html: source, url: sourceUrl })) {
-            addLine('SEGMENT_IMAGE_URL', imageUrl);
+        for (const imageUrl of Array.isArray(hintedImageUrls) ? hintedImageUrls : []) {
+            addLine('SEGMENT_IMAGE_HINT_URL', imageUrl);
             if (lines.length >= 4) break;
+        }
+
+        if (lines.length === 0) {
+            for (const imageUrl of this.extractOrderedImageUrlsFromHtml(source, sourceUrl, 4)) {
+                addLine('SEGMENT_IMAGE_URL', imageUrl);
+                if (lines.length >= 4) break;
+            }
         }
 
         let linkCount = 0;
@@ -1826,7 +1946,10 @@ class AiWebParser {
             'mixcloud.com',
             'light-tech.online',
             'rolloverfx.com',
-            'armra.com'
+            'armra.com',
+            'camplife.com',
+            'madbear.org',
+            'cloudbeds.com'
         ];
 
         const lowerUrl = url.toLowerCase();
@@ -4361,29 +4484,107 @@ ${String(rawResponse || '')}`;
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
             htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
         );
-        const title = this.firstNonEmpty(aiEvent.title, aiEvent.name, aiEvent.summary);
-        const description = this.firstNonEmpty(aiEvent.description, aiEvent.desc, '');
-        const bar = this.firstNonEmpty(aiEvent.bar, aiEvent.venue, '');
-        const address = this.firstNonEmpty(aiEvent.address, aiEvent.addr, '');
-        const location = this.firstNonEmpty(aiEvent.location, aiEvent.coords, '');
-        const city = this.firstNonEmpty(aiEvent.city, parserConfig && parserConfig.city, '');
+        const title = this.firstNonEmpty(
+            aiEvent.title,
+            aiEvent.name,
+            aiEvent.summary,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
+        );
+        const description = this.firstNonEmpty(
+            aiEvent.description,
+            aiEvent.desc,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['description', 'desc'], aiEvent),
+            ''
+        );
+        const bar = this.firstNonEmpty(
+            aiEvent.bar,
+            aiEvent.venue,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['bar', 'venue'], aiEvent),
+            ''
+        );
+        const address = this.firstNonEmpty(
+            aiEvent.address,
+            aiEvent.addr,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['address', 'addr'], aiEvent),
+            ''
+        );
+        const location = this.firstNonEmpty(
+            aiEvent.location,
+            aiEvent.coords,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['location', 'coords'], aiEvent),
+            ''
+        );
+        const city = this.firstNonEmpty(
+            aiEvent.city,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['city'], aiEvent),
+            parserConfig && parserConfig.city,
+            ''
+        );
         const timezone = this.firstNonEmpty(
             aiEvent.timezone,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['timezone'], aiEvent),
             this.getTimezoneForCity(city, cityConfig),
             this.getTimezoneForCity(parserConfig && parserConfig.city, cityConfig),
             ''
         );
-        const url = this.firstNonEmpty(aiEvent.url, aiEvent.web, aiEvent.website, '');
-        const ticketUrl = this.firstNonEmpty(aiEvent.ticketUrl, aiEvent.tickets, '');
-        const instagram = this.firstNonEmpty(scrapedLinks.instagram, aiEvent.instagram, aiEvent.insta, '');
-        const facebook = this.firstNonEmpty(scrapedLinks.facebook, aiEvent.facebook, aiEvent.fb, '');
-        const gmaps = this.firstNonEmpty(scrapedLinks.gmaps, aiEvent.gmaps, '');
-        const image = this.firstNonEmpty(aiEvent.image, aiEvent.img, '');
-        const cover = this.firstNonEmpty(aiEvent.cover, '');
-        const shortName = this.firstNonEmpty(aiEvent.shortName, aiEvent.short, '');
+        const url = this.firstNonEmpty(
+            aiEvent.url,
+            aiEvent.web,
+            aiEvent.website,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['url', 'web', 'website'], aiEvent),
+            ''
+        );
+        const ticketUrl = this.firstNonEmpty(
+            aiEvent.ticketUrl,
+            aiEvent.tickets,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['ticketUrl', 'tickets'], aiEvent),
+            ''
+        );
+        const instagram = this.firstNonEmpty(
+            scrapedLinks.instagram,
+            aiEvent.instagram,
+            aiEvent.insta,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['instagram', 'insta'], aiEvent),
+            ''
+        );
+        const facebook = this.firstNonEmpty(
+            scrapedLinks.facebook,
+            aiEvent.facebook,
+            aiEvent.fb,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['facebook', 'fb'], aiEvent),
+            ''
+        );
+        const gmaps = this.firstNonEmpty(
+            scrapedLinks.gmaps,
+            aiEvent.gmaps,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['gmaps'], aiEvent),
+            ''
+        );
+        const image = this.firstNonEmpty(
+            aiEvent.image,
+            aiEvent.img,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['image', 'img'], aiEvent),
+            ''
+        );
+        const cover = this.firstNonEmpty(
+            aiEvent.cover,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['cover'], aiEvent),
+            ''
+        );
+        const shortName = this.firstNonEmpty(
+            aiEvent.shortName,
+            aiEvent.short,
+            this.getResolvedParserMetadataFieldValue(parserConfig, ['shortName', 'short'], aiEvent),
+            ''
+        );
         const aiPrompts = Array.isArray(aiEvent.__aiPrompts) ? aiEvent.__aiPrompts.filter(entry => entry && entry.prompt) : [];
         const recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields)
-            ? this.normalizeRruleValue(this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.rrule, ''))
+            ? this.normalizeRruleValue(this.firstNonEmpty(
+                aiEvent.recurrenceRule,
+                aiEvent.rrule,
+                this.getResolvedParserMetadataFieldValue(parserConfig, ['recurrenceRule', 'rrule'], aiEvent),
+                ''
+            ))
             : '';
 
         const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
@@ -4424,13 +4625,86 @@ ${String(rawResponse || '')}`;
         if (parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object') {
             Object.keys(parserConfig.metadata).forEach(key => {
                 const metaValue = parserConfig.metadata[key];
-                if (typeof metaValue === 'object' && metaValue !== null && 'value' in metaValue) {
-                    event[key] = metaValue.value;
+                const resolvedValue = this.resolveParserMetadataValue(metaValue, event);
+                if (resolvedValue !== null && resolvedValue !== undefined && String(resolvedValue).trim()) {
+                    event[key] = resolvedValue;
                 }
             });
         }
 
         return event;
+    }
+
+    getResolvedParserMetadataFieldValue(parserConfig, fieldNames, eventContext = null) {
+        const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object'
+            ? parserConfig.metadata
+            : null;
+        if (!metadata) return '';
+        const candidates = Array.isArray(fieldNames) ? fieldNames : [fieldNames];
+        for (const fieldName of candidates) {
+            if (!Object.prototype.hasOwnProperty.call(metadata, fieldName)) continue;
+            const resolved = this.resolveParserMetadataValue(metadata[fieldName], eventContext);
+            if (resolved === null || resolved === undefined) continue;
+            const text = String(resolved).trim();
+            if (text) return text;
+        }
+        return '';
+    }
+
+    resolveParserMetadataValue(metaValue, eventContext = null) {
+        if (metaValue === null || metaValue === undefined) return undefined;
+        if (typeof metaValue !== 'object') return metaValue;
+        const hasValue = Object.prototype.hasOwnProperty.call(metaValue, 'value');
+        const hasDefaultValue = Object.prototype.hasOwnProperty.call(metaValue, 'defaultValue');
+        const fallbackValue = hasDefaultValue ? metaValue.defaultValue : (hasValue ? metaValue.value : undefined);
+        if (!Array.isArray(metaValue.conditionalValues) || metaValue.conditionalValues.length === 0) {
+            return fallbackValue;
+        }
+        const searchText = this.buildParserMetadataSearchText(eventContext);
+        if (!searchText) return fallbackValue;
+        for (const condition of metaValue.conditionalValues) {
+            if (!condition || typeof condition !== 'object') continue;
+            if (!Object.prototype.hasOwnProperty.call(condition, 'value')) continue;
+            const keywords = this.normalizeParserMetadataKeywords(condition.keywords || []);
+            if (keywords.length === 0) continue;
+            if (keywords.some(keyword => searchText.includes(keyword))) {
+                return condition.value;
+            }
+        }
+        return fallbackValue;
+    }
+
+    normalizeParserMetadataKeywords(keywords) {
+        const keywordList = Array.isArray(keywords) ? keywords : [keywords];
+        return keywordList
+            .map(keyword => String(keyword || '').trim().toLowerCase())
+            .filter(Boolean);
+    }
+
+    buildParserMetadataSearchText(eventContext) {
+        const visited = new Set();
+        const parts = [];
+        const collect = value => {
+            if (value === null || value === undefined) return;
+            const valueType = typeof value;
+            if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
+                const normalized = String(value).trim().toLowerCase();
+                if (normalized) parts.push(normalized);
+                return;
+            }
+            if (valueType !== 'object' || visited.has(value)) return;
+            visited.add(value);
+            if (Array.isArray(value)) {
+                value.forEach(collect);
+                return;
+            }
+            Object.keys(value).forEach(key => {
+                if (String(key || '').startsWith('_')) return;
+                collect(value[key]);
+            });
+        };
+        collect(eventContext);
+        return parts.join(' ');
     }
 
     firstNonEmpty(...values) {
