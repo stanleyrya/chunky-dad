@@ -875,6 +875,7 @@ class ScriptableAdapter {
                 statusCode: cached.statusCode || 200,
                 headers: cached.headers || {},
                 fetchedAt: cached.fetchedAt || null,
+                imageAnalysis: cached.imageAnalysis || null,
                 cachePath
             };
         } catch (error) {
@@ -900,7 +901,8 @@ class ScriptableAdapter {
             statusCode: responseData.statusCode || 200,
             headers: responseData.headers || {},
             fetchState: 'downloaded',
-            html: responseData.html
+            html: responseData.html,
+            imageAnalysis: responseData.imageAnalysis || null
         };
 
         try {

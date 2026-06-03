@@ -65,7 +65,10 @@ class SharedCore {
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
         this.loggedWarnings = new Set();
         this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
-        
+
+        // CDN patterns for normalization
+        this.wixMediaRegex = /^https?:\/\/static\.wixstatic\.com\/media\/([^/]+)/i;
+
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
             {
@@ -165,8 +168,22 @@ class SharedCore {
      * @param {string|null} html - Raw HTML of the page (used only when URL patterns don't match).
      * @returns {'event-page'|'link-aggregator'|'multi-event-page'|'ad'|'unknown'}
      */
-    classifyPage(url, html) {
-        // 1. URL pattern rules (deterministic, no HTML needed)
+    classifyPage(url, html, imageAnalysis = null) {
+        // 1. Image analysis classification (high priority signals)
+        if (imageAnalysis && imageAnalysis.summary) {
+            const summary = imageAnalysis.summary;
+            if (summary.classifications['multi-event promotional art'] > 0) {
+                return 'multi-event-page';
+            }
+            if (summary.classifications['ad'] > 0 && summary.topClassification === 'ad' && summary.totalConfidence > 0.8) {
+                return 'ad';
+            }
+            if (summary.classifications['event promotional art'] > 0 && summary.topClassification === 'event promotional art') {
+                return 'event-page';
+            }
+        }
+
+        // 2. URL pattern rules (deterministic, no HTML needed)
         if (url) {
             for (const rule of this.pageClassificationRules) {
                 if (this.pageClassificationRuleMatchesUrl(rule, url)) {
@@ -681,6 +698,27 @@ class SharedCore {
                         urlDiscoveryDepth: Math.max(0, maxDepth - currentDepth)
                     };
 
+                // Perform image analysis on promising pages if not already in cache
+                const aiParser = parsers['ai-web'];
+                if (aiParser && typeof aiParser.getOcrConfig === 'function' && !shouldUseInlineInput && htmlData.html && !htmlData.imageAnalysis) {
+                    const ocrConfig = aiParser.getOcrConfig(perPageParserConfig, mainConfig?.config?.ai);
+                    if (ocrConfig.enabled) {
+                        const imageAnalysis = await this.analyzePageImages(htmlData, ocrConfig, aiParser, displayAdapter);
+                        if (imageAnalysis) {
+                            htmlData.imageAnalysis = imageAnalysis;
+                            // Persist the updated page cache with image analysis results
+                            if (typeof httpAdapter.writeCachedPage === 'function') {
+                                const pageCacheConfig = typeof httpAdapter.getPageCacheConfig === 'function'
+                                    ? httpAdapter.getPageCacheConfig()
+                                    : { enabled: true, ttlDays: 7 };
+                                if (pageCacheConfig.enabled) {
+                                    await httpAdapter.writeCachedPage(url, htmlData, pageCacheConfig);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 const { pageClassification, parseResult, urlParserName } = await this.parsePageForCrawl({
                     url,
                     htmlData,
@@ -825,7 +863,7 @@ class SharedCore {
         logClassification = true,
         logParserSwitch = true
     }) {
-        const pageClassification = this.classifyPage(url, htmlData.html);
+        const pageClassification = this.classifyPage(url, htmlData.html, htmlData.imageAnalysis);
         if (logClassification) {
             await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
         }
@@ -955,6 +993,188 @@ class SharedCore {
         if (key) {
             processedUrls.add(key);
         }
+    }
+
+    // Normalize CDN image URLs to identify duplicate media at different resolutions.
+    // Example: Wix fill URLs with different w_XXX,h_YYY parameters.
+    normalizeCdnImageUrl(url) {
+        if (!url || typeof url !== 'string') return url;
+
+        // Wix Media Normalization
+        const wixMatch = url.match(this.wixMediaRegex);
+        if (wixMatch) {
+            const mediaId = wixMatch[1];
+            // Return base Wix media URL without transform parameters
+            return `https://static.wixstatic.com/media/${mediaId}`;
+        }
+
+        // Generic pattern for other CDNs (SquareSpace, Shopify, etc. often use query params for sizing)
+        try {
+            const parsed = this.parseUrl(url);
+            if (parsed && (parsed.hostname.includes('squarespace.com') ||
+                           parsed.hostname.includes('shopify.com') ||
+                           parsed.hostname.includes('wp.com') ||
+                           parsed.hostname.includes('cloudinary.com'))) {
+                // Return URL without query string for basic deduplication
+                return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+            }
+        } catch (_) {}
+
+        return url;
+    }
+
+    // Extract potential resolution info from image URL (best effort)
+    getImageResolutionScore(url) {
+        if (!url || typeof url !== 'string') return 0;
+
+        // Wix: look for w_XXX,h_YYY
+        const wixWidthMatch = url.match(/w_(\d+)/);
+        const wixHeightMatch = url.match(/h_(\d+)/);
+        if (wixWidthMatch || wixHeightMatch) {
+            const w = parseInt(wixWidthMatch ? wixWidthMatch[1] : '0', 10);
+            const h = parseInt(wixHeightMatch ? wixHeightMatch[1] : '0', 10);
+            return w * h;
+        }
+
+        // Generic query param width/height
+        const genericWidthMatch = url.match(/[?&](width|w)=(\d+)/i);
+        const genericHeightMatch = url.match(/[?&](height|h)=(\d+)/i);
+        if (genericWidthMatch || genericHeightMatch) {
+            const w = parseInt(genericWidthMatch ? genericWidthMatch[2] : '0', 10);
+            const h = parseInt(genericHeightMatch ? genericHeightMatch[2] : '0', 10);
+            return w * h;
+        }
+
+        return 0;
+    }
+
+    // Extract and rank useful images from HTML.
+    // Returns an array of image URLs sorted by potential usefulness.
+    extractUsefulImages(html, sourceUrl) {
+        if (!html) return [];
+
+        const imageRecords = new Map(); // normalizedUrl -> { url, score, resolution }
+
+        // 1. Extract from meta tags (og:image, twitter:image)
+        const metaPattern = /<meta\b[^>]*(?:property|name)\s*=\s*["'](?:og:image|twitter:image)["'][^>]*content\s*=\s*["']([^"']+)["']/gi;
+        let match;
+        while ((match = metaPattern.exec(html)) !== null) {
+            const rawUrl = match[1];
+            const url = this.normalizeUrl(rawUrl, sourceUrl);
+            if (url) {
+                this.addImageToUsefulMap(imageRecords, url, 100); // Base score for meta images
+            }
+        }
+
+        // 2. Extract from <img> tags
+        const imgPattern = /<img\b[^>]*src\s*=\s*["']([^"']+)["']/gi;
+        while ((match = imgPattern.exec(html)) !== null) {
+            const rawUrl = match[1];
+            const url = this.normalizeUrl(rawUrl, sourceUrl);
+            if (url) {
+                this.addImageToUsefulMap(imageRecords, url, 0); // Base score for body images
+            }
+        }
+
+        // 3. Extract from background-image in style attributes
+        const bgImgPattern = /style\s*=\s*["'][^"']*background-image\s*:\s*url\((['"]?)([^'")]*)\1\)/gi;
+        while ((match = bgImgPattern.exec(html)) !== null) {
+            const rawUrl = match[2];
+            const url = this.normalizeUrl(rawUrl, sourceUrl);
+            if (url) {
+                this.addImageToUsefulMap(imageRecords, url, -10); // Lower base score for background images
+            }
+        }
+
+        // Sort by score
+        return Array.from(imageRecords.values())
+            .sort((a, b) => b.score - a.score)
+            .map(record => record.url);
+    }
+
+    addImageToUsefulMap(map, url, baseScore) {
+        // Skip common UI elements and small icons
+        if (url.includes('favicon') || url.includes('logo') || url.includes('icon') ||
+            url.includes('pixel') || url.includes('spacer') || url.includes('/loading')) {
+            return;
+        }
+
+        const normalizedUrl = this.normalizeCdnImageUrl(url);
+        const resolution = this.getImageResolutionScore(url);
+
+        let score = baseScore;
+
+        // Keyword bonus
+        const keywordPattern = /(poster|flyer|event|promo|art|large|full|big)/i;
+        if (keywordPattern.test(url)) {
+            score += 50;
+        }
+
+        // Resolution bonus (prefer larger images)
+        if (resolution > 1000000) score += 40;      // > 1000x1000
+        else if (resolution > 250000) score += 20;  // > 500x500
+        else if (resolution > 10000) score += 5;    // > 100x100
+        else if (resolution > 0) score -= 20;       // tiny images
+
+        const existing = map.get(normalizedUrl);
+        if (!existing || resolution > existing.resolution || (resolution === existing.resolution && score > existing.score)) {
+            map.set(normalizedUrl, { url, score, resolution });
+        }
+    }
+
+    async analyzePageImages(htmlData, ocrConfig, aiParser, displayAdapter) {
+        const sourceUrl = htmlData.url;
+        const usefulImages = this.extractUsefulImages(htmlData.html, sourceUrl);
+
+        if (usefulImages.length === 0) return null;
+
+        // Take the top images based on our ranking
+        const maxImages = Math.min(usefulImages.length, ocrConfig.maxImages || 2);
+        const imagesToAnalyze = usefulImages.slice(0, maxImages);
+
+        const analysisResults = [];
+        for (const imageUrl of imagesToAnalyze) {
+            try {
+                const ocrResult = await aiParser.getOcrTextForImage(imageUrl, ocrConfig, 'page-analysis');
+                if (ocrResult) {
+                    analysisResults.push(ocrResult);
+                }
+            } catch (error) {
+                await displayAdapter.logWarn(`SYSTEM: Image analysis failed for ${imageUrl}: ${error.message}`);
+            }
+        }
+
+        if (analysisResults.length === 0) return null;
+
+        return {
+            images: analysisResults,
+            summary: this.summarizeImageAnalysis(analysisResults)
+        };
+    }
+
+    summarizeImageAnalysis(results) {
+        const summary = {
+            classifications: {},
+            totalConfidence: 0,
+            hasText: false,
+            topClassification: null
+        };
+
+        let maxConfidence = -1;
+
+        results.forEach(res => {
+            const cls = res.classification || 'unknown';
+            summary.classifications[cls] = (summary.classifications[cls] || 0) + 1;
+            summary.totalConfidence += res.confidence || 0;
+            if (res.text && res.text.trim()) summary.hasText = true;
+
+            if (res.confidence > maxConfidence) {
+                maxConfidence = res.confidence;
+                summary.topClassification = cls;
+            }
+        });
+
+        return summary;
     }
 
     getUrlDedupeKey(url) {

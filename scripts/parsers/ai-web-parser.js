@@ -112,7 +112,7 @@ class AiWebParser {
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
         this.defaultOcrModel = 'qwen2.5vl:3b';
-        this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears. Return a JSON object with a single key 'text' containing the full extracted text, preserving line breaks as \\n. Do not add commentary.";
+        this.defaultOcrPrompt = "Analyze this image from an event website and extract its text and purpose. Return a JSON object with these keys:\n- text: Full extracted text exactly as it appears, preserving line breaks as \\n.\n- classification: One of: 'background image', 'title', 'ad', 'event promotional art', 'multi-event promotional art'.\n- confidence: A number from 0 to 1 indicating your classification confidence.\nDo not add commentary.";
         this.defaultOcrRequestConfig = {
             timeoutSeconds: 300,
             keepAlive: '5m',
@@ -151,7 +151,7 @@ class AiWebParser {
             if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
                 let discoveredSegments = null;
                 if (parserConfig.discoveryOnly === true && pageClassification === 'multi-event-page') {
-                    const segments = this.buildMultiEventSegments(html, sourceUrl);
+                    const segments = this.buildMultiEventSegments(htmlData, sourceUrl);
                     if (segments.length === 0) {
                         console.warn('🤖 AI Web: Segment discovery found no valid segments on multi-event page (check date/title signals and extraction limits)');
                     } else {
@@ -215,8 +215,7 @@ class AiWebParser {
     }
 
     async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields) {
-        const html = htmlData && htmlData.html ? htmlData.html : '';
-        const segments = this.buildMultiEventSegments(html, htmlData && typeof htmlData.url === 'string' ? htmlData.url : '');
+        const segments = this.buildMultiEventSegments(htmlData, htmlData && typeof htmlData.url === 'string' ? htmlData.url : '');
         if (segments.length === 0) {
             console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
             return [];
@@ -284,9 +283,22 @@ class AiWebParser {
             sourceUrl,
             segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : []
         );
+
+        // Include OCR text for hinted images to help AI context
+        const ocrLines = [];
+        if (htmlData.imageAnalysis && Array.isArray(htmlData.imageAnalysis.images) && Array.isArray(segment.imageHintUrls)) {
+            const hintedSet = new Set(segment.imageHintUrls);
+            htmlData.imageAnalysis.images.forEach(img => {
+                if (hintedSet.has(img.imageUrl) && img.text) {
+                    ocrLines.push(`IMAGE_OCR_TEXT (${img.imageUrl}): ${img.text.replace(/\n/g, ' ')}`);
+                }
+            });
+        }
+
         const contextLines = [
             `SEGMENT_INDEX: ${index + 1}/${totalSegments}`,
-            ...resourceLines
+            ...resourceLines,
+            ...ocrLines
         ].filter(Boolean);
         const segmentContent = segmentHtml || (segment && Array.isArray(segment.lines) ? segment.lines.join('\n') : '');
         return {
@@ -297,10 +309,11 @@ class AiWebParser {
         };
     }
 
-    buildMultiEventSegments(html, sourceUrl = '') {
+    buildMultiEventSegments(htmlData, sourceUrl = '') {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
-            return this.attachSequentialImageHintsToSegments(html, structuredSegments, sourceUrl);
+            return this.attachSequentialImageHintsToSegments(htmlData, structuredSegments, sourceUrl);
         }
 
         const bodyParts = this.trimLeadingMultiEventNoise(
@@ -376,7 +389,7 @@ class AiWebParser {
             });
             if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
         }
-        return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl);
+        return this.attachSequentialImageHintsToSegments(htmlData, uniqueSegments, sourceUrl);
     }
 
 
@@ -671,7 +684,8 @@ class AiWebParser {
         };
     }
 
-    attachSequentialImageHintsToSegments(html, segments, sourceUrl = '') {
+    attachSequentialImageHintsToSegments(htmlData, segments, sourceUrl = '') {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
         const source = String(html || '');
         const sourceSegments = Array.isArray(segments) ? segments : [];
         if (!source || sourceSegments.length < 2) return sourceSegments;
@@ -707,8 +721,25 @@ class AiWebParser {
         const orderedPageImages = pageImageRecords.map(record => record.url);
         const fallbackSequentialImageUrls = orderedPageImages.slice(0, sourceSegments.length);
 
+        // Integrate image analysis results as high-confidence hints
+        const analyzedImages = htmlData.imageAnalysis && Array.isArray(htmlData.imageAnalysis.images)
+            ? htmlData.imageAnalysis.images
+            : [];
+
         return sourceSegments.map((segment, index) => {
-            const orderedImage = matchedImageUrls[index] || fallbackSequentialImageUrls[index];
+            let orderedImage = matchedImageUrls[index] || fallbackSequentialImageUrls[index];
+
+            // If OCR text matches segment content, prefer that image
+            const segmentText = segment.lines.join(' ').toLowerCase();
+            const ocrMatch = analyzedImages.find(img => {
+                if (!img.text) return false;
+                const words = img.text.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+                return words.some(w => segmentText.includes(w));
+            });
+            if (ocrMatch) {
+                orderedImage = ocrMatch.imageUrl;
+            }
+
             if (!orderedImage || !segment || typeof segment !== 'object') return segment;
             const existingImages = this.extractOrderedImageUrlsFromHtml(
                 segment && typeof segment.html === 'string' ? segment.html : '',
@@ -1646,13 +1677,13 @@ class AiWebParser {
                 rawPayload = await runtime.fs.promises.readFile(cachePath, 'utf8');
             }
             const cached = JSON.parse(rawPayload);
-            const responseText = cached && cached.response && typeof cached.response.text === 'string'
-                ? cached.response.text
-                : (typeof cached.text === 'string' ? cached.text : '');
-            if (!responseText) return null;
+            const response = (cached && cached.response && typeof cached.response === 'object')
+                ? cached.response
+                : (typeof cached.text === 'string' ? { text: cached.text } : null);
+            if (!response) return null;
             return {
                 imageUrl: cached.url || normalizedUrl,
-                text: responseText,
+                ...response,
                 cachePath,
                 cached: true
             };
@@ -1665,10 +1696,9 @@ class AiWebParser {
         }
     }
 
-    async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '') {
+    async writeCachedOcrResult(imageUrl, ocrConfig = {}, ocrData = {}) {
         if (!ocrConfig.cacheEnabled) return null;
-        const resultText = String(text || '').trim();
-        if (!resultText) return null;
+        if (!ocrData || typeof ocrData !== 'object') return null;
         const runtime = this.getOcrCacheRuntime();
         if (!runtime) return null;
         const { normalizedUrl, hostDir, fileName, signatureHash } = this.getOcrCachePathParts(imageUrl, ocrConfig);
@@ -1689,9 +1719,7 @@ class AiWebParser {
                     keepAlive: String(ocrConfig.keepAlive || '')
                 }
             },
-            response: {
-                text: resultText
-            }
+            response: ocrData
         };
 
         try {
@@ -1753,11 +1781,20 @@ class AiWebParser {
 
     parseOcrResponse(rawText) {
         const parsed = this.parseAiEventResponse(rawText);
-        const text = parsed && typeof parsed.text === 'string' ? parsed.text : '';
+        if (!parsed) return null;
+
+        const text = typeof parsed.text === 'string' ? parsed.text : '';
         const normalizedText = text
             .replace(/\r\n?/g, '\n')
             .trim();
-        return this.isLikelyEmptyOcrText(normalizedText) ? '' : normalizedText;
+
+        if (this.isLikelyEmptyOcrText(normalizedText)) {
+            parsed.text = '';
+        } else {
+            parsed.text = normalizedText;
+        }
+
+        return parsed;
     }
 
     isLikelyEmptyOcrText(text) {
@@ -1787,17 +1824,22 @@ class AiWebParser {
         return candidates.slice(0, Math.max(1, Number(ocrConfig.maxImages) || 1));
     }
 
-    buildOcrSnippet(imageUrl, text) {
+    buildOcrSnippet(imageUrl, ocrData) {
+        const text = ocrData && typeof ocrData.text === 'string' ? ocrData.text : '';
+        const type = ocrData && typeof ocrData.classification === 'string' ? ocrData.classification : 'unknown';
+        const confidence = ocrData && typeof ocrData.confidence === 'number' ? ocrData.confidence : 0;
+
         return [
             `OCR_IMAGE_URL: ${String(imageUrl || '').trim()}`,
+            `OCR_IMAGE_TYPE: ${type} (confidence: ${confidence})`,
             'OCR_IMAGE_TEXT',
-            String(text || '').trim()
+            text.trim()
         ].filter(Boolean).join('\n');
     }
 
     async getOcrTextForImage(imageUrl, ocrConfig = {}, passLabel = 'ocr') {
         const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
-        if (cached && cached.text) {
+        if (cached && (cached.text || cached.classification)) {
             console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
             return cached;
         }
@@ -1820,15 +1862,15 @@ class AiWebParser {
         };
         const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, ocrConfig.prompt);
         if (!rawResponse) return null;
-        const text = this.parseOcrResponse(rawResponse);
-        if (!text) {
-            console.warn(`🤖 AI Web: OCR response for ${imageUrl} did not include text`);
+        const ocrData = this.parseOcrResponse(rawResponse);
+        if (!ocrData) {
+            console.warn(`🤖 AI Web: OCR response for ${imageUrl} was not valid JSON`);
             return null;
         }
-        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, text);
+        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, ocrData);
         return {
             imageUrl,
-            text,
+            ...ocrData,
             cachePath,
             cached: false
         };
@@ -1897,10 +1939,10 @@ class AiWebParser {
                     });
                     continue;
                 }
-                const trimmedText = ocrResult.text.length > ocrConfig.maxTextChars
+                const trimmedText = (ocrResult.text || '').length > ocrConfig.maxTextChars
                     ? `${ocrResult.text.slice(0, ocrConfig.maxTextChars)}…`
-                    : ocrResult.text;
-                snippets.push(this.buildOcrSnippet(imageUrl, trimmedText));
+                    : (ocrResult.text || '');
+                snippets.push(this.buildOcrSnippet(imageUrl, { ...ocrResult, text: trimmedText }));
                 diagnostics.processedImageCount += 1;
                 if (ocrResult.cached) diagnostics.cacheHits += 1;
                 diagnostics.images.push({
