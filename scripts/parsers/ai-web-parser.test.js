@@ -65,7 +65,7 @@ test('pairs nearby row-split event images to the matching multi-event segments',
     </html>
   `;
 
-  const segments = parser.buildMultiEventSegments({ html, url: sourceUrl }, sourceUrl);
+  const segments = parser.buildMultiEventSegments(html, sourceUrl);
   assert.equal(segments.length, 4);
 
   const pairedImages = segments.map(segment => {
