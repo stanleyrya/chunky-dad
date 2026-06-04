@@ -197,6 +197,8 @@ class WebAdapter {
         const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
         const cacheDir = this.path.join(this.pageStorageDir, hostDir);
         const cachePath = this.path.join(cacheDir, fileName);
+        
+        // Start with basic payload
         const payload = {
             url: normalizedUrl,
             fetchedAt: new Date().toISOString(),
@@ -205,6 +207,11 @@ class WebAdapter {
             fetchState: 'downloaded',
             html: responseData.html
         };
+
+        // Add OCR results if available
+        if (responseData.ocrResults) {
+            payload.ocrResults = responseData.ocrResults;
+        }
 
         try {
             await this.fs.promises.mkdir(cacheDir, { recursive: true });
@@ -241,6 +248,10 @@ class WebAdapter {
             if (canUseCache) {
                 const cachedPage = await this.readCachedPage(url, pageCacheConfig);
                 if (cachedPage) {
+                    // If cached page has OCR results, use them
+                    if (cachedPage.ocrResults) {
+                        cachedPage.ocrResultsApplied = true;
+                    }
                     return cachedPage;
                 }
             }
@@ -278,6 +289,12 @@ class WebAdapter {
                     statusCode: response.status,
                     headers: Object.fromEntries(response.headers.entries())
                 };
+
+                // Run OCR on downloaded page
+                const ocrResults = await this.runOcrOnPage(html, url);
+                if (ocrResults) {
+                    responseData.ocrResults = ocrResults;
+                }
 
                 if (canUseCache) {
                     await this.writeCachedPage(url, responseData, pageCacheConfig);
@@ -834,6 +851,181 @@ class WebAdapter {
             console.log('   • Check parser configurations');
             console.log('   • Verify event sources');
             console.log('   • Review bear detection keywords');
+        }
+    }
+
+        // OCR Processing
+    async runOcrOnPage(html, url) {
+        try {
+            // Import or use OCR processor
+            let OcrProcessor;
+            
+            // Try to load from module
+            if (typeof module !== 'undefined' && module.exports) {
+                try {
+                    const ocrModule = require('../ocr-processor.js');
+                    if (ocrModule && ocrModule.OcrProcessor) {
+                        OcrProcessor = ocrModule.OcrProcessor;
+                    }
+                } catch (_) {
+                    // Fall through to window/global
+                }
+            }
+            
+            if (!OcrProcessor && typeof window !== 'undefined' && window.OcrProcessor) {
+                OcrProcessor = window.OcrProcessor;
+            } else if (!OcrProcessor && typeof this.OcrProcessor !== 'undefined') {
+                OcrProcessor = this.OcrProcessor;
+            }
+            
+            if (!OcrProcessor) {
+                console.log(`🌐 Web: OCR processor not available, skipping OCR`);
+                return null;
+            }
+
+            // Define environment-specific methods
+            const loadImageAsBase64 = async (imageUrl) => {
+                const response = await fetch(imageUrl, {
+                    signal: AbortSignal.timeout(this.config.ocrTimeoutSeconds * 1000 || 300000)
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} while downloading OCR image`);
+                }
+                const buffer = await response.arrayBuffer();
+                if (typeof Buffer !== 'undefined') {
+                    return Buffer.from(buffer).toString('base64');
+                }
+                if (typeof btoa === 'function') {
+                    let binary = '';
+                    const bytes = new Uint8Array(buffer);
+                    for (let i = 0; i < bytes.length; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    return btoa(binary);
+                }
+                throw new Error('No base64 encoding available');
+            };
+
+            const sendOcrRequest = async (ocrConfig) => {
+                if (!ocrConfig.endpoint) {
+                    console.log(`🌐 Web: OCR endpoint not configured`);
+                    return null;
+                }
+                
+                const base64Image = await loadImageAsBase64(ocrConfig.imageUrl);
+                const payload = {
+                    model: ocrConfig.model,
+                    prompt: ocrConfig.prompt,
+                    images: [base64Image],
+                    format: 'json',
+                    stream: false,
+                    think: ocrConfig.think,
+                    keep_alive: ocrConfig.keepAlive,
+                    options: {
+                        num_ctx: ocrConfig.numCtx,
+                        num_predict: ocrConfig.numPredict,
+                        temperature: ocrConfig.temperature
+                    }
+                };
+                
+                const response = await fetch(ocrConfig.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} from OCR endpoint`);
+                }
+                
+                const data = await response.json();
+                return {
+                    response: data,
+                    cached: false
+                };
+            };
+
+            const sendClassificationRequest = async (classificationConfig) => {
+                if (!classificationConfig.endpoint) {
+                    console.log(`🌐 Web: OCR endpoint not configured for classification`);
+                    return null;
+                }
+                
+                const base64Image = await loadImageAsBase64(classificationConfig.imageUrl);
+                const payload = {
+                    model: classificationConfig.model,
+                    prompt: classificationConfig.prompt,
+                    images: [base64Image],
+                    format: 'json',
+                    stream: false,
+                    think: classificationConfig.think,
+                    keep_alive: classificationConfig.keepAlive,
+                    options: {
+                        num_ctx: classificationConfig.numCtx,
+                        num_predict: classificationConfig.numPredict,
+                        temperature: classificationConfig.temperature
+                    }
+                };
+                
+                const response = await fetch(classificationConfig.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} from OCR endpoint`);
+                }
+                
+                const data = await response.json();
+                return {
+                    response: data,
+                    cached: false
+                };
+            };
+
+            // Initialize OCR processor with configuration and dependencies
+            const ocrConfig = {
+                enabled: true,
+                endpoint: this.config.ocrEndpoint || null,
+                model: this.config.ocrModel || 'qwen2.5vl:3b',
+                timeoutSeconds: this.config.ocrTimeoutSeconds || 300,
+                keepAlive: this.config.ocrKeepAlive || '5m',
+                numCtx: this.config.ocrNumCtx || 8192,
+                numPredict: this.config.ocrNumPredict || 2000,
+                temperature: this.config.ocrTemperature || 0,
+                think: this.config.ocrThink || false,
+                maxImages: this.config.ocrMaxImages || 10,
+                maxTextChars: this.config.ocrMaxTextChars || 10000,
+                cacheEnabled: this.config.ocrCacheEnabled !== false,
+                cacheDir: this.config.ocrCacheDir || null,
+                minImageDimension: this.config.ocrMinImageDimension || 100,
+                minImageArea: this.config.ocrMinImageArea || 10000,
+                // Pass environment-specific methods as dependencies
+                loadImageAsBase64,
+                sendOcrRequest,
+                sendClassificationRequest
+            };
+
+            const processor = new OcrProcessor(ocrConfig);
+
+            // Process page images
+            const results = await processor.processPageImages(html, url);
+            
+            if (results && results.images && results.images.length > 0) {
+                console.log(`🌐 Web: OCR completed for ${url} (${results.images.length} images, ${results.summary.totalTextChars} chars)`);
+                return results;
+            }
+
+            return null;
+            
+        } catch (error) {
+            console.log(`🌐 Web: OCR processing failed for ${url}: ${error.message}`);
+            return null;
         }
     }
 

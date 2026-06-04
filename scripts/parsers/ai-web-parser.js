@@ -1834,7 +1834,82 @@ class AiWebParser {
         };
     }
 
-    async recoverMissingFieldsFromImages(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent, validationState, extractionTrace) {
+    // Use OCR results from htmlData (already processed by adapters during page download)
+    async useOcrResultsFromHtmlData(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent, validationState, extractionTrace) {
+        // Check if OCR results are available in htmlData
+        if (!htmlData || !htmlData.ocrResults) {
+            return { merged: mergedEvent, diagnostics: { skippedReason: 'no-ocr-results' } };
+        }
+
+        const ocrConfig = this.getOcrConfig(parserConfig, aiConfig);
+        
+        // Skip OCR if it was already applied or disabled
+        if (!ocrConfig.enabled) {
+            return { merged: mergedEvent, diagnostics: { skippedReason: 'disabled' } };
+        }
+        
+        if (!ocrConfig.endpoint || !ocrConfig.model) {
+            return { merged: mergedEvent, diagnostics: { skippedReason: 'missing-endpoint-or-model' } };
+        }
+
+        const diagnostics = {
+            enabled: ocrConfig.enabled,
+            model: String(ocrConfig.model || ''),
+            skippedReason: null,
+            images: [],
+            totalImages: 0,
+            cached: 0
+        };
+
+        // Get OCR results from htmlData
+        const ocrResults = htmlData.ocrResults;
+        diagnostics.totalImages = ocrResults.images.length;
+        
+        // Process each OCR result
+        for (const imageResult of ocrResults.images) {
+            if (!imageResult || !imageResult.imageUrl) {
+                diagnostics.images.push({
+                    url: null,
+                    textChars: 0,
+                    cached: false,
+                    status: 'invalid'
+                });
+                continue;
+            }
+
+            // Check if OCR was cached
+            if (imageResult.cached) {
+                diagnostics.cached += 1;
+            }
+
+            diagnostics.images.push({
+                url: imageResult.imageUrl,
+                textChars: imageResult.ocrText ? imageResult.ocrText.length : 0,
+                cached: Boolean(imageResult.cached),
+                status: imageResult.ocrText ? 'ok' : 'no-text',
+                classification: imageResult.classification
+            });
+        }
+
+        // If we have OCR results but no missing fields, just return
+        const missingFields = this.getRemainingPromptFields(promptFields, mergedEvent)
+            .map(field => this.normalizePromptFieldName(field))
+            .filter(Boolean);
+            
+        if (missingFields.length === 0) {
+            diagnostics.skippedReason = 'no-missing-fields';
+            return { merged: mergedEvent, diagnostics };
+        }
+
+        // TODO: Use OCR text to recover missing fields
+        // This would involve extracting specific fields from OCR text
+        // For now, we'll just return the diagnostics
+        diagnostics.skippedReason = 'ocr-not-yet-integrated';
+
+        return { merged: mergedEvent, diagnostics };
+    }
+
+        async recoverMissingFieldsFromImages(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent, validationState, extractionTrace) {
         const ocrConfig = this.getOcrConfig(parserConfig, aiConfig);
         const missingBefore = this.getRemainingPromptFields(promptFields, mergedEvent)
             .map(field => this.normalizePromptFieldName(field))
@@ -3498,7 +3573,7 @@ class AiWebParser {
             if (retryPasses >= confidenceRuntime.maxRetryPasses) break;
         }
 
-        const ocrRecovery = await this.recoverMissingFieldsFromImages(
+        const ocrRecovery = await this.useOcrResultsFromHtmlData(
             htmlData,
             aiConfig,
             cityConfig,
