@@ -875,6 +875,7 @@ class ScriptableAdapter {
                 statusCode: cached.statusCode || 200,
                 headers: cached.headers || {},
                 fetchedAt: cached.fetchedAt || null,
+                ocrResults: cached.ocrResults || null,
                 cachePath
             };
         } catch (error) {
@@ -902,6 +903,10 @@ class ScriptableAdapter {
             fetchState: 'downloaded',
             html: responseData.html
         };
+
+        if (responseData.ocrResults) {
+            payload.ocrResults = responseData.ocrResults;
+        }
 
         try {
             this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
@@ -989,6 +994,12 @@ class ScriptableAdapter {
                     headers: request.response ? request.response.headers : {}
                 };
 
+                // Run OCR on page if enabled
+                const ocrResults = await this.runOcrOnPage(responseData.html, url);
+                if (ocrResults) {
+                    responseData.ocrResults = ocrResults;
+                }
+
                 if (canUseCache) {
                     await this.writeCachedPage(url, responseData, pageCacheConfig);
                 }
@@ -1016,15 +1027,24 @@ class ScriptableAdapter {
             let OcrProcessor;
             
             // Try to load from module
-            if (typeof module !== 'undefined' && module.exports) {
+            try {
+                // In Scriptable environment
+                if (typeof importModule === 'function') {
+                    const ocrModule = importModule('ocr-processor');
+                    if (ocrModule && ocrModule.OcrProcessor) {
+                        OcrProcessor = ocrModule.OcrProcessor;
+                    }
+                }
+            } catch (_) {}
+
+            // Try require for Node.js context if available
+            if (!OcrProcessor && typeof require === 'function') {
                 try {
                     const ocrModule = require('../ocr-processor.js');
                     if (ocrModule && ocrModule.OcrProcessor) {
                         OcrProcessor = ocrModule.OcrProcessor;
                     }
-                } catch (_) {
-                    // Fall through to window/global
-                }
+                } catch (_) {}
             }
             
             if (!OcrProcessor && typeof window !== 'undefined' && window.OcrProcessor) {
@@ -1038,7 +1058,116 @@ class ScriptableAdapter {
                 return null;
             }
 
-            // Initialize OCR processor with configuration
+            // Define environment-specific methods
+            const loadImageAsBase64 = async (imageUrl) => {
+                const request = new Request(imageUrl);
+                request.timeoutInterval = this.config.ocrTimeoutSeconds || 300;
+                const image = await request.loadImage();
+                const data = Data.fromJPEG(image);
+                return data.toBase64String();
+            };
+
+            const sendOcrRequest = async (ocrConfig) => {
+                if (!ocrConfig.endpoint) {
+                    console.log(`📱 Scriptable: OCR endpoint not configured`);
+                    return null;
+                }
+
+                // Check cache first
+                const cached = await this.readCachedOcrResult(ocrConfig.imageUrl, ocrConfig);
+                if (cached) return cached;
+
+                const base64Image = await loadImageAsBase64(ocrConfig.imageUrl);
+                const payload = {
+                    model: ocrConfig.model,
+                    prompt: ocrConfig.prompt,
+                    images: [base64Image],
+                    format: 'json',
+                    stream: false,
+                    think: ocrConfig.think,
+                    keep_alive: ocrConfig.keepAlive,
+                    options: {
+                        num_ctx: ocrConfig.numCtx,
+                        num_predict: ocrConfig.numPredict,
+                        temperature: ocrConfig.temperature
+                    }
+                };
+
+                const request = new Request(ocrConfig.endpoint);
+                request.method = 'POST';
+                request.headers = { 'Content-Type': 'application/json' };
+                request.body = JSON.stringify(payload);
+                request.timeoutInterval = ocrConfig.timeoutSeconds;
+
+                const response = await request.loadString();
+                const statusCode = request.response ? request.response.statusCode : 200;
+
+                if (statusCode >= 400) {
+                    throw new Error(`HTTP ${statusCode} from OCR endpoint`);
+                }
+
+                const result = {
+                    response: response,
+                    cached: false
+                };
+
+                // Cache the result
+                await this.writeCachedOcrResult(ocrConfig.imageUrl, ocrConfig, response);
+
+                return result;
+            };
+
+            const sendClassificationRequest = async (classificationConfig) => {
+                if (!classificationConfig.endpoint) {
+                    console.log(`📱 Scriptable: OCR endpoint not configured for classification`);
+                    return null;
+                }
+
+                // Check cache first (using a modified config for classification)
+                const cached = await this.readCachedOcrResult(classificationConfig.imageUrl, classificationConfig, 'class');
+                if (cached) return cached;
+
+                const base64Image = await loadImageAsBase64(classificationConfig.imageUrl);
+                const payload = {
+                    model: classificationConfig.model,
+                    prompt: classificationConfig.prompt,
+                    images: [base64Image],
+                    format: 'json',
+                    stream: false,
+                    think: classificationConfig.think,
+                    keep_alive: classificationConfig.keepAlive,
+                    options: {
+                        num_ctx: classificationConfig.numCtx,
+                        num_predict: classificationConfig.numPredict,
+                        temperature: classificationConfig.temperature
+                    }
+                };
+
+                const request = new Request(classificationConfig.endpoint);
+                request.method = 'POST';
+                request.headers = { 'Content-Type': 'application/json' };
+                request.body = JSON.stringify(payload);
+                request.timeoutInterval = classificationConfig.timeoutSeconds;
+
+                const response = await request.loadString();
+                const statusCode = request.response ? request.response.statusCode : 200;
+
+                if (statusCode >= 400) {
+                    throw new Error(`HTTP ${statusCode} from classification endpoint`);
+                }
+
+                const result = {
+                    response: response,
+                    cached: false
+                };
+
+                // Cache the result
+                await this.writeCachedOcrResult(classificationConfig.imageUrl, classificationConfig, response, 'class');
+
+                return result;
+            };
+
+            // Initialize OCR processor with configuration and dependencies
             const ocrConfig = {
                 enabled: true,
                 endpoint: this.config.ocrEndpoint || null,
@@ -1054,7 +1183,11 @@ class ScriptableAdapter {
                 cacheEnabled: this.config.ocrCacheEnabled !== false,
                 cacheDir: this.config.ocrCacheDir || null,
                 minImageDimension: this.config.ocrMinImageDimension || 100,
-                minImageArea: this.config.ocrMinImageArea || 10000
+                minImageArea: this.config.ocrMinImageArea || 10000,
+                // Pass environment-specific methods as dependencies
+                loadImageAsBase64,
+                sendOcrRequest,
+                sendClassificationRequest
             };
 
             const processor = new OcrProcessor(ocrConfig);
@@ -1072,6 +1205,58 @@ class ScriptableAdapter {
         } catch (error) {
             console.log(`📱 Scriptable: OCR processing failed for ${url}: ${error.message}`);
             return null;
+        }
+    }
+
+    async readCachedOcrResult(imageUrl, ocrConfig, type = 'ocr') {
+        if (ocrConfig.cacheEnabled === false) return null;
+
+        const ocrStorageDir = this.fm.joinPath(this.storageDir, 'ocr');
+        if (!this.fm.fileExists(ocrStorageDir)) return null;
+
+        const hash = this.hashPageCacheValue(`${imageUrl}|${ocrConfig.model}|${ocrConfig.prompt}|${type}`);
+        const cachePath = this.fm.joinPath(ocrStorageDir, `${hash}.json`);
+
+        if (this.fm.fileExists(cachePath)) {
+            try {
+                await this.fm.downloadFileFromiCloud(cachePath);
+                const content = this.fm.readString(cachePath);
+                const parsed = JSON.parse(content);
+                return {
+                    response: parsed.response,
+                    cached: true
+                };
+            } catch (_) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    async writeCachedOcrResult(imageUrl, ocrConfig, response, type = 'ocr') {
+        if (ocrConfig.cacheEnabled === false) return;
+
+        const ocrStorageDir = this.fm.joinPath(this.storageDir, 'ocr');
+        if (!this.fm.fileExists(ocrStorageDir)) {
+            this.fm.createDirectory(ocrStorageDir, true);
+        }
+
+        const hash = this.hashPageCacheValue(`${imageUrl}|${ocrConfig.model}|${ocrConfig.prompt}|${type}`);
+        const cachePath = this.fm.joinPath(ocrStorageDir, `${hash}.json`);
+
+        const payload = {
+            imageUrl,
+            model: ocrConfig.model,
+            prompt: ocrConfig.prompt,
+            type,
+            response,
+            timestamp: new Date().toISOString()
+        };
+
+        try {
+            this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+        } catch (error) {
+            console.log(`📱 Scriptable: OCR cache write failed: ${error.message}`);
         }
     }
 

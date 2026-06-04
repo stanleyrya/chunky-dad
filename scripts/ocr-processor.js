@@ -79,22 +79,35 @@ Image context: ${imageContext || 'Unknown context'}`;
     }
 
     /**
-     * Extract all image URLs from HTML
+     * Extract all image URLs from HTML with metadata
      */
     extractImageUrlsFromHtml(html, baseUrl) {
         if (!html) return [];
         
-        const imageUrls = [];
+        const images = [];
         const seen = new Set();
 
         // Match img tags
-        const imgRegex = /<img\b[^>]*src=["']([^"']+)["'][^>]*>/gi;
+        const imgRegex = /<img\b[^>]+>/gi;
         let match;
         while ((match = imgRegex.exec(html)) !== null) {
-            const url = this.normalizeImageUrl(match[1], baseUrl);
+            const tag = match[0];
+            const srcMatch = tag.match(/src=["']([^"']+)["']/i);
+            if (!srcMatch) continue;
+
+            const url = this.normalizeImageUrl(srcMatch[1], baseUrl);
             if (url && !seen.has(url)) {
                 seen.add(url);
-                imageUrls.push(url);
+
+                // Try to get width/height from attributes
+                const widthMatch = tag.match(/\bwidth=["'](\d+)["']/i);
+                const heightMatch = tag.match(/\bheight=["'](\d+)["']/i);
+
+                images.push({
+                    url,
+                    width: widthMatch ? parseInt(widthMatch[1], 10) : null,
+                    height: heightMatch ? parseInt(heightMatch[1], 10) : null
+                });
             }
         }
 
@@ -104,7 +117,7 @@ Image context: ${imageContext || 'Unknown context'}`;
             const url = this.normalizeImageUrl(match[1], baseUrl);
             if (url && !seen.has(url)) {
                 seen.add(url);
-                imageUrls.push(url);
+                images.push({ url, width: null, height: null });
             }
         }
 
@@ -114,11 +127,11 @@ Image context: ${imageContext || 'Unknown context'}`;
             const url = this.normalizeImageUrl(match[1], baseUrl);
             if (url && !seen.has(url)) {
                 seen.add(url);
-                imageUrls.push(url);
+                images.push({ url, width: null, height: null });
             }
         }
 
-        return imageUrls;
+        return images;
     }
 
     /**
@@ -169,32 +182,42 @@ Image context: ${imageContext || 'Unknown context'}`;
 
     /**
      * Detect multiple resolutions of the same image
-     * Returns groups of URLs that appear to be different resolutions of the same image
+     * Returns groups of objects that appear to be different resolutions of the same image
      */
-    detectImageResolutions(imageUrls) {
-        if (!Array.isArray(imageUrls) || imageUrls.length === 0) return [];
+    detectImageResolutions(images) {
+        if (!Array.isArray(images) || images.length === 0) return [];
 
-        // Group URLs by their base image (removing resolution parameters)
+        // Group images by their base image (removing resolution parameters)
         const groups = new Map();
 
-        for (const url of imageUrls) {
-            const baseImage = this.getBaseImageUrl(url);
+        for (const img of images) {
+            const baseImage = this.getBaseImageUrl(img.url);
             
             if (!groups.has(baseImage)) {
                 groups.set(baseImage, []);
             }
             
+            // Prefer resolution from URL if available, otherwise use attributes
+            let resolution = this.extractImageResolution(img.url);
+            if (!resolution && img.width && img.height) {
+                resolution = {
+                    width: img.width,
+                    height: img.height,
+                    area: img.width * img.height
+                };
+            }
+
             groups.get(baseImage).push({
-                url,
-                resolution: this.extractImageResolution(url)
+                url: img.url,
+                resolution
             });
         }
 
         // Return groups with multiple resolutions
         const resolutionGroups = [];
-        for (const [, urls] of groups) {
-            if (urls.length > 1) {
-                resolutionGroups.push(urls);
+        for (const [, items] of groups) {
+            if (items.length > 1) {
+                resolutionGroups.push(items);
             }
         }
 
@@ -208,6 +231,16 @@ Image context: ${imageContext || 'Unknown context'}`;
         if (!url) return null;
 
         try {
+            // Special handling for Wix URLs
+            if (url.includes('static.wixstatic.com/media/')) {
+                // Wix format: .../media/ID~mv2.jpg/v1/fill/w_296,h_370.../filename.jpg
+                // The base image ID is before the first slash after media/
+                const wixMatch = url.match(/((?:https?:\/\/|\/\/)?static\.wixstatic\.com\/media\/[^/]+)/i);
+                if (wixMatch) {
+                    return wixMatch[1];
+                }
+            }
+
             const parsed = new URL(url);
             
             // Remove common resolution/query parameters
@@ -230,7 +263,12 @@ Image context: ${imageContext || 'Unknown context'}`;
                 parsed.search = '';
             }
 
-            return parsed.toString();
+            // Strip path-based resolution for common patterns
+            let base = parsed.toString();
+            base = base.replace(/\/w_\d+,h_\d+[^/]*\//i, '/');
+            base = base.replace(/\/fill\/w_\d+,h_\d+[^/]*\//i, '/');
+
+            return base;
         } catch (_) {
             return url;
         }
@@ -243,6 +281,16 @@ Image context: ${imageContext || 'Unknown context'}`;
     extractImageResolution(url) {
         if (!url) return null;
 
+        // Try Wix path-based resolution first
+        if (url.includes('static.wixstatic.com/media/')) {
+            const wixResMatch = url.match(/\/w_(\d+),h_(\d+)/i);
+            if (wixResMatch) {
+                const width = parseInt(wixResMatch[1], 10);
+                const height = parseInt(wixResMatch[2], 10);
+                return { width, height, area: width * height };
+            }
+        }
+
         // Try to extract dimensions from URL parameters
         try {
             const parsed = new URL(url);
@@ -250,13 +298,11 @@ Image context: ${imageContext || 'Unknown context'}`;
             // Check for width/height parameters
             const widthParam = parsed.searchParams.get('w') || 
                               parsed.searchParams.get('width') ||
-                              parsed.searchParams.get('w_') ||
-                              parsed.searchParams.get('w_296'); // Example: w_296
+                              parsed.searchParams.get('w_');
             
             const heightParam = parsed.searchParams.get('h') || 
                                parsed.searchParams.get('height') ||
-                               parsed.searchParams.get('h_') ||
-                               parsed.searchParams.get('h_370'); // Example: h_370
+                               parsed.searchParams.get('h_');
 
             if (widthParam && heightParam) {
                 const width = parseInt(widthParam, 10);
@@ -522,10 +568,26 @@ Image context: ${imageContext || 'Unknown context'}`;
     parseOcrResponse(rawText) {
         if (!rawText) return null;
 
+        // If already an object, process it
+        if (typeof rawText === 'object') {
+            if (rawText.response && typeof rawText.response === 'string') {
+                return this.parseOcrResponse(rawText.response);
+            }
+            if (typeof rawText.text === 'string') {
+                return rawText.text.trim();
+            }
+            return null;
+        }
+
         try {
             // Try to parse as JSON first
             const parsed = JSON.parse(rawText);
             
+            // If the response is the whole Ollama response object
+            if (parsed && typeof parsed.response === 'string') {
+                return this.parseOcrResponse(parsed.response);
+            }
+
             if (parsed && typeof parsed.text === 'string') {
                 return parsed.text.trim();
             }
@@ -547,10 +609,31 @@ Image context: ${imageContext || 'Unknown context'}`;
     parseClassificationResponse(rawText) {
         if (!rawText) return null;
 
+        // If already an object, process it
+        if (typeof rawText === 'object') {
+            if (rawText.response && typeof rawText.response === 'string') {
+                return this.parseClassificationResponse(rawText.response);
+            }
+            if (typeof rawText.type === 'string') {
+                return {
+                    type: rawText.type,
+                    confidence: typeof rawText.confidence === 'number' ? rawText.confidence : 0.0,
+                    text: typeof rawText.text === 'string' ? rawText.text : '',
+                    details: typeof rawText.details === 'string' ? rawText.details : ''
+                };
+            }
+            return null;
+        }
+
         try {
             // Try to parse as JSON
             const parsed = JSON.parse(rawText);
             
+            // If the response is the whole Ollama response object
+            if (parsed && typeof parsed.response === 'string') {
+                return this.parseClassificationResponse(parsed.response);
+            }
+
             if (parsed && typeof parsed.type === 'string') {
                 return {
                     type: parsed.type,
@@ -638,21 +721,51 @@ Image context: ${imageContext || 'Unknown context'}`;
      * Process all images from a page
      */
     async processPageImages(html, baseUrl) {
-        // Extract image URLs
-        let imageUrls = this.extractImageUrlsFromHtml(html, baseUrl);
+        // Extract images with metadata
+        const images = this.extractImageUrlsFromHtml(html, baseUrl);
         
         // Detect resolution groups
-        const resolutionGroups = this.detectImageResolutions(imageUrls);
+        const resolutionGroups = this.detectImageResolutions(images);
         
-        // Select best resolutions
-        if (resolutionGroups.length > 0) {
-            imageUrls = this.selectBestResolutions(resolutionGroups);
+        // Select best resolutions for grouped images
+        const bestGroupedUrls = this.selectBestResolutions(resolutionGroups);
+        const bestGroupedSet = new Set(bestGroupedUrls);
+
+        // Find URLs that were in a group but NOT the best
+        const rejectedUrls = new Set();
+        for (const group of resolutionGroups) {
+            for (const img of group) {
+                if (!bestGroupedSet.has(img.url)) {
+                    rejectedUrls.add(img.url);
+                }
+            }
         }
+
+        // Final list of URLs to process (all non-grouped + best from each group)
+        const urlsToProcess = images
+            .filter(img => {
+                // If this image was rejected in resolution selection, skip it
+                if (rejectedUrls.has(img.url)) return false;
+
+                // Enforce minimum size if known
+                if (img.width && img.height) {
+                    return img.width >= this.config.minImageDimension &&
+                           img.height >= this.config.minImageDimension &&
+                           (img.width * img.height) >= this.config.minImageArea;
+                }
+
+                // Heuristic for unknown sizes - skip likely icons
+                const url = img.url.toLowerCase();
+                if (url.includes('icon') || url.includes('favicon')) return false;
+
+                return true;
+            })
+            .map(img => img.url);
 
         // Process each image
         const results = [];
         
-        for (const imageUrl of imageUrls) {
+        for (const imageUrl of urlsToProcess) {
             const result = await this.processSingleImage(imageUrl);
             
             if (result) {
