@@ -1901,12 +1901,46 @@ class AiWebParser {
             return { merged: mergedEvent, diagnostics };
         }
 
-        // TODO: Use OCR text to recover missing fields
-        // This would involve extracting specific fields from OCR text
-        // For now, we'll just return the diagnostics
-        diagnostics.skippedReason = 'ocr-not-yet-integrated';
+        // Use OCR text to recover missing fields
+        const snippets = [];
+        for (const imageResult of ocrResults.images) {
+            if (imageResult.ocrText) {
+                const trimmedText = imageResult.ocrText.length > ocrConfig.maxTextChars
+                    ? `${imageResult.ocrText.slice(0, ocrConfig.maxTextChars)}…`
+                    : imageResult.ocrText;
+                snippets.push(this.buildOcrSnippet(imageResult.imageUrl, trimmedText));
+            }
+        }
 
-        return { merged: mergedEvent, diagnostics };
+        if (snippets.length === 0) {
+            diagnostics.skippedReason = 'no-ocr-text';
+            return { merged: mergedEvent, diagnostics };
+        }
+
+        const partial = await this.extractFieldsAcrossSnippets(
+            htmlData,
+            aiConfig,
+            cityConfig,
+            parserConfig,
+            missingFields,
+            snippets,
+            'ocr-cache',
+            validationState,
+            {
+                partitionLabel: 'content',
+                extractionTrace,
+                promptVariant: 'alternate'
+            }
+        );
+
+        const merged = this.mergeAiEventFields(mergedEvent, partial);
+        const missingAfter = this.getRemainingPromptFields(promptFields, merged)
+            .map(field => this.normalizePromptFieldName(field))
+            .filter(Boolean);
+
+        diagnostics.recoveredFields = missingFields.filter(field => !missingAfter.includes(field));
+
+        return { merged, diagnostics };
     }
 
         async recoverMissingFieldsFromImages(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent, validationState, extractionTrace) {
