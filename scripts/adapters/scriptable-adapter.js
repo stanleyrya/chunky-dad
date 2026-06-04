@@ -1208,6 +1208,62 @@ class ScriptableAdapter {
         }
     }
 
+    getOcrSummaryPath(url) {
+        const { hostDir, fileName } = this.getPageCachePathParts(url);
+        const summaryDir = this.fm.joinPath(this.ocrStorageDir, hostDir);
+        const summaryFileName = fileName.replace(/\.json$/i, '--summary.json');
+        return {
+            summaryDir,
+            summaryPath: this.fm.joinPath(summaryDir, summaryFileName)
+        };
+    }
+
+    async writeOcrSummary(url, results) {
+        const summaryInfo = this.getOcrSummaryPath(url);
+        if (!summaryInfo || !results) return null;
+        this.ensureDirectoryExists(summaryInfo.summaryDir);
+        const payload = {
+            url,
+            createdAt: new Date().toISOString(),
+            model: this.config.ocrModel || 'qwen2.5vl:3b',
+            summary: results.summary || null,
+            images: Array.isArray(results.images)
+                ? results.images.map((image, index) => ({
+                    index: index + 1,
+                    imageUrl: image.imageUrl,
+                    sourceType: image.sourceType || 'unknown',
+                    width: Number.isFinite(Number(image.width)) ? Number(image.width) : null,
+                    height: Number.isFinite(Number(image.height)) ? Number(image.height) : null,
+                    area: Number.isFinite(Number(image.area)) ? Number(image.area) : null,
+                    baseImageUrl: image.baseImageUrl || null,
+                    ocrChars: Number.isFinite(Number(image.ocrChars))
+                        ? Number(image.ocrChars)
+                        : (typeof image.ocrText === 'string' ? image.ocrText.length : 0),
+                    textPreview: typeof image.ocrText === 'string'
+                        ? (image.ocrText.length > 240 ? `${image.ocrText.slice(0, 240)}…` : image.ocrText)
+                        : '',
+                    classification: image.classification || null,
+                    cached: Boolean(image.cached),
+                    ocrCached: Boolean(image.ocrCached),
+                    classificationCached: Boolean(image.classificationCached)
+                }))
+                : []
+        };
+        this.fm.writeString(summaryInfo.summaryPath, JSON.stringify(payload, null, 2));
+        return summaryInfo.summaryPath;
+    }
+
+    async persistOcrResults(url, results) {
+        const summaryPath = await this.writeOcrSummary(url, results);
+        if (summaryPath) {
+            results.summaryPath = summaryPath;
+            if (results.summary && typeof results.summary === 'object') {
+                results.summary.summaryPath = summaryPath;
+            }
+        }
+        return results;
+    }
+
     async readCachedOcrResult(imageUrl, ocrConfig, type = 'ocr') {
         if (ocrConfig.cacheEnabled === false) return null;
 

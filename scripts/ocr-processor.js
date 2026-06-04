@@ -106,7 +106,8 @@ Image context: ${imageContext || 'Unknown context'}`;
                 images.push({
                     url,
                     width: widthMatch ? parseInt(widthMatch[1], 10) : null,
-                    height: heightMatch ? parseInt(heightMatch[1], 10) : null
+                    height: heightMatch ? parseInt(heightMatch[1], 10) : null,
+                    sourceType: 'img'
                 });
             }
         }
@@ -117,7 +118,12 @@ Image context: ${imageContext || 'Unknown context'}`;
             const url = this.normalizeImageUrl(match[1], baseUrl);
             if (url && !seen.has(url)) {
                 seen.add(url);
-                images.push({ url, width: null, height: null });
+                images.push({
+                    url,
+                    width: null,
+                    height: null,
+                    sourceType: 'background'
+                });
             }
         }
 
@@ -127,11 +133,43 @@ Image context: ${imageContext || 'Unknown context'}`;
             const url = this.normalizeImageUrl(match[1], baseUrl);
             if (url && !seen.has(url)) {
                 seen.add(url);
-                images.push({ url, width: null, height: null });
+                images.push({
+                    url,
+                    width: null,
+                    height: null,
+                    sourceType: 'picture'
+                });
             }
         }
 
         return images;
+    }
+
+    normalizeImageCandidate(image) {
+        if (!image) return null;
+        if (typeof image === 'string') {
+            return {
+                url: image,
+                width: null,
+                height: null,
+                sourceType: 'unknown'
+            };
+        }
+        return {
+            url: image.url,
+            width: Number.isFinite(Number(image.width)) ? Number(image.width) : null,
+            height: Number.isFinite(Number(image.height)) ? Number(image.height) : null,
+            sourceType: typeof image.sourceType === 'string' && image.sourceType.trim()
+                ? image.sourceType.trim().toLowerCase()
+                : 'unknown'
+        };
+    }
+
+    getImageArea(image) {
+        if (!image || !Number.isFinite(Number(image.width)) || !Number.isFinite(Number(image.height))) {
+            return null;
+        }
+        return Number(image.width) * Number(image.height);
     }
 
     /**
@@ -388,8 +426,19 @@ Image context: ${imageContext || 'Unknown context'}`;
     /**
      * Classify an image based on OCR text
      */
-    classifyImage(imageUrl, ocrText) {
+    classifyImage(imageInput, ocrText) {
+        const image = this.normalizeImageCandidate(imageInput);
+        const imageUrl = image && image.url ? image.url : String(imageInput || '');
+        const sourceType = image && image.sourceType ? image.sourceType : 'unknown';
+
         if (!ocrText) {
+            if (sourceType === 'background') {
+                return {
+                    type: this.imageClassificationTypes.BACKGROUND,
+                    confidence: 0.65,
+                    details: 'Background-image source with no extracted text'
+                };
+            }
             return {
                 type: this.imageClassificationTypes.UNKNOWN,
                 confidence: 0.0,
@@ -487,6 +536,14 @@ Image context: ${imageContext || 'Unknown context'}`;
                     details: `Found ${matchCount} keyword matches`
                 };
             }
+        }
+
+        if (bestClassification.type === this.imageClassificationTypes.UNKNOWN && sourceType === 'background') {
+            return {
+                type: this.imageClassificationTypes.BACKGROUND,
+                confidence: 0.6,
+                details: 'Background-image source with low OCR signal'
+            };
         }
 
         return bestClassification;
@@ -652,7 +709,13 @@ Image context: ${imageContext || 'Unknown context'}`;
     /**
      * Process a single image with OCR and classification
      */
-    async processSingleImage(imageUrl) {
+    async processSingleImage(imageInput) {
+        const image = this.normalizeImageCandidate(imageInput);
+        if (!image || !image.url) {
+            return null;
+        }
+        const imageUrl = image.url;
+
         // Check if we've reached max images
         if (this.seenUrls.size >= this.config.maxImages) {
             return null;
@@ -674,9 +737,18 @@ Image context: ${imageContext || 'Unknown context'}`;
         if (!ocrResult) {
             return {
                 imageUrl,
+                sourceType: image.sourceType,
+                width: image.width,
+                height: image.height,
+                area: this.getImageArea(image),
+                baseImageUrl: this.getBaseImageUrl(imageUrl),
                 ocrText: null,
                 classification: null,
-                cached: false
+                cached: false,
+                ocrCached: false,
+                classificationCached: false,
+                ocrResponse: null,
+                classificationResponse: null
             };
         }
 
@@ -701,19 +773,31 @@ Image context: ${imageContext || 'Unknown context'}`;
         }
 
         // If classification failed, use heuristic classification
-        if (!classification && ocrText) {
-            classification = this.classifyImage(imageUrl, ocrText);
+        if (!classification) {
+            classification = this.classifyImage(image, ocrText);
         }
 
         return {
             imageUrl,
+            sourceType: image.sourceType,
+            width: image.width,
+            height: image.height,
+            area: this.getImageArea(image),
+            baseImageUrl: this.getBaseImageUrl(imageUrl),
             ocrText: ocrText || '',
+            ocrChars: ocrText ? ocrText.length : 0,
             classification: classification || {
                 type: this.imageClassificationTypes.UNKNOWN,
                 confidence: 0.0,
                 details: 'Classification unavailable'
             },
-            cached: ocrResult.cached || false
+            cached: Boolean(ocrResult.cached || (classificationResult && classificationResult.cached)),
+            ocrCached: Boolean(ocrResult.cached),
+            classificationCached: Boolean(classificationResult && classificationResult.cached),
+            ocrResponse: ocrResult.response || ocrResult.text || null,
+            classificationResponse: classificationResult
+                ? (classificationResult.response || classificationResult.text || null)
+                : null
         };
     }
 
@@ -730,6 +814,7 @@ Image context: ${imageContext || 'Unknown context'}`;
         // Select best resolutions for grouped images
         const bestGroupedUrls = this.selectBestResolutions(resolutionGroups);
         const bestGroupedSet = new Set(bestGroupedUrls);
+        const imageByUrl = new Map(images.map(image => [image.url, image]));
 
         // Find URLs that were in a group but NOT the best
         const rejectedUrls = new Set();
@@ -766,7 +851,7 @@ Image context: ${imageContext || 'Unknown context'}`;
         const results = [];
         
         for (const imageUrl of urlsToProcess) {
-            const result = await this.processSingleImage(imageUrl);
+            const result = await this.processSingleImage(imageByUrl.get(imageUrl) || imageUrl);
             
             if (result) {
                 results.push(result);
@@ -801,8 +886,12 @@ Image context: ${imageContext || 'Unknown context'}`;
             imagesWithText: 0,
             totalTextChars: 0,
             classifications: {},
-            typesFound: []
+            typesFound: [],
+            usefulImages: 0,
+            averageClassificationConfidence: 0
         };
+        let totalConfidence = 0;
+        let classifiedImages = 0;
 
         for (const result of results) {
             if (result.ocrText && result.ocrText.length > 0) {
@@ -813,12 +902,23 @@ Image context: ${imageContext || 'Unknown context'}`;
             if (result.classification) {
                 const type = result.classification.type;
                 summary.classifications[type] = (summary.classifications[type] || 0) + 1;
+                if (type && type !== this.imageClassificationTypes.UNKNOWN && type !== this.imageClassificationTypes.BACKGROUND) {
+                    summary.usefulImages++;
+                }
+                if (Number.isFinite(Number(result.classification.confidence))) {
+                    totalConfidence += Number(result.classification.confidence);
+                    classifiedImages++;
+                }
                 
                 if (!summary.typesFound.includes(type)) {
                     summary.typesFound.push(type);
                 }
             }
         }
+
+        summary.averageClassificationConfidence = classifiedImages > 0
+            ? Number((totalConfidence / classifiedImages).toFixed(3))
+            : 0;
 
         return summary;
     }
