@@ -878,9 +878,6 @@ class PageCacheMaintenance {
 }
 
 (async () => {
-  if (typeof module !== 'undefined' && module.exports) {
-    return;
-  }
   try {
     const maintenance = new PageCacheMaintenance();
     const days = maintenance.getSelectedDays();
@@ -920,7 +917,3 @@ class PageCacheMaintenance {
     }
   }
 })();
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PageCacheMaintenance };
-}
