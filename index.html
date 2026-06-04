@@ -123,7 +123,12 @@
 
         <section id="today-events" class="bear-events-compact">
             <div class="container">
-                <h2>🎉 Upcoming Parties</h2>
+                <div class="section-header">
+                    <h2>🎉 Upcoming Parties</h2>
+                    <button id="location-sort-btn" class="location-sort-btn" title="Sort events by distance from your location">
+                        <i class="bi bi-geo-alt"></i> Sort by Location
+                    </button>
+                </div>
                 <div class="event-scroll-container">
                     <div class="event-compact-grid" id="today-event-grid">
                         <!-- Today events will be dynamically rendered by TodayEventsAggregator -->
