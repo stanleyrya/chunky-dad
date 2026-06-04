@@ -1852,9 +1852,6 @@ class AiWebParser {
             return { merged: mergedEvent, diagnostics: { skippedReason: 'missing-endpoint-or-model' } };
         }
 
-        const ocrResults = htmlData.ocrResults;
-        const ocrImages = Array.isArray(ocrResults.images) ? ocrResults.images.filter(Boolean) : [];
-
         const diagnostics = {
             enabled: ocrConfig.enabled,
             model: String(ocrConfig.model || ''),
@@ -1864,7 +1861,9 @@ class AiWebParser {
             cached: 0
         };
 
-        diagnostics.totalImages = ocrImages.length;
+        // Get OCR results from htmlData
+        const ocrResults = htmlData.ocrResults;
+        diagnostics.totalImages = ocrResults.images.length;
         
         // Process each OCR result
         for (const imageResult of ocrResults.images) {

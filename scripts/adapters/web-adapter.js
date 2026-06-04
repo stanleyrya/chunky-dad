@@ -1091,49 +1091,6 @@ class WebAdapter {
         }
     }
 
-    async persistOcrResults(url, results) {
-        if (!this.isNode || !this.fs || !this.path || !this.pageStorageDir || !results) {
-            return results;
-        }
-        const { hostDir, fileName } = this.getPageCachePathParts(url);
-        const summaryDir = this.path.join(this.path.dirname(this.pageStorageDir), 'ocr', hostDir);
-        const summaryPath = this.path.join(summaryDir, fileName.replace(/\.json$/i, '--summary.json'));
-        const payload = {
-            url,
-            createdAt: new Date().toISOString(),
-            model: this.config.ocrModel || 'qwen2.5vl:3b',
-            summary: results.summary || null,
-            images: Array.isArray(results.images)
-                ? results.images.map((image, index) => ({
-                    index: index + 1,
-                    imageUrl: image.imageUrl,
-                    sourceType: image.sourceType || 'unknown',
-                    width: Number.isFinite(Number(image.width)) ? Number(image.width) : null,
-                    height: Number.isFinite(Number(image.height)) ? Number(image.height) : null,
-                    area: Number.isFinite(Number(image.area)) ? Number(image.area) : null,
-                    baseImageUrl: image.baseImageUrl || null,
-                    ocrChars: Number.isFinite(Number(image.ocrChars))
-                        ? Number(image.ocrChars)
-                        : (typeof image.ocrText === 'string' ? image.ocrText.length : 0),
-                    textPreview: typeof image.ocrText === 'string'
-                        ? (image.ocrText.length > 240 ? `${image.ocrText.slice(0, 240)}…` : image.ocrText)
-                        : '',
-                    classification: image.classification || null,
-                    cached: Boolean(image.cached),
-                    ocrCached: Boolean(image.ocrCached),
-                    classificationCached: Boolean(image.classificationCached)
-                }))
-                : []
-        };
-        await this.fs.promises.mkdir(summaryDir, { recursive: true });
-        await this.fs.promises.writeFile(summaryPath, JSON.stringify(payload, null, 2), 'utf8');
-        results.summaryPath = summaryPath;
-        if (results.summary && typeof results.summary === 'object') {
-            results.summary.summaryPath = summaryPath;
-        }
-        return results;
-    }
-
     // Helper method to extract all events from parser results
     getAllEventsFromResults(results) {
         // Events must be analyzed to have action types - no fallback to raw parser results
