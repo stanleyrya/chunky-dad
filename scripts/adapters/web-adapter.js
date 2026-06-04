@@ -176,7 +176,6 @@ class WebAdapter {
                 statusCode: cached.statusCode || 200,
                 headers: cached.headers || {},
                 fetchedAt: cached.fetchedAt || null,
-                ocrResults: cached.ocrResults || null,
                 cachePath
             };
         } catch (error) {
@@ -861,14 +860,16 @@ class WebAdapter {
             // Import or use OCR processor
             let OcrProcessor;
             
-            // Try to load from module (Node.js)
-            if (typeof require === 'function') {
+            // Try to load from module
+            if (typeof module !== 'undefined' && module.exports) {
                 try {
                     const ocrModule = require('../ocr-processor.js');
                     if (ocrModule && ocrModule.OcrProcessor) {
                         OcrProcessor = ocrModule.OcrProcessor;
                     }
-                } catch (_) {}
+                } catch (_) {
+                    // Fall through to window/global
+                }
             }
             
             if (!OcrProcessor && typeof window !== 'undefined' && window.OcrProcessor) {
@@ -911,10 +912,6 @@ class WebAdapter {
                     return null;
                 }
                 
-                // Check cache first
-                const cached = await this.readCachedOcrResult(ocrConfig.imageUrl, ocrConfig);
-                if (cached) return cached;
-
                 const base64Image = await loadImageAsBase64(ocrConfig.imageUrl);
                 const payload = {
                     model: ocrConfig.model,
@@ -944,15 +941,10 @@ class WebAdapter {
                 }
                 
                 const data = await response.json();
-                const result = {
+                return {
                     response: data,
                     cached: false
                 };
-
-                // Cache the result
-                await this.writeCachedOcrResult(ocrConfig.imageUrl, ocrConfig, data);
-
-                return result;
             };
 
             const sendClassificationRequest = async (classificationConfig) => {
@@ -961,10 +953,6 @@ class WebAdapter {
                     return null;
                 }
                 
-                // Check cache first
-                const cached = await this.readCachedOcrResult(classificationConfig.imageUrl, classificationConfig, 'class');
-                if (cached) return cached;
-
                 const base64Image = await loadImageAsBase64(classificationConfig.imageUrl);
                 const payload = {
                     model: classificationConfig.model,
@@ -994,15 +982,10 @@ class WebAdapter {
                 }
                 
                 const data = await response.json();
-                const result = {
+                return {
                     response: data,
                     cached: false
                 };
-
-                // Cache the result
-                await this.writeCachedOcrResult(classificationConfig.imageUrl, classificationConfig, data, 'class');
-
-                return result;
             };
 
             // Initialize OCR processor with configuration and dependencies
@@ -1043,51 +1026,6 @@ class WebAdapter {
         } catch (error) {
             console.log(`🌐 Web: OCR processing failed for ${url}: ${error.message}`);
             return null;
-        }
-    }
-
-    async readCachedOcrResult(imageUrl, ocrConfig, type = 'ocr') {
-        if (!this.isNode || !this.fs || !this.path || !this.pageStorageDir) return null;
-        if (ocrConfig.cacheEnabled === false) return null;
-
-        const ocrStorageDir = this.path.join(this.path.dirname(this.pageStorageDir), 'ocr');
-        const hash = this.hashPageCacheValue(`${imageUrl}|${ocrConfig.model}|${ocrConfig.prompt}|${type}`);
-        const cachePath = this.path.join(ocrStorageDir, `${hash}.json`);
-
-        try {
-            const content = await this.fs.promises.readFile(cachePath, 'utf8');
-            const parsed = JSON.parse(content);
-            return {
-                response: parsed.response,
-                cached: true
-            };
-        } catch (_) {
-            return null;
-        }
-    }
-
-    async writeCachedOcrResult(imageUrl, ocrConfig, response, type = 'ocr') {
-        if (!this.isNode || !this.fs || !this.path || !this.pageStorageDir) return;
-        if (ocrConfig.cacheEnabled === false) return;
-
-        const ocrStorageDir = this.path.join(this.path.dirname(this.pageStorageDir), 'ocr');
-        const hash = this.hashPageCacheValue(`${imageUrl}|${ocrConfig.model}|${ocrConfig.prompt}|${type}`);
-        const cachePath = this.path.join(ocrStorageDir, `${hash}.json`);
-
-        const payload = {
-            imageUrl,
-            model: ocrConfig.model,
-            prompt: ocrConfig.prompt,
-            type,
-            response,
-            timestamp: new Date().toISOString()
-        };
-
-        try {
-            await this.fs.promises.mkdir(ocrStorageDir, { recursive: true });
-            await this.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
-        } catch (error) {
-            console.log(`🟢 Node.js: OCR cache write failed: ${error.message}`);
         }
     }
 
