@@ -26,12 +26,13 @@ const ImportedEventSchema = (() => {
 })();
 
 class AiWebParser {
-    constructor(config = {}) {
+    constructor(config = {}, dependencies = {}) {
         this.config = {
             source: 'ai-web',
             maxAdditionalUrls: 15,
             ...config
         };
+        this.aiService = dependencies.aiService || null;
         this.cachedEventSchemaPromptFields = [];
         this.cachedEventSchemaPromptFieldDescriptions = new Map();
         this.eventSchemaPromptFieldsLoaded = false;
@@ -1519,46 +1520,6 @@ class AiWebParser {
         return (hash >>> 0).toString(36);
     }
 
-    getOcrCacheRuntime() {
-        if (typeof FileManager !== 'undefined') {
-            try {
-                const fm = FileManager.iCloud();
-                const documentsDir = fm.documentsDirectory();
-                const baseDir = this.config.ocrCacheDir
-                    ? String(this.config.ocrCacheDir)
-                    : fm.joinPath(fm.joinPath(fm.joinPath(documentsDir, 'chunky-dad-scraper'), 'storage'), 'ocr');
-                return {
-                    type: 'scriptable',
-                    fm,
-                    baseDir
-                };
-            } catch (error) {
-                console.log(`🤖 AI Web: OCR cache setup unavailable in Scriptable: ${error.message}`);
-                return null;
-            }
-        }
-        if (typeof require === 'function') {
-            try {
-                const fs = require('fs');
-                const path = require('path');
-                const os = require('os');
-                const baseDir = this.config.ocrCacheDir
-                    ? String(this.config.ocrCacheDir)
-                    : path.join(os.homedir(), '.chunky-dad-scraper', 'storage', 'ocr');
-                return {
-                    type: 'node',
-                    fs,
-                    path,
-                    baseDir
-                };
-            } catch (error) {
-                console.log(`🤖 AI Web: OCR cache setup unavailable in Node: ${error.message}`);
-                return null;
-            }
-        }
-        return null;
-    }
-
     getOcrCachePathParts(imageUrl, ocrConfig = {}) {
         const rawUrl = String(imageUrl || '').trim();
         const normalizedSource = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
@@ -1625,94 +1586,17 @@ class AiWebParser {
     }
 
     async readCachedOcrResult(imageUrl, ocrConfig = {}) {
-        if (!ocrConfig.cacheEnabled) return null;
-        const runtime = this.getOcrCacheRuntime();
-        if (!runtime) return null;
-        const { normalizedUrl, hostDir, fileName } = this.getOcrCachePathParts(imageUrl, ocrConfig);
-
-        try {
-            let cachePath;
-            let rawPayload = null;
-            if (runtime.type === 'scriptable') {
-                const hostDirPath = runtime.fm.joinPath(runtime.baseDir, hostDir);
-                cachePath = runtime.fm.joinPath(hostDirPath, fileName);
-                if (!runtime.fm.fileExists(cachePath)) return null;
-                try {
-                    await runtime.fm.downloadFileFromiCloud(cachePath);
-                } catch (_) {}
-                rawPayload = runtime.fm.readString(cachePath);
-            } else {
-                cachePath = runtime.path.join(runtime.baseDir, hostDir, fileName);
-                rawPayload = await runtime.fs.promises.readFile(cachePath, 'utf8');
-            }
-            const cached = JSON.parse(rawPayload);
-            const responseText = cached && cached.response && typeof cached.response.text === 'string'
-                ? cached.response.text
-                : (typeof cached.text === 'string' ? cached.text : '');
-            if (!responseText) return null;
-            return {
-                imageUrl: cached.url || normalizedUrl,
-                text: responseText,
-                cachePath,
-                cached: true
-            };
-        } catch (error) {
-            const missingFile = error && (error.code === 'ENOENT' || /does not exist/i.test(String(error.message || '')));
-            if (!missingFile) {
-                console.log(`🤖 AI Web: OCR cache read failed for ${imageUrl}: ${error.message}`);
-            }
-            return null;
-        }
+        if (!this.aiService || typeof this.aiService.readCachedOcrResult !== 'function') return null;
+        return this.aiService.readCachedOcrResult(imageUrl, ocrConfig, {
+            getOcrCachePathParts: this.getOcrCachePathParts.bind(this)
+        });
     }
 
     async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '') {
-        if (!ocrConfig.cacheEnabled) return null;
-        const resultText = String(text || '').trim();
-        if (!resultText) return null;
-        const runtime = this.getOcrCacheRuntime();
-        if (!runtime) return null;
-        const { normalizedUrl, hostDir, fileName, signatureHash } = this.getOcrCachePathParts(imageUrl, ocrConfig);
-        const payload = {
-            url: normalizedUrl,
-            cachedAt: new Date().toISOString(),
-            cacheKeyVersion: 1,
-            request: {
-                endpoint: String(ocrConfig.endpoint || ''),
-                model: String(ocrConfig.model || ''),
-                prompt: String(ocrConfig.prompt || ''),
-                signatureHash,
-                options: {
-                    numCtx: Number.isFinite(Number(ocrConfig.numCtx)) ? Number(ocrConfig.numCtx) : null,
-                    numPredict: Number.isFinite(Number(ocrConfig.numPredict)) ? Number(ocrConfig.numPredict) : null,
-                    temperature: Number.isFinite(Number(ocrConfig.temperature)) ? Number(ocrConfig.temperature) : null,
-                    think: Boolean(ocrConfig.think),
-                    keepAlive: String(ocrConfig.keepAlive || '')
-                }
-            },
-            response: {
-                text: resultText
-            }
-        };
-
-        try {
-            let cachePath;
-            if (runtime.type === 'scriptable') {
-                const hostDirPath = runtime.fm.joinPath(runtime.baseDir, hostDir);
-                if (!runtime.fm.fileExists(runtime.baseDir)) runtime.fm.createDirectory(runtime.baseDir, true);
-                if (!runtime.fm.fileExists(hostDirPath)) runtime.fm.createDirectory(hostDirPath, true);
-                cachePath = runtime.fm.joinPath(hostDirPath, fileName);
-                runtime.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
-            } else {
-                const hostDirPath = runtime.path.join(runtime.baseDir, hostDir);
-                await runtime.fs.promises.mkdir(hostDirPath, { recursive: true });
-                cachePath = runtime.path.join(hostDirPath, fileName);
-                await runtime.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
-            }
-            return cachePath;
-        } catch (error) {
-            console.log(`🤖 AI Web: OCR cache write failed for ${imageUrl}: ${error.message}`);
-            return null;
-        }
+        if (!this.aiService || typeof this.aiService.writeCachedOcrResult !== 'function') return null;
+        return this.aiService.writeCachedOcrResult(imageUrl, ocrConfig, text, {
+            getOcrCachePathParts: this.getOcrCachePathParts.bind(this)
+        });
     }
 
     async loadImageAsBase64(imageUrl, timeoutSeconds) {
@@ -1721,34 +1605,10 @@ class AiWebParser {
         if (!normalizedUrl) {
             throw new Error('Missing image URL');
         }
-        if (typeof Request !== 'undefined') {
-            const request = new Request(normalizedUrl);
-            request.timeoutInterval = timeoutSeconds;
-            const image = await request.loadImage();
-            const jpegData = Data.fromJPEG(image);
-            return jpegData.toBase64String();
+        if (!this.aiService || typeof this.aiService.loadImageAsBase64 !== 'function') {
+            throw new Error('AI service loadImageAsBase64 unavailable');
         }
-        if (typeof fetch === 'function') {
-            const response = await fetch(normalizedUrl, {
-                signal: AbortSignal.timeout(timeoutSeconds * 1000)
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status} while downloading OCR image`);
-            }
-            const buffer = await response.arrayBuffer();
-            if (typeof Buffer !== 'undefined') {
-                return Buffer.from(buffer).toString('base64');
-            }
-            if (typeof btoa === 'function') {
-                let binary = '';
-                const bytes = new Uint8Array(buffer);
-                for (let i = 0; i < bytes.length; i++) {
-                    binary += String.fromCharCode(bytes[i]);
-                }
-                return btoa(binary);
-            }
-        }
-        throw new Error('No image HTTP client available');
+        return this.aiService.loadImageAsBase64(normalizedUrl, timeoutSeconds);
     }
 
     parseOcrResponse(rawText) {
@@ -3887,60 +3747,11 @@ ${String(rawResponse || '')}`;
         if (prompt) {
             console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
         }
-        const startTime = Date.now();
-        try {
-            let responseText = null;
-            let responseJson = null;
-            if (typeof Request !== 'undefined') {
-                const request = new Request(aiConfig.endpoint);
-                request.method = 'POST';
-                request.headers = { 'Content-Type': 'application/json' };
-                request.body = JSON.stringify(payload);
-                request.timeoutInterval = aiConfig.timeoutSeconds;
-                responseText = await request.loadString();
-            } else if (typeof fetch === 'function') {
-                const response = await fetch(aiConfig.endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    signal: AbortSignal.timeout(aiConfig.timeoutSeconds * 1000)
-                });
-                if (!response.ok) {
-                    console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
-                    return null;
-                }
-                responseText = await response.text();
-            } else {
-                console.warn(`🤖 AI Web: AI request${label} failed - no HTTP client available (Request/fetch missing)`);
-                return null;
-            }
-            if (responseText) {
-                try {
-                    responseJson = JSON.parse(responseText);
-                } catch (parseError) {
-                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars)`);
-                    console.log(`🤖 AI Web: Raw response payload${label}\n${responseText}`);
-                    return null;
-                }
-            }
-            const elapsed = Date.now() - startTime;
-            if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
-                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
-                console.log(`🤖 AI Web: Model response text${label}\n${responseJson.response}`);
-                return responseJson.response;
-            }
-            const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
-            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
-            if (responseText) {
-                console.log(`🤖 AI Web: Raw response payload${label}\n${responseText}`);
-            }
-            return null;
-        } catch (error) {
-            const elapsed = Date.now() - startTime;
-            const errorType = error && error.name ? error.name : 'Error';
-            console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
+        if (!this.aiService || typeof this.aiService.sendAiRequest !== 'function') {
+            console.warn(`🤖 AI Web: AI request${label} failed - aiService.sendAiRequest unavailable`);
             return null;
         }
+        return this.aiService.sendAiRequest(aiConfig, payload, passLabel);
     }
 
     async callAiGenerate(aiConfig, prompt, passLabel) {

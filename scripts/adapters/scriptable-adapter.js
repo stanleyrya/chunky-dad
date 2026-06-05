@@ -1952,6 +1952,124 @@ class ScriptableAdapter {
         }
     }
 
+    // AI and OCR Implementation
+    async sendAiRequest(aiConfig, payload, passLabel) {
+        const label = passLabel ? ` (${passLabel} pass)` : '';
+        const startTime = Date.now();
+        try {
+            const request = new Request(aiConfig.endpoint);
+            request.method = 'POST';
+            request.headers = { 'Content-Type': 'application/json' };
+            request.body = JSON.stringify(payload);
+            request.timeoutInterval = aiConfig.timeoutSeconds;
+            const responseText = await request.loadString();
+            if (!responseText) return null;
+            try {
+                const responseJson = JSON.parse(responseText);
+                const elapsed = Date.now() - startTime;
+                if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
+                    console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
+                    return responseJson.response;
+                }
+                const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
+                console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
+                return null;
+            } catch (parseError) {
+                console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars)`);
+                return null;
+            }
+        } catch (error) {
+            const elapsed = Date.now() - startTime;
+            const errorType = error && error.name ? error.name : 'Error';
+            console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
+            return null;
+        }
+    }
+
+    async loadImageAsBase64(imageUrl, timeoutSeconds) {
+        if (typeof Request === 'undefined' || typeof Data === 'undefined') {
+            throw new Error('No image HTTP client available');
+        }
+        const request = new Request(imageUrl);
+        request.timeoutInterval = timeoutSeconds;
+        const image = await request.loadImage();
+        const jpegData = Data.fromJPEG(image);
+        return jpegData.toBase64String();
+    }
+
+    async readCachedOcrResult(imageUrl, ocrConfig, cacheHelpers) {
+        if (!ocrConfig.cacheEnabled) return null;
+        const fm = FileManager.iCloud();
+        const documentsDir = fm.documentsDirectory();
+        const baseDir = fm.joinPath(fm.joinPath(fm.joinPath(documentsDir, 'chunky-dad-scraper'), 'storage'), 'ocr');
+        const { normalizedUrl, hostDir, fileName } = cacheHelpers.getOcrCachePathParts(imageUrl, ocrConfig);
+        const hostDirPath = fm.joinPath(baseDir, hostDir);
+        const cachePath = fm.joinPath(hostDirPath, fileName);
+
+        if (!fm.fileExists(cachePath)) return null;
+        try {
+            await fm.downloadFileFromiCloud(cachePath);
+            const rawPayload = fm.readString(cachePath);
+            const cached = JSON.parse(rawPayload);
+            const responseText = cached && cached.response && typeof cached.response.text === 'string'
+                ? cached.response.text
+                : (typeof cached.text === 'string' ? cached.text : '');
+            if (!responseText) return null;
+            return {
+                imageUrl: cached.url || normalizedUrl,
+                text: responseText,
+                cachePath,
+                cached: true
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async writeCachedOcrResult(imageUrl, ocrConfig, text, cacheHelpers) {
+        if (!ocrConfig.cacheEnabled) return null;
+        const resultText = String(text || '').trim();
+        if (!resultText) return null;
+        const fm = FileManager.iCloud();
+        const documentsDir = fm.documentsDirectory();
+        const baseDir = fm.joinPath(fm.joinPath(fm.joinPath(documentsDir, 'chunky-dad-scraper'), 'storage'), 'ocr');
+        const { normalizedUrl, hostDir, fileName, signatureHash } = cacheHelpers.getOcrCachePathParts(imageUrl, ocrConfig);
+        const hostDirPath = fm.joinPath(baseDir, hostDir);
+        const cachePath = fm.joinPath(hostDirPath, fileName);
+
+        const payload = {
+            url: normalizedUrl,
+            cachedAt: new Date().toISOString(),
+            cacheKeyVersion: 1,
+            request: {
+                endpoint: String(ocrConfig.endpoint || ''),
+                model: String(ocrConfig.model || ''),
+                prompt: String(ocrConfig.prompt || ''),
+                signatureHash,
+                options: {
+                    numCtx: Number.isFinite(Number(ocrConfig.numCtx)) ? Number(ocrConfig.numCtx) : null,
+                    numPredict: Number.isFinite(Number(ocrConfig.numPredict)) ? Number(ocrConfig.numPredict) : null,
+                    temperature: Number.isFinite(Number(ocrConfig.temperature)) ? Number(ocrConfig.temperature) : null,
+                    think: Boolean(ocrConfig.think),
+                    keepAlive: String(ocrConfig.keepAlive || '')
+                }
+            },
+            response: {
+                text: resultText
+            }
+        };
+
+        try {
+            if (!fm.fileExists(baseDir)) fm.createDirectory(baseDir, true);
+            if (!fm.fileExists(hostDirPath)) fm.createDirectory(hostDirPath, true);
+            fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+            return cachePath;
+        } catch (error) {
+            console.log(`🤖 AI Web: OCR cache write failed for ${imageUrl}: ${error.message}`);
+            return null;
+        }
+    }
+
     // Display/Logging Adapter Implementation
     async logInfo(message) {
         console.log(message);

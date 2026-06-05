@@ -248,6 +248,8 @@ class BearEventScraperOrchestrator {
                     } else if (name === 'ai-web') {
                         parsers[name] = new ParserClass({
                             normalizeUrl: sharedCore.normalizeUrl.bind(sharedCore)
+                        }, {
+                            aiService: finalAdapter
                         });
                     } else {
                         parsers[name] = new ParserClass();
