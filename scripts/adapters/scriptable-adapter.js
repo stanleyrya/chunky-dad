@@ -2103,7 +2103,7 @@ class ScriptableAdapter {
         const payload = {
             url: normalizedUrl,
             cachedAt: new Date().toISOString(),
-            cacheKeyVersion: 1,
+            cacheKeyVersion: 2,
             request: {
                 endpoint: String(ocrConfig.endpoint || ''),
                 model: String(ocrConfig.model || ''),

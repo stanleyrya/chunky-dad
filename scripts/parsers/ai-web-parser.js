@@ -1546,6 +1546,7 @@ class AiWebParser {
         } catch (_) {}
         const parsed = this.parseUrlComponents(normalizedUrl);
         const requestSignature = JSON.stringify({
+            version: 2,
             model: String(ocrConfig.model || ''),
             prompt: String(ocrConfig.prompt || ''),
             options: {
@@ -1681,14 +1682,6 @@ class AiWebParser {
         const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
         if (cached && (cached.text || (cached.response && cached.response.text))) {
             console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
-            // Backward compatibility for old cache entries that were just text
-            if (typeof cached.text === 'string' && !cached.classification) {
-                return {
-                    ...cached,
-                    classification: 'unknown',
-                    confidence: 0
-                };
-            }
             return cached;
         }
 
