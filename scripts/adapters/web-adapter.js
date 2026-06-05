@@ -33,15 +33,19 @@ class WebAdapter {
         this.fs = null;
         this.path = null;
         this.pageStorageDir = null;
+        this.ocrStorageDir = null;
+        this.aiPromptHistory = [];
 
         if (this.isNode) {
             try {
                 this.fs = require('fs');
                 this.path = require('path');
                 const os = require('os');
-                this.pageStorageDir = this.path.join(os.homedir(), '.chunky-dad-scraper', 'storage', 'pages');
+                const baseDir = this.path.join(os.homedir(), '.chunky-dad-scraper', 'storage');
+                this.pageStorageDir = this.path.join(baseDir, 'pages');
+                this.ocrStorageDir = this.path.join(baseDir, 'ocr');
             } catch (error) {
-                console.log(`🟢 Node.js: Page cache setup unavailable: ${error.message}`);
+                console.log(`🟢 Node.js: Storage setup unavailable: ${error.message}`);
             }
         }
     }
@@ -518,6 +522,178 @@ class WebAdapter {
     async getExistingEvents(event) {
 
         return [];
+    }
+
+    // AI and OCR Implementation
+    recordAiPrompt(prompt, passLabel, aiConfig = {}) {
+        if (!prompt) return;
+        const normalizedPassLabel = String(passLabel || 'extraction').trim() || 'extraction';
+        this.aiPromptHistory.push({
+            pass: normalizedPassLabel,
+            model: String(aiConfig.model || ''),
+            endpoint: String(aiConfig.endpoint || ''),
+            chars: prompt.length,
+            prompt: String(prompt)
+        });
+    }
+
+    consumeAiPromptHistory() {
+        const prompts = this.aiPromptHistory
+            .map(entry => {
+                if (!entry || typeof entry !== 'object') return null;
+                const promptText = String(entry.prompt || '');
+                if (!promptText) return null;
+                return {
+                    pass: String(entry.pass || 'extraction'),
+                    model: String(entry.model || ''),
+                    endpoint: String(entry.endpoint || ''),
+                    chars: Number.isFinite(Number(entry.chars)) ? Number(entry.chars) : promptText.length,
+                    prompt: promptText
+                };
+            })
+            .filter(Boolean);
+        this.aiPromptHistory = [];
+        return prompts;
+    }
+
+    async sendAiRequest(aiConfig, payload, passLabel) {
+        const label = passLabel ? ` (${passLabel} pass)` : '';
+        const prompt = payload && typeof payload.prompt === 'string' ? payload.prompt : '';
+        const promptChars = prompt.length;
+        if (prompt) {
+            this.recordAiPrompt(prompt, passLabel, aiConfig);
+        }
+        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
+        if (prompt) {
+            console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
+        }
+        const startTime = Date.now();
+        try {
+            const response = await fetch(aiConfig.endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(aiConfig.timeoutSeconds * 1000)
+            });
+            if (!response.ok) {
+                console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
+                return null;
+            }
+            const responseText = await response.text();
+            if (!responseText) return null;
+            try {
+                const responseJson = JSON.parse(responseText);
+                const elapsed = Date.now() - startTime;
+                if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
+                    console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
+                    console.log(`🤖 AI Web: Model response text${label}\n${responseJson.response}`);
+                    return responseJson.response;
+                }
+                const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
+                console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
+                return null;
+            } catch (parseError) {
+                console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars)`);
+                return null;
+            }
+        } catch (error) {
+            const elapsed = Date.now() - startTime;
+            const errorType = error && error.name ? error.name : 'Error';
+            console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
+            return null;
+        }
+    }
+
+    async loadImageAsBase64(imageUrl, timeoutSeconds) {
+        if (typeof fetch !== 'function') {
+            throw new Error('No image HTTP client available');
+        }
+        const response = await fetch(imageUrl, {
+            signal: AbortSignal.timeout(timeoutSeconds * 1000)
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} while downloading OCR image`);
+        }
+        const buffer = await response.arrayBuffer();
+        if (typeof Buffer !== 'undefined') {
+            return Buffer.from(buffer).toString('base64');
+        }
+        if (typeof btoa === 'function') {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+        throw new Error('No base64 encoder available');
+    }
+
+    async readCachedOcrResult(imageUrl, ocrConfig, cacheHelpers) {
+        if (!ocrConfig.cacheEnabled || !this.isNode || !this.fs || !this.path || !this.ocrStorageDir) {
+            return null;
+        }
+        const { normalizedUrl, hostDir, fileName } = cacheHelpers.getOcrCachePathParts(imageUrl, ocrConfig);
+        const cachePath = this.path.join(this.ocrStorageDir, hostDir, fileName);
+
+        try {
+            const rawPayload = await this.fs.promises.readFile(cachePath, 'utf8');
+            const cached = JSON.parse(rawPayload);
+            const responseText = cached && cached.response && typeof cached.response.text === 'string'
+                ? cached.response.text
+                : (typeof cached.text === 'string' ? cached.text : '');
+            if (!responseText) return null;
+            return {
+                imageUrl: cached.url || normalizedUrl,
+                text: responseText,
+                cachePath,
+                cached: true
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async writeCachedOcrResult(imageUrl, ocrConfig, text, cacheHelpers) {
+        if (!ocrConfig.cacheEnabled || !this.isNode || !this.fs || !this.path || !this.ocrStorageDir) {
+            return null;
+        }
+        const resultText = String(text || '').trim();
+        if (!resultText) return null;
+        const { normalizedUrl, hostDir, fileName, signatureHash } = cacheHelpers.getOcrCachePathParts(imageUrl, ocrConfig);
+        const hostDirPath = this.path.join(this.ocrStorageDir, hostDir);
+        const cachePath = this.path.join(hostDirPath, fileName);
+
+        const payload = {
+            url: normalizedUrl,
+            cachedAt: new Date().toISOString(),
+            cacheKeyVersion: 1,
+            request: {
+                endpoint: String(ocrConfig.endpoint || ''),
+                model: String(ocrConfig.model || ''),
+                prompt: String(ocrConfig.prompt || ''),
+                signatureHash,
+                options: {
+                    numCtx: Number.isFinite(Number(ocrConfig.numCtx)) ? Number(ocrConfig.numCtx) : null,
+                    numPredict: Number.isFinite(Number(ocrConfig.numPredict)) ? Number(ocrConfig.numPredict) : null,
+                    temperature: Number.isFinite(Number(ocrConfig.temperature)) ? Number(ocrConfig.temperature) : null,
+                    think: Boolean(ocrConfig.think),
+                    keepAlive: String(ocrConfig.keepAlive || '')
+                }
+            },
+            response: {
+                text: resultText
+            }
+        };
+
+        try {
+            await this.fs.promises.mkdir(hostDirPath, { recursive: true });
+            await this.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+            return cachePath;
+        } catch (error) {
+            console.log(`🤖 AI Web: OCR cache write failed for ${imageUrl}: ${error.message}`);
+            return null;
+        }
     }
 
     // Display/Logging Adapter Implementation
