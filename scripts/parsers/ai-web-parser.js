@@ -32,7 +32,13 @@ class AiWebParser {
             maxAdditionalUrls: 15,
             ...config
         };
-        this.aiService = dependencies.aiService || null;
+        this.sendAiRequest = dependencies.sendAiRequest || null;
+        this.loadImageAsBase64 = dependencies.loadImageAsBase64 || null;
+        this.readCachedOcrResult = dependencies.readCachedOcrResult || null;
+        this.writeCachedOcrResult = dependencies.writeCachedOcrResult || null;
+        this.recordAiPrompt = dependencies.recordAiPrompt || null;
+        this.consumeAiPromptHistory = dependencies.consumeAiPromptHistory || null;
+
         this.cachedEventSchemaPromptFields = [];
         this.cachedEventSchemaPromptFieldDescriptions = new Map();
         this.eventSchemaPromptFieldsLoaded = false;
@@ -111,7 +117,6 @@ class AiWebParser {
         // Common CDN/image-transform query keys (w=width, h=height, q=quality, fit/crop/auto/fm/format, s=signature).
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
-        this.aiPromptHistory = [];
         this.defaultOcrModel = 'qwen2.5vl:3b';
         this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears. Return a JSON object with a single key 'text' containing the full extracted text, preserving line breaks as \\n. Do not add commentary.";
         this.defaultOcrRequestConfig = {
@@ -144,7 +149,6 @@ class AiWebParser {
 
     async parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
         try {
-            this.aiPromptHistory = [];
             const html = htmlData && htmlData.html ? htmlData.html : '';
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
@@ -1586,15 +1590,15 @@ class AiWebParser {
     }
 
     async readCachedOcrResult(imageUrl, ocrConfig = {}) {
-        if (!this.aiService || typeof this.aiService.readCachedOcrResult !== 'function') return null;
-        return this.aiService.readCachedOcrResult(imageUrl, ocrConfig, {
+        if (typeof this.readCachedOcrResult !== 'function' || this.readCachedOcrResult === null) return null;
+        return this.readCachedOcrResult(imageUrl, ocrConfig, {
             getOcrCachePathParts: this.getOcrCachePathParts.bind(this)
         });
     }
 
     async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '') {
-        if (!this.aiService || typeof this.aiService.writeCachedOcrResult !== 'function') return null;
-        return this.aiService.writeCachedOcrResult(imageUrl, ocrConfig, text, {
+        if (typeof this.writeCachedOcrResult !== 'function' || this.writeCachedOcrResult === null) return null;
+        return this.writeCachedOcrResult(imageUrl, ocrConfig, text, {
             getOcrCachePathParts: this.getOcrCachePathParts.bind(this)
         });
     }
@@ -1605,10 +1609,10 @@ class AiWebParser {
         if (!normalizedUrl) {
             throw new Error('Missing image URL');
         }
-        if (!this.aiService || typeof this.aiService.loadImageAsBase64 !== 'function') {
+        if (typeof this.loadImageAsBase64 !== 'function' || this.loadImageAsBase64 === null) {
             throw new Error('AI service loadImageAsBase64 unavailable');
         }
-        return this.aiService.loadImageAsBase64(normalizedUrl, timeoutSeconds);
+        return this.loadImageAsBase64(normalizedUrl, timeoutSeconds);
     }
 
     parseOcrResponse(rawText) {
@@ -2447,46 +2451,13 @@ class AiWebParser {
         if (!extracted || typeof extracted !== 'object') {
             return extracted;
         }
-        const promptHistory = this.consumeAiPromptHistory();
+        const promptHistory = (typeof this.consumeAiPromptHistory === 'function')
+            ? this.consumeAiPromptHistory()
+            : [];
         if (promptHistory.length > 0) {
             extracted.__aiPrompts = promptHistory;
         }
         return extracted;
-    }
-
-    recordAiPrompt(prompt, passLabel, aiConfig = {}) {
-        if (!prompt) return;
-        const normalizedPassLabel = String(passLabel || 'extraction').trim() || 'extraction';
-        this.aiPromptHistory.push({
-            pass: normalizedPassLabel,
-            model: String(aiConfig.model || ''),
-            endpoint: String(aiConfig.endpoint || ''),
-            chars: prompt.length,
-            prompt: String(prompt)
-        });
-    }
-
-    consumeAiPromptHistory() {
-        if (!Array.isArray(this.aiPromptHistory) || this.aiPromptHistory.length === 0) {
-            this.aiPromptHistory = [];
-            return [];
-        }
-        const prompts = this.aiPromptHistory
-            .map(entry => {
-                if (!entry || typeof entry !== 'object') return null;
-                const promptText = String(entry.prompt || '');
-                if (!promptText) return null;
-                return {
-                    pass: String(entry.pass || 'extraction'),
-                    model: String(entry.model || ''),
-                    endpoint: String(entry.endpoint || ''),
-                    chars: Number.isFinite(Number(entry.chars)) ? Number(entry.chars) : promptText.length,
-                    prompt: promptText
-                };
-            })
-            .filter(Boolean);
-        this.aiPromptHistory = [];
-        return prompts;
     }
 
     getAiConfig(parserConfig = {}) {
@@ -3740,18 +3711,18 @@ ${String(rawResponse || '')}`;
         const label = passLabel ? ` (${passLabel} pass)` : '';
         const prompt = String(promptForHistory || (payload && typeof payload.prompt === 'string' ? payload.prompt : ''));
         const promptChars = prompt.length;
-        if (prompt) {
+        if (prompt && typeof this.recordAiPrompt === 'function') {
             this.recordAiPrompt(prompt, passLabel, aiConfig);
         }
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
         if (prompt) {
             console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
         }
-        if (!this.aiService || typeof this.aiService.sendAiRequest !== 'function') {
-            console.warn(`🤖 AI Web: AI request${label} failed - aiService.sendAiRequest unavailable`);
+        if (typeof this.sendAiRequest !== 'function' || this.sendAiRequest === null) {
+            console.warn(`🤖 AI Web: AI request${label} failed - sendAiRequest unavailable`);
             return null;
         }
-        return this.aiService.sendAiRequest(aiConfig, payload, passLabel);
+        return this.sendAiRequest(aiConfig, payload, passLabel);
     }
 
     async callAiGenerate(aiConfig, prompt, passLabel) {

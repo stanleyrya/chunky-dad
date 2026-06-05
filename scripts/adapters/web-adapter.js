@@ -34,6 +34,7 @@ class WebAdapter {
         this.path = null;
         this.pageStorageDir = null;
         this.ocrStorageDir = null;
+        this.aiPromptHistory = [];
 
         if (this.isNode) {
             try {
@@ -524,8 +525,48 @@ class WebAdapter {
     }
 
     // AI and OCR Implementation
+    recordAiPrompt(prompt, passLabel, aiConfig = {}) {
+        if (!prompt) return;
+        const normalizedPassLabel = String(passLabel || 'extraction').trim() || 'extraction';
+        this.aiPromptHistory.push({
+            pass: normalizedPassLabel,
+            model: String(aiConfig.model || ''),
+            endpoint: String(aiConfig.endpoint || ''),
+            chars: prompt.length,
+            prompt: String(prompt)
+        });
+    }
+
+    consumeAiPromptHistory() {
+        const prompts = this.aiPromptHistory
+            .map(entry => {
+                if (!entry || typeof entry !== 'object') return null;
+                const promptText = String(entry.prompt || '');
+                if (!promptText) return null;
+                return {
+                    pass: String(entry.pass || 'extraction'),
+                    model: String(entry.model || ''),
+                    endpoint: String(entry.endpoint || ''),
+                    chars: Number.isFinite(Number(entry.chars)) ? Number(entry.chars) : promptText.length,
+                    prompt: promptText
+                };
+            })
+            .filter(Boolean);
+        this.aiPromptHistory = [];
+        return prompts;
+    }
+
     async sendAiRequest(aiConfig, payload, passLabel) {
         const label = passLabel ? ` (${passLabel} pass)` : '';
+        const prompt = payload && typeof payload.prompt === 'string' ? payload.prompt : '';
+        const promptChars = prompt.length;
+        if (prompt) {
+            this.recordAiPrompt(prompt, passLabel, aiConfig);
+        }
+        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
+        if (prompt) {
+            console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
+        }
         const startTime = Date.now();
         try {
             const response = await fetch(aiConfig.endpoint, {
@@ -545,6 +586,7 @@ class WebAdapter {
                 const elapsed = Date.now() - startTime;
                 if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
                     console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
+                    console.log(`🤖 AI Web: Model response text${label}\n${responseJson.response}`);
                     return responseJson.response;
                 }
                 const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
