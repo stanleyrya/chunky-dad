@@ -643,23 +643,44 @@ class WebAdapter {
                 ? cached.response.text
                 : (typeof cached.text === 'string' ? cached.text : '');
             if (!responseText) return null;
-            return {
+
+            const result = {
                 imageUrl: cached.url || normalizedUrl,
                 text: responseText,
                 cachePath,
                 cached: true
             };
+
+            if (cached && cached.response) {
+                if (cached.response.classification) result.classification = cached.response.classification;
+                if (typeof cached.response.confidence === 'number') result.confidence = cached.response.confidence;
+            }
+
+            return result;
         } catch (error) {
             return null;
         }
     }
 
-    async writeCachedOcrResult(imageUrl, ocrConfig, text, cacheHelpers) {
+    async writeCachedOcrResult(imageUrl, ocrConfig, responseData, cacheHelpers) {
         if (!ocrConfig.cacheEnabled || !this.isNode || !this.fs || !this.path || !this.ocrStorageDir) {
             return null;
         }
-        const resultText = String(text || '').trim();
+
+        let resultText = '';
+        let classification = null;
+        let confidence = null;
+
+        if (typeof responseData === 'object' && responseData !== null) {
+            resultText = String(responseData.text || '').trim();
+            classification = responseData.classification || null;
+            confidence = responseData.confidence || null;
+        } else {
+            resultText = String(responseData || '').trim();
+        }
+
         if (!resultText) return null;
+
         const { normalizedUrl, hostDir, fileName, signatureHash } = cacheHelpers.getOcrCachePathParts(imageUrl, ocrConfig);
         const hostDirPath = this.path.join(this.ocrStorageDir, hostDir);
         const cachePath = this.path.join(hostDirPath, fileName);
@@ -682,7 +703,9 @@ class WebAdapter {
                 }
             },
             response: {
-                text: resultText
+                text: resultText,
+                classification,
+                confidence
             }
         };
 
