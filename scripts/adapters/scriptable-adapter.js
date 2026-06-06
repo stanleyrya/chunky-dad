@@ -1010,7 +1010,73 @@ class ScriptableAdapter {
         }
     }
 
-    hasNonEmptyValue(value) {
+    // OCR Processing
+    async runOcrOnPage(html, url) {
+        try {
+            // Import or use OCR processor
+            let OcrProcessor;
+            
+            // Try to load from module
+            if (typeof module !== 'undefined' && module.exports) {
+                try {
+                    const ocrModule = require('../ocr-processor.js');
+                    if (ocrModule && ocrModule.OcrProcessor) {
+                        OcrProcessor = ocrModule.OcrProcessor;
+                    }
+                } catch (_) {
+                    // Fall through to window/global
+                }
+            }
+            
+            if (!OcrProcessor && typeof window !== 'undefined' && window.OcrProcessor) {
+                OcrProcessor = window.OcrProcessor;
+            } else if (!OcrProcessor && typeof this.OcrProcessor !== 'undefined') {
+                OcrProcessor = this.OcrProcessor;
+            }
+            
+            if (!OcrProcessor) {
+                console.log(`📱 Scriptable: OCR processor not available, skipping OCR`);
+                return null;
+            }
+
+            // Initialize OCR processor with configuration
+            const ocrConfig = {
+                enabled: true,
+                endpoint: this.config.ocrEndpoint || null,
+                model: this.config.ocrModel || 'qwen2.5vl:3b',
+                timeoutSeconds: this.config.ocrTimeoutSeconds || 300,
+                keepAlive: this.config.ocrKeepAlive || '5m',
+                numCtx: this.config.ocrNumCtx || 8192,
+                numPredict: this.config.ocrNumPredict || 2000,
+                temperature: this.config.ocrTemperature || 0,
+                think: this.config.ocrThink || false,
+                maxImages: this.config.ocrMaxImages || 10,
+                maxTextChars: this.config.ocrMaxTextChars || 10000,
+                cacheEnabled: this.config.ocrCacheEnabled !== false,
+                cacheDir: this.config.ocrCacheDir || null,
+                minImageDimension: this.config.ocrMinImageDimension || 100,
+                minImageArea: this.config.ocrMinImageArea || 10000
+            };
+
+            const processor = new OcrProcessor(ocrConfig);
+
+            // Process page images
+            const results = await processor.processPageImages(html, url);
+            
+            if (results && results.images && results.images.length > 0) {
+                console.log(`📱 Scriptable: OCR completed for ${url} (${results.images.length} images, ${results.summary.totalTextChars} chars)`);
+                return results;
+            }
+
+            return null;
+            
+        } catch (error) {
+            console.log(`📱 Scriptable: OCR processing failed for ${url}: ${error.message}`);
+            return null;
+        }
+    }
+
+        hasNonEmptyValue(value) {
         if (value === null || value === undefined) return false;
         if (Array.isArray(value)) {
             return value.some(item => this.hasNonEmptyValue(item));
