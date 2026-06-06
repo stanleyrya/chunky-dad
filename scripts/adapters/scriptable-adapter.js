@@ -2302,11 +2302,41 @@ class ScriptableAdapter {
         return automationRun && hasAutomationParsers;
     }
 
+    normalizeOcrSourceInput(source) {
+        if (source && typeof source === 'object' && !Array.isArray(source)) {
+            return {
+                html: typeof source.html === 'string' ? source.html : '',
+                url: typeof source.url === 'string' ? source.url : '',
+                imageUrls: Array.isArray(source.imageUrls) ? source.imageUrls : [],
+                summaryKey: typeof source.summaryKey === 'string' ? source.summaryKey : ''
+            };
+        }
+        return {
+            html: typeof source === 'string' ? source : '',
+            url: '',
+            imageUrls: [],
+            summaryKey: ''
+        };
+    }
+
+    normalizeOcrImageUrls(imageUrls, sourceUrl = '') {
+        const normalizedUrls = new Set();
+        (Array.isArray(imageUrls) ? imageUrls : []).forEach(imageUrl => {
+            this.addImageUrlIfValid(imageUrl, sourceUrl, normalizedUrls);
+        });
+        return Array.from(normalizedUrls);
+    }
+
     // Simple OCR: Extract all images from HTML and run OCR on them
-    async runOcrOnAllImages(html, ocrConfig = {}) {
+    async runOcrOnAllImages(source, ocrConfig = {}) {
         try {
-            // Find all image URLs in HTML using the same patterns as ai-web-parser.js
-            const imageUrls = this.extractImageUrlsFromHtml(html);
+            const sourceInput = this.normalizeOcrSourceInput(source);
+            const html = sourceInput.html;
+            const sourceUrl = sourceInput.url;
+            const summaryKey = sourceInput.summaryKey || sourceUrl || html;
+            const imageUrls = sourceInput.imageUrls.length > 0
+                ? this.normalizeOcrImageUrls(sourceInput.imageUrls, sourceUrl)
+                : this.extractImageUrlsFromHtml(html, sourceUrl);
 
             if (!imageUrls || imageUrls.length === 0) {
                 console.log(`🤖 OCR: No images found in HTML`);
@@ -2315,7 +2345,7 @@ class ScriptableAdapter {
 
             // Check if we have a cached summary
             if (ocrConfig.cacheEnabled) {
-                const cachedSummary = await this.readCachedOcrSummary(html, ocrConfig, this);
+                const cachedSummary = await this.readCachedOcrSummary(summaryKey, ocrConfig, this);
                 if (cachedSummary && cachedSummary.results && cachedSummary.results.length > 0) {
                     console.log(`🤖 OCR: Using cached summary (${cachedSummary.successful}/${cachedSummary.imageCount} successful)`);
                     return cachedSummary.results;
@@ -2372,9 +2402,11 @@ class ScriptableAdapter {
                         images: [base64Image],
                         format: 'json',
                         stream: false,
+                        think: Boolean(ocrConfig.think),
+                        keep_alive: String(ocrConfig.keepAlive || ''),
                         options: {
-                            numCtx: Number(ocrConfig.numCtx) || 32000,
-                            numPredict: Number(ocrConfig.numPredict) || 2048,
+                            num_ctx: Number(ocrConfig.numCtx) || 32000,
+                            num_predict: Number(ocrConfig.numPredict) || 2048,
                             temperature: Number(ocrConfig.temperature) || 0.2
                         }
                     };
@@ -2417,7 +2449,7 @@ class ScriptableAdapter {
             // Cache the summary if we have results
             if (ocrConfig.cacheEnabled && ocrResults.length > 0) {
                 try {
-                    await this.writeCachedOcrSummary(html, ocrConfig, ocrResults, this);
+                    await this.writeCachedOcrSummary(summaryKey, ocrConfig, ocrResults, this);
                 } catch (error) {
                     console.log(`🤖 OCR: Failed to cache summary: ${error.message}`);
                 }
@@ -2432,11 +2464,10 @@ class ScriptableAdapter {
     }
 
     // Extract image URLs from HTML using the same patterns as ai-web-parser.js
-    extractImageUrlsFromHtml(html) {
+    extractImageUrlsFromHtml(html, sourceUrl = '') {
         if (!html) return [];
 
         const imageUrls = new Set();
-        const sourceUrl = ''; // Not available in this simple version
 
         // Extract URLs from image tags (src, data-src, data-lazy-src, poster, content)
         const attrPatterns = [
@@ -2502,6 +2533,18 @@ class ScriptableAdapter {
         if (!wrappedNormalized) return normalized;
 
         return this.unwrapImageProxyUrl(wrappedNormalized, unwrapDepth + 1);
+    }
+
+    getImageProxyPathPrefixes() {
+        return ['/e/_next/image?', '/_next/image?'];
+    }
+
+    getLikelyImageRegex() {
+        return /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i;
+    }
+
+    getLikelyImageQueryRegex() {
+        return /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
     }
 
     // Check if URL ends with a supported image extension
