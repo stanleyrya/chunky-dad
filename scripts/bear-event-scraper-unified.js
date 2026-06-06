@@ -248,13 +248,6 @@ class BearEventScraperOrchestrator {
                     } else if (name === 'ai-web') {
                         parsers[name] = new ParserClass({
                             normalizeUrl: sharedCore.normalizeUrl.bind(sharedCore)
-                        }, {
-                            sendAiRequest: finalAdapter.sendAiRequest.bind(finalAdapter),
-                            loadImageAsBase64: finalAdapter.loadImageAsBase64.bind(finalAdapter),
-                            readCachedOcrResult: finalAdapter.readCachedOcrResult.bind(finalAdapter),
-                            writeCachedOcrResult: finalAdapter.writeCachedOcrResult.bind(finalAdapter),
-                            recordAiPrompt: finalAdapter.recordAiPrompt.bind(finalAdapter),
-                            consumeAiPromptHistory: finalAdapter.consumeAiPromptHistory.bind(finalAdapter)
                         });
                     } else {
                         parsers[name] = new ParserClass();
