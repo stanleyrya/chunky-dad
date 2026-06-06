@@ -1654,7 +1654,7 @@ class AiWebParser {
 
         const hintedUrls = [];
         const seen = new Set();
-        const pattern = /^SEGMENT_IMAGE(?:_HINT)?_URL:\s*(\S+)/gim;
+        const pattern = /^\s*SEGMENT_IMAGE(?:_HINT)?_URL:\s*(\S+)/gim;
         let match;
         while ((match = pattern.exec(html)) !== null) {
             const rawUrl = String(match[1] || '').trim();

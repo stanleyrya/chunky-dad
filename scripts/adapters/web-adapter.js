@@ -1198,6 +1198,18 @@ class WebAdapter {
         return this.unwrapImageProxyUrl(wrappedNormalized, unwrapDepth + 1);
     }
 
+    getImageProxyPathPrefixes() {
+        return ['/e/_next/image?', '/_next/image?'];
+    }
+
+    getLikelyImageRegex() {
+        return /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i;
+    }
+
+    getLikelyImageQueryRegex() {
+        return /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
+    }
+
     // Check if URL ends with a supported image extension
     hasSupportedImageFilenameAtEnd(url) {
         const parsed = this.parseUrlComponents(url);
