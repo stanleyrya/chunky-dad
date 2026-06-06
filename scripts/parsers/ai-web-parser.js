@@ -1211,8 +1211,7 @@ class AiWebParser {
         if (/^(ticket|tickets|buy|register|details|learn more)\b/i.test(line)) return false;
         const wordCount = line.split(/\s+/).length;
         if (wordCount < this.extractionLimits.multiEventTitleMinWords) return false;
-        if (/^[^a-z0-9]+$/i.test(line)) return false;
-        return true;
+        return !/^[^a-z0-9]+$/i.test(line);
     }
 
     extractAdditionalUrls(html, sourceUrl, parserConfig) {
@@ -1276,19 +1275,15 @@ class AiWebParser {
             }
 
             // Extract from common JS-embedded data objects (window.__SERVER_DATA__, __INITIAL_STATE__, etc.)
-            const serverDataDiagnostics = {};
-            const serverDataUrls = this.extractUrlsFromServerData(html, sourceUrl, serverDataDiagnostics);
+            const serverDataUrls = this.extractUrlsFromServerData(html, sourceUrl, discoveryStats.serverDataDiagnostics || null);
             discoveryStats.serverDataCandidates = serverDataUrls.length;
-            discoveryStats.serverDataDiagnostics = serverDataDiagnostics;
             for (const candidate of serverDataUrls) {
                 this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__server-data__', discoveryStats, parserConfig);
             }
 
             // Extract from __NEXT_DATA__ (Next.js pages)
-            const nextDataDiagnostics = {};
-            const nextDataUrls = this.extractUrlsFromNextData(html, sourceUrl, nextDataDiagnostics);
+            const nextDataUrls = this.extractUrlsFromNextData(html, sourceUrl, discoveryStats.nextDataDiagnostics || null);
             discoveryStats.nextDataCandidates = nextDataUrls.length;
-            discoveryStats.nextDataDiagnostics = nextDataDiagnostics;
             for (const candidate of nextDataUrls) {
                 this.addAdditionalUrlCandidate(urls, candidate, sourceUrl, '__next-data__', discoveryStats, parserConfig);
             }
@@ -1975,10 +1970,6 @@ class AiWebParser {
         return score;
     }
 
-    isValidEventUrl(url, sourceUrl) {
-        return this.validateEventUrl(url, sourceUrl).valid;
-    }
-
     validateEventUrl(url, sourceUrl, parserConfig = {}) {
         if (!url || typeof url !== 'string') return { valid: false, reason: 'missing-or-invalid-url' };
 
@@ -2290,19 +2281,75 @@ class AiWebParser {
         });
     }
 
-    extractUrlsFromServerData(html, sourceUrl, diagnostics = null) {
-        if (!html) return [];
+    extractUrlsFromScriptData(html, sourceUrl, diagnostics, pattern, patternName) {
+        if (!html || !pattern) return [];
         const urls = [];
         const localDiagnostics = diagnostics && typeof diagnostics === 'object'
             ? diagnostics
             : null;
-        if (localDiagnostics) {
-            localDiagnostics.containersFound = [];
-            localDiagnostics.containersParsed = [];
-            localDiagnostics.parseErrors = [];
-            localDiagnostics.regexFallbackCandidates = 0;
-            localDiagnostics.urlSamples = [];
+        let containersFound = [];
+        let containersParsed = [];
+        let parseErrors = [];
+
+        const startMatch = html.match(pattern);
+        if (!startMatch) {
+            if (localDiagnostics && localDiagnostics.urlSamples !== undefined) {
+                localDiagnostics.urlSamples = [];
+            }
+            return urls;
         }
+        if (localDiagnostics) {
+            if (Array.isArray(localDiagnostics.containersFound)) {
+                containersFound = localDiagnostics.containersFound;
+                containersParsed = localDiagnostics.containersParsed || [];
+                parseErrors = localDiagnostics.parseErrors || [];
+            }
+            containersFound.push(patternName);
+        }
+        try {
+            const startIndex = startMatch.index + startMatch[0].length;
+            const jsonString = this.extractJsonObject(html, startIndex);
+            if (!jsonString) {
+                if (localDiagnostics && localDiagnostics.urlSamples !== undefined) {
+                    localDiagnostics.urlSamples = [];
+                }
+                return urls;
+            }
+            const data = JSON.parse(jsonString);
+            this.collectEventUrlsFromDataObject(data, sourceUrl, urls, new Set(), 0);
+            const fallbackUrls = this.extractLikelyEventUrlsFromSerializedJson(jsonString, sourceUrl);
+            fallbackUrls.forEach(url => urls.push(url));
+            if (localDiagnostics) {
+                containersParsed.push(patternName);
+                if (Array.isArray(localDiagnostics.parseErrors)) {
+                    parseErrors.push(`${patternName}:${this.trimToMaxLength(String(jsonString), 120)}`);
+                }
+            }
+        } catch (error) {
+            console.warn(`🤖 AI Web: Error extracting URLs from ${patternName}: ${error}`);
+            if (localDiagnostics && Array.isArray(localDiagnostics.parseErrors)) {
+                parseErrors.push(`${patternName}:${this.trimToMaxLength(String(error), 120)}`);
+            }
+        }
+        if (localDiagnostics) {
+            if (Array.isArray(localDiagnostics.containersFound)) {
+                localDiagnostics.containersFound = containersFound;
+                localDiagnostics.containersParsed = containersParsed;
+                localDiagnostics.parseErrors = parseErrors;
+            }
+            if (localDiagnostics.regexFallbackCandidates !== undefined) {
+                localDiagnostics.regexFallbackCandidates = fallbackUrls.length;
+            }
+            if (localDiagnostics.urlSamples !== undefined) {
+                localDiagnostics.urlSamples = urls.slice(0, 5).map(url => this.trimToMaxLength(url, 140));
+            }
+        }
+        return urls;
+    }
+
+    extractUrlsFromServerData(html, sourceUrl, diagnostics = null) {
+        if (!html) return [];
+        const urls = [];
         const patterns = [
             { name: '__SERVER_DATA__', regex: /window\.__SERVER_DATA__\s*=\s*/ },
             { name: '__INITIAL_STATE__', regex: /window\.__INITIAL_STATE__\s*=\s*/ },
@@ -2313,72 +2360,19 @@ class AiWebParser {
             { name: '__STATE__', regex: /window\.__STATE__\s*=\s*/ },
         ];
         for (const patternEntry of patterns) {
-            const startPattern = patternEntry.regex;
-            const startMatch = html.match(startPattern);
-            if (!startMatch) continue;
-            const varName = patternEntry.name || 'unknown';
-            if (localDiagnostics) localDiagnostics.containersFound.push(varName);
-            try {
-                const startIndex = startMatch.index + startMatch[0].length;
-                const jsonString = this.extractJsonObject(html, startIndex);
-                if (!jsonString) continue;
-                const data = JSON.parse(jsonString);
-                this.collectEventUrlsFromDataObject(data, sourceUrl, urls, new Set(), 0);
-                const fallbackUrls = this.extractLikelyEventUrlsFromSerializedJson(jsonString, sourceUrl);
-                fallbackUrls.forEach(url => urls.push(url));
-                if (localDiagnostics) {
-                    localDiagnostics.containersParsed.push(varName);
-                    localDiagnostics.regexFallbackCandidates += fallbackUrls.length;
-                }
-            } catch (error) {
-                console.warn(`🤖 AI Web: Error extracting URLs from window.${varName}: ${error}`);
-                if (localDiagnostics) {
-                    localDiagnostics.parseErrors.push(`${varName}:${this.trimToMaxLength(String(error), 120)}`);
-                }
-            }
-        }
-        if (localDiagnostics) {
-            localDiagnostics.urlSamples = urls.slice(0, 5).map(url => this.trimToMaxLength(url, 140));
+            const patternUrls = this.extractUrlsFromScriptData(
+                html, sourceUrl, diagnostics, patternEntry.regex, patternEntry.name
+            );
+            patternUrls.forEach(url => urls.push(url));
         }
         return urls;
     }
 
     extractUrlsFromNextData(html, sourceUrl, diagnostics = null) {
         if (!html) return [];
-        const urls = [];
-        const localDiagnostics = diagnostics && typeof diagnostics === 'object'
-            ? diagnostics
-            : null;
-        if (localDiagnostics) {
-            localDiagnostics.found = false;
-            localDiagnostics.parsed = false;
-            localDiagnostics.parseError = '';
-            localDiagnostics.regexFallbackCandidates = 0;
-            localDiagnostics.scriptSample = '';
-            localDiagnostics.urlSamples = [];
-        }
-        try {
-            const scriptMatch = html.match(/<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-            if (!scriptMatch) return [];
-            if (localDiagnostics) {
-                localDiagnostics.found = true;
-                localDiagnostics.scriptSample = this.trimToMaxLength((scriptMatch[1] || '').trim(), 240);
-            }
-            const nextDataRaw = (scriptMatch[1] || '').trim();
-            const nextData = JSON.parse(nextDataRaw);
-            if (localDiagnostics) localDiagnostics.parsed = true;
-            this.collectEventUrlsFromDataObject(nextData, sourceUrl, urls, new Set(), 0);
-            const fallbackUrls = this.extractLikelyEventUrlsFromSerializedJson(nextDataRaw, sourceUrl);
-            fallbackUrls.forEach(url => urls.push(url));
-            if (localDiagnostics) localDiagnostics.regexFallbackCandidates = fallbackUrls.length;
-        } catch (error) {
-            console.warn(`🤖 AI Web: Error extracting URLs from __NEXT_DATA__: ${error}`);
-            if (localDiagnostics) localDiagnostics.parseError = this.trimToMaxLength(String(error), 120);
-        }
-        if (localDiagnostics) {
-            localDiagnostics.urlSamples = urls.slice(0, 5).map(url => this.trimToMaxLength(url, 140));
-        }
-        return urls;
+        const pattern = /<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
+        const patternName = '__NEXT_DATA__';
+        return this.extractUrlsFromScriptData(html, sourceUrl, diagnostics, pattern, patternName);
     }
 
     collectEventUrlsFromDataObject(node, sourceUrl, urls, visited, depth) {
@@ -2450,33 +2444,33 @@ class AiWebParser {
     }
 
     formatStructuredDiscoveryDiagnostics(discoveryStats = {}) {
-        const parts = [];
         const jsonLd = discoveryStats.jsonLdDiagnostics || {};
         const serverData = discoveryStats.serverDataDiagnostics || {};
         const nextData = discoveryStats.nextDataDiagnostics || {};
+        const entries = [];
 
         if (Object.keys(jsonLd).length > 0) {
-            parts.push(`jsonLd{${this.formatDiagnosticsPairs({
+            entries.push(['jsonLd', {
                 scriptsFound: jsonLd.scriptsFound || 0,
                 parsed: jsonLd.scriptsParsed || 0,
                 parseErrors: jsonLd.parseErrors || 0,
                 candidates: discoveryStats.jsonLdCandidates || 0,
                 samples: (jsonLd.urlSamples || []).join(' | ') || 'none',
                 scriptSamples: (jsonLd.scriptSamples || []).join(' | ') || 'none'
-            })}}`);
+            }]);
         }
         if (Object.keys(serverData).length > 0) {
-            parts.push(`serverData{${this.formatDiagnosticsPairs({
+            entries.push(['serverData', {
                 found: (serverData.containersFound || []).join(',') || 'none',
                 parsed: (serverData.containersParsed || []).join(',') || 'none',
                 parseErrors: (serverData.parseErrors || []).join(' | ') || 'none',
                 regexFallbackCandidates: serverData.regexFallbackCandidates || 0,
                 candidates: discoveryStats.serverDataCandidates || 0,
                 samples: (serverData.urlSamples || []).join(' | ') || 'none'
-            })}}`);
+            }]);
         }
         if (Object.keys(nextData).length > 0) {
-            parts.push(`nextData{${this.formatDiagnosticsPairs({
+            entries.push(['nextData', {
                 found: nextData.found ? 'yes' : 'no',
                 parsed: nextData.parsed ? 'yes' : 'no',
                 parseError: nextData.parseError || 'none',
@@ -2484,9 +2478,9 @@ class AiWebParser {
                 candidates: discoveryStats.nextDataCandidates || 0,
                 samples: (nextData.urlSamples || []).join(' | ') || 'none',
                 scriptSample: nextData.scriptSample || 'none'
-            })}}`);
+            }]);
         }
-        return parts.join('; ');
+        return entries.map(([label, data]) => `${label}{${this.formatDiagnosticsPairs(data)}}`).join('; ');
     }
 
     formatDiagnosticsPairs(values = {}) {
@@ -2523,8 +2517,7 @@ class AiWebParser {
 
         if (braceCount !== 0) return null;
         const rawSubstring = html.substring(startIndex, i);
-        const cleanedJson = this.escapeJsonControlCharacters(rawSubstring);
-        return cleanedJson;
+        return this.escapeJsonControlCharacters(rawSubstring);
     }
 
     escapeJsonControlCharacters(jsonString) {
@@ -2553,15 +2546,6 @@ class AiWebParser {
             }
         }
         return result;
-    }
-
-    buildEmptyResult(htmlData) {
-        return {
-            events: [],
-            additionalLinks: [],
-            source: this.config.source,
-            url: htmlData && htmlData.url ? htmlData.url : ''
-        };
     }
 
     async getAiEvent(htmlData, parserConfig, cityConfig, selectedPromptFields = null) {
@@ -2870,10 +2854,9 @@ class AiWebParser {
             ? rootExpectations.fields
             : {};
         const parserDefaults = this.normalizeConfidenceExpectationFieldMap(parserDefaultsRaw);
-        const configuredUrlPatternOverrides = Array.isArray(rootExpectations.urlPatterns)
+        const urlPatternOverrides = Array.isArray(rootExpectations.urlPatterns)
             ? rootExpectations.urlPatterns
             : [];
-        const urlPatternOverrides = configuredUrlPatternOverrides;
         const normalizedFields = Array.from(
             new Set((Array.isArray(promptFields) ? promptFields : []).map(field => this.normalizePromptFieldName(field)).filter(Boolean))
         );
@@ -3558,24 +3541,15 @@ class AiWebParser {
         const jsonLdParts = this.extractJsonLdParts(source);
         const bodyParts = this.extractBodyParts(source);
         const sections = [];
+
         if (title) sections.push(`TITLE\n${title}`);
-        if (payloadMode === 'jsonld') {
-            if (jsonLdParts.length > 0) {
-                sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
-            }
-        } else if (payloadMode === 'meta') {
-            if (metaParts.length > 0) {
-                sections.push(`META_PRIMARY\n${metaParts.join('\n')}`);
-            }
+        if (payloadMode === 'jsonld' && jsonLdParts.length > 0) {
+            sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
+        } else if (payloadMode === 'meta' && metaParts.length > 0) {
+            sections.push(`META_PRIMARY\n${metaParts.join('\n')}`);
         } else if (payloadMode === 'best') {
-            const jsonLdLooksFull = jsonLdParts.length > 0 && this.isSnippetSourceFull(
-                this.scoreJsonLdParts(jsonLdParts),
-                this.extractionLimits.jsonLdFullnessMinSignals
-            );
-            const metaLooksFull = metaParts.length > 0 && this.isSnippetSourceFull(
-                this.scoreMetaParts(metaParts),
-                this.extractionLimits.metaFullnessMinSignals
-            );
+            const jsonLdLooksFull = this.isSnippetSourceFull(this.scoreJsonLdParts(jsonLdParts), this.extractionLimits.jsonLdFullnessMinSignals);
+            const metaLooksFull = this.isSnippetSourceFull(this.scoreMetaParts(metaParts), this.extractionLimits.metaFullnessMinSignals);
             if (jsonLdLooksFull && metaLooksFull) {
                 sections.push(`JSON_LD_PRIMARY\n${jsonLdParts.join('\n')}`);
                 sections.push(`META_FALLBACK\n${metaParts.join('\n')}`);
@@ -3705,10 +3679,6 @@ class AiWebParser {
             this.eventSchemaFieldSignalRegexMapLoaded = true;
         }
         return this.cachedEventSchemaFieldSignalRegexMap.get(normalizedField) || [];
-    }
-
-    getDefaultExtractionFields() {
-        return this.getEventSchemaPromptFields().map(field => field.promptFieldName);
     }
 
     getAiPromptFields(parserConfig = {}) {
@@ -4175,8 +4145,8 @@ ${String(rawResponse || '')}`;
         if (!normalizedValue) return false;
         if (evidenceContext.normalized.includes(normalizedValue)) return true;
         const compactValue = normalizedValue.replace(/[^a-z0-9]+/g, '');
-        if (compactValue.length >= this.extractionLimits.evidenceCompactMinLength && evidenceContext.compact.includes(compactValue)) return true;
-        return false;
+        return compactValue.length >= this.extractionLimits.evidenceCompactMinLength && evidenceContext.compact.includes(compactValue);
+
     }
 
     hasFuzzyEvidence(evidenceContext, value) {
@@ -4487,10 +4457,8 @@ ${String(rawResponse || '')}`;
         if (this.likelyImagePathRegex.test(path)) {
             return true;
         }
-        if (this.likelyImageQueryRegex.test(search)) {
-            return true;
-        }
-        return false;
+        return this.likelyImageQueryRegex.test(search);
+
     }
 
     hasImageEvidence(validationContext, value) {
@@ -5082,25 +5050,6 @@ ${String(rawResponse || '')}`;
         }
         const selected = eventResults.length > 0 ? eventResults : results;
         return selected.slice(0, this.extractionLimits.maxJsonLdParts);
-    }
-
-    extractLinkParts(html) {
-        const results = [];
-        const seen = new Set();
-        const regex = /href=["']([^"']+)["']/gi;
-        let match;
-        while ((match = regex.exec(html)) !== null) {
-            const rawUrl = match[1];
-            if (!rawUrl || rawUrl.startsWith('#')) continue;
-            const normalized = this.normalizeWhitespace(rawUrl);
-            if (!/^https?:\/\//i.test(normalized)) continue;
-            const dedupeKey = normalized.toLowerCase();
-            if (seen.has(dedupeKey)) continue;
-            seen.add(dedupeKey);
-            results.push(normalized);
-            if (results.length >= this.extractionLimits.maxLinkParts) break;
-        }
-        return results;
     }
 
     extractBodyParts(html) {
