@@ -36,6 +36,7 @@ class AiWebParser {
         this.loadImageAsBase64 = dependencies.loadImageAsBase64 || null;
         this._readCachedOcrResult = dependencies.readCachedOcrResult || null;
         this._writeCachedOcrResult = dependencies.writeCachedOcrResult || null;
+        this._runOcrOnAllImages = dependencies.runOcrOnAllImages || null;
         this.recordAiPrompt = dependencies.recordAiPrompt || null;
         this.consumeAiPromptHistory = dependencies.consumeAiPromptHistory || null;
 
@@ -1639,25 +1640,75 @@ class AiWebParser {
         return normalized === 'text' || normalized === 'ocr text';
     }
 
-    collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
-        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
-        const candidates = [];
-        const seen = new Set();
-        const addImageUrl = rawUrl => {
-            const normalized = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(String(rawUrl || '').trim()) || String(rawUrl || '').trim());
-            if (!normalized) return;
-            if (!this.hasSupportedImageFilenameAtEnd(normalized) && !this.hasLikelyImageUrl(normalized)) return;
-            if (seen.has(normalized)) return;
-            seen.add(normalized);
-            candidates.push(normalized);
+    async collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
+        const maxImages = Number(ocrConfig.maxImages) || 1;
+
+        // Extract ALL image URLs (without maxImages limit)
+        const allImages = this.buildImageEvidenceContext(htmlData);
+        const allImageUrls = Array.from(allImages);
+
+        // Call runOcrOnAllImages to process ALL images (uses caching internally)
+        const ocrResults = await this._runOcrOnAllImages(htmlData.html || '', ocrConfig);
+
+        if (!Array.isArray(ocrResults) || ocrResults.length === 0) {
+            return [];
+        }
+
+        // Sort by classification relevance (event/promo > title > multi-event > ad > background)
+        const sortedResults = this.sortOcrResultsByRelevance(ocrResults, htmlData, ocrConfig);
+
+        // Extract just the image URLs, limited to maxImages
+        const selectedUrls = sortedResults
+            .slice(0, maxImages)
+            .map(result => result.src || result.imageUrl || result.url)
+            .filter(url => url);
+
+        return selectedUrls;
+    }
+
+    sortOcrResultsByRelevance(ocrResults, htmlData, ocrConfig = {}) {
+        const sorted = [...ocrResults];
+
+        sorted.sort((a, b) => {
+            const scoreA = this.scoreOcrResultByClassification(a, htmlData, ocrConfig);
+            const scoreB = this.scoreOcrResultByClassification(b, htmlData, ocrConfig);
+
+            if (scoreB !== scoreA) {
+                return scoreB - scoreA;
+            }
+
+            // Tie-breaker: prefer higher confidence
+            const confA = a.confidence || 0;
+            const confB = b.confidence || 0;
+            if (confB !== confA) {
+                return confB - confA;
+            }
+
+            return 0;
+        });
+
+        return sorted;
+    }
+
+    scoreOcrResultByClassification(ocrResult, htmlData, ocrConfig = {}) {
+        const classification = ocrResult && (ocrResult.classification || ocrResult.type || 'unknown');
+        const classStr = String(classification || '').toLowerCase().trim();
+
+        // Score by classification relevance (higher is better)
+        const classScores = {
+            'event promotional art': 100,
+            'event_promotional_art': 100,
+            'event': 95,
+            'title': 90,
+            'multi-event': 85,
+            'multi-event promotional art': 80,
+            'multi_event': 80,
+            'ad': -10,
+            'background': -20,
+            'background image': -25
         };
-        const preferred = this.buildImageEvidenceContextFromText(
-            htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
-            sourceUrl
-        );
-        preferred.forEach(addImageUrl);
-        this.buildImageEvidenceContext(htmlData).forEach(addImageUrl);
-        return candidates.slice(0, Math.max(1, Number(ocrConfig.maxImages) || 1));
+
+        return classScores[classStr] || 0;
     }
 
     buildOcrSnippet(imageUrl, ocrResult) {
@@ -1759,8 +1810,8 @@ class AiWebParser {
             diagnostics.skippedReason = 'no-target-fields-missing';
             return { merged: mergedEvent, diagnostics };
         }
-        const imageUrls = this.collectOcrCandidateImageUrls(htmlData, ocrConfig);
-        diagnostics.attemptedImageCount = imageUrls.length;
+        const imageUrls = await this.collectOcrCandidateImageUrls(htmlData, ocrConfig);
+        diagnostics.attemptedImageCount = imageUrls?.length || 0;
         if (imageUrls.length === 0) {
             diagnostics.skippedReason = 'no-image-candidates';
             return { merged: mergedEvent, diagnostics };
@@ -2526,7 +2577,7 @@ class AiWebParser {
             : null;
         const maxImages = Number.isFinite(Number(rawOcr.maxImages))
             ? Math.max(1, Math.min(4, Math.floor(Number(rawOcr.maxImages))))
-            : 2;
+            : null;
         const maxTextChars = Number.isFinite(Number(rawOcr.maxTextChars))
             ? Math.max(250, Math.floor(Number(rawOcr.maxTextChars)))
             : 4000;

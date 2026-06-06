@@ -253,6 +253,7 @@ class BearEventScraperOrchestrator {
                             loadImageAsBase64: finalAdapter.loadImageAsBase64.bind(finalAdapter),
                             readCachedOcrResult: finalAdapter.readCachedOcrResult.bind(finalAdapter),
                             writeCachedOcrResult: finalAdapter.writeCachedOcrResult.bind(finalAdapter),
+                            runOcrOnAllImages: finalAdapter.runOcrOnAllImages.bind(finalAdapter),
                             recordAiPrompt: finalAdapter.recordAiPrompt.bind(finalAdapter),
                             consumeAiPromptHistory: finalAdapter.consumeAiPromptHistory.bind(finalAdapter)
                         });
