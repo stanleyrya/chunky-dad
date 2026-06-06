@@ -1897,9 +1897,123 @@ class SharedCore {
 
     isValidUrl(url) {
         if (!url || typeof url !== 'string') return false;
-        
+
         const parsed = this.parseUrl(url);
         return parsed !== null;
+    }
+
+    // Image-related utilities for OCR and image extraction
+    // List of proxy path prefixes for image proxy servers
+    getImageProxyPathPrefixes() {
+        return ['/e/_next/image?', '/_next/image?'];
+    }
+
+    // Regex patterns for likely image URLs
+    getLikelyImageRegex() {
+        return /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i;
+    }
+
+    // Regex for image-related query parameters
+    getLikelyImageQueryRegex() {
+        return /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
+    }
+
+    // Check if URL ends with a supported image extension
+    hasSupportedImageFilenameAtEnd(url) {
+        const parsed = this.parseUrl(String(url || ''));
+        if (!parsed || !parsed.pathname) return false;
+        const pathname = String(parsed.pathname).toLowerCase();
+        if (!pathname || pathname.endsWith('/')) return false;
+        const supportedExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff'];
+        return supportedExtensions.some(ext => pathname.endsWith(ext));
+    }
+
+    // Check if URL looks like an image URL (proxy, image path, or image params)
+    hasLikelyImageUrl(url) {
+        const parsed = this.parseUrl(String(url || ''));
+        if (!parsed) return false;
+        const path = String(parsed.pathname || '').toLowerCase();
+        const search = String(parsed.search || '').toLowerCase();
+
+        const proxyPathPrefixes = this.getImageProxyPathPrefixes();
+        if (proxyPathPrefixes.some(prefix => {
+            const normalizedPrefix = String(prefix || '').replace(/\?.*$/, '').toLowerCase();
+            return normalizedPrefix && path.startsWith(normalizedPrefix);
+        })) {
+            return true;
+        }
+
+        const likelyImageRegex = this.getLikelyImageRegex();
+        if (likelyImageRegex.test(path)) {
+            return true;
+        }
+
+        const likelyImageQueryRegex = this.getLikelyImageQueryRegex();
+        if (likelyImageQueryRegex.test(search)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // Unwrap image proxy URLs (like _next/image?..url=...)
+    unwrapImageProxyUrl(url, unwrapDepth = 0) {
+        const normalized = this.normalizeHttpUrlValue(url);
+        if (!normalized || unwrapDepth > 3) return normalized;
+
+        const parsed = this.parseUrlComponents(normalized);
+        if (!parsed) return normalized;
+
+        const path = String(parsed.pathname || '');
+        const search = String(parsed.search || '');
+
+        const proxyPathPrefixes = this.getImageProxyPathPrefixes();
+        const isProxyPath = proxyPathPrefixes.some(prefix => {
+            const normalizedPrefix = String(prefix || '').replace(/\?.*$/, '');
+            return normalizedPrefix && path.startsWith(normalizedPrefix);
+        });
+
+        if (!isProxyPath) return normalized;
+
+        const wrapped = this.extractSearchParamValue(search, 'url');
+        if (!wrapped) return normalized;
+
+        const decodedWrapped = this.decodeUrlEscapes(this.decodeBasicEntities(wrapped));
+        const wrappedNormalized = this.normalizeUrl(decodedWrapped, normalized);
+        if (!wrappedNormalized) return normalized;
+
+        return this.unwrapImageProxyUrl(wrappedNormalized, unwrapDepth + 1);
+    }
+
+    // Parse URL components - wrapper for URL constructor
+    parseUrlComponents(url) {
+        try {
+            return new URL(String(url || ''));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Normalize HTTP URL value
+    normalizeHttpUrlValue(url) {
+        if (!url || typeof url !== 'string') return null;
+        try {
+            const parsed = new URL(url);
+            parsed.protocol = 'http:';
+            return parsed.href;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Extract search parameter value from a query string
+    extractSearchParamValue(search, paramName) {
+        try {
+            const url = new URL('http://placeholder.com?' + search);
+            return url.searchParams.get(paramName);
+        } catch (e) {
+            return null;
+        }
     }
 
     // Date utilities
