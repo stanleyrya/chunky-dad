@@ -34,8 +34,8 @@ class AiWebParser {
         };
         this.sendAiRequest = dependencies.sendAiRequest || null;
         this.loadImageAsBase64 = dependencies.loadImageAsBase64 || null;
-        this._readCachedOcrResult = dependencies.readCachedOcrResult || null;
-        this._writeCachedOcrResult = dependencies.writeCachedOcrResult || null;
+        this.readCachedOcrResult = dependencies.readCachedOcrResult || null;
+        this.writeCachedOcrResult = dependencies.writeCachedOcrResult || null;
         this.recordAiPrompt = dependencies.recordAiPrompt || null;
         this.consumeAiPromptHistory = dependencies.consumeAiPromptHistory || null;
 
@@ -118,7 +118,7 @@ class AiWebParser {
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.defaultOcrModel = 'qwen2.5vl:3b';
-        this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears. Also classify the image into one of these types: background image, title, ad, event promotional art, multi-event promotional art. Provide a confidence score between 0 and 1 for the classification. Return a JSON object with keys 'text', 'classification' (string), and 'confidence' (number). Do not add commentary.";
+        this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears. Return a JSON object with a single key 'text' containing the full extracted text, preserving line breaks as \\n. Do not add commentary.";
         this.defaultOcrRequestConfig = {
             timeoutSeconds: 300,
             keepAlive: '5m',
@@ -1546,7 +1546,6 @@ class AiWebParser {
         } catch (_) {}
         const parsed = this.parseUrlComponents(normalizedUrl);
         const requestSignature = JSON.stringify({
-            version: 2,
             model: String(ocrConfig.model || ''),
             prompt: String(ocrConfig.prompt || ''),
             options: {
@@ -1591,15 +1590,15 @@ class AiWebParser {
     }
 
     async readCachedOcrResult(imageUrl, ocrConfig = {}) {
-        if (typeof this._readCachedOcrResult !== 'function') return null;
-        return this._readCachedOcrResult(imageUrl, ocrConfig, {
+        if (typeof this.readCachedOcrResult !== 'function' || this.readCachedOcrResult === null) return null;
+        return this.readCachedOcrResult(imageUrl, ocrConfig, {
             getOcrCachePathParts: this.getOcrCachePathParts.bind(this)
         });
     }
 
-    async writeCachedOcrResult(imageUrl, ocrConfig = {}, responseData = null) {
-        if (typeof this._writeCachedOcrResult !== 'function') return null;
-        return this._writeCachedOcrResult(imageUrl, ocrConfig, responseData, {
+    async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '') {
+        if (typeof this.writeCachedOcrResult !== 'function' || this.writeCachedOcrResult === null) return null;
+        return this.writeCachedOcrResult(imageUrl, ocrConfig, text, {
             getOcrCachePathParts: this.getOcrCachePathParts.bind(this)
         });
     }
@@ -1618,19 +1617,11 @@ class AiWebParser {
 
     parseOcrResponse(rawText) {
         const parsed = this.parseAiEventResponse(rawText);
-        if (!parsed) return null;
-        const text = typeof parsed.text === 'string' ? parsed.text : '';
+        const text = parsed && typeof parsed.text === 'string' ? parsed.text : '';
         const normalizedText = text
             .replace(/\r\n?/g, '\n')
             .trim();
-        const classification = typeof parsed.classification === 'string' ? parsed.classification.toLowerCase().trim() : 'unknown';
-        const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : 0;
-
-        return {
-            text: this.isLikelyEmptyOcrText(normalizedText) ? '' : normalizedText,
-            classification,
-            confidence
-        };
+        return this.isLikelyEmptyOcrText(normalizedText) ? '' : normalizedText;
     }
 
     isLikelyEmptyOcrText(text) {
@@ -1660,27 +1651,17 @@ class AiWebParser {
         return candidates.slice(0, Math.max(1, Number(ocrConfig.maxImages) || 1));
     }
 
-    buildOcrSnippet(imageUrl, ocrResult) {
-        const text = typeof ocrResult === 'string' ? ocrResult : (ocrResult?.text || '');
-        const classification = typeof ocrResult === 'object' ? ocrResult.classification : null;
-        const confidence = typeof ocrResult === 'object' ? ocrResult.confidence : null;
-
-        const parts = [
-            `OCR_IMAGE_URL: ${String(imageUrl || '').trim()}`
-        ];
-        if (classification) {
-            const confidenceSuffix = typeof confidence === 'number' ? ` (confidence: ${confidence.toFixed(2)})` : '';
-            parts.push(`OCR_IMAGE_CLASSIFICATION: ${classification}${confidenceSuffix}`);
-        }
-        parts.push('OCR_IMAGE_TEXT');
-        parts.push(String(text).trim());
-
-        return parts.filter(Boolean).join('\n');
+    buildOcrSnippet(imageUrl, text) {
+        return [
+            `OCR_IMAGE_URL: ${String(imageUrl || '').trim()}`,
+            'OCR_IMAGE_TEXT',
+            String(text || '').trim()
+        ].filter(Boolean).join('\n');
     }
 
     async getOcrTextForImage(imageUrl, ocrConfig = {}, passLabel = 'ocr') {
         const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
-        if (cached && (cached.text || (cached.response && cached.response.text))) {
+        if (cached && cached.text) {
             console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
             return cached;
         }
@@ -1703,15 +1684,15 @@ class AiWebParser {
         };
         const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, ocrConfig.prompt);
         if (!rawResponse) return null;
-        const ocrResult = this.parseOcrResponse(rawResponse);
-        if (!ocrResult || !ocrResult.text) {
+        const text = this.parseOcrResponse(rawResponse);
+        if (!text) {
             console.warn(`🤖 AI Web: OCR response for ${imageUrl} did not include text`);
             return null;
         }
-        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, ocrResult);
+        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, text);
         return {
             imageUrl,
-            ...ocrResult,
+            text,
             cachePath,
             cached: false
         };
@@ -1780,22 +1761,15 @@ class AiWebParser {
                     });
                     continue;
                 }
-                const text = ocrResult.text || '';
-                const trimmedText = text.length > ocrConfig.maxTextChars
-                    ? `${text.slice(0, ocrConfig.maxTextChars)}…`
-                    : text;
-                const snippetOcrResult = {
-                    ...ocrResult,
-                    text: trimmedText
-                };
-                snippets.push(this.buildOcrSnippet(imageUrl, snippetOcrResult));
+                const trimmedText = ocrResult.text.length > ocrConfig.maxTextChars
+                    ? `${ocrResult.text.slice(0, ocrConfig.maxTextChars)}…`
+                    : ocrResult.text;
+                snippets.push(this.buildOcrSnippet(imageUrl, trimmedText));
                 diagnostics.processedImageCount += 1;
                 if (ocrResult.cached) diagnostics.cacheHits += 1;
                 diagnostics.images.push({
                     url: imageUrl,
                     textChars: trimmedText.length,
-                    classification: ocrResult.classification || 'unknown',
-                    confidence: ocrResult.confidence || 0,
                     cached: Boolean(ocrResult.cached),
                     status: 'ok'
                 });
