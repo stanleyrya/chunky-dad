@@ -1640,36 +1640,161 @@ class AiWebParser {
         return normalized === 'text' || normalized === 'ocr text';
     }
 
-    async collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
-        const maxImages = Number(ocrConfig.maxImages) || 1;
+    resolveOcrMaxImages(ocrConfig = {}) {
+        const parsedMaxImages = Number(ocrConfig.maxImages);
+        if (Number.isFinite(parsedMaxImages) && parsedMaxImages > 0) {
+            return Math.max(1, Math.floor(parsedMaxImages));
+        }
+        return 1;
+    }
 
-        // Extract ALL image URLs (without maxImages limit)
-        const allImages = this.buildImageEvidenceContext(htmlData);
-        const allImageUrls = Array.from(allImages);
+    extractSegmentHintImageUrls(htmlData) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return [];
 
-        // Call runOcrOnAllImages to process ALL images (uses caching internally)
-        const ocrResults = await this._runOcrOnAllImages(htmlData.html || '', ocrConfig);
+        const hintedUrls = [];
+        const seen = new Set();
+        const pattern = /^SEGMENT_IMAGE(?:_HINT)?_URL:\s*(\S+)/gim;
+        let match;
+        while ((match = pattern.exec(html)) !== null) {
+            const rawUrl = String(match[1] || '').trim();
+            const normalized = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
+            if (!normalized || seen.has(normalized)) continue;
+            seen.add(normalized);
+            hintedUrls.push(normalized);
+        }
+        return hintedUrls;
+    }
 
-        if (!Array.isArray(ocrResults) || ocrResults.length === 0) {
-            return [];
+    normalizeOcrRecoveryResult(result) {
+        if (!result || typeof result !== 'object') return null;
+        const imageUrl = String(result.imageUrl || result.src || result.url || '').trim();
+        return {
+            ...result,
+            imageUrl,
+            src: imageUrl || String(result.src || '').trim()
+        };
+    }
+
+    async collectOcrCandidateResults(htmlData, ocrConfig = {}) {
+        const maxImages = this.resolveOcrMaxImages(ocrConfig);
+        const segmentHintUrls = this.extractSegmentHintImageUrls(htmlData);
+
+        if (segmentHintUrls.length > 0) {
+            const hintedResults = [];
+            const selectedUrls = segmentHintUrls.slice(0, maxImages);
+            for (let index = 0; index < selectedUrls.length; index++) {
+                const imageUrl = selectedUrls[index];
+                try {
+                    const ocrResult = await this.getOcrTextForImage(imageUrl, ocrConfig, `segment ocr ${index + 1}/${selectedUrls.length}`);
+                    if (ocrResult) {
+                        hintedResults.push(this.normalizeOcrRecoveryResult(ocrResult));
+                    } else {
+                        hintedResults.push(this.normalizeOcrRecoveryResult({ imageUrl, src: imageUrl, text: '' }));
+                    }
+                } catch (error) {
+                    hintedResults.push(this.normalizeOcrRecoveryResult({
+                        imageUrl,
+                        src: imageUrl,
+                        text: '',
+                        error: error && error.message ? error.message : String(error || ''),
+                        cached: false
+                    }));
+                }
+            }
+            return {
+                selectionSource: 'segment-image-hints',
+                candidateImageCount: selectedUrls.length,
+                summaryImageCount: 0,
+                results: hintedResults
+            };
         }
 
-        // Sort by classification relevance (event/promo > title > multi-event > ad > background)
-        const sortedResults = this.sortOcrResultsByRelevance(ocrResults, htmlData, ocrConfig);
+        const allImageUrls = Array.from(this.buildImageEvidenceContext(htmlData));
+        if (typeof this._runOcrOnAllImages === 'function') {
+            const ocrResults = await this._runOcrOnAllImages({
+                html: htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
+                url: htmlData && typeof htmlData.url === 'string' ? htmlData.url : '',
+                imageUrls: allImageUrls
+            }, ocrConfig);
 
-        // Extract just the image URLs, limited to maxImages
-        const selectedUrls = sortedResults
+            if (!Array.isArray(ocrResults) || ocrResults.length === 0) {
+                return {
+                    selectionSource: 'summary',
+                    candidateImageCount: allImageUrls.length,
+                    summaryImageCount: 0,
+                    results: []
+                };
+            }
+
+            const sortedResults = this.sortOcrResultsByRelevance(ocrResults, htmlData, ocrConfig);
+            const preferredResults = sortedResults.filter(result => String(result && result.text ? result.text : '').trim());
+            const selectionPool = preferredResults.length > 0 ? preferredResults : sortedResults;
+            return {
+                selectionSource: 'summary',
+                candidateImageCount: allImageUrls.length,
+                summaryImageCount: ocrResults.length,
+                results: selectionPool
+                    .slice(0, maxImages)
+                    .map(result => this.normalizeOcrRecoveryResult(result))
+                    .filter(Boolean)
+            };
+        }
+
+        const fallbackResults = [];
+        const selectedFallbackUrls = allImageUrls.slice(0, maxImages);
+        for (let index = 0; index < selectedFallbackUrls.length; index++) {
+            const imageUrl = selectedFallbackUrls[index];
+            try {
+                const ocrResult = await this.getOcrTextForImage(imageUrl, ocrConfig, `ocr ${index + 1}/${selectedFallbackUrls.length}`);
+                if (ocrResult) {
+                    fallbackResults.push(this.normalizeOcrRecoveryResult(ocrResult));
+                } else {
+                    fallbackResults.push(this.normalizeOcrRecoveryResult({ imageUrl, src: imageUrl, text: '' }));
+                }
+            } catch (error) {
+                fallbackResults.push(this.normalizeOcrRecoveryResult({
+                    imageUrl,
+                    src: imageUrl,
+                    text: '',
+                    error: error && error.message ? error.message : String(error || ''),
+                    cached: false
+                }));
+            }
+        }
+        return {
+            selectionSource: 'direct-image-ocr',
+            candidateImageCount: selectedFallbackUrls.length,
+            summaryImageCount: 0,
+            results: fallbackResults
+        };
+    }
+
+    async collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
+        const maxImages = this.resolveOcrMaxImages(ocrConfig);
+        const ocrSelection = await this.collectOcrCandidateResults(htmlData, ocrConfig);
+        return (ocrSelection.results || [])
             .slice(0, maxImages)
-            .map(result => result.src || result.imageUrl || result.url)
+            .map(result => result.imageUrl || result.src || result.url)
             .filter(url => url);
-
-        return selectedUrls;
     }
 
     sortOcrResultsByRelevance(ocrResults, htmlData, ocrConfig = {}) {
         const sorted = [...ocrResults];
 
         sorted.sort((a, b) => {
+            const hasTextA = String(a && a.text ? a.text : '').trim() ? 1 : 0;
+            const hasTextB = String(b && b.text ? b.text : '').trim() ? 1 : 0;
+            if (hasTextB !== hasTextA) {
+                return hasTextB - hasTextA;
+            }
+
+            const hasErrorA = a && a.error ? 1 : 0;
+            const hasErrorB = b && b.error ? 1 : 0;
+            if (hasErrorA !== hasErrorB) {
+                return hasErrorA - hasErrorB;
+            }
+
             const scoreA = this.scoreOcrResultByClassification(a, htmlData, ocrConfig);
             const scoreB = this.scoreOcrResultByClassification(b, htmlData, ocrConfig);
 
@@ -1781,9 +1906,12 @@ class AiWebParser {
             attemptedFields: [],
             recoveredFields: [],
             attemptedImageCount: 0,
+            candidateImageCount: 0,
+            summaryImageCount: 0,
             processedImageCount: 0,
             cacheHits: 0,
             images: [],
+            selectionSource: null,
             skippedReason: null
         };
         if (!ocrConfig.enabled) {
@@ -1810,23 +1938,39 @@ class AiWebParser {
             diagnostics.skippedReason = 'no-target-fields-missing';
             return { merged: mergedEvent, diagnostics };
         }
-        const imageUrls = await this.collectOcrCandidateImageUrls(htmlData, ocrConfig);
-        diagnostics.attemptedImageCount = imageUrls?.length || 0;
-        if (imageUrls.length === 0) {
+        const ocrSelection = await this.collectOcrCandidateResults(htmlData, ocrConfig);
+        const selectedResults = Array.isArray(ocrSelection && ocrSelection.results) ? ocrSelection.results : [];
+        diagnostics.selectionSource = ocrSelection && ocrSelection.selectionSource ? ocrSelection.selectionSource : null;
+        diagnostics.candidateImageCount = Number(ocrSelection && ocrSelection.candidateImageCount) || 0;
+        diagnostics.summaryImageCount = Number(ocrSelection && ocrSelection.summaryImageCount) || 0;
+        diagnostics.attemptedImageCount = selectedResults.length;
+        if (selectedResults.length === 0) {
             diagnostics.skippedReason = 'no-image-candidates';
             return { merged: mergedEvent, diagnostics };
         }
 
         const snippets = [];
-        for (let index = 0; index < imageUrls.length; index++) {
-            const imageUrl = imageUrls[index];
+        for (let index = 0; index < selectedResults.length; index++) {
+            const ocrResult = this.normalizeOcrRecoveryResult(selectedResults[index]);
+            const imageUrl = ocrResult && (ocrResult.imageUrl || ocrResult.src || ocrResult.url)
+                ? String(ocrResult.imageUrl || ocrResult.src || ocrResult.url).trim()
+                : '';
             try {
-                const ocrResult = await this.getOcrTextForImage(imageUrl, ocrConfig, `ocr ${index + 1}/${imageUrls.length}`);
+                if (ocrResult && ocrResult.error) {
+                    diagnostics.images.push({
+                        url: imageUrl,
+                        textChars: 0,
+                        cached: Boolean(ocrResult.cached),
+                        status: 'error',
+                        error: ocrResult.error
+                    });
+                    continue;
+                }
                 if (!ocrResult || !ocrResult.text) {
                     diagnostics.images.push({
                         url: imageUrl,
                         textChars: 0,
-                        cached: false,
+                        cached: Boolean(ocrResult && ocrResult.cached),
                         status: 'empty'
                     });
                     continue;
