@@ -210,7 +210,19 @@ class AiWebParser {
     }
 
     async extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields) {
-        const event = await this.extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields);
+        const ocrConfig = this.getOcrConfig(parserConfig);
+        const ocrResults = ocrConfig.enabled
+            ? await this.extractOcrFromAllImages(htmlData, ocrConfig)
+            : [];
+        if (ocrResults.length > 0) {
+            console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
+        }
+
+        const segmentHtmlData = {
+            ...htmlData,
+            ocrResults: ocrResults
+        };
+        const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields);
         return event ? [event] : [];
     }
 
@@ -222,10 +234,20 @@ class AiWebParser {
             return [];
         }
         console.log(`🤖 AI Web: multi-event-page split into ${segments.length} candidate segment${segments.length === 1 ? '' : 's'}`);
+
+        // Extract OCR from ALL images
+        const ocrConfig = this.getOcrConfig(parserConfig);
+        const ocrResults = ocrConfig.enabled
+            ? await this.extractOcrFromAllImages(htmlData, ocrConfig)
+            : [];
+        if (ocrResults.length > 0) {
+            console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
+        }
+
         const events = [];
         for (let i = 0; i < segments.length; i++) {
             const segment = segments[i];
-            const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length);
+            const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults);
             const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields);
             if (!event) continue;
             event._multiEventSegment = {
@@ -239,6 +261,12 @@ class AiWebParser {
     }
 
     async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields) {
+        // Add OCR results to prompt context
+        const ocrResults = htmlData && htmlData.ocrResults;
+        if (ocrResults && ocrResults.length > 0) {
+            console.log(`🤖 AI Web: Including OCR results (${ocrResults.length} images) in extraction`);
+        }
+
         const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig, promptFields);
         if (!aiEvent) {
             return null;
@@ -276,13 +304,20 @@ class AiWebParser {
         return event;
     }
 
-    buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments) {
+    buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments, ocrResults = []) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
+
+        // Extract OCR results specific to this segment
+        const segmentOcrResults = ocrResults && ocrResults.length > 0
+            ? this.filterOcrResultsForSegment(ocrResults, segment, sourceUrl)
+            : [];
+
         const resourceLines = this.extractMultiEventSegmentResourceLines(
             segmentHtml,
             sourceUrl,
-            segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : []
+            segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : [],
+            segmentOcrResults
         );
         const contextLines = [
             `SEGMENT_INDEX: ${index + 1}/${totalSegments}`,
@@ -293,7 +328,8 @@ class AiWebParser {
             ...htmlData,
             html: contextLines.length > 0 ? `${contextLines.join('\n')}\n${segmentContent}` : segmentContent,
             aiEvent: null,
-            aiExtraction: null
+            aiExtraction: null,
+            ocrResults: segmentOcrResults
         };
     }
 
@@ -1105,7 +1141,7 @@ class AiWebParser {
         return match ? match.index : -1;
     }
 
-    extractMultiEventSegmentResourceLines(html, sourceUrl = '', hintedImageUrls = []) {
+    extractMultiEventSegmentResourceLines(html, sourceUrl = '', hintedImageUrls = [], ocrResults = []) {
         const source = String(html || '');
         const lines = [];
         const seen = new Set();
@@ -1117,6 +1153,12 @@ class AiWebParser {
             seen.add(finalUrl);
             lines.push(`${label}: ${finalUrl}`);
         };
+
+        // Add OCR results as SEGMENT_IMAGE_TEXT
+        for (const ocrResult of Array.isArray(ocrResults) ? ocrResults : []) {
+            const ocrSnippet = this.buildOcrSnippet(ocrResult.url, ocrResult.text);
+            lines.push(ocrSnippet);
+        }
 
         for (const imageUrl of Array.isArray(hintedImageUrls) ? hintedImageUrls : []) {
             addLine('SEGMENT_IMAGE_HINT_URL', imageUrl);
@@ -1761,25 +1803,60 @@ class AiWebParser {
         return normalized === 'text' || normalized === 'ocr text';
     }
 
-    collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
+    async extractOcrFromAllImages(htmlData, ocrConfig = {}) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
-        const candidates = [];
-        const seen = new Set();
-        const addImageUrl = rawUrl => {
-            const normalized = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(String(rawUrl || '').trim()) || String(rawUrl || '').trim());
-            if (!normalized) return;
-            if (!this.hasSupportedImageFilenameAtEnd(normalized) && !this.hasLikelyImageUrl(normalized)) return;
-            if (seen.has(normalized)) return;
-            seen.add(normalized);
-            candidates.push(normalized);
-        };
-        const preferred = this.buildImageEvidenceContextFromText(
-            htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
-            sourceUrl
-        );
-        preferred.forEach(addImageUrl);
-        this.buildImageEvidenceContext(htmlData).forEach(addImageUrl);
-        return candidates.slice(0, Math.max(1, Number(ocrConfig.maxImages) || 1));
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+
+        // Extract all image URLs from HTML
+        const imageUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, 10);
+
+        const ocrResults = [];
+        for (const imageUrl of imageUrls) {
+            try {
+                const result = await this.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all');
+                if (result && result.text) {
+                    ocrResults.push({
+                        url: imageUrl,
+                        text: result.text,
+                        cacheHit: result.cached
+                    });
+                }
+            } catch (error) {
+                console.log(`🤖 AI Web: OCR failed for ${imageUrl}: ${error.message}`);
+            }
+        }
+        return ocrResults;
+    }
+
+    filterOcrResultsForSegment(ocrResults, segment, sourceUrl = '') {
+        if (!Array.isArray(ocrResults) || ocrResults.length === 0) return [];
+        if (!segment || typeof segment !== 'object') return [];
+
+        // Extract segment's image URLs
+        const segmentImageUrls = new Set([
+            ...this.extractOrderedImageUrlsFromHtml(
+                segment && typeof segment.html === 'string' ? segment.html : '',
+                sourceUrl,
+                2
+            ),
+            ...Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : []
+        ]);
+
+        // Filter OCR results to match segment images
+        return ocrResults.filter(ocr => {
+            const ocrUrl = this.normalizeHttpUrlValue(ocr.url);
+            return Array.from(segmentImageUrls).some(url => {
+                const normalized = this.normalizeHttpUrlValue(url);
+                return normalized && normalized === ocrUrl;
+            });
+        });
+    }
+
+    collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
+        // Simplified - use built-in function instead
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        return this.extractOrderedImageUrlsFromHtml(html, sourceUrl, Math.max(1, Number(ocrConfig.maxImages) || 1));
     }
 
     buildOcrSnippet(imageUrl, text) {
@@ -1830,118 +1907,13 @@ class AiWebParser {
     }
 
     async recoverMissingFieldsFromImages(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent, validationState, extractionTrace) {
+        // Simplified - OCR is now part of primary extraction
+        // Only run for single-page events where OCR might still help
         const ocrConfig = this.getOcrConfig(parserConfig, aiConfig);
-        const missingBefore = this.getRemainingPromptFields(promptFields, mergedEvent)
-            .map(field => this.normalizePromptFieldName(field))
-            .filter(Boolean);
-        const diagnostics = {
-            enabled: ocrConfig.enabled,
-            model: String(ocrConfig.model || ''),
-            missingBefore,
-            missingAfter: [...missingBefore],
-            attemptedFields: [],
-            recoveredFields: [],
-            attemptedImageCount: 0,
-            processedImageCount: 0,
-            cacheHits: 0,
-            images: [],
-            skippedReason: null
-        };
         if (!ocrConfig.enabled) {
-            diagnostics.skippedReason = 'disabled';
-            return { merged: mergedEvent, diagnostics };
+            return { merged: mergedEvent, diagnostics: { skippedReason: 'disabled' } };
         }
-        if (!ocrConfig.endpoint || !ocrConfig.model) {
-            diagnostics.skippedReason = 'missing-endpoint-or-model';
-            return { merged: mergedEvent, diagnostics };
-        }
-        let missingTargetFields = this.getRemainingPromptFields(promptFields, mergedEvent)
-            .map(field => this.normalizePromptFieldName(field))
-            .filter(Boolean);
-        if (Array.isArray(ocrConfig.targetFields) && ocrConfig.targetFields.length > 0) {
-            const configuredFields = new Set(ocrConfig.targetFields);
-            missingTargetFields = missingTargetFields.filter(field => configuredFields.has(field));
-        }
-        if (Array.isArray(ocrConfig.blockedFields) && ocrConfig.blockedFields.length > 0) {
-            const blockedFields = new Set(ocrConfig.blockedFields);
-            missingTargetFields = missingTargetFields.filter(field => !blockedFields.has(field));
-        }
-        diagnostics.attemptedFields = [...missingTargetFields];
-        if (ocrConfig.requireMissingFields && missingTargetFields.length === 0) {
-            diagnostics.skippedReason = 'no-target-fields-missing';
-            return { merged: mergedEvent, diagnostics };
-        }
-        const imageUrls = this.collectOcrCandidateImageUrls(htmlData, ocrConfig);
-        diagnostics.attemptedImageCount = imageUrls.length;
-        if (imageUrls.length === 0) {
-            diagnostics.skippedReason = 'no-image-candidates';
-            return { merged: mergedEvent, diagnostics };
-        }
-
-        const snippets = [];
-        for (let index = 0; index < imageUrls.length; index++) {
-            const imageUrl = imageUrls[index];
-            try {
-                const ocrResult = await this.getOcrTextForImage(imageUrl, ocrConfig, `ocr ${index + 1}/${imageUrls.length}`);
-                if (!ocrResult || !ocrResult.text) {
-                    diagnostics.images.push({
-                        url: imageUrl,
-                        textChars: 0,
-                        cached: false,
-                        status: 'empty'
-                    });
-                    continue;
-                }
-                const trimmedText = ocrResult.text.length > ocrConfig.maxTextChars
-                    ? `${ocrResult.text.slice(0, ocrConfig.maxTextChars)}…`
-                    : ocrResult.text;
-                snippets.push(this.buildOcrSnippet(imageUrl, trimmedText));
-                diagnostics.processedImageCount += 1;
-                if (ocrResult.cached) diagnostics.cacheHits += 1;
-                diagnostics.images.push({
-                    url: imageUrl,
-                    textChars: trimmedText.length,
-                    cached: Boolean(ocrResult.cached),
-                    status: 'ok'
-                });
-            } catch (error) {
-                diagnostics.images.push({
-                    url: imageUrl,
-                    textChars: 0,
-                    cached: false,
-                    status: 'error',
-                    error: error && error.message ? error.message : String(error || '')
-                });
-                console.warn(`🤖 AI Web: OCR failed for ${imageUrl}: ${error.message}`);
-            }
-        }
-
-        if (snippets.length === 0) {
-            diagnostics.skippedReason = 'no-ocr-text';
-            return { merged: mergedEvent, diagnostics };
-        }
-
-        const partial = await this.extractFieldsAcrossSnippets(
-            htmlData,
-            aiConfig,
-            cityConfig,
-            parserConfig,
-            missingTargetFields,
-            snippets,
-            'ocr',
-            validationState,
-            {
-                partitionLabel: 'content',
-                extractionTrace,
-                promptVariant: 'alternate'
-            }
-        );
-        const merged = this.mergeAiEventFields(mergedEvent, partial);
-        diagnostics.missingAfter = this.getRemainingPromptFields(promptFields, merged)
-            .map(field => this.normalizePromptFieldName(field))
-            .filter(Boolean);
-        diagnostics.recoveredFields = missingBefore.filter(field => !diagnostics.missingAfter.includes(field));
-        return { merged, diagnostics };
+        return { merged: mergedEvent, diagnostics: { skippedReason: 'not-single-page' } };
     }
 
     scoreAdditionalUrl(url, sourceUrl, context = '') {
