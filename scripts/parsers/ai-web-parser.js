@@ -112,7 +112,7 @@ class AiWebParser {
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
         this.defaultOcrModel = 'qwen2.5vl:3b';
-        this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears. Return a JSON object with a single key 'text' containing the full extracted text, preserving line breaks as \\n. Do not add commentary.";
+        this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears AND classify the image type.\n\nImage classification options:\n- ad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\n- event-flyer: Single event poster/flyer (one event with date, title, venue)\n- multi-event-flyer: Multiple events listed (multiple dates + titles, like a calendar)\n- logo: Brand or organization logo (minimal text, just brand name)\n- thumbnail: Small preview image (low detail)\n- hero-banner: Large header/banner image (prominent on page)\n\nReturn JSON with:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
         this.defaultOcrRequestConfig = {
             timeoutSeconds: 300,
             keepAlive: '5m',
@@ -973,8 +973,8 @@ class AiWebParser {
         if (!line) return false;
         if (/, ?[A-Z]{2}(?:\b|$)/.test(line)) return true;
         if (/,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?$/.test(line) && line.split(/\s+/).length <= 5) return true;
-        if (/^[A-Z][A-Za-z .'-]+\s+-\s+[A-Z][A-Za-z .'-]+(?:,\s*[A-Z]{2})?$/.test(line)) return true;
-        return false;
+        return /^[A-Z][A-Za-z .'-]+\s+-\s+[A-Z][A-Za-z .'-]+(?:,\s*[A-Z]{2})?$/.test(line);
+
     }
 
     findTrailingMultiEventStartIndex(lines) {
@@ -1333,7 +1333,7 @@ class AiWebParser {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
         }
 
-        const rankedUrls = this.rankAdditionalUrls(urls, sourceUrl);
+        const rankedUrls = this.rankAdditionalUrls(urls);
         const maxAdditionalUrls = this.resolveMaxAdditionalUrls(parserConfig);
         const hasFiniteLimit = Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0;
 
@@ -1467,7 +1467,7 @@ class AiWebParser {
         return hasJsConfigTokens || (hasRegexTokens && hasConfigDelimiter);
     }
 
-    rankAdditionalUrls(urls, sourceUrl) {
+    rankAdditionalUrls(urls) {
         return Array.from(urls.values())
             .sort((a, b) => {
                 if (b.score !== a.score) return b.score - a.score;
@@ -1687,9 +1687,15 @@ class AiWebParser {
                 ? cached.response.text
                 : (typeof cached.text === 'string' ? cached.text : '');
             if (!responseText) return null;
+
+            const parsed = JSON.parse(responseText);
+
             return {
                 imageUrl: cached.url || normalizedUrl,
-                text: responseText,
+                text: typeof parsed.text === 'string' ? parsed.text : '',
+                imageClassification: typeof parsed.imageClassification === 'string' ? parsed.imageClassification : null,
+                confidence: typeof parsed.confidence === 'number' ? parsed.confidence : (typeof parsed.confidence === 'string' ? parseInt(parsed.confidence, 10) : null),
+                reason: typeof parsed.reason === 'string' ? parsed.reason : null,
                 cachePath,
                 cached: true
             };
@@ -1788,13 +1794,33 @@ class AiWebParser {
         throw new Error('No image HTTP client available');
     }
 
-    parseOcrResponse(rawText) {
+    parseOcrResponseWithClassification(rawText) {
         const parsed = this.parseAiEventResponse(rawText);
-        const text = parsed && typeof parsed.text === 'string' ? parsed.text : '';
+        if (!parsed) return null;
+
+        const text = typeof parsed.text === 'string' ? parsed.text : '';
+        const imageClassification = typeof parsed.imageClassification === 'string' ? parsed.imageClassification : null;
+        let confidence = typeof parsed.confidence === 'number' ? parsed.confidence : (typeof parsed.confidence === 'string' ? parseInt(parsed.confidence, 10) : null);
+
+        // Clamp confidence to 0-100 range and validate
+        if (Number.isFinite(confidence)) {
+            confidence = Math.max(0, Math.min(100, Math.round(confidence)));
+        } else {
+            confidence = null;
+        }
+
+        const reason = typeof parsed.reason === 'string' ? parsed.reason : null;
+
         const normalizedText = text
             .replace(/\r\n?/g, '\n')
             .trim();
-        return this.isLikelyEmptyOcrText(normalizedText) ? '' : normalizedText;
+
+        return {
+            text: this.isLikelyEmptyOcrText(normalizedText) ? '' : normalizedText,
+            imageClassification,
+            confidence,
+            reason
+        };
     }
 
     isLikelyEmptyOcrText(text) {
@@ -1818,6 +1844,9 @@ class AiWebParser {
                     ocrResults.push({
                         url: imageUrl,
                         text: result.text,
+                        imageClassification: result.imageClassification,
+                        confidence: result.confidence,
+                        reason: result.reason,
                         cacheHit: result.cached
                     });
                 }
@@ -1850,13 +1879,6 @@ class AiWebParser {
                 return normalized && normalized === ocrUrl;
             });
         });
-    }
-
-    collectOcrCandidateImageUrls(htmlData, ocrConfig = {}) {
-        // Simplified - use built-in function instead
-        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
-        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
-        return this.extractOrderedImageUrlsFromHtml(html, sourceUrl, Math.max(1, Number(ocrConfig.maxImages) || 1));
     }
 
     buildOcrSnippet(imageUrl, text) {
@@ -1892,21 +1914,24 @@ class AiWebParser {
         };
         const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, ocrConfig.prompt);
         if (!rawResponse) return null;
-        const text = this.parseOcrResponse(rawResponse);
-        if (!text) {
+        const parsed = this.parseOcrResponseWithClassification(rawResponse);
+        if (!parsed || !parsed.text) {
             console.warn(`🤖 AI Web: OCR response for ${imageUrl} did not include text`);
             return null;
         }
-        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, text);
+        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify(parsed));
         return {
             imageUrl,
-            text,
+            text: parsed.text,
+            imageClassification: parsed.imageClassification,
+            confidence: parsed.confidence,
+            reason: parsed.reason,
             cachePath,
             cached: false
         };
     }
 
-    async recoverMissingFieldsFromImages(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent, validationState, extractionTrace) {
+    async recoverMissingFieldsFromImages(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent) {
         // Simplified - OCR is now part of primary extraction
         // Only run for single-page events where OCR might still help
         const ocrConfig = this.getOcrConfig(parserConfig, aiConfig);
@@ -3459,9 +3484,7 @@ class AiWebParser {
             cityConfig,
             parserConfig,
             promptFields,
-            merged,
-            validationState,
-            extractionTrace
+            merged
         );
         merged = ocrRecovery && ocrRecovery.merged && typeof ocrRecovery.merged === 'object'
             ? ocrRecovery.merged
