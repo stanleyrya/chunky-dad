@@ -228,14 +228,9 @@ class AiWebParser {
 
     async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
-        const segments = this.buildMultiEventSegments(html, htmlData && typeof htmlData.url === 'string' ? htmlData.url : '');
-        if (segments.length === 0) {
-            console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
-            return [];
-        }
-        console.log(`🤖 AI Web: multi-event-page split into ${segments.length} candidate segment${segments.length === 1 ? '' : 's'}`);
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
 
-        // Extract OCR from ALL images
+        // Extract OCR from ALL images FIRST - we need it for image-segment pairing
         const ocrConfig = this.getOcrConfig(parserConfig);
         const ocrResults = ocrConfig.enabled
             ? await this.extractOcrFromAllImages(htmlData, ocrConfig)
@@ -243,6 +238,13 @@ class AiWebParser {
         if (ocrResults.length > 0) {
             console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
         }
+
+        const segments = this.buildMultiEventSegments(html, sourceUrl, ocrResults);
+        if (segments.length === 0) {
+            console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
+            return [];
+        }
+        console.log(`🤖 AI Web: multi-event-page split into ${segments.length} candidate segment${segments.length === 1 ? '' : 's'}`);
 
         const events = [];
         for (let i = 0; i < segments.length; i++) {
@@ -333,10 +335,10 @@ class AiWebParser {
         };
     }
 
-    buildMultiEventSegments(html, sourceUrl = '') {
+    buildMultiEventSegments(html, sourceUrl = '', ocrResults = []) {
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
-            return this.attachSequentialImageHintsToSegments(html, structuredSegments, sourceUrl);
+            return this.attachSequentialImageHintsToSegments(html, structuredSegments, sourceUrl, ocrResults);
         }
 
         const bodyParts = this.trimLeadingMultiEventNoise(
@@ -412,7 +414,7 @@ class AiWebParser {
             });
             if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
         }
-        return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl);
+        return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
 
 
@@ -707,7 +709,7 @@ class AiWebParser {
         };
     }
 
-    attachSequentialImageHintsToSegments(html, segments, sourceUrl = '') {
+    attachSequentialImageHintsToSegments(html, segments, sourceUrl = '', ocrResults = []) {
         const source = String(html || '');
         const sourceSegments = Array.isArray(segments) ? segments : [];
         if (!source || sourceSegments.length < 2) return sourceSegments;
@@ -739,7 +741,12 @@ class AiWebParser {
             segment && Array.isArray(segment.lines) ? segment.lines : [],
             pageTextRecords
         ));
-        const matchedImageUrls = this.matchOrderedImagesToSegments(segmentBounds, pageImageRecords);
+
+        // Use OCR results for better image-segment pairing if available
+        const matchedImageUrls = ocrResults && ocrResults.length > 0
+            ? this.matchOrderedImagesToSegmentsWithOcr(segmentBounds, pageImageRecords, ocrResults)
+            : this.matchOrderedImagesToSegments(segmentBounds, pageImageRecords);
+
         const orderedPageImages = pageImageRecords.map(record => record.url);
         const fallbackSequentialImageUrls = orderedPageImages.slice(0, sourceSegments.length);
 
@@ -836,6 +843,139 @@ class AiWebParser {
             state = dp[segmentIndex][imageIndex];
         }
         return matchedUrls;
+    }
+
+    matchOrderedImagesToSegmentsWithOcr(segmentBounds, imageRecords, ocrResults) {
+        const boundsList = Array.isArray(segmentBounds) ? segmentBounds : [];
+        const records = Array.isArray(imageRecords) ? imageRecords : [];
+        if (boundsList.length === 0 || records.length === 0) return [];
+        if (!boundsList.some(bounds => bounds && Number.isFinite(bounds.rawStart) && Number.isFinite(bounds.rawEnd))) {
+            return [];
+        }
+
+        // Create a map of image URL to OCR result for quick lookup
+        const ocrMap = new Map();
+        if (Array.isArray(ocrResults)) {
+            for (const result of ocrResults) {
+                if (result && result.url) {
+                    const normalizedUrl = this.normalizeHttpUrlValue(result.url);
+                    if (normalizedUrl) ocrMap.set(normalizedUrl, result);
+                }
+            }
+        }
+
+        const betterState = (current, candidate) => {
+            if (!candidate) return current;
+            if (!current) return candidate;
+            if (candidate.matches !== current.matches) {
+                return candidate.matches > current.matches ? candidate : current;
+            }
+            if (candidate.score !== current.score) {
+                return candidate.score > current.score ? candidate : current;
+            }
+            if (candidate.cost !== current.cost) {
+                return candidate.cost < current.cost ? candidate : current;
+            }
+            return candidate.steps < current.steps ? candidate : current;
+        };
+
+        const dp = Array.from({ length: boundsList.length + 1 }, () => Array(records.length + 1).fill(null));
+        dp[0][0] = { matches: 0, score: 0, cost: 0, steps: 0, prev: null, action: '' };
+
+        for (let segmentIndex = 0; segmentIndex <= boundsList.length; segmentIndex++) {
+            for (let imageIndex = 0; imageIndex <= records.length; imageIndex++) {
+                const state = dp[segmentIndex][imageIndex];
+                if (!state) continue;
+
+                if (segmentIndex < boundsList.length) {
+                    dp[segmentIndex + 1][imageIndex] = betterState(dp[segmentIndex + 1][imageIndex], {
+                        matches: state.matches,
+                        score: state.score,
+                        cost: state.cost,
+                        steps: state.steps + 1,
+                        prev: [segmentIndex, imageIndex],
+                        action: 'skip-segment'
+                    });
+                }
+
+                if (imageIndex < records.length) {
+                    dp[segmentIndex][imageIndex + 1] = betterState(dp[segmentIndex][imageIndex + 1], {
+                        matches: state.matches,
+                        score: state.score,
+                        cost: state.cost,
+                        steps: state.steps + 1,
+                        prev: [segmentIndex, imageIndex],
+                        action: 'skip-image'
+                    });
+                }
+
+                if (segmentIndex < boundsList.length && imageIndex < records.length) {
+                    const imageRecord = records[imageIndex];
+                    const ocrResult = ocrMap.get(this.normalizeHttpUrlValue(imageRecord.url));
+                    const pairingResult = this.getSegmentImagePairingCostWithOcr(
+                        boundsList[segmentIndex],
+                        imageRecord,
+                        ocrResult
+                    );
+                    if (Number.isFinite(pairingResult.cost)) {
+                        dp[segmentIndex + 1][imageIndex + 1] = betterState(dp[segmentIndex + 1][imageIndex + 1], {
+                            matches: state.matches + 1,
+                            score: state.score + pairingResult.score,
+                            cost: state.cost + pairingResult.cost,
+                            steps: state.steps + 1,
+                            prev: [segmentIndex, imageIndex],
+                            action: 'match'
+                        });
+                    }
+                }
+            }
+        }
+
+        const matchedUrls = [];
+        let segmentIndex = boundsList.length;
+        let imageIndex = records.length;
+        let state = dp[segmentIndex][imageIndex];
+        while (state && state.prev) {
+            if (state.action === 'match') {
+                matchedUrls[segmentIndex - 1] = records[imageIndex - 1].url;
+            }
+            const [prevSegmentIndex, prevImageIndex] = state.prev;
+            segmentIndex = prevSegmentIndex;
+            imageIndex = prevImageIndex;
+            state = dp[segmentIndex][imageIndex];
+        }
+        return matchedUrls;
+    }
+
+    getSegmentImagePairingCostWithOcr(segmentBounds, imageRecord, ocrResult) {
+        // Base cost from HTML proximity
+        const proximityCost = this.getSegmentImagePairingCost(segmentBounds, imageRecord);
+        if (!Number.isFinite(proximityCost)) return { cost: Infinity, score: -Infinity };
+
+        // Start with proximity-based cost
+        let cost = proximityCost;
+        let score = 0;
+
+        // Bonus for event-flyer classification
+        if (ocrResult && ocrResult.imageClassification === 'event-flyer') {
+            score += 100;  // Strong preference for event flyers
+        }
+
+        // Penalty for multi-event-flyer (contains multiple events, not suitable for single-event segments)
+        if (ocrResult && ocrResult.imageClassification === 'multi-event-flyer') {
+            score -= 200;  // Strong penalty - these images contain multiple events
+        }
+
+        // Text similarity bonus - compare OCR text with segment content
+        if (ocrResult && ocrResult.text && Array.isArray(segmentBounds.matchedRecords) && segmentBounds.matchedRecords.length > 0) {
+            const segmentText = segmentBounds.matchedRecords.map(r => r.text).join('\n');
+            const similarity = this.computeTextSimilarity(ocrResult.text, segmentText);
+            if (similarity >= 0.15) {
+                score += similarity * 100;  // Up to 100 points for good similarity
+            }
+        }
+
+        return { cost, score };
     }
 
     getSegmentImagePairingCost(segmentBounds, imageRecord) {
@@ -996,6 +1136,33 @@ class AiWebParser {
             if (this.hasMultiEventDateSignal(lines[i])) return i;
         }
         return -1;
+    }
+
+    computeTextSimilarity(text1, text2) {
+        // Normalize texts
+        const normalize = t => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const t1 = normalize(text1);
+        const t2 = normalize(text2);
+
+        if (!t1 || !t2) return 0;
+
+        // Create token sets
+        const tokens1 = new Set(t1.split(/\s+/).filter(t => t.length >= 3));
+        const tokens2 = new Set(t2.split(/\s+/).filter(t => t.length >= 3));
+
+        if (tokens1.size === 0 || tokens2.size === 0) return 0;
+
+        // Calculate intersection
+        let intersection = 0;
+        for (const token of tokens1) {
+            if (tokens2.has(token)) intersection++;
+        }
+
+        // Jaccard-like similarity: intersection over min size
+        const minSize = Math.min(tokens1.size, tokens2.size);
+        const similarity = intersection / minSize;
+
+        return similarity;
     }
 
     extractRawHtmlForMultiEventSegment(html, lines) {
