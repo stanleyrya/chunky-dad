@@ -147,6 +147,11 @@ class PageCacheMaintenance {
     return action ? String(action).trim().toLowerCase() : null;
   }
 
+  getModelFromQuery() {
+    const model = this.runtime.queryParameters?.model || null;
+    return model ? String(model).trim() : null;
+  }
+
   ensureCacheDir() {
     if (!this.fm.fileExists(this.cacheDir)) {
       this.fm.createDirectory(this.cacheDir, true);
@@ -258,6 +263,25 @@ class PageCacheMaintenance {
     }
   }
 
+  parseOcrCacheFileName(fileName) {
+    // Extract model name from OCR cache file path
+    // Format: ...--ocr-{signatureHash}.json
+    // Read the cache file to get the model name from the JSON
+    const match = String(fileName || '').match(/--ocr-([a-z0-9]+)\.json$/);
+    if (!match) return null;
+    return match[1];
+  }
+
+  async readOcrCacheFile(filePath) {
+    try {
+      await this.fm.downloadFileFromiCloud(filePath);
+      const content = this.fm.readString(filePath);
+      return JSON.parse(content);
+    } catch (_) {
+      return null;
+    }
+  }
+
   async analyzeHostDirectory(hostName, hostPath, thresholdMs, nowMs, scope = null) {
     const entryNames = await this.listDirectoryEntries(hostPath);
     const files = [];
@@ -287,6 +311,18 @@ class PageCacheMaintenance {
       const ageDays = ageMs === null ? null : ageMs / (24 * 60 * 60 * 1000);
       const isOld = ageMs !== null && ageMs > thresholdMs;
 
+      // Read OCR cache metadata for model info
+      let cacheData = null;
+      let modelName = null;
+      let imageUrl = null;
+      if (scope && scope.key === 'ocr') {
+        cacheData = await this.readOcrCacheFile(entryPath);
+        if (cacheData) {
+          modelName = cacheData?.request?.model || 'unknown';
+          imageUrl = cacheData?.url || null;
+        }
+      }
+
       if (isOld) {
         oldFileCount += 1;
       } else {
@@ -305,7 +341,9 @@ class PageCacheMaintenance {
         path: entryPath,
         modifiedAt,
         ageDays,
-        isOld
+        isOld,
+        modelName,
+        imageUrl
       });
     }
 
@@ -349,6 +387,20 @@ class PageCacheMaintenance {
     });
 
     const hosts = (await Promise.all(hostPromises)).filter(Boolean);
+
+    // Filter by model if specified
+    const modelFilter = this.getModelFromQuery();
+    if (modelFilter) {
+      for (const host of hosts) {
+        host.files = host.files?.filter(file => file?.modelName === modelFilter);
+      }
+      // Recalculate counts after filtering
+      hosts.forEach(host => {
+        host.totalFileCount = host.files?.length || 0;
+        host.oldFileCount = host.files?.filter(f => f?.isOld).length || 0;
+        host.recentFileCount = host.files?.filter(f => !f?.isOld).length || 0;
+      });
+    }
 
     hosts.sort((left, right) => {
       if (right.oldFileCount !== left.oldFileCount) return right.oldFileCount - left.oldFileCount;
@@ -507,6 +559,62 @@ class PageCacheMaintenance {
     return `${parts.join(', ')}.`;
   }
 
+  renderOcrFilesTable(ocrFiles) {
+    if (!ocrFiles || ocrFiles.length === 0) {
+      return `<div class="empty-card">No OCR cache files found.</div>`;
+    }
+
+    const renderOcrFileRows = (files) => {
+      return files.map(file => {
+        const modelBadge = file.modelName
+          ? `<span class="badge neutral" style="background: rgba(167,176,204,0.20); color: #cfd5e8;">${this.escapeHtml(file.modelName || 'unknown')}</span>`
+          : '';
+        const imagePreview = file.imageUrl
+          ? `<a href="${this.escapeHtml(file.imageUrl)}" target="_blank" style="display:inline-block; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
+              <img src="${this.escapeHtml(file.imageUrl)}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
+            </a>`
+          : '';
+        const fileDate = this.formatFileDate(file.modifiedAt);
+        const fileAge = this.formatAgeDays(file.ageDays);
+        const fileMeta = [
+          `Age: ${this.escapeHtml(fileAge)}`,
+          `Modified: ${this.escapeHtml(fileDate)}`
+        ].join(' • ');
+        return `
+          <tr>
+            <td style="min-width: 200px;">
+              <div style="font-weight: 500;">${this.escapeHtml(file.name)}</div>
+              <div style="color: var(--muted); font-size: 11px; margin-top: 4px;">${this.escapeHtml(file.imageUrl || 'No image URL')}</div>
+            </td>
+            <td style="min-width: 100px;">${modelBadge}</td>
+            <td style="min-width: 80px;">${imagePreview}</td>
+            <td style="color: var(--muted); font-size: 13px;">${this.escapeHtml(fileMeta)}</td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    return `
+      <div class="panel">
+        <h2>OCR Cache Files</h2>
+        <div class="helper">Files stored for image OCR processing. Click image thumbnail to view full size.</div>
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Model</th>
+              <th>Preview</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderOcrFileRows(ocrFiles)}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
   async buildAppHtml(analysis, result) {
     const logoImage = await this.loadLogoImage();
     const logoDataUri = this.imageToDataUri(logoImage);
@@ -552,7 +660,6 @@ class PageCacheMaintenance {
         : '');
 
     return `<!doctype html>
-<html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -827,6 +934,11 @@ class PageCacheMaintenance {
         </table>
       </div>
     `}
+
+    ${emptyState || (() => {
+  const ocrScope = analysis.cacheScopes.find(s => s.key === 'ocr');
+  return this.renderOcrFilesTable(ocrScope?.hosts.flatMap(h => h.files || []) || []);
+})()}
 
     <div class="footer">${this.escapeHtml(this.getCacheScopeDirectorySummary(' • '))}</div>
   </div>
