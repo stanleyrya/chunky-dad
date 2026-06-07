@@ -264,9 +264,6 @@ class PageCacheMaintenance {
   }
 
   parseOcrCacheFileName(fileName) {
-    // Extract model name from OCR cache file path
-    // Format: ...--ocr-{signatureHash}.json
-    // Read the cache file to get the model name from the JSON
     const match = String(fileName || '').match(/--ocr-([a-z0-9]+)\.json$/);
     if (!match) return null;
     return match[1];
@@ -394,7 +391,6 @@ class PageCacheMaintenance {
       for (const host of hosts) {
         host.files = host.files?.filter(file => file?.modelName === modelFilter);
       }
-      // Recalculate counts after filtering
       hosts.forEach(host => {
         host.totalFileCount = host.files?.length || 0;
         host.oldFileCount = host.files?.filter(f => f?.isOld).length || 0;
@@ -990,6 +986,9 @@ class PageCacheMaintenance {
 }
 
 (async () => {
+  if (typeof module !== 'undefined' && module.exports) {
+    return;
+  }
   try {
     const maintenance = new PageCacheMaintenance();
     const days = maintenance.getSelectedDays();
@@ -1029,3 +1028,7 @@ class PageCacheMaintenance {
     }
   }
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { PageCacheMaintenance };
+}
