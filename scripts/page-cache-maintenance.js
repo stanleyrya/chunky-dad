@@ -162,6 +162,49 @@ class PageCacheMaintenance {
     }
   }
 
+  renderOcrFilesTable(ocrFiles) {
+    if (!ocrFiles || ocrFiles.length === 0) return '';
+
+    const renderOcrFileRows = (files) => {
+      return files.map(file => {
+        const modelBadge = file.modelName
+          ? `<span style="padding: 2px 6px; border-radius: 10px; font-size: 10px; background: rgba(167,176,204,0.2); color: #cfd5e8;">${this.escapeHtml(file.modelName || 'unknown')}</span>`
+          : '';
+        const imagePreview = file.imageUrl
+          ? `<img src="${this.escapeHtml(file.imageUrl)}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover; vertical-align: middle; margin-right: 6px;" loading="lazy">`
+          : '';
+        const fileAge = this.formatAgeDays(file.ageDays);
+        const fileDate = this.formatFileDate(file.modifiedAt);
+        return `
+          <tr>
+            <td style="padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px;">${this.escapeHtml(file.name)}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.06);">${modelBadge}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.06);">${imagePreview}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 11px; color: #e6ebff;">Age: ${this.escapeHtml(fileAge)} | ${this.escapeHtml(fileDate)}</td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    return `
+      <div style="padding: 12px 0; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.06);">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead>
+            <tr>
+              <th style="padding: 6px 8px; text-align: left; color: #e6ebff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">File</th>
+              <th style="padding: 6px 8px; text-align: left; color: #e6ebff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Model</th>
+              <th style="padding: 6px 8px; text-align: left; color: #e6ebff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Preview</th>
+              <th style="padding: 6px 8px; text-align: left; color: #e6ebff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderOcrFileRows(ocrFiles)}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
   ensureCacheDir() {
     if (!this.fm.fileExists(this.cacheDir)) {
       this.fm.createDirectory(this.cacheDir, true);
@@ -851,6 +894,11 @@ class PageCacheMaintenance {
       </div>
     </div>
 
+    ${(() => {
+  const ocrScope = analysis.cacheScopes.find(s => s.key === 'ocr');
+  return this.renderOcrFilesTable(ocrScope?.hosts.flatMap(h => h.files || []) || []);
+})()}
+
     ${emptyState || `
       <div class="panel">
         <h2>Host breakdown</h2>
@@ -869,11 +917,6 @@ class PageCacheMaintenance {
         </table>
       </div>
     `}
-
-    ${(() => {
-  const ocrScope = analysis.cacheScopes.find(s => s.key === 'ocr');
-  return this.renderOcrFilesTable(ocrScope?.hosts.flatMap(h => h.files || []) || []);
-})()}
 
     <div class="footer">${this.escapeHtml(this.getCacheScopeDirectorySummary(' • '))}</div>
   </div>
@@ -922,65 +965,12 @@ class PageCacheMaintenance {
 
     return widget;
   }
-
-  renderOcrFilesTable(ocrFiles) {
-    if (!ocrFiles || ocrFiles.length === 0) {
-      return `<div class="empty-card" style="padding: 20px; font-size: 14px;">No OCR cache files found.</div>`;
-    }
-
-    const renderOcrFileRows = (files) => {
-      return files.map(file => {
-        const modelBadge = file.modelName
-          ? `<span style="display:inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; background: rgba(167,176,204,0.20); color: #cfd5e8;">${this.escapeHtml(file.modelName || 'unknown')}</span>`
-          : '';
-        const imagePreview = file.imageUrl
-          ? `<a href="${this.escapeHtml(file.imageUrl)}" target="_blank" style="display:inline-block; width: 50px; height: 50px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); vertical-align: middle; margin-right: 8px;">
-              <img src="${this.escapeHtml(file.imageUrl)}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
-            </a>`
-          : '<span style="color: #667eea; font-size: 11px;">No preview</span>';
-        const fileDate = this.formatFileDate(file.modifiedAt);
-        const fileAge = this.formatAgeDays(file.ageDays);
-        const fileMeta = [
-          `Age: ${this.escapeHtml(fileAge)}`,
-          `Modified: ${this.escapeHtml(fileDate)}`
-        ].join(' | ');
-        return `
-          <tr>
-            <td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);">
-              <div style="font-weight: 500; font-size: 13px;">${this.escapeHtml(file.name)}</div>
-              <div style="color: #e6ebff; font-size: 11px; margin-top: 2px;">${this.escapeHtml(file.imageUrl || 'No image URL')}</div>
-            </td>
-            <td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);">${modelBadge}</td>
-            <td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);">${imagePreview}</td>
-            <td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); color: #e6ebff; font-size: 12px;">${this.escapeHtml(fileMeta)}</td>
-          </tr>
-        `;
-      }).join('');
-    };
-
-    return `
-      <div class="panel" style="padding: 16px; margin-top: 12px;">
-        <h2 style="margin: 0 0 10px 0; font-size: 18px; color: #e6ebff;">OCR Cache Files</h2>
-        <div style="color: #e6ebff; font-size: 12px; margin-bottom: 12px; opacity: 0.7;">Files stored for image OCR processing. Click thumbnail to view full size.</div>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead>
-            <tr>
-              <th style="padding: 8px 12px; text-align: left; color: #e6ebff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(255,255,255,0.04);">File</th>
-              <th style="padding: 8px 12px; text-align: left; color: #e6ebff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(255,255,255,0.04);">Model</th>
-              <th style="padding: 8px 12px; text-align: left; color: #e6ebff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(255,255,255,0.04);">Preview</th>
-              <th style="padding: 8px 12px; text-align: left; color: #e6ebff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(255,255,255,0.04);">Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${renderOcrFileRows(ocrFiles)}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
 }
 
 (async () => {
+  if (typeof module !== 'undefined' && module.exports) {
+    return;
+  }
   try {
     const maintenance = new PageCacheMaintenance();
     const days = maintenance.getSelectedDays();
@@ -1020,3 +1010,7 @@ class PageCacheMaintenance {
     }
   }
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { PageCacheMaintenance };
+}
