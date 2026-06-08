@@ -3270,6 +3270,8 @@ class AiWebParser {
                 missingFields: Array.from(new Set(missingFields)),
                 fieldSources: extractionSources
             },
+            parserConfig,
+            sourceUrl,
             retry: {
                 decisions: [],
                 summary: {
@@ -3282,13 +3284,18 @@ class AiWebParser {
         };
     }
 
-    planConfidenceRetries(confidenceDiagnostics) {
+    planConfidenceRetries(confidenceDiagnostics, promptFields = []) {
         if (!confidenceDiagnostics || typeof confidenceDiagnostics !== 'object') {
             return [];
         }
         const confidenceByField = confidenceDiagnostics.fieldConfidence && typeof confidenceDiagnostics.fieldConfidence === 'object'
             ? confidenceDiagnostics.fieldConfidence
             : {};
+        const expectations = this.getAiConfidenceExpectations(
+            confidenceDiagnostics.parserConfig || {},
+            confidenceDiagnostics.sourceUrl || '',
+            Array.isArray(promptFields) ? promptFields : []
+        );
         const grouped = {
             jsonld: new Set(),
             meta: new Set(),
@@ -3296,11 +3303,21 @@ class AiWebParser {
         };
         Object.keys(confidenceByField).forEach(field => {
             const confidence = confidenceByField[field];
-            if (!confidence || confidence.level !== 'low' || !Array.isArray(confidence.retryCandidates)) return;
-            confidence.retryCandidates.forEach(partition => {
-                if (!grouped[partition]) return;
-                grouped[partition].add(field);
-            });
+            const expectation = expectations[field] || { expected: [], strong: [] };
+            const hasContentExpected = expectation.expected && expectation.expected.includes('content');
+            if (!confidence || confidence.level !== 'low') return;
+            if (!Array.isArray(confidence.retryCandidates) || confidence.retryCandidates.length === 0) {
+                // No retry candidates - if content is expected, add to content since OCR content might still have the field
+                if (hasContentExpected && grouped.content !== undefined) {
+                    grouped.content.add(field);
+                }
+            } else {
+                // Has retry candidates - use existing logic
+                confidence.retryCandidates.forEach(partition => {
+                    if (!grouped[partition]) return;
+                    grouped[partition].add(field);
+                });
+            }
         });
         return ['jsonld', 'meta', 'content']
             .map(partition => ({
@@ -3609,7 +3626,7 @@ class AiWebParser {
                 merged,
                 extractionTrace
             );
-            const retryPlan = this.planConfidenceRetries(confidenceDiagnostics);
+            const retryPlan = this.planConfidenceRetries(confidenceDiagnostics, promptFields);
             if (retryPlan.length === 0) break;
             const cycleMissingFields = this.getRemainingPromptFields(promptFields, merged).map(field => this.normalizePromptFieldName(field));
             if (cycleMissingFields.length === 0) break;
