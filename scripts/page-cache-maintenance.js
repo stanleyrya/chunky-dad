@@ -187,8 +187,7 @@ class PageCacheMaintenance {
     };
 
     return `
-      <div style="padding: 12px 0; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.06);">
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px;">
           <thead>
             <tr>
               <th style="padding: 6px 8px; text-align: left; color: #e6ebff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">File</th>
@@ -201,7 +200,6 @@ class PageCacheMaintenance {
             ${renderOcrFileRows(ocrFiles)}
           </tbody>
         </table>
-      </div>
     `;
   }
 
