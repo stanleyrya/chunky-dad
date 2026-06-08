@@ -2098,16 +2098,6 @@ class AiWebParser {
         };
     }
 
-    async recoverMissingFieldsFromImages(htmlData, aiConfig, cityConfig, parserConfig, promptFields, mergedEvent) {
-        // Simplified - OCR is now part of primary extraction
-        // Only run for single-page events where OCR might still help
-        const ocrConfig = this.getOcrConfig(parserConfig, aiConfig);
-        if (!ocrConfig.enabled) {
-            return { merged: mergedEvent, diagnostics: { skippedReason: 'disabled' } };
-        }
-        return { merged: mergedEvent, diagnostics: { skippedReason: 'not-single-page' } };
-    }
-
     scoreAdditionalUrl(url, sourceUrl, context = '') {
         let score = 0;
         const parsedUrl = this.parseUrlComponents(url);
@@ -2802,12 +2792,6 @@ class AiWebParser {
         const rawOcr = parserAiConfig.ocr && typeof parserAiConfig.ocr === 'object'
             ? parserAiConfig.ocr
             : {};
-        const blockedFields = Array.from(new Set(
-            ['image', 'cover', 'location', 'gmaps']
-                .concat(Array.isArray(rawOcr.blockedFields) ? rawOcr.blockedFields : [])
-                .map(field => this.normalizePromptFieldName(field))
-                .filter(Boolean)
-        ));
         const targetFields = Array.isArray(rawOcr.targetFields) && rawOcr.targetFields.length > 0
             ? Array.from(new Set(
                 rawOcr.targetFields
@@ -2848,7 +2832,6 @@ class AiWebParser {
             maxTextChars,
             cacheEnabled: rawOcr.cache !== false,
             requireMissingFields: rawOcr.requireMissingFields !== false,
-            blockedFields,
             targetFields
         };
     }
@@ -3291,11 +3274,8 @@ class AiWebParser {
         const confidenceByField = confidenceDiagnostics.fieldConfidence && typeof confidenceDiagnostics.fieldConfidence === 'object'
             ? confidenceDiagnostics.fieldConfidence
             : {};
-        const expectations = this.getAiConfidenceExpectations(
-            confidenceDiagnostics.parserConfig || {},
-            confidenceDiagnostics.sourceUrl || '',
-            Array.isArray(promptFields) ? promptFields : []
-        );
+        // Reuse expectedSignals from buildConfidenceDiagnostics to avoid redundant expectations lookup
+        const expectations = confidenceDiagnostics.expectedSignals || {};
         const grouped = {
             jsonld: new Set(),
             meta: new Set(),
@@ -3306,7 +3286,7 @@ class AiWebParser {
             const expectation = expectations[field] || { expected: [], strong: [] };
             const hasContentExpected = expectation.expected && expectation.expected.includes('content');
             if (!confidence || confidence.level !== 'low') return;
-            if (!Array.isArray(confidence.retryCandidates) || confidence.retryCandidates.length === 0) {
+            if (!confidence.retryCandidates?.length) {
                 // No retry candidates - if content is expected, add to content since OCR content might still have the field
                 if (hasContentExpected && grouped.content !== undefined) {
                     grouped.content.add(field);
@@ -3662,21 +3642,6 @@ class AiWebParser {
             if (retryPasses >= confidenceRuntime.maxRetryPasses) break;
         }
 
-        const ocrRecovery = await this.recoverMissingFieldsFromImages(
-            htmlData,
-            aiConfig,
-            cityConfig,
-            parserConfig,
-            promptFields,
-            merged
-        );
-        merged = ocrRecovery && ocrRecovery.merged && typeof ocrRecovery.merged === 'object'
-            ? ocrRecovery.merged
-            : merged;
-        const ocrDiagnostics = ocrRecovery && ocrRecovery.diagnostics && typeof ocrRecovery.diagnostics === 'object'
-            ? ocrRecovery.diagnostics
-            : null;
-
         const confidenceDiagnostics = this.buildConfidenceDiagnostics(
             sectionBundle,
             promptFields,
@@ -3700,7 +3665,6 @@ class AiWebParser {
                 maxRetryPasses: confidenceRuntime.maxRetryPasses
             }
         };
-        confidenceDiagnostics.ocr = ocrDiagnostics;
 
         if (merged && typeof merged === 'object' && validationState.validatedFields.size > 0) {
             merged.__preValidatedFields = Array.from(validationState.validatedFields);
