@@ -195,6 +195,18 @@ class PageCacheMaintenance {
     }
   }
 
+  parseHostname(url) {
+    if (!url) return 'unknown';
+    try {
+      // Basic extraction for simple environments
+      const match = String(url).match(/^https?:\/\/([^/?#]+)/i);
+      if (match && match[1]) {
+        return match[1].replace(/^www\./i, '');
+      }
+    } catch (_) {}
+    return 'unknown';
+  }
+
   escapeHtml(value) {
     return String(value === null || value === undefined ? '' : value)
       .replace(/&/g, '&amp;')
@@ -306,11 +318,20 @@ class PageCacheMaintenance {
       let cacheData = null;
       let modelName = null;
       let imageUrl = null;
+      let ocrMetadata = null;
+
       if (scope && scope.key === 'ocr') {
         cacheData = await this.readOcrCacheFile(entryPath);
         if (cacheData) {
           modelName = cacheData?.request?.model || 'unknown';
           imageUrl = cacheData?.url || null;
+
+          // Parse nested JSON in response.text
+          if (typeof cacheData?.response?.text === 'string') {
+            try {
+              ocrMetadata = JSON.parse(cacheData.response.text);
+            } catch (_) {}
+          }
         }
       }
 
@@ -334,7 +355,8 @@ class PageCacheMaintenance {
         ageDays,
         isOld,
         modelName,
-        imageUrl
+        imageUrl,
+        ocrMetadata
       });
     }
 
@@ -551,53 +573,88 @@ class PageCacheMaintenance {
 
   renderOcrFilesTable(ocrFiles) {
     if (!ocrFiles || ocrFiles.length === 0) {
-      return `<div class="empty-card">No OCR cache files found.</div>`;
+      return '';
     }
 
-    const renderOcrFileRows = (files) => {
-      return files.map(file => {
-        const modelBadge = file.modelName
-          ? `<span class="badge neutral" style="background: rgba(167,176,204,0.20); color: #cfd5e8;">${this.escapeHtml(file.modelName || 'unknown')}</span>`
-          : '';
-        const imagePreview = file.imageUrl
-          ? `<a href="${this.escapeHtml(file.imageUrl)}" target="_blank" style="display:inline-block; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);">
-              <img src="${this.escapeHtml(file.imageUrl)}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
-            </a>`
-          : '';
-        const fileDate = this.formatFileDate(file.modifiedAt);
+    const grouped = new Map();
+    ocrFiles.forEach(file => {
+      const url = file.imageUrl || 'no-url';
+      if (!grouped.has(url)) {
+        grouped.set(url, []);
+      }
+      grouped.get(url).push(file);
+    });
+
+    const sortedEntries = Array.from(grouped.entries()).sort((a, b) => {
+      const aMaxAge = Math.max(...a[1].map(f => f.ageDays || 0));
+      const bMaxAge = Math.max(...b[1].map(f => f.ageDays || 0));
+      return bMaxAge - aMaxAge;
+    });
+
+    const rows = sortedEntries.map(([imageUrl, files]) => {
+      const hostname = imageUrl !== 'no-url' ? this.parseHostname(imageUrl) : 'unknown-host';
+      const imagePreview = imageUrl !== 'no-url'
+        ? `<a href="${this.escapeHtml(imageUrl)}" target="_blank" style="display:inline-block; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); margin-top: 4px;">
+            <img src="${this.escapeHtml(imageUrl)}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
+          </a>`
+        : '<div style="width: 64px; height: 64px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px;">🖼️</div>';
+
+      const modelComparisons = files.map(file => {
+        const meta = file.ocrMetadata || {};
+        const classification = meta.imageClassification || 'unclassified';
+        const confidence = typeof meta.confidence === 'number' ? `${meta.confidence}%` : '';
+        const textSnippet = meta.text ? this.escapeHtml(meta.text.slice(0, 120)) + (meta.text.length > 120 ? '...' : '') : 'No text extracted';
         const fileAge = this.formatAgeDays(file.ageDays);
-        const fileMeta = [
-          `Age: ${this.escapeHtml(fileAge)}`,
-          `Modified: ${this.escapeHtml(fileDate)}`
-        ].join(' • ');
+
+        let badgeClass = 'neutral';
+        if (classification === 'event-flyer' || classification === 'multi-event-flyer') badgeClass = 'success';
+        if (classification === 'ad-banner' || classification === 'thumbnail') badgeClass = 'warning';
+
         return `
-          <tr>
-            <td style="min-width: 200px;">
-              <div style="font-weight: 500;">${this.escapeHtml(file.name)}</div>
-              <div style="color: var(--muted); font-size: 11px; margin-top: 4px;">${this.escapeHtml(file.imageUrl || 'No image URL')}</div>
-            </td>
-            <td style="min-width: 100px;">${modelBadge}</td>
-            <td style="min-width: 80px;">${imagePreview}</td>
-            <td style="color: var(--muted); font-size: 13px;">${this.escapeHtml(fileMeta)}</td>
-          </tr>
+          <div style="margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span class="badge neutral" style="font-size: 10px;">${this.escapeHtml(file.modelName)}</span>
+              <span class="badge ${badgeClass}" style="font-size: 10px;">${this.escapeHtml(classification)}${confidence ? ` (${confidence})` : ''}</span>
+              <span style="font-size: 11px; color: var(--muted); margin-left: auto;">${fileAge}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text); line-height: 1.4; font-family: monospace; white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 6px;">${textSnippet}</div>
+          </div>
         `;
       }).join('');
-    };
+
+      return `
+        <tr>
+          <td style="width: 80px; padding-right: 0;">${imagePreview}</td>
+          <td style="min-width: 200px;">
+            <div style="font-weight: 600; font-size: 15px;">${this.escapeHtml(hostname)}</div>
+            <div style="color: var(--muted); font-size: 11px; margin-top: 2px; word-break: break-all; max-width: 300px;">${this.escapeHtml(imageUrl)}</div>
+            <div style="margin-top: 8px; font-size: 11px; color: var(--muted);">Files: ${files.length}</div>
+          </td>
+          <td style="padding-left: 0;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              ${modelComparisons}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
 
     return `
-      <table class="compact-table" style="border-collapse: collapse; width: 100%; border-radius: 12px; overflow: hidden; margin-top: 8px;">
-        <thead>
-          <tr>
-            <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255,255,255,0.04);">File</th>
-            <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255,255,255,0.04);">Model</th>
-            <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255,255,255,0.04);">Preview</th>
-            <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255,255,255,0.04);">Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${renderOcrFileRows(ocrFiles)}
-        </tbody>
-      </table>
+      <div class="panel">
+        <h2>OCR model comparison</h2>
+        <div class="helper">Comparing OCR results for the same image across different models.</div>
+        <table>
+          <thead>
+            <tr>
+              <th colspan="2">Image source</th>
+              <th>Model responses & extractions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
     `;
   }
 
@@ -826,6 +883,8 @@ class PageCacheMaintenance {
     }
     .badge.success { background: rgba(46,213,115,0.16); color: ${BRAND.success}; }
     .badge.danger { background: rgba(255,107,107,0.16); color: ${BRAND.danger}; }
+    .badge.warning { background: rgba(254,202,87,0.16); color: ${BRAND.warning}; }
+    .badge.neutral { background: rgba(167,176,204,0.16); color: ${BRAND.neutral}; }
     .empty-card {
       padding: 28px;
       text-align: center;
