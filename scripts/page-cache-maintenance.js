@@ -599,25 +599,33 @@ class PageCacheMaintenance {
           </a>`
         : '<div style="width: 64px; height: 64px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px;">🖼️</div>';
 
+      const classifications = new Set(files.map(f => f.ocrMetadata?.imageClassification).filter(Boolean));
+      const hasConflict = classifications.size > 1;
+
       const modelComparisons = files.map(file => {
         const meta = file.ocrMetadata || {};
         const classification = meta.imageClassification || 'unclassified';
         const confidence = typeof meta.confidence === 'number' ? `${meta.confidence}%` : '';
-        const textSnippet = meta.text ? this.escapeHtml(meta.text.slice(0, 120)) + (meta.text.length > 120 ? '...' : '') : 'No text extracted';
+        const reason = meta.reason ? this.escapeHtml(meta.reason) : '';
+        const textSnippet = meta.text ? this.escapeHtml(meta.text.slice(0, 250)) + (meta.text.length > 250 ? '...' : '') : 'No text extracted';
         const fileAge = this.formatAgeDays(file.ageDays);
 
         let badgeClass = 'neutral';
         if (classification === 'event-flyer' || classification === 'multi-event-flyer') badgeClass = 'success';
         if (classification === 'ad-banner' || classification === 'thumbnail') badgeClass = 'warning';
+        if (classification === 'logo') badgeClass = 'neutral';
 
         return `
-          <div style="margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-              <span class="badge neutral" style="font-size: 10px;">${this.escapeHtml(file.modelName)}</span>
-              <span class="badge ${badgeClass}" style="font-size: 10px;">${this.escapeHtml(classification)}${confidence ? ` (${confidence})` : ''}</span>
+          <div style="margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <span style="font-weight: 700; font-size: 12px; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em;">${this.escapeHtml(file.modelName)}</span>
+              <span class="badge ${badgeClass}" style="font-size: 11px;">${this.escapeHtml(classification)}${confidence ? ` (${confidence})` : ''}</span>
               <span style="font-size: 11px; color: var(--muted); margin-left: auto;">${fileAge}</span>
             </div>
-            <div style="font-size: 12px; color: var(--text); line-height: 1.4; font-family: monospace; white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 6px;">${textSnippet}</div>
+
+            ${reason ? `<div style="font-size: 12px; color: var(--muted); font-style: italic; margin-bottom: 10px; line-height: 1.4; padding-left: 8px; border-left: 2px solid rgba(255,255,255,0.1);">"${reason}"</div>` : ''}
+
+            <div style="font-size: 11px; color: var(--text); line-height: 1.5; font-family: 'SF Mono', 'Fira Code', monospace; white-space: pre-wrap; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); max-height: 150px; overflow-y: auto;">${textSnippet}</div>
           </div>
         `;
       }).join('');
@@ -626,7 +634,10 @@ class PageCacheMaintenance {
         <tr>
           <td style="width: 80px; padding-right: 0;">${imagePreview}</td>
           <td style="min-width: 200px;">
-            <div style="font-weight: 600; font-size: 15px;">${this.escapeHtml(hostname)}</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="font-weight: 600; font-size: 15px;">${this.escapeHtml(hostname)}</div>
+              ${hasConflict ? '<span class="badge danger" style="font-size: 9px; padding: 2px 6px;">CONFLICT</span>' : ''}
+            </div>
             <div style="color: var(--muted); font-size: 11px; margin-top: 2px; word-break: break-all; max-width: 300px;">${this.escapeHtml(imageUrl)}</div>
             <div style="margin-top: 8px; font-size: 11px; color: var(--muted);">Files: ${files.length}</div>
           </td>
@@ -672,6 +683,20 @@ class PageCacheMaintenance {
     const pruneHref = this.escapeHtml(this.buildSelfUrl({ action: 'prune', days }));
     const pruneHostsHref = this.escapeHtml(this.buildSelfUrl({ action: 'prune', days, deleteHosts: 1 }));
     const refreshHref = this.escapeHtml(this.buildSelfUrl({ days }));
+
+    const activeModel = this.getModelFromQuery();
+    const ocrScope = analysis.cacheScopes.find(s => s.key === 'ocr');
+    const allOcrFiles = ocrScope?.hosts.flatMap(h => h.files || []) || [];
+    const availableModels = [...new Set(allOcrFiles.map(f => f.modelName).filter(Boolean))].sort();
+
+    const modelChips = availableModels.length > 0 ? [
+      `<a class="chip ${!activeModel ? 'active' : ''}" href="${this.escapeHtml(this.buildSelfUrl({ days }))}">All models</a>`,
+      ...availableModels.map(m => {
+        const activeClass = m === activeModel ? 'chip active' : 'chip';
+        const href = this.escapeHtml(this.buildSelfUrl({ days, model: m }));
+        return `<a class="${activeClass}" href="${href}">${this.escapeHtml(m)}</a>`;
+      })
+    ].join('') : '';
 
     const hostRows = analysis.hosts
       .filter(host => host.totalFileCount > 0 || host.removableAfterPrune)
@@ -926,12 +951,19 @@ class PageCacheMaintenance {
     ${resultMessage ? `<div class="notice ${result?.cancelled || result?.skipped ? 'warning' : ''}">${this.escapeHtml(resultMessage)}</div>` : ''}
 
     <div class="panel controls">
-      <div>
-        <h2>Threshold</h2>
-        <div class="helper">Tap a quick filter or rerun with <code>days=N</code> for a custom threshold.</div>
-        <div class="chip-row">${dayChips}</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px;">
+        <div>
+          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px;">Threshold</h2>
+          <div class="chip-row">${dayChips}</div>
+        </div>
+        ${modelChips ? `
+        <div>
+          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px;">Model Filter</h2>
+          <div class="chip-row">${modelChips}</div>
+        </div>
+        ` : ''}
       </div>
-      <div>
+      <div style="margin-top: 12px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08);">
         <h2>Actions</h2>
         <div class="helper">Deletion always asks for confirmation first.</div>
         <div class="button-row">
