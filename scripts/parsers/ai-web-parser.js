@@ -113,7 +113,7 @@ class AiWebParser {
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
         this.defaultOcrModel = 'qwen3-vl:4b-instruct';
-        this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears AND classify the image type.\n\nImage classification options:\n- ad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\n- event-flyer: Single event poster/flyer (one event with date, title, venue)\n- multi-event-flyer: Multiple events listed (multiple dates + titles, like a calendar)\n- logo: Brand or organization logo (minimal text, just brand name)\n- thumbnail: Small preview image (low detail)\n- hero-banner: Large header/banner image (prominent on page)\n\nReturn JSON with:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
+        this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears AND classify the image type.\n\nImage classification options:\n- ad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\n- event-flyer: Single event poster/flyer - ONE event only, even if it's part of a larger event series like \"Bear Week\". Look for ONE title, ONE date/time range, ONE venue.\n- multi-event-flyer: MULTIPLE distinct events with DIFFERENT dates/times (like a calendar or festival schedule). Each event has its own title and time slot.\n- logo: Brand or organization logo (minimal text, just brand name)\n- thumbnail: Small preview image (low detail)\n- hero-banner: Large header/banner image (prominent on page)\n\nKEY DIFFERENCE: An event-flyer describes ONE event (even if that event is during Bear Week). A multi-event-flyer lists SEVERAL different events with different dates.\n\nIMPORTANT CONTEXT: This is for a gay bear community travel guide. Events may be part of:\n- \"Bear Week\" or \"Bear Weekend\" themed events\n- Annual bear gatherings (e.g., \"Puerto Vallarta Bear Week\", \"Sitges Bear Week\")\n- Regular bear-themed parties or meetups\n- Events at bear-owned businesses or bear-friendly venues\n\nReturn JSON with:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"eventSummary\": \"a concise 1-2 sentence summary of the event including: event name, venue, date/time, and any bear-week context if applicable. Focus on what makes this event notable for the bear community.\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
         this.defaultOcrRequestConfig = {
             timeoutSeconds: 300,
             keepAlive: '5m',
@@ -1854,13 +1854,15 @@ class AiWebParser {
             if (responseText === undefined || responseText === null) return null;
 
             const parsed = JSON.parse(responseText);
+            const normalized = this.normalizeOcrResult(parsed);
 
             return {
                 imageUrl: cached.url || normalizedUrl,
-                text: typeof parsed.text === 'string' ? parsed.text : '',
-                imageClassification: typeof parsed.imageClassification === 'string' ? parsed.imageClassification : null,
-                confidence: typeof parsed.confidence === 'number' ? parsed.confidence : (typeof parsed.confidence === 'string' ? parseInt(parsed.confidence, 10) : null),
-                reason: typeof parsed.reason === 'string' ? parsed.reason : null,
+                text: normalized.text,
+                imageClassification: normalized.imageClassification,
+                eventSummary: normalized.eventSummary,
+                confidence: normalized.confidence,
+                reason: normalized.reason,
                 cachePath,
                 cached: true
             };
@@ -1963,28 +1965,12 @@ class AiWebParser {
         const parsed = this.parseAiEventResponse(rawText);
         if (!parsed) return null;
 
-        const text = typeof parsed.text === 'string' ? parsed.text : '';
-        const imageClassification = typeof parsed.imageClassification === 'string' ? parsed.imageClassification : null;
-        let confidence = typeof parsed.confidence === 'number' ? parsed.confidence : (typeof parsed.confidence === 'string' ? parseInt(parsed.confidence, 10) : null);
-
-        // Clamp confidence to 0-100 range and validate
-        if (Number.isFinite(confidence)) {
-            confidence = Math.max(0, Math.min(100, Math.round(confidence)));
-        } else {
-            confidence = null;
-        }
-
-        const reason = typeof parsed.reason === 'string' ? parsed.reason : null;
-
-        const normalizedText = text
-            .replace(/\r\n?/g, '\n')
-            .trim();
-
         return {
-            text: this.isLikelyEmptyOcrText(normalizedText) ? '' : normalizedText,
-            imageClassification,
-            confidence,
-            reason
+            text: parsed.text,
+            imageClassification: parsed.imageClassification,
+            eventSummary: parsed.eventSummary,
+            confidence: parsed.confidence,
+            reason: parsed.reason
         };
     }
 
@@ -2117,20 +2103,38 @@ class AiWebParser {
             || rawResult.extracted_text
             || '';
 
-        const confidence = Number(rawResult.confidence)
+        const eventSummary = rawResult.eventSummary
+            || rawResult.summary
+            || rawResult.event_summary
+            || null;
+
+        let confidence = Number(rawResult.confidence)
             || Number(rawResult.score)
             || Number(rawResult.certainty)
             || 0;
+
+        // Clamp confidence to 0-100 range
+        if (Number.isFinite(confidence)) {
+            confidence = Math.max(0, Math.min(100, Math.round(confidence)));
+        } else {
+            confidence = null;
+        }
 
         const reason = rawResult.reason
             || rawResult.explanation
             || rawResult.notes
             || '';
 
+        // Normalize text: trim and handle empty/invalid OCR text
+        const normalizedText = String(text || '')
+            .replace(/\r\n?/g, '\n')
+            .trim();
+
         return {
             url: rawResult.imageUrl || rawResult.url || '',
-            text,
+            text: this.isLikelyEmptyOcrText(normalizedText) ? '' : normalizedText,
             imageClassification: classification,
+            eventSummary,
             confidence,
             reason,
             cacheHit: rawResult.cached || false
@@ -2360,13 +2364,15 @@ class AiWebParser {
         if (!parsed.text) {
             console.log(`🤖 AI Web: OCR response for ${imageUrl} has no text (imageClassification: ${parsed.imageClassification})`);
         }
+        const normalized = this.normalizeOcrResult(parsed);
         const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify(parsed));
         return {
             imageUrl,
-            text: parsed.text,
-            imageClassification: parsed.imageClassification,
-            confidence: parsed.confidence,
-            reason: parsed.reason,
+            text: normalized.text,
+            imageClassification: normalized.imageClassification,
+            eventSummary: normalized.eventSummary,
+            confidence: normalized.confidence,
+            reason: normalized.reason,
             cachePath,
             cached: false
         };
