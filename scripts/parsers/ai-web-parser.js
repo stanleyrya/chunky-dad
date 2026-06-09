@@ -149,38 +149,53 @@ class AiWebParser {
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
 
-            if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
-                let discoveredSegments = null;
-                if (parserConfig.discoveryOnly === true && pageClassification === 'multi-event-page') {
-                    const segments = this.buildMultiEventSegments(html, sourceUrl);
-                    if (segments.length === 0) {
-                        console.warn('🤖 AI Web: Segment discovery found no valid segments on multi-event page (check date/title signals and extraction limits)');
-                    } else {
-                        discoveredSegments = segments.map((segment, i) => {
-                            const diagnostics = this.describeMultiEventSegment(segment, sourceUrl);
-                            return {
-                                index: i + 1,
-                                lineCount: diagnostics.lineCount,
-                                preview: diagnostics.preview,
-                                imageUrls: diagnostics.imageUrls,
-                                resourceLines: diagnostics.resourceLines
-                            };
-                        });
-                        console.log(`🤖 AI Web: Segment discovery found ${segments.length} segment(s) on multi-event page`);
-                        for (let i = 0; i < segments.length; i++) {
-                            const diagnostics = this.describeMultiEventSegment(segments[i], sourceUrl);
-                            const resourceSummary = diagnostics.resourceLines.length > 0
-                                ? `\n${diagnostics.resourceLines.join('\n')}`
-                                : '';
-                            console.log(`🤖 AI Web: Segment ${i + 1}/${segments.length} (${diagnostics.lineCount} lines, images=${diagnostics.imageUrls.length}):\n${segments[i].lines.join('\n')}${resourceSummary}`);
-                        }
+            // Extract OCR from ALL images FIRST - we need it for consistent segment-to-image mapping
+            // regardless of whether discoveryOnly mode is enabled
+            const ocrConfig = this.getOcrConfig(parserConfig);
+            const ocrResults = ocrConfig.enabled
+                ? await this.extractOcrFromAllImages(htmlData, ocrConfig)
+                : [];
+            if (ocrResults.length > 0) {
+                console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
+            }
+
+            // Build segments for multi-event pages - we need this for consistent segment-to-image mapping
+            // and for UI discovery mode. Pass OCR results for proper image-segment pairing.
+            let discoveredSegments = null;
+            if (pageClassification === 'multi-event-page') {
+                const segments = this.buildMultiEventSegments(html, sourceUrl, ocrResults);
+                if (segments.length === 0) {
+                    console.warn('🤖 AI Web: Segment discovery found no valid segments on multi-event page (check date/title signals and extraction limits)');
+                } else {
+                    discoveredSegments = segments.map((segment, i) => {
+                        const diagnostics = this.describeMultiEventSegment(segment, sourceUrl);
+                        return {
+                            index: i + 1,
+                            lineCount: diagnostics.lineCount,
+                            preview: diagnostics.preview,
+                            imageUrls: diagnostics.imageUrls,
+                            resourceLines: diagnostics.resourceLines
+                        };
+                    });
+                    console.log(`🤖 AI Web: Segment discovery found ${segments.length} segment(s) on multi-event page`);
+                    for (let i = 0; i < segments.length; i++) {
+                        const diagnostics = this.describeMultiEventSegment(segments[i], sourceUrl);
+                        const resourceSummary = diagnostics.resourceLines.length > 0
+                            ? `\n${diagnostics.resourceLines.join('\n')}`
+                            : '';
+                        console.log(`🤖 AI Web: Segment ${i + 1}/${segments.length} (${diagnostics.lineCount} lines, images=${diagnostics.imageUrls.length}):\n${segments[i].lines.join('\n')}${resourceSummary}`);
                     }
                 }
+            }
+
+            // Skip AI extraction in discoveryOnly mode or for link-aggregator pages
+            if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
                 console.log(`🤖 AI Web: Link-finding mode (${parserConfig.discoveryOnly ? 'discoveryOnly' : 'link-aggregator'}) found ${additionalLinks.length} additional links`);
                 return {
                     events: [],
                     additionalLinks: additionalLinks,
                     discoveredSegments,
+                    ocrResults: ocrResults,
                     source: this.config.source,
                     url: sourceUrl
                 };
@@ -188,12 +203,14 @@ class AiWebParser {
 
             const promptFields = this.getAiPromptFields(parserConfig);
             const events = pageClassification === 'multi-event-page'
-                ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields)
-                : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields);
+                ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults)
+                : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults);
 
             return {
                 events,
                 additionalLinks,
+                discoveredSegments,
+                ocrResults: ocrResults,
                 source: this.config.source,
                 url: htmlData && htmlData.url ? htmlData.url : ''
             };
@@ -204,21 +221,15 @@ class AiWebParser {
             return {
                 events: [],
                 additionalLinks: this.extractAdditionalUrls(html, sourceUrl, parserConfig),
+                discoveredSegments,
+                ocrResults: ocrResults,
                 source: this.config.source,
                 url: sourceUrl
             };
         }
     }
 
-    async extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields) {
-        const ocrConfig = this.getOcrConfig(parserConfig);
-        const ocrResults = ocrConfig.enabled
-            ? await this.extractOcrFromAllImages(htmlData, ocrConfig)
-            : [];
-        if (ocrResults.length > 0) {
-            console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
-        }
-
+    async extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = []) {
         const segmentHtmlData = {
             ...htmlData,
             ocrResults: ocrResults
@@ -227,18 +238,9 @@ class AiWebParser {
         return event ? [event] : [];
     }
 
-    async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields) {
+    async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = []) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
-
-        // Extract OCR from ALL images FIRST - we need it for image-segment pairing
-        const ocrConfig = this.getOcrConfig(parserConfig);
-        const ocrResults = ocrConfig.enabled
-            ? await this.extractOcrFromAllImages(htmlData, ocrConfig)
-            : [];
-        if (ocrResults.length > 0) {
-            console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
-        }
 
         const segments = this.buildMultiEventSegments(html, sourceUrl, ocrResults);
         if (segments.length === 0) {
@@ -954,7 +956,7 @@ class AiWebParser {
         if (!Number.isFinite(proximityCost)) return { cost: Infinity, score: -Infinity };
 
         // Only allow event-flyer classification - other image types don't contain event details
-        if (!ocrResult?.imageClassification === 'event-flyer') {
+        if (ocrResult?.imageClassification !== 'event-flyer') {
             return { cost: Infinity, score: -Infinity };
         }
 
