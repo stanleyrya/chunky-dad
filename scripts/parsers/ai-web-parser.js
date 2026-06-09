@@ -38,6 +38,7 @@ class AiWebParser {
         this.cachedEventSchemaFieldSignalRegexMap = new Map();
         this.eventSchemaFieldSignalRegexMapLoaded = false;
         this.invalidFieldSignalPatternWarnings = new Set();
+        this.validationContextCache = new Map();
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
@@ -111,7 +112,7 @@ class AiWebParser {
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
-        this.defaultOcrModel = 'qwen2.5vl:3b';
+        this.defaultOcrModel = 'qwen3-vl:4b-instruct';
         this.defaultOcrPrompt = "Please extract all text from this image exactly as it appears AND classify the image type.\n\nImage classification options:\n- ad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\n- event-flyer: Single event poster/flyer (one event with date, title, venue)\n- multi-event-flyer: Multiple events listed (multiple dates + titles, like a calendar)\n- logo: Brand or organization logo (minimal text, just brand name)\n- thumbnail: Small preview image (low detail)\n- hero-banner: Large header/banner image (prominent on page)\n\nReturn JSON with:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
         this.defaultOcrRequestConfig = {
             timeoutSeconds: 300,
@@ -952,22 +953,17 @@ class AiWebParser {
         const proximityCost = this.getSegmentImagePairingCost(segmentBounds, imageRecord);
         if (!Number.isFinite(proximityCost)) return { cost: Infinity, score: -Infinity };
 
-        // Start with proximity-based cost
+        // Only allow event-flyer classification - other image types don't contain event details
+        if (!ocrResult?.imageClassification === 'event-flyer') {
+            return { cost: Infinity, score: -Infinity };
+        }
+
+        // Start with proximity-based cost and base score for valid event-flyer
         let cost = proximityCost;
-        let score = 0;
-
-        // Bonus for event-flyer classification
-        if (ocrResult && ocrResult.imageClassification === 'event-flyer') {
-            score += 100;  // Strong preference for event flyers
-        }
-
-        // Penalty for multi-event-flyer (contains multiple events, not suitable for single-event segments)
-        if (ocrResult && ocrResult.imageClassification === 'multi-event-flyer') {
-            score -= 200;  // Strong penalty - these images contain multiple events
-        }
+        let score = 100;  // Base score for valid event-flyer classification
 
         // Text similarity bonus - compare OCR text with segment content
-        if (ocrResult && ocrResult.text && Array.isArray(segmentBounds.matchedRecords) && segmentBounds.matchedRecords.length > 0) {
+        if (ocrResult.text && Array.isArray(segmentBounds.matchedRecords) && segmentBounds.matchedRecords.length > 0) {
             const segmentText = segmentBounds.matchedRecords.map(r => r.text).join('\n');
             const similarity = this.computeTextSimilarity(ocrResult.text, segmentText);
             if (similarity >= 0.15) {
@@ -2003,25 +1999,53 @@ class AiWebParser {
         // Extract all image URLs from HTML
         const imageUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, 10);
 
-        const ocrResults = [];
-        for (const imageUrl of imageUrls) {
-            try {
-                const result = await this.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all');
-                if (result && result.text) {
-                    ocrResults.push({
-                        url: imageUrl,
-                        text: result.text,
-                        imageClassification: result.imageClassification,
-                        confidence: result.confidence,
-                        reason: result.reason,
-                        cacheHit: result.cached
-                    });
-                }
-            } catch (error) {
-                console.log(`🤖 AI Web: OCR failed for ${imageUrl}: ${error.message}`);
-            }
-        }
+        // Batch OCR requests using Promise.all
+        const ocrPromises = imageUrls.map(url =>
+            this.getOcrTextForImage(url, ocrConfig, 'ocr-all').catch(err => null)
+        );
+        const results = await Promise.all(ocrPromises);
+
+        const ocrResults = results
+            .filter(Boolean)
+            .map(result => this.normalizeOcrResult(result))
+            .filter(Boolean);
+
         return ocrResults;
+    }
+
+    normalizeOcrResult(rawResult) {
+        if (!rawResult || typeof rawResult !== 'object') return null;
+
+        // Map possible field names to canonical names
+        const classification = rawResult.imageClassification
+            || rawResult.classification
+            || rawResult.type
+            || rawResult.category
+            || '';
+
+        const text = rawResult.text
+            || rawResult.content
+            || rawResult.extracted_text
+            || '';
+
+        const confidence = Number(rawResult.confidence)
+            || Number(rawResult.score)
+            || Number(rawResult.certainty)
+            || 0;
+
+        const reason = rawResult.reason
+            || rawResult.explanation
+            || rawResult.notes
+            || '';
+
+        return {
+            url: rawResult.imageUrl || rawResult.url || '',
+            text,
+            imageClassification: classification,
+            confidence,
+            reason,
+            cacheHit: rawResult.cached || false
+        };
     }
 
     filterOcrResultsForSegment(ocrResults, segment, sourceUrl = '') {
@@ -2038,13 +2062,17 @@ class AiWebParser {
             ...Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : []
         ]);
 
+        // Normalize segment image URLs for comparison
+        const normalizedSegmentImageSet = new Set(
+            Array.from(segmentImageUrls)
+                .map(u => this.normalizeHttpUrlValue(u))
+                .filter(Boolean)
+        );
+
         // Filter OCR results to match segment images
         return ocrResults.filter(ocr => {
             const ocrUrl = this.normalizeHttpUrlValue(ocr.url);
-            return Array.from(segmentImageUrls).some(url => {
-                const normalized = this.normalizeHttpUrlValue(url);
-                return normalized && normalized === ocrUrl;
-            });
+            return normalizedSegmentImageSet.has(ocrUrl);
         });
     }
 
@@ -2792,47 +2820,35 @@ class AiWebParser {
         const rawOcr = parserAiConfig.ocr && typeof parserAiConfig.ocr === 'object'
             ? parserAiConfig.ocr
             : {};
-        const targetFields = Array.isArray(rawOcr.targetFields) && rawOcr.targetFields.length > 0
-            ? Array.from(new Set(
-                rawOcr.targetFields
-                    .map(field => this.normalizePromptFieldName(field))
-                    .filter(Boolean)
-            ))
-            : null;
         const maxImages = Number.isFinite(Number(rawOcr.maxImages))
             ? Math.max(1, Math.min(4, Math.floor(Number(rawOcr.maxImages))))
             : 2;
         const maxTextChars = Number.isFinite(Number(rawOcr.maxTextChars))
             ? Math.max(250, Math.floor(Number(rawOcr.maxTextChars)))
             : 4000;
+        const ocrConfigTemplate = {
+            timeoutSeconds: this.defaultOcrRequestConfig.timeoutSeconds,
+            keepAlive: this.defaultOcrRequestConfig.keepAlive,
+            numCtx: this.defaultOcrRequestConfig.numCtx,
+            numPredict: this.defaultOcrRequestConfig.numPredict,
+            temperature: this.defaultOcrRequestConfig.temperature,
+            think: this.defaultOcrRequestConfig.think
+        };
         return {
             enabled: rawOcr.enabled !== false,
             endpoint: String(rawOcr.endpoint || baseAiConfig.endpoint || ''),
             model: String(rawOcr.model || this.defaultOcrModel),
             prompt: String(rawOcr.prompt || this.defaultOcrPrompt),
-            timeoutSeconds: Number.isFinite(Number(rawOcr.timeoutSeconds))
-                ? Number(rawOcr.timeoutSeconds)
-                : this.defaultOcrRequestConfig.timeoutSeconds,
-            keepAlive: Object.prototype.hasOwnProperty.call(rawOcr, 'keepAlive')
-                ? String(rawOcr.keepAlive)
-                : this.defaultOcrRequestConfig.keepAlive,
-            numCtx: Number.isFinite(Number(rawOcr.numCtx))
-                ? Number(rawOcr.numCtx)
-                : this.defaultOcrRequestConfig.numCtx,
-            numPredict: Number.isFinite(Number(rawOcr.numPredict))
-                ? Number(rawOcr.numPredict)
-                : this.defaultOcrRequestConfig.numPredict,
-            temperature: Number.isFinite(Number(rawOcr.temperature))
-                ? Number(rawOcr.temperature)
-                : this.defaultOcrRequestConfig.temperature,
-            think: Object.prototype.hasOwnProperty.call(rawOcr, 'think')
-                ? Boolean(rawOcr.think)
-                : this.defaultOcrRequestConfig.think,
+            ...Object.fromEntries(
+                Object.entries(ocrConfigTemplate).map(([key, defaultValue]) => [
+                    key,
+                    Number.isFinite(Number(rawOcr[key])) ? Number(rawOcr[key]) : defaultValue
+                ])
+            ),
             maxImages,
             maxTextChars,
             cacheEnabled: rawOcr.cache !== false,
-            requireMissingFields: rawOcr.requireMissingFields !== false,
-            targetFields
+            requireMissingFields: rawOcr.requireMissingFields !== false
         };
     }
 
@@ -3494,7 +3510,7 @@ class AiWebParser {
                 parserConfig,
                 remainingFields,
                 {
-                    evidenceContext: this.buildAiEvidenceContextFromText(snippetText),
+                    evidenceContext: this.getCachedValidationContext(snippetText),
                     validationContext: {
                         imageEvidenceUrls: this.buildImageEvidenceContextFromText(
                             snippetText,
@@ -3910,12 +3926,14 @@ class AiWebParser {
         return allFields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
-    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet) {
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, variant = 'default') {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
             : this.getAiPromptFields(parserConfig);
         const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
-        return `You are a data scraper. You are being provided part of a website that includes information about an event. You must check if any of the requested keys are within the provided scraped data and return it as ONLY valid JSON. If a requested key is not explicitly in the source text, skip and omit it.
+
+        const templates = {
+            default: `You are a data scraper. You are being provided part of a website that includes information about an event. You must check if any of the requested keys are within the provided scraped data and return it as ONLY valid JSON. If a requested key is not explicitly in the source text, skip and omit it.
 Preferred keys:
 ${fieldContext}
 Rules:
@@ -3923,15 +3941,8 @@ Rules:
 - Return only keys from the Preferred keys list
 - Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.
 
-${String(snippet || '')}`;
-    }
-
-    buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet) {
-        const promptFields = Array.isArray(fields) && fields.length > 0
-            ? fields
-            : this.getAiPromptFields(parserConfig);
-        const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
-        return `You are extracting specific event fields from web page source data. Carefully search the entire provided text for the listed fields — they may appear in metadata, structured data, or body text. Return only what you find as a single valid JSON object.
+`,
+            alternate: `You are extracting specific event fields from web page source data. Carefully search the entire provided text for the listed fields — they may appear in metadata, structured data, or body text. Return only what you find as a single valid JSON object.
 Fields to find:
 ${fieldContext}
 Rules:
@@ -3940,15 +3951,8 @@ Rules:
 - Do not guess, invent, or infer missing values
 - Omit any field not explicitly present in the source
 
-${String(snippet || '')}`;
-    }
-
-    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields) {
-        const promptFields = Array.isArray(fields) && fields.length > 0
-            ? fields
-            : this.getAiPromptFields(parserConfig);
-        const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
-        return `Convert this text into one strict JSON object for an event.
+`,
+            repair: `Convert this text into one strict JSON object for an event.
 Preferred keys:
 ${fieldContext}
 Rules:
@@ -3960,7 +3964,18 @@ Rules:
 - Do not infer missing facts; keep only details explicitly supported by source text
 
 TEXT:
-${String(rawResponse || '')}`;
+`
+        };
+
+        return `${templates[variant]}${String(snippet || '')}`;
+    }
+
+    buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet) {
+        return this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, 'alternate');
+    }
+
+    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields) {
+        return this.buildExtractionPrompt(null, aiConfig, cityConfig, parserConfig, fields, rawResponse, 'repair');
     }
 
     async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, passLabel = '', options = {}) {
@@ -4203,6 +4218,13 @@ ${String(rawResponse || '')}`;
                     .filter(Boolean)
             )
         };
+    }
+
+    getCachedValidationContext(snippet) {
+        if (!this.validationContextCache.has(snippet)) {
+            this.validationContextCache.set(snippet, this.buildAiEvidenceContextFromText(snippet));
+        }
+        return this.validationContextCache.get(snippet);
     }
 
     normalizeEvidenceText(value) {
