@@ -605,10 +605,10 @@ class PageCacheMaintenance {
       return bMaxAge - aMaxAge;
     });
 
-    const rows = sortedEntries.map(([imageUrl, files]) => {
+    const cards = sortedEntries.map(([imageUrl, files]) => {
       const hostname = imageUrl !== 'no-url' ? this.parseHostname(imageUrl) : 'unknown-host';
       const imagePreview = imageUrl !== 'no-url'
-        ? `<a href="${this.escapeHtml(imageUrl)}" target="_blank" style="display:inline-block; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); margin-top: 4px;">
+        ? `<a href="${this.escapeHtml(imageUrl)}" target="_blank" style="display:block; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); align-self: center;">
             <img src="${this.escapeHtml(imageUrl)}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
           </a>`
         : '<div style="width: 64px; height: 64px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px;">🖼️</div>';
@@ -634,7 +634,7 @@ class PageCacheMaintenance {
         const modelName = file.modelName || 'unknown';
 
         return `
-          <div style="margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+          <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
               <span style="font-weight: 700; font-size: 12px; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em;">${this.escapeHtml(modelName)}</span>
               <span class="badge ${badgeClass}" style="font-size: 11px;">${this.escapeHtml(classification)}${confidence ? ` (${confidence})` : ''}</span>
@@ -649,22 +649,24 @@ class PageCacheMaintenance {
       }).join('');
 
       return `
-        <tr>
-          <td style="width: 80px; padding-right: 0;">${imagePreview}</td>
-          <td style="min-width: 200px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="font-weight: 600; font-size: 15px;">${this.escapeHtml(hostname)}</div>
-              ${hasConflict ? '<span class="badge danger" style="font-size: 9px; padding: 2px 6px;">CONFLICT</span>' : ''}
+        <div class="ocr-card">
+          <div class="ocr-card-preview">
+            ${imagePreview}
+          </div>
+          <div class="ocr-card-details">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="font-weight: 600; font-size: 15px;">${this.escapeHtml(hostname)}</div>
+                ${hasConflict ? '<span class="badge danger" style="font-size: 9px; padding: 2px 6px;">CONFLICT</span>' : ''}
+              </div>
+              <div style="color: var(--muted); font-size: 11px; margin-top: 2px; word-break: break-all; max-width: 100%; min-width: 0;">${this.escapeHtml(imageUrl)}</div>
+              <div style="margin-top: 4px; font-size: 11px; color: var(--muted);">Files: ${files.length}</div>
             </div>
-            <div style="color: var(--muted); font-size: 11px; margin-top: 2px; word-break: break-all; max-width: 300px;">${this.escapeHtml(imageUrl)}</div>
-            <div style="margin-top: 8px; font-size: 11px; color: var(--muted);">Files: ${files.length}</div>
-          </td>
-          <td style="padding-left: 0;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
               ${modelComparisons}
             </div>
-          </td>
-        </tr>
+          </div>
+        </div>
       `;
     }).join('');
 
@@ -672,17 +674,9 @@ class PageCacheMaintenance {
       <div class="panel">
         <h2>OCR model comparison</h2>
         <div class="helper">Comparing OCR results for the same image across different models.</div>
-        <table>
-          <thead>
-            <tr>
-              <th colspan="2">Image source</th>
-              <th>Model responses & extractions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          ${cards}
+        </div>
       </div>
     `;
   }
@@ -915,6 +909,26 @@ class PageCacheMaintenance {
       background: rgba(255,255,255,0.04);
     }
     tr:last-child td { border-bottom: none; }
+    /* OCR Card-based layout */
+    .ocr-card {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .ocr-card-preview {
+      flex: 0 0 64px;
+      width: 64px;
+      height: 64px;
+    }
+    .ocr-card-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
     .badge {
       display: inline-flex;
       align-items: center;
