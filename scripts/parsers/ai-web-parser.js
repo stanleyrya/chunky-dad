@@ -750,8 +750,24 @@ class AiWebParser {
             ? this.matchOrderedImagesToSegmentsWithOcr(segmentBounds, pageImageRecords, ocrResults)
             : this.matchOrderedImagesToSegments(segmentBounds, pageImageRecords);
 
+        // Deduplicate matchedImageUrls by stripped URL to prevent same image at different sizes
+        // from being assigned to different segments. This is a safety net since pageImageRecords
+        // is already deduplicated, but OCR results or matching edge cases could still produce duplicates.
+        const seenStrippedUrls = new Set();
+        const dedupedMatchedImageUrls = matchedImageUrls.map(url => {
+            if (!url) return url;
+            const strippedUrl = this.stripSizeParams(url);
+            if (seenStrippedUrls.has(strippedUrl)) {
+                // This image (at some size) was already assigned, return null to skip
+                return null;
+            }
+            seenStrippedUrls.add(strippedUrl);
+            return url;
+        });
+
         return sourceSegments.map((segment, index) => {
-            const orderedImage = matchedImageUrls[index];
+            const orderedImage = dedupedMatchedImageUrls[index];
+            // Skip if this image was already assigned to an earlier segment
             if (!orderedImage || !segment || typeof segment !== 'object') return segment;
             const existingImages = this.extractOrderedImageUrlsFromHtml(
                 segment && typeof segment.html === 'string' ? segment.html : '',
@@ -1011,9 +1027,12 @@ class AiWebParser {
             if (!normalized) return;
             const unwrapped = this.unwrapImageProxyUrl(normalized);
             const finalUrl = this.normalizeHttpUrlValue(unwrapped || normalized);
-            if (!finalUrl || seen.has(finalUrl)) return;
+            if (!finalUrl) return;
+            // Use stripped URL for deduplication to handle same image at different sizes
+            const strippedUrl = this.stripSizeParams(finalUrl);
+            if (seen.has(strippedUrl)) return;
             if (!this.hasSupportedImageFilenameAtEnd(finalUrl) && !this.hasLikelyImageUrl(finalUrl)) return;
-            seen.add(finalUrl);
+            seen.add(strippedUrl);
             results.push({
                 url: finalUrl,
                 start: Number.isFinite(Number(start)) ? Number(start) : -1,
@@ -1666,6 +1685,45 @@ class AiWebParser {
                     parsed.searchParams.delete(key);
                 }
             }
+            return parsed.toString();
+        } catch (_) {
+            return url;
+        }
+    }
+
+    /**
+     * Strip size-related parameters from image URLs for deduplication.
+     * Removes width/height parameters like w=1920, h=1080, w_296,h_370, etc.
+     * to identify the same image at different resolutions.
+     */
+    stripSizeParams(url) {
+        if (!url) return url;
+        try {
+            const parsed = new URL(url);
+            const pathname = parsed.pathname;
+
+            // Remove size patterns from pathname (e.g., /w_296,h_370/ or /1920x1080/)
+            let newpathname = pathname.replace(/\/\d+[xX]\d+\/?/g, '/');  // 1920x1080 patterns
+            newpathname = newpathname.replace(/\/w_\d+(?:,h_\d+)?\/?/i, '/');  // w_296,h_370 patterns
+            newpathname = newpathname.replace(/\/h_\d+(?:,w_\d+)?\/?/i, '/');  // h_370,w_296 patterns
+            newpathname = newpathname.replace(/\/(?:w|h|width|height|wpx|hpx)=\d+\/?/gi, '/');  // ?w=1920 patterns
+            if (newpathname !== pathname) {
+                parsed.pathname = newpathname;
+            }
+
+            // Remove size query parameters
+            const sizeParamPattern = /^(w|h|width|height|wpx|hpx|scale|size|res|resolution|x|y)$/;
+            for (const key of [...parsed.searchParams.keys()]) {
+                if (sizeParamPattern.test(key.toLowerCase())) {
+                    parsed.searchParams.delete(key);
+                }
+            }
+
+            // Clean up empty search params
+            if (parsed.search === '?') {
+                parsed.search = '';
+            }
+
             return parsed.toString();
         } catch (_) {
             return url;
