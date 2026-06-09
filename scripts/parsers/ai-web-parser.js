@@ -2083,7 +2083,23 @@ class AiWebParser {
             .map(result => this.normalizeOcrResult(result))
             .filter(r => r !== null);
 
-        return ocrResults;
+        // Consolidate duplicate images (same text + classification, different URLs)
+        // Only consolidate images that have actual text content (event fliers, flyers, etc.)
+        const resultsWithText = ocrResults.filter(r => r && r.text && r.text.trim().length > 0);
+        const consolidatedResults = this.consolidateDuplicateOcrResults(resultsWithText);
+
+        if (ocrResults.length > 0) {
+            const skipped = ocrResults.length - resultsWithText.length;
+            if (skipped > 0) {
+                console.log(`🤖 AI Web: Skipped ${skipped} OCR result(s) without text`);
+            }
+        }
+
+        if (consolidatedResults.length < resultsWithText.length) {
+            console.log(`🤖 AI Web: Consolidated ${resultsWithText.length} text-containing OCR results to ${consolidatedResults.length} unique images`);
+        }
+
+        return consolidatedResults;
     }
 
     normalizeOcrResult(rawResult) {
@@ -2157,9 +2173,163 @@ class AiWebParser {
         ].filter(Boolean).join('\n');
     }
 
+    /**
+     * Normalize OCR text for comparison (case-insensitive, whitespace-normalized)
+     */
+    normalizeOcrTextForComparison(text) {
+        if (!text || typeof text !== 'string') return '';
+        return text.trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    /**
+     * Extract a size score from a URL to determine which image is larger.
+     * Returns a numeric score - higher means larger image.
+     */
+    getImageSizeFromUrl(url) {
+        if (!url || typeof url !== 'string') return 0;
+
+        const lowerUrl = url.toLowerCase();
+        const parsed = this.parseUrlComponents(url);
+
+        if (!parsed) {
+            // Fallback: longer URL often means higher quality
+            return url.length;
+        }
+
+        let score = 0;
+        const search = String(parsed.search || '').toLowerCase();
+        const path = String(parsed.pathname || '').toLowerCase();
+
+        // Check query parameters for size indicators
+        const searchParams = new URLSearchParams(search);
+
+        // Width/height parameters (e.g., ?w=1920, ?width=1080, ?h=1080, ?height=1920)
+        const width = searchParams.get('w') || searchParams.get('width') || searchParams.get('wpx');
+        const height = searchParams.get('h') || searchParams.get('height') || searchParams.get('hpx');
+
+        if (width) {
+            const w = parseInt(width, 10);
+            if (!isNaN(w)) score += w;
+        }
+        if (height) {
+            const h = parseInt(height, 10);
+            if (!isNaN(h)) score += h;
+        }
+
+        // Size scale parameters (e.g., ?scale=2, ?size=large)
+        const scale = searchParams.get('scale') || searchParams.get('size');
+        if (scale) {
+            const s = scale.toLowerCase();
+            if (s === 'large' || s === 'big' || s === 'max' || s === 'original' || s === 'full') {
+                score += 5000;
+            } else if (s === 'medium' || s === 'mid') {
+                score += 2500;
+            } else if (s === 'small' || s === 'tiny') {
+                score += 500;
+            } else {
+                const num = parseInt(s, 10);
+                if (!isNaN(num)) score += num;
+            }
+        }
+
+        // Check path for resolution indicators (e.g., /1920x1080/, /large/, /original/)
+        const pathSegments = path.split('/').filter(Boolean);
+        for (const segment of pathSegments) {
+            // Match resolution patterns like 1920x1080, 1080p, 4k
+            const resolutionMatch = segment.match(/(\d+)x(\d+)/);
+            if (resolutionMatch) {
+                const w = parseInt(resolutionMatch[1], 10);
+                const h = parseInt(resolutionMatch[2], 10);
+                score += w * h;
+            }
+
+            // Match pixel patterns like 1920px, 1080px
+            const pxMatch = segment.match(/(\d+)px/);
+            if (pxMatch) {
+                const px = parseInt(pxMatch[1], 10);
+                score += px;
+            }
+
+            // Check for size keywords
+            if (segment === 'large' || segment === 'big' || segment === 'max' || segment === 'original' || segment === 'full' || segment === 'high') {
+                score += 5000;
+            } else if (segment === 'medium' || segment === 'mid') {
+                score += 2500;
+            } else if (segment === 'small' || segment === 'tiny') {
+                score += 500;
+            }
+        }
+
+        // Fallback: longer URL often means higher quality (more parameters, paths, etc.)
+        if (score === 0) {
+            score = url.length;
+        }
+
+        return score;
+    }
+
+    /**
+     * Consolidate duplicate OCR results by selecting the largest image from groups
+     * with identical text + classification.
+     *
+     * Only call this with results that have actual text content.
+     * Empty-text results should be filtered out before consolidation.
+     */
+    consolidateDuplicateOcrResults(ocrResults) {
+        if (!Array.isArray(ocrResults) || ocrResults.length <= 1) {
+            return ocrResults;
+        }
+
+        // Filter out results without text (we only care about event fliers with readable text)
+        const resultsWithText = ocrResults.filter(r => r && r.text && r.text.trim().length > 0);
+        if (resultsWithText.length === 0) {
+            return [];
+        }
+        if (resultsWithText.length < ocrResults.length) {
+            console.log(`🤖 AI Web: Filtered out ${ocrResults.length - resultsWithText.length} result(s) without text before consolidation`);
+        }
+        ocrResults = resultsWithText;
+
+        // Group results by normalized text + classification
+        const groups = new Map();
+        for (const result of ocrResults) {
+            const key = this.getOcrResultDuplicateKey(result);
+            if (!groups.has(key)) {
+                groups.set(key, []);
+            }
+            groups.get(key).push(result);
+        }
+
+        // For each group, select the largest image
+        const consolidated = [];
+        for (const group of groups.values()) {
+            if (group.length === 1) {
+                consolidated.push(group[0]);
+            } else {
+                // Sort by size score (descending) and pick the largest
+                group.sort((a, b) => this.getImageSizeFromUrl(b.url) - this.getImageSizeFromUrl(a.url));
+                consolidated.push(group[0]);
+                console.log(`🤖 AI Web: Consolidated ${group.length} duplicate image(s) to largest: ${group[0].url}`);
+            }
+        }
+
+        return consolidated;
+    }
+
+    /**
+     * Generate a key for grouping OCR results by content (text + classification).
+     * Results with the same key are considered duplicates (same content, different URLs).
+     */
+    getOcrResultDuplicateKey(result) {
+        if (!result) return '';
+        const text = this.normalizeOcrTextForComparison(result.text || '');
+        const classification = (result.imageClassification || '').toLowerCase().trim();
+        return `${text}||${classification}`;
+    }
+
     async getOcrTextForImage(imageUrl, ocrConfig = {}, passLabel = 'ocr') {
         const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
-        if (cached && cached.text) {
+        if (cached) {
             console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
             return cached;
         }
