@@ -750,11 +750,8 @@ class AiWebParser {
             ? this.matchOrderedImagesToSegmentsWithOcr(segmentBounds, pageImageRecords, ocrResults)
             : this.matchOrderedImagesToSegments(segmentBounds, pageImageRecords);
 
-        const orderedPageImages = pageImageRecords.map(record => record.url);
-        const fallbackSequentialImageUrls = orderedPageImages.slice(0, sourceSegments.length);
-
         return sourceSegments.map((segment, index) => {
-            const orderedImage = matchedImageUrls[index] || fallbackSequentialImageUrls[index];
+            const orderedImage = matchedImageUrls[index];
             if (!orderedImage || !segment || typeof segment !== 'object') return segment;
             const existingImages = this.extractOrderedImageUrlsFromHtml(
                 segment && typeof segment.html === 'string' ? segment.html : '',
@@ -1320,8 +1317,10 @@ class AiWebParser {
         };
 
         // Add OCR results as SEGMENT_IMAGE_TEXT
-        for (const ocrResult of Array.isArray(ocrResults) ? ocrResults : []) {
-            const ocrSnippet = this.buildOcrSnippet(ocrResult.url, ocrResult.text);
+        const ocrList = Array.isArray(ocrResults) ? ocrResults : [];
+        for (let i = 0; i < ocrList.length; i++) {
+            const ocrResult = ocrList[i];
+            const ocrSnippet = this.buildOcrSnippet(ocrResult.url, ocrResult.text, ocrResult.eventSummary);
             lines.push(ocrSnippet);
         }
 
@@ -2169,12 +2168,16 @@ class AiWebParser {
         });
     }
 
-    buildOcrSnippet(imageUrl, text) {
-        return [
+    buildOcrSnippet(imageUrl, text, eventSummary = null) {
+        const parts = [
             `OCR_IMAGE_URL: ${String(imageUrl || '').trim()}`,
             'OCR_IMAGE_TEXT',
             String(text || '').trim()
-        ].filter(Boolean).join('\n');
+        ];
+        if (eventSummary && typeof eventSummary === 'string' && eventSummary.trim().length > 0) {
+            parts.push('OCR_IMAGE_SUMMARY', String(eventSummary).trim());
+        }
+        return parts.filter(Boolean).join('\n');
     }
 
     /**
