@@ -774,7 +774,13 @@ class AiWebParser {
                 sourceUrl,
                 2
             );
-            if (existingImages.includes(orderedImage)) return segment;
+            // Check if this image (at any size) is already in the segment
+            const strippedOrderedImage = this.stripSizeParams(orderedImage);
+            const hasDuplicateSize = existingImages.some(img => {
+                const strippedImg = this.stripSizeParams(img);
+                return strippedImg && strippedOrderedImage === strippedImg;
+            });
+            if (hasDuplicateSize) return segment;
             return {
                 ...segment,
                 imageHintUrls: [orderedImage]
@@ -1326,12 +1332,17 @@ class AiWebParser {
         const source = String(html || '');
         const lines = [];
         const seen = new Set();
+        const seenStripped = new Set();
         const addLine = (label, rawUrl) => {
             const normalized = this.normalizeUrl(rawUrl, sourceUrl);
             if (!normalized || !/^https?:\/\//i.test(normalized)) return;
             const finalUrl = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(normalized) || normalized);
-            if (!finalUrl || seen.has(finalUrl)) return;
+            if (!finalUrl) return;
+            // Check for duplicates using stripped URL to handle same image at different sizes
+            const strippedUrl = this.stripSizeParams(finalUrl);
+            if (seenStripped.has(strippedUrl)) return;
             seen.add(finalUrl);
+            seenStripped.add(strippedUrl);
             lines.push(`${label}: ${finalUrl}`);
         };
 
@@ -1711,12 +1722,24 @@ class AiWebParser {
                 parsed.pathname = newpathname;
             }
 
-            // Remove size query parameters
-            const sizeParamPattern = /^(w|h|width|height|wpx|hpx|scale|size|res|resolution|x|y)$/;
-            for (const key of [...parsed.searchParams.keys()]) {
-                if (sizeParamPattern.test(key.toLowerCase())) {
-                    parsed.searchParams.delete(key);
+            // Remove size query parameters (both w=1920 and w_296,h_370 formats)
+            const searchParams = parsed.searchParams;
+            const keysToRemove = [];
+            for (const key of searchParams.keys()) {
+                const lowerKey = key.toLowerCase();
+                // Match standard size params: w, h, width, height, wpx, hpx, scale, size, res, resolution
+                if (/^(w|h|width|height|wpx|hpx|scale|size|res|resolution|x|y)$/.test(lowerKey)) {
+                    keysToRemove.push(key);
                 }
+                // Match Wix-style params like w_296,h_370 (the key is 'v1' or similar, value contains size info)
+                // Check if the value contains size patterns like w_\d+, h_\d+, or \d+x\d+
+                const value = searchParams.get(key);
+                if (value && (/\d+[xX]\d+/.test(value) || /w_\d+(?:,h_\d+)?/.test(value) || /h_\d+(?:,w_\d+)?/.test(value))) {
+                    keysToRemove.push(key);
+                }
+            }
+            for (const key of keysToRemove) {
+                searchParams.delete(key);
             }
 
             // Clean up empty search params
