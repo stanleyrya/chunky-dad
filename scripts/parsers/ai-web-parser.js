@@ -1849,7 +1849,7 @@ class AiWebParser {
             const responseText = cached && cached.response && typeof cached.response.text === 'string'
                 ? cached.response.text
                 : (typeof cached.text === 'string' ? cached.text : '');
-            if (!responseText) return null;
+            if (responseText === undefined || responseText === null) return null;
 
             const parsed = JSON.parse(responseText);
 
@@ -1874,7 +1874,7 @@ class AiWebParser {
     async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '') {
         if (!ocrConfig.cacheEnabled) return null;
         const resultText = String(text || '').trim();
-        if (!resultText) return null;
+        if (resultText === undefined || resultText === null) return null;
         const runtime = this.getOcrCacheRuntime();
         if (!runtime) return null;
         const { normalizedUrl, hostDir, fileName, signatureHash } = this.getOcrCachePathParts(imageUrl, ocrConfig);
@@ -1992,12 +1992,83 @@ class AiWebParser {
         return normalized === 'text' || normalized === 'ocr text';
     }
 
+    isLikelyUninterestingImageUrl(url) {
+        const lowerUrl = String(url || '').toLowerCase();
+        // Skip images that are clearly not event-related
+        const uninterestingPatterns = [
+            'logo',           // Brand logos
+            'favicon',        // Favicon icons
+            'icon',           // Generic icons
+            'avatar',         // User avatars
+            'button',         // UI buttons
+            'spacer',         // Spacer images
+            'divider',        // Divider images
+            'bullet',         // Bullet points
+            'sprite',         // Sprite images
+            'share-',         // Share icons (share-facebook, share-twitter, etc.)
+            'social-',        // Social media icons
+            'newsletter',     // Newsletter icons
+            'subscribe',      // Subscribe buttons
+            'download',       // Download buttons
+            'arrow-',         // Arrow icons
+            'chevron-',       // Chevron icons
+            'caret-',         // Caret icons
+            'menu-',          // Menu icons
+            'close-',         // Close/X icons
+            'search-',        // Search icons
+            'cart-',          // Cart icons
+            'user-',          // User icons
+            'account-',       // Account icons
+            'profile-',       // Profile icons
+            'settings-',      // Settings icons
+            'help-',          // Help icons
+            'info-',          // Info icons
+            'warning-',       // Warning icons
+            'error-',         // Error icons
+            'success-',       // Success icons
+            'check-',         // Check icons
+            'star-',          // Star icons
+            'rating',         // Rating stars
+            'badge',          // Badges
+            'tag',            // Tags
+            'flag-',          // Flag icons
+            'language',       // Language selectors
+            'currency',       // Currency selectors
+            'loading',        // Loading spinners
+            'spinner',        // Loading spinners
+            'placeholder',    // Placeholder images
+            'empty',          // Empty state images
+            'null',           // Null state images
+            'missing',        // Missing state images
+            '404',            // 404 images
+            'coming-soon',    // Coming soon images
+            'under-construction',
+            'maintenance',    // Maintenance pages
+            'temp-',          // Temp images
+            'tmp-',           // Temp images
+            'cache-',         // Cached images
+            'thumb',          // Thumbnails (already handled by classification)
+            'thumbnail',      // Thumbnails
+        ];
+        for (const pattern of uninterestingPatterns) {
+            if (lowerUrl.includes(pattern)) return true;
+        }
+        return false;
+    }
+
     async extractOcrFromAllImages(htmlData, ocrConfig = {}) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
 
         // Extract all image URLs from HTML
-        const imageUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, 10);
+        const allImageUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, 10);
+
+        // Pre-filter out uninteresting images before OCR
+        const imageUrls = allImageUrls.filter(url => !this.isLikelyUninterestingImageUrl(url));
+
+        if (imageUrls.length < allImageUrls.length) {
+            console.log(`🤖 AI Web: OCR skipped ${allImageUrls.length - imageUrls.length} uninteresting images`);
+        }
 
         // Batch OCR requests using Promise.all
         const ocrPromises = imageUrls.map(url =>
@@ -2006,9 +2077,9 @@ class AiWebParser {
         const results = await Promise.all(ocrPromises);
 
         const ocrResults = results
-            .filter(Boolean)
+            .filter(r => r !== undefined)
             .map(result => this.normalizeOcrResult(result))
-            .filter(Boolean);
+            .filter(r => r !== null);
 
         return ocrResults;
     }
@@ -2110,9 +2181,12 @@ class AiWebParser {
         const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, ocrConfig.prompt);
         if (!rawResponse) return null;
         const parsed = this.parseOcrResponseWithClassification(rawResponse);
-        if (!parsed || !parsed.text) {
+        if (!parsed) {
             console.warn(`🤖 AI Web: OCR response for ${imageUrl} did not include text`);
             return null;
+        }
+        if (!parsed.text) {
+            console.log(`🤖 AI Web: OCR response for ${imageUrl} has no text (imageClassification: ${parsed.imageClassification})`);
         }
         const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify(parsed));
         return {

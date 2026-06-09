@@ -164,6 +164,29 @@ const scraperConfig = {
       dryRun: false,         // Optional: override global dryRun setting for this parser
       allowlist: ["keyword1", "keyword2"],
       city: "nyc"
+    },
+    {
+      name: "AI Web Parser with OCR",
+      enabled: true,
+      urls: ["https://venue.com/events"],
+      alwaysBear: true,
+      parser: "ai-web",
+      ai: {
+        enabled: true,
+        endpoint: "http://your-ai-endpoint:11434/api/generate",
+        model: "qwen3.5:4b",  // Main AI model for parsing
+        timeoutSeconds: 120
+      },
+      ocr: {
+        enabled: true,
+        endpoint: "http://your-ai-endpoint:11434/api/generate",
+        model: "qwen3-vl:4b-instruct",  // OCR model - defaults to qwen3-vl:4b-instruct
+        timeoutSeconds: 300,
+        maxImages: 2,
+        maxTextChars: 4000,
+        cacheEnabled: true,
+        requireMissingFields: true
+      }
     }
   ],
   cities: {
@@ -228,6 +251,33 @@ metadata: {
   }
 }
 ```
+
+### OCR Configuration
+
+The OCR (Optical Character Recognition) settings allow you to configure AI-based image text extraction:
+
+```javascript
+ocr: {
+  enabled: true,                    // Set to false to disable OCR
+  endpoint: "http://your-ai-endpoint:11434/api/generate",
+  model: "qwen3-vl:4b-instruct",   // OCR model - defaults to qwen3-vl:4b-instruct
+  timeoutSeconds: 300,             // Request timeout
+  numCtx: 8192,                    // Context window size
+  numPredict: 2000,                // Maximum tokens to predict
+  temperature: 0,                  // Model temperature (0 = deterministic)
+  think: false,                    // Enable chain-of-thought reasoning
+  keepAlive: "5m",                 // Model keep-alive duration
+  maxImages: 2,                    // Maximum images per request
+  maxTextChars: 4000,              // Maximum text characters to extract
+  cacheEnabled: true,              // Enable result caching
+  requireMissingFields: true       // Only OCR when fields are missing
+}
+```
+
+**Note**: OCR is used as a fallback to extract text from images when primary HTML parsing doesn't yield complete results. The OCR model runs only when:
+- OCR is enabled
+- The page is a single-event page
+- Target fields are missing from primary extraction
 
 ### Adding New Parsers
 1. Create `parsers/[venue]-parser.js` with pure parsing logic

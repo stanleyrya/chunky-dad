@@ -433,7 +433,7 @@ const scraperConfig = {
       ai: {
         enabled: true,
         endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-        model: "qwen3.5:4b",
+        model: "qwen3.5:4b",  // Main AI model for parsing
         payloadMode: "best",
         maxHtmlChars: 6000,
         numCtx: 2048,
@@ -442,6 +442,21 @@ const scraperConfig = {
         think: false,
         timeoutSeconds: 120,
         keepAlive: "5m"
+      },
+      ocr: {
+        enabled: true,
+        endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
+        model: "qwen3-vl:4b-instruct",  // OCR model - defaults to qwen3-vl:4b-instruct
+        timeoutSeconds: 300,
+        numCtx: 8192,
+        numPredict: 2000,
+        temperature: 0,
+        think: false,
+        keepAlive: "5m",
+        maxImages: 2,
+        maxTextChars: 4000,
+        cacheEnabled: true,
+        requireMissingFields: true
       },
       fieldPriorities: {
         title: { priority: ["ai-web"], merge: "clobber" },
