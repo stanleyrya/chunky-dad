@@ -316,21 +316,35 @@ class PageCacheMaintenance {
 
       // Read OCR cache metadata for model info
       let cacheData = null;
-      let modelName = null;
+      let modelName = 'unknown';
       let imageUrl = null;
       let ocrMetadata = null;
 
       if (scope && scope.key === 'ocr') {
         cacheData = await this.readOcrCacheFile(entryPath);
         if (cacheData) {
-          modelName = cacheData?.request?.model || 'unknown';
+          // Extract model name from request.model or fallback to 'unknown'
+          try {
+            modelName = cacheData?.request?.model || 'unknown';
+          } catch (e) {
+            modelName = 'unknown';
+          }
           imageUrl = cacheData?.url || null;
 
           // Parse nested JSON in response.text
           if (typeof cacheData?.response?.text === 'string') {
             try {
               ocrMetadata = JSON.parse(cacheData.response.text);
-            } catch (_) {}
+            } catch (parseError) {
+              console.log(`OCR cache parse error for ${entryName}: ${parseError.message}`);
+              // If JSON parsing fails, create a fallback metadata object with raw text
+              ocrMetadata = {
+                text: cacheData.response.text,
+                imageClassification: 'parse-error',
+                confidence: null,
+                reason: 'Failed to parse JSON response'
+              };
+            }
           }
         }
       }
@@ -614,11 +628,15 @@ class PageCacheMaintenance {
         if (classification === 'event-flyer' || classification === 'multi-event-flyer') badgeClass = 'success';
         if (classification === 'ad-banner' || classification === 'thumbnail') badgeClass = 'warning';
         if (classification === 'logo') badgeClass = 'neutral';
+        if (classification === 'parse-error') badgeClass = 'danger';
+
+        // Show model name with fallback
+        const modelName = file.modelName || 'unknown';
 
         return `
           <div style="margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
-              <span style="font-weight: 700; font-size: 12px; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em;">${this.escapeHtml(file.modelName)}</span>
+              <span style="font-weight: 700; font-size: 12px; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em;">${this.escapeHtml(modelName)}</span>
               <span class="badge ${badgeClass}" style="font-size: 11px;">${this.escapeHtml(classification)}${confidence ? ` (${confidence})` : ''}</span>
               <span style="font-size: 11px; color: var(--muted); margin-left: auto;">${fileAge}</span>
             </div>
