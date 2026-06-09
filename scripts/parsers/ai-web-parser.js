@@ -1711,15 +1711,18 @@ class AiWebParser {
         if (!url) return url;
         try {
             const parsed = new URL(url);
-            const pathname = parsed.pathname;
+            let pathname = parsed.pathname;
 
             // Remove size patterns from pathname (e.g., /w_296,h_370/ or /1920x1080/)
-            let newpathname = pathname.replace(/\/\d+[xX]\d+\/?/g, '/');  // 1920x1080 patterns
-            newpathname = newpathname.replace(/\/w_\d+(?:,h_\d+)?\/?/i, '/');  // w_296,h_370 patterns
-            newpathname = newpathname.replace(/\/h_\d+(?:,w_\d+)?\/?/i, '/');  // h_370,w_296 patterns
-            newpathname = newpathname.replace(/\/(?:w|h|width|height|wpx|hpx)=\d+\/?/gi, '/');  // ?w=1920 patterns
-            if (newpathname !== pathname) {
-                parsed.pathname = newpathname;
+            // Handle Wix-style /v1/fill/w_296,h_370,.../ patterns
+            pathname = pathname.replace(/\/v1\/fill\/[^/]+/g, '/v1/fill/');  // Wix transform path
+            pathname = pathname.replace(/\/\d+[xX]\d+\/?/g, '/');  // 1920x1080 patterns
+            pathname = pathname.replace(/\/w_\d+(?:,h_\d+)?\/?/i, '/');  // w_296,h_370 patterns
+            pathname = pathname.replace(/\/h_\d+(?:,w_\d+)?\/?/i, '/');  // h_370,w_296 patterns
+            pathname = pathname.replace(/\/(?:w|h|width|height|wpx|hpx)=\d+\/?/gi, '/');  // ?w=1920 patterns
+
+            if (pathname !== parsed.pathname) {
+                parsed.pathname = pathname;
             }
 
             // Remove size query parameters (both w=1920 and w_296,h_370 formats)
