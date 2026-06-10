@@ -394,20 +394,35 @@ class AiWebParser {
     }
 
     async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields) {
-        // Add OCR results to prompt context
+        // Add OCR results to prompt context by prepending to HTML
         const ocrResults = htmlData && htmlData.ocrResults;
+        let promptHtmlData = htmlData;
         if (ocrResults && ocrResults.length > 0) {
             console.log(`🤖 AI Web: Including OCR results (${ocrResults.length} images) in extraction`);
+            // Build OCR snippet text to prepend to the prompt
+            const ocrLines = [];
+            for (let i = 0; i < ocrResults.length; i++) {
+                const ocr = ocrResults[i];
+                const ocrSnippet = this.buildOcrSnippet(ocr.url, ocr.text, ocr.eventSummary);
+                ocrLines.push(ocrSnippet);
+            }
+            // Prepend OCR to the HTML so it's included in the prompt
+            const ocrText = ocrLines.join('\n\n');
+            const originalHtml = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+            promptHtmlData = {
+                ...htmlData,
+                html: ocrText ? `${ocrText}\n\n${originalHtml}` : originalHtml
+            };
         }
 
-        const aiEvent = await this.getAiEvent(htmlData, parserConfig, cityConfig, promptFields);
+        const aiEvent = await this.getAiEvent(promptHtmlData, parserConfig, cityConfig, promptFields);
         if (!aiEvent) {
             return null;
         }
-        const validationResult = this.validateAiEventEvidence(aiEvent, htmlData, parserConfig, promptFields, {
+        const validationResult = this.validateAiEventEvidence(aiEvent, promptHtmlData, parserConfig, promptFields, {
             trustedFields: aiEvent && Array.isArray(aiEvent.__preValidatedFields) ? aiEvent.__preValidatedFields : []
         });
-        const event = this.normalizeAiEvent(validationResult.event, parserConfig, htmlData, cityConfig, promptFields);
+        const event = this.normalizeAiEvent(validationResult.event, parserConfig, promptHtmlData, cityConfig, promptFields);
         if (!event || !event.title || !event.startDate) {
             console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
             return null;
