@@ -419,8 +419,20 @@ class AiWebParser {
         if (!aiEvent) {
             return null;
         }
+
+        // Build evidence context from promptHtmlData.html (the actual content passed to AI)
+        const evidenceContext = this.buildAiEvidenceContext(promptHtmlData, parserConfig);
+        const imageEvidenceUrls = this.buildImageEvidenceContextFromText(
+            promptHtmlData && typeof promptHtmlData.html === 'string' ? promptHtmlData.html : '',
+            promptHtmlData && typeof promptHtmlData.url === 'string' ? promptHtmlData.url : ''
+        );
+
         const validationResult = this.validateAiEventEvidence(aiEvent, promptHtmlData, parserConfig, promptFields, {
-            trustedFields: aiEvent && Array.isArray(aiEvent.__preValidatedFields) ? aiEvent.__preValidatedFields : []
+            trustedFields: aiEvent && Array.isArray(aiEvent.__preValidatedFields) ? aiEvent.__preValidatedFields : [],
+            evidenceContext: evidenceContext,
+            validationContext: {
+                imageEvidenceUrls: imageEvidenceUrls
+            }
         });
         const event = this.normalizeAiEvent(validationResult.event, parserConfig, promptHtmlData, cityConfig, promptFields);
         if (!event || !event.title || !event.startDate) {
@@ -4043,18 +4055,27 @@ class AiWebParser {
                 `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim(),
                 { ...options, dataFlags }
             );
+            // Build snippet-based evidence context for validation
+            const snippetEvidenceContext = this.getCachedValidationContext(snippetText);
+            const snippetImageEvidence = this.buildImageEvidenceContextFromText(
+                snippetText,
+                htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
+            );
+
+            // Verify snippet-based evidence was created (should always succeed)
+            if (!snippetEvidenceContext || !snippetEvidenceContext.raw) {
+                console.warn(`🤖 AI Web: Warning - snippet evidence context is empty for snippet ${index + 1}/${promptSnippets.length}`);
+            }
+
             const partialValidation = this.validateAiEventEvidence(
                 partial,
                 htmlData,
                 parserConfig,
                 remainingFields,
                 {
-                    evidenceContext: this.getCachedValidationContext(snippetText),
+                    evidenceContext: snippetEvidenceContext,
                     validationContext: {
-                        imageEvidenceUrls: this.buildImageEvidenceContextFromText(
-                            snippetText,
-                            htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
-                        )
+                        imageEvidenceUrls: snippetImageEvidence
                     }
                 }
             );
@@ -5331,14 +5352,24 @@ TEXT:
             return { event: aiEvent, report: null };
         }
 
+        // STRICT MODE: Require snippet-based evidence context - no fallback to full HTML
+        // This ensures AI validation only passes on data that was found in the snippet passed to AI
         const evidenceContext = options && options.evidenceContext && typeof options.evidenceContext === 'object'
             ? options.evidenceContext
-            : this.buildAiEvidenceContext(htmlData, parserConfig);
+            : null;
+        if (!evidenceContext) {
+            console.warn('🤖 AI Web: Validation failed - snippet-based evidenceContext not provided. Returning event without validation.');
+            return { event: aiEvent, report: null };
+        }
+
         const validationContext = options && options.validationContext && typeof options.validationContext === 'object'
             ? options.validationContext
-            : {
-                imageEvidenceUrls: this.buildImageEvidenceContext(htmlData)
-            };
+            : null;
+        if (!validationContext || !validationContext.imageEvidenceUrls) {
+            console.warn('🤖 AI Web: Validation failed - validationContext.imageEvidenceUrls not provided. Returning event without validation.');
+            return { event: aiEvent, report: null };
+        }
+
         const validated = { ...aiEvent };
         const trustedFields = new Set(
             (Array.isArray(options && options.trustedFields) ? options.trustedFields : [])
