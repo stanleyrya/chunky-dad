@@ -875,10 +875,14 @@ class AiWebParser {
             return [];
         }
 
+        // Deduplicate OCR results by stripped URL to prevent same image at different sizes
+        // from being matched multiple times. Select the largest image from each group.
+        const dedupedOcrResults = this.deduplicateOcrResultsByUrl(ocrResults || []);
+
         // Create a map of image URL to OCR result for quick lookup
         const ocrMap = new Map();
-        if (Array.isArray(ocrResults)) {
-            for (const result of ocrResults) {
+        if (Array.isArray(dedupedOcrResults)) {
+            for (const result of dedupedOcrResults) {
                 if (result && result.url) {
                     const normalizedUrl = this.normalizeHttpUrlValue(result.url);
                     if (normalizedUrl) ocrMap.set(normalizedUrl, result);
@@ -1715,7 +1719,7 @@ class AiWebParser {
 
             // Remove size patterns from pathname (e.g., /w_296,h_370/ or /1920x1080/)
             // Handle Wix-style /v1/fill/w_296,h_370,.../ patterns
-            pathname = pathname.replace(/\/v1\/fill\/[^/]+/g, '/v1/fill/');  // Wix transform path
+            pathname = pathname.replace(/\/v1\/fill\/[^/]+\/?/g, '/v1/fill/');  // Wix transform path
             pathname = pathname.replace(/\/\d+[xX]\d+\/?/g, '/');  // 1920x1080 patterns
             pathname = pathname.replace(/\/w_\d+(?:,h_\d+)?\/?/i, '/');  // w_296,h_370 patterns
             pathname = pathname.replace(/\/h_\d+(?:,w_\d+)?\/?/i, '/');  // h_370,w_296 patterns
@@ -2152,9 +2156,14 @@ class AiWebParser {
             .map(result => this.normalizeOcrResult(result))
             .filter(r => r !== null);
 
+        // Deduplicate OCR results by stripped URL to prevent same image at different sizes
+        // from being processed multiple times. This runs before consolidation which groups
+        // by text+classification.
+        const dedupedByUrl = this.deduplicateOcrResultsByUrl(ocrResults || []);
+
         // Consolidate duplicate images (same text + classification, different URLs)
         // Only consolidate images that have actual text content (event fliers, flyers, etc.)
-        const resultsWithText = ocrResults.filter(r => r && r.text && r.text.trim().length > 0);
+        const resultsWithText = dedupedByUrl.filter(r => r && r.text && r.text.trim().length > 0);
         const consolidatedResults = this.consolidateDuplicateOcrResults(resultsWithText);
 
         if (ocrResults.length > 0) {
@@ -2277,7 +2286,7 @@ class AiWebParser {
      * Returns a numeric score - higher means larger image.
      */
     getImageSizeFromUrl(url) {
-        if (!url || typeof url !== 'string') return 0;
+        if (!url || typeof url !== 'string') return -1;
 
         const lowerUrl = url.toLowerCase();
         const parsed = this.parseUrlComponents(url);
@@ -2357,6 +2366,52 @@ class AiWebParser {
         }
 
         return score;
+    }
+
+    /**
+     * Deduplicate OCR results by stripped URL to prevent same image at different sizes
+     * from being processed multiple times. Selects the largest image from each group.
+     */
+    deduplicateOcrResultsByUrl(ocrResults) {
+        if (!Array.isArray(ocrResults)) {
+            return [];
+        }
+        if (ocrResults.length <= 1) {
+            return ocrResults;
+        }
+
+        // Filter out null/undefined elements
+        const filteredResults = ocrResults.filter(r => r !== null && r !== undefined);
+        if (filteredResults.length <= 1) {
+            return filteredResults;
+        }
+
+        // Group results by stripped URL (same image at different sizes)
+        const groups = new Map();
+        for (const result of filteredResults) {
+            if (!result || !result.url) continue;
+            const strippedUrl = this.stripSizeParams(result.url);
+            if (!strippedUrl) continue;
+            if (!groups.has(strippedUrl)) {
+                groups.set(strippedUrl, []);
+            }
+            groups.get(strippedUrl).push(result);
+        }
+
+        // For each group, select the largest image
+        const deduped = [];
+        for (const group of groups.values()) {
+            if (group.length === 1) {
+                deduped.push(group[0]);
+            } else {
+                // Sort by size score (descending) and pick the largest
+                group.sort((a, b) => this.getImageSizeFromUrl(b.url) - this.getImageSizeFromUrl(a.url));
+                deduped.push(group[0]);
+                console.log(`🤖 AI Web: Deduplicated ${group.length} size variant(s) to largest: ${group[0].url}`);
+            }
+        }
+
+        return deduped;
     }
 
     /**
