@@ -4405,6 +4405,20 @@ class AiWebParser {
             selected.push('city');
             console.log('🤖 AI Web: Added special prompt field => city');
         }
+        // Auto-add startTime when startDate is selected
+        const hasStartDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'startdate');
+        const hasStartTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'starttime');
+        if (hasStartDateSelected && !hasStartTimeSelected) {
+            selected.push('startTime');
+            console.log('🤖 AI Web: Added special prompt field => startTime (because startDate was selected)');
+        }
+        // Auto-add endTime when endDate is selected
+        const hasEndDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'enddate');
+        const hasEndTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'endtime');
+        if (hasEndDateSelected && !hasEndTimeSelected) {
+            selected.push('endTime');
+            console.log('🤖 AI Web: Added special prompt field => endTime (because endDate was selected)');
+        }
         const aiPromptFields = selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
         const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
