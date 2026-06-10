@@ -5507,7 +5507,11 @@ TEXT:
         const combinedStartDate = startTimeRaw ? combineDateAndTime(startDateRaw, startTimeRaw) : startDateRaw;
         const combinedEndDate = endTimeRaw ? combineDateAndTime(endDateRaw, endTimeRaw) : endDateRaw;
 
-        const { startDate, endDate } = this.normalizeEventDates(combinedStartDate, combinedEndDate);
+        // For single-day events, if startDate is missing but endDate exists, use endDate as start
+        const finalStartDate = combinedStartDate || combinedEndDate;
+        const finalEndDate = combinedEndDate || combinedStartDate;
+
+        const { startDate, endDate } = this.normalizeEventDates(finalStartDate, finalEndDate);
 
         if (!title || !startDate) {
             return null;
