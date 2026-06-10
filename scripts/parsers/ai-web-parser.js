@@ -25,6 +25,134 @@ const ImportedEventSchema = (() => {
     return null;
 })();
 
+// ============================================================================
+// NORMALIZATION HELPERS
+// ============================================================================
+
+/**
+ * Normalize city value: lowercase, trim, handle common aliases
+ */
+function normalizeCityValue(value) {
+    if (!value || typeof value !== 'string') return '';
+    return value.trim().toLowerCase();
+}
+
+/**
+ * Normalize time value to HH:MM 24-hour format
+ * Handles formats like: "01H", "10PM", "22:30", "10:30pm", "3:30 AM", "2026-05-12T22:30", etc.
+ */
+function normalizeStartTimeValue(value) {
+    if (!value || typeof value !== 'string') return '';
+
+    let timeStr = value.trim();
+
+    // Handle ISO datetime format like "2026-05-12T22:30" or "2026-05-12T22:30:00"
+    const isoDateTimeMatch = timeStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (isoDateTimeMatch) {
+        const hour = parseInt(isoDateTimeMatch[4], 10);
+        const minute = parseInt(isoDateTimeMatch[5], 10);
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+        }
+    }
+
+    // Handle "01H" format (military time with H suffix)
+    const militaryMatch = timeStr.match(/^(\d{1,2})H$/i);
+    if (militaryMatch) {
+        const hour = parseInt(militaryMatch[1], 10);
+        if (hour >= 0 && hour <= 23) {
+            return String(hour).padStart(2, '0') + ':00';
+        }
+    }
+
+    // Handle "10PM" format (no colon, AM/PM attached)
+    const attachedAmPmMatch = timeStr.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+    if (attachedAmPmMatch) {
+        let hour = parseInt(attachedAmPmMatch[1], 10);
+        const minute = attachedAmPmMatch[2] ? parseInt(attachedAmPmMatch[2], 10) : 0;
+        const ampm = attachedAmPmMatch[3].toUpperCase();
+
+        if (ampm === 'PM' && hour !== 12) hour += 12;
+        if (ampm === 'AM' && hour === 12) hour = 0;
+
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+        }
+    }
+
+    // Handle "3:30 AM" format (space-separated AM/PM)
+    const separateAmPmMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (separateAmPmMatch) {
+        let hour = parseInt(separateAmPmMatch[1], 10);
+        const minute = parseInt(separateAmPmMatch[2], 10);
+        const ampm = separateAmPmMatch[3].toUpperCase();
+
+        if (ampm === 'PM' && hour !== 12) hour += 12;
+        if (ampm === 'AM' && hour === 12) hour = 0;
+
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+        }
+    }
+
+    // Handle "22:30" format (already HH:MM)
+    const hhmmMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (hhmmMatch) {
+        const hour = parseInt(hhmmMatch[1], 10);
+        const minute = parseInt(hhmmMatch[2], 10);
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+        }
+    }
+
+    // Handle "10:30pm" format (lowercase ampm attached or separate)
+    const lowercaseMatch = timeStr.match(/^(\d{1,2}):?(\d{2})?\s*(am|pm)$/i);
+    if (lowercaseMatch) {
+        let hour = parseInt(lowercaseMatch[1], 10);
+        const minute = lowercaseMatch[2] ? parseInt(lowercaseMatch[2], 10) : 0;
+        const ampm = lowercaseMatch[3].toUpperCase();
+
+        if (ampm === 'PM' && hour !== 12) hour += 12;
+        if (ampm === 'AM' && hour === 12) hour = 0;
+
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+        }
+    }
+
+    // If all parsing fails, return empty string
+    return '';
+}
+
+/**
+ * Combine date (YYYY-MM-DD) and time (HH:MM) into a full datetime string
+ * Returns ISO string or null if inputs are invalid
+ */
+function combineDateAndTime(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return null;
+
+    // Validate date format (YYYY-MM-DD)
+    const dateMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) return null;
+
+    // Validate time format (HH:MM)
+    const timeMatch = String(timeStr).match(/^(\d{2}):(\d{2})$/);
+    if (!timeMatch) return null;
+
+    const year = parseInt(dateMatch[1], 10);
+    const month = parseInt(dateMatch[2], 10) - 1; // JS months are 0-indexed
+    const day = parseInt(dateMatch[3], 10);
+    const hour = parseInt(timeMatch[1], 10);
+    const minute = parseInt(timeMatch[2], 10);
+
+    if (month < 0 || month > 11 || day < 1 || day > 31 || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+        return null;
+    }
+
+    const date = new Date(Date.UTC(year, month, day, hour, minute));
+    return date.toISOString();
+}
+
 class AiWebParser {
     constructor(config = {}) {
         this.config = {
@@ -3884,6 +4012,8 @@ class AiWebParser {
             validationState.validatedFields = new Set();
         }
         const validatedFields = validationState ? validationState.validatedFields : new Set();
+        // Extract data flags from options for prompt building
+        const dataFlags = options && options.dataFlags && typeof options.dataFlags === 'object' ? options.dataFlags : {};
         for (let index = 0; index < promptSnippets.length; index++) {
             const remainingFields = this.getRemainingPromptFields(promptFields, merged);
             if (remainingFields.length === 0) break;
@@ -3896,7 +4026,7 @@ class AiWebParser {
                 remainingFields,
                 snippetText,
                 `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim(),
-                options
+                { ...options, dataFlags }
             );
             const partialValidation = this.validateAiEventEvidence(
                 partial,
@@ -3946,6 +4076,8 @@ class AiWebParser {
         const runPartitionExtraction = async (fieldsToExtract, partition, passLabel, extractionOptions = {}) => {
             const sections = this.getSectionsForPartition(sectionBundle, partition);
             const snippets = this.buildPromptSnippets([], sections, maxHtmlChars);
+            // Determine data flags based on partition and snippet content
+            const dataFlags = this.getDataFlagsForPartition(sectionBundle, partition, snippets[0] || '');
             return this.extractFieldsAcrossSnippets(
                 htmlData,
                 aiConfig,
@@ -3958,6 +4090,7 @@ class AiWebParser {
                 {
                     partitionLabel: partition,
                     extractionTrace,
+                    dataFlags,
                     ...extractionOptions
                 }
             );
@@ -3975,6 +4108,12 @@ class AiWebParser {
             const fallbackSnippets = snippets.length > 0
                 ? snippets
                 : this.buildPromptSnippets([], [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean), maxHtmlChars);
+            // Exhaustive mode uses mixed data sources
+            const dataFlags = {
+                jsonLd: !!sectionBundle.jsonLd,
+                meta: !!sectionBundle.metaFallback,
+                content: !!sectionBundle.content
+            };
             for (const field of promptFields) {
                 const remainingField = this.getRemainingPromptFields([field], merged);
                 if (remainingField.length === 0) continue;
@@ -3989,7 +4128,8 @@ class AiWebParser {
                     validationState,
                     {
                         partitionLabel: 'mixed',
-                        extractionTrace
+                        extractionTrace,
+                        dataFlags
                     }
                 );
                 merged = this.mergeAiEventFields(merged, partial);
@@ -4286,12 +4426,6 @@ class AiWebParser {
         const normalized = this.normalizePromptFieldName(field);
         const schemaDescription = this.getEventSchemaPromptFieldDescription(normalized);
         let description = schemaDescription || 'Event field';
-        if (normalized === 'city' && cityConfig && typeof cityConfig === 'object') {
-            const cityKeys = this.getCityKeys(cityConfig);
-            if (cityKeys.length > 0) {
-                description += `. Must be one of: ${cityKeys.join(', ')}`;
-            }
-        }
         return description;
     }
 
@@ -4320,15 +4454,55 @@ class AiWebParser {
         return allFields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
-    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, variant = 'default') {
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, variant = 'default', dataFlags = {}) {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
             : this.getAiPromptFields(parserConfig);
         const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
 
+        // Build DATA PROVIDED section based on flags
+        const hasOcr = !!dataFlags.ocr;
+        const hasSegment = !!dataFlags.segment;
+        const hasJsonLd = !!dataFlags.jsonLd;
+        const hasMeta = !!dataFlags.meta;
+        const hasContent = !!dataFlags.content;
+
+        let dataProvided = '';
+        if (hasOcr || hasSegment) {
+            dataProvided += `DATA PROVIDED:
+`;
+            if (hasOcr) {
+                dataProvided += `- OCR_IMAGE_TEXT: Raw text extracted from event images
+- OCR_IMAGE_SUMMARY: Summary of what\'s in the image
+`;
+            }
+            if (hasSegment) {
+                dataProvided += `- SEGMENT_IMAGE_URL: Image URLs associated with this segment
+- SEGMENT_LINK_URL: Link URLs from the page
+`;
+            }
+            dataProvided += `
+`;
+        }
+
+        // Build SOURCE DATA section based on what's actually provided
+        let sourceData = '';
+        if (hasJsonLd || hasMeta || hasContent) {
+            sourceData += `SOURCE DATA:
+`;
+            if (hasJsonLd) sourceData += `- JSON-LD structured data
+`;
+            if (hasMeta) sourceData += `- OpenGraph and other meta tags
+`;
+            if (hasContent) sourceData += `- Page body text (unformatted)
+`;
+            sourceData += `
+`;
+        }
+
         const templates = {
             default: `You are a data scraper. You are being provided part of a website that includes information about an event. You must check if any of the requested keys are within the provided scraped data and return it as ONLY valid JSON. If a requested key is not explicitly in the source text, skip and omit it.
-Preferred keys:
+${dataProvided}${sourceData}Preferred keys:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
@@ -4337,7 +4511,7 @@ Rules:
 
 `,
             alternate: `You are extracting specific event fields from web page source data. Carefully search the entire provided text for the listed fields — they may appear in metadata, structured data, or body text. Return only what you find as a single valid JSON object.
-Fields to find:
+${dataProvided}${sourceData}Fields to find:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
@@ -4364,20 +4538,64 @@ TEXT:
         return `${templates[variant]}${String(snippet || '')}`;
     }
 
-    buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet) {
-        return this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, 'alternate');
+    buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, dataFlags = {}) {
+        return this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, 'alternate', dataFlags);
     }
 
-    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields) {
-        return this.buildExtractionPrompt(null, aiConfig, cityConfig, parserConfig, fields, rawResponse, 'repair');
+    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags = {}) {
+        return this.buildExtractionPrompt(null, aiConfig, cityConfig, parserConfig, fields, rawResponse, 'repair', dataFlags);
+    }
+
+    /**
+     * Get data flags for a given partition based on what data is available in the section bundle.
+     * This tells the prompt what kind of data the AI will actually see.
+     * Also checks the snippet for OCR/segment markers to handle multi-event segments.
+     */
+    getDataFlagsForPartition(sectionBundle, partition, snippet) {
+        const flags = {};
+        const snippetStr = String(snippet || '');
+
+        // Check for OCR/segment markers in the snippet (for multi-event segments)
+        flags.ocr = snippetStr.includes('OCR_IMAGE_TEXT') || snippetStr.includes('OCR_IMAGE_SUMMARY');
+        flags.segment = snippetStr.includes('SEGMENT_INDEX') || snippetStr.includes('SEGMENT_IMAGE_URL');
+
+        // Check section bundle for other data sources
+        switch (partition) {
+            case 'jsonld':
+                flags.jsonLd = true;
+                break;
+            case 'meta':
+                flags.meta = true;
+                break;
+            case 'content':
+                flags.content = true;
+                break;
+            case 'best':
+            case 'mixed':
+            case 'exhaustive':
+                // These modes may use multiple data sources
+                flags.jsonLd = !!sectionBundle?.jsonLd;
+                flags.meta = !!sectionBundle?.metaPrimary || !!sectionBundle?.metaFallback;
+                flags.content = !!sectionBundle?.content;
+                break;
+            default:
+                // For unknown partitions, try to detect from sectionBundle
+                flags.jsonLd = !!sectionBundle?.jsonLd;
+                flags.meta = !!sectionBundle?.metaPrimary || !!sectionBundle?.metaFallback;
+                flags.content = !!sectionBundle?.content;
+                break;
+        }
+        return flags;
     }
 
     async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, passLabel = '', options = {}) {
         const passSuffix = passLabel ? ` ${passLabel}` : '';
         const useAlternate = options && options.promptVariant === 'alternate';
+        // Extract data flags from options for prompt building
+        const dataFlags = options && options.dataFlags && typeof options.dataFlags === 'object' ? options.dataFlags : {};
         const extractPrompt = useAlternate
-            ? this.buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet)
-            : this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet);
+            ? this.buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, dataFlags)
+            : this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, 'default', dataFlags);
         const firstPass = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
         if (!firstPass) return null;
         const parsedFirstPass = this.parseAiEventResponse(firstPass);
@@ -4386,7 +4604,7 @@ TEXT:
             return parsedFirstPass;
         }
         console.warn(`🤖 AI Web: Extraction pass${passSuffix} was not parseable JSON; running repair pass`);
-        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig, parserConfig, fields);
+        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig, parserConfig, fields, dataFlags);
         const secondPass = await this.callAiGenerate(aiConfig, repairPrompt, 'repair');
         if (!secondPass) return null;
         const parsedSecondPass = this.parseAiEventResponse(secondPass);
@@ -5191,11 +5409,13 @@ TEXT:
             this.getResolvedParserMetadataFieldValue(parserConfig, ['location', 'coords'], aiEvent),
             ''
         );
-        const city = this.firstNonEmpty(
-            aiEvent.city,
-            this.getResolvedParserMetadataFieldValue(parserConfig, ['city'], aiEvent),
-            parserConfig && parserConfig.city,
-            ''
+        const city = normalizeCityValue(
+            this.firstNonEmpty(
+                aiEvent.city,
+                this.getResolvedParserMetadataFieldValue(parserConfig, ['city'], aiEvent),
+                parserConfig && parserConfig.city,
+                ''
+            )
         );
         const timezone = this.firstNonEmpty(
             aiEvent.timezone,
@@ -5265,8 +5485,15 @@ TEXT:
             : '';
 
         const startDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.startDate, aiEvent.start, ''), timezone);
+        const startTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.startTime, aiEvent.start, ''));
         const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
-        const { startDate, endDate } = this.normalizeEventDates(startDateRaw, endDateRaw);
+        const endTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.endTime, aiEvent.end, ''));
+
+        // Combine date and time if we have split fields
+        const combinedStartDate = startTimeRaw ? combineDateAndTime(startDateRaw, startTimeRaw) : startDateRaw;
+        const combinedEndDate = endTimeRaw ? combineDateAndTime(endDateRaw, endTimeRaw) : endDateRaw;
+
+        const { startDate, endDate } = this.normalizeEventDates(combinedStartDate, combinedEndDate);
 
         if (!title || !startDate) {
             return null;
@@ -5969,9 +6196,15 @@ TEXT:
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AiWebParser };
+    module.exports = { AiWebParser, normalizeCityValue, normalizeStartTimeValue, combineDateAndTime };
 } else if (typeof window !== 'undefined') {
     window.AiWebParser = AiWebParser;
+    window.normalizeCityValue = normalizeCityValue;
+    window.normalizeStartTimeValue = normalizeStartTimeValue;
+    window.combineDateAndTime = combineDateAndTime;
 } else {
     this.AiWebParser = AiWebParser;
+    this.normalizeCityValue = normalizeCityValue;
+    this.normalizeStartTimeValue = normalizeStartTimeValue;
+    this.combineDateAndTime = combineDateAndTime;
 }
