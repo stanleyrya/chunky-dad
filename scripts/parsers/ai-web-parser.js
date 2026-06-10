@@ -4813,7 +4813,24 @@ TEXT:
                 return true;
             })
             .join('\n\n');
-        const raw = sectionText || this.cleanHtml(html, aiConfig) || html;
+
+        // Include OCR text in evidence context for date/time validation
+        const ocrResults = htmlData && htmlData.ocrResults;
+        let ocrText = '';
+        if (Array.isArray(ocrResults) && ocrResults.length > 0) {
+            const ocrParts = ocrResults.map(ocr => {
+                const text = String(ocr.text || '').trim();
+                const summary = ocr.eventSummary && typeof ocr.eventSummary === 'string'
+                    ? String(ocr.eventSummary).trim()
+                    : '';
+                const parts = [text];
+                if (summary) parts.push(summary);
+                return parts.filter(Boolean).join('\n');
+            });
+            ocrText = ocrParts.filter(Boolean).join('\n\n');
+        }
+
+        const raw = sectionText ? (ocrText ? `${ocrText}\n\n${sectionText}` : sectionText) : (ocrText || this.cleanHtml(html, aiConfig) || html);
         const normalized = this.normalizeEvidenceText(raw);
         const compact = normalized.replace(/[^a-z0-9]+/g, '');
         return {
@@ -5062,6 +5079,21 @@ TEXT:
             variants.add(`${monthShortNames[monthIndex]} ${day}, ${year}`);
             variants.add(`${month}/${day}/${year}`);
             variants.add(`${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`);
+        }
+        // Add range variants for dates that might appear in a range format (e.g., "Aug 21-23")
+        // These help match cases like "AUG 21-23, 2026" when we're validating a specific date
+        if (Number.isFinite(year) && year > 0) {
+            variants.add(`${monthNames[monthIndex]} ${day}-${year}`);
+            variants.add(`${monthShortNames[monthIndex]} ${day}-${year}`);
+            variants.add(`${month}/${day}-${year}`);
+            variants.add(`${String(month).padStart(2, '0')}/${day}-${year}`);
+            // Add variants with dash prefix for range format (e.g., "21-23" contains "23")
+            variants.add(`-${day}`);
+            variants.add(`-${String(day).padStart(2, '0')}`);
+            // Add variants with comma suffix for format like "Aug 23, 2026"
+            variants.add(`${monthNames[monthIndex]} ${day},`);
+            variants.add(`${monthShortNames[monthIndex]} ${day},`);
+            variants.add(`${String(day).padStart(2, '0')},`);
         }
         return Array.from(variants).filter(Boolean);
     }
