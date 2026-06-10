@@ -4828,24 +4828,7 @@ TEXT:
                 return true;
             })
             .join('\n\n');
-
-        // Include OCR text in evidence context for date/time validation
-        const ocrResults = htmlData && htmlData.ocrResults;
-        let ocrText = '';
-        if (Array.isArray(ocrResults) && ocrResults.length > 0) {
-            const ocrParts = ocrResults.map(ocr => {
-                const text = String(ocr.text || '').trim();
-                const summary = ocr.eventSummary && typeof ocr.eventSummary === 'string'
-                    ? String(ocr.eventSummary).trim()
-                    : '';
-                const parts = [text];
-                if (summary) parts.push(summary);
-                return parts.filter(Boolean).join('\n');
-            });
-            ocrText = ocrParts.filter(Boolean).join('\n\n');
-        }
-
-        const raw = sectionText ? (ocrText ? `${ocrText}\n\n${sectionText}` : sectionText) : (ocrText || this.cleanHtml(html, aiConfig) || html);
+        const raw = sectionText || this.cleanHtml(html, aiConfig) || html;
         const normalized = this.normalizeEvidenceText(raw);
         const compact = normalized.replace(/[^a-z0-9]+/g, '');
         return {
