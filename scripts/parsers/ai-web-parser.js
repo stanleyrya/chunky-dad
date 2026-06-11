@@ -166,7 +166,6 @@ class AiWebParser {
         this.cachedEventSchemaFieldSignalRegexMap = new Map();
         this.eventSchemaFieldSignalRegexMapLoaded = false;
         this.invalidFieldSignalPatternWarnings = new Set();
-        this.validationContextCache = new Map();
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
@@ -4024,78 +4023,93 @@ class AiWebParser {
         return groups.filter(Boolean);
     }
 
+    // === Main: Extract Fields Across Multiple Snippets ===
+
     async extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, fields, snippets, passLabelPrefix, validationState = null, options = {}) {
+        // === STEP 1: Setup ===
         let merged = {};
         const promptFields = Array.isArray(fields) ? fields : [];
         const promptSnippets = Array.isArray(snippets) ? snippets.filter(Boolean) : [];
         const extractionTrace = options && options.extractionTrace && typeof options.extractionTrace === 'object'
             ? options.extractionTrace
-            : null;
+            : { fieldSources: {} };
         if (extractionTrace && (!extractionTrace.fieldSources || typeof extractionTrace.fieldSources !== 'object')) {
             extractionTrace.fieldSources = {};
         }
-        const partitionLabel = this.normalizeConfidencePartition(options && options.partitionLabel);
         if (validationState && !(validationState.validatedFields instanceof Set)) {
             validationState.validatedFields = new Set();
         }
-        const validatedFields = validationState ? validationState.validatedFields : new Set();
-        // Extract data flags from options for prompt building
         const dataFlags = options && options.dataFlags && typeof options.dataFlags === 'object' ? options.dataFlags : {};
+
+        // === STEP 2: Process Each Snippet ===
         for (let index = 0; index < promptSnippets.length; index++) {
             const remainingFields = this.getRemainingPromptFields(promptFields, merged);
-            if (remainingFields.length === 0) break;
+            if (remainingFields.length === 0) break; // All fields extracted
+
             const snippetText = String(promptSnippets[index] || '');
-            const partial = await this.extractEventWithTwoPassAi(
-                htmlData,
-                aiConfig,
-                cityConfig,
-                parserConfig,
-                remainingFields,
-                snippetText,
-                `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim(),
-                { ...options, dataFlags }
-            );
-            // Build snippet-based evidence context for validation
-            const snippetEvidenceContext = this.getCachedValidationContext(snippetText);
-            const snippetImageEvidence = this.buildImageEvidenceContextFromText(
-                snippetText,
-                htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
-            );
+            const passLabel = `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim();
 
-            // Verify snippet-based evidence was created (should always succeed)
-            if (!snippetEvidenceContext || !snippetEvidenceContext.raw) {
-                console.warn(`🤖 AI Web: Warning - snippet evidence context is empty for snippet ${index + 1}/${promptSnippets.length}`);
-            }
+            // === Build Evidence Context ===
+            // We use the snippet text directly as evidence - this is what we sent to the AI
+            const snippetEvidenceContext = this.buildAiEvidenceContextFromText(snippetText);
+            const snippetImageEvidence = this.buildImageEvidenceContextFromText(snippetText, htmlData && typeof htmlData.url === 'string' ? htmlData.url : '');
 
-            const partialValidation = this.validateAiEventEvidence(
-                partial,
-                htmlData,
-                parserConfig,
-                remainingFields,
-                {
-                    evidenceContext: snippetEvidenceContext,
-                    validationContext: {
-                        imageEvidenceUrls: snippetImageEvidence
+            // === Include OCR Evidence if Available ===
+            // OCR results are attached to htmlData.ocrResults and should be included in evidence
+            const ocrResults = htmlData && htmlData.ocrResults;
+            if (ocrResults && ocrResults.length > 0) {
+                const ocrLines = [];
+                const seenOcrUrls = new Set();
+                for (const ocrResult of ocrResults) {
+                    if (!ocrResult || !ocrResult.url) continue;
+                    const normalizedUrl = this.normalizeHttpUrlValue(ocrResult.url);
+                    if (!normalizedUrl || seenOcrUrls.has(normalizedUrl)) continue;
+                    seenOcrUrls.add(normalizedUrl);
+                    const ocrSnippet = this.buildOcrSnippet(ocrResult.url, ocrResult.text, ocrResult.eventSummary);
+                    ocrLines.push(ocrSnippet);
+                }
+                if (ocrLines.length > 0) {
+                    // Merge OCR text with snippet text for evidence
+                    const ocrText = ocrLines.join('\n\n');
+                    const combinedText = ocrText ? `${ocrText}\n\n${snippetText}` : snippetText;
+                    const snippetEvidenceContextWithOcr = this.buildAiEvidenceContextFromText(combinedText);
+                    // Replace evidence context with OCR-inclusive version
+                    Object.assign(snippetEvidenceContext, snippetEvidenceContextWithOcr);
+                    // Also update image evidence with OCR image URLs
+                    for (const url of seenOcrUrls) {
+                        snippetImageEvidence.add(url);
                     }
                 }
-            );
-            const validatedPartial = partialValidation && partialValidation.event && typeof partialValidation.event === 'object'
-                ? partialValidation.event
-                : {};
+            }
+
+            // Extract from snippet using two-pass strategy
+            const partial = await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, remainingFields, snippetText, passLabel, { ...options, dataFlags });
+
+            // Validate extracted fields
+            const validatedPartial = this.validateAiEventEvidence(partial, htmlData, parserConfig, remainingFields, {
+                evidenceContext: snippetEvidenceContext,
+                validationContext: { imageEvidenceUrls: snippetImageEvidence }
+            }).event || {};
+
+            // Track field sources for traceability
+            const validatedFields = validationState ? validationState.validatedFields : new Set();
             Object.keys(validatedPartial).forEach(key => {
                 if (this.isInternalAiFieldKey(key)) return;
                 const normalizedField = this.normalizePromptFieldName(key);
                 validatedFields.add(normalizedField);
                 if (extractionTrace && extractionTrace.fieldSources && !extractionTrace.fieldSources[normalizedField]) {
                     extractionTrace.fieldSources[normalizedField] = {
-                        partition: partitionLabel,
-                        pass: `${passLabelPrefix} ${index + 1}/${promptSnippets.length}`.trim(),
+                        partition: passLabel,
+                        pass: passLabel,
                         snippet: index + 1
                     };
                 }
             });
+
             merged = this.mergeAiEventFields(merged, validatedPartial);
         }
+
+        // === STEP 3: Return Merged Results ===
         return merged;
     }
 
@@ -4638,31 +4652,50 @@ TEXT:
         return flags;
     }
 
+    // === Main: Two-Pass Extraction with Fallback ===
+
     async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, passLabel = '', options = {}) {
+        // Setup
         const passSuffix = passLabel ? ` ${passLabel}` : '';
-        const useAlternate = options && options.promptVariant === 'alternate';
-        // Extract data flags from options for prompt building
         const dataFlags = options && options.dataFlags && typeof options.dataFlags === 'object' ? options.dataFlags : {};
-        const extractPrompt = useAlternate
-            ? this.buildAlternateExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, dataFlags)
-            : this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, 'default', dataFlags);
-        const firstPass = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
-        if (!firstPass) return null;
-        const parsedFirstPass = this.parseAiEventResponse(firstPass);
-        if (parsedFirstPass) {
-            console.log(`🤖 AI Web: Extraction pass${passSuffix} returned parseable JSON`);
-            return parsedFirstPass;
+        const useAlternate = options && options.promptVariant === 'alternate';
+
+        // PASS 1: Try standard extraction
+        console.log(`🤖 AI Web: Starting extraction pass${passSuffix}`);
+        let extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, useAlternate ? 'alternate' : 'default', dataFlags);
+        let rawResponse = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
+        if (!rawResponse) return null;
+        let event = this.parseAiEventResponse(rawResponse);
+        if (event) {
+            console.log(`🤖 AI Web: Extraction pass${passSuffix} succeeded`);
+            return event;
         }
-        console.warn(`🤖 AI Web: Extraction pass${passSuffix} was not parseable JSON; running repair pass`);
-        const repairPrompt = this.buildJsonRepairPrompt(firstPass, aiConfig, cityConfig, parserConfig, fields, dataFlags);
-        const secondPass = await this.callAiGenerate(aiConfig, repairPrompt, 'repair');
-        if (!secondPass) return null;
-        const parsedSecondPass = this.parseAiEventResponse(secondPass);
-        if (parsedSecondPass) {
-            console.log(`🤖 AI Web: Repair pass${passSuffix} returned parseable JSON`);
-            return parsedSecondPass;
+
+        // PASS 2: Try alternate extraction if first pass failed and alternate is enabled
+        if (useAlternate) {
+            console.log(`🤖 AI Web: Standard pass${passSuffix} failed; trying alternate prompt`);
+            extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, 'alternate', dataFlags);
+            rawResponse = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
+            if (!rawResponse) return null;
+            event = this.parseAiEventResponse(rawResponse);
+            if (event) {
+                console.log(`🤖 AI Web: Alternate pass${passSuffix} succeeded`);
+                return event;
+            }
         }
-        console.warn(`🤖 AI Web: Repair pass${passSuffix} output was still not parseable JSON`);
+
+        // PASS 3: Try repair if extraction returned unparseable JSON
+        console.warn(`🤖 AI Web: Extraction pass${passSuffix} returned unparseable JSON; attempting repair`);
+        const repairPrompt = this.buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags);
+        const repairResponse = await this.callAiGenerate(aiConfig, repairPrompt, 'repair');
+        if (!repairResponse) return null;
+        event = this.parseAiEventResponse(repairResponse);
+        if (event) {
+            console.log(`🤖 AI Web: Repair pass${passSuffix} succeeded`);
+            return event;
+        }
+
+        console.warn(`🤖 AI Web: Extraction pass${passSuffix} failed (both standard and repair)`);
         return null;
     }
 
@@ -4882,13 +4915,6 @@ TEXT:
         };
     }
 
-    getCachedValidationContext(snippet) {
-        if (!this.validationContextCache.has(snippet)) {
-            this.validationContextCache.set(snippet, this.buildAiEvidenceContextFromText(snippet));
-        }
-        return this.validationContextCache.get(snippet);
-    }
-
     normalizeEvidenceText(value) {
         const htmlEntityMap = {
             amp: '&',
@@ -5063,15 +5089,40 @@ TEXT:
             };
         }
         const parsed = this.parseDateValue(rawValue);
-        if (!(parsed instanceof Date) || Number.isNaN(parsed.getTime())) return null;
-        return {
-            year: parsed.getFullYear(),
-            month: parsed.getMonth() + 1,
-            day: parsed.getDate(),
-            hour: parsed.getHours(),
-            minute: parsed.getMinutes(),
-            hasTime: /\d{1,2}:\d{2}|\b\d{1,2}\s*(?:am|pm)\b/i.test(rawValue)
-        };
+        if (parsed instanceof Date && !Number.isNaN(parsed.getTime())) {
+            return {
+                year: parsed.getFullYear(),
+                month: parsed.getMonth() + 1,
+                day: parsed.getDate(),
+                hour: parsed.getHours(),
+                minute: parsed.getMinutes(),
+                hasTime: /\d{1,2}:\d{2}|\b\d{1,2}\s*(?:am|pm)\b/i.test(rawValue)
+            };
+        }
+        // Handle time-only strings (e.g., "22:00", "10pm", "10:30pm") that parseDateValue can't parse
+        // Extract hour and minute using regex for formats like HH:MM, HH:MMpm, HHpm
+        const timeOnlyMatch = rawValue.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+        if (timeOnlyMatch) {
+            let hour = parseInt(timeOnlyMatch[1], 10);
+            const minute = timeOnlyMatch[2] ? parseInt(timeOnlyMatch[2], 10) : 0;
+            const suffix = timeOnlyMatch[3] ? timeOnlyMatch[3].toLowerCase() : null;
+
+            // Convert to 24-hour format
+            if (suffix === 'pm' && hour !== 12) hour += 12;
+            if (suffix === 'am' && hour === 12) hour = 0;
+
+            if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                return {
+                    year: null,
+                    month: null,
+                    day: null,
+                    hour: hour,
+                    minute: minute,
+                    hasTime: true
+                };
+            }
+        }
+        return null;
     }
 
     buildDateEvidenceVariants(dateParts) {
@@ -5409,10 +5460,68 @@ TEXT:
         }
     }
 
+    // === Validation Helper Methods ===
+
+    /**
+     * Check if a field should be validated at all.
+     * Returns null if valid to continue, or a drop/bypass reason string.
+     */
+    getFieldValidationStatus(key, aiEvent, rule, requestedFields, trustedFields, report) {
+        if (this.isInternalAiFieldKey(key)) {
+            return 'skip-internal';
+        }
+
+        const value = aiEvent[key];
+        if (!this.isUsableAiFieldValue(value)) {
+            report.dropped.push({ field: rule.field, key, mode: rule.mode, reason: 'not-usable' });
+            return 'drop-not-usable';
+        }
+
+        if (requestedFields && !requestedFields.has(rule.field)) {
+            report.dropped.push({ field: rule.field, key, mode: rule.mode, reason: 'not-requested' });
+            return 'drop-not-requested';
+        }
+
+        if (!rule.strict) {
+            report.bypassed.push({ field: rule.field, key, reason: 'override-allow-without-evidence' });
+            return 'bypass-strictness';
+        }
+
+        if (trustedFields.has(rule.field)) {
+            report.bypassed.push({ field: rule.field, key, reason: 'previous-step-validated' });
+            return 'bypass-trusted';
+        }
+
+        return null; // Continue to evidence check
+    }
+
+    /**
+     * Validate a single field value against evidence.
+     * Returns true if valid, false if should be dropped.
+     */
+    validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report) {
+        const hasEvidence = this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
+        if (!hasEvidence) {
+            report.dropped.push({
+                field: rule.field,
+                key,
+                mode: rule.mode,
+                value: this.trimToMaxLength(String(value), this.extractionLimits.validationReportValueMaxLength)
+            });
+            return false;
+        }
+        report.kept.push({ field: rule.field, key, mode: rule.mode });
+        return true;
+    }
+
+    // === Main Validation Entry Point ===
+
     validateAiEventEvidence(aiEvent, htmlData, parserConfig = {}, promptFields = null, options = {}) {
+        // === STEP 1: Guard Clauses ===
         if (!aiEvent || typeof aiEvent !== 'object') {
             return { event: aiEvent, report: null };
         }
+
         const validationConfig = this.getAiValidationConfig(parserConfig);
         if (!validationConfig.enabled) {
             return { event: aiEvent, report: null };
@@ -5436,6 +5545,7 @@ TEXT:
             return { event: aiEvent, report: null };
         }
 
+        // === STEP 2: Setup Validation Context ===
         const validated = { ...aiEvent };
         const trustedFields = new Set(
             (Array.isArray(options && options.trustedFields) ? options.trustedFields : [])
@@ -5453,42 +5563,26 @@ TEXT:
             ? new Set(promptFields.map(field => this.normalizePromptFieldName(field)))
             : null;
 
+        // === STEP 3: Validate Each Field ===
         Object.keys(aiEvent).forEach(key => {
-            if (this.isInternalAiFieldKey(key)) return;
             const rule = this.getFieldValidationRule(key, validationConfig);
+
+            // Check if field should be skipped/dropped/bypassed
+            const status = this.getFieldValidationStatus(key, aiEvent, rule, requestedFields, trustedFields, report);
+            if (status === 'skip-internal' || status === 'drop-not-usable' || status === 'drop-not-requested' || status === 'bypass-strictness' || status === 'bypass-trusted') {
+                delete validated[key];
+                return;
+            }
+
+            // Validate field value against evidence
             const value = aiEvent[key];
-            const usable = this.isUsableAiFieldValue(value);
-            if (!usable) {
+            const isValid = this.validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report);
+            if (!isValid) {
                 delete validated[key];
-                return;
             }
-            if (requestedFields && !requestedFields.has(rule.field)) {
-                report.dropped.push({ field: rule.field, key, mode: rule.mode, reason: 'not-requested' });
-                delete validated[key];
-                return;
-            }
-            if (!rule.strict) {
-                report.bypassed.push({ field: rule.field, key, reason: 'override-allow-without-evidence' });
-                return;
-            }
-            if (trustedFields.has(rule.field)) {
-                report.bypassed.push({ field: rule.field, key, reason: 'previous-step-validated' });
-                return;
-            }
-            const hasEvidence = this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
-            if (!hasEvidence) {
-                report.dropped.push({
-                    field: rule.field,
-                    key,
-                    mode: rule.mode,
-                    value: this.trimToMaxLength(String(value), this.extractionLimits.validationReportValueMaxLength)
-                });
-                delete validated[key];
-                return;
-            }
-            report.kept.push({ field: rule.field, key, mode: rule.mode });
         });
 
+        // === STEP 4: Return Result ===
         if (report.dropped.length > 0) {
             console.warn(`🤖 AI Web: Dropped ${report.dropped.length} field(s) lacking source evidence: ${report.dropped.map(entry => entry.key).join(', ')}`);
         }
