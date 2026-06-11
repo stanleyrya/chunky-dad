@@ -86,3 +86,51 @@ test('pairs nearby row-split event images to the matching multi-event segments',
   ]);
   assert.deepEqual(segments.slice(2).map(segment => segment.imageHintUrls || null), [null, null]);
 });
+
+test('validateAiEventEvidence should NOT delete trusted or internal fields', () => {
+  // Mock EventSchema for testing
+  global.EventSchema = {
+    AI_PROMPT_FIELDS: [
+      { param: 'title', desc: 'Event title' },
+      { param: 'startDate', desc: 'Start date' }
+    ],
+    canonicalizeEventKey: (key) => key.toLowerCase()
+  };
+
+  const parser = createParser();
+  const aiEvent = {
+    title: 'Furball',
+    startDate: '2026-07-11',
+    __internal: 'keep me'
+  };
+
+  const htmlData = { html: 'Some content' };
+  const evidenceContext = parser.buildAiEvidenceContextFromText('Some content');
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  // Test trusted fields
+  const result = parser.validateAiEventEvidence(aiEvent, htmlData, {}, null, {
+    evidenceContext,
+    validationContext,
+    trustedFields: ['title']
+  });
+
+  assert.ok(result.event.title, 'title should be kept because it is trusted');
+  assert.equal(result.event.title, 'Furball');
+
+  // Test internal fields
+  assert.ok(result.event.__internal, '__internal should be kept because it is internal');
+
+  // Test field not in evidence but NOT strict
+  const nonStrictResult = parser.validateAiEventEvidence(
+    { startDate: '2026-07-11' },
+    htmlData,
+    { ai: { validation: { strict: false } } },
+    null,
+    {
+      evidenceContext,
+      validationContext
+    }
+  );
+  assert.ok(nonStrictResult.event.startDate, 'startDate should be kept when strict is false even if evidence is missing');
+});

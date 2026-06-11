@@ -5569,7 +5569,11 @@ TEXT:
 
             // Check if field should be skipped/dropped/bypassed
             const status = this.getFieldValidationStatus(key, aiEvent, rule, requestedFields, trustedFields, report);
-            if (status === 'skip-internal' || status === 'drop-not-usable' || status === 'drop-not-requested' || status === 'bypass-strictness' || status === 'bypass-trusted') {
+            if (status === 'skip-internal' || status === 'bypass-strictness' || status === 'bypass-trusted') {
+                // Keep these fields without further evidence checks
+                return;
+            }
+            if (status === 'drop-not-usable' || status === 'drop-not-requested') {
                 delete validated[key];
                 return;
             }
