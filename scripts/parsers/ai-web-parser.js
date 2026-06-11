@@ -4918,6 +4918,7 @@ TEXT:
         let mode = typeof rawRule.mode === 'string' ? rawRule.mode.trim().toLowerCase() : '';
         if (!mode) {
             if (normalizedField === 'startdate' || normalizedField === 'enddate') mode = 'date';
+            else if (normalizedField === 'starttime' || normalizedField === 'endtime') mode = 'time';
             else if (normalizedField === 'location') mode = 'coords';
             else if (normalizedField === 'cover') mode = 'cover';
             else if (normalizedField === 'description') mode = validationConfig.fuzzyDescription ? 'fuzzy' : 'exact';
@@ -5160,6 +5161,69 @@ TEXT:
         return timeVariants.some(variant => normalizedEvidence.includes(variant));
     }
 
+    hasTimeEvidence(evidenceContext, value) {
+        const normalizedEvidence = String(evidenceContext && evidenceContext.normalized ? evidenceContext.normalized : '');
+        if (!normalizedEvidence) return false;
+
+        // Normalize the value to HH:MM format
+        const normalizedTime = normalizeStartTimeValue(value);
+        if (!normalizedTime) return false;
+
+        // Build time format variants (22:00, 10pm, 10:00pm, etc.)
+        const timeParts = this.extractDateEvidenceParts(normalizedTime);
+        if (!timeParts || !timeParts.hasTime) return false;
+        const variants = this.buildTimeEvidenceVariants(timeParts);
+        if (variants.length === 0) return false;
+
+        // Check if any variant exists in the evidence context (case-insensitive)
+        const lowerEvidence = normalizedEvidence.toLowerCase();
+        if (variants.some(variant => lowerEvidence.includes(variant.toLowerCase()))) {
+            return true;
+        }
+
+        // Also check for OCR-specific formats in raw evidence
+        const rawEvidence = String(evidenceContext && evidenceContext.raw ? evidenceContext.raw : '');
+        const lowerRaw = rawEvidence.toLowerCase();
+
+        // Extract hour from normalized time for matching
+        const hour24 = parseInt(normalizedTime.split(':')[0], 10);
+        const hour12 = hour24 % 12 || 12;
+
+        // Pattern 1: @HH, @HHmm, @HHH, @HH H, @HH H mm (OCR time indicators)
+        // Matches: @10PM, @10PM30, 01H, 10H, @10, @10 H, etc.
+        const ocrTimePattern = /(?:^|[\s,@"'`(]|at\s)(\d{1,2})(?::?(\d{2}))?\s*(H|[ap]m)?/i;
+        const ocrMatch = ocrTimePattern.exec(lowerRaw);
+        if (ocrMatch) {
+            const ocrHour = parseInt(ocrMatch[1], 10);
+            const ocrMinute = ocrMatch[2] ? parseInt(ocrMatch[2], 10) : 0;
+            const ocrSuffix = ocrMatch[3] ? ocrMatch[3].toLowerCase() : null;
+
+            // Convert OCR hour to 24-hour format
+            let ocrHour24 = ocrHour;
+            if (ocrSuffix === 'pm' && ocrHour !== 12) ocrHour24 += 12;
+            if (ocrSuffix === 'am' && ocrHour === 12) ocrHour24 = 0;
+            if (ocrSuffix === 'h') ocrHour24 = ocrHour; // military format
+
+            if (ocrHour24 === hour24) {
+                return true;
+            }
+        }
+
+        // Pattern 2: Standalone time formats (e.g., "10pm", "10:00pm", "22:00")
+        // Use word boundary instead of end-of-string anchor for OCR text
+        const standaloneTimePattern = /(?:^|[\s,;"'`(])(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i;
+        const standaloneMatch = standaloneTimePattern.exec(lowerRaw);
+        if (standaloneMatch) {
+            const ocrTime = standaloneMatch[1];
+            const ocrNormalized = normalizeStartTimeValue(ocrTime);
+            if (ocrNormalized === normalizedTime) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     normalizeHttpUrlValue(value) {
         const normalized = this.normalizeUrl(String(value || '').trim(), '');
         if (!normalized) return '';
@@ -5329,6 +5393,8 @@ TEXT:
                 return this.hasCoordinateEvidence(evidenceContext, valueText);
             case 'date':
                 return this.hasDateEvidence(evidenceContext, valueText);
+            case 'time':
+                return this.hasTimeEvidence(evidenceContext, valueText);
             case 'cover':
                 return this.hasCoverEvidence(evidenceContext, valueText);
             case 'fuzzy':
