@@ -6456,7 +6456,10 @@
       function buildAiFieldListText(cityKeys, isUrlMode) {
         const schema = (typeof EventSchema !== 'undefined' && EventSchema) ? EventSchema : null;
         const fields = (schema && Array.isArray(schema.AI_PROMPT_FIELDS)) ? schema.AI_PROMPT_FIELDS : [];
-        return fields.map(({ param, desc }) => {
+        // Filter out split date fields - only show start/end for dates
+        const splitDateFields = ['startDate', 'startTime', 'endDate', 'endTime'];
+        const visibleFields = fields.filter(f => !splitDateFields.includes(f.param));
+        return visibleFields.map(({ param, desc }) => {
           let fieldDesc = desc;
           if (param === 'city') {
             fieldDesc += `. Must be one of: ${cityKeys}`;

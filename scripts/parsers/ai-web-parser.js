@@ -328,7 +328,12 @@ class AiWebParser {
                 };
             }
 
-            const promptFields = this.getAiPromptFields(parserConfig);
+            // Compute dataFlags based on HTML content to determine which date fields to use
+            const sectionBundle = this.getPromptSectionBundle(html, parserConfig);
+            const aiConfig = this.getAiConfig(parserConfig);
+            const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
+            const dataFlags = this.getDataFlagsForPartition(sectionBundle, payloadMode, '');
+            const promptFields = this.getAiPromptFields(parserConfig, dataFlags);
             const events = pageClassification === 'multi-event-page'
                 ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults)
                 : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults);
@@ -4424,7 +4429,7 @@ class AiWebParser {
         return this.cachedEventSchemaFieldSignalRegexMap.get(normalizedField) || [];
     }
 
-    getAiPromptFields(parserConfig = {}) {
+    getAiPromptFields(parserConfig = {}, dataFlags = {}) {
         const priorities = parserConfig && parserConfig.fieldPriorities && typeof parserConfig.fieldPriorities === 'object'
             ? parserConfig.fieldPriorities
             : {};
@@ -4432,7 +4437,7 @@ class AiWebParser {
             ? parserConfig.metadata
             : {};
         const skippedFieldReasons = [];
-        const selected = Object.keys(priorities).filter(field => {
+        let selected = Object.keys(priorities).filter(field => {
             const rule = priorities[field];
             if (!rule || !Array.isArray(rule.priority)) {
                 skippedFieldReasons.push({ field, reason: 'missing-priority-array' });
@@ -4455,19 +4460,51 @@ class AiWebParser {
             selected.push('city');
             console.log('🤖 AI Web: Added special prompt field => city');
         }
-        // Auto-add startTime when startDate is selected
-        const hasStartDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'startdate');
-        const hasStartTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'starttime');
-        if (hasStartDateSelected && !hasStartTimeSelected) {
-            selected.push('startTime');
-            console.log('🤖 AI Web: Added special prompt field => startTime (because startDate was selected)');
-        }
-        // Auto-add endTime when endDate is selected
-        const hasEndDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'enddate');
-        const hasEndTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'endtime');
-        if (hasEndDateSelected && !hasEndTimeSelected) {
-            selected.push('endTime');
-            console.log('🤖 AI Web: Added special prompt field => endTime (because endDate was selected)');
+        const hasOcr = !!dataFlags.ocr || !!dataFlags.segment;
+        const hasJsonLd = !!dataFlags.jsonLd;
+        const hasMeta = !!dataFlags.meta;
+
+        // For structured data (JSON-LD/meta), prefer start/end fields over split fields
+        // For unstructured data (OCR/content), use split fields
+        if (hasJsonLd || hasMeta) {
+            // Structured data - prefer start/end, remove split fields
+            const splitDateFields = ['startDate', 'startTime', 'endDate', 'endTime'];
+            const originalSelected = [...selected];
+            selected = selected.filter(field => !splitDateFields.includes(field));
+            if (selected.length !== originalSelected.length) {
+                console.log('🤖 AI Web: Removed split date fields (using start/end for structured data)');
+            }
+
+            // Auto-add end when start is selected
+            const hasStartSelected = selected.some(field => this.normalizePromptFieldName(field) === 'start');
+            const hasEndSelected = selected.some(field => this.normalizePromptFieldName(field) === 'end');
+            if (hasStartSelected && !hasEndSelected) {
+                selected.push('end');
+                console.log('🤖 AI Web: Added special prompt field => end (because start was selected)');
+            }
+        } else {
+            // Unstructured data - prefer split fields, remove start/end
+            const fullDateFields = ['start', 'end'];
+            const originalSelected = [...selected];
+            selected = selected.filter(field => !fullDateFields.includes(field));
+            if (selected.length !== originalSelected.length) {
+                console.log('🤖 AI Web: Removed full datetime fields (using split fields for unstructured data)');
+            }
+
+            // Auto-add startTime when startDate is selected
+            const hasStartDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'startdate');
+            const hasStartTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'starttime');
+            if (hasStartDateSelected && !hasStartTimeSelected) {
+                selected.push('startTime');
+                console.log('🤖 AI Web: Added special prompt field => startTime (because startDate was selected)');
+            }
+            // Auto-add endTime when endDate is selected
+            const hasEndDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'enddate');
+            const hasEndTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'endtime');
+            if (hasEndDateSelected && !hasEndTimeSelected) {
+                selected.push('endTime');
+                console.log('🤖 AI Web: Added special prompt field => endTime (because endDate was selected)');
+            }
         }
         const aiPromptFields = selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
@@ -4521,7 +4558,7 @@ class AiWebParser {
     buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, variant = 'default', dataFlags = {}) {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
-            : this.getAiPromptFields(parserConfig);
+            : this.getAiPromptFields(parserConfig, dataFlags);
         const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
 
         // Build DATA PROVIDED section based on flags
@@ -5728,9 +5765,19 @@ TEXT:
         const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
         const endTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.endTime, aiEvent.end, ''));
 
+        // Check if start/end were explicitly provided (full datetime format)
+        // These contain full datetime like "2026-05-12T22:30" or "2026-05-12 22:30" - use directly without combining
+        const startProvided = aiEvent.start && this.parseDateValue(aiEvent.start, timezone) !== null;
+        const endProvided = aiEvent.end && this.parseDateValue(aiEvent.end, timezone) !== null;
+
         // Combine date and time if we have split fields
-        const combinedStartDate = startTimeRaw ? combineDateAndTime(startDateRaw, startTimeRaw) : startDateRaw;
-        const combinedEndDate = endTimeRaw ? combineDateAndTime(endDateRaw, endTimeRaw) : endDateRaw;
+        // If start/end was provided, use them directly; otherwise combine split fields
+        const combinedStartDate = startProvided
+            ? this.parseDateValue(aiEvent.start, timezone)
+            : (startTimeRaw ? combineDateAndTime(startDateRaw, startTimeRaw) : startDateRaw);
+        const combinedEndDate = endProvided
+            ? this.parseDateValue(aiEvent.end, timezone)
+            : (endTimeRaw ? combineDateAndTime(endDateRaw, endTimeRaw) : endDateRaw);
 
         // For single-day events, if startDate is missing but endDate exists, use endDate as start
         const finalStartDate = combinedStartDate || combinedEndDate;

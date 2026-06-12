@@ -35,13 +35,17 @@ const EVENT_KEY_ALIASES = {
     city: 'city',
 
     startdate: 'startDate',
-    start: 'startDate',
     starttime: 'startTime',
     date: 'date',
     eventdate: 'date',
     enddate: 'endDate',
-    end: 'endDate',
     endtime: 'endTime',
+    startDate: 'startDate',
+    startTime: 'startTime',
+    endDate: 'endDate',
+    endTime: 'endTime',
+    start: 'start',
+    end: 'end',
 
     recurrence: 'recurrence',
     rrule: 'recurrence',
@@ -127,7 +131,7 @@ const DEFAULT_NOTES_EXCLUDED_FIELDS = new Set([
     'url',
     'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action',
     '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
-    '_original', '_mergeInfo', '_changes', '_mergeDiff',
+    '_original', '_mergeInfo', '_changes', '_mergeDiff', '_staticFields',
     'originalTitle', 'name',
     'recurrenceId', 'recurrenceIdTimezone', 'sequence',
     'lat', 'lng',
@@ -350,12 +354,16 @@ const AI_PROMPT_FIELDS = [
     { param: 'name',    desc: 'The formal title of the event as stated.' },
     { param: 'short',   desc: 'If the title is long, a shorter version to display as a reference. For long words, add - to help break them up). It will not show unless we need two lines. If you want a hyphen all the time, add \\- instead. The \\ will not show.' },
     { param: 'desc',    desc: 'Event description/tagline from source text; do not invent details.' },
-    { param: 'city',    desc: 'City key' },
+    { param: 'city',    desc: 'City name (e.g. "new york", "los angeles"). Return lowercase city name only.' },
     { param: 'venue',   desc: 'Venue or bar name exactly as stated. Do not infer using address or coordinates.' },
     { param: 'addr',    desc: 'Street address exactly as shown. Do not infer using coordinates, bar/venue name, or other data.' },
     { param: 'coords',  desc: 'Coordinates if they are explicitly stored in the page on its own in the format "lat,lng", not using the address or bar/venue' },
-    { param: 'start',    desc: 'Start datetime. Use YYYY-MM-DDTHH:MM for local time. If the source explicitly includes a UTC offset or Z suffix, preserve it (e.g. YYYY-MM-DDTHH:MM-05:00 or YYYY-MM-DDTHH:MMZ).' },
-    { param: 'end',      desc: 'End datetime. Use YYYY-MM-DDTHH:MM for local time. If the source explicitly includes a UTC offset or Z suffix, preserve it (e.g. YYYY-MM-DDTHH:MM-05:00 or YYYY-MM-DDTHH:MMZ).' },
+    { param: 'startDate', desc: 'Start date only. Use YYYY-MM-DD format. If the source shows "May 12, 2026" or similar, convert to YYYY-MM-DD.' },
+    { param: 'startTime', desc: 'Start time only. Use HH:MM 24-hour format (e.g. "22:30" for 10:30pm, "03:00" for 3am). Handle formats like "01H", "10PM", "3:30 AM", etc.' },
+    { param: 'endDate', desc: 'End date only. Use YYYY-MM-DD format. If the source shows "May 12, 2026" or similar, convert to YYYY-MM-DD.' },
+    { param: 'endTime', desc: 'End time only. Use HH:MM 24-hour format (e.g. "22:30" for 10:30pm, "03:00" for 3am). Handle formats like "01H", "10PM", "3:30 AM", etc.' },
+    { param: 'start',   desc: 'Start datetime. Use YYYY-MM-DDTHH:MM for local time. If the source explicitly includes a UTC offset or Z suffix, preserve it (e.g. YYYY-MM-DDTHH:MM-05:00 or YYYY-MM-DDTHH:MMZ).' },
+    { param: 'end',     desc: 'End datetime. Use YYYY-MM-DDTHH:MM for local time. If the source explicitly includes a UTC offset or Z suffix, preserve it (e.g. YYYY-MM-DDTHH:MM-05:00 or YYYY-MM-DDTHH:MMZ).' },
     { param: 'rrule',   desc: 'Valid iCal RRULE value (e.g. FREQ=WEEKLY;BYDAY=FR) ONLY when an explicit repeat schedule is stated; never infer from vague words like "returns" or "back", and never return natural-language/date-range text' },
     { param: 'web',     desc: 'Event or organizer website URL from page metadata/content.' },
     { param: 'tickets', desc: 'Ticket purchase URL only when explicitly present' },
@@ -408,12 +416,31 @@ const AI_FIELD_SIGNAL_REGEXES = {
     start: [
         '\\bstart(?:_|\\s|-)?date\\b',
         '\\bstart(?:_|\\s|-)?time\\b',
+        '\\bstart(?:_|\\s|-)?datetime\\b',
+        '\\bstart\\b',
         '\\bdoor(?:_|\\s|-)?time\\b',
         '\\bdatetime\\b'
     ],
+    startDate: [
+        '\\bstart(?:_|\\s|-)?date\\b',
+        '\\bdate\\b'
+    ],
+    startTime: [
+        '\\bstart(?:_|\\s|-)?time\\b',
+        '\\btime\\b'
+    ],
     end: [
         '\\bend(?:_|\\s|-)?date\\b',
-        '\\bend(?:_|\\s|-)?time\\b'
+        '\\bend(?:_|\\s|-)?time\\b',
+        '\\bend(?:_|\\s|-)?datetime\\b',
+        '\\bend\\b'
+    ],
+    endDate: [
+        '\\bend(?:_|\\s|-)?date\\b'
+    ],
+    endTime: [
+        '\\bend(?:_|\\s|-)?time\\b',
+        '\\btime\\b'
     ],
     rrule: [
         '\\brrule\\b',

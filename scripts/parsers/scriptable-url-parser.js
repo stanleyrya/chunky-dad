@@ -379,14 +379,30 @@ class ScriptableUrlParser {
         const startTime = fields.startTime || null;
         const endTime = fields.endTime || null;
 
+        // Handle full datetime fields (start/end) - these take precedence if present
+        const startValue = fields.start || null;
+        const endValue = fields.end || null;
+
         let explicitStartDate = false;
         let explicitEndDate = false;
 
-        let startDate = this.parseDate(startDateValue);
-        if (startDate && startDateValue !== null && startDateValue !== undefined) {
-            explicitStartDate = true;
+        // Check start/end (full datetime format) first if present
+        let startDate = null;
+        if (startValue) {
+            startDate = this.parseDate(startValue);
+            if (startDate) {
+                explicitStartDate = true;
+            }
+        }
+        // Fall back to startDate if start is not provided
+        if (!startDate) {
+            startDate = this.parseDate(startDateValue);
+            if (startDate && startDateValue !== null && startDateValue !== undefined) {
+                explicitStartDate = true;
+            }
         }
 
+        // Parse date + time split if start not found
         if (!startDate && dateValue && startTime) {
             startDate = this.parseDate(`${dateValue}T${startTime}`);
             explicitStartDate = Boolean(startDate);
@@ -399,11 +415,23 @@ class ScriptableUrlParser {
             }
         }
 
-        let endDate = this.parseDate(endDateValue);
-        if (endDate && endDateValue !== null && endDateValue !== undefined) {
-            explicitEndDate = true;
+        // Check end/end (full datetime format) first if present
+        let endDate = null;
+        if (endValue) {
+            endDate = this.parseDate(endValue);
+            if (endDate) {
+                explicitEndDate = true;
+            }
+        }
+        // Fall back to endDate if end is not provided
+        if (!endDate) {
+            endDate = this.parseDate(endDateValue);
+            if (endDate && endDateValue !== null && endDateValue !== undefined) {
+                explicitEndDate = true;
+            }
         }
 
+        // Parse date + time split if end not found
         if (!endDate && dateValue && endTime) {
             endDate = this.parseDate(`${dateValue}T${endTime}`);
             explicitEndDate = Boolean(endDate);
@@ -414,13 +442,13 @@ class ScriptableUrlParser {
             const durationHours = this.parseNumber(fields.durationHours);
             const duration = this.parseNumber(fields.duration);
 
-            if (durationMinutes) {
+            if (durationMinutes !== null) {
                 endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
                 explicitEndDate = true;
-            } else if (durationHours) {
+            } else if (durationHours !== null) {
                 endDate = new Date(startDate.getTime() + durationHours * 60 * 60 * 1000);
                 explicitEndDate = true;
-            } else if (duration) {
+            } else if (duration !== null) {
                 endDate = new Date(startDate.getTime() + duration * 60 * 1000);
                 explicitEndDate = true;
             }

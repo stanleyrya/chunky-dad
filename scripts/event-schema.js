@@ -35,13 +35,17 @@ const EVENT_KEY_ALIASES = {
     city: 'city',
 
     startdate: 'startDate',
-    start: 'startDate',
     starttime: 'startTime',
     date: 'date',
     eventdate: 'date',
     enddate: 'endDate',
-    end: 'endDate',
     endtime: 'endTime',
+    startDate: 'startDate',
+    startTime: 'startTime',
+    endDate: 'endDate',
+    endTime: 'endTime',
+    start: 'start',
+    end: 'end',
 
     recurrence: 'recurrence',
     rrule: 'recurrence',
@@ -358,6 +362,8 @@ const AI_PROMPT_FIELDS = [
     { param: 'startTime', desc: 'Start time only. Use HH:MM 24-hour format (e.g. "22:30" for 10:30pm, "03:00" for 3am). Handle formats like "01H", "10PM", "3:30 AM", etc.' },
     { param: 'endDate', desc: 'End date only. Use YYYY-MM-DD format. If the source shows "May 12, 2026" or similar, convert to YYYY-MM-DD.' },
     { param: 'endTime', desc: 'End time only. Use HH:MM 24-hour format (e.g. "22:30" for 10:30pm, "03:00" for 3am). Handle formats like "01H", "10PM", "3:30 AM", etc.' },
+    { param: 'start',   desc: 'Start datetime. Use YYYY-MM-DDTHH:MM for local time. If the source explicitly includes a UTC offset or Z suffix, preserve it (e.g. YYYY-MM-DDTHH:MM-05:00 or YYYY-MM-DDTHH:MMZ).' },
+    { param: 'end',     desc: 'End datetime. Use YYYY-MM-DDTHH:MM for local time. If the source explicitly includes a UTC offset or Z suffix, preserve it (e.g. YYYY-MM-DDTHH:MM-05:00 or YYYY-MM-DDTHH:MMZ).' },
     { param: 'rrule',   desc: 'Valid iCal RRULE value (e.g. FREQ=WEEKLY;BYDAY=FR) ONLY when an explicit repeat schedule is stated; never infer from vague words like "returns" or "back", and never return natural-language/date-range text' },
     { param: 'web',     desc: 'Event or organizer website URL from page metadata/content.' },
     { param: 'tickets', desc: 'Ticket purchase URL only when explicitly present' },
@@ -410,6 +416,8 @@ const AI_FIELD_SIGNAL_REGEXES = {
     start: [
         '\\bstart(?:_|\\s|-)?date\\b',
         '\\bstart(?:_|\\s|-)?time\\b',
+        '\\bstart(?:_|\\s|-)?datetime\\b',
+        '\\bstart\\b',
         '\\bdoor(?:_|\\s|-)?time\\b',
         '\\bdatetime\\b'
     ],
@@ -423,7 +431,9 @@ const AI_FIELD_SIGNAL_REGEXES = {
     ],
     end: [
         '\\bend(?:_|\\s|-)?date\\b',
-        '\\bend(?:_|\\s|-)?time\\b'
+        '\\bend(?:_|\\s|-)?time\\b',
+        '\\bend(?:_|\\s|-)?datetime\\b',
+        '\\bend\\b'
     ],
     endDate: [
         '\\bend(?:_|\\s|-)?date\\b'
