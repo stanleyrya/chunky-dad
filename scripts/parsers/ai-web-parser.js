@@ -5938,12 +5938,12 @@ TEXT:
         const combinedStartDate = startProvided
             ? this.parseDateValue(aiEvent.start, timezone)
             : (startTimeRaw && startDateRaw
-                ? this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + startTimeRaw, timezone)
+                ? (this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + startTimeRaw, timezone) || combineDateAndTime(startDateRaw, startTimeRaw))
                 : (startTimeRaw && !startDateRaw ? this.parseDateValue(startTimeRaw, timezone) : startDateRaw));
         const combinedEndDate = endProvided
             ? this.parseDateValue(aiEvent.end, timezone)
             : (endTimeRaw && endDateRaw
-                ? this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + endTimeRaw, timezone)
+                ? (this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + endTimeRaw, timezone) || combineDateAndTime(endDateRaw, endTimeRaw))
                 : (endTimeRaw && !endDateRaw ? this.parseDateValue(endTimeRaw, timezone) : endDateRaw));
 
         console.log(`🤖 AI Web: Combined dates — combinedStartDate=${combinedStartDate instanceof Date ? combinedStartDate.toISOString() : combinedStartDate}, combinedEndDate=${combinedEndDate instanceof Date ? combinedEndDate.toISOString() : combinedEndDate}`);
