@@ -4632,6 +4632,22 @@ class AiWebParser {
         return allFields.map(field => `- ${field}: ${this.getFieldContext(field, cityConfig)}`).join('\n');
     }
 
+
+    buildContextPrePrompt(snippet) {
+        return `Analyze this raw event data. Find any hidden times or confusing dates and format them explicitly.
+- If you see a time like "01H" or "20h30", rewrite it as "01:00 AM" or "8:30 PM".
+- Identify the Main Event Name, its Specific Date, and whether there is a larger festival date range mentioned.
+
+Output ONLY this format:
+CORRECTIONS:
+- Cleaned Times: [List them here]
+- Core Event Date: [The single specific date]
+- Parent Festival Dates: [If any, otherwise 'None']
+
+TEXT:
+${String(snippet || '')}`;
+    }
+
     buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, variant = 'default', dataFlags = {}) {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
@@ -4774,9 +4790,23 @@ TEXT:
         const dataFlags = options && options.dataFlags && typeof options.dataFlags === 'object' ? options.dataFlags : {};
         const useAlternate = options && options.promptVariant === 'alternate';
 
+        let processedSnippet = snippet;
+
+        const hasStructuredData = !!dataFlags.jsonLd || !!dataFlags.meta;
+        const hasUnstructuredData = !!dataFlags.ocr || !!dataFlags.segment || !!dataFlags.content;
+
+        if (hasUnstructuredData && !hasStructuredData) {
+            console.log(`🤖 AI Web: Running context pre-extraction pass${passSuffix}`);
+            const contextPrompt = this.buildContextPrePrompt(snippet);
+            const contextResponse = await this.callAiGenerate(aiConfig, contextPrompt, 'context-prep');
+            if (contextResponse) {
+                processedSnippet = `[PRE-PARSED HELPER DATA - HIGHEST PRIORITY]\n${contextResponse.trim()}\n\nCONTENT\n${snippet}`;
+            }
+        }
+
         // PASS 1: Try standard extraction
         console.log(`🤖 AI Web: Starting extraction pass${passSuffix}`);
-        let extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, useAlternate ? 'alternate' : 'default', dataFlags);
+        let extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, useAlternate ? 'alternate' : 'default', dataFlags);
         let rawResponse = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
         if (!rawResponse) return null;
         let event = this.parseAiEventResponse(rawResponse);
@@ -4788,7 +4818,7 @@ TEXT:
         // PASS 2: Try alternate extraction if first pass failed and alternate is enabled
         if (useAlternate) {
             console.log(`🤖 AI Web: Standard pass${passSuffix} failed; trying alternate prompt`);
-            extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, 'alternate', dataFlags);
+            extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, 'alternate', dataFlags);
             rawResponse = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
             if (!rawResponse) return null;
             event = this.parseAiEventResponse(rawResponse);
