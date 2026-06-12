@@ -2206,7 +2206,8 @@ class AiWebParser {
         if (!normalizedUrl) {
             throw new Error('Missing image URL');
         }
-        if (typeof Request !== 'undefined') {
+        const isScriptable = typeof Request !== 'undefined' && typeof Data !== 'undefined' && typeof FileManager !== 'undefined';
+        if (isScriptable) {
             const request = new Request(normalizedUrl);
             request.timeoutInterval = timeoutSeconds;
             const image = await request.loadImage();
@@ -3366,11 +3367,19 @@ class AiWebParser {
 
     getAiConfig(parserConfig = {}) {
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        const provider = String(aiConfig.provider || 'ollama');
+        const defaultEndpoint = provider === 'openai'
+            ? 'https://api.openai.com/v1/chat/completions'
+            : 'http://desktop.taila7523c.ts.net:11434/api/generate';
+        const defaultModel = provider === 'openai'
+            ? 'gpt-4o'
+            : 'qwen3.5:4b';
+
         return {
             enabled: aiConfig.enabled !== false,
-            provider: String(aiConfig.provider || 'ollama'),
-            endpoint: String(aiConfig.endpoint || 'http://desktop.taila7523c.ts.net:11434/api/generate'),
-            model: String(aiConfig.model || 'qwen3.5:4b'),
+            provider: provider,
+            endpoint: String(aiConfig.endpoint || defaultEndpoint),
+            model: String(aiConfig.model || defaultModel),
             payloadMode: this.normalizePayloadMode(aiConfig.payloadMode),
             maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 6000,
             numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 8192,
@@ -4819,13 +4828,21 @@ TEXT:
         try {
             let responseText = null;
             let responseJson = null;
-            if (typeof Request !== 'undefined') {
+            const isScriptable = typeof Request !== 'undefined' && typeof Data !== 'undefined' && typeof FileManager !== 'undefined';
+            if (isScriptable) {
                 const request = new Request(aiConfig.endpoint);
                 request.method = 'POST';
                 request.headers = { 'Content-Type': 'application/json' };
                 request.body = JSON.stringify(payload);
                 request.timeoutInterval = aiConfig.timeoutSeconds;
                 responseText = await request.loadString();
+                if (request.response && request.response.statusCode >= 400) {
+                    console.warn(`🤖 AI Web: AI request${label} returned HTTP ${request.response.statusCode} after ${Date.now() - startTime}ms`);
+                    if (responseText) {
+                        console.log(`🤖 AI Web: Error response body${label}\n${responseText}`);
+                    }
+                    return null;
+                }
             } else if (typeof fetch === 'function') {
                 const response = await fetch(aiConfig.endpoint, {
                     method: 'POST',
@@ -4833,11 +4850,14 @@ TEXT:
                     body: JSON.stringify(payload),
                     signal: AbortSignal.timeout(aiConfig.timeoutSeconds * 1000)
                 });
+                responseText = await response.text();
                 if (!response.ok) {
                     console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
+                    if (responseText) {
+                        console.log(`🤖 AI Web: Error response body${label}\n${responseText}`);
+                    }
                     return null;
                 }
-                responseText = await response.text();
             } else {
                 console.warn(`🤖 AI Web: AI request${label} failed - no HTTP client available (Request/fetch missing)`);
                 return null;
@@ -4915,17 +4935,21 @@ TEXT:
                 userContent = prompt;
             }
 
-            return {
+            const payload = {
                 model: aiConfig.model,
                 messages: [
                     { role: "user", content: userContent }
                 ],
                 temperature: aiConfig.temperature,
-                max_tokens: aiConfig.numPredict,
-                response_format: aiConfig.openai?.responseFormat
-                    ? { type: aiConfig.openai.responseFormat }
-                    : { type: "json_object" }
+                max_tokens: Math.floor(aiConfig.numPredict)
             };
+
+            const responseFormat = aiConfig.openai?.responseFormat;
+            if (responseFormat !== 'none') {
+                payload.response_format = { type: responseFormat || "json_object" };
+            }
+
+            return payload;
         }
 
         throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
