@@ -190,7 +190,6 @@ const scraperCities = {
       "miami",
       "south beach",
       "miami beach",
-      "fort lauderdale",
       "key west"
     ]
   },
@@ -221,6 +220,122 @@ const scraperCities = {
     "timezone": "America/Los_Angeles",
     "patterns": [
       "sacramento"
+    ]
+  },
+  "poconos": {
+    "calendar": "chunky-dad-poconos",
+    "timezone": "America/New_York",
+    "patterns": [
+      "poconos",
+      "pocono"
+    ]
+  },
+  "torremolinos": {
+    "calendar": "chunky-dad-torremolinos",
+    "timezone": "Europe/Madrid",
+    "patterns": [
+      "torremolinos"
+    ]
+  },
+  "fort-lauderdale": {
+    "calendar": "chunky-dad-fort-lauderdale",
+    "timezone": "America/New_York",
+    "patterns": [
+      "fort lauderdale",
+      "fll",
+      "ft lauderdale"
+    ]
+  },
+  "montreal": {
+    "calendar": "chunky-dad-montreal",
+    "timezone": "America/Toronto",
+    "patterns": [
+      "montreal"
+    ]
+  },
+  "fire-island": {
+    "calendar": "chunky-dad-fire-island",
+    "timezone": "America/New_York",
+    "patterns": [
+      "fire island",
+      "cherry grove",
+      "fire island pines"
+    ]
+  },
+  "vancouver": {
+    "calendar": "chunky-dad-vancouver",
+    "timezone": "America/Vancouver",
+    "patterns": [
+      "vancouver",
+      "yvr"
+    ]
+  },
+  "bangkok": {
+    "calendar": "chunky-dad-bangkok",
+    "timezone": "Asia/Bangkok",
+    "patterns": [
+      "bangkok",
+      "bkk"
+    ]
+  },
+  "paris": {
+    "calendar": "chunky-dad-paris",
+    "timezone": "Europe/Paris",
+    "patterns": [
+      "paris"
+    ]
+  },
+  "manchester": {
+    "calendar": "chunky-dad-manchester",
+    "timezone": "Europe/London",
+    "patterns": [
+      "manchester",
+      "mcr"
+    ]
+  },
+  "dublin": {
+    "calendar": "chunky-dad-dublin",
+    "timezone": "Europe/Dublin",
+    "patterns": [
+      "dublin"
+    ]
+  },
+  "mexico-city": {
+    "calendar": "chunky-dad-mexico-city",
+    "timezone": "America/Mexico_City",
+    "patterns": [
+      "mexico city",
+      "cdmx"
+    ]
+  },
+  "madrid": {
+    "calendar": "chunky-dad-madrid",
+    "timezone": "Europe/Madrid",
+    "patterns": [
+      "madrid"
+    ]
+  },
+  "amsterdam": {
+    "calendar": "chunky-dad-amsterdam",
+    "timezone": "Europe/Amsterdam",
+    "patterns": [
+      "amsterdam"
+    ]
+  },
+  "sao-paulo": {
+    "calendar": "chunky-dad-sao-paulo",
+    "timezone": "America/Sao_Paulo",
+    "patterns": [
+      "sao paulo",
+      "são paulo"
+    ]
+  },
+  "bogota": {
+    "calendar": "chunky-dad-bogota",
+    "timezone": "America/Bogota",
+    "patterns": [
+      "bogota",
+      "bogotá"
     ]
   }
 };
