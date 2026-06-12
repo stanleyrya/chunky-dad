@@ -366,7 +366,13 @@ class AiWebParser {
             ...htmlData,
             ocrResults: ocrResults
         };
-        const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields);
+        // For single-page events, combine OCR flags with any existing structured data flags
+        // If OCR is present, add ocr flag; preserve htmlData.dataFlags if present
+        const dataFlags = {
+            ...(ocrResults && ocrResults.length > 0 ? { ocr: true } : {}),
+            ...(htmlData.dataFlags || {})
+        };
+        const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields, dataFlags);
         return event ? [event] : [];
     }
 
@@ -381,23 +387,30 @@ class AiWebParser {
         }
         console.log(`🤖 AI Web: multi-event-page split into ${segments.length} candidate segment${segments.length === 1 ? '' : 's'}`);
 
+        // Segments are unstructured data (page content + OCR), so always use split fields
+        const segmentDataFlags = { ocr: true, segment: true };
+
         const events = [];
         for (let i = 0; i < segments.length; i++) {
-            const segment = segments[i];
-            const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults);
-            const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields);
-            if (!event) continue;
-            event._multiEventSegment = {
-                index: i + 1,
-                total: segments.length,
-                lineCount: segment.lines.length
-            };
-            events.push(event);
+            try {
+                const segment = segments[i];
+                const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults);
+                const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields, segmentDataFlags);
+                if (!event) continue;
+                event._multiEventSegment = {
+                    index: i + 1,
+                    total: segments.length,
+                    lineCount: segment.lines.length
+                };
+                events.push(event);
+            } catch (err) {
+                console.warn(`🤖 AI Web: Segment ${i + 1}/${segments.length} extraction failed: ${err.message}`);
+            }
         }
         return events;
     }
 
-    async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields) {
+    async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields, dataFlags = null) {
         // Add OCR results to prompt context by prepending to HTML
         const ocrResults = htmlData && htmlData.ocrResults;
         let promptHtmlData = htmlData;
@@ -419,7 +432,9 @@ class AiWebParser {
             };
         }
 
-        const aiEvent = await this.getAiEvent(promptHtmlData, parserConfig, cityConfig, promptFields);
+        // Use pre-computed dataFlags if available (e.g., from segments), otherwise compute from htmlData
+        const computedDataFlags = htmlData.dataFlags || dataFlags || {};
+        const aiEvent = await this.getAiEvent(promptHtmlData, parserConfig, cityConfig, promptFields, computedDataFlags);
         if (!aiEvent) {
             return null;
         }
@@ -493,7 +508,8 @@ class AiWebParser {
             html: contextLines.length > 0 ? `${contextLines.join('\n')}\n${segmentContent}` : segmentContent,
             aiEvent: null,
             aiExtraction: null,
-            ocrResults: segmentOcrResults
+            ocrResults: segmentOcrResults,
+            dataFlags: { ocr: true, segment: true }  // Segments are unstructured data
         };
     }
 
@@ -3283,7 +3299,7 @@ class AiWebParser {
         return result;
     }
 
-    async getAiEvent(htmlData, parserConfig, cityConfig, selectedPromptFields = null) {
+    async getAiEvent(htmlData, parserConfig, cityConfig, selectedPromptFields = null, dataFlags = {}) {
         if (!htmlData || typeof htmlData !== 'object') return null;
         if (htmlData.aiEvent && typeof htmlData.aiEvent === 'object') return htmlData.aiEvent;
         if (htmlData.aiExtraction && typeof htmlData.aiExtraction.event === 'object') {
@@ -3295,7 +3311,7 @@ class AiWebParser {
         }
         const promptFields = Array.isArray(selectedPromptFields) && selectedPromptFields.length > 0
             ? selectedPromptFields
-            : this.getAiPromptFields(parserConfig);
+            : this.getAiPromptFields(parserConfig, dataFlags);
         if (promptFields.length === 0) {
             console.warn('🤖 AI Web: No eligible AI prompt fields configured - skipping extraction');
             return null;
@@ -5642,10 +5658,10 @@ TEXT:
         return normalized;
     }
 
-    isPromptFieldRequested(fieldName, parserConfig = {}, promptFields = null) {
+    isPromptFieldRequested(fieldName, parserConfig = {}, promptFields = null, dataFlags = {}) {
         const requestedFields = Array.isArray(promptFields) && promptFields.length > 0
             ? promptFields
-            : this.getAiPromptFields(parserConfig);
+            : this.getAiPromptFields(parserConfig, dataFlags);
         const requestedSet = new Set(requestedFields.map(field => this.normalizePromptFieldName(field)));
         return requestedSet.has(this.normalizePromptFieldName(fieldName));
     }
@@ -5751,7 +5767,9 @@ TEXT:
             ''
         );
         const aiPrompts = Array.isArray(aiEvent.__aiPrompts) ? aiEvent.__aiPrompts.filter(entry => entry && entry.prompt) : [];
-        const recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields)
+        // Pass dataFlags from htmlData if available, otherwise default to empty object
+        const dataFlags = htmlData && htmlData.dataFlags ? htmlData.dataFlags : {};
+        const recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields, dataFlags)
             ? this.normalizeRruleValue(this.firstNonEmpty(
                 aiEvent.recurrenceRule,
                 aiEvent.rrule,
