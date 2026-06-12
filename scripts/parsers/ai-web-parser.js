@@ -377,7 +377,11 @@ class AiWebParser {
             ...(ocrResults && ocrResults.length > 0 ? { ocr: true } : {}),
             ...(htmlData.dataFlags || {})
         };
-        const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields, dataFlags);
+
+        // Recalculate prompt fields because OCR results might have changed the preferred date format (e.g. from start/end to split fields)
+        const adjustedPromptFields = this.getAiPromptFields(parserConfig, dataFlags);
+
+        const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, adjustedPromptFields, dataFlags);
         return event ? [event] : [];
     }
 
@@ -394,13 +398,14 @@ class AiWebParser {
 
         // Segments are unstructured data (page content + OCR), so always use split fields
         const segmentDataFlags = { ocr: true, segment: true };
+        const segmentPromptFields = this.getAiPromptFields(parserConfig, segmentDataFlags);
 
         const events = [];
         for (let i = 0; i < segments.length; i++) {
             try {
                 const segment = segments[i];
                 const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults);
-                const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, promptFields, segmentDataFlags);
+                const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags);
                 if (!event) continue;
                 event._multiEventSegment = {
                     index: i + 1,
@@ -439,6 +444,9 @@ class AiWebParser {
 
         // Use pre-computed dataFlags if available (e.g., from segments), otherwise compute from htmlData
         const computedDataFlags = htmlData.dataFlags || dataFlags || {};
+
+        console.log(`🤖 AI Web: Using extraction fields: ${Array.isArray(promptFields) ? promptFields.join(', ') : 'none'}`);
+
         const aiEvent = await this.getAiEvent(promptHtmlData, parserConfig, cityConfig, promptFields, computedDataFlags);
         if (!aiEvent) {
             return null;
@@ -4486,24 +4494,11 @@ class AiWebParser {
         const hasMeta = !!dataFlags.meta;
 
         // For structured data (JSON-LD/meta), prefer start/end fields over split fields
-        // For unstructured data (OCR/content), use split fields
-        if (hasJsonLd || hasMeta) {
-            // Structured data - prefer start/end, remove split fields
-            const splitDateFields = ['startDate', 'startTime', 'endDate', 'endTime'];
-            const originalSelected = [...selected];
-            selected = selected.filter(field => !splitDateFields.includes(field));
-            if (selected.length !== originalSelected.length) {
-                console.log('🤖 AI Web: Removed split date fields (using start/end for structured data)');
-            }
-
-            // Auto-add end when start is selected
-            const hasStartSelected = selected.some(field => this.normalizePromptFieldName(field) === 'start');
-            const hasEndSelected = selected.some(field => this.normalizePromptFieldName(field) === 'end');
-            if (hasStartSelected && !hasEndSelected) {
-                selected.push('end');
-                console.log('🤖 AI Web: Added special prompt field => end (because start was selected)');
-            }
-        } else {
+        // For unstructured data (OCR/content/segments), use split fields
+        // IMPORTANT: OCR/Segment context (unstructured) takes precedence over structured data flags
+        // because segments/OCR text are often mixed into pages that otherwise have structured data.
+        if (hasOcr) {
+            console.log(`🤖 AI Web: Using split fields (startDate/startTime/etc) because OCR or segment data is present (hasOcr=${!!dataFlags.ocr}, hasSegment=${!!dataFlags.segment})`);
             // Unstructured data - prefer split fields, remove start/end
             const fullDateFields = ['start', 'end'];
             const originalSelected = [...selected];
@@ -4537,6 +4532,38 @@ class AiWebParser {
                 selected.push('endDate');
                 console.log('🤖 AI Web: Added split field => endDate (because end was selected)');
             }
+        } else if (hasJsonLd || hasMeta) {
+            console.log(`🤖 AI Web: Using full datetime fields (start/end) because structured data is present (hasJsonLd=${hasJsonLd}, hasMeta=${hasMeta})`);
+            // Structured data - prefer start/end, remove split fields
+            const splitDateFields = ['startDate', 'startTime', 'endDate', 'endTime'];
+            const originalSelected = [...selected];
+            const hasStartDateRequested = selected.some(field => this.normalizePromptFieldName(field) === 'startdate');
+            const hasStartTimeRequested = selected.some(field => this.normalizePromptFieldName(field) === 'starttime');
+            const hasEndDateRequested = selected.some(field => this.normalizePromptFieldName(field) === 'enddate');
+            const hasEndTimeRequested = selected.some(field => this.normalizePromptFieldName(field) === 'endtime');
+
+            selected = selected.filter(field => !splitDateFields.includes(field));
+            if (selected.length !== originalSelected.length) {
+                console.log('🤖 AI Web: Removed split date fields (using start/end for structured data)');
+            }
+
+            // Ensure start/end are present if any split fields were requested
+            const hasStartSelected = selected.some(field => this.normalizePromptFieldName(field) === 'start');
+            if (!hasStartSelected && (hasStartDateRequested || hasStartTimeRequested)) {
+                selected.push('start');
+                console.log('🤖 AI Web: Added full datetime field => start (because split fields were requested)');
+            }
+
+            const hasEndSelected = selected.some(field => this.normalizePromptFieldName(field) === 'end');
+            if (!hasEndSelected && (hasEndDateRequested || hasEndTimeRequested || hasStartSelected)) {
+                selected.push('end');
+                console.log('🤖 AI Web: Added full datetime field => end (because split fields or start was requested)');
+            }
+        } else {
+            console.log('🤖 AI Web: Defaulting to split fields (no structured data or OCR context detected)');
+            // Default to split fields (same as unstructured)
+            const fullDateFields = ['start', 'end'];
+            selected = selected.filter(field => !fullDateFields.includes(field));
         }
         const aiPromptFields = selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
