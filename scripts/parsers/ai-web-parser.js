@@ -2670,20 +2670,7 @@ class AiWebParser {
 
         const base64Image = await this.loadImageAsBase64(imageUrl, ocrConfig.timeoutSeconds);
         console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars)`);
-        const payload = {
-            model: ocrConfig.model,
-            prompt: ocrConfig.prompt,
-            images: [base64Image],
-            format: 'json',
-            stream: false,
-            think: ocrConfig.think,
-            keep_alive: ocrConfig.keepAlive,
-            options: {
-                num_ctx: ocrConfig.numCtx,
-                num_predict: ocrConfig.numPredict,
-                temperature: ocrConfig.temperature
-            }
-        };
+        const payload = this.buildAiPayload(ocrConfig, ocrConfig.prompt, base64Image);
         const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, ocrConfig.prompt);
         if (!rawResponse) return null;
         const parsed = this.parseOcrResponseWithClassification(rawResponse);
@@ -3381,6 +3368,7 @@ class AiWebParser {
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
         return {
             enabled: aiConfig.enabled !== false,
+            provider: String(aiConfig.provider || 'ollama'),
             endpoint: String(aiConfig.endpoint || 'http://desktop.taila7523c.ts.net:11434/api/generate'),
             model: String(aiConfig.model || 'qwen3.5:4b'),
             payloadMode: this.normalizePayloadMode(aiConfig.payloadMode),
@@ -3390,7 +3378,9 @@ class AiWebParser {
             temperature: Number.isFinite(Number(aiConfig.temperature)) ? Number(aiConfig.temperature) : 0,
             think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
-            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m'
+            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
+            ollama: aiConfig.ollama && typeof aiConfig.ollama === 'object' ? aiConfig.ollama : {},
+            openai: aiConfig.openai && typeof aiConfig.openai === 'object' ? aiConfig.openai : {}
         };
     }
 
@@ -3418,6 +3408,7 @@ class AiWebParser {
         };
         return {
             enabled: rawOcr.enabled !== false,
+            provider: String(rawOcr.provider || baseAiConfig.provider || 'ollama'),
             endpoint: String(rawOcr.endpoint || baseAiConfig.endpoint || ''),
             model: String(rawOcr.model || this.defaultOcrModel),
             prompt: String(rawOcr.prompt || this.defaultOcrPrompt),
@@ -3430,7 +3421,9 @@ class AiWebParser {
             maxImages,
             maxTextChars,
             cacheEnabled: rawOcr.cache !== false,
-            requireMissingFields: rawOcr.requireMissingFields !== false
+            requireMissingFields: rawOcr.requireMissingFields !== false,
+            ollama: rawOcr.ollama && typeof rawOcr.ollama === 'object' ? rawOcr.ollama : (baseAiConfig.ollama || {}),
+            openai: rawOcr.openai && typeof rawOcr.openai === 'object' ? rawOcr.openai : (baseAiConfig.openai || {})
         };
     }
 
@@ -4818,7 +4811,7 @@ TEXT:
         if (prompt) {
             this.recordAiPrompt(prompt, passLabel, aiConfig);
         }
-        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, stream: ${payload.stream}, prompt: ${promptChars} chars`);
+        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, provider: ${aiConfig.provider}, prompt: ${promptChars} chars`);
         if (prompt) {
             console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
         }
@@ -4859,10 +4852,11 @@ TEXT:
                 }
             }
             const elapsed = Date.now() - startTime;
-            if (responseJson && typeof responseJson.response === 'string' && responseJson.response.length > 0) {
-                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseJson.response.length} chars`);
-                console.log(`🤖 AI Web: Model response text${label}\n${responseJson.response}`);
-                return responseJson.response;
+            const responseContent = this.extractAiResponse(aiConfig, responseJson);
+            if (responseContent && typeof responseContent === 'string' && responseContent.length > 0) {
+                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseContent.length} chars`);
+                console.log(`🤖 AI Web: Model response text${label}\n${responseContent}`);
+                return responseContent;
             }
             const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
@@ -4878,21 +4872,85 @@ TEXT:
         }
     }
 
+    /**
+     * Maps common inputs, images, and provider-specific configurations into the exact payload.
+     * @param {Object} aiConfig - Your unified configuration object
+     * @param {string} prompt - The text extraction prompt
+     * @param {string|null} base64Image - Optional base64 image data string
+     */
+    buildAiPayload(aiConfig, prompt, base64Image = null) {
+        if (aiConfig.provider === 'ollama') {
+            const payload = {
+                model: aiConfig.model,
+                prompt: prompt,
+                format: "json",
+                stream: false,
+                think: aiConfig.think,
+                keep_alive: aiConfig.keepAlive,
+                options: {
+                    num_ctx: aiConfig.numCtx,
+                    num_predict: aiConfig.numPredict,
+                    temperature: aiConfig.temperature
+                }
+            };
+            if (base64Image) {
+                payload.images = [base64Image];
+            }
+            return payload;
+        }
+
+        if (aiConfig.provider === 'openai') {
+            let userContent;
+            if (base64Image) {
+                userContent = [
+                    { type: "text", text: prompt },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: `data:image/png;base64,${base64Image}`
+                        }
+                    }
+                ];
+            } else {
+                userContent = prompt;
+            }
+
+            return {
+                model: aiConfig.model,
+                messages: [
+                    { role: "user", content: userContent }
+                ],
+                temperature: aiConfig.temperature,
+                max_tokens: aiConfig.numPredict,
+                response_format: aiConfig.openai?.responseFormat
+                    ? { type: aiConfig.openai.responseFormat }
+                    : { type: "json_object" }
+            };
+        }
+
+        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
+    }
+
+    /**
+     * Extracts the raw string content out of varying provider response shapes.
+     */
+    extractAiResponse(aiConfig, responseBody) {
+        if (!responseBody) return null;
+
+        if (aiConfig.provider === 'ollama') {
+            return responseBody.response;
+        }
+
+        if (aiConfig.provider === 'openai') {
+            return responseBody.choices?.[0]?.message?.content;
+        }
+
+        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
+    }
+
     async callAiGenerate(aiConfig, prompt, passLabel) {
         if (!prompt) return null;
-        const payload = {
-            model: aiConfig.model,
-            prompt,
-            format: 'json',
-            stream: false,
-            think: aiConfig.think,
-            keep_alive: aiConfig.keepAlive,
-            options: {
-                num_ctx: aiConfig.numCtx,
-                num_predict: aiConfig.numPredict,
-                temperature: aiConfig.temperature
-            }
-        };
+        const payload = this.buildAiPayload(aiConfig, prompt);
         return this.sendAiRequest(aiConfig, payload, passLabel, prompt);
     }
 
