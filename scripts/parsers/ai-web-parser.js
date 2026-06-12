@@ -5436,9 +5436,9 @@ TEXT:
 
         // Pattern 1: @HH, @HHmm, @HHH, @HH H, @HH H mm (OCR time indicators)
         // Matches: @10PM, @10PM30, 01H, 10H, @10, @10 H, etc.
-        const ocrTimePattern = /(?:^|[\s,@"'`(]|at\s)(\d{1,2})(?::?(\d{2}))?\s*(H|[ap]m)?/i;
-        const ocrMatch = ocrTimePattern.exec(lowerRaw);
-        if (ocrMatch) {
+        const ocrTimePattern = /(?:^|[\s,@"'`(]|at\s)(\d{1,2})(?::?(\d{2}))?\s*(H|[ap]m)?/gi;
+        let ocrMatch;
+        while ((ocrMatch = ocrTimePattern.exec(lowerRaw)) !== null) {
             const ocrHour = parseInt(ocrMatch[1], 10);
             const ocrMinute = ocrMatch[2] ? parseInt(ocrMatch[2], 10) : 0;
             const ocrSuffix = ocrMatch[3] ? ocrMatch[3].toLowerCase() : null;
@@ -5456,9 +5456,9 @@ TEXT:
 
         // Pattern 2: Standalone time formats (e.g., "10pm", "10:00pm", "22:00")
         // Use word boundary instead of end-of-string anchor for OCR text
-        const standaloneTimePattern = /(?:^|[\s,;"'`(])(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i;
-        const standaloneMatch = standaloneTimePattern.exec(lowerRaw);
-        if (standaloneMatch) {
+        const standaloneTimePattern = /(?:^|[\s,;"'`(])(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/gi;
+        let standaloneMatch;
+        while ((standaloneMatch = standaloneTimePattern.exec(lowerRaw)) !== null) {
             const ocrTime = standaloneMatch[1];
             const ocrNormalized = normalizeStartTimeValue(ocrTime);
             if (ocrNormalized === normalizedTime) {
