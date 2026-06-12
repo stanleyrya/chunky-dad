@@ -1166,7 +1166,6 @@ class AiWebParser {
     getSegmentImagePairingCostWithOcr(segmentBounds, imageRecord, ocrResult) {
         // Base cost from HTML proximity
         const proximityCost = this.getSegmentImagePairingCost(segmentBounds, imageRecord);
-        if (!Number.isFinite(proximityCost)) return { cost: Infinity, score: -Infinity };
 
         // Only allow event-flyer classification - other image types don't contain event details
         if (ocrResult?.imageClassification !== 'event-flyer') {
@@ -1178,12 +1177,23 @@ class AiWebParser {
         let score = 100;  // Base score for valid event-flyer classification
 
         // Text similarity bonus - compare OCR text with segment content
+        let similarity = 0;
         if (ocrResult.text && Array.isArray(segmentBounds.matchedRecords) && segmentBounds.matchedRecords.length > 0) {
             const segmentText = segmentBounds.matchedRecords.map(r => r.text).join('\n');
-            const similarity = this.computeTextSimilarity(ocrResult.text, segmentText);
+            similarity = this.computeTextSimilarity(ocrResult.text, segmentText);
             if (similarity >= 0.15) {
                 score += similarity * 100;  // Up to 100 points for good similarity
+
+                // If similarity is good but proximity is Infinity (e.g. absolute positioning),
+                // override proximity cost so it can still match
+                if (!Number.isFinite(cost)) {
+                    cost = 20000; // Arbitrary high finite cost, but beatable by a good score
+                }
             }
+        }
+
+        if (!Number.isFinite(cost)) {
+            return { cost: Infinity, score: -Infinity };
         }
 
         return { cost, score };
@@ -1353,8 +1363,8 @@ class AiWebParser {
     }
 
     computeTextSimilarity(text1, text2) {
-        // Normalize texts
-        const normalize = t => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        // Normalize texts, replacing punctuation with spaces before compressing spaces
+        const normalize = t => String(t || '').toLowerCase().replace(/[^\w\s]|_/g, ' ').replace(/\s+/g, ' ').trim();
         const t1 = normalize(text1);
         const t2 = normalize(text2);
 
@@ -4802,7 +4812,12 @@ TEXT:
             const contextPrompt = this.buildContextPrePrompt(snippet);
             const contextResponse = await this.callAiGenerate(aiConfig, contextPrompt, 'context-prep');
             if (contextResponse) {
-                processedSnippet = `[PRE-PARSED HELPER DATA - HIGHEST PRIORITY]\n${contextResponse.trim()}\n\nCONTENT\n${snippet}`;
+                const strippedContext = contextResponse.replace(/[^a-z0-9]/gi, '').trim();
+                if (strippedContext.length >= 5) {
+                    processedSnippet = `[PRE-PARSED HELPER DATA - HIGHEST PRIORITY]\n${contextResponse.trim()}\n\nCONTENT\n${snippet}`;
+                } else {
+                    console.log(`🤖 AI Web: Skipping empty context response (${strippedContext.length} chars)`);
+                }
             }
         }
 
@@ -5972,11 +5987,23 @@ TEXT:
             : (startTimeRaw && startDateRaw
                 ? (this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + startTimeRaw, timezone) || combineDateAndTime(startDateRaw, startTimeRaw))
                 : (startTimeRaw && !startDateRaw ? this.parseDateValue(startTimeRaw, timezone) : startDateRaw));
-        const combinedEndDate = endProvided
+        let combinedEndDate = endProvided
             ? this.parseDateValue(aiEvent.end, timezone)
             : (endTimeRaw && endDateRaw
                 ? (this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + endTimeRaw, timezone) || combineDateAndTime(endDateRaw, endTimeRaw))
                 : (endTimeRaw && !endDateRaw ? this.parseDateValue(endTimeRaw, timezone) : endDateRaw));
+
+        // If we have a combined start date with a time, but the end date doesn't have a time (or doesn't exist),
+        // we want the end date to exactly match the start date's time, leaving the end ambiguous.
+        if (combinedStartDate && startTimeRaw && !endTimeRaw) {
+            if (!endDateRaw || (startDateRaw && endDateRaw.getTime() === startDateRaw.getTime())) {
+                // Same day or missing end date: end date is exactly start date
+                combinedEndDate = new Date(combinedStartDate);
+            } else {
+                // Different day: Apply start time to end date
+                combinedEndDate = this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + startTimeRaw, timezone) || combineDateAndTime(endDateRaw, startTimeRaw);
+            }
+        }
 
         console.log(`🤖 AI Web: Combined dates — combinedStartDate=${combinedStartDate instanceof Date ? combinedStartDate.toISOString() : combinedStartDate}, combinedEndDate=${combinedEndDate instanceof Date ? combinedEndDate.toISOString() : combinedEndDate}`);
 
