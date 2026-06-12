@@ -134,3 +134,51 @@ test('validateAiEventEvidence should NOT delete trusted or internal fields', () 
   );
   assert.ok(nonStrictResult.event.startDate, 'startDate should be kept when strict is false even if evidence is missing');
 });
+
+test('getAiPromptFields should group and sort split date/time fields correctly', () => {
+  // Mock EventSchema specifically for this test to ensure consistency
+  global.EventSchema = {
+    AI_PROMPT_FIELDS: [
+      { param: 'name',    desc: 'Name' },
+      { param: 'startDate', desc: 'Start Date' },
+      { param: 'startTime', desc: 'Start Time' },
+      { param: 'endDate', desc: 'End Date' },
+      { param: 'endTime', desc: 'End Time' },
+      { param: 'city', desc: 'City' }
+    ],
+    canonicalizeEventKey: (key) => {
+      const map = {
+        'name': 'title',
+        'title': 'title',
+        'startdate': 'startDate',
+        'starttime': 'startTime',
+        'enddate': 'endDate',
+        'endtime': 'endTime',
+        'city': 'city'
+      };
+      return map[key.toLowerCase()] || key;
+    }
+  };
+
+  const parser = createParser();
+
+  const parserConfig = {
+    fieldPriorities: {
+      'startTime': { priority: ['ai-web'] },
+      'endTime': { priority: ['ai-web'] },
+      'startDate': { priority: ['ai-web'] },
+      'endDate': { priority: ['ai-web'] },
+      'name': { priority: ['ai-web'] }
+    }
+  };
+
+  // Scenario 1: OCR enabled (dataFlags.ocr = true)
+  const fields = parser.getAiPromptFields(parserConfig, { ocr: true });
+
+  // Expected order based on our mock AI_PROMPT_FIELDS:
+  // name (title), startDate (startdate), startTime (starttime), endDate (enddate), endTime (endtime), city (city)
+  const normalizedFields = fields.map(f => parser.normalizePromptFieldName(f));
+
+  const expectedOrder = ['title', 'startdate', 'starttime', 'enddate', 'endtime', 'city'];
+  assert.deepEqual(normalizedFields, expectedOrder, 'Fields should be sorted according to EventSchema canonical order');
+});
