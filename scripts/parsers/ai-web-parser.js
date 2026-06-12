@@ -3293,9 +3293,9 @@ class AiWebParser {
         if (!aiConfig.enabled || !htmlData.html) {
             return null;
         }
-        const promptFields = Array.isArray(selectedPromptFields) && selectedPromptFields.length > 0
-            ? selectedPromptFields
-            : this.getAiPromptFields(parserConfig);
+        // Always recompute promptFields based on dataFlags to ensure correct date fields
+        // for the current data mode (structured vs unstructured/OCR/segment)
+        const promptFields = this.getAiPromptFields(parserConfig, dataFlags);
         if (promptFields.length === 0) {
             console.warn('🤖 AI Web: No eligible AI prompt fields configured - skipping extraction');
             return null;
