@@ -146,7 +146,7 @@
     .color-input-wrapper { position: relative; }
     .color-input-wrapper input[type="color"] { width: 100%; height: 44px; border-radius: 8px; border: 1.5px solid var(--border-lighter); cursor: pointer; }
 
-    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(550px, 1fr)); gap: 40px; }
     .variant-card { background: var(--white); border: 2px solid var(--border-lighter); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); transition: all 0.3s; }
     .variant-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateY(-2px); }
     .variant-.variant-title { font-weight: 700; font-size: 14px; color: var(--text-primary); }
@@ -173,7 +173,8 @@
     /* LAYOUT: Minimal */
     .layout-minimal { background: #fff; position: relative; }
     .layout-minimal .card { position: absolute; inset: 0; background: #fff; overflow: hidden; z-index: 1; }
-    .layout-minimal .card-.layout-minimal .card-header .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.4; }
+    .layout-minimal .card-header { height: 280px; position: relative; overflow: hidden; }
+    .layout-minimal .card-header .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.4; }
     .layout-minimal .card-header .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%); }
     .layout-minimal .card-header .date-badge { position: absolute; top: 30px; right: 30px; background: #fff; color: #333; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
     .layout-minimal .event-image { position: absolute; bottom: 40px; left: 60px; width: 160px; height: 160px; z-index: 2; background: transparent; object-fit: contain; }
@@ -217,7 +218,8 @@
     .layout-speech-terminal { background: #0f3460; position: relative; }
     .layout-speech-terminal:before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px); }
     .layout-speech-terminal .terminal-window { position: absolute; inset: 60px; background: #001122; border: 2px solid #00ff00; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,255,0,0.1); }
-    .layout-speech-terminal .terminal-.layout-speech-terminal .terminal-buttons { display: flex; gap: 5px; }
+    .layout-speech-terminal .terminal-header { position: absolute; top: 0; left: 0; right: 0; height: 30px; background: #003366; border-bottom: 1px solid #00ff00; display: flex; align-items: center; padding: 0 10px; }
+    .layout-speech-terminal .terminal-buttons { display: flex; gap: 5px; }
     .layout-speech-terminal .terminal-button { width: 12px; height: 12px; border-radius: 50%; background: #00ff00; }
     .layout-speech-terminal .terminal-content { position: absolute; top: 40px; left: 20px; right: 20px; bottom: 20px; font-family: 'Courier New', monospace; color: #00ff00; font-size: 18px; line-height: 1.4; }
     .layout-speech-terminal .event-image { position: absolute; right: 40px; bottom: 40px; width: 200px; height: 150px; background-size: cover; background-position: center; border: 2px solid #00ff00; filter: contrast(1.2) brightness(0.9); }
@@ -249,8 +251,7 @@
       background: radial-gradient(circle at 50% 45%, rgba(0,0,0,0) 0 45%, rgba(0,0,0,0.35) 100%);
       pointer-events: none;
     }
-    .layout-chunky-pattern .content-box,
-    .layout-css-pattern .content-box {
+    .layout-chunky-pattern .content-box {
       position: absolute; inset: 55px; z-index: 1;
       background: rgba(0,0,0,0.88);
       border-radius: 18px;
@@ -260,9 +261,15 @@
       padding: 60px 72px;
       color: #fff;
     }
-    .layout-chunky-pattern .content-box,
+    .layout-css-pattern .content-box {
+      position: absolute; inset: 55px; z-index: 2;
+      background: #000;
+      border-radius: 18px;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 60px 72px;
+      color: #fff;
+    }
     .layout-chunky-pattern .content-box { z-index: 2; }
-    .layout-css-pattern .content-box { z-index: 2; }
     .layout-chunky-pattern .brand,
     .layout-css-pattern .brand {
       font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
@@ -283,7 +290,7 @@
 
     @media (max-width: 768px) {
       .variants-grid { grid-template-columns: 1fr; }
-      }
+    }
   </style>
 </head>
 <body>
@@ -439,7 +446,11 @@
             </div>
             <div class="field-group">
               <label for="cssPatternSize">Pattern size</label>
-              <input id="cssPatternSize" type="range" min="20" max="260" value="90">
+              <input id="cssPatternSize" type="range" min="20" max="260" value="160">
+            </div>
+            <div class="field-group">
+              <label for="cssPatternRotation">Pattern rotation</label>
+              <input id="cssPatternRotation" type="range" min="0" max="360" value="0">
             </div>
           </div>
           <div class="pattern-source-note" id="cssPatternMeta">Patterns load from the local downloaded CSS Pattern data file.</div>
@@ -483,6 +494,7 @@
       const customB = document.getElementById('customB');
       const cssPatternSelect = document.getElementById('cssPatternSelect');
       const cssPatternSize = document.getElementById('cssPatternSize');
+      const cssPatternRotation = document.getElementById('cssPatternRotation');
       const cssPatternMeta = document.getElementById('cssPatternMeta');
       const coverInput = document.getElementById('coverInput');
       const faviconInput = document.getElementById('faviconInput');
@@ -591,7 +603,21 @@
           this.filteredEvents = this.allEvents.slice();
           this.filteredEvents.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
           this.populateEventSelect();
-          this.selectedEvent = this.filteredEvents[0];
+
+          // Check for date in url
+          const params = new URLSearchParams(window.location.search);
+          const dateParam = params.get('date');
+          if (dateParam) {
+            const index = this.filteredEvents.findIndex(ev => ev.day === dateParam);
+            if (index !== -1) {
+              this.selectedEvent = this.filteredEvents[index];
+              eventSelect.selectedIndex = index;
+            } else {
+              this.selectedEvent = this.filteredEvents[0];
+            }
+          } else {
+             this.selectedEvent = this.filteredEvents[0];
+          }
           this.render();
         }
 
@@ -618,6 +644,20 @@
           this.render();
         }
 
+        getImageUrl(ev) {
+          if (!ev) return '';
+          let imageUrl = ev.cover || ev.image || ev.image_url || '';
+          if (imageUrl && window.FilenameUtils && typeof window.FilenameUtils.convertImageUrlToLocalPath === 'function') {
+             const localPath = window.FilenameUtils.convertImageUrlToLocalPath(imageUrl, {
+                name: ev.name,
+                startDate: ev.startDate || ev.start,
+                recurring: ev.recurring
+             }, '../img/events');
+             return localPath;
+          }
+          return imageUrl;
+        }
+
         getPreviewData() {
           const ev = this.selectedEvent || {};
           return {
@@ -627,7 +667,7 @@
             time: ev.time || 'Time TBA',
             city: getCityConfig(this.currentCity)?.name || 'City',
             description: ev.tea || 'Join us for an amazing bear community event!',
-            cover: (coverInput.value || '').trim() || (ev.cover || ev.image || '').trim(),
+            cover: (coverInput.value || '').trim() || this.getImageUrl(ev),
             faviconColors: this.getFaviconColors(),
             faviconUrl: (faviconInput.value || '').trim() || (this.getFaviconUrl() ? new URL('/favicon.ico', this.getFaviconUrl()).href : '') || '../favicons/favicon-96x96.png'
           };
@@ -765,6 +805,12 @@
             element.style.setProperty(`--css-pattern-color-${index + 1}`, color);
           });
           element.style.setProperty('--css-pattern-size', `${cssPatternSize.value}px`);
+          if (cssPatternRotation) {
+            const patternBg = element.querySelector('.css-pattern-bg');
+            if (patternBg) {
+                patternBg.style.transform = `rotate(${cssPatternRotation.value}deg) scale(1.5)`;
+            }
+          }
         }
 
         attachHandlers() {
@@ -804,6 +850,7 @@
             this.render();
           });
           cssPatternSize.addEventListener('input', () => this.render());
+          if (cssPatternRotation) cssPatternRotation.addEventListener('input', () => this.render());
 
           // Theme selection
           themeOptions.forEach(option => {
@@ -1159,5 +1206,6 @@ $ <span class="cursor">_</span>`;
       });
     })();
   </script>
+  <script src="../js/filename-utils.js"></script>
 </body>
 </html>
