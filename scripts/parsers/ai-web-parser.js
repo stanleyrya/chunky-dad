@@ -125,14 +125,19 @@ function normalizeStartTimeValue(value) {
 }
 
 /**
- * Combine date (YYYY-MM-DD) and time (HH:MM) into a full datetime string
- * Returns ISO string or null if inputs are invalid
+ * Combine date (YYYY-MM-DD) and time (HH:MM) into a full UTC Date object
+ * Returns Date object or null if inputs are invalid
  */
 function combineDateAndTime(dateStr, timeStr) {
     if (!dateStr || !timeStr) return null;
 
+    let dateValue = dateStr;
+    if (dateStr instanceof Date && !isNaN(dateStr.getTime())) {
+        dateValue = dateStr.toISOString().split('T')[0];
+    }
+
     // Validate date format (YYYY-MM-DD)
-    const dateMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const dateMatch = String(dateValue).match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!dateMatch) return null;
 
     // Validate time format (HH:MM)
@@ -150,7 +155,7 @@ function combineDateAndTime(dateStr, timeStr) {
     }
 
     const date = new Date(Date.UTC(year, month, day, hour, minute));
-    return date.toISOString();
+    return isNaN(date.getTime()) ? null : date;
 }
 
 class AiWebParser {
@@ -4502,24 +4507,35 @@ class AiWebParser {
             // Unstructured data - prefer split fields, remove start/end
             const fullDateFields = ['start', 'end'];
             const originalSelected = [...selected];
+            const hasStartRequested = selected.some(field => this.normalizePromptFieldName(field) === 'start');
+            const hasEndRequested = selected.some(field => this.normalizePromptFieldName(field) === 'end');
+
             selected = selected.filter(field => !fullDateFields.includes(field));
             if (selected.length !== originalSelected.length) {
                 console.log('🤖 AI Web: Removed full datetime fields (using split fields for unstructured data)');
             }
 
-            // Auto-add startTime when startDate is selected
+            // Ensure split fields are present if full fields were requested or if only one of the split pair is present
             const hasStartDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'startdate');
             const hasStartTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'starttime');
-            if (hasStartDateSelected && !hasStartTimeSelected) {
+            if ((hasStartRequested || hasStartDateSelected) && !hasStartTimeSelected) {
                 selected.push('startTime');
-                console.log('🤖 AI Web: Added special prompt field => startTime (because startDate was selected)');
+                console.log(`🤖 AI Web: Added split field => startTime (because ${hasStartRequested ? 'start' : 'startDate'} was selected)`);
             }
-            // Auto-add endTime when endDate is selected
+            if (hasStartRequested && !hasStartDateSelected) {
+                selected.push('startDate');
+                console.log('🤖 AI Web: Added split field => startDate (because start was selected)');
+            }
+
             const hasEndDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'enddate');
             const hasEndTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'endtime');
-            if (hasEndDateSelected && !hasEndTimeSelected) {
+            if ((hasEndRequested || hasEndDateSelected) && !hasEndTimeSelected) {
                 selected.push('endTime');
-                console.log('🤖 AI Web: Added special prompt field => endTime (because endDate was selected)');
+                console.log(`🤖 AI Web: Added split field => endTime (because ${hasEndRequested ? 'end' : 'endDate'} was selected)`);
+            }
+            if (hasEndRequested && !hasEndDateSelected) {
+                selected.push('endDate');
+                console.log('🤖 AI Web: Added split field => endDate (because end was selected)');
             }
         }
         const aiPromptFields = selected;
@@ -5783,6 +5799,9 @@ TEXT:
         const endDateRaw = this.parseDateValue(this.firstNonEmpty(aiEvent.endDate, aiEvent.end, ''), timezone);
         const endTimeRaw = normalizeStartTimeValue(this.firstNonEmpty(aiEvent.endTime, aiEvent.end, ''));
 
+        console.log(`🤖 AI Web: Date normalization — rawStartDate=${aiEvent.startDate}, rawStartTime=${aiEvent.startTime}, rawStart=${aiEvent.start}, rawEndDate=${aiEvent.endDate}, rawEndTime=${aiEvent.endTime}, rawEnd=${aiEvent.end}`);
+        console.log(`🤖 AI Web: Parsed raw values — startDateRaw=${startDateRaw instanceof Date ? startDateRaw.toISOString() : startDateRaw}, startTimeRaw=${startTimeRaw}, endDateRaw=${endDateRaw instanceof Date ? endDateRaw.toISOString() : endDateRaw}, endTimeRaw=${endTimeRaw}`);
+
         // Check if start/end were explicitly provided (full datetime format)
         // These contain full datetime like "2026-05-12T22:30" or "2026-05-12 22:30" - use directly without combining
         const startProvided = aiEvent.start && this.parseDateValue(aiEvent.start, timezone) !== null;
@@ -5790,20 +5809,29 @@ TEXT:
 
         // Combine date and time if we have split fields
         // If start/end was provided, use them directly; otherwise combine split fields
+        // Use timezone-aware combination when both date and time are available from split fields
         const combinedStartDate = startProvided
             ? this.parseDateValue(aiEvent.start, timezone)
-            : (startTimeRaw ? combineDateAndTime(startDateRaw, startTimeRaw) : startDateRaw);
+            : (startTimeRaw && startDateRaw
+                ? this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + startTimeRaw, timezone)
+                : (startTimeRaw && !startDateRaw ? this.parseDateValue(startTimeRaw, timezone) : startDateRaw));
         const combinedEndDate = endProvided
             ? this.parseDateValue(aiEvent.end, timezone)
-            : (endTimeRaw ? combineDateAndTime(endDateRaw, endTimeRaw) : endDateRaw);
+            : (endTimeRaw && endDateRaw
+                ? this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + endTimeRaw, timezone)
+                : (endTimeRaw && !endDateRaw ? this.parseDateValue(endTimeRaw, timezone) : endDateRaw));
+
+        console.log(`🤖 AI Web: Combined dates — combinedStartDate=${combinedStartDate instanceof Date ? combinedStartDate.toISOString() : combinedStartDate}, combinedEndDate=${combinedEndDate instanceof Date ? combinedEndDate.toISOString() : combinedEndDate}`);
 
         // For single-day events, if startDate is missing but endDate exists, use endDate as start
         const finalStartDate = combinedStartDate || combinedEndDate;
         const finalEndDate = combinedEndDate || combinedStartDate;
 
         const { startDate, endDate } = this.normalizeEventDates(finalStartDate, finalEndDate);
+        console.log(`🤖 AI Web: Normalized dates — startDate=${startDate instanceof Date ? startDate.toISOString() : startDate}, endDate=${endDate instanceof Date ? endDate.toISOString() : endDate}`);
 
         if (!title || !startDate) {
+            console.warn(`🤖 AI Web: Normalization failed — title=${title}, startDate=${startDate}`);
             return null;
         }
 
@@ -6078,6 +6106,9 @@ TEXT:
             return candidate;
         });
         const inWindow = candidates.filter(candidate => candidate >= windowStart && candidate <= windowEnd);
+        if (inWindow.length === 0) {
+            console.warn(`🤖 AI Web: Date ${date.toISOString()} is outside window [${windowStart.toISOString()}, ${windowEnd.toISOString()}] and no candidate year was in window.`);
+        }
         const candidateSet = inWindow.length > 0 ? inWindow : candidates;
         return candidateSet.reduce((best, candidate) => {
             if (!best) return candidate;
