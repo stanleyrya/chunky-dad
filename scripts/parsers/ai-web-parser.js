@@ -1067,13 +1067,14 @@ class AiWebParser {
         // from being matched multiple times. Select the largest image from each group.
         const dedupedOcrResults = this.deduplicateOcrResultsByUrl(ocrResults || []);
 
-        // Create a map of image URL to OCR result for quick lookup
+        // Create a map of stripped image URL to OCR result for quick lookup
         const ocrMap = new Map();
         if (Array.isArray(dedupedOcrResults)) {
             for (const result of dedupedOcrResults) {
                 if (result && result.url) {
                     const normalizedUrl = this.normalizeHttpUrlValue(result.url);
-                    if (normalizedUrl) ocrMap.set(normalizedUrl, result);
+                    const strippedUrl = this.stripSizeParams(normalizedUrl);
+                    if (strippedUrl) ocrMap.set(strippedUrl, result);
                 }
             }
         }
@@ -1125,7 +1126,8 @@ class AiWebParser {
 
                 if (segmentIndex < boundsList.length && imageIndex < records.length) {
                     const imageRecord = records[imageIndex];
-                    const ocrResult = ocrMap.get(this.normalizeHttpUrlValue(imageRecord.url));
+                    const normalizedUrl = this.normalizeHttpUrlValue(imageRecord.url);
+                    const ocrResult = ocrMap.get(this.stripSizeParams(normalizedUrl));
                     const pairingResult = this.getSegmentImagePairingCostWithOcr(
                         boundsList[segmentIndex],
                         imageRecord,
