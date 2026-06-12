@@ -472,6 +472,56 @@ const scraperConfig = {
         ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {}
+    },
+    {
+      name: "AI Web Parser (OpenAI Sample)",
+      iconUrl: "https://www.google.com/s2/favicons?domain=openai.com&sz=64",
+      enabled: false,
+      automation: {
+        automationEnabled: false
+      },
+      parser: "ai-web",
+      urls: ["https://example.com/openai-events"],
+      alwaysBear: false,
+      urlDiscoveryDepth: 1,
+      maxAdditionalUrls: 15,
+      dryRun: true,
+      ai: {
+        enabled: true,
+        provider: "openai",
+        endpoint: "https://api.openai.com/v1/chat/completions",
+        model: "gpt-4o",
+        numPredict: 1024,
+        temperature: 0,
+        openai: {
+          responseFormat: "json_object"
+        }
+      },
+      ocr: {
+        enabled: true,
+        provider: "openai",
+        endpoint: "https://api.openai.com/v1/chat/completions",
+        model: "gpt-4o-mini",
+        numPredict: 2000,
+        temperature: 0,
+        openai: {
+          responseFormat: "json_object"
+        }
+      },
+      fieldPriorities: {
+        title: { priority: ["ai-web"], merge: "clobber" },
+        description: { priority: ["ai-web"], merge: "clobber" },
+        bar: { priority: ["ai-web"], merge: "clobber" },
+        address: { priority: ["ai-web"], merge: "clobber" },
+        startDate: { priority: ["ai-web"], merge: "clobber" },
+        endDate: { priority: ["ai-web"], merge: "clobber" },
+        city: { priority: ["ai-web"], merge: "clobber" },
+        url: { priority: ["ai-web"], merge: "clobber" },
+        image: { priority: ["ai-web"], merge: "clobber" },
+        cover: { priority: ["ai-web"], merge: "clobber" },
+        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
+      },
+      metadata: {}
     }
   ]
 };
