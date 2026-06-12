@@ -275,6 +275,8 @@ class AiWebParser {
     }
 
     async parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
+        let discoveredSegments = null;
+        let ocrResults = [];
         try {
             this.aiPromptHistory = [];
             const html = htmlData && htmlData.html ? htmlData.html : '';
@@ -284,7 +286,7 @@ class AiWebParser {
             // Extract OCR from ALL images FIRST - we need it for consistent segment-to-image mapping
             // regardless of whether discoveryOnly mode is enabled
             const ocrConfig = this.getOcrConfig(parserConfig);
-            const ocrResults = ocrConfig.enabled
+            ocrResults = ocrConfig.enabled
                 ? await this.extractOcrFromAllImages(htmlData, ocrConfig)
                 : [];
             if (ocrResults.length > 0) {
@@ -293,7 +295,6 @@ class AiWebParser {
 
             // Build segments for multi-event pages - we need this for consistent segment-to-image mapping
             // and for UI discovery mode. Pass OCR results for proper image-segment pairing.
-            let discoveredSegments = null;
             if (pageClassification === 'multi-event-page') {
                 const segments = this.buildMultiEventSegments(html, sourceUrl, ocrResults);
                 if (segments.length === 0) {
