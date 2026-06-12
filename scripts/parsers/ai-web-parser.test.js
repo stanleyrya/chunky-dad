@@ -182,3 +182,52 @@ test('getAiPromptFields should group and sort split date/time fields correctly',
   const expectedOrder = ['title', 'startdate', 'starttime', 'enddate', 'endtime', 'city'];
   assert.deepEqual(normalizedFields, expectedOrder, 'Fields should be sorted according to EventSchema canonical order');
 });
+
+test('buildAiPayload and extractAiResponse support both Ollama and OpenAI', () => {
+  const parser = createParser();
+  const prompt = 'Extract event details';
+  const base64Image = 'base64data';
+
+  // Ollama Payload
+  const ollamaConfig = {
+    provider: 'ollama',
+    model: 'qwen3.5:4b',
+    numPredict: 512,
+    temperature: 0,
+    keepAlive: '5m'
+  };
+  const ollamaPayload = parser.buildAiPayload(ollamaConfig, prompt, base64Image);
+  assert.equal(ollamaPayload.model, 'qwen3.5:4b');
+  assert.equal(ollamaPayload.prompt, prompt);
+  assert.deepEqual(ollamaPayload.images, [base64Image]);
+  assert.equal(ollamaPayload.options.num_predict, 512);
+
+  // OpenAI Payload (Text only)
+  const openaiConfig = {
+    provider: 'openai',
+    model: 'gpt-4o',
+    numPredict: 1024,
+    temperature: 0.5
+  };
+  const openaiPayloadText = parser.buildAiPayload(openaiConfig, prompt);
+  assert.equal(openaiPayloadText.model, 'gpt-4o');
+  assert.equal(openaiPayloadText.messages[0].role, 'user');
+  assert.equal(openaiPayloadText.messages[0].content, prompt);
+  assert.equal(openaiPayloadText.max_tokens, 1024);
+  assert.deepEqual(openaiPayloadText.response_format, { type: 'json_object' });
+
+  // OpenAI Payload (Vision)
+  const openaiPayloadVision = parser.buildAiPayload(openaiConfig, prompt, base64Image);
+  assert.ok(Array.isArray(openaiPayloadVision.messages[0].content));
+  assert.equal(openaiPayloadVision.messages[0].content[0].type, 'text');
+  assert.equal(openaiPayloadVision.messages[0].content[0].text, prompt);
+  assert.equal(openaiPayloadVision.messages[0].content[1].type, 'image_url');
+  assert.equal(openaiPayloadVision.messages[0].content[1].image_url.url, `data:image/png;base64,${base64Image}`);
+
+  // Response Extraction
+  const ollamaResponse = { response: '{"title": "Ollama Event"}' };
+  assert.equal(parser.extractAiResponse(ollamaConfig, ollamaResponse), '{"title": "Ollama Event"}');
+
+  const openaiResponse = { choices: [{ message: { content: '{"title": "OpenAI Event"}' } }] };
+  assert.equal(parser.extractAiResponse(openaiConfig, openaiResponse), '{"title": "OpenAI Event"}');
+});
