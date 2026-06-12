@@ -1,1 +1,0 @@
-// Get favicon Url tool
