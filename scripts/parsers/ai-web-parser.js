@@ -4565,6 +4565,22 @@ class AiWebParser {
             const fullDateFields = ['start', 'end'];
             selected = selected.filter(field => !fullDateFields.includes(field));
         }
+
+        // Ensure fields follow the canonical order from EventSchema
+        const schemaFields = this.getEventSchemaPromptFields();
+        const schemaOrderMap = new Map(schemaFields.map((field, index) => [field.normalizedName, index]));
+
+        selected.sort((a, b) => {
+            const indexA = schemaOrderMap.get(this.normalizePromptFieldName(a));
+            const indexB = schemaOrderMap.get(this.normalizePromptFieldName(b));
+
+            // If a field is not in the schema (e.g. city added manually), put it at the end
+            const sortA = indexA !== undefined ? indexA : 999;
+            const sortB = indexB !== undefined ? indexB : 999;
+
+            return sortA - sortB;
+        });
+
         const aiPromptFields = selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
         const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
