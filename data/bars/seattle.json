@@ -16,8 +16,7 @@
     "coordinates": "47.5165235, -122.3548059",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0",
     "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:04.188Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
   },
   {
     "name": "The Cuff Complex",
@@ -27,8 +26,7 @@
     "facebook": "https://www.facebook.com/thecuffcomplex",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY",
     "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:04.862Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z"
   },
   {
     "name": "Seattle Eagle",
@@ -46,8 +44,7 @@
     "facebook": "https://www.facebook.com/ccsseattle",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I",
     "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:04.751Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:51.206Z"
   },
   {
     "name": "Madison Pub",
