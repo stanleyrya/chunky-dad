@@ -3,8 +3,12 @@
     "name": "Eagle",
     "city": "fort-lauderdale",
     "gayCities": "https://fortlauderdale.gaycities.com/bars/309115-eagle-wilton-manors",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:07.785Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "2209 Wilton Dr, Wilton Manors, FL 33305",
+    "coordinates": "26.156486, -80.138547",
+    "instagram": "https://www.instagram.com/eaglebarwm",
+    "facebook": "https://www.facebook.com/EagleBarWM/",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJu6n6wQ0B2YgRuXxB9KC59OA",
+    "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z"
   },
   {
     "name": "Gym Sports Bar",
@@ -13,8 +17,7 @@
     "coordinates": "26.1572257, -80.1373084",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJPUAeAZwB2YgRL0hklcfzn6A",
     "gayCities": "https://fortlauderdale.gaycities.com/bars/309259-gym-sportsbar-wilton-manors",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:26.668Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T22:28:54.785Z"
   },
   {
     "name": "The Pub",

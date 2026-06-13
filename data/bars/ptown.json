@@ -2,11 +2,11 @@
   {
     "name": "A-House",
     "city": "ptown",
-    "gayCities": "https://ptown.gaycities.com/bars/535-a-house",
     "address": "6 Masonic Pl #4, Provincetown, MA 02657",
     "coordinates": "42.0500638, -70.1888875",
     "facebook": "https://www.facebook.com/ahouseprovincetown",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJyQ3ZXX6n_IkR0_ZfyWwD6Zg",
+    "gayCities": "https://ptown.gaycities.com/bars/535-a-house",
     "gayCitiesLastScrapedAt": "2026-06-13T20:34:59.308Z"
   },
   {
@@ -22,11 +22,11 @@
   {
     "name": "Crown & Anchor",
     "city": "ptown",
-    "gayCities": "https://ptown.gaycities.com/bars/541-crown-anchor",
     "address": "247 Commercial St, Provincetown, MA 02657",
     "coordinates": "42.0502291, -70.1876737",
     "facebook": "https://www.facebook.com/CrownAnchorProvincetown",
     "googleMaps": "https://www.google.com/maps/place/?q=247+Commercial+St,+Provincetown,+MA+02657",
+    "gayCities": "https://ptown.gaycities.com/bars/541-crown-anchor",
     "gayCitiesLastScrapedAt": "2026-06-13T20:35:03.709Z"
   },
   {

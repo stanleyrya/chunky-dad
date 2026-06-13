@@ -3,7 +3,9 @@
     "name": "CC Slaughters",
     "city": "portland",
     "gayCities": "https://portland.gaycities.com/bars/893-cc-slaughters-nightclub-and-lounge",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.216Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "219 NW Davis St, Portland, OR 97209",
+    "coordinates": "45.5246478, -122.6729183",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJnfNLuwAKlVQRXZrfhfLp_i4",
+    "gayCitiesLastScrapedAt": "2026-06-13T22:29:01.943Z"
   }
 ]
