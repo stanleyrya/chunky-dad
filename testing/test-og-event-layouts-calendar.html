@@ -953,32 +953,6 @@
               if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
               break;
             }
-            case 'speech': {
-              const head = artboard.querySelector('.headline');
-              const bubble = artboard.querySelector('.speech-bubble');
-              const img = artboard.querySelector('.event-image');
-              const cov = artboard.querySelector('.cover');
-              if (head) head.textContent = data.event;
-              if (bubble) bubble.textContent = `${data.date} @ ${data.time} · ${data.venue}`;
-              if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
-              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            }
-            case 'speech-terminal': {
-              const content = artboard.querySelector('.terminal-content');
-              const img = artboard.querySelector('.event-image');
-              if (content) {
-                content.innerHTML = `$ cat event_info.txt<br/>
-EVENT: ${data.event}<br/>
-DATE: ${data.date}<br/>
-TIME: ${data.time}<br/>
-VENUE: ${data.venue}<br/>
-<br/>
-$ <span class="cursor">_</span>`;
-              }
-              if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            }
             case 'banner': {
               const title = artboard.querySelector('.event-title');
               const info = artboard.querySelector('.event-info');
@@ -1079,26 +1053,6 @@ $ <span class="cursor">_</span>`;
               </div>
               <div class="description"></div>
             `,
-            'speech': `
-              <div class="cover"></div>
-              <div class="headline"></div>
-              <img class="logo-avatar" src="${data.faviconUrl}" alt="chunky.dad" />
-              <div class="speech-bubble"></div>
-              <div class="brand">chunky.dad</div>
-            `,
-            'speech-terminal': `
-              <div class="terminal-window">
-                <div class="terminal-header">
-                  <div class="terminal-buttons">
-                    <div class="terminal-button"></div>
-                    <div class="terminal-button"></div>
-                    <div class="terminal-button"></div>
-                  </div>
-                </div>
-                <div class="terminal-content"></div>
-                <div class="event-image"></div>
-              </div>
-            `,
             'banner': `
               <div class="banner-bg"></div>
               <div class="banner-content">
@@ -1152,21 +1106,19 @@ $ <span class="cursor">_</span>`;
           const VARIANTS = [
             // Pattern Layouts with Colored Rim
             { key: 'css-pattern', name: '🧩 CSS Pattern.com', class: 'layout-css-pattern', description: 'Downloaded gradient pattern background' },
-            { key: 'chunky-pattern', name: '🐻 Chunky Pattern', class: 'layout-chunky-pattern', description: 'Custom paw print and star pattern' },
 
             // Simple & Clean Layouts
+            { key: 'simple-speech', name: '💬 Simple Speech', class: 'layout-simple-speech', description: 'Clean chunky.dad speech bubble' },
+            { key: 'bold-centered', name: '⚡ Bold & Centered', class: 'layout-bold-centered', description: 'Big typography, centered text' },
+            { key: 'side-by-side', name: '📐 Side by Side', class: 'layout-side-by-side', description: 'Simple two-column layout' },
             { key: 'banner', name: '🎯 Banner', class: 'layout-banner', description: 'Billboard/hero banner style' },
             
             // Creative Layouts
             { key: 'split', name: 'Split Screen', class: 'layout-split-screen', description: 'Dynamic diagonal composition' },
             { key: 'minimal', name: 'Minimalist Card', class: 'layout-minimal', description: 'Clean modern card design' },
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass backdrop' },
-            { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus' },
-            
-            // Speech Bubble Variations
-            { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about event' },
-            { key: 'speech-terminal', name: 'Retro Terminal', class: 'layout-speech-terminal', description: 'Computer terminal style' },
-            ];
+            { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus' }
+          ];
 
           grid.innerHTML = '';
           const artboards = [];
