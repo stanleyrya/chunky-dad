@@ -2418,10 +2418,28 @@ class AiWebParser {
                 .filter(Boolean)
         );
 
+        // Strip sizes for more robust comparison
+        const strippedSegmentImageSet = new Set(
+            Array.from(normalizedSegmentImageSet)
+                .map(u => this.stripSizeParams(u))
+                .filter(Boolean)
+        );
+
+        console.log(`🤖 AI Web: Filtering OCR results against ${normalizedSegmentImageSet.size} segment images (${strippedSegmentImageSet.size} stripped)`);
+
         // Filter OCR results to match segment images
         return ocrResults.filter(ocr => {
             const ocrUrl = this.normalizeHttpUrlValue(ocr.url);
-            return normalizedSegmentImageSet.has(ocrUrl);
+            const strippedOcrUrl = this.stripSizeParams(ocrUrl);
+
+            const exactMatch = normalizedSegmentImageSet.has(ocrUrl);
+            const strippedMatch = strippedOcrUrl && strippedSegmentImageSet.has(strippedOcrUrl);
+
+            if (exactMatch || strippedMatch) {
+                console.log(`🤖 AI Web: Segment matched OCR result via ${exactMatch ? 'exact' : 'stripped'} URL: ${ocrUrl}`);
+                return true;
+            }
+            return false;
         });
     }
 
