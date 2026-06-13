@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Hunters",
+    "city": "palm-springs",
+    "gayCities": "https://palmsprings.gaycities.com/bars/588-hunters-palm-springs",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:14.133Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

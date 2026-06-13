@@ -1,0 +1,28 @@
+[
+  {
+    "name": "BEEF.BKK",
+    "city": "bangkok",
+    "address": "9th Fl. SilomEdge Si Lom Rd, Suriya Wong, Bang Rak, Bangkok 10500, Thailand",
+    "coordinates": "13.729305880910303, 100.53569913387547",
+    "instagram": "https://www.instagram.com/beef.bkk",
+    "facebook": "https://www.facebook.com/beef.bkkbar/",
+    "googleMaps": "https://maps.app.goo.gl/zEYjJa9v8AJJGUNB6"
+  },
+  {
+    "name": "CAKE",
+    "city": "bangkok",
+    "address": "ตั้งอยู่ที่ 942/27 Rama IV Rd, Suriya Wong, Bang Rak, Bangkok 10500, Thailand",
+    "coordinates": "13.730338066694463, 100.53405491726055",
+    "instagram": "https://www.instagram.com/cake.bangkok",
+    "facebook": "https://www.facebook.com/CakeBangkokTH/",
+    "googleMaps": "https://maps.app.goo.gl/GrhBKQzDEFfvcUFn8"
+  },
+  {
+    "name": "BARBER.BAR",
+    "city": "bangkok",
+    "address": "ชั้น 2 109/111 Si Lom Rd, Khwaeng Suriya Wong, Khet Bang Rak, Bangkok 10500, Thailand",
+    "coordinates": "13.727938343038128, 100.53224466713601",
+    "instagram": "https://www.instagram.com/bar.ber.bar/",
+    "googleMaps": "https://maps.app.goo.gl/V96bZYM6qBm8tqQs5"
+  }
+]

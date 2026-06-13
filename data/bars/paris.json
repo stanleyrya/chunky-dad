@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Bear's Den",
+    "city": "paris",
+    "gayCities": "https://paris.gaycities.com/bars/1625-bears-den",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.684Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "El Hombre",
+    "city": "paris",
+    "address": "15 rue de la Reynie, Paris, France 75004",
+    "coordinates": "48.859861, 2.349458",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJsYcLoB5u5kcRvlZDfSyg7w4",
+    "gayCities": "https://paris.gaycities.com/bars/307921-el-hombre",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:14.181Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

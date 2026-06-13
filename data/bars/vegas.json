@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Fun Hog Ranch",
+    "city": "vegas",
+    "gayCities": "https://lasvegas.gaycities.com/bars/1346-fun-hog-ranch",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.295Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

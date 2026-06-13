@@ -179,7 +179,7 @@ const CITY_CONFIG = {
         calendarId: '2f2e6cde722236a41a43325818baaa3775288bd2b4796a98b943e158bf62eb81@group.calendar.google.com',
         calendar: 'chunky-dad-sf',
         timezone: 'America/Los_Angeles',
-        patterns: ['san francisco', 'sf', 'castro', 'san jose', 'oakland'],
+        patterns: ['san francisco', 'san fransisco', 'sf', 'castro', 'san jose', 'oakland'],
         coordinates: { lat: 37.7749, lng: -122.4194 },
         mapZoom: 10,
         visible: true
@@ -238,6 +238,9 @@ const CITY_CONFIG = {
         tagline: 'Cape Cod bear paradise',
         aliases: ['provincetown'],
         calendarId: '3b7c4ed1606370c70125e378cb3435fe8ab168161593b0f7dd3112ae56bc4db9@group.calendar.google.com',
+        calendar: 'chunky-dad-provincetown',
+        timezone: 'America/New_York',
+        patterns: ['provincetown', 'ptown'],
         coordinates: { lat: 42.0526, lng: -70.1865 },
         mapZoom: 12,
         visible: true
@@ -508,6 +511,42 @@ const CITY_CONFIG = {
         timezone: 'America/Bogota',
         patterns: ['bogota', 'bogotá'],
         coordinates: { lat: 4.7110, lng: -74.0721 },
+        mapZoom: 11,
+        visible: false
+    },
+    'honolulu': {
+        name: 'Honolulu',
+        emoji: '🌺',
+        tagline: 'Hawaiian bear paradise',
+        calendarId: '8b1cdc79cf18b1c20d5f4b8a49ad96a2890497d51b274e4c7cc9fe0779f1935f@group.calendar.google.com',
+        calendar: 'chunky-dad-honolulu',
+        timezone: 'Pacific/Honolulu',
+        patterns: ['honolulu', 'hawaii', 'oahu', 'waikiki'],
+        coordinates: { lat: 21.3069, lng: -157.8583 },
+        mapZoom: 11,
+        visible: false
+    },
+    'hong-kong': {
+        name: 'Hong Kong',
+        emoji: '🇭🇰',
+        tagline: 'Asian bear scene',
+        calendarId: '75b66a4ed30e33ee388ad32773157c2ceb380043cfdc3132434e43cf45a4bfb7@group.calendar.google.com',
+        calendar: 'chunky-dad-hongkong',
+        timezone: 'Asia/Hong_Kong',
+        patterns: ['hong kong', 'hk'],
+        coordinates: { lat: 22.3193, lng: 114.1694 },
+        mapZoom: 11,
+        visible: false
+    },
+    'tokyo': {
+        name: 'Tokyo',
+        emoji: '🗼',
+        tagline: 'Japanese bear scene',
+        calendarId: '55b5375e8476d1f78d4f8b7aace56322a4fd61a524cd613982534de8ac9fc566@group.calendar.google.com',
+        calendar: 'chunky-dad-tokyo',
+        timezone: 'Asia/Tokyo',
+        patterns: ['tokyo'],
+        coordinates: { lat: 35.6762, lng: 139.6503 },
         mapZoom: 11,
         visible: false
     }

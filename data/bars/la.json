@@ -7,7 +7,9 @@
     "instagram": "dirtybird_la",
     "facebook": "https://www.facebook.com/eagle.bar.la/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-    "gayCities": "https://losangeles.gaycities.com/bars/357-eagle-la"
+    "gayCities": "https://losangeles.gaycities.com/bars/357-eagle-la",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:04.830Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "Precinct LA",
@@ -17,6 +19,29 @@
     "instagram": "https://www.instagram.com/precinctdtla",
     "facebook": "https://www.facebook.com/precinctdtla",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ16rgokvGwoARgLmCBWa28wI",
-    "gayCities": "https://losangeles.gaycities.com/bars/306866-precinct"
+    "gayCities": "https://losangeles.gaycities.com/bars/306866-precinct",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:08.016Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Akbar",
+    "city": "la",
+    "gayCities": "https://losangeles.gaycities.com/bars/359-akbar",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:06.594Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "The Falcon",
+    "city": "la",
+    "gayCities": "https://longbeach.gaycities.com/bars/1215-falcon",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:06.674Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "GYM Bar",
+    "city": "la",
+    "gayCities": "https://losangeles.gaycities.com/bars/309258-gym-bar-weho",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:14.234Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   }
 ]

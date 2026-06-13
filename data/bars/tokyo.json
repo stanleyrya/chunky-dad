@@ -1,0 +1,20 @@
+[
+  {
+    "name": "EAGLE TOKYO",
+    "city": "tokyo",
+    "gayCities": "https://tokyo.gaycities.com/bars/307927-eagle-tokyo",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:16.126Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "EAGLE TOKYO BLUE",
+    "city": "tokyo",
+    "address": "2 Chome−11−2 Casa Verde, 1階、地下1階, Shinjuku City, Tokyo 160-0022",
+    "coordinates": "35.690086, 139.7077713",
+    "instagram": "https://www.instagram.com/eagletokyojp",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJVVvvklSNGGAR4pCosef9zpQ",
+    "gayCities": "https://tokyo.gaycities.com/bars/312380-eagle-tokyo-blue",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:45.310Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

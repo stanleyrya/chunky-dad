@@ -1,0 +1,16 @@
+[
+  {
+    "name": "STUDS",
+    "city": "pv",
+    "gayCities": "https://vallarta.gaycities.com/bars/309956-studs-bear-bar",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.611Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "CC Slaughters",
+    "city": "pv",
+    "gayCities": "https://vallarta.gaycities.com/bars/302724-cc-slaughters",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.132Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

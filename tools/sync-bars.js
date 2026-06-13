@@ -465,7 +465,7 @@ async function enrichBarsWithExternalData(bars) {
         } else if (needsGayCitiesScraping) {
             try {
                 console.log(`🔍 Scraping GayCities data for ${bar.name} from ${bar.gayCities}`);
-                const scrapedData = await scrapeGayCitiesData(bar.gayCities);
+                const scrapedData = await scrapeGayCitiesDataWithRetry(bar.gayCities);
                 
                 // Only update fields that are currently empty
                 if (!enrichedBar.address && scrapedData.address) {
@@ -602,6 +602,28 @@ async function scrapeWikipediaData(url) {
     // Wikipedia logo extraction removed - logos are now handled by the image download action
     
     return data;
+}
+
+
+async function scrapeGayCitiesDataWithRetry(url) {
+    const maxRetries = 2;
+    let lastError;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await scrapeGayCitiesData(url);
+        } catch (error) {
+            lastError = error;
+            if (error.message.includes('403') && attempt < maxRetries) {
+                console.log(`    ⚠️ HTTP 403 on ${url}, retrying (${attempt + 1}/${maxRetries})...`);
+                // Exponential backoff: 2s, 4s, etc.
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+            } else {
+                throw error;
+            }
+        }
+    }
+    throw lastError;
 }
 
 // Scrape GayCities data for a bar (simplified version)

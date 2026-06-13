@@ -6,7 +6,9 @@
     "coordinates": "40.7173904, -73.9493112",
     "instagram": "https://www.instagram.com/animal.nyc",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJdaGX6E9ZwokRrcrhq8cMM-8",
-    "gayCities": "https://newyork.gaycities.com/bars/312406-animal"
+    "gayCities": "https://newyork.gaycities.com/bars/312406-animal",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:02.885Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "Rockbar",
@@ -16,7 +18,9 @@
     "instagram": "https://www.instagram.com/rockbarnyc",
     "facebook": "https://www.facebook.com/Rockbar-NYC",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
-    "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc"
+    "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:43:58.506Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "Eagle NYC",
@@ -36,7 +40,9 @@
     "instagram": "https://www.instagram.com/3dollarbillbk",
     "facebook": "https://www.facebook.com/3dollarbillbk",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc",
-    "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill"
+    "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:03.601Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "Ty's",
@@ -46,7 +52,9 @@
     "instagram": "https://www.instagram.com/tysbar",
     "facebook": "https://www.facebook.com/TysNYC",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY",
-    "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc"
+    "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:01.708Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "Nowhere Bar",
@@ -56,6 +64,47 @@
     "instagram": "https://www.instagram.com/nowherenyc",
     "facebook": "https://www.facebook.com/nowherebar",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY",
-    "gayCities": "https://newyork.gaycities.com/bars/415-nowhere-bar"
+    "gayCities": "https://newyork.gaycities.com/bars/415-nowhere-bar",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:03.933Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Albatross",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/449-albatross-bar",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.543Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Gym Sports Bar",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/394-gym-sportsbar",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.111Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "FLEX",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/311127-flex",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:15.060Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Atlas Social Club",
+    "city": "nyc",
+    "address": "753 9th Ave, New York, NY 10019",
+    "coordinates": "40.7640829, -73.9889102",
+    "facebook": "https://www.facebook.com/atlassocialclub",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJSYrBMldYwokRuer87cJcwiw",
+    "gayCities": "https://newyork.gaycities.com/bars/305118-atlas-social-club",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:39.100Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "9th Avenue Saloon",
+    "city": "nyc",
+    "gayCities": "https://newyork.gaycities.com/bars/426-th-avenue-saloon",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:15.492Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   }
 ]

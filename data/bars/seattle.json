@@ -15,7 +15,9 @@
     "address": "9630 16th Ave SW, Seattle, WA 98106",
     "coordinates": "47.5165235, -122.3548059",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-8uYrt9DkFQRXv1WZmNZ8F0",
-    "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar"
+    "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:04.188Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "The Cuff Complex",
@@ -24,7 +26,9 @@
     "coordinates": "47.6150778, -122.3157208",
     "facebook": "https://www.facebook.com/thecuffcomplex",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuQVbk81qkFQRkm6N_RnwHQY",
-    "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex"
+    "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:04.862Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "Seattle Eagle",
@@ -41,7 +45,9 @@
     "coordinates": "47.6196626, -122.3233158",
     "facebook": "https://www.facebook.com/ccsseattle",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I",
-    "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle"
+    "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:04.751Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "Madison Pub",
@@ -49,7 +55,9 @@
     "address": "1315 E Madison St, Seattle, WA 98122",
     "coordinates": "47.6133619, -122.3149054",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJB_-ecc5qkFQRS1xH4lgadrg",
-    "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub"
+    "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.171Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   },
   {
     "name": "Pony",
@@ -57,6 +65,8 @@
     "address": "1221 E Madison St, Seattle, WA 98122",
     "coordinates": "47.6130663, -122.3157243",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJRUOyfc5qkFQRDZLLFj1Q264",
-    "gayCities": "https://seattle.gaycities.com/bars/2442-pony"
+    "gayCities": "https://seattle.gaycities.com/bars/2442-pony",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:11.084Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   }
 ]
