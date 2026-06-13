@@ -130,6 +130,7 @@ const scraperCities = {
     "timezone": "America/Los_Angeles",
     "patterns": [
       "san francisco",
+      "san fransisco",
       "sf",
       "castro",
       "san jose",
@@ -166,6 +167,14 @@ const scraperCities = {
     "timezone": "America/Phoenix",
     "patterns": [
       "phoenix"
+    ]
+  },
+  "ptown": {
+    "calendar": "chunky-dad-provincetown",
+    "timezone": "America/New_York",
+    "patterns": [
+      "provincetown",
+      "ptown"
     ]
   },
   "san-diego": {
@@ -336,6 +345,31 @@ const scraperCities = {
     "patterns": [
       "bogota",
       "bogotá"
+    ]
+  },
+  "honolulu": {
+    "calendar": "chunky-dad-honolulu",
+    "timezone": "Pacific/Honolulu",
+    "patterns": [
+      "honolulu",
+      "hawaii",
+      "oahu",
+      "waikiki"
+    ]
+  },
+  "hong-kong": {
+    "calendar": "chunky-dad-hongkong",
+    "timezone": "Asia/Hong_Kong",
+    "patterns": [
+      "hong kong",
+      "hk"
+    ]
+  },
+  "tokyo": {
+    "calendar": "chunky-dad-tokyo",
+    "timezone": "Asia/Tokyo",
+    "patterns": [
+      "tokyo"
     ]
   }
 };

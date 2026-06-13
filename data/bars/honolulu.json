@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Hula's Bar and Lei Stand",
+    "city": "honolulu",
+    "gayCities": "https://hawaii.gaycities.com/bars/276-hulas-bar-lei-stand",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:15.559Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "In Between",
+    "city": "honolulu",
+    "address": "2155 Lauula St, Honolulu, HI 96815",
+    "coordinates": "21.2807141, -157.8297099",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJK93OZIptAHwRwR-r34F8Zj4",
+    "gayCities": "https://hawaii.gaycities.com/bars/277-in-between",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:42.207Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

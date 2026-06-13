@@ -1,0 +1,9 @@
+[
+  {
+    "name": "The Alley Bar",
+    "city": "boston",
+    "gayCities": "https://boston.gaycities.com/bars/127-the-alley-bar",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:07.283Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

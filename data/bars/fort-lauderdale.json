@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Eagle",
+    "city": "fort-lauderdale",
+    "gayCities": "https://fortlauderdale.gaycities.com/bars/309115-eagle-wilton-manors",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:07.785Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Gym Sports Bar",
+    "city": "fort-lauderdale",
+    "address": "2287 Wilton Dr, Wilton Manors, FL 33305",
+    "coordinates": "26.1572257, -80.1373084",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJPUAeAZwB2YgRL0hklcfzn6A",
+    "gayCities": "https://fortlauderdale.gaycities.com/bars/309259-gym-sportsbar-wilton-manors",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:26.668Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "The Pub",
+    "city": "fort-lauderdale",
+    "gayCities": "https://fortlauderdale.gaycities.com/bars/304345-the-pub-wilton-manors",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.740Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Hunters",
+    "city": "fort-lauderdale",
+    "address": "2232-2238 Wilton Dr, Wilton Manors, FL 33305",
+    "coordinates": "26.1557905, -80.1381831",
+    "facebook": "https://www.facebook.com/huntersfl",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJde9xlp4B2YgRVl9hn3TriiI",
+    "gayCities": "https://fortlauderdale.gaycities.com/bars/247-hunters-nightclub-wilton-manors",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:32.819Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Scandals Saloon",
+    "city": "fort-lauderdale",
+    "gayCities": "https://fortlauderdale.gaycities.com/bars/256-scandals-saloon",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:14.184Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

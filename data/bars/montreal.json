@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Le Stud",
+    "city": "montreal",
+    "gayCities": "https://montreal.gaycities.com/bars/724-le-stud",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.383Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Aigle Noir",
+    "city": "montreal",
+    "address": "1315 St Catherine St E, Montreal, QC H2L 2H4",
+    "coordinates": "45.519641, -73.555339",
+    "facebook": "https://www.facebook.com/Bar.Aigle.Noir/",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJEc7NGK4byUwR1QVPh5qsYCY",
+    "gayCities": "https://montreal.gaycities.com/bars/710-aigle-noir",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:29.766Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

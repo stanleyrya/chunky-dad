@@ -1,0 +1,9 @@
+[
+  {
+    "name": "CC Slaughters",
+    "city": "portland",
+    "gayCities": "https://portland.gaycities.com/bars/893-cc-slaughters-nightclub-and-lounge",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.216Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]

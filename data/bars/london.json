@@ -7,6 +7,34 @@
     "instagram": "https://www.instagram.com/rvtofficial",
     "facebook": "https://www.facebook.com/TheRVT",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
-    "gayCities": "https://london.gaycities.com/bars/1710-royal-vauxhall-tavern"
+    "gayCities": "https://london.gaycities.com/bars/1710-royal-vauxhall-tavern",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.525Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Duke of Wellington",
+    "city": "london",
+    "gayCities": "https://london.gaycities.com/bars/1704-the-duke-of-wellington",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.999Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Kings Arms",
+    "city": "london",
+    "address": "23 Poland St, London, England W1F 8QL",
+    "coordinates": "51.5151643, -0.1371827",
+    "instagram": "https://www.instagram.com/KingsArms.soho",
+    "facebook": "https://www.facebook.com/kingsarms.soho",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJBUDtIZcEdkgR0k-Xw7rA8wM",
+    "gayCities": "https://london.gaycities.com/bars/2046-the-kings-arms",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:17.284Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Eagle London",
+    "city": "london",
+    "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:06.578Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
   }
 ]

@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Meeting House Tavern",
+    "city": "chicago",
+    "gayCities": "https://chicago.gaycities.com/bars/311263-meeting-house-tavern",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:06.765Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "The SoFo Tap",
+    "city": "chicago",
+    "address": "4923 N Clark St 1st floor, Chicago, IL 60640",
+    "coordinates": "41.9724308, -87.6676099",
+    "instagram": "https://www.instagram.com/thesofotap",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
+    "gayCities": "https://chicago.gaycities.com/bars/2076-the-sofo-tap",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:20.384Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Jackhammer",
+    "city": "chicago",
+    "gayCities": "https://chicago.gaycities.com/bars/176-jackhammer",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:07.070Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  },
+  {
+    "name": "Touché",
+    "city": "chicago",
+    "address": "6412 N Clark St, Chicago, IL 60626",
+    "coordinates": "41.9985708, -87.670974",
+    "instagram": "https://www.instagram.com/?hl=en",
+    "facebook": "https://www.facebook.com/ToucheChicago",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJnwLkWrzRD4gREreJ-KlTEoU",
+    "gayCities": "https://chicago.gaycities.com/bars/184-touch%C3%A9"
+  },
+  {
+    "name": "Cell Block",
+    "city": "chicago",
+    "gayCities": "https://chicago.gaycities.com/bars/145-cell-block",
+    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.721Z",
+    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+  }
+]
