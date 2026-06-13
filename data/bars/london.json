@@ -8,8 +8,7 @@
     "facebook": "https://www.facebook.com/TheRVT",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
     "gayCities": "https://london.gaycities.com/bars/1710-royal-vauxhall-tavern",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.525Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:19:24.741Z"
   },
   {
     "name": "Duke of Wellington",

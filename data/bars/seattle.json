@@ -53,8 +53,7 @@
     "coordinates": "47.6133619, -122.3149054",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJB_-ecc5qkFQRS1xH4lgadrg",
     "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.171Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:19:20.182Z"
   },
   {
     "name": "Pony",
@@ -63,7 +62,6 @@
     "coordinates": "47.6130663, -122.3157243",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJRUOyfc5qkFQRDZLLFj1Q264",
     "gayCities": "https://seattle.gaycities.com/bars/2442-pony",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:11.084Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:19:22.288Z"
   }
 ]
