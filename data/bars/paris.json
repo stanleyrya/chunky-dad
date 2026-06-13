@@ -3,8 +3,11 @@
     "name": "Bear's Den",
     "city": "paris",
     "gayCities": "https://paris.gaycities.com/bars/1625-bears-den",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:05.684Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "6 Rue des Lombards, Paris, IDF 75004",
+    "coordinates": "48.8591657, 2.3500783",
+    "facebook": "https://www.facebook.com/Bearsden-Paris-306571042732756/",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ3wmsgx5u5kcRX4l_NuRC3z0",
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:22.662Z"
   },
   {
     "name": "El Hombre",
@@ -13,7 +16,6 @@
     "coordinates": "48.859861, 2.349458",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJsYcLoB5u5kcRvlZDfSyg7w4",
     "gayCities": "https://paris.gaycities.com/bars/307921-el-hombre",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:14.181Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:24.689Z"
   }
 ]

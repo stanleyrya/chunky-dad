@@ -76,11 +76,11 @@
   {
     "name": "Albatross",
     "city": "nyc",
-    "gayCities": "https://newyork.gaycities.com/bars/449-albatross-bar",
     "address": "3619 24th Ave, Queens, NY 11103",
     "coordinates": "40.7701915, -73.9121803",
     "facebook": "https://www.facebook.com/albatrossastoria",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ8RSx_WlfwokRa_PTy_InEnM",
+    "gayCities": "https://newyork.gaycities.com/bars/449-albatross-bar",
     "gayCitiesLastScrapedAt": "2026-06-13T15:19:27.078Z"
   },
   {
