@@ -6010,27 +6010,39 @@ TEXT:
         // Combine date and time if we have split fields
         // If start/end was provided, use them directly; otherwise combine split fields
         // Use timezone-aware combination when both date and time are available from split fields
-        const combinedStartDate = startProvided
-            ? this.parseDateValue(aiEvent.start, timezone)
-            : (startTimeRaw && startDateRaw
-                ? (this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + startTimeRaw, timezone) || combineDateAndTime(startDateRaw, startTimeRaw))
-                : (startTimeRaw && !startDateRaw ? this.parseDateValue(startTimeRaw, timezone) : startDateRaw));
-        let combinedEndDate = endProvided
-            ? this.parseDateValue(aiEvent.end, timezone)
-            : (endTimeRaw && endDateRaw
-                ? (this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + endTimeRaw, timezone) || combineDateAndTime(endDateRaw, endTimeRaw))
-                : (endTimeRaw && !endDateRaw ? this.parseDateValue(endTimeRaw, timezone) : endDateRaw));
 
-        // If we have a combined start date with a time, but the end date doesn't have a time (or doesn't exist),
-        // we want the end date to exactly match the start date's time, leaving the end ambiguous.
-        if (combinedStartDate && startTimeRaw && !endTimeRaw) {
-            if (!endDateRaw || (startDateRaw && endDateRaw.getTime() === startDateRaw.getTime())) {
-                // Same day or missing end date: end date is exactly start date
-                combinedEndDate = new Date(combinedStartDate);
+        let combinedStartDate = null;
+        if (startProvided) {
+            combinedStartDate = this.parseDateValue(aiEvent.start, timezone);
+        } else if (startDateRaw) {
+            // Default to local midnight if no start time provided
+            const timeStr = startTimeRaw || '00:00:00';
+            combinedStartDate = this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + timeStr, timezone) || combineDateAndTime(startDateRaw, startTimeRaw || '00:00') || startDateRaw;
+        } else if (startTimeRaw) {
+            combinedStartDate = this.parseDateValue(startTimeRaw, timezone);
+        }
+
+        let combinedEndDate = null;
+        if (endProvided) {
+            combinedEndDate = this.parseDateValue(aiEvent.end, timezone);
+        } else if (endDateRaw) {
+            const isDifferentDay = startDateRaw && endDateRaw.getTime() !== startDateRaw.getTime();
+            if (endTimeRaw) {
+                combinedEndDate = this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + endTimeRaw, timezone) || combineDateAndTime(endDateRaw, endTimeRaw) || endDateRaw;
+            } else if (isDifferentDay) {
+                // Multi-day event with no end time: use 23:59:59 local time
+                combinedEndDate = this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' 23:59:59', timezone) || combineDateAndTime(endDateRaw, '23:59') || endDateRaw;
             } else {
-                // Different day: Apply start time to end date
-                combinedEndDate = this.convertLocalDateTimeToUtc(endDateRaw.toISOString().split('T')[0] + ' ' + startTimeRaw, timezone) || combineDateAndTime(endDateRaw, startTimeRaw);
+                // Same day with no end time: exactly match start time to represent ambiguous end
+                combinedEndDate = combinedStartDate ? new Date(combinedStartDate) : endDateRaw;
             }
+        } else if (endTimeRaw) {
+            combinedEndDate = this.parseDateValue(endTimeRaw, timezone);
+        }
+
+        // If we only have a start date and no end date info at all, match the end exactly to the start
+        if (!endProvided && !endDateRaw && !endTimeRaw && combinedStartDate) {
+            combinedEndDate = new Date(combinedStartDate);
         }
 
         console.log(`🤖 AI Web: Combined dates — combinedStartDate=${combinedStartDate instanceof Date ? combinedStartDate.toISOString() : combinedStartDate}, combinedEndDate=${combinedEndDate instanceof Date ? combinedEndDate.toISOString() : combinedEndDate}`);
