@@ -335,11 +335,13 @@ function cleanBarObject(bar) {
         'wikipediaExtractionFailureAt',
         'wikipediaExtractionFailureMessage',
         'gayCitiesExtractionFailureAt',
-        'gayCitiesExtractionFailureMessage'
+        'gayCitiesExtractionFailureMessage',
+        'gayCitiesExtractionFailureCount',
+        'gayCitiesLastScrapedAt'
     ];
     
     fieldsToKeep.forEach(field => {
-        if (bar[field] && bar[field].toString().trim() !== '') {
+        if (bar[field] !== undefined && bar[field] !== null && bar[field].toString().trim() !== '') {
             cleaned[field] = bar[field];
         }
     });
@@ -378,8 +380,32 @@ function shouldScrapeWikipediaBar(bar, localBar) {
 // Check if a bar needs GayCities scraping based on missing data or URL changes
 function shouldScrapeGayCitiesBar(bar, localBar) {
     const priorFailureAt = bar.gayCitiesExtractionFailureAt || localBar?.gayCitiesExtractionFailureAt;
-    if (priorFailureAt) {
-        console.log(`🚫 Skipping GayCities scraping for ${bar.name} - previous extraction failed at ${priorFailureAt}; requires manual investigation`);
+    const priorFailureCount = bar.gayCitiesExtractionFailureCount || localBar?.gayCitiesExtractionFailureCount || 0;
+
+    // Check if URL changed from what we have saved locally
+    const urlChanged = bar.gayCities && localBar?.gayCities && bar.gayCities !== localBar.gayCities;
+
+    if (priorFailureAt && !urlChanged) {
+        if (priorFailureCount >= 3) {
+            console.log(`🚫 Skipping GayCities scraping for ${bar.name} - failed ${priorFailureCount} times, last at ${priorFailureAt}`);
+            return false;
+        } else {
+            // Exponential backoff
+            const failedDate = new Date(priorFailureAt);
+            const now = new Date();
+            const daysSinceFailure = (now - failedDate) / (1000 * 60 * 60 * 24);
+            const daysToWait = priorFailureCount; // wait 1 day for 1 failure, 2 days for 2 failures
+
+            if (daysSinceFailure < daysToWait) {
+                console.log(`⏳ Backing off GayCities scraping for ${bar.name} - waiting ${daysToWait} days after failure ${priorFailureCount}`);
+                return false;
+            }
+        }
+    }
+
+    const lastScrapedAt = bar.gayCitiesLastScrapedAt || localBar?.gayCitiesLastScrapedAt;
+    if (lastScrapedAt && !urlChanged) {
+        // We've already successfully scraped this URL, any missing fields are truly missing
         return false;
     }
 
@@ -392,8 +418,7 @@ function shouldScrapeGayCitiesBar(bar, localBar) {
     if (!bar.facebook || bar.facebook.trim() === '') missingFields.push('facebook');
     if (!bar.googleMaps || bar.googleMaps.trim() === '') missingFields.push('googleMaps');
     
-    // Check if URL changed from what we have saved locally
-    if (bar.gayCities && localBar?.gayCities && bar.gayCities !== localBar.gayCities) {
+    if (urlChanged) {
         console.log(`🔄 ${bar.name} GayCities URL changed: ${localBar.gayCities} → ${bar.gayCities}`);
         return true;
     }
@@ -410,6 +435,8 @@ function shouldScrapeGayCitiesBar(bar, localBar) {
 async function enrichBarsWithExternalData(bars) {
     const enrichedBars = [];
     const extractionFailures = [];
+    let gayCitiesScrapedCount = 0;
+    const MAX_GAYCITIES_SCRAPES = 5;
     
     for (const bar of bars) {
         let enrichedBar = { ...bar };
@@ -424,7 +451,11 @@ async function enrichBarsWithExternalData(bars) {
         const needsWikipediaScraping = bar.wikipedia && shouldScrapeWikipediaBar(bar, localBar);
         
         // Check if bar needs GayCities scraping
-        const needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(bar, localBar);
+        let needsGayCitiesScraping = bar.gayCities && shouldScrapeGayCitiesBar(bar, localBar);
+        if (needsGayCitiesScraping && gayCitiesScrapedCount >= MAX_GAYCITIES_SCRAPES) {
+            console.log(`⏸️  Skipping GayCities scraping for ${bar.name} - reached session limit of ${MAX_GAYCITIES_SCRAPES}`);
+            needsGayCitiesScraping = false;
+        }
         
         if (needsWikipediaScraping) {
             try {
@@ -464,6 +495,12 @@ async function enrichBarsWithExternalData(bars) {
             }
         } else if (needsGayCitiesScraping) {
             try {
+                if (gayCitiesScrapedCount > 0) {
+                    console.log(`⏳ Waiting 2 seconds before next GayCities request...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                gayCitiesScrapedCount++;
+
                 console.log(`🔍 Scraping GayCities data for ${bar.name} from ${bar.gayCities}`);
                 const scrapedData = await scrapeGayCitiesDataWithRetry(bar.gayCities);
                 
@@ -489,12 +526,17 @@ async function enrichBarsWithExternalData(bars) {
 
                 delete enrichedBar.gayCitiesExtractionFailureAt;
                 delete enrichedBar.gayCitiesExtractionFailureMessage;
+                delete enrichedBar.gayCitiesExtractionFailureCount;
+                enrichedBar.gayCitiesLastScrapedAt = new Date().toISOString();
                 
                 console.log(`✅ Enriched ${bar.name} with GayCities data`);
             } catch (error) {
                 const failedAt = new Date().toISOString();
+                const previousCount = enrichedBar.gayCitiesExtractionFailureCount || localBar?.gayCitiesExtractionFailureCount || 0;
                 enrichedBar.gayCitiesExtractionFailureAt = failedAt;
                 enrichedBar.gayCitiesExtractionFailureMessage = error.message;
+                enrichedBar.gayCitiesExtractionFailureCount = previousCount + 1;
+
                 extractionFailures.push({
                     bar: bar.name,
                     city: bar.city,
@@ -504,10 +546,6 @@ async function enrichBarsWithExternalData(bars) {
                 });
                 console.warn(`⚠️  Failed to scrape GayCities data for ${bar.name}:`, error.message);
             }
-        } else if (bar.wikipedia) {
-            console.log(`⏭️  Skipping Wikipedia scraping for ${bar.name} - already has valid data`);
-        } else if (bar.gayCities) {
-            console.log(`⏭️  Skipping GayCities scraping for ${bar.name} - already has valid data`);
         }
         
         enrichedBars.push(enrichedBar);
