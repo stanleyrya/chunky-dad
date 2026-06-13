@@ -1921,7 +1921,7 @@ class AiWebParser {
 
             // Remove size patterns from pathname (e.g., /w_296,h_370/ or /1920x1080/)
             // Handle Wix-style /v1/fill/w_296,h_370,.../ patterns
-            pathname = pathname.replace(/\/v1\/fill\/[^/]+\/?/g, '/v1/fill/');  // Wix transform path
+            pathname = pathname.replace(/\/v1\/(?:fill|crop|fit)\/.*$/i, '');  // Wix transform path
             pathname = pathname.replace(/\/\d+[xX]\d+\/?/g, '/');  // 1920x1080 patterns
             pathname = pathname.replace(/\/w_\d+(?:,h_\d+)?\/?/i, '/');  // w_296,h_370 patterns
             pathname = pathname.replace(/\/h_\d+(?:,w_\d+)?\/?/i, '/');  // h_370,w_296 patterns
