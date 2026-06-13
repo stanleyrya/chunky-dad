@@ -179,6 +179,33 @@ class CityRenderer extends CompactCardRenderer {
     constructor() {
         super('city', '.city-compact-grid');
     }
+
+    init() {
+        super.init();
+        this.initSearch();
+    }
+
+    initSearch() {
+        const searchInput = document.getElementById('city-search');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const cards = this.container.querySelectorAll('.city-compact-card:not(.spacer-card):not(.coming-soon)');
+
+            cards.forEach(card => {
+                const cityNameElement = card.querySelector('.city-name');
+                if (cityNameElement) {
+                    const cityName = cityNameElement.textContent.toLowerCase();
+                    if (cityName.includes(searchTerm)) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
 }
 
 class BearEventRenderer extends CompactCardRenderer {
