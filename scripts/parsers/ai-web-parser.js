@@ -930,15 +930,21 @@ class AiWebParser {
         }
 
         const pageTextRecords = this.extractBodyPartRecords(source);
-        const segmentBounds = sourceSegments.map(segment => this.findMultiEventSegmentTextBounds(
-            source,
-            segment && Array.isArray(segment.lines) ? segment.lines : [],
-            pageTextRecords
-        ));
+        const segmentBounds = sourceSegments.map((segment, index) => {
+            const bounds = this.findMultiEventSegmentTextBounds(
+                source,
+                segment && Array.isArray(segment.lines) ? segment.lines : [],
+                pageTextRecords
+            );
+            if (!bounds) {
+                console.log(`🤖 AI Web: Failed to find exact text bounds for segment ${index + 1}. Will use fallback text for OCR similarity.`);
+            }
+            return bounds;
+        });
 
         // Use OCR results for better image-segment pairing if available
         const matchedImageUrls = ocrResults && ocrResults.length > 0
-            ? this.matchOrderedImagesToSegmentsWithOcr(segmentBounds, pageImageRecords, ocrResults)
+            ? this.matchOrderedImagesToSegmentsWithOcr(sourceSegments, segmentBounds, pageImageRecords, ocrResults)
             : this.matchOrderedImagesToSegments(segmentBounds, pageImageRecords);
 
         // Deduplicate matchedImageUrls by stripped URL to prevent same image at different sizes
@@ -1058,7 +1064,8 @@ class AiWebParser {
         return matchedUrls;
     }
 
-    matchOrderedImagesToSegmentsWithOcr(segmentBounds, imageRecords, ocrResults) {
+    matchOrderedImagesToSegmentsWithOcr(segments, segmentBounds, imageRecords, ocrResults) {
+        const sourceSegments = Array.isArray(segments) ? segments : [];
         const boundsList = Array.isArray(segmentBounds) ? segmentBounds : [];
         const records = Array.isArray(imageRecords) ? imageRecords : [];
         if (boundsList.length === 0 || records.length === 0) return [];
@@ -1089,10 +1096,14 @@ class AiWebParser {
                 const normalizedUrl = this.normalizeHttpUrlValue(imageRecord.url);
                 const ocrResult = ocrMap.get(this.stripSizeParams(normalizedUrl));
 
+                const segment = sourceSegments[i];
+                const fallbackText = segment && Array.isArray(segment.lines) ? segment.lines.join('\n') : '';
+
                 const pairingResult = this.getSegmentImagePairingCostWithOcr(
                     boundsList[i],
                     imageRecord,
-                    ocrResult
+                    ocrResult,
+                    fallbackText
                 );
 
                 if (Number.isFinite(pairingResult.cost)) {
@@ -1121,13 +1132,14 @@ class AiWebParser {
                 matchedUrls[pair.segmentIndex] = pair.url;
                 usedSegments.add(pair.segmentIndex);
                 usedImages.add(pair.imageIndex);
+                console.log(`🤖 AI Web: Successfully matched OCR image to segment ${pair.segmentIndex + 1} (score: ${pair.score.toFixed(1)}, cost: ${pair.cost})`);
             }
         }
 
         return matchedUrls;
     }
 
-    getSegmentImagePairingCostWithOcr(segmentBounds, imageRecord, ocrResult) {
+    getSegmentImagePairingCostWithOcr(segmentBounds, imageRecord, ocrResult, fallbackText = '') {
         // Base cost from HTML proximity
         const proximityCost = this.getSegmentImagePairingCost(segmentBounds, imageRecord);
 
@@ -1142,9 +1154,16 @@ class AiWebParser {
 
         // Text similarity bonus - compare OCR text with segment content
         let similarity = 0;
-        if (ocrResult.text && segmentBounds && Array.isArray(segmentBounds.matchedRecords) && segmentBounds.matchedRecords.length > 0) {
-            const segmentText = segmentBounds.matchedRecords.map(r => r.text).join('\n');
+        let segmentText = fallbackText;
+        if (segmentBounds && Array.isArray(segmentBounds.matchedRecords) && segmentBounds.matchedRecords.length > 0) {
+            segmentText = segmentBounds.matchedRecords.map(r => r.text).join('\n');
+        }
+
+        if (ocrResult.text && segmentText) {
             similarity = this.computeTextSimilarity(ocrResult.text, segmentText);
+
+            console.log(`🤖 AI Web: OCR similarity for image vs segment text -> ${similarity.toFixed(3)} (threshold: 0.15)`);
+
             if (similarity >= 0.15) {
                 score += similarity * 100;  // Up to 100 points for good similarity
 
