@@ -3,7 +3,10 @@
     "name": "The Alley Bar",
     "city": "boston",
     "gayCities": "https://boston.gaycities.com/bars/127-the-alley-bar",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:07.283Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "14 Pi Alley, Boston, MA 02108",
+    "coordinates": "42.358084, -71.0587317",
+    "facebook": "https://www.facebook.com/thealleybarboston",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
+    "gayCitiesLastScrapedAt": "2026-06-13T20:34:56.886Z"
   }
 ]

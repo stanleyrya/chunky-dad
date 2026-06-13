@@ -24,20 +24,20 @@
   {
     "name": "Akbar",
     "city": "la",
-    "gayCities": "https://losangeles.gaycities.com/bars/359-akbar",
     "address": "4356 Sunset Blvd, Los Angeles, CA 90029",
     "coordinates": "34.0956924, -118.2842979",
     "facebook": "https://www.facebook.com/Akbarsilverlake",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJOwpNUEzHwoARAPHUIkcyjdM",
+    "gayCities": "https://losangeles.gaycities.com/bars/359-akbar",
     "gayCitiesLastScrapedAt": "2026-06-13T18:37:31.295Z"
   },
   {
     "name": "The Falcon",
     "city": "la",
-    "gayCities": "https://longbeach.gaycities.com/bars/1215-falcon",
     "address": "1435 E Broadway, Long Beach, CA 90802",
     "coordinates": "33.768209, -118.173899",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqVioYxAx3YARhUlzgOXT0Zs",
+    "gayCities": "https://longbeach.gaycities.com/bars/1215-falcon",
     "gayCitiesLastScrapedAt": "2026-06-13T18:37:33.538Z"
   },
   {

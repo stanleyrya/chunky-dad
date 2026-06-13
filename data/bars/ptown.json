@@ -3,8 +3,11 @@
     "name": "A-House",
     "city": "ptown",
     "gayCities": "https://ptown.gaycities.com/bars/535-a-house",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:07.379Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "6 Masonic Pl #4, Provincetown, MA 02657",
+    "coordinates": "42.0500638, -70.1888875",
+    "facebook": "https://www.facebook.com/ahouseprovincetown",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJyQ3ZXX6n_IkR0_ZfyWwD6Zg",
+    "gayCitiesLastScrapedAt": "2026-06-13T20:34:59.308Z"
   },
   {
     "name": "Boatslip",
@@ -14,15 +17,17 @@
     "instagram": "https://www.instagram.com/boatslipresort",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
     "gayCities": "https://ptown.gaycities.com/hotels/10272-boatslip-resort-beach-club",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:23.570Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z"
   },
   {
     "name": "Crown & Anchor",
     "city": "ptown",
     "gayCities": "https://ptown.gaycities.com/bars/541-crown-anchor",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:07.704Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "247 Commercial St, Provincetown, MA 02657",
+    "coordinates": "42.0502291, -70.1876737",
+    "facebook": "https://www.facebook.com/CrownAnchorProvincetown",
+    "googleMaps": "https://www.google.com/maps/place/?q=247+Commercial+St,+Provincetown,+MA+02657",
+    "gayCitiesLastScrapedAt": "2026-06-13T20:35:03.709Z"
   },
   {
     "name": "Purgatory Gifford House",

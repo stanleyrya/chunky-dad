@@ -2,11 +2,11 @@
   {
     "name": "Meeting House Tavern",
     "city": "chicago",
-    "gayCities": "https://chicago.gaycities.com/bars/311263-meeting-house-tavern",
     "address": "5025 N Clark St, Chicago, IL 60640",
     "coordinates": "41.9732343, -87.6678243",
     "instagram": "https://www.instagram.com/meetinghousetavernchi",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJndazcVjTD4gRimEFGWVA_AU",
+    "gayCities": "https://chicago.gaycities.com/bars/311263-meeting-house-tavern",
     "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z"
   },
   {
@@ -22,12 +22,12 @@
   {
     "name": "Jackhammer",
     "city": "chicago",
-    "gayCities": "https://chicago.gaycities.com/bars/176-jackhammer",
     "address": "6406 N Clark St, Chicago, IL 60626",
     "coordinates": "41.9984139, -87.6710111",
     "instagram": "https://www.instagram.com/?hl=en",
     "facebook": "https://www.facebook.com/chijackhammer/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+    "gayCities": "https://chicago.gaycities.com/bars/176-jackhammer",
     "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z"
   },
   {
@@ -38,7 +38,8 @@
     "instagram": "https://www.instagram.com/?hl=en",
     "facebook": "https://www.facebook.com/ToucheChicago",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJnwLkWrzRD4gREreJ-KlTEoU",
-    "gayCities": "https://chicago.gaycities.com/bars/184-touch%C3%A9"
+    "gayCities": "https://chicago.gaycities.com/bars/184-touch%C3%A9",
+    "gayCitiesLastScrapedAt": "2026-06-13T20:34:54.431Z"
   },
   {
     "name": "Cell Block",
