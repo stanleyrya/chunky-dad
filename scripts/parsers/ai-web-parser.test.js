@@ -179,7 +179,7 @@ test('getAiPromptFields should group and sort split date/time fields correctly',
   // name (title), startDate (startdate), startTime (starttime), endDate (enddate), endTime (endtime), city (city)
   const normalizedFields = fields.map(f => parser.normalizePromptFieldName(f));
 
-  const expectedOrder = ['title', 'startdate', 'starttime', 'enddate', 'endtime', 'city', 'website', 'mastodon', 'description', 'bar', 'address', 'url', 'location', 'image', 'cover', 'ticketurl'];
+  const expectedOrder = ['title', 'startdate', 'starttime', 'enddate', 'endtime', 'city'];
   assert.deepEqual(normalizedFields, expectedOrder, 'Fields should be sorted according to EventSchema canonical order');
 });
 

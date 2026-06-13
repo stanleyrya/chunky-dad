@@ -4501,28 +4501,9 @@ class AiWebParser {
     }
 
     getAiPromptFields(parserConfig = {}, dataFlags = {}) {
-        const defaultPriorities = {
-            title: { priority: ["ai-web"], merge: "clobber" },
-            instagram: { priority: ["ai-web"], merge: "clobber" },
-            facebook: { priority: ["ai-web"], merge: "clobber" },
-            website: { priority: ["ai-web"], merge: "clobber" },
-            mastodon: { priority: ["ai-web"], merge: "clobber" },
-            description: { priority: ["ai-web"], merge: "clobber" },
-            bar: { priority: ["ai-web"], merge: "clobber" },
-            address: { priority: ["ai-web"], merge: "clobber" },
-            startDate: { priority: ["ai-web"], merge: "clobber" },
-            endDate: { priority: ["ai-web"], merge: "clobber" },
-            url: { priority: ["ai-web"], merge: "clobber" },
-            location: { priority: ["ai-web"], merge: "clobber" },
-            gmaps: { priority: ["ai-web"], merge: "clobber" },
-            image: { priority: ["ai-web"], merge: "clobber" },
-            cover: { priority: ["ai-web"], merge: "clobber" },
-            ticketUrl: { priority: ["ai-web"], merge: "clobber" }
-        };
-        const explicitPriorities = parserConfig && parserConfig.fieldPriorities && typeof parserConfig.fieldPriorities === 'object'
+        const priorities = parserConfig && parserConfig.fieldPriorities && typeof parserConfig.fieldPriorities === 'object'
             ? parserConfig.fieldPriorities
             : {};
-        const priorities = { ...defaultPriorities, ...explicitPriorities };
         const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object'
             ? parserConfig.metadata
             : {};
@@ -4642,15 +4623,7 @@ class AiWebParser {
             return sortA - sortB;
         });
 
-        const uniqueNormalized = new Set();
-        const aiPromptFields = [];
-        for (const field of selected) {
-            const normalized = this.normalizePromptFieldName(field);
-            if (!uniqueNormalized.has(normalized)) {
-                uniqueNormalized.add(normalized);
-                aiPromptFields.push(field);
-            }
-        }
+        const aiPromptFields = selected;
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
         const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
         const removedManualFields = aiPromptFields.filter(field => manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
