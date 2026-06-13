@@ -18,99 +18,35 @@
   <link rel="stylesheet" href="../styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@300;400;500;600&family=Poppins:wght@300;400;600;700;900&family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-      color-scheme: dark;
-      --page-bg: #0b0d13;
-      --panel-bg: #141826;
-      --panel-raised: #1c2235;
-      --text-primary: #f6f7ff;
-      --text-secondary: #c4c8e4;
-      --text-muted: #8e94b6;
-      --accent: #ffa24a;
-      --accent-strong: #ff7b2f;
-      --border: rgba(255, 255, 255, 0.08);
-      --soft: rgba(255, 162, 74, 0.12);
-      --chip: rgba(255, 162, 74, 0.18);
-      --sticky-header-offset: 6rem;
-    }
+    body { font-family: 'Poppins', sans-serif; background: var(--background-primary); color: var(--text-primary); }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Poppins', sans-serif;
-      background: radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%);
-      color: var(--text-primary);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+    header { position: sticky; top: 0; background: var(--gradient-primary); z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    nav .nav-container { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; max-width: 1400px; margin: 0 auto; }
+    .logo h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; }
+    .logo a { color: var(--text-inverse); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+    .logo-img { width: 28px; height: 28px; }
 
-    .page-wrapper {
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: calc(2.1rem + var(--sticky-header-offset)) 1.25rem 3.2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
+    main { padding: 24px 0 40px; }
+    .page-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .page-title h2 { font-size: 32px; font-weight: 700; margin: 0; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .subtitle { color: var(--text-secondary); font-size: 15px; line-height: 1.5; }
 
-    .tool-.tool-header .tool-.tool-nav .tool-nav .tool-brand-text {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: nowrap;
-    }
-
-    .tool-page-label {
-      display: inline-flex;
-      align-items: center;
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.85);
-      white-space: nowrap;
-      padding: 0.15rem 0.45rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-      gap: 1.5rem;
-      align-items: start;
-    }
-
-    .panel {
-      background: var(--panel-bg);
-      border-radius: 16px;
-      padding: 1.2rem;
-      border: 1px solid var(--border);
-      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.35);
-    }
-
-    .panel-.panel-header h2 { margin: 0; font-size: 1.15rem; color: var(--text-primary); }
-    .panel-subtitle { margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
-
-    .section-body { display: grid; gap: 0.85rem; margin-top: 0.55rem; }
-    .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem; }
-
-    .field-group { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
-    .field-group label { font-weight: 600; font-size: 0.85rem; color: var(--text-primary); }
-
-    input[type="text"], input[type="url"], select, textarea {
-      font-family: inherit; font-size: 0.85rem; border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 9px; padding: 0.5rem 0.65rem; background: #0d111a; color: var(--text-primary);
-    }
-
-    .btn, .ghost-button {
-      padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.24);
-      background: rgba(255, 255, 255, 0.08); color: var(--text-primary); cursor: pointer; font-size: 0.8rem;
-    }
-    .btn:hover, .ghost-button:hover { background: rgba(255, 255, 255, 0.16); }
-
-
+    .controls-panel { background: var(--white); border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 24px; border: 2px solid var(--border-lighter); }
+    .controls-section { margin-bottom: 20px; }
+    .controls-section:last-child { margin-bottom: 0; }
+    .controls-section h3 { font-size: 14px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0; }
+    .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .control-field { display: flex; flex-direction: column; gap: 6px; }
+    .control-field label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+    .control-field input, .control-field select { padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border-lighter); background: var(--white); color: var(--text-primary); font-family: inherit; transition: all 0.2s; }
+    .control-field input:focus, .control-field select:focus { outline: none; border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); }
+    .control-field.full { grid-column: 1 / -1; }
+    .button-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { padding: 10px 18px; border-radius: 8px; border: 1.5px solid var(--border-lighter); background: var(--white); cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; font-family: inherit; }
+    .btn:hover { background: var(--background-light); transform: translateY(-1px); }
+    .btn.primary { background: var(--gradient-primary); color: var(--text-inverse); border: 0; }
+    .btn.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3); }
 
     .theme-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
     .theme-option { aspect-ratio: 2/1; border-radius: 10px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; position: relative; overflow: hidden; }
@@ -146,10 +82,11 @@
     .color-input-wrapper { position: relative; }
     .color-input-wrapper input[type="color"] { width: 100%; height: 44px; border-radius: 8px; border: 1.5px solid var(--border-lighter); cursor: pointer; }
 
-    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(550px, 1fr)); gap: 40px; }
+    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
     .variant-card { background: var(--white); border: 2px solid var(--border-lighter); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); transition: all 0.3s; }
     .variant-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateY(-2px); }
-    .variant-.variant-title { font-weight: 700; font-size: 14px; color: var(--text-primary); }
+    .variant-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 2px solid var(--border-lighter); background: var(--background-light); }
+    .variant-title { font-weight: 700; font-size: 14px; color: var(--text-primary); }
     .variant-description { font-size: 12px; color: var(--text-secondary); }
     .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #0a0a0a; display: grid; place-items: center; overflow: hidden; position: relative; }
     .artboard { width: 1200px; height: 630px; position: relative; overflow: hidden; transform-origin: top left; font-family: 'Poppins', sans-serif; }
@@ -214,6 +151,16 @@
     .layout-speech .event-image { position: absolute; right: 80px; top: 80px; width: 340px; height: 220px; background-size: cover; background-position: center; border: 8px solid rgba(255,255,255,0.9); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
     .layout-speech .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.85); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 14px; }
 
+    /* Event Image Speaks */
+    .layout-speech-event { position: relative; }
+    .layout-speech-event .event-avatar { position: absolute; right: 80px; bottom: 80px; width: 200px; height: 200px; border-radius: 50%; box-shadow: 0 15px 50px rgba(0,0,0,0.5); border: 8px solid rgba(255,255,255,0.95); background-size: cover; background-position: center; }
+    .layout-speech-event .speech-bubble { position: absolute; right: 320px; bottom: 180px; max-width: 700px; background: #fff; color: #111; border-radius: 25px; padding: 28px 32px; box-shadow: 0 25px 70px rgba(0,0,0,0.4); font-size: 28px; line-height: 1.3; font-weight: 600; }
+    .layout-speech-event .speech-bubble:after { content: ""; position: absolute; right: -32px; bottom: 28px; width: 0; height: 0; border-top: 24px solid transparent; border-bottom: 24px solid transparent; border-left: 32px solid #fff; filter: drop-shadow(0 8px 8px rgba(0,0,0,0.2)); }
+    .layout-speech-event .title-bg { position: absolute; left: 60px; top: 60px; right: 60px; height: 140px; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); border-radius: 20px; border: 2px solid rgba(255,255,255,0.25); }
+    .layout-speech-event .event-title { position: absolute; left: 80px; top: 90px; right: 80px; color: #fff; font-size: 56px; line-height: 0.95; font-weight: 900; text-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align: center; }
+    .layout-speech-event .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.9); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 16px; }
+
+
     /* Retro Terminal */
     .layout-speech-terminal { background: #0f3460; position: relative; }
     .layout-speech-terminal:before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px); }
@@ -226,32 +173,151 @@
     .layout-speech-terminal .cursor { animation: blink 1s infinite; }
     @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
 
+    /* Instagram Story */
+    .layout-speech-story { background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%); position: relative; }
+    .layout-speech-story .story-frame { position: absolute; inset: 40px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .layout-speech-story .story-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.7); }
+    .layout-speech-story .story-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.6) 100%); }
+    .layout-speech-story .profile-section { position: absolute; top: 30px; left: 30px; right: 30px; display: flex; align-items: center; gap: 15px; }
+    .layout-speech-story .profile-avatar { width: 60px; height: 60px; object-fit: contain; }
+    .layout-speech-story .profile-info { color: #fff; }
+    .layout-speech-story .profile-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+    .layout-speech-story .profile-time { font-size: 12px; opacity: 0.8; }
+    .layout-speech-story .story-bubble { position: absolute; left: 30px; right: 30px; bottom: 80px; background: rgba(255,255,255,0.95); color: #333; border-radius: 25px; padding: 24px 28px; font-size: 22px; line-height: 1.3; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .layout-speech-story .event-title { position: absolute; left: 30px; right: 30px; top: 50%; transform: translateY(-50%); color: #fff; font-size: 42px; line-height: 1.1; font-weight: 900; text-align: center; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+
+    /* Thought Cloud */
+    .layout-speech-thought { position: relative; }
+    .layout-speech-thought .dreamer { position: absolute; left: 80px; bottom: 80px; width: 180px; height: 180px; object-fit: contain; }
+    .layout-speech-thought .thought-cloud { position: absolute; left: 320px; bottom: 200px; max-width: 700px; background: #fff; color: #333; border-radius: 50px; padding: 32px 40px; box-shadow: 0 25px 60px rgba(0,0,0,0.3); font-size: 24px; line-height: 1.4; position: relative; }
+    .layout-speech-thought .thought-bubble-1 { position: absolute; left: -40px; bottom: 30px; width: 30px; height: 30px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .layout-speech-thought .thought-bubble-2 { position: absolute; left: -20px; bottom: 10px; width: 20px; height: 20px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .layout-speech-thought .thought-bubble-3 { position: absolute; left: -8px; bottom: -5px; width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .layout-speech-thought .event-image { position: absolute; right: 80px; top: 80px; width: 320px; height: 240px; background-size: cover; background-position: center; border-radius: 20px; border: 6px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+    .layout-speech-thought .event-title { position: absolute; left: 80px; top: 80px; max-width: 500px; color: #fff; font-size: 52px; line-height: 1.1; font-weight: 900; text-shadow: 0 6px 25px rgba(0,0,0,0.5); }
+
+    /* Messenger Chat */
+    .layout-speech-messenger { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; }
+    .layout-speech-messenger .chat-container { position: absolute; inset: 60px; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+    .layout-speech-messenger .chat-header { position: absolute; top: 0; left: 0; right: 0; height: 80px; background: #4267B2; display: flex; align-items: center; padding: 0 20px; gap: 15px; }
+    .layout-speech-messenger .chat-avatar { width: 50px; height: 50px; object-fit: contain; }
+    .layout-speech-messenger .chat-title { color: #fff; font-size: 20px; font-weight: 700; }
+    .layout-speech-messenger .chat-body { position: absolute; top: 80px; left: 0; right: 0; bottom: 0; padding: 30px; background: #f0f2f5; }
+    .layout-speech-messenger .message-bubble { background: #4267B2; color: #fff; border-radius: 20px; padding: 16px 20px; font-size: 18px; line-height: 1.4; max-width: 400px; margin-left: auto; margin-bottom: 15px; }
+    .layout-speech-messenger .message-image { width: 300px; height: 200px; background-size: cover; background-position: center; border-radius: 15px; margin-left: auto; margin-bottom: 15px; }
+    .layout-speech-messenger .typing-indicator { display: flex; align-items: center; gap: 8px; color: #65676b; font-size: 14px; }
+    .layout-speech-messenger .typing-dots { display: flex; gap: 3px; }
+    .layout-speech-messenger .typing-dot { width: 6px; height: 6px; background: #65676b; border-radius: 50%; animation: typingDot 1.4s infinite ease-in-out; }
+    .layout-speech-messenger .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .layout-speech-messenger .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typingDot { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+    /* Discord Chat */
+    .layout-speech-discord { background: #36393f; position: relative; }
+    .layout-speech-discord .discord-container { position: absolute; inset: 40px; background: #2f3136; border-radius: 8px; overflow: hidden; }
+    .layout-speech-discord .discord-sidebar { position: absolute; left: 0; top: 0; bottom: 0; width: 200px; background: #202225; border-right: 1px solid #40444b; }
+    .layout-speech-discord .discord-main { position: absolute; left: 200px; top: 0; right: 0; bottom: 0; }
+    .layout-speech-discord .discord-header { position: absolute; top: 0; left: 0; right: 0; height: 60px; background: #36393f; border-bottom: 1px solid #40444b; display: flex; align-items: center; padding: 0 20px; }
+    .layout-speech-discord .channel-name { color: #fff; font-size: 18px; font-weight: 600; }
+    .layout-speech-discord .discord-messages { position: absolute; top: 60px; left: 0; right: 0; bottom: 0; padding: 20px; }
+    .layout-speech-discord .message { display: flex; gap: 15px; margin-bottom: 20px; }
+    .layout-speech-discord .message-avatar { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; }
+    .layout-speech-discord .message-content { flex: 1; }
+    .layout-speech-discord .message-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; }
+    .layout-speech-discord .message-author { color: #fff; font-size: 16px; font-weight: 600; }
+    .layout-speech-discord .message-time { color: #72767d; font-size: 12px; }
+    .layout-speech-discord .message-text { color: #dcddde; font-size: 16px; line-height: 1.4; }
+    .layout-speech-discord .message-embed { background: #2f3136; border-left: 4px solid #5865f2; border-radius: 4px; padding: 15px; margin-top: 10px; }
+    .layout-speech-discord .embed-image { width: 300px; height: 180px; background-size: cover; background-position: center; border-radius: 4px; margin-top: 10px; }
+
+    /* SIMPLE LAYOUTS - Clean and Easy */
+
+    /* Simple Speech - Just chunky.dad talking */
+    .layout-simple-speech { position: relative; }
+    .layout-simple-speech .chunky-avatar { position: absolute; left: 80px; bottom: 80px; width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 8px 24px rgba(0,0,0,0.3)); }
+    .layout-simple-speech .simple-bubble { position: absolute; left: 250px; right: 80px; bottom: 100px; background: #fff; color: #111; border-radius: 28px; padding: 32px 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); font-size: 32px; line-height: 1.3; font-weight: 600; }
+    .layout-simple-speech .simple-bubble:after { content: ""; position: absolute; left: -20px; bottom: 40px; width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-right: 20px solid #fff; }
+    .layout-simple-speech .brand-badge { position: absolute; top: 60px; left: 80px; background: rgba(255,255,255,0.95); color: #333; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 18px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+
+    /* Bold & Centered - Big typography */
+    .layout-bold-centered { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px; }
+    .layout-bold-centered .event-title { font-size: 84px; font-weight: 900; line-height: 0.9; color: #fff; text-shadow: 0 8px 40px rgba(0,0,0,0.4); margin-bottom: 30px; }
+    .layout-bold-centered .event-details { font-size: 32px; color: #fff; opacity: 0.95; line-height: 1.4; margin-bottom: 20px; }
+    .layout-bold-centered .event-venue { font-size: 28px; color: #fff; opacity: 0.85; }
+    .layout-bold-centered .logo-stamp { position: absolute; bottom: 60px; right: 60px; width: 80px; height: 80px; object-fit: contain; opacity: 0.8; }
+
+    /* Side by Side - Two columns */
+    .layout-side-by-side { position: relative; display: flex; }
+    .layout-side-by-side .left-panel { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); }
+    .layout-side-by-side .right-panel { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; }
+    .layout-side-by-side .event-title { font-size: 56px; font-weight: 900; color: #fff; line-height: 1; margin-bottom: 24px; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .layout-side-by-side .event-date { font-size: 28px; color: #fff; opacity: 0.95; margin-bottom: 12px; }
+    .layout-side-by-side .event-venue { font-size: 24px; color: #fff; opacity: 0.9; margin-bottom: 24px; }
+    .layout-side-by-side .description { font-size: 20px; color: #fff; opacity: 0.85; line-height: 1.5; }
+    .layout-side-by-side .chunky-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 30px; }
+
+    /* Photo Frame - Polaroid style */
+    .layout-photo-frame { background: #f5f5f5; position: relative; display: flex; align-items: center; justify-content: center; }
+    .layout-photo-frame .polaroid { background: #fff; padding: 20px 20px 60px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); transform: rotate(-2deg); max-width: 900px; }
+    .layout-photo-frame .photo-area { width: 100%; aspect-ratio: 16/10; background: #ddd; margin-bottom: 20px; overflow: hidden; position: relative; }
+    .layout-photo-frame .photo-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+    .layout-photo-frame .photo-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.5) 100%); }
+    .layout-photo-frame .photo-title { position: absolute; bottom: 20px; left: 20px; right: 20px; color: #fff; font-size: 42px; font-weight: 900; text-shadow: 0 4px 12px rgba(0,0,0,0.6); }
+    .layout-photo-frame .caption { font-family: 'Courier New', monospace; text-align: center; font-size: 24px; color: #333; padding: 0 20px; line-height: 1.4; }
+
+    /* Banner - Billboard style */
+    .layout-banner { position: relative; }
+    .layout-banner .banner-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.4) blur(2px); }
+    .layout-banner .banner-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 80px; }
+    .layout-banner .brand-logo { width: 100px; height: 100px; object-fit: contain; margin-bottom: 40px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
+    .layout-banner .event-title { font-size: 72px; font-weight: 900; color: #fff; line-height: 0.95; margin-bottom: 30px; text-shadow: 0 6px 30px rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: -1px; }
+    .layout-banner .event-info { font-size: 32px; color: #fff; opacity: 0.95; margin-bottom: 12px; font-weight: 600; }
+    .layout-banner .event-cta { background: #fff; color: #111; padding: 16px 40px; border-radius: 50px; font-size: 24px; font-weight: 700; margin-top: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+
     /* === Pattern Layouts with Rim Effect === */
     .artboard.layout-css-pattern,
-    .artboard.layout-chunky-pattern { background: #000; position: relative; overflow: hidden; }
-
-    .layout-chunky-pattern .chunky-pattern-bg {
-      position: absolute; inset: 0; z-index: 0;
-      background-color: #06060a;
-      background-image:
-        radial-gradient(circle at 25% 25%, var(--pattern-color, rgba(255,255,255,0.15)) 4px, transparent 4px),
-        radial-gradient(circle at 75% 75%, var(--pattern-color, rgba(255,255,255,0.15)) 4px, transparent 4px),
-        linear-gradient(45deg, transparent 45%, var(--pattern-color, rgba(255,255,255,0.05)) 45%, var(--pattern-color, rgba(255,255,255,0.05)) 55%, transparent 55%),
-        linear-gradient(-45deg, transparent 45%, var(--pattern-color, rgba(255,255,255,0.05)) 45%, var(--pattern-color, rgba(255,255,255,0.05)) 55%, transparent 55%);
-      background-size: 60px 60px;
-    }
+    .artboard.layout-pattern-dots,
+    .artboard.layout-pattern-stripes,
+    .artboard.layout-pattern-grid,
+    .artboard.layout-pattern-zigzag { background: #000; position: relative; overflow: hidden; }
 
     .layout-css-pattern .css-pattern-bg {
       position: absolute; inset: 0; z-index: 0;
       background-color: #06060a;
     }
-    .layout-chunky-pattern .pattern-vignette,
     .layout-css-pattern .pattern-vignette {
       position: absolute; inset: 0; z-index: 1;
       background: radial-gradient(circle at 50% 45%, rgba(0,0,0,0) 0 45%, rgba(0,0,0,0.35) 100%);
       pointer-events: none;
     }
-    .layout-chunky-pattern .content-box {
+    .layout-pattern-dots .pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+      background-image: radial-gradient(circle, var(--pattern-color, rgba(255,255,255,0.22)) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+    .layout-pattern-stripes .pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+      background-image: repeating-linear-gradient(-45deg, var(--pattern-color, rgba(255,255,255,0.18)) 0px, var(--pattern-color, rgba(255,255,255,0.18)) 1.5px, transparent 1.5px, transparent 12px);
+    }
+    .layout-pattern-grid .pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+      background-image: linear-gradient(var(--pattern-color, rgba(255,255,255,0.14)) 1px, transparent 1px), linear-gradient(90deg, var(--pattern-color, rgba(255,255,255,0.14)) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+    .layout-pattern-zigzag .pattern-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-color: #06060a;
+      background-image: linear-gradient(135deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%) -10px 0, linear-gradient(225deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%) -10px 0, linear-gradient(315deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%), linear-gradient(45deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%);
+      background-size: 20px 20px;
+    }
+    .layout-css-pattern .content-box,
+    .layout-pattern-dots .content-box,
+    .layout-pattern-stripes .content-box,
+    .layout-pattern-grid .content-box,
+    .layout-pattern-zigzag .content-box {
       position: absolute; inset: 55px; z-index: 1;
       background: rgba(0,0,0,0.88);
       border-radius: 18px;
@@ -261,26 +327,30 @@
       padding: 60px 72px;
       color: #fff;
     }
-    .layout-css-pattern .content-box {
-      position: absolute; inset: 55px; z-index: 2;
-      background: #000;
-      border-radius: 18px;
-      display: flex; flex-direction: column; justify-content: center;
-      padding: 60px 72px;
-      color: #fff;
-    }
-    .layout-chunky-pattern .content-box { z-index: 2; }
-    .layout-chunky-pattern .brand,
-    .layout-css-pattern .brand {
+    .layout-css-pattern .content-box { z-index: 2; }
+    .layout-css-pattern .brand,
+    .layout-pattern-dots .brand,
+    .layout-pattern-stripes .brand,
+    .layout-pattern-grid .brand,
+    .layout-pattern-zigzag .brand {
       font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
       color: var(--rim-color, #667eea); margin-bottom: 18px;
     }
-    .layout-chunky-pattern .event-title,
-    .layout-css-pattern .event-title { font-size: 66px; line-height: 0.95; font-weight: 900; margin-bottom: 20px; }
-    .layout-chunky-pattern .event-date,
-    .layout-css-pattern .event-date { font-size: 26px; opacity: 0.9; margin-bottom: 8px; }
-    .layout-chunky-pattern .event-venue,
-    .layout-css-pattern .event-venue { font-size: 22px; opacity: 0.8; }
+    .layout-css-pattern .event-title,
+    .layout-pattern-dots .event-title,
+    .layout-pattern-stripes .event-title,
+    .layout-pattern-grid .event-title,
+    .layout-pattern-zigzag .event-title { font-size: 66px; line-height: 0.95; font-weight: 900; margin-bottom: 20px; }
+    .layout-css-pattern .event-date,
+    .layout-pattern-dots .event-date,
+    .layout-pattern-stripes .event-date,
+    .layout-pattern-grid .event-date,
+    .layout-pattern-zigzag .event-date { font-size: 26px; opacity: 0.9; margin-bottom: 8px; }
+    .layout-css-pattern .event-venue,
+    .layout-pattern-dots .event-venue,
+    .layout-pattern-stripes .event-venue,
+    .layout-pattern-grid .event-venue,
+    .layout-pattern-zigzag .event-venue { font-size: 22px; opacity: 0.8; }
 
     /* Favicon colors indicator */
     .favicon-colors-info { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 14px; background: var(--background-light); border-radius: 10px; font-size: 13px; color: var(--text-secondary); }
@@ -289,54 +359,45 @@
     .pattern-source-note { margin-top: 10px; color: var(--text-secondary); font-size: 13px; line-height: 1.4; }
 
     @media (max-width: 768px) {
+      .controls-grid { grid-template-columns: 1fr; }
       .variants-grid { grid-template-columns: 1fr; }
+      .page-title { flex-direction: column; align-items: start; }
     }
   </style>
 </head>
 <body>
-  <header class="tool-header">
+  <header>
     <nav>
-      <div class="nav-container tool-nav">
+      <div class="nav-container">
         <div class="logo">
-          <h1>
-            <a href="../index.html" aria-label="chunky.dad home">
-              <img src="../favicons/favicon-96x96.png"
-                   srcset="../favicons/favicon-96x96.png 1x, ../favicons/favicon-192x192.png 2x, ../favicons/favicon-256x256.png 3x"
-                   alt="chunky.dad logo" class="logo-img">
-              <span class="tool-brand-text">
-                <span class="tool-brand-name">chunky.dad</span>
-                <span class="tool-page-label">OG Studio</span>
-              </span>
-            </a>
-          </h1>
+          <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad</a></h1>
         </div>
       </div>
     </nav>
   </header>
 
-  <div class="page-wrapper">
-    <main class="layout">
-      <div class="panel form-panel">
-        <div class="panel-header">
-          <div>
-            <h2 id="event-details-heading">🎨 OpenGraph Image Studio</h2>
-            <div class="panel-subtitle">Create stunning social media preview images for your events</div>
-          </div>
+  <main>
+    <div class="container">
+      <div class="page-title">
+        <div>
+          <h2>🎨 OpenGraph Image Studio</h2>
+          <div class="subtitle">Create stunning social media preview images for your events • downloaded CSS Pattern backgrounds included</div>
         </div>
+      </div>
 
-        <div class="section-body">
-        <div class="form-section">
-          <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 1rem; color: var(--text-secondary);">📍 Event Selection</h3>
-          <div class="field-row">
-            <div class="field-group">
+      <div class="controls-panel">
+        <div class="controls-section">
+          <h3>📍 Event Selection</h3>
+          <div class="controls-grid">
+            <div class="control-field">
               <label for="citySelect">City</label>
               <select id="citySelect"></select>
             </div>
-            <div class="field-group" >
+            <div class="control-field" style="grid-column: span 2;">
               <label for="eventSelect">Event</label>
               <select id="eventSelect"></select>
             </div>
-            <div class="field-group">
+            <div class="control-field">
               <label for="eventSearch">Search Events</label>
               <input id="eventSearch" type="text" placeholder="Type to filter...">
             </div>
@@ -347,8 +408,8 @@
           </div>
         </div>
 
-        <div class="form-section">
-          <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 1rem; color: var(--text-secondary);">🎨 Color Theme</h3>
+        <div class="controls-section">
+          <h3>🎨 Color Theme</h3>
           <div class="theme-picker">
             <div class="theme-option theme-classic-night" data-theme="classic-night">
               <div class="theme-name">Classic Night</div>
@@ -414,14 +475,14 @@
               <div class="theme-name">Favicon 🎨</div>
             </div>
           </div>
-          <div class="field-row" style="margin-top: 16px;">
-            <div class="field-group">
+          <div class="custom-colors" style="margin-top: 16px;">
+            <div class="color-picker-field control-field">
               <label for="customA">Custom Color 1</label>
               <div class="color-input-wrapper">
                 <input id="customA" type="color" value="#8e2de2">
               </div>
             </div>
-            <div class="field-group">
+            <div class="color-picker-field control-field">
               <label for="customB">Custom Color 2</label>
               <div class="color-input-wrapper">
                 <input id="customB" type="color" value="#4a00e0">
@@ -435,44 +496,35 @@
           </div>
         </div>
 
-        <div class="form-section">
-          <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 1rem; color: var(--text-secondary);">🧩 CSS Pattern Background</h3>
-          <div class="field-row">
-            <div class="field-group" >
+        <div class="controls-section">
+          <h3>🧩 CSS Pattern Background</h3>
+          <div class="controls-grid">
+            <div class="control-field" style="grid-column: span 2;">
               <label for="cssPatternSelect">Downloaded pattern</label>
               <select id="cssPatternSelect">
                 <option>Loading CSS patterns...</option>
               </select>
             </div>
-            <div class="field-group">
+            <div class="control-field">
               <label for="cssPatternSize">Pattern size</label>
-              <input id="cssPatternSize" type="range" min="20" max="260" value="160">
-            </div>
-            <div class="field-group">
-              <label for="cssPatternRotation">Pattern rotation</label>
-              <input id="cssPatternRotation" type="range" min="0" max="360" value="0">
+              <input id="cssPatternSize" type="range" min="20" max="260" value="90">
             </div>
           </div>
           <div class="pattern-source-note" id="cssPatternMeta">Patterns load from the local downloaded CSS Pattern data file.</div>
         </div>
 
-        <div class="form-section">
-          <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 1rem; color: var(--text-secondary);">🖼️ Imagery</h3>
-          <div class="field-row">
-            <div class="field-group">
-              <label for="coverInput">Cover Image URL (optional - uses event image if available)</label>
-              <input id="coverInput" type="url" placeholder="https://example.com/image.jpg">
-            </div>
-            <div class="field-group">
-              <label for="faviconInput">Favicon URL (optional - uses domain favicon if available)</label>
-              <input id="faviconInput" type="url" placeholder="https://example.com/favicon.ico">
-            </div>
+        <div class="controls-section">
+          <h3>🖼️ Cover Image</h3>
+          <div class="control-field full">
+            <label for="coverInput">Image URL (optional - uses event image if available)</label>
+            <input id="coverInput" type="url" placeholder="https://example.com/image.jpg">
           </div>
         </div>
       </div>
+
       <section class="variants-grid" id="variantsGrid"></section>
-    </main>
-  </div>
+    </div>
+  </main>
 
   <script src="../js/logger.js"></script>
   <script src="../js/city-config.js"></script>
@@ -494,10 +546,8 @@
       const customB = document.getElementById('customB');
       const cssPatternSelect = document.getElementById('cssPatternSelect');
       const cssPatternSize = document.getElementById('cssPatternSize');
-      const cssPatternRotation = document.getElementById('cssPatternRotation');
       const cssPatternMeta = document.getElementById('cssPatternMeta');
       const coverInput = document.getElementById('coverInput');
-      const faviconInput = document.getElementById('faviconInput');
       const grid = document.getElementById('variantsGrid');
       const themeOptions = document.querySelectorAll('.theme-option');
 
@@ -603,21 +653,7 @@
           this.filteredEvents = this.allEvents.slice();
           this.filteredEvents.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
           this.populateEventSelect();
-
-          // Check for date in url
-          const params = new URLSearchParams(window.location.search);
-          const dateParam = params.get('date');
-          if (dateParam) {
-            const index = this.filteredEvents.findIndex(ev => ev.day === dateParam);
-            if (index !== -1) {
-              this.selectedEvent = this.filteredEvents[index];
-              eventSelect.selectedIndex = index;
-            } else {
-              this.selectedEvent = this.filteredEvents[0];
-            }
-          } else {
-             this.selectedEvent = this.filteredEvents[0];
-          }
+          this.selectedEvent = this.filteredEvents[0];
           this.render();
         }
 
@@ -644,20 +680,6 @@
           this.render();
         }
 
-        getImageUrl(ev) {
-          if (!ev) return '';
-          let imageUrl = ev.cover || ev.image || ev.image_url || '';
-          if (imageUrl && window.FilenameUtils && typeof window.FilenameUtils.convertImageUrlToLocalPath === 'function') {
-             const localPath = window.FilenameUtils.convertImageUrlToLocalPath(imageUrl, {
-                name: ev.name,
-                startDate: ev.startDate || ev.start,
-                recurring: ev.recurring
-             }, '../img/events');
-             return localPath;
-          }
-          return imageUrl;
-        }
-
         getPreviewData() {
           const ev = this.selectedEvent || {};
           return {
@@ -667,9 +689,8 @@
             time: ev.time || 'Time TBA',
             city: getCityConfig(this.currentCity)?.name || 'City',
             description: ev.tea || 'Join us for an amazing bear community event!',
-            cover: (coverInput.value || '').trim() || this.getImageUrl(ev),
-            faviconColors: this.getFaviconColors(),
-            faviconUrl: (faviconInput.value || '').trim() || (this.getFaviconUrl() ? new URL('/favicon.ico', this.getFaviconUrl()).href : '') || '../favicons/favicon-96x96.png'
+            cover: (coverInput.value || '').trim() || (ev.image || '').trim(),
+            faviconColors: this.getFaviconColors()
           };
         }
 
@@ -685,7 +706,7 @@
               const entries = await evRes.value.json();
               for (const entry of entries) {
                 if (entry.slug && entry.faviconBg) {
-                  this.eventColorsMap.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff', url: entry.url });
+                  this.eventColorsMap.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff' });
                 }
               }
             }
@@ -701,15 +722,6 @@
           } catch (e) {
             logger.debug(COMPONENT, 'Could not load favicon colors', { cityKey, error: e.message });
           }
-        }
-
-        getFaviconUrl() {
-          const ev = this.selectedEvent || {};
-          if (ev.slug && this.eventColorsMap.has(ev.slug)) {
-            const entry = this.eventColorsMap.get(ev.slug);
-            if (entry && entry.url) return entry.url;
-          }
-          return null;
         }
 
         getFaviconColors() {
@@ -805,12 +817,6 @@
             element.style.setProperty(`--css-pattern-color-${index + 1}`, color);
           });
           element.style.setProperty('--css-pattern-size', `${cssPatternSize.value}px`);
-          if (cssPatternRotation) {
-            const patternBg = element.querySelector('.css-pattern-bg');
-            if (patternBg) {
-                patternBg.style.transform = `rotate(${cssPatternRotation.value}deg) scale(1.5)`;
-            }
-          }
         }
 
         attachHandlers() {
@@ -843,14 +849,12 @@
           });
 
           coverInput.addEventListener('input', () => this.render());
-          faviconInput.addEventListener('input', () => this.render());
           cssPatternSelect.addEventListener('change', () => {
             this.currentCssPattern = this.cssPatterns.find(pattern => pattern.id === cssPatternSelect.value) || this.cssPatterns[0] || null;
             this.syncCssPatternControls();
             this.render();
           });
           cssPatternSize.addEventListener('input', () => this.render());
-          if (cssPatternRotation) cssPatternRotation.addEventListener('input', () => this.render());
 
           // Theme selection
           themeOptions.forEach(option => {
@@ -918,7 +922,7 @@
               const dateBadge = artboard.querySelector('.date-badge');
               const cardHeader = artboard.querySelector('.card-header');
               if (t) t.textContent = data.event;
-              if (v) v.textContent = `@ ${data.venue}`;
+              if (v) v.textContent = `@ ${data.venue} · ${data.time}`;
               if (desc) desc.textContent = data.description;
               if (dateBadge) dateBadge.textContent = data.date;
               if (cardHeader) {
@@ -952,19 +956,25 @@
               if (desc) desc.textContent = data.description;
               if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
               break;
-            }
-            case 'speech': {
+            } {
               const head = artboard.querySelector('.headline');
               const bubble = artboard.querySelector('.speech-bubble');
               const img = artboard.querySelector('.event-image');
               const cov = artboard.querySelector('.cover');
               if (head) head.textContent = data.event;
-              if (bubble) bubble.textContent = `${data.date} @ ${data.time} · ${data.venue}`;
+              if (bubble) bubble.textContent = `${data.date} · ${data.time} @ ${data.venue}. ${data.description}`;
               if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
               if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
               break;
-            }
-            case 'speech-terminal': {
+            } {
+              const title = artboard.querySelector('.event-title');
+              const bubble = artboard.querySelector('.speech-bubble');
+              const avatar = artboard.querySelector('.event-avatar');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `Join us ${data.date} at ${data.time}! We're hosting an amazing event at ${data.venue}. ${data.description}`;
+              if (avatar && data.cover) avatar.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            } {
               const content = artboard.querySelector('.terminal-content');
               const img = artboard.querySelector('.event-image');
               if (content) {
@@ -973,10 +983,84 @@ EVENT: ${data.event}<br/>
 DATE: ${data.date}<br/>
 TIME: ${data.time}<br/>
 VENUE: ${data.venue}<br/>
-<br/>
-$ <span class="cursor">_</span>`;
+INFO: ${data.description}<br/>
+$ ./join_event.sh<br/>
+Loading... <span class="cursor">█</span>`;
               }
               if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            } {
+              const title = artboard.querySelector('.event-title');
+              const bubble = artboard.querySelector('.story-bubble');
+              const bg = artboard.querySelector('.story-bg');
+              const name = artboard.querySelector('.profile-name');
+              const time = artboard.querySelector('.profile-time');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `Can't wait for this! ${data.date} at ${data.time} 🎉`;
+              if (bg && data.cover) bg.style.backgroundImage = `url('${data.cover}')`;
+              if (name) name.textContent = 'chunky.dad';
+              if (time) time.textContent = '2h ago';
+              break;
+            } {
+              const title = artboard.querySelector('.event-title');
+              const cloud = artboard.querySelector('.thought-cloud');
+              const img = artboard.querySelector('.event-image');
+              if (title) title.textContent = data.event;
+              if (cloud) cloud.textContent = `I'm dreaming about ${data.event}... ${data.date} at ${data.venue} will be perfect! ${data.description}`;
+              if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            } {
+              const title = artboard.querySelector('.chat-title');
+              const bubble = artboard.querySelector('.message-bubble');
+              const img = artboard.querySelector('.message-image');
+              if (title) title.textContent = data.event;
+              if (bubble) bubble.textContent = `Hey! ${data.event} is happening ${data.date} at ${data.time} @ ${data.venue}. You coming?`;
+              if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            } {
+              const channel = artboard.querySelector('.channel-name');
+              const author = artboard.querySelector('.message-author');
+              const time = artboard.querySelector('.message-time');
+              const text = artboard.querySelector('.message-text');
+              const img = artboard.querySelector('.embed-image');
+              if (channel) channel.textContent = `# ${data.event.toLowerCase().replace(/\s+/g, '-')}`;
+              if (author) author.textContent = 'chunky.dad';
+              if (time) time.textContent = 'Today at 12:34 PM';
+              if (text) text.textContent = `@everyone ${data.event} is happening ${data.date} at ${data.venue}!`;
+              if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
+              break;
+            }
+            case 'simple-speech': {
+              const bubble = artboard.querySelector('.simple-bubble');
+              if (bubble) bubble.textContent = `${data.event} is happening ${data.date} at ${data.time} @ ${data.venue}! ${data.description}`;
+              break;
+            }
+            case 'bold-centered': {
+              const title = artboard.querySelector('.event-title');
+              const details = artboard.querySelector('.event-details');
+              const venue = artboard.querySelector('.event-venue');
+              if (title) title.textContent = data.event;
+              if (details) details.textContent = `${data.date} · ${data.time}`;
+              if (venue) venue.textContent = `@ ${data.venue}`;
+              break;
+            }
+            case 'side-by-side': {
+              const title = artboard.querySelector('.event-title');
+              const date = artboard.querySelector('.event-date');
+              const venue = artboard.querySelector('.event-venue');
+              const desc = artboard.querySelector('.description');
+              if (title) title.textContent = data.event;
+              if (date) date.textContent = data.date;
+              if (venue) venue.textContent = `@ ${data.venue} · ${data.time}`;
+              if (desc) desc.textContent = data.description;
+              break;
+            } {
+              const photoTitle = artboard.querySelector('.photo-title');
+              const caption = artboard.querySelector('.caption');
+              const photoBg = artboard.querySelector('.photo-bg');
+              if (photoTitle) photoTitle.textContent = data.event;
+              if (caption) caption.textContent = `${data.date} at ${data.time} @ ${data.venue}`;
+              if (photoBg && data.cover) photoBg.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
             case 'banner': {
@@ -990,16 +1074,15 @@ $ <span class="cursor">_</span>`;
               if (bg && data.cover) bg.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
-            case 'css-pattern':
-            case 'chunky-pattern': {
+            case 'css-pattern': {
               const t = artboard.querySelector('.event-title');
               const d = artboard.querySelector('.event-date');
               const v = artboard.querySelector('.event-venue');
-              const bg = artboard.querySelector('.css-pattern-bg') || artboard.querySelector('.chunky-pattern-bg');
+              const cssBg = artboard.querySelector('.css-pattern-bg');
               if (t) t.textContent = data.event;
               if (d) d.textContent = `${data.date} · ${data.time}`;
               if (v) v.textContent = `@ ${data.venue}`;
-              if (bg && variant.key === 'css-pattern') this.applyCssPattern(bg);
+              if (cssBg) this.applyCssPattern(cssBg);
               break;
             }
           }
@@ -1018,14 +1101,14 @@ $ <span class="cursor">_</span>`;
             </div>
             <div class="variant-preview">
               <div class="artboard ${variant.class} theme-${currentTheme}">
-                ${this.createVariantHTML(variant, data)}
+                ${this.createVariantHTML(variant)}
               </div>
             </div>
           `;
           return card;
         }
 
-        createVariantHTML(variant, data) {
+        createVariantHTML(variant) {
           const layouts = {
             'split': `
               <div class="left-side">
@@ -1049,7 +1132,7 @@ $ <span class="cursor">_</span>`;
                   <div class="overlay"></div>
                   <div class="date-badge"></div>
                 </div>
-                <img class="event-image" src="${data.faviconUrl}" alt="chunky.dad" />
+                <img class="event-image" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
                 <div class="card-body">
                   <div class="event-title"></div>
                   <div class="venue"></div>
@@ -1079,30 +1162,32 @@ $ <span class="cursor">_</span>`;
               </div>
               <div class="description"></div>
             `,
-            'speech': `
-              <div class="cover"></div>
-              <div class="headline"></div>
-              <img class="logo-avatar" src="${data.faviconUrl}" alt="chunky.dad" />
-              <div class="speech-bubble"></div>
-              <div class="brand">chunky.dad</div>
+            'simple-speech': `
+              <img class="chunky-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+              <div class="simple-bubble"></div>
+              <div class="brand-badge">chunky.dad</div>
             `,
-            'speech-terminal': `
-              <div class="terminal-window">
-                <div class="terminal-header">
-                  <div class="terminal-buttons">
-                    <div class="terminal-button"></div>
-                    <div class="terminal-button"></div>
-                    <div class="terminal-button"></div>
-                  </div>
-                </div>
-                <div class="terminal-content"></div>
-                <div class="event-image"></div>
+            'bold-centered': `
+              <div class="event-title"></div>
+              <div class="event-details"></div>
+              <div class="event-venue"></div>
+              <img class="logo-stamp" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+            `,
+            'side-by-side': `
+              <div class="left-panel">
+                <img class="chunky-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                <div class="event-title"></div>
+              </div>
+              <div class="right-panel">
+                <div class="event-date"></div>
+                <div class="event-venue"></div>
+                <div class="description"></div>
               </div>
             `,
             'banner': `
               <div class="banner-bg"></div>
               <div class="banner-content">
-                <img class="brand-logo" src="${data.faviconUrl}" alt="chunky.dad" />
+                <img class="brand-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
                 <div class="event-title"></div>
                 <div class="event-info"></div>
                 <div class="event-cta">Get Tickets</div>
@@ -1118,17 +1203,7 @@ $ <span class="cursor">_</span>`;
                 <div class="event-venue"></div>
               </div>
             `,
-            'chunky-pattern': `
-              <div class="chunky-pattern-bg"></div>
-              <div class="pattern-vignette"></div>
-              <div class="content-box">
-                <div class="brand">chunky.dad</div>
-                <div class="event-title"></div>
-                <div class="event-date"></div>
-                <div class="event-venue"></div>
-              </div>
-            `,
-            };
+          };
           return layouts[variant.key] || '';
         }
 
@@ -1152,9 +1227,10 @@ $ <span class="cursor">_</span>`;
           const VARIANTS = [
             // Pattern Layouts with Colored Rim
             { key: 'css-pattern', name: '🧩 CSS Pattern.com', class: 'layout-css-pattern', description: 'Downloaded gradient pattern background' },
-            { key: 'chunky-pattern', name: '🐻 Chunky Pattern', class: 'layout-chunky-pattern', description: 'Custom paw print and star pattern' },
-
             // Simple & Clean Layouts
+            { key: 'simple-speech', name: '💬 Simple Speech', class: 'layout-simple-speech', description: 'Clean chunky.dad speech bubble' },
+            { key: 'bold-centered', name: '⚡ Bold & Centered', class: 'layout-bold-centered', description: 'Big typography, centered text' },
+            { key: 'side-by-side', name: '📐 Side by Side', class: 'layout-side-by-side', description: 'Simple two-column layout' },
             { key: 'banner', name: '🎯 Banner', class: 'layout-banner', description: 'Billboard/hero banner style' },
             
             // Creative Layouts
@@ -1162,11 +1238,11 @@ $ <span class="cursor">_</span>`;
             { key: 'minimal', name: 'Minimalist Card', class: 'layout-minimal', description: 'Clean modern card design' },
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass backdrop' },
             { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus' },
-            
+
             // Speech Bubble Variations
-            { key: 'speech', name: 'Speech Bubble', class: 'layout-speech', description: 'Logo speaks about event' },
-            { key: 'speech-terminal', name: 'Retro Terminal', class: 'layout-speech-terminal', description: 'Computer terminal style' },
-            ];
+
+            // Pattern Layouts with Colored Rim
+          ];
 
           grid.innerHTML = '';
           const artboards = [];
@@ -1206,6 +1282,5 @@ $ <span class="cursor">_</span>`;
       });
     })();
   </script>
-  <script src="../js/filename-utils.js"></script>
 </body>
 </html>
