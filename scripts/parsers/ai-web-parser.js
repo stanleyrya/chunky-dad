@@ -275,8 +275,8 @@ class AiWebParser {
     }
 
     async parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
-        let discoveredSegments = null;
-        let ocrResults = [];
+        var discoveredSegments = null;
+        var ocrResults = [];
         try {
             this.aiPromptHistory = [];
             const html = htmlData && htmlData.html ? htmlData.html : '';
@@ -354,6 +354,7 @@ class AiWebParser {
             };
         } catch (error) {
             console.warn(`🤖 AI Web: Failed to parse AI event: ${error}`);
+            console.warn(`🤖 AI Web: Stack trace:\n${error && error.stack ? error.stack : 'No stack trace'}`);
             const html = htmlData && htmlData.html ? htmlData.html : '';
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
             return {

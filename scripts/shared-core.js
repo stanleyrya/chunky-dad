@@ -778,6 +778,9 @@ class SharedCore {
                     }
                 } else {
                     await displayAdapter.logError(`SYSTEM: Failed to process crawl page ${url}: ${message}`);
+                    if (error.stack && error.stack.trim()) {
+                        await displayAdapter.logError(`SYSTEM: Crawl URL processing stack trace: ${error.stack}`);
+                    }
                 }
             }
         }
