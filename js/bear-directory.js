@@ -58,17 +58,70 @@ class BearDirectory {
         logger.timeEnd('DIRECTORY', 'initialization');
     }
     
+    applyTheme(map) {
+        const PURPLE = "#667eea";
+        const layers = map.getStyle().layers;
+
+        for (const layer of layers) {
+            const id = layer.id.toLowerCase();
+
+            try {
+                // water
+                if (id.includes("water")) {
+                    if (layer.type === "fill") {
+                        map.setPaintProperty(layer.id, "fill-color", PURPLE);
+                    }
+                    if (layer.type === "line") {
+                        map.setPaintProperty(layer.id, "line-color", PURPLE);
+                    }
+                }
+
+                /* Other theme examples for later:
+                // land
+                if (id.includes("land") || id.includes("natural")) {
+                    if (layer.type === "fill") {
+                        map.setPaintProperty(layer.id, "fill-color", "#1b102b");
+                    }
+                }
+
+                // roads
+                if (id.includes("road")) {
+                    if (layer.type === "line") {
+                        map.setPaintProperty(layer.id, "line-color", "#3a2a55");
+                        map.setPaintProperty(layer.id, "line-opacity", 0.35);
+                    }
+                }
+
+                // labels
+                if (id.includes("label")) {
+                    if (layer.type === "symbol") {
+                        map.setPaintProperty(layer.id, "text-color", "#b7a7d9");
+                    }
+                }
+                */
+
+            } catch (e) {}
+        }
+    }
+
     initMap() {
         try {
             logger.componentInit('MAP', 'Initializing directory map');
             
-            // Initialize Leaflet map
-            this.map = L.map('directoryMap').setView([40.7128, -74.0060], 2);
+            // Initialize maplibregl map
+            this.map = new maplibregl.Map({
+                container: 'directoryMap',
+                style: 'https://tiles.openfreemap.org/styles/liberty',
+                center: [-74.0060, 40.7128],
+                zoom: 2,
+                renderWorldCopies: false
+            });
+
+            this.map.on('style.load', () => {
+                this.applyTheme(this.map);
+            });
             
-            // Add tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(this.map);
+            this.map.addControl(new maplibregl.NavigationControl());
             
             logger.componentLoad('MAP', 'Directory map initialized');
         } catch (error) {
@@ -333,16 +386,19 @@ class BearDirectory {
                 const [lat, lng] = item.coordinates.split(',').map(coord => parseFloat(coord.trim()));
                 
                 if (!isNaN(lat) && !isNaN(lng)) {
-                    const marker = L.marker([lat, lng])
-                        .addTo(this.map)
-                        .bindPopup(`
-                            <div class="map-popup">
-                                <h4>${item.name}</h4>
-                                <p>${item.type}</p>
-                                ${item.city ? `<p>📍 ${item.city}</p>` : ''}
-                                ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank">Instagram</a>` : ''}
-                            </div>
-                        `);
+                    const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`
+                        <div class="map-popup">
+                            <h4>${item.name}</h4>
+                            <p>${item.type}</p>
+                            ${item.city ? `<p>📍 ${item.city}</p>` : ''}
+                            ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank">Instagram</a>` : ''}
+                        </div>
+                    `);
+
+                    const marker = new maplibregl.Marker()
+                        .setLngLat([lng, lat])
+                        .setPopup(popup)
+                        .addTo(this.map);
                     
                     this.markers.push(marker);
                 }
@@ -351,8 +407,11 @@ class BearDirectory {
         
         // Fit map to markers if any exist
         if (this.markers.length > 0) {
-            const group = new L.featureGroup(this.markers);
-            this.map.fitBounds(group.getBounds().pad(0.1));
+            const bounds = new maplibregl.LngLatBounds();
+            this.markers.forEach(marker => {
+                bounds.extend(marker.getLngLat());
+            });
+            this.map.fitBounds(bounds, { padding: 50 });
         }
         
         logger.componentLoad('MAP', 'Map markers updated', { markerCount: this.markers.length });
