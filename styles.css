@@ -90,6 +90,7 @@ body.index-page {
 
 html {
     overflow-x: hidden; /* Prevent horizontal scroll */
+    height: 100%;
 }
 
 /* Prevent all elements from overflowing on small screens */
