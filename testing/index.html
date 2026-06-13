@@ -543,11 +543,7 @@
       gap: 0.8rem;
     }
 
-    .footer-icons {
-      font-size: 1.5rem;
-      display: flex;
-      gap: 0.5rem;
-    }
+
 
     .footer p {
       margin: 0;
@@ -568,6 +564,11 @@
     }
 
     @media (max-width: 768px) {
+      .page-wrapper { padding: 1rem 0.5rem; }
+      .panel { padding: 1rem; }
+      .hero-text h2 { font-size: 1.5rem; }
+      .tool-nav .logo h1 { font-size: 1.25rem; }
+      .tool-actions { flex-wrap: wrap; }
       :root {
         --sticky-header-offset: 7.5rem;
       }
@@ -600,73 +601,55 @@
       }
     }
 
-    .logo-wrapper {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .logo-hat {
-      position: absolute;
-      top: -12px;
-      left: 1px;
-      font-size: 22px;
-      transform: rotate(-15deg);
-      animation: wiggle 3s infinite ease-in-out;
-      z-index: 2;
-    }
-    .logo-tool {
-      position: absolute;
-      bottom: -4px;
-      right: -8px;
-      font-size: 18px;
-      animation: hammer 2s infinite ease-in-out;
-      z-index: 2;
-    }
-    @keyframes wiggle {
-      0%, 100% { transform: rotate(-15deg); }
-      50% { transform: rotate(5deg); }
-    }
-    @keyframes hammer {
-      0%, 100% { transform: rotate(0deg); }
-      20% { transform: rotate(-30deg); }
-      40% { transform: rotate(15deg); }
-      60% { transform: rotate(0deg); }
-    }
 
-    .ascii-art-container {
-      font-family: 'SFMono-Regular', ui-monospace, Menlo, Monaco, Consolas, monospace;
+
+
+
+
+
+
+
+
+
+
+
+
+    #animation-output {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      font-family: monospace;
+      font-size: 16px;
+      line-height: 16px;
       white-space: pre;
-      color: var(--accent);
-      text-shadow: 0 0 5px var(--accent-strong);
-      line-height: 1.15;
-      font-size: 12px;
-      animation: pulse-glow 2s infinite alternate;
-      background: rgba(0,0,0,0.4);
-      padding: 1.2rem;
-      border-radius: 12px;
-      border: 1px dashed var(--accent);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow-x: hidden;
-      box-shadow: inset 0 0 15px rgba(255, 162, 74, 0.1);
+      overflow: hidden;
+      z-index: -1;
+      opacity: 0.15;
+      color: #ff99ff;
+      background: #000;
+      pointer-events: none;
     }
 
-    .ascii-art-container span.tool-emoji-ascii {
-      font-size: 18px;
-      vertical-align: middle;
-      text-shadow: none;
+    .page-wrapper {
+      background: transparent;
     }
 
-    @keyframes pulse-glow {
-      from { text-shadow: 0 0 4px var(--accent-strong); border-color: rgba(255, 162, 74, 0.4); box-shadow: inset 0 0 10px rgba(255, 162, 74, 0.05); }
-      to { text-shadow: 0 0 8px #ffb74d, 0 0 12px #ffb74d; border-color: rgba(255, 162, 74, 0.8); box-shadow: inset 0 0 25px rgba(255, 162, 74, 0.2); }
+    .footer-bear {
+      display: block;
+      margin: 2rem auto;
+      font-family: monospace;
+      white-space: pre;
+      text-align: center;
+      line-height: 1.2;
+      color: var(--text-muted);
     }
-
-  </style>
+    </style>
 </head>
 <body class="toolbox-page">
+  <pre id="animation-output"></pre>
   <header class="tool-header">
     <nav>
       <div class="nav-container tool-nav">
@@ -760,12 +743,17 @@
 
   <footer class="footer">
     <div class="footer-inner">
-      <div class="footer-icons">
-        <img src="../chunky-dad-emoji.png" alt="dad" style="height: 24px; width: auto; opacity: 0.7;">
-        <span>🧰</span>
-        <span>🔧</span>
-        <span>⚒️</span>
-      </div>
+      <pre class="footer-bear">
+⠀⠀⠀⠀⠀⠀⠀⣤⠶⣤⣤⣤⡴⢦⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢷⠉⠀⠀⠀⠈⠁⢷⠖⠒⠲⠶⢤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢸⠀⠠⠀⠠⠀⢠⠀⢳⠀⠀⠀⠀⠉⢳⡄⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠈⣧⡀⣶⡆⣠⠏⠀⠀⠀⠀⠀⠀⠀⠀⢹⡄⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢸⡉⠒⠚⠁⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠸⡇⢢⡀⣤⠀⠀⠀⢸⠀⠀⠀⠀⠀⢀⡇⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣷⠀⠉⢻⡀⠀⠀⣾⠤⠤⡄⠀⠀⢸⠁⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⠄⠀⣼⡇⠀⢠⡇⢀⡼⣻⠀⢀⡟⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⠒⠚⠙⠷⠶⠞⠉⠉⠀⠓⠒⠚⠁⠀⠀⠀⠀⠀⠀⠀
+      </pre>
       <p>Built for cute chaos, subversive joy, and steady dad hands.</p>
     </div>
   </footer>
@@ -1015,5 +1003,63 @@
 
     loadTestFiles();
   </script>
+
+  <script>
+    (function() {
+      const container = document.getElementById('animation-output');
+      if (!container) return;
+
+      const chars = " .:-=+*#%@";
+
+      let rows = 40;
+      let cols = 80;
+      let time = 0;
+      let animationFrame;
+
+      function resize() {
+        const charWidth = 8;
+        const charHeight = 16;
+        cols = Math.floor(window.innerWidth / charWidth);
+        rows = Math.floor(window.innerHeight / charHeight);
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+
+      function render() {
+        let output = "";
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const nx = x * 0.1;
+            const ny = y * 0.2;
+
+            let v = 0;
+            v += Math.sin(nx + time);
+            v += Math.sin(ny + time);
+            v += Math.sin((nx + ny + time) / 2);
+
+            const cx = nx - cols * 0.05;
+            const cy = ny - rows * 0.1;
+            v += Math.sin(Math.sqrt(cx * cx + cy * cy + 1) + time);
+
+            v = (v / 4 + 1) / 2;
+            if (v < 0) v = 0;
+            if (v > 1) v = 1;
+
+            const charIndex = Math.floor(v * (chars.length - 1));
+            output += chars[charIndex];
+          }
+          output += "\n";
+        }
+        container.textContent = output;
+
+        time += 0.05;
+        animationFrame = requestAnimationFrame(render);
+      }
+
+      render();
+    })();
+  </script>
+
 </body>
 </html>
