@@ -782,6 +782,7 @@ class SharedCore {
                         await displayAdapter.logError(`SYSTEM: Crawl URL processing stack trace: ${error.stack}`);
                     }
                 }
+                throw error;
             }
         }
     }
