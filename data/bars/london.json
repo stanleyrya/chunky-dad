@@ -13,12 +13,12 @@
   {
     "name": "Duke of Wellington",
     "city": "london",
-    "gayCities": "https://london.gaycities.com/bars/1704-the-duke-of-wellington",
     "address": "77 Wardour St, London, England W1D 6QA",
     "coordinates": "51.512343, -0.1331208",
     "instagram": "https://www.instagram.com/dukeofwellington_soho",
     "facebook": "https://www.facebook.com/Duke.Of.Welly",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJkUcf6v4PdkgR8zHSLztcmdw",
+    "gayCities": "https://london.gaycities.com/bars/1704-the-duke-of-wellington",
     "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z"
   },
   {
@@ -35,12 +35,12 @@
   {
     "name": "Eagle London",
     "city": "london",
-    "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
     "address": "349 Kennington Lane, London, England SE11 5QY",
     "coordinates": "51.4862598, -0.1193404",
     "instagram": "https://www.instagram.com/eagleldn",
     "facebook": "https://www.facebook.com/EagleLDN",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
+    "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
     "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
   }
 ]

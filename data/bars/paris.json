@@ -2,11 +2,11 @@
   {
     "name": "Bear's Den",
     "city": "paris",
-    "gayCities": "https://paris.gaycities.com/bars/1625-bears-den",
     "address": "6 Rue des Lombards, Paris, IDF 75004",
     "coordinates": "48.8591657, 2.3500783",
     "facebook": "https://www.facebook.com/Bearsden-Paris-306571042732756/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ3wmsgx5u5kcRX4l_NuRC3z0",
+    "gayCities": "https://paris.gaycities.com/bars/1625-bears-den",
     "gayCitiesLastScrapedAt": "2026-06-13T16:37:22.662Z"
   },
   {

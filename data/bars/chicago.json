@@ -3,8 +3,11 @@
     "name": "Meeting House Tavern",
     "city": "chicago",
     "gayCities": "https://chicago.gaycities.com/bars/311263-meeting-house-tavern",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:06.765Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "5025 N Clark St, Chicago, IL 60640",
+    "coordinates": "41.9732343, -87.6678243",
+    "instagram": "https://www.instagram.com/meetinghousetavernchi",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJndazcVjTD4gRimEFGWVA_AU",
+    "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z"
   },
   {
     "name": "The SoFo Tap",
@@ -14,15 +17,18 @@
     "instagram": "https://www.instagram.com/thesofotap",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
     "gayCities": "https://chicago.gaycities.com/bars/2076-the-sofo-tap",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:20.384Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z"
   },
   {
     "name": "Jackhammer",
     "city": "chicago",
     "gayCities": "https://chicago.gaycities.com/bars/176-jackhammer",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:07.070Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "6406 N Clark St, Chicago, IL 60626",
+    "coordinates": "41.9984139, -87.6710111",
+    "instagram": "https://www.instagram.com/?hl=en",
+    "facebook": "https://www.facebook.com/chijackhammer/",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
+    "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z"
   },
   {
     "name": "Touché",
