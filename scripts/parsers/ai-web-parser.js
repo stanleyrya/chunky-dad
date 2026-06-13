@@ -1180,7 +1180,7 @@ class AiWebParser {
 
         // Text similarity bonus - compare OCR text with segment content
         let similarity = 0;
-        if (ocrResult.text && Array.isArray(segmentBounds.matchedRecords) && segmentBounds.matchedRecords.length > 0) {
+        if (ocrResult.text && segmentBounds && Array.isArray(segmentBounds.matchedRecords) && segmentBounds.matchedRecords.length > 0) {
             const segmentText = segmentBounds.matchedRecords.map(r => r.text).join('\n');
             similarity = this.computeTextSimilarity(ocrResult.text, segmentText);
             if (similarity >= 0.15) {
