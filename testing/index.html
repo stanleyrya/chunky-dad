@@ -38,7 +38,7 @@
       --border: rgba(255, 255, 255, 0.08);
       --soft: rgba(255, 162, 74, 0.12);
       --chip: rgba(255, 162, 74, 0.18);
-      --sticky-header-offset: 6rem;
+      --sticky-header-offset: 4rem;
     }
 
     * {
@@ -63,7 +63,7 @@
       width: 100%;
       max-width: 1200px;
       margin: 0 auto;
-      padding: calc(2.1rem + var(--sticky-header-offset)) 1.25rem 3.2rem;
+      padding: calc(var(--sticky-header-offset)) 1.25rem 3.2rem;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
@@ -200,20 +200,7 @@
     }
 
     .panel {
-      background: var(--panel-bg);
-      border-radius: 16px;
       padding: 1.5rem;
-      border: 1px solid var(--border);
-      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.35);
-      margin-bottom: 1.5rem;
-    }
-
-    .hero-panel {
-      display: grid;
-      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-      gap: 1.5rem;
-      background: linear-gradient(145deg, var(--panel-bg), #1a1e30);
-      border-color: rgba(255, 162, 74, 0.2);
     }
 
     .hero-text h2 {
@@ -399,7 +386,7 @@
     }
 
     .toolbox-card {
-      background: rgba(255, 255, 255, 0.02);
+      background: var(--panel-bg);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 14px;
       padding: 1rem 1.2rem;
@@ -410,12 +397,12 @@
       align-items: flex-start;
       min-height: 100px;
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+      min-width: 0;
     }
 
     .toolbox-card:hover {
       transform: translateY(-2px);
       border-color: rgba(255, 162, 74, 0.5);
-      background: rgba(255, 162, 74, 0.05);
       box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
     }
 
@@ -529,11 +516,11 @@
     }
 
     .footer {
-      border-top: 1px solid var(--border);
-      padding: 2rem 0;
+      padding: 0 0;
       color: var(--text-muted);
       text-align: center;
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0);
+      margin-top: auto;
     }
 
     .footer-inner {
@@ -570,7 +557,7 @@
       .tool-nav .logo h1 { font-size: 1.25rem; }
       .tool-actions { flex-wrap: wrap; }
       :root {
-        --sticky-header-offset: 7.5rem;
+        --sticky-header-offset: 6rem;
       }
 
       .tool-nav {
@@ -585,11 +572,7 @@
       }
 
       .page-wrapper {
-        padding: calc(1.5rem + var(--sticky-header-offset)) 1rem 2rem;
-      }
-
-      .panel {
-        padding: 1.2rem;
+        padding: calc(var(--sticky-header-offset)) 1rem 0;
       }
 
       .hero-text h2 {
@@ -657,34 +640,15 @@
           <h1>
             <a href="../index.html" aria-label="chunky.dad home">
               <div class="logo-wrapper">
-                <span class="logo-hat">👷‍♂️</span>
                 <img src="../favicons/favicon-96x96.png"
                      srcset="../favicons/favicon-96x96.png 1x, ../favicons/favicon-192x192.png 2x, ../favicons/favicon-256x256.png 3x"
                      alt="chunky.dad logo" class="logo-img">
-                <span class="logo-tool">🔧</span>
               </div>
               <span class="tool-brand-text" style="margin-left: 0.5rem;">
-                <span class="tool-brand-name">chunky.dad</span>
-                <span class="tool-page-label">Tools</span>
+                <span class="tool-brand-name">chunky.dad | The Tool Shed</span>
               </span>
             </a>
           </h1>
-        </div>
-        <div class="tool-actions">
-          <div class="tool-buttons">
-            <a class="secondary-button action-button" href="../index.html">
-              <i class="bi bi-house-door" aria-hidden="true"></i>
-              <span>Main Site</span>
-            </a>
-            <a class="secondary-button action-button" href="../bear-directory.html">
-              <i class="bi bi-book" aria-hidden="true"></i>
-              <span>Bear Directory</span>
-            </a>
-            <a class="primary-button action-button" href="event-builder.html">
-              <i class="bi bi-tools" aria-hidden="true"></i>
-              <span>Event Builder</span>
-            </a>
-          </div>
         </div>
       </div>
     </nav>
@@ -692,40 +656,7 @@
 
   <div class="page-wrapper">
     <main>
-      <section class="panel hero-panel">
-        <div class="hero-text">
-          <span class="hero-kicker">The Tool Shed</span>
-          <h2>Grab a wrench and get weird</h2>
-          <p>Cute toolbox, subversive gay vibes, big dad energy. Welcome to the experimental garage. We're testing layouts, pushing pixels, and probably breaking things.</p>
-        </div>
-        <div class="hero-aside">
-          <div class="hero-badges">
-            <span class="hero-badge">Cute</span>
-            <span class="hero-badge">Subversive</span>
-            <span class="hero-badge">Dad Energy</span>
-            <span class="hero-badge">Beta</span>
-          </div>
-          <div class="ascii-art-container" aria-hidden="true">
-      .=""=.
-    / _   _ \   <span class="tool-emoji-ascii">🔧</span>
-   | (o) (o) |
-   |   / \   |
-    \  '-'  /
-    /`""`\
-   / |  <span class="tool-emoji-ascii">🧰</span> | \
-          </div>
-        </div>
-      </section>
-
       <section class="panel">
-        <div class="toolbar">
-          <div class="toolbar-text">
-            <span class="toolbar-label">Lab Experiments</span>
-            <p>Pick a file to tinker or inspect.</p>
-          </div>
-          <div class="stats" id="toolbox-stats">Loading tools...</div>
-        </div>
-
         <details class="debug-panel" id="debug-info" hidden>
           <summary>Load details</summary>
           <div id="debug-content" class="debug-list"></div>
@@ -754,7 +685,6 @@
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⠄⠀⣼⡇⠀⢠⡇⢀⡼⣻⠀⢀⡟⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⠒⠚⠙⠷⠶⠞⠉⠉⠀⠓⠒⠚⠁⠀⠀⠀⠀⠀⠀⠀
       </pre>
-      <p>Built for cute chaos, subversive joy, and steady dad hands.</p>
     </div>
   </footer>
 
@@ -990,10 +920,6 @@
               <h3>${fileInfo.displayName}</h3>
               <span class="card-arrow">→</span>
             </div>
-            <div class="card-meta">
-              <span class="card-file">${file.name}</span>
-              ${file.size ? `<span class="card-size">${formatFileSize(file.size)}</span>` : ''}
-            </div>
             <p class="card-desc">${fileInfo.desc}</p>
           </div>
         `;
@@ -1053,7 +979,7 @@
         }
         container.textContent = output;
 
-        time += 0.05;
+        time += 0.005;
         animationFrame = requestAnimationFrame(render);
       }
 
