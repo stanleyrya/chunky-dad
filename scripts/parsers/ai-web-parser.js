@@ -1081,87 +1081,48 @@ class AiWebParser {
             }
         }
 
-        const betterState = (current, candidate) => {
-            if (!candidate) return current;
-            if (!current) return candidate;
-            if (candidate.matches !== current.matches) {
-                return candidate.matches > current.matches ? candidate : current;
-            }
-            if (candidate.score !== current.score) {
-                return candidate.score > current.score ? candidate : current;
-            }
-            if (candidate.cost !== current.cost) {
-                return candidate.cost < current.cost ? candidate : current;
-            }
-            return candidate.steps < current.steps ? candidate : current;
-        };
+        const pairings = [];
+        for (let i = 0; i < boundsList.length; i++) {
+            for (let j = 0; j < records.length; j++) {
+                const imageRecord = records[j];
+                const normalizedUrl = this.normalizeHttpUrlValue(imageRecord.url);
+                const ocrResult = ocrMap.get(this.stripSizeParams(normalizedUrl));
 
-        const dp = Array.from({ length: boundsList.length + 1 }, () => Array(records.length + 1).fill(null));
-        dp[0][0] = { matches: 0, score: 0, cost: 0, steps: 0, prev: null, action: '' };
+                const pairingResult = this.getSegmentImagePairingCostWithOcr(
+                    boundsList[i],
+                    imageRecord,
+                    ocrResult
+                );
 
-        for (let segmentIndex = 0; segmentIndex <= boundsList.length; segmentIndex++) {
-            for (let imageIndex = 0; imageIndex <= records.length; imageIndex++) {
-                const state = dp[segmentIndex][imageIndex];
-                if (!state) continue;
-
-                if (segmentIndex < boundsList.length) {
-                    dp[segmentIndex + 1][imageIndex] = betterState(dp[segmentIndex + 1][imageIndex], {
-                        matches: state.matches,
-                        score: state.score,
-                        cost: state.cost,
-                        steps: state.steps + 1,
-                        prev: [segmentIndex, imageIndex],
-                        action: 'skip-segment'
+                if (Number.isFinite(pairingResult.cost)) {
+                    pairings.push({
+                        segmentIndex: i,
+                        imageIndex: j,
+                        score: pairingResult.score,
+                        cost: pairingResult.cost,
+                        url: imageRecord.url
                     });
-                }
-
-                if (imageIndex < records.length) {
-                    dp[segmentIndex][imageIndex + 1] = betterState(dp[segmentIndex][imageIndex + 1], {
-                        matches: state.matches,
-                        score: state.score,
-                        cost: state.cost,
-                        steps: state.steps + 1,
-                        prev: [segmentIndex, imageIndex],
-                        action: 'skip-image'
-                    });
-                }
-
-                if (segmentIndex < boundsList.length && imageIndex < records.length) {
-                    const imageRecord = records[imageIndex];
-                    const normalizedUrl = this.normalizeHttpUrlValue(imageRecord.url);
-                    const ocrResult = ocrMap.get(this.stripSizeParams(normalizedUrl));
-                    const pairingResult = this.getSegmentImagePairingCostWithOcr(
-                        boundsList[segmentIndex],
-                        imageRecord,
-                        ocrResult
-                    );
-                    if (Number.isFinite(pairingResult.cost)) {
-                        dp[segmentIndex + 1][imageIndex + 1] = betterState(dp[segmentIndex + 1][imageIndex + 1], {
-                            matches: state.matches + 1,
-                            score: state.score + pairingResult.score,
-                            cost: state.cost + pairingResult.cost,
-                            steps: state.steps + 1,
-                            prev: [segmentIndex, imageIndex],
-                            action: 'match'
-                        });
-                    }
                 }
             }
         }
 
-        const matchedUrls = [];
-        let segmentIndex = boundsList.length;
-        let imageIndex = records.length;
-        let state = dp[segmentIndex][imageIndex];
-        while (state && state.prev) {
-            if (state.action === 'match') {
-                matchedUrls[segmentIndex - 1] = records[imageIndex - 1].url;
+        pairings.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return a.cost - b.cost;
+        });
+
+        const matchedUrls = new Array(boundsList.length).fill(null);
+        const usedImages = new Set();
+        const usedSegments = new Set();
+
+        for (const pair of pairings) {
+            if (!usedSegments.has(pair.segmentIndex) && !usedImages.has(pair.imageIndex)) {
+                matchedUrls[pair.segmentIndex] = pair.url;
+                usedSegments.add(pair.segmentIndex);
+                usedImages.add(pair.imageIndex);
             }
-            const [prevSegmentIndex, prevImageIndex] = state.prev;
-            segmentIndex = prevSegmentIndex;
-            imageIndex = prevImageIndex;
-            state = dp[segmentIndex][imageIndex];
         }
+
         return matchedUrls;
     }
 
