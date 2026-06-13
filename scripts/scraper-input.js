@@ -32,6 +32,38 @@ const scraperConfig = {
         }
       }
     },
+    ai: {
+      enabled: true,
+      endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+      provider: "openai",
+      openai: {
+        responseFormat: "json_object"
+      },
+      model: "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+      payloadMode: "best",
+      maxHtmlChars: 6000,
+      numCtx: 2048,
+      numPredict: 512,
+      temperature: 0,
+      think: false,
+      timeoutSeconds: 120,
+      keepAlive: "5m"
+    },
+    ocr: {
+      enabled: true,
+      endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
+      model: "qwen3-vl:4b-instruct",
+      timeoutSeconds: 300,
+      numCtx: 8192,
+      numPredict: 2000,
+      temperature: 0,
+      think: false,
+      keepAlive: "5m",
+      maxImages: 2,
+      maxTextChars: 4000,
+      cacheEnabled: true,
+      requireMissingFields: true
+    },
     // URL pattern rules for page classification. Checked in order — first match wins.
     // More specific patterns (e.g. /events/:slug) must come before broader ones (e.g. domain root).
     pageClassificationRules: [
@@ -60,17 +92,7 @@ const scraperConfig = {
         title: { priority: ["static"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web"], merge: "clobber" },
-        address: { priority: ["ai-web"], merge: "clobber" },
-        startDate: { priority: ["ai-web"], merge: "clobber" },
-        endDate: { priority: ["ai-web"], merge: "clobber" },
         url: { priority: ["static"], merge: "clobber" },
-        location: { priority: ["ai-web"], merge: "clobber" },
-        gmaps: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {
         title: { value: "MEGAWOOF" },
@@ -91,30 +113,9 @@ const scraperConfig = {
       alwaysBear: true,
       urlDiscoveryDepth: 1,    // Depth 1: discover /e/ event links from the /o/ organizer listing
       dryRun: false,
-      ai: {
-        enabled: true,
-        endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-        model: "qwen3.5:4b",
-        maxHtmlChars: 12000,
-        numCtx: 8192,
-        numPredict: 512,
-        timeoutSeconds: 120,
-        keepAlive: "5m"
-      },
       fieldPriorities: {
-        title: { priority: ["ai-web"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web"], merge: "clobber" },
-        address: { priority: ["ai-web"], merge: "clobber" },
-        startDate: { priority: ["ai-web"], merge: "clobber" },
-        endDate: { priority: ["ai-web"], merge: "clobber" },
-        location: { priority: ["ai-web"], merge: "clobber" },
-        gmaps: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {
         shortName: {
@@ -236,23 +237,11 @@ const scraperConfig = {
       urlDiscoveryDepth: 0,
       maxAdditionalUrls: 0,
       discoveryBlockedPatterns: ["furball.nyc/"],
-      defaultCity: "nyc",
       dryRun: false,
       fieldPriorities: {
         title: { priority: ["ai-web", "static"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web"], merge: "clobber" },
-        address: { priority: ["ai-web"], merge: "clobber" },
-        startDate: { priority: ["ai-web"], merge: "clobber" },
-        endDate: { priority: ["ai-web"], merge: "clobber" },
-        url: { priority: ["ai-web"], merge: "clobber" },
-        location: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" },
-        gmaps: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {
         title: { value: "FURBALL" },
@@ -355,21 +344,9 @@ const scraperConfig = {
       maxAdditionalUrls: null,
       dryRun: false,
       fieldPriorities: {
-        title: { priority: ["ai-web"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
         instagram: { priority: ["static"], merge: "clobber" },
         facebook: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web"], merge: "clobber" },
-        address: { priority: ["ai-web"], merge: "clobber" },
-        startDate: { priority: ["ai-web"], merge: "clobber" },
-        endDate: { priority: ["ai-web"], merge: "clobber" },
-        url: { priority: ["ai-web"], merge: "clobber" },
-        location: { priority: ["ai-web"], merge: "clobber" },
-        gmaps: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {
         shortName: { value: "TWIST-ED BEAR" },
@@ -390,22 +367,10 @@ const scraperConfig = {
       maxAdditionalUrls: null,
       dryRun: false,
       fieldPriorities: {
-        title: { priority: ["ai-web"], merge: "clobber" },
         instagram: { priority: ["static"], merge: "clobber" },
         facebook: { priority: ["static"], merge: "clobber" },
         website: { priority: ["static"], merge: "clobber" },
         mastodon: { priority: ["static"], merge: "clobber" },
-        description: { priority: ["ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web"], merge: "clobber" },
-        address: { priority: ["ai-web"], merge: "clobber" },
-        startDate: { priority: ["ai-web"], merge: "clobber" },
-        endDate: { priority: ["ai-web"], merge: "clobber" },
-        url: { priority: ["ai-web"], merge: "clobber" },
-        location: { priority: ["ai-web"], merge: "clobber" },
-        gmaps: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {
         website: { value: "https://www.thedallaseagle.com" },
@@ -458,19 +423,6 @@ const scraperConfig = {
         cacheEnabled: true,
         requireMissingFields: true
       },
-      fieldPriorities: {
-        title: { priority: ["ai-web"], merge: "clobber" },
-        description: { priority: ["ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web"], merge: "clobber" },
-        address: { priority: ["ai-web"], merge: "clobber" },
-        startDate: { priority: ["ai-web"], merge: "clobber" },
-        endDate: { priority: ["ai-web"], merge: "clobber" },
-        city: { priority: ["ai-web"], merge: "clobber" },
-        url: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
-      },
       metadata: {}
     },
     {
@@ -507,19 +459,6 @@ const scraperConfig = {
         openai: {
           responseFormat: "json_object"
         }
-      },
-      fieldPriorities: {
-        title: { priority: ["ai-web"], merge: "clobber" },
-        description: { priority: ["ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web"], merge: "clobber" },
-        address: { priority: ["ai-web"], merge: "clobber" },
-        startDate: { priority: ["ai-web"], merge: "clobber" },
-        endDate: { priority: ["ai-web"], merge: "clobber" },
-        city: { priority: ["ai-web"], merge: "clobber" },
-        url: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" }
       },
       metadata: {}
     }
