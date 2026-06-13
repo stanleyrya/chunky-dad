@@ -21,8 +21,8 @@
     <link rel="stylesheet" href="../styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Permanent+Marker&family=Roboto+Condensed:wght@400;700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css"
+
           crossorigin=""/>
     <!-- Logger -->
     <script src="../js/logger.js"></script>
@@ -477,8 +477,8 @@
     <!-- Scripts -->
     <script src="../js/navigation.js"></script>
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+    <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"
+
             crossorigin=""></script>
     
     <script>
@@ -507,13 +507,69 @@
         let loadStartTime = null;
 
         // Initialize map
+        function applyTheme(map) {
+            const PURPLE = "#667eea";
+            const layers = map.getStyle().layers;
+
+            for (const layer of layers) {
+                const id = layer.id.toLowerCase();
+
+                try {
+                    // water
+                    if (id.includes("water")) {
+                        if (layer.type === "fill") {
+                            map.setPaintProperty(layer.id, "fill-color", PURPLE);
+                        }
+                        if (layer.type === "line") {
+                            map.setPaintProperty(layer.id, "line-color", PURPLE);
+                        }
+                    }
+
+                    /* Other theme examples for later:
+                    // land
+                    if (id.includes("land") || id.includes("natural")) {
+                        if (layer.type === "fill") {
+                            map.setPaintProperty(layer.id, "fill-color", "#1b102b");
+                        }
+                    }
+
+                    // roads
+                    if (id.includes("road")) {
+                        if (layer.type === "line") {
+                            map.setPaintProperty(layer.id, "line-color", "#3a2a55");
+                            map.setPaintProperty(layer.id, "line-opacity", 0.35);
+                        }
+                    }
+
+                    // labels
+                    if (id.includes("label")) {
+                        if (layer.type === "symbol") {
+                            map.setPaintProperty(layer.id, "text-color", "#b7a7d9");
+                        }
+                    }
+                    */
+
+                } catch (e) {}
+            }
+        }
+
+        // Initialize map
         function initTestMap() {
             try {
                 testLogger.logToViewer('info', 'Initializing test map');
-                testMap = L.map('testMap').setView([40.7128, -74.0060], 2);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(testMap);
+                testMap = new maplibregl.Map({
+                    container: 'testMap',
+                    style: 'https://tiles.openfreemap.org/styles/liberty',
+                    center: [-74.0060, 40.7128],
+                    zoom: 2,
+                    renderWorldCopies: false
+                });
+
+                testMap.on('style.load', () => {
+                    applyTheme(testMap);
+                });
+
+                testMap.addControl(new maplibregl.NavigationControl());
                 testLogger.logToViewer('success', 'Test map initialized');
             } catch (error) {
                 testLogger.logToViewer('error', 'Failed to initialize map', error.message);
@@ -910,15 +966,17 @@
                     const [lat, lng] = item.coordinates.split(',').map(coord => parseFloat(coord.trim()));
                     
                     if (!isNaN(lat) && !isNaN(lng)) {
-                        const marker = L.marker([lat, lng])
-                            .addTo(testMap)
-                            .bindPopup(`
-                                <div>
-                                    <h4>${item.name}</h4>
-                                    <p>${item.type}</p>
-                                    ${item.city ? `<p>📍 ${item.city}</p>` : ''}
-                                </div>
-                            `);
+                        const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`
+                            <div>
+                                <h4>${item.name}</h4>
+                                <p>${item.type}</p>
+                                ${item.city ? `<p>📍 ${item.city}</p>` : ''}
+                            </div>
+                        `);
+                        const marker = new maplibregl.Marker()
+                            .setLngLat([lng, lat])
+                            .setPopup(popup)
+                            .addTo(testMap);
                         
                         testMarkers.push(marker);
                         testLogger.logToViewer('success', `Added marker for ${item.name}`, { lat, lng });

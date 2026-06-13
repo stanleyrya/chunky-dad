@@ -1182,18 +1182,15 @@ class DynamicCalendarLoader extends CalendarCore {
                     dataSource: this.dataSource
                 });
                 
-                return L.divIcon({
-                    className: 'favicon-marker',
-                    html: `
-                        <div class="favicon-marker-container">
-                            <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon"
-                                 onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
-                        </div>
-                    `,
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 20],
-                    popupAnchor: [0, -16]
-                });
+                const el = document.createElement('div');
+                el.className = 'favicon-marker';
+                el.innerHTML = `
+                    <div class="favicon-marker-container">
+                        <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon"
+                             onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
+                    </div>
+                `;
+                return el;
             } catch (error) {
                 logger.warn('MAP', 'Failed to create favicon marker', { website: event.website, error: error.message });
             }
@@ -1201,17 +1198,14 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Use text from shorter field or shortName or name
         const markerText = this.getMarkerText(event);
-        return L.divIcon({
-            className: 'favicon-marker text-marker',
-            html: `
-                <div class="favicon-marker-container text-marker">
-                    <span class="marker-text">${markerText}</span>
-                </div>
-            `,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-            popupAnchor: [0, -16]
-        });
+        const el = document.createElement('div');
+        el.className = 'favicon-marker text-marker';
+        el.innerHTML = `
+            <div class="favicon-marker-container text-marker">
+                <span class="marker-text">${markerText}</span>
+            </div>
+        `;
+        return el;
     }
 
     // Get marker text from event data
@@ -2505,6 +2499,52 @@ class DynamicCalendarLoader extends CalendarCore {
         return headerHtml + daysHtml;
     }
 
+    applyTheme(map) {
+        const PURPLE = "#667eea";
+        const layers = map.getStyle().layers;
+
+        for (const layer of layers) {
+            const id = layer.id.toLowerCase();
+
+            try {
+                // water
+                if (id.includes("water")) {
+                    if (layer.type === "fill") {
+                        map.setPaintProperty(layer.id, "fill-color", PURPLE);
+                    }
+                    if (layer.type === "line") {
+                        map.setPaintProperty(layer.id, "line-color", PURPLE);
+                    }
+                }
+
+                /* Other theme examples for later:
+                // land
+                if (id.includes("land") || id.includes("natural")) {
+                    if (layer.type === "fill") {
+                        map.setPaintProperty(layer.id, "fill-color", "#1b102b");
+                    }
+                }
+
+                // roads
+                if (id.includes("road")) {
+                    if (layer.type === "line") {
+                        map.setPaintProperty(layer.id, "line-color", "#3a2a55");
+                        map.setPaintProperty(layer.id, "line-opacity", 0.35);
+                    }
+                }
+
+                // labels
+                if (id.includes("label")) {
+                    if (layer.type === "symbol") {
+                        map.setPaintProperty(layer.id, "text-color", "#b7a7d9");
+                    }
+                }
+                */
+
+            } catch (e) {}
+        }
+    }
+
     // Initialize map
     initializeMap(cityConfig, events) {
         logger.debug('MAP', 'Starting map initialization', {
@@ -2515,10 +2555,10 @@ class DynamicCalendarLoader extends CalendarCore {
         });
 
         const mapContainer = document.querySelector('#events-map');
-        if (!mapContainer || typeof L === 'undefined') {
-            logger.warn('MAP', 'Map initialization skipped - missing container or Leaflet', {
+        if (!mapContainer || typeof maplibregl === 'undefined') {
+            logger.warn('MAP', 'Map initialization skipped - missing container or MapLibre', {
                 mapContainerExists: !!mapContainer,
-                leafletAvailable: typeof L !== 'undefined'
+                maplibreAvailable: typeof maplibregl !== 'undefined'
             });
             return;
         }
@@ -2541,50 +2581,59 @@ class DynamicCalendarLoader extends CalendarCore {
             let mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
             let mapZoom = cityConfig.mapZoom || 10; // Reduced from 11 to 10 for better overview on desktop
 
-            const map = L.map('events-map', {
-                scrollWheelZoom: false,
-                doubleClickZoom: true,
-                touchZoom: true,
-                dragging: true,
-                zoomControl: true,
-                fullscreenControl: false
-            }).setView(mapCenter, mapZoom);
+            const map = new maplibregl.Map({
+                container: 'events-map',
+                style: 'https://tiles.openfreemap.org/styles/liberty',
+                center: [mapCenter[1], mapCenter[0]],
+                zoom: mapZoom,
+                renderWorldCopies: false,
+                scrollZoom: false
+            });
 
-            // Use clean US-based OpenStreetMap tiles
-            logger.debug('MAP', 'Loading OpenStreetMap tile layer');
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 18
-            }).addTo(map);
-            logger.debug('MAP', 'Tile layer added successfully');
+            map.on('style.load', () => {
+                this.applyTheme(map);
+            });
 
 
 
-            // Add "fit all markers" control
-            const fitMarkersControl = L.control({position: 'topleft'});
-            fitMarkersControl.onAdd = function() {
-                const div = L.DomUtil.create('div', 'leaflet-control-fit-markers');
-                div.innerHTML = `
-                    <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
-                        <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
-                    </button>
-                `;
-                return div;
-            };
-            fitMarkersControl.addTo(map);
+            // Add custom controls to maplibregl
+            class FitMarkersControl {
+                onAdd(map) {
+                    this._map = map;
+                    this._container = document.createElement('div');
+                    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                    this._container.innerHTML = `
+                        <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
+                            <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
+                        </button>
+                    `;
+                    return this._container;
+                }
+                onRemove() {
+                    this._container.parentNode.removeChild(this._container);
+                    this._map = undefined;
+                }
+            }
+            map.addControl(new FitMarkersControl(), 'top-left');
 
-            // Add "my location" control
-            const myLocationControl = L.control({position: 'topleft'});
-            myLocationControl.onAdd = function() {
-                const div = L.DomUtil.create('div', 'leaflet-control-my-location');
-                div.innerHTML = `
-                    <button class="map-control-btn" id="location-btn" onclick="showMyLocation()" title="Show My Location">
-                        <i class="bi bi-crosshair2" id="location-icon"></i>
-                    </button>
-                `;
-                return div;
-            };
-            myLocationControl.addTo(map);
+            class MyLocationControl {
+                onAdd(map) {
+                    this._map = map;
+                    this._container = document.createElement('div');
+                    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                    this._container.innerHTML = `
+                        <button class="map-control-btn" id="location-btn" onclick="showMyLocation()" title="Show My Location">
+                            <i class="bi bi-crosshair2" id="location-icon"></i>
+                        </button>
+                    `;
+                    return this._container;
+                }
+                onRemove() {
+                    this._container.parentNode.removeChild(this._container);
+                    this._map = undefined;
+                }
+            }
+            map.addControl(new MyLocationControl(), 'top-left');
             
             // Initialize location status
             updateLocationStatus();
@@ -2625,17 +2674,22 @@ class DynamicCalendarLoader extends CalendarCore {
                         // Create custom marker icon with favicon or fallback
                         const markerIcon = this.createMarkerIcon(event);
                         
-                        const marker = L.marker([event.coordinates.lat, event.coordinates.lng], {
-                            icon: markerIcon,
-                            eventSlug: event.slug
+                        const marker = new maplibregl.Marker({
+                            element: markerIcon,
+                            anchor: 'bottom'
                         })
-                            .addTo(map)
-                            .on('click', () => {
-                                // Select the event without changing page scroll
-                                const eventDateISO = event.date || this.formatDateToISO(this.currentDate);
-                                this.toggleEventSelection(event.slug, eventDateISO);
-                                logger.userInteraction('MAP', 'Marker clicked, event selected', { eventSlug: event.slug });
-                            });
+                            .setLngLat([event.coordinates.lng, event.coordinates.lat])
+                            .addTo(map);
+
+                        marker.getElement().addEventListener('click', () => {
+                            // Select the event without changing page scroll
+                            const eventDateISO = event.date || this.formatDateToISO(this.currentDate);
+                            this.toggleEventSelection(event.slug, eventDateISO);
+                            logger.userInteraction('MAP', 'Marker clicked, event selected', { eventSlug: event.slug });
+                        });
+
+                        // Store the slug on the marker object for later reference
+                        marker.eventSlug = event.slug;
                         markers.push(marker);
                         markersAdded++;
                         
@@ -2649,12 +2703,15 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             });
 
-            // Fit map to show all markers using Leaflet's built-in bounds calculation
+            // Fit map to show all markers using maplibre's bounds calculation
             if (markers.length > 0) {
-                const group = new L.featureGroup(markers);
+                const bounds = new maplibregl.LngLatBounds();
+                markers.forEach(marker => {
+                    bounds.extend(marker.getLngLat());
+                });
                 const isMobile = window.innerWidth <= 768;
-                map.fitBounds(group.getBounds(), {
-                    padding: [20, 20],
+                map.fitBounds(bounds, {
+                    padding: 20,
                     maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
                 });
             }
@@ -2671,7 +2728,7 @@ class DynamicCalendarLoader extends CalendarCore {
             // Store marker references by event slug for easy access
             window.eventsMapMarkersBySlug = {};
             markers.forEach(marker => {
-                const eventSlug = marker.options.eventSlug;
+                const eventSlug = marker.eventSlug;
                 if (eventSlug) {
                     window.eventsMapMarkersBySlug[eventSlug] = marker;
                 }
@@ -3923,15 +3980,16 @@ function showOnMap(lat, lng, eventName, barName) {
         
         // Then center the map on the location with a slight delay
         setTimeout(() => {
-            window.eventsMap.setView([lat, lng], 16);
-            window.eventsMap.eachLayer(layer => {
-                if (layer instanceof L.Marker) {
-                    const latLng = layer.getLatLng();
+            window.eventsMap.setCenter([lng, lat]);
+            window.eventsMap.setZoom(16);
+            if (window.eventsMapMarkers) {
+                window.eventsMapMarkers.forEach(marker => {
+                    const latLng = marker.getLngLat();
                     if (Math.abs(latLng.lat - lat) < 0.0001 && Math.abs(latLng.lng - lng) < 0.0001) {
-                        layer.openPopup();
+                        marker.togglePopup();
                     }
-                }
-            });
+                });
+            }
         }, 300);
         
         logger.userInteraction('MAP', 'showOnMap called', { lat, lng, eventName, barName });
@@ -3955,10 +4013,13 @@ function updateFitMarkersIcon() {
 // Map control functions
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
-        const group = new L.featureGroup(window.eventsMapMarkers);
+        const bounds = new maplibregl.LngLatBounds();
+        window.eventsMapMarkers.forEach(marker => {
+            bounds.extend(marker.getLngLat());
+        });
         const isMobile = window.innerWidth <= 768;
-        window.eventsMap.fitBounds(group.getBounds(), {
-            padding: [20, 20],
+        window.eventsMap.fitBounds(bounds, {
+            padding: 20,
             maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
         });
         
@@ -3990,7 +4051,7 @@ async function showMyLocation() {
         if (window.eventsMap) {
             // Remove existing location circle
             if (window.myLocationCircle) {
-                window.eventsMap.removeLayer(window.myLocationCircle);
+                window.myLocationCircle.remove();
             }
             
             // Create popup text with accuracy info
@@ -4003,32 +4064,42 @@ async function showMyLocation() {
                 popupText += ' (cached)';
             }
             
-            // Add location circle instead of marker
-            window.myLocationCircle = L.circle([location.lat, location.lng], {
-                color: '#4285f4',
-                fillColor: '#4285f4',
-                fillOpacity: 0.2,
-                radius: 500,
-                weight: 3
-            }).addTo(window.eventsMap).bindPopup(popupText);
+            // Note: Maplibre doesn't have an equivalent to L.circle out-of-the-box in the same way without adding a layer source.
+            // Using a simple HTML marker for the location dot
+            const locationEl = document.createElement('div');
+            locationEl.style.width = '15px';
+            locationEl.style.height = '15px';
+            locationEl.style.backgroundColor = '#4285f4';
+            locationEl.style.borderRadius = '50%';
+            locationEl.style.border = '2px solid white';
+            locationEl.style.boxShadow = '0 0 5px rgba(0,0,0,0.5)';
+
+            const popup = new maplibregl.Popup({ offset: 25 }).setHTML(popupText);
+
+            window.myLocationCircle = new maplibregl.Marker({element: locationEl})
+                .setLngLat([location.lng, location.lat])
+                .setPopup(popup)
+                .addTo(window.eventsMap);
             
             // Calculate bounds that include both user location and all event markers
-            const bounds = L.latLngBounds([[location.lat, location.lng]]);
+            const bounds = new maplibregl.LngLatBounds();
+            bounds.extend([location.lng, location.lat]);
             
             // Add all event markers to bounds
             if (window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
                 window.eventsMapMarkers.forEach(marker => {
-                    bounds.extend(marker.getLatLng());
+                    bounds.extend(marker.getLngLat());
                 });
                 
                 // Fit map to show both user location and all events
                 window.eventsMap.fitBounds(bounds, {
-                    padding: [50, 50],
+                    padding: 50,
                     maxZoom: 14
                 });
             } else {
                 // If no event markers, just center on user location
-                window.eventsMap.setView([location.lat, location.lng], 14);
+                window.eventsMap.setCenter([location.lng, location.lat]);
+                window.eventsMap.setZoom(14);
             }
             
             // Update button to show success state
@@ -4055,20 +4126,20 @@ async function showMyLocation() {
         if (window.eventsMap) {
             // Remove any existing error popup
             if (window.locationErrorPopup) {
-                window.eventsMap.removeLayer(window.locationErrorPopup);
+                window.locationErrorPopup.remove();
             }
             
             // Show error as map popup
             const center = window.eventsMap.getCenter();
-            window.locationErrorPopup = L.popup()
-                .setLatLng(center)
-                .setContent(`<div style="text-align: center; color: #d32f2f; font-weight: 500;">${errorMessage}</div>`)
-                .openOn(window.eventsMap);
+            window.locationErrorPopup = new maplibregl.Popup({ closeOnClick: false })
+                .setLngLat(center)
+                .setHTML(`<div style="text-align: center; color: #d32f2f; font-weight: 500;">${errorMessage}</div>`)
+                .addTo(window.eventsMap);
             
             // Auto-close after 5 seconds
             setTimeout(() => {
                 if (window.locationErrorPopup) {
-                    window.eventsMap.closePopup(window.locationErrorPopup);
+                    window.locationErrorPopup.remove();
                     window.locationErrorPopup = null;
                 }
             }, 5000);

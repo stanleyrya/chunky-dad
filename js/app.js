@@ -234,7 +234,7 @@ class ChunkyDadApp {
         this.componentsManager = new ComponentsManager();
         
         // Navigation is only needed on main page and directory page, not city pages
-        if (this.isMainPage || this.isDirectoryPage) {
+        if ((this.isMainPage || this.isDirectoryPage) && typeof NavigationManager !== 'undefined') {
             this.navigationManager = new NavigationManager();
         } else {
             logger.debug('SYSTEM', 'Skipping navigation manager for city pages (using city switcher instead)');
