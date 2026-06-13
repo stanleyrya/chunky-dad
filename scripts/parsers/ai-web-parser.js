@@ -3381,7 +3381,7 @@ class AiWebParser {
 
     getAiConfig(parserConfig = {}) {
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
-        const provider = String(aiConfig.provider || 'ollama');
+        const provider = String(aiConfig.provider || 'openai');
         const defaultEndpoint = provider === 'openai'
             ? 'https://api.openai.com/v1/chat/completions'
             : 'http://desktop.taila7523c.ts.net:11434/api/generate';
@@ -3429,11 +3429,27 @@ class AiWebParser {
             temperature: this.defaultOcrRequestConfig.temperature,
             think: this.defaultOcrRequestConfig.think
         };
+        const provider = String(rawOcr.provider || 'ollama');
+
+        let defaultEndpoint;
+        if (provider === 'openai') {
+            defaultEndpoint = 'https://api.openai.com/v1/chat/completions';
+        } else {
+            // If the base AI config is also ollama, inherit its endpoint so custom endpoints aren't lost
+            defaultEndpoint = baseAiConfig.provider === 'ollama' && baseAiConfig.endpoint
+                ? baseAiConfig.endpoint
+                : 'http://desktop.taila7523c.ts.net:11434/api/generate';
+        }
+
+        const defaultModel = provider === 'openai'
+            ? 'gpt-4o'
+            : this.defaultOcrModel;
+
         return {
             enabled: rawOcr.enabled !== false,
-            provider: String(rawOcr.provider || baseAiConfig.provider || 'ollama'),
-            endpoint: String(rawOcr.endpoint || baseAiConfig.endpoint || ''),
-            model: String(rawOcr.model || this.defaultOcrModel),
+            provider: provider,
+            endpoint: String(rawOcr.endpoint || defaultEndpoint),
+            model: String(rawOcr.model || defaultModel),
             prompt: String(rawOcr.prompt || this.defaultOcrPrompt),
             ...Object.fromEntries(
                 Object.entries(ocrConfigTemplate).map(([key, defaultValue]) => [
