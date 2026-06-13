@@ -911,7 +911,8 @@ class AiWebParser {
             sourceUrl,
             Math.max(sourceSegments.length * 4, sourceSegments.length + 6)
         );
-        if (pageImageRecords.length < 2) return sourceSegments;
+        // Even if there's only 1 image on the page, we still want to match it to a segment using OCR
+        if (pageImageRecords.length === 0) return sourceSegments;
 
         const primarySegmentImages = sourceSegments.map(segment => {
             const images = this.extractOrderedImageUrlsFromHtml(
@@ -2418,11 +2419,40 @@ class AiWebParser {
                 .filter(Boolean)
         );
 
+        // Strip sizes for more robust comparison
+        const strippedSegmentImageSet = new Set(
+            Array.from(normalizedSegmentImageSet)
+                .map(u => this.stripSizeParams(u))
+                .filter(Boolean)
+        );
+
+        console.log(`🤖 AI Web: Filtering OCR results against ${normalizedSegmentImageSet.size} segment images (${strippedSegmentImageSet.size} stripped)`);
+
         // Filter OCR results to match segment images
-        return ocrResults.filter(ocr => {
+        const matchedOcrResults = ocrResults.filter(ocr => {
             const ocrUrl = this.normalizeHttpUrlValue(ocr.url);
-            return normalizedSegmentImageSet.has(ocrUrl);
+            const strippedOcrUrl = this.stripSizeParams(ocrUrl);
+
+            const exactMatch = normalizedSegmentImageSet.has(ocrUrl);
+            const strippedMatch = strippedOcrUrl && strippedSegmentImageSet.has(strippedOcrUrl);
+
+            if (exactMatch) {
+                console.log(`🤖 AI Web: Segment matched OCR result via exact URL: ${ocrUrl}`);
+                return true;
+            } else if (strippedMatch) {
+                console.log(`🤖 AI Web: Segment matched OCR result via stripped URL: ${ocrUrl} -> ${strippedOcrUrl}`);
+                return true;
+            }
+            return false;
         });
+
+        if (matchedOcrResults.length === 0 && ocrResults.length > 0 && normalizedSegmentImageSet.size > 0) {
+            console.log(`🤖 AI Web: Segment failed to match any of the ${ocrResults.length} OCR results.`);
+            console.log(`🤖 AI Web: First segment image (stripped): ${Array.from(strippedSegmentImageSet)[0] || 'none'}`);
+            console.log(`🤖 AI Web: First OCR image (stripped): ${this.stripSizeParams(this.normalizeHttpUrlValue(ocrResults[0].url)) || 'none'}`);
+        }
+
+        return matchedOcrResults;
     }
 
     buildOcrSnippet(imageUrl, text, eventSummary = null) {
