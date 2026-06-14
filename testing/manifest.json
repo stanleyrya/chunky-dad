@@ -14,13 +14,13 @@
     },
     {
       "name": "test-calendar-logging.html",
-      "size": 68767,
+      "size": 68633,
       "icon": "🔍",
       "description": "Debug Scope - Look deep inside calendar processing (magnify those logs)"
     },
     {
       "name": "test-google-sheets-loader.html",
-      "size": 41074,
+      "size": 43013,
       "icon": "📊",
       "description": "Sheet Metal Worker - Loads and shapes Google Sheets data"
     },
