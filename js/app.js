@@ -258,6 +258,7 @@ class ChunkyDadApp {
             this.initializeBearEventRenderer();
             this.initializeDadJokes();
             this.initializeTodayEvents();
+            this.initializeHomeMap();
         }
         
         logger.componentLoad('SYSTEM', 'Core modules initialized');
@@ -285,6 +286,17 @@ class ChunkyDadApp {
             }
         } else if (shouldShow && !window.DebugOverlay) {
             logger.warn('SYSTEM', 'Debug overlay requested but DebugOverlay class not available');
+        }
+    }
+
+    initializeHomeMap() {
+        if (window.HomeMap) {
+            this.homeMap = new window.HomeMap();
+            this.homeMap.init();
+            window.homeMap = this.homeMap; // Make globally accessible
+            logger.componentInit('SYSTEM', 'Home map initialized in app');
+        } else {
+            logger.warn('SYSTEM', 'HomeMap not available');
         }
     }
 
