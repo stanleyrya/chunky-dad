@@ -4782,51 +4782,19 @@ footer {
     gap: 2rem;
 }
 
-.directory-tile {
-    background: var(--background-primary);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px var(--shadow-light);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
 
-.directory-tile:hover {
-    transform: translateY(-4px);
-}
 
-.instagram-embed-container {
-    width: 100%;
-    min-height: 300px;
-    background: var(--background-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: visible;
-}
+
+
+
 
 /* Instagram embed iframe styles */
-.instagram-embed-container iframe {
-    width: 100% !important;
-    height: auto !important;
-    min-height: 300px;
-}
+
 
 /* Instagram blockquote styles */
-.instagram-embed-container .instagram-media {
-    margin: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-}
 
-.tile-placeholder {
-    width: 100%;
-    height: 300px;
-    background: var(--background-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+
+
 
 .bear-icon {
     font-size: 4rem;
@@ -5031,36 +4999,13 @@ footer {
 }
 
 /* Website Preview for Restricted Profiles */
-.website-preview-container {
-    width: 100%;
-    height: 300px;
-    position: relative;
-    background: var(--background-light);
-    display: flex;
-    flex-direction: column;
-}
 
-.website-preview-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: var(--background-light);
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
 
-.website-icon {
-    font-size: 1.2rem;
-}
 
-.website-preview-iframe {
-    flex: 1;
-    width: 100%;
-    border: none;
-    background: white;
-}
+
+
+
+
 
 .website-preview-link {
     position: absolute;
@@ -5101,14 +5046,7 @@ footer {
 }
 
 /* Shop Preview (similar to website preview) */
-.shop-preview-container {
-    width: 100%;
-    height: 300px;
-    position: relative;
-    background: var(--background-light);
-    display: flex;
-    flex-direction: column;
-}
+
 
 .shop-preview-header {
     display: flex;
@@ -5171,10 +5109,7 @@ footer {
 }
 
 /* Instagram loading state improvements */
-.instagram-embed-container {
-    position: relative;
-    min-height: 300px;
-}
+
 
 .instagram-embed-container.loading .instagram-loading {
     display: flex;
@@ -5878,4 +5813,116 @@ body.loaded {
 
 .share-event-btn.icon-only i::before {
     margin: -2px 0 0 0;
+}
+
+
+/* Bear Directory Refactor */
+.directory-tile {
+    background: var(--background-primary);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+}
+
+.directory-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.tile-banner {
+    height: 80px;
+    position: relative;
+}
+
+.tile-avatar {
+    width: 64px;
+    height: 64px;
+    background: var(--background-primary);
+    border-radius: 50%;
+    position: absolute;
+    bottom: -32px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 2px solid var(--background-primary);
+}
+
+.tile-content {
+    padding: 40px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.tile-name {
+    margin: 0 0 4px 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.tile-city {
+    margin: 0 0 12px 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tile-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.tile-badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: var(--background-light);
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tile-links {
+    margin-top: auto;
+    display: flex;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.tile-link {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--background-light);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.tile-link:hover {
+    background: var(--purple-primary);
+    color: white;
+}
+
+.tile-link i {
+    font-size: 1.1rem;
 }
