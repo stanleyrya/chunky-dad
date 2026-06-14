@@ -2773,7 +2773,8 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             const calendarTitle = document.getElementById('calendar-title');
             if (calendarTitle) {
-                calendarTitle.textContent = `What's the vibe?`;
+                // Removing calendar title for now, keeping reference in case we want to add per-city titles again later
+                // calendarTitle.textContent = `What's the vibe?`;
                 logger.debug('CALENDAR', 'Calendar title updated successfully');
             } else {
                 logger.warn('CALENDAR', 'Calendar title element not found');

@@ -3393,10 +3393,10 @@ class AiWebParser {
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
         const provider = String(aiConfig.provider || 'openai');
         const defaultEndpoint = provider === 'openai'
-            ? 'https://api.openai.com/v1/chat/completions'
+            ? 'https://rybook.taila7523c.ts.net:8000/v1/chat/completions'
             : 'http://desktop.taila7523c.ts.net:11434/api/generate';
         const defaultModel = provider === 'openai'
-            ? 'gpt-4o'
+            ? 'lmstudio-community/Qwen3-Coder-Next-MLX-6bit'
             : 'qwen3.5:4b';
 
         return {
@@ -3443,7 +3443,7 @@ class AiWebParser {
 
         let defaultEndpoint;
         if (provider === 'openai') {
-            defaultEndpoint = 'https://api.openai.com/v1/chat/completions';
+            defaultEndpoint = 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions';
         } else {
             // If the base AI config is also ollama, inherit its endpoint so custom endpoints aren't lost
             defaultEndpoint = baseAiConfig.provider === 'ollama' && baseAiConfig.endpoint
@@ -3452,7 +3452,7 @@ class AiWebParser {
         }
 
         const defaultModel = provider === 'openai'
-            ? 'gpt-4o'
+            ? 'lmstudio-community/Qwen3-Coder-Next-MLX-6bit'
             : this.defaultOcrModel;
 
         return {
