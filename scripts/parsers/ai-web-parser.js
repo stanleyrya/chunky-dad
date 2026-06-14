@@ -6054,7 +6054,10 @@ TEXT:
 
         if (hasUnstructuredData && !hasStructuredData && finalStartDate instanceof Date && !Number.isNaN(finalStartDate.getTime())) {
             const localHour = this.getLocalHour(finalStartDate, timezone);
-            if (localHour !== null && localHour > 0 && localHour < 6) {
+            // If the local hour is explicitly 0 (midnight), only shift it if it was explicitly extracted from unstructured text.
+            // If it was "invented" as a default because no time was provided, leave it alone.
+            const isInventedMidnight = localHour === 0 && !startTimeRaw;
+            if (localHour !== null && localHour >= 0 && localHour < 6 && !isInventedMidnight) {
                 console.log(`🤖 AI Web: Adjusting late night event (+1 day) for unstructured data. Original start: ${finalStartDate.toISOString()}`);
                 finalStartDate = new Date(finalStartDate.getTime() + 24 * 60 * 60 * 1000);
                 if (finalEndDate instanceof Date && !Number.isNaN(finalEndDate.getTime())) {
