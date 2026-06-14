@@ -7,9 +7,7 @@
     "instagram": "https://www.instagram.com/animal.nyc",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJdaGX6E9ZwokRrcrhq8cMM-8",
     "gayCities": "https://newyork.gaycities.com/bars/312406-animal",
-    "gayCitiesExtractionFailureAt": "2026-06-13T15:10:55.777Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403",
-    "gayCitiesExtractionFailureCount": 1
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:14.085Z"
   },
   {
     "name": "Rockbar",
@@ -20,9 +18,7 @@
     "facebook": "https://www.facebook.com/Rockbar-NYC",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
     "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
-    "gayCitiesExtractionFailureAt": "2026-06-13T15:11:00.881Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403",
-    "gayCitiesExtractionFailureCount": 1
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:16.402Z"
   },
   {
     "name": "Eagle NYC",
@@ -43,9 +39,7 @@
     "facebook": "https://www.facebook.com/3dollarbillbk",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc",
     "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill",
-    "gayCitiesExtractionFailureAt": "2026-06-13T15:11:06.105Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403",
-    "gayCitiesExtractionFailureCount": 1
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:18.601Z"
   },
   {
     "name": "Ty's",
@@ -56,9 +50,7 @@
     "facebook": "https://www.facebook.com/TysNYC",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY",
     "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
-    "gayCitiesExtractionFailureAt": "2026-06-13T15:11:11.173Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403",
-    "gayCitiesExtractionFailureCount": 1
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:20.711Z"
   },
   {
     "name": "Nowhere Bar",
@@ -69,9 +61,7 @@
     "facebook": "https://www.facebook.com/nowherebar",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY",
     "gayCities": "https://newyork.gaycities.com/bars/415-nowhere-bar",
-    "gayCitiesExtractionFailureAt": "2026-06-13T15:11:16.233Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403",
-    "gayCitiesExtractionFailureCount": 1
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:22.742Z"
   },
   {
     "name": "Albatross",
