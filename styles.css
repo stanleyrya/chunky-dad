@@ -5879,19 +5879,3 @@ body.loaded {
 .share-event-btn.icon-only i::before {
     margin: -2px 0 0 0;
 }
-/* Maplibre Attribution Auto-Dismiss on Mobile */
-@media (max-width: 768px) {
-    .maplibregl-ctrl-attrib {
-        max-width: 150px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        transition: max-width 0.3s ease;
-    }
-
-    .maplibregl-ctrl-bottom-right:active .maplibregl-ctrl-attrib,
-    .maplibregl-ctrl-attrib:active {
-        max-width: none;
-        white-space: normal;
-    }
-}
