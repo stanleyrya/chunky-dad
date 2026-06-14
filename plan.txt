@@ -1,0 +1,9 @@
+1. The user is asking to confirm the logic for handling rate limits (e.g. 50 max per day) and refreshing (randomized threshold).
+2. The current implementation in `tools/sync-directory-previews.js` handles this exactly as requested:
+   - `MAX_REQUESTS_PER_RUN = 40` (so we safely stay under 50).
+   - If `requestsMade >= MAX_REQUESTS_PER_RUN`, the loop breaks. The array `items` is shuffled beforehand (`items.sort(() => 0.5 - Math.random())`). So it doesn't strictly "pick back up" linearly based on an index, but because it randomizes and skips ones that don't need updates (because their `lastFetched` is fresh), over a few runs it will eventually cover all items.
+   - Wait, if it randomly shuffles, and only 40 are updated, what if there are 200 items that need updates? Over 5 runs it will randomly hit most of them, but some might be statistically skipped for a few days. Is that "properly pick back up where we left off"? To literally "pick up where we left off", it would be better to sort items by `lastFetched` (oldest first). That way it guarantees the stalest items are processed first.
+   - For the refresh threshold, `getStalenessThresholdMs` uses `30 + Math.floor(Math.random() * 15)`, meaning an item expires between 30 and 44 days randomly. However, `getStalenessThresholdMs()` is called on every check, which is fine, but to truly stagger updates over time, we just need to ensure the oldest ones get refreshed first.
+3. Plan:
+   - Modify `tools/sync-directory-previews.js` to sort items by `lastFetched` (oldest first, or 0 if never fetched) instead of shuffling them randomly. This ensures it reliably picks up exactly where it left off.
+   - Explain to the user how this works in a reply and commit the updated script.

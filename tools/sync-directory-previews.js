@@ -6,7 +6,7 @@ const SHEET_ID = '1-ttoHpM6unij08U40voVi8YLn7j8Mhld4FkRsKrzql4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
 const CACHE_FILE = path.join(process.cwd(), 'data', 'microlink', 'directory-cache.json');
-const MAX_REQUESTS_PER_RUN = 40;
+const MAX_REQUESTS_PER_RUN = 20;
 
 // Randomize staleness threshold between 30 and 45 days
 const getStalenessThresholdMs = () => {
@@ -88,12 +88,18 @@ async function run() {
     let requestsMade = 0;
     let newUpdates = 0;
 
-    // Shuffle items to avoid always checking the same ones first
-    const shuffledItems = items.sort(() => 0.5 - Math.random());
+    // Sort items by lastFetched (oldest or never fetched first) to accurately pick up where we left off
+    const sortedItems = items.sort((a, b) => {
+        const keyA = a.name ? a.name.toLowerCase().trim() : a.finalUrl;
+        const keyB = b.name ? b.name.toLowerCase().trim() : b.finalUrl;
+        const fetchedA = cache[keyA] && cache[keyA].lastFetched ? cache[keyA].lastFetched : 0;
+        const fetchedB = cache[keyB] && cache[keyB].lastFetched ? cache[keyB].lastFetched : 0;
+        return fetchedA - fetchedB;
+    });
 
     const now = Date.now();
 
-    for (const item of shuffledItems) {
+    for (const item of sortedItems) {
         if (requestsMade >= MAX_REQUESTS_PER_RUN) {
             console.log(`Reached max requests (${MAX_REQUESTS_PER_RUN}) for this run.`);
             break;
