@@ -2581,6 +2581,12 @@ class DynamicCalendarLoader extends CalendarCore {
             let mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
             let mapZoom = cityConfig.mapZoom || 10; // Reduced from 11 to 10 for better overview on desktop
 
+            // Store original view state globally
+            window.eventsMapCityCenter = mapCenter;
+            window.eventsMapCityZoom = mapZoom;
+            window.isMapZoomedToFit = true; // Initialize to true as we start zoomed out
+            window.mapHasUserInteracted = false;
+
             const map = new maplibregl.Map({
                 container: 'events-map',
                 style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -2622,7 +2628,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     this._container = document.createElement('div');
                     this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
                     this._container.innerHTML = `
-                        <button class="map-control-btn" id="location-btn" onclick="showMyLocation()" title="Show My Location">
+                        <button class="map-control-btn" id="location-btn" onclick="showMyLocation(true)" title="Show My Location">
                             <i class="bi bi-crosshair2" id="location-icon"></i>
                         </button>
                     `;
@@ -2639,6 +2645,22 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Initialize location status
             updateLocationStatus();
+
+            // Map interaction tracking
+            const interactionHandler = (e) => {
+                if (e.originalEvent) { // Check if the event was triggered by user interaction
+                    window.mapHasUserInteracted = true;
+                    window.isMapZoomedToFit = false;
+                    if (typeof updateFitMarkersIcon === 'function') {
+                        updateFitMarkersIcon();
+                    }
+                }
+            };
+
+            map.on('wheel', interactionHandler);
+            map.on('dragstart', interactionHandler);
+            map.on('zoomstart', interactionHandler);
+            map.on('touchstart', interactionHandler);
 
             // Enable scroll wheel zoom only when Ctrl is pressed
             map.on('wheel', function(e) {
@@ -2711,11 +2733,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 markers.forEach(marker => {
                     bounds.extend(marker.getLngLat());
                 });
-                const isMobile = window.innerWidth <= 768;
                 map.fitBounds(bounds, {
                     padding: 20,
-                    maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
+                    maxZoom: mapZoom
                 });
+                window.isMapZoomedToFit = true;
             }
 
             logger.componentLoad('MAP', `Map initialized with ${markersAdded} markers for ${cityConfig.name}`, {
@@ -2985,7 +3007,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, location);
                         
                         // Show user location on map
-                        showMyLocation();
+                        showMyLocation(false);
                         
                         logger.info('CALENDAR', 'Location features enabled', { 
                             lat: location.lat, 
@@ -4005,9 +4027,11 @@ function updateFitMarkersIcon() {
     const fitIcon = document.getElementById('zoom-to-fit-icon');
     if (fitBtn && fitIcon) {
         // Show filled icon when active, unfilled when not
-        if (fitBtn.classList.contains('active')) {
+        if (window.isMapZoomedToFit) {
+            fitBtn.classList.add('active');
             fitIcon.className = 'bi bi-pin-map-fill';
         } else {
+            fitBtn.classList.remove('active');
             fitIcon.className = 'bi bi-pin-map';
         }
     }
@@ -4016,20 +4040,33 @@ function updateFitMarkersIcon() {
 // Map control functions
 function fitAllMarkers() {
     if (window.eventsMap && window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
-        const bounds = new maplibregl.LngLatBounds();
-        window.eventsMapMarkers.forEach(marker => {
-            bounds.extend(marker.getLngLat());
-        });
-        const isMobile = window.innerWidth <= 768;
-        window.eventsMap.fitBounds(bounds, {
-            padding: 20,
-            maxZoom: isMobile ? 11 : 12 // Reduced mobile zoom to 11, desktop stays at 12
-        });
+        // Toggle logic: if already zoomed to fit and user hasn't interacted, toggle back to city view
+        if (window.isMapZoomedToFit && !window.mapHasUserInteracted && window.eventsMapCityCenter) {
+            window.eventsMap.setCenter([window.eventsMapCityCenter[1], window.eventsMapCityCenter[0]]);
+            if (window.eventsMapCityZoom) {
+                window.eventsMap.setZoom(window.eventsMapCityZoom);
+            }
+            window.isMapZoomedToFit = false;
+        } else {
+            const bounds = new maplibregl.LngLatBounds();
+            window.eventsMapMarkers.forEach(marker => {
+                bounds.extend(marker.getLngLat());
+            });
+            window.eventsMap.fitBounds(bounds, {
+                padding: 20,
+                maxZoom: window.eventsMapCityZoom || 11
+            });
+            window.isMapZoomedToFit = true;
+            window.mapHasUserInteracted = false;
+        }
         
         // Update icon based on current state
         updateFitMarkersIcon();
         
-        logger.userInteraction('MAP', 'Fit all markers clicked', { markerCount: window.eventsMapMarkers.length });
+        logger.userInteraction('MAP', 'Fit all markers clicked', {
+            markerCount: window.eventsMapMarkers.length,
+            isZoomedToFit: window.isMapZoomedToFit
+        });
     } else {
         logger.warn('MAP', 'No markers to fit');
     }
@@ -4038,7 +4075,7 @@ function fitAllMarkers() {
 
 
 
-async function showMyLocation() {
+async function showMyLocation(panMap = true) {
     try {
         // Update button to show loading state
         updateLocationButtonStatus('loading');
@@ -4084,25 +4121,15 @@ async function showMyLocation() {
                 .setPopup(popup)
                 .addTo(window.eventsMap);
             
-            // Calculate bounds that include both user location and all event markers
-            const bounds = new maplibregl.LngLatBounds();
-            bounds.extend([location.lng, location.lat]);
-            
-            // Add all event markers to bounds
-            if (window.eventsMapMarkers && window.eventsMapMarkers.length > 0) {
-                window.eventsMapMarkers.forEach(marker => {
-                    bounds.extend(marker.getLngLat());
-                });
-                
-                // Fit map to show both user location and all events
-                window.eventsMap.fitBounds(bounds, {
-                    padding: 50,
-                    maxZoom: 14
-                });
-            } else {
-                // If no event markers, just center on user location
+            // Center on user location if requested
+            if (panMap) {
                 window.eventsMap.setCenter([location.lng, location.lat]);
                 window.eventsMap.setZoom(14);
+                window.isMapZoomedToFit = false;
+                window.mapHasUserInteracted = true;
+                if (typeof updateFitMarkersIcon === 'function') {
+                    updateFitMarkersIcon();
+                }
             }
             
             // Update button to show success state
