@@ -121,7 +121,7 @@ class BearDirectory {
                 this.applyTheme(this.map);
             });
             
-            this.map.addControl(new maplibregl.NavigationControl());
+            this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
             
             logger.componentLoad('MAP', 'Directory map initialized');
         } catch (error) {

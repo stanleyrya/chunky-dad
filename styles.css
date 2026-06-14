@@ -2680,8 +2680,8 @@ body.index-page main {
     background: var(--background-primary);
     border: 2px solid var(--border-light);
     border-radius: 8px;
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 25px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5864,3 +5864,34 @@ body.loaded {
     transform: translateY(-5px);
 }
 
+
+
+/* Map controls icon adjustments */
+.map-control-btn i::before {
+    margin: 5px 0 0 0;
+}
+
+/* Icon-only button adjustments */
+.icon-only i::before {
+    margin: 1px 0 0 0;
+}
+
+.share-event-btn.icon-only i::before {
+    margin: -2px 0 0 0;
+}
+/* Maplibre Attribution Auto-Dismiss on Mobile */
+@media (max-width: 768px) {
+    .maplibregl-ctrl-attrib {
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: max-width 0.3s ease;
+    }
+
+    .maplibregl-ctrl-bottom-right:active .maplibregl-ctrl-attrib,
+    .maplibregl-ctrl-attrib:active {
+        max-width: none;
+        white-space: normal;
+    }
+}
