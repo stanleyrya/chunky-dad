@@ -204,6 +204,10 @@ class CityRenderer extends CompactCardRenderer {
                     }
                 }
             });
+
+            if (window.homeMap) {
+                window.homeMap.filterMarkers(searchTerm);
+            }
         });
     }
 }
