@@ -3393,7 +3393,7 @@ class AiWebParser {
         const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
         const provider = String(aiConfig.provider || 'openai');
         const defaultEndpoint = provider === 'openai'
-            ? 'https://rybook.taila7523c.ts.net:8000/v1/chat/completions'
+            ? 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions'
             : 'http://desktop.taila7523c.ts.net:11434/api/generate';
         const defaultModel = provider === 'openai'
             ? 'lmstudio-community/Qwen3-Coder-Next-MLX-6bit'
