@@ -33,7 +33,10 @@
     "name": "Purgatory Gifford House",
     "city": "ptown",
     "gayCities": "https://ptown.gaycities.com/bars/543-purgatory-gifford-house",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.314Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "11 Carver St, Provincetown, MA 02657",
+    "coordinates": "42.0496268, -70.1900224",
+    "instagram": "https://www.instagram.com/gifford_house",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJE9zxSn6n_IkRbOMJFiVbw_k",
+    "gayCitiesLastScrapedAt": "2026-06-14T01:14:29.670Z"
   }
 ]

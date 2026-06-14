@@ -2,12 +2,12 @@
   {
     "name": "Eagle",
     "city": "fort-lauderdale",
-    "gayCities": "https://fortlauderdale.gaycities.com/bars/309115-eagle-wilton-manors",
     "address": "2209 Wilton Dr, Wilton Manors, FL 33305",
     "coordinates": "26.156486, -80.138547",
     "instagram": "https://www.instagram.com/eaglebarwm",
     "facebook": "https://www.facebook.com/EagleBarWM/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJu6n6wQ0B2YgRuXxB9KC59OA",
+    "gayCities": "https://fortlauderdale.gaycities.com/bars/309115-eagle-wilton-manors",
     "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z"
   },
   {

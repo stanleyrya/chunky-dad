@@ -12,11 +12,11 @@
   {
     "name": "CC Slaughters",
     "city": "pv",
-    "gayCities": "https://vallarta.gaycities.com/bars/302724-cc-slaughters",
     "address": "Lazaro Cardenas 254, Puerto Vallarta, JAL 48290",
     "coordinates": "20.6483408, -105.1980403",
     "facebook": "https://www.facebook.com/CCSlaughtersPV/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
+    "gayCities": "https://vallarta.gaycities.com/bars/302724-cc-slaughters",
     "gayCitiesLastScrapedAt": "2026-06-13T22:28:59.439Z"
   }
 ]

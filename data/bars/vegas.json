@@ -3,7 +3,10 @@
     "name": "Fun Hog Ranch",
     "city": "vegas",
     "gayCities": "https://lasvegas.gaycities.com/bars/1346-fun-hog-ranch",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.295Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "495 E Twain Ave, Las Vegas, NV 89169",
+    "coordinates": "36.1208359, -115.1522707",
+    "instagram": "https://www.instagram.com/funhogranchlv",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJKfM4OVvEyIARKXe7Mp57Uv0",
+    "gayCitiesLastScrapedAt": "2026-06-14T01:14:27.328Z"
   }
 ]

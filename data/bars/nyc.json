@@ -86,12 +86,12 @@
   {
     "name": "Gym Sports Bar",
     "city": "nyc",
-    "gayCities": "https://newyork.gaycities.com/bars/394-gym-sportsbar",
     "address": "167 8th Ave, New York, NY 10011",
     "coordinates": "40.7426478, -74.0007982",
     "instagram": "https://www.instagram.com/gymsportsbarny",
     "facebook": "https://www.facebook.com/GYMSPORTSBARNY",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJX-P_qr5ZwokR7pssvk2V9b0",
+    "gayCities": "https://newyork.gaycities.com/bars/394-gym-sportsbar",
     "gayCitiesLastScrapedAt": "2026-06-13T22:28:57.028Z"
   },
   {

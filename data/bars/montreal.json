@@ -3,8 +3,11 @@
     "name": "Le Stud",
     "city": "montreal",
     "gayCities": "https://montreal.gaycities.com/bars/724-le-stud",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:08.383Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "1812 Rue Sainte-Catherine E, Montreal, QC H2K 2H3",
+    "coordinates": "45.522756, -73.5519804",
+    "facebook": "https://www.facebook.com/groups/42513323876/",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ6615i68byUwRS5KOpOHOFB8",
+    "gayCitiesLastScrapedAt": "2026-06-14T01:14:32.066Z"
   },
   {
     "name": "Aigle Noir",
@@ -14,7 +17,6 @@
     "facebook": "https://www.facebook.com/Bar.Aigle.Noir/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJEc7NGK4byUwR1QVPh5qsYCY",
     "gayCities": "https://montreal.gaycities.com/bars/710-aigle-noir",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:29.766Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-14T01:14:34.423Z"
   }
 ]
