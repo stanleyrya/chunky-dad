@@ -30,6 +30,7 @@ jobs:
         git config --local user.name "Directory Preview Bot"
 
         git add data/microlink/directory-cache.json
+        git add img/directory/
 
         if git diff --staged --quiet; then
           echo "No cache changes to commit"

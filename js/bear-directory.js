@@ -51,8 +51,8 @@ class BearDirectory {
         this.setupEventListeners();
         
         // Set up share button handlers
-        this.setupPreviewButtons();
-        this.setupShareButtons();
+        // Handled in displayDirectory after tiles are rendered
+        // this.setupShareButtons();
         
         // Load Instagram embed script
         this.loadInstagramEmbed();
@@ -315,8 +315,8 @@ class BearDirectory {
                     <button class="share-event-btn icon-only tile-link" data-item-name="${item.name}" data-item-type="${item.type}" data-item-city="${item.city}" data-item-instagram="${item.instagram || ''}" title="Share this business" aria-label="Share this business">
                         <i class="bi bi-share"></i>
                     </button>
-                    ${item.instagram || item.website ? `
-                    <button class="preview-btn" data-url="${item.instagram ? `https://instagram.com/${item.instagram}` : item.website}" title="Toggle Preview"><i class="bi bi-eye"></i></button>
+                    ${item.instagram || item.website || item.shop ? `
+                    <button class="preview-btn" data-url="${item.instagram ? `https://instagram.com/${item.instagram}` : (item.website || item.shop)}" title="Toggle Preview"><i class="bi bi-eye"></i></button>
                     ` : ''}
                 </div>
             </div>
@@ -780,10 +780,9 @@ class BearDirectory {
                 } else {
                     // Fallback to the live embeds
                     if (url.includes('instagram.com/')) {
-                        const username = url.split('instagram.com/')[1].replace('/', '');
                         container.innerHTML = `
                             <div class="instagram-embed-container loading">
-                                <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/${username}/?utm_source=ig_embed" data-instgrm-version="14"></blockquote>
+                                <blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14"></blockquote>
                             </div>
                         `;
                         // Trigger IG script to process it

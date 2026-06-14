@@ -1,9 +1,38 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Bear Directory Google Sheet ID
 const SHEET_ID = '1-ttoHpM6unij08U40voVi8YLn7j8Mhld4FkRsKrzql4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+
+const https = require('https');
+const http = require('http');
+
+async function downloadImage(url, dest) {
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(dest);
+        const protocol = url.startsWith('https') ? https : http;
+
+        protocol.get(url, (response) => {
+            if (response.statusCode === 200) {
+                response.pipe(file);
+                file.on('finish', () => {
+                    file.close(resolve);
+                });
+            } else {
+                file.close();
+                fs.unlink(dest, () => {});
+                reject(new Error(`Server responded with ${response.statusCode}: ${response.statusMessage}`));
+            }
+        }).on('error', (err) => {
+            file.close();
+            fs.unlink(dest, () => {});
+            reject(err);
+        });
+    });
+}
 
 const CACHE_FILE = path.join(process.cwd(), 'data', 'microlink', 'directory-cache.json');
 const MAX_REQUESTS_PER_RUN = 20;
@@ -108,6 +137,11 @@ async function run() {
         const url = item.finalUrl;
         if (!url) continue;
 
+        // Skip Instagram URLs as Microlink cannot scrape them (returns generic login page)
+        if (url.includes('instagram.com/')) {
+            continue;
+        }
+
         // Identify key
         const key = item.name ? item.name.toLowerCase().trim() : url;
         const cachedEntry = cache[key];
@@ -132,8 +166,33 @@ async function run() {
             requestsMade++;
 
             if (metadata) {
+                let localImagePath = null;
+                if (metadata.image) {
+                    try {
+                        const imgDir = path.join(process.cwd(), 'img', 'directory');
+                        if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
+
+                        // Hash the key to create a safe filename
+                        const safeName = crypto.createHash('md5').update(key).digest('hex');
+                        const ext = metadata.image.split('.').pop().split('?')[0].toLowerCase() || 'jpg';
+                        // Keep only valid extensions or default to jpg
+                        const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg';
+
+                        const filename = `${safeName}.${safeExt}`;
+                        const absolutePath = path.join(imgDir, filename);
+
+                        console.log(`Downloading image: ${metadata.image}`);
+                        await downloadImage(metadata.image, absolutePath);
+
+                        localImagePath = `img/directory/${filename}`;
+                    } catch (err) {
+                        console.error(`Failed to download image for ${key}:`, err);
+                    }
+                }
+
                 cache[key] = {
                     ...metadata,
+                    image: localImagePath, // Save the relative local path, not the external URL
                     url: url,
                     lastFetched: now
                 };
