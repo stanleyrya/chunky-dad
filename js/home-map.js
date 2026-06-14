@@ -22,6 +22,7 @@ class HomeMap {
                     }
                 }
 
+                /* Other theme examples for later:
                 // land
                 if (id.includes("land") || id.includes("natural")) {
                     if (layer.type === "fill") {
@@ -43,6 +44,7 @@ class HomeMap {
                         map.setPaintProperty(layer.id, "text-color", "#b7a7d9");
                     }
                 }
+                */
             } catch (e) {
                 // Ignore layers that don't support the property
             }
@@ -97,10 +99,19 @@ class HomeMap {
                         </div>
                     `);
 
-                    const marker = new maplibregl.Marker()
+                    const el = document.createElement('div');
+                    el.className = 'favicon-marker text-marker';
+                    el.innerHTML = `
+                        <div class="favicon-marker-container text-marker">
+                            <span class="marker-text" style="font-size: 20px; line-height: 1;">${city.emoji}</span>
+                        </div>
+                    `;
+
+                    const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
                         .setLngLat([lng, lat])
                         .setPopup(popup)
                         .addTo(this.map);
+                    marker.cityName = city.name.toLowerCase();
 
                     this.markers.push(marker);
                 }
@@ -117,6 +128,18 @@ class HomeMap {
         }
 
         logger.componentLoad('MAP', 'Home map markers updated', { markerCount: this.markers.length });
+    }
+
+    filterMarkers(searchTerm) {
+        if (!this.markers) return;
+
+        this.markers.forEach(marker => {
+            if (!searchTerm || marker.cityName.includes(searchTerm)) {
+                marker.getElement().style.display = 'block';
+            } else {
+                marker.getElement().style.display = 'none';
+            }
+        });
     }
 }
 
