@@ -3,8 +3,11 @@
     "name": "EAGLE TOKYO",
     "city": "tokyo",
     "gayCities": "https://tokyo.gaycities.com/bars/307927-eagle-tokyo",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:16.126Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "2 Chome-12-3 Shinjuku, Tokyo, Tōkyō-to 160-0022",
+    "coordinates": "35.6904391, 139.7076017",
+    "facebook": "https://www.facebook.com/eagletokyojp",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJAQCrt9yMGGARObx5wDPQtAA",
+    "gayCitiesLastScrapedAt": "2026-06-14T09:13:52.895Z"
   },
   {
     "name": "EAGLE TOKYO BLUE",
@@ -14,7 +17,6 @@
     "instagram": "https://www.instagram.com/eagletokyojp",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJVVvvklSNGGAR4pCosef9zpQ",
     "gayCities": "https://tokyo.gaycities.com/bars/312380-eagle-tokyo-blue",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:45.310Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-14T09:13:55.162Z"
   }
 ]

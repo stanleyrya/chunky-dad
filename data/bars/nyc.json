@@ -97,12 +97,12 @@
   {
     "name": "FLEX",
     "city": "nyc",
-    "gayCities": "https://newyork.gaycities.com/bars/311127-flex",
     "address": "405 W 51st St, New York, NY 10019",
     "coordinates": "40.7644457, -73.9888453",
     "instagram": "https://www.instagram.com/flexnyc",
     "facebook": "https://www.facebook.com/flexbarnyc",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJBWXY9oZZwokRA9xrSOqTNjc",
+    "gayCities": "https://newyork.gaycities.com/bars/311127-flex",
     "gayCitiesLastScrapedAt": "2026-06-14T07:46:24.312Z"
   },
   {
@@ -118,12 +118,12 @@
   {
     "name": "9th Avenue Saloon",
     "city": "nyc",
-    "gayCities": "https://newyork.gaycities.com/bars/426-th-avenue-saloon",
     "address": "656 9th Ave, New York, NY 10036",
     "coordinates": "40.7607576, -73.9906454",
     "instagram": "https://www.instagram.com/9thavesaloon",
     "facebook": "https://www.facebook.com/9thAveSaloon",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJte-0gz9ZwokR5wz0wDUVOpQ",
+    "gayCities": "https://newyork.gaycities.com/bars/426-th-avenue-saloon",
     "gayCitiesLastScrapedAt": "2026-06-14T07:46:28.587Z"
   }
 ]
