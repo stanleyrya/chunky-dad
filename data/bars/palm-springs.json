@@ -3,7 +3,11 @@
     "name": "Hunters",
     "city": "palm-springs",
     "gayCities": "https://palmsprings.gaycities.com/bars/588-hunters-palm-springs",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:14.133Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "302 E Arenas Rd, Palm Springs, CA 92262",
+    "coordinates": "33.8214288, -116.544092",
+    "instagram": "https://www.instagram.com/hunterspalmsprings",
+    "facebook": "https://www.facebook.com/HuntersPS",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJbXdJHxEb24ARI5sarz94EAI",
+    "gayCitiesLastScrapedAt": "2026-06-14T03:19:28.458Z"
   }
 ]

@@ -44,12 +44,12 @@
   {
     "name": "Cell Block",
     "city": "chicago",
-    "gayCities": "https://chicago.gaycities.com/bars/145-cell-block",
     "address": "3702 N Halsted St, Chicago, IL 60613",
     "coordinates": "41.9493268, -87.6498756",
     "instagram": "https://www.instagram.com/cellblockchi?fbclid=IwAR3LhbkA3SomCj4qvipwYyqsRpeFs6ANoAc4-LU8KvFOUKpRt_n2AyTHsqY",
     "facebook": "https://www.facebook.com/cellblockchi",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
+    "gayCities": "https://chicago.gaycities.com/bars/145-cell-block",
     "gayCitiesLastScrapedAt": "2026-06-14T01:14:36.735Z"
   }
 ]

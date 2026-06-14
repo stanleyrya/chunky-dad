@@ -2,11 +2,11 @@
   {
     "name": "Le Stud",
     "city": "montreal",
-    "gayCities": "https://montreal.gaycities.com/bars/724-le-stud",
     "address": "1812 Rue Sainte-Catherine E, Montreal, QC H2K 2H3",
     "coordinates": "45.522756, -73.5519804",
     "facebook": "https://www.facebook.com/groups/42513323876/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ6615i68byUwRS5KOpOHOFB8",
+    "gayCities": "https://montreal.gaycities.com/bars/724-le-stud",
     "gayCitiesLastScrapedAt": "2026-06-14T01:14:32.066Z"
   },
   {
