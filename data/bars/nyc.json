@@ -98,8 +98,12 @@
     "name": "FLEX",
     "city": "nyc",
     "gayCities": "https://newyork.gaycities.com/bars/311127-flex",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:15.060Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "405 W 51st St, New York, NY 10019",
+    "coordinates": "40.7644457, -73.9888453",
+    "instagram": "https://www.instagram.com/flexnyc",
+    "facebook": "https://www.facebook.com/flexbarnyc",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJBWXY9oZZwokRA9xrSOqTNjc",
+    "gayCitiesLastScrapedAt": "2026-06-14T07:46:24.312Z"
   },
   {
     "name": "Atlas Social Club",
@@ -109,14 +113,17 @@
     "facebook": "https://www.facebook.com/atlassocialclub",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJSYrBMldYwokRuer87cJcwiw",
     "gayCities": "https://newyork.gaycities.com/bars/305118-atlas-social-club",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:39.100Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-14T07:46:26.352Z"
   },
   {
     "name": "9th Avenue Saloon",
     "city": "nyc",
     "gayCities": "https://newyork.gaycities.com/bars/426-th-avenue-saloon",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:15.492Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "656 9th Ave, New York, NY 10036",
+    "coordinates": "40.7607576, -73.9906454",
+    "instagram": "https://www.instagram.com/9thavesaloon",
+    "facebook": "https://www.facebook.com/9thAveSaloon",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJte-0gz9ZwokR5wz0wDUVOpQ",
+    "gayCitiesLastScrapedAt": "2026-06-14T07:46:28.587Z"
   }
 ]
