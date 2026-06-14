@@ -1783,6 +1783,7 @@ body.index-page main {
 /* Floating clear button removed - was ugly and unnecessary */
 
 .calendar-grid {
+    background-color: var(--text-inverse);
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 0;
@@ -1811,7 +1812,6 @@ body.index-page main {
 
 .calendar-day {
     background: var(--background-primary);
-    border: 1px solid var(--border-light);
     border-radius: 8px;
     padding: 0.5rem;
     min-height: 120px;
