@@ -4501,9 +4501,7 @@ class AiWebParser {
     }
 
     getAiPromptFields(parserConfig = {}, dataFlags = {}) {
-        const priorities = parserConfig && parserConfig.fieldPriorities && typeof parserConfig.fieldPriorities === 'object'
-            ? parserConfig.fieldPriorities
-            : {};
+        const priorities = this.core.getResolvedFieldPriorities(parserConfig);
         const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object'
             ? parserConfig.metadata
             : {};
