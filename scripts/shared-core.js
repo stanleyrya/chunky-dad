@@ -2832,13 +2832,7 @@ class SharedCore {
         return normalized;
     }
     
-    // Apply field-level priority strategies from the parser config
-    // This determines which parser's data to trust for each field
-    applyFieldPriorities(event, parserConfig, mainConfig) {
-        // Always attach parser config
-        event._parserConfig = parserConfig;
-        
-        // Get the field priorities configuration from this parser's config
+    getResolvedFieldPriorities(parserConfig) {
         const explicitPriorities = parserConfig?.fieldPriorities || {};
         const defaultPriorities = {
             title: { priority: ["ai-web"], merge: "clobber" },
@@ -2858,7 +2852,17 @@ class SharedCore {
             cover: { priority: ["ai-web"], merge: "clobber" },
             ticketUrl: { priority: ["ai-web"], merge: "clobber" }
         };
-        const fieldPriorities = { ...defaultPriorities, ...explicitPriorities };
+        return { ...defaultPriorities, ...explicitPriorities };
+    }
+
+    // Apply field-level priority strategies from the parser config
+    // This determines which parser's data to trust for each field
+    applyFieldPriorities(event, parserConfig, mainConfig) {
+        // Always attach parser config
+        event._parserConfig = parserConfig;
+
+        // Get the field priorities configuration from this parser's config
+        const fieldPriorities = this.getResolvedFieldPriorities(parserConfig);
         
         // Field priorities loaded from parser configuration
         

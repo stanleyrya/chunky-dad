@@ -20,6 +20,7 @@ function createParser() {
 
 test('pairs nearby row-split event images to the matching multi-event segments', () => {
   const parser = createParser();
+  parser.core = { getResolvedFieldPriorities: (config) => config?.fieldPriorities || {} };
   const sourceUrl = 'https://furball.example/events';
   const html = `
     <html>
@@ -161,6 +162,7 @@ test('getAiPromptFields should group and sort split date/time fields correctly',
   };
 
   const parser = createParser();
+  parser.core = { getResolvedFieldPriorities: (config) => config?.fieldPriorities || {} };
 
   const parserConfig = {
     fieldPriorities: {
