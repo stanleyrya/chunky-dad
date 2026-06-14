@@ -2588,8 +2588,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 style: 'https://tiles.openfreemap.org/styles/liberty',
                 center: [mapCenter[1], mapCenter[0]],
                 zoom: mapZoom,
-                renderWorldCopies: false,
-                scrollZoom: false
+                renderWorldCopies: false
             });
 
             map.on('style.load', () => {
@@ -2641,20 +2640,6 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // Initialize location status
             updateLocationStatus();
-
-            // Enable scroll wheel zoom only when Ctrl is pressed
-            map.on('wheel', function(e) {
-                if (e.originalEvent.ctrlKey) {
-                    map.scrollWheelZoom.enable();
-                } else {
-                    map.scrollWheelZoom.disable();
-                }
-            });
-
-            // Disable scroll wheel zoom when mouse leaves map
-            map.on('mouseout', function() {
-                map.scrollWheelZoom.disable();
-            });
             
             let markersAdded = 0;
             const markers = []; // Store markers for fit all function

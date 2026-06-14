@@ -93,9 +93,9 @@ class HomeMap {
                 if (!isNaN(lat) && !isNaN(lng)) {
                     const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`
                         <div class="map-popup" style="text-align: center;">
-                            <h4 style="margin-bottom: 5px; color: var(--text-primary);">${city.emoji} ${city.name}</h4>
-                            <p style="margin-top: 5px; margin-bottom: 10px;">${city.tagline}</p>
-                            <a href="${city.key}/" style="display: inline-block; padding: 5px 10px; background-color: var(--primary-color); color: white; text-decoration: none; border-radius: 5px; font-size: 14px;">View City</a>
+                            <a href="${city.key}/" style="display: inline-block; color: var(--text-primary); text-decoration: none;">
+                                <h4 style="margin: 5px 0; font-size: 18px;">${city.emoji} ${city.name}</h4>
+                            </a>
                         </div>
                     `);
 

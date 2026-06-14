@@ -395,7 +395,21 @@ class BearDirectory {
                         </div>
                     `);
 
-                    const marker = new maplibregl.Marker()
+                    // Try to get a simple text marker (first letter or emoji based on type)
+                    let markerText = '🐻';
+                    if (item.type && item.type.toLowerCase().includes('bar')) markerText = '🍻';
+                    else if (item.type && item.type.toLowerCase().includes('gear')) markerText = '👕';
+                    else if (item.name) markerText = item.name.charAt(0).toUpperCase();
+
+                    const el = document.createElement('div');
+                    el.className = 'favicon-marker text-marker';
+                    el.innerHTML = `
+                        <div class="favicon-marker-container text-marker">
+                            <span class="marker-text" style="font-size: 16px;">${markerText}</span>
+                        </div>
+                    `;
+
+                    const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
                         .setLngLat([lng, lat])
                         .setPopup(popup)
                         .addTo(this.map);
