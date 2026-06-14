@@ -2634,6 +2634,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             }
             map.addControl(new MyLocationControl(), 'top-left');
+            // Add navigation controls (zoom in/out)
+            map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
             
             // Initialize location status
             updateLocationStatus();
