@@ -7,6 +7,7 @@ class BearDirectory {
         
         // Data storage
         this.bearData = [];
+        this.microlinkCache = {};
         this.filteredData = [];
         
         // Map instance
@@ -44,7 +45,7 @@ class BearDirectory {
         this.initMap();
         
         // Load data from Google Sheets
-        await this.loadGoogleSheetsData();
+        await this.loadMicrolinkCache().then(() => this.loadGoogleSheetsData());
         
         // Set up event listeners
         this.setupEventListeners();
@@ -130,6 +131,23 @@ class BearDirectory {
         }
     }
     
+
+    async loadMicrolinkCache() {
+        try {
+            // We load the statically generated cache instead of fetching live
+            const res = await fetch('data/microlink/directory-cache.json');
+            if (res.ok) {
+                this.microlinkCache = await res.json();
+                logger.debug('DIRECTORY', 'Loaded microlink cache', { size: Object.keys(this.microlinkCache).length });
+            } else {
+                this.microlinkCache = {};
+            }
+        } catch (e) {
+            console.error('Failed to load microlink cache', e);
+            this.microlinkCache = {};
+        }
+    }
+
     async loadGoogleSheetsData() {
         logger.apiCall('DIRECTORY', 'Loading Google Sheets data', { sheetId: this.sheetId });
         
@@ -722,6 +740,7 @@ class BearDirectory {
     }
 
 
+
     setupPreviewButtons() {
         const previewButtons = document.querySelectorAll('.preview-btn');
         previewButtons.forEach(btn => {
@@ -730,7 +749,8 @@ class BearDirectory {
                 const url = btn.dataset.url;
                 if (!url) return;
 
-                const container = btn.closest('.directory-tile').querySelector('.preview-container');
+                const tile = btn.closest('.directory-tile');
+                const container = tile.querySelector('.preview-container');
                 if (!container) return;
 
                 // Toggle if already loaded
@@ -739,25 +759,45 @@ class BearDirectory {
                     return;
                 }
 
-                // Load Instagram embed if it's an IG link
-                if (url.includes('instagram.com/')) {
-                    const username = url.split('instagram.com/')[1].replace('/', '');
-                    container.innerHTML = `
-                        <div class="instagram-embed-container loading">
-                            <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/${username}/?utm_source=ig_embed" data-instgrm-version="14"></blockquote>
-                        </div>
-                    `;
-                    // Trigger IG script to process it
-                    if (window.instgrm) {
-                        window.instgrm.Embeds.process();
+                // Get item name key to look up in cache
+                const itemName = tile.querySelector('.tile-name').textContent.toLowerCase().trim();
+                const cacheData = this.microlinkCache ? this.microlinkCache[itemName] : null;
+
+                // If we have cached microlink data that was successful, use it!
+                if (cacheData && !cacheData.error && (cacheData.image || cacheData.description)) {
+                    let html = '<div class="preview-card" style="background: var(--surface-color-alt); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">';
+                    if (cacheData.image) {
+                        html += `<img src="${cacheData.image}" alt="Preview" style="width:100%; max-height:200px; object-fit:cover; display:block;">`;
                     }
+                    if (cacheData.title || cacheData.description) {
+                        html += '<div style="padding: 12px; font-size: 0.85rem;">';
+                        if (cacheData.title) html += `<strong style="display:block; margin-bottom: 4px;">${cacheData.title}</strong>`;
+                        if (cacheData.description) html += `<span style="color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${cacheData.description}</span>`;
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    container.innerHTML = html;
                 } else {
-                    // For regular websites, fall back to an iframe but make it small and safe
-                    container.innerHTML = `
-                        <div class="website-preview-container">
-                            <iframe src="${url}" class="website-preview-iframe" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
-                        </div>
-                    `;
+                    // Fallback to the live embeds
+                    if (url.includes('instagram.com/')) {
+                        const username = url.split('instagram.com/')[1].replace('/', '');
+                        container.innerHTML = `
+                            <div class="instagram-embed-container loading">
+                                <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/${username}/?utm_source=ig_embed" data-instgrm-version="14"></blockquote>
+                            </div>
+                        `;
+                        // Trigger IG script to process it
+                        if (window.instgrm) {
+                            window.instgrm.Embeds.process();
+                        }
+                    } else {
+                        // For regular websites, fall back to an iframe
+                        container.innerHTML = `
+                            <div class="website-preview-container">
+                                <iframe src="${url}" class="website-preview-iframe" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
+                            </div>
+                        `;
+                    }
                 }
 
                 container.style.display = 'block';
@@ -765,7 +805,6 @@ class BearDirectory {
             });
         });
     }
-
     setupShareButtons() {
         const shareButtons = document.querySelectorAll('.share-event-btn');
         
