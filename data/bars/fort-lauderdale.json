@@ -22,10 +22,10 @@
   {
     "name": "The Pub",
     "city": "fort-lauderdale",
-    "gayCities": "https://fortlauderdale.gaycities.com/bars/304345-the-pub-wilton-manors",
     "address": "2283 Wilton Dr, Wilton Manors, FL 33305",
     "coordinates": "26.1571585, -80.1374938",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJj6QjAJwB2YgRf7XQXta65mY",
+    "gayCities": "https://fortlauderdale.gaycities.com/bars/304345-the-pub-wilton-manors",
     "gayCitiesLastScrapedAt": "2026-06-14T03:19:23.849Z"
   },
   {
@@ -41,11 +41,11 @@
   {
     "name": "Scandals Saloon",
     "city": "fort-lauderdale",
-    "gayCities": "https://fortlauderdale.gaycities.com/bars/256-scandals-saloon",
     "address": "3073 NE 6th Ave, Wilton Manors, FL 33334",
     "coordinates": "26.1661037, -80.138715",
     "facebook": "https://www.facebook.com/scandalsfla",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJK4HWoYMB2YgRf442vxEUrM8",
+    "gayCities": "https://fortlauderdale.gaycities.com/bars/256-scandals-saloon",
     "gayCitiesLastScrapedAt": "2026-06-14T03:19:30.718Z"
   }
 ]

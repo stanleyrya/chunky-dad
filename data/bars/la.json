@@ -43,11 +43,11 @@
   {
     "name": "GYM Bar",
     "city": "la",
-    "gayCities": "https://losangeles.gaycities.com/bars/309258-gym-bar-weho",
     "address": "8919 Santa Monica Blvd, West Hollywood, CA 90069",
     "coordinates": "34.0847604, -118.3846815",
     "instagram": "https://www.instagram.com/wehogymbar",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJXxXPUMi_woARE46Y7WO-Ww0",
+    "gayCities": "https://losangeles.gaycities.com/bars/309258-gym-bar-weho",
     "gayCitiesLastScrapedAt": "2026-06-14T03:19:33.089Z"
   }
 ]

@@ -3,8 +3,12 @@
     "name": "SF Eagle",
     "city": "sf",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/304619-sf-eagle",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:14.304Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "398 12th St, San Francisco, CA 94103",
+    "coordinates": "37.7699927, -122.4134077",
+    "instagram": "https://www.instagram.com/sfeaglebar",
+    "facebook": "https://www.facebook.com/SFEagleBar",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJeQ6_GyZ-j4ARj3aV_MeMyf8",
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z"
   },
   {
     "name": "Powerhouse",
@@ -14,15 +18,17 @@
     "instagram": "https://www.instagram.com/sfpowerhouse",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJY_ioDSh-j4ARCCFmqIVhgZo",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/43-powerhouse",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:44:35.917Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z"
   },
   {
     "name": "Hole in the Wall Saloon",
     "city": "sf",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/40-hole-in-the-wall-saloon",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:14.640Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "1369 Folsom St, San Francisco, CA 94103",
+    "coordinates": "37.7729155, -122.4123163",
+    "instagram": "https://www.instagram.com/the-hole-in-the-wall-saloon",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJExXNdCh-j4AR6JuGm4ElqcQ",
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:24.790Z"
   },
   {
     "name": "Lone Star Saloon",
@@ -31,13 +37,18 @@
     "coordinates": "37.7721717, -122.410901",
     "facebook": "https://www.facebook.com/lonestarsf",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ4yvd8Ch-j4ARGZFAn1jfTl8",
-    "gayCities": "https://sanfrancisco.gaycities.com/bars/42-lone-star-saloon"
+    "gayCities": "https://sanfrancisco.gaycities.com/bars/42-lone-star-saloon",
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z"
   },
   {
     "name": "440 Castro",
     "city": "sf",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/3-castro",
-    "gayCitiesExtractionFailureAt": "2026-06-13T14:35:15.010Z",
-    "gayCitiesExtractionFailureMessage": "HTTP error! status: 403"
+    "address": "440 Castro St, San Francisco, CA 94114",
+    "coordinates": "37.7618335, -122.4352736",
+    "instagram": "https://www.instagram.com/440castro",
+    "facebook": "https://www.facebook.com/440Castro",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlYxnqhx-j4ARE6-6BQBetEI",
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:29.719Z"
   }
 ]
