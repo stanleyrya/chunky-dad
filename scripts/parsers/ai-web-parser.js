@@ -6053,9 +6053,11 @@ TEXT:
         const hasUnstructuredData = !!dataFlags.ocr || !!dataFlags.segment || !!dataFlags.content;
 
         if (hasUnstructuredData && !hasStructuredData && finalStartDate instanceof Date && !Number.isNaN(finalStartDate.getTime())) {
-            // Because combineDateAndTime uses Date.UTC, getUTCHours() returns the originally extracted local hour
-            const localHour = finalStartDate.getUTCHours();
-            if (localHour >= 0 && localHour < 6) {
+            const localHour = this.getLocalHour(finalStartDate, timezone);
+            // If the local hour is explicitly 0 (midnight), only shift it if it was explicitly extracted from unstructured text.
+            // If it was "invented" as a default because no time was provided, leave it alone.
+            const isInventedMidnight = localHour === 0 && !startTimeRaw;
+            if (localHour !== null && localHour >= 0 && localHour < 6 && !isInventedMidnight) {
                 console.log(`🤖 AI Web: Adjusting late night event (+1 day) for unstructured data. Original start: ${finalStartDate.toISOString()}`);
                 finalStartDate = new Date(finalStartDate.getTime() + 24 * 60 * 60 * 1000);
                 if (finalEndDate instanceof Date && !Number.isNaN(finalEndDate.getTime())) {
@@ -6213,7 +6215,15 @@ TEXT:
         }
 
         const normalizedCity = cityText.toLowerCase();
-        const matchedKey = Object.keys(map).find(key => String(key).toLowerCase() === normalizedCity);
+        const matchedKey = Object.keys(map).find(key => {
+            if (String(key).toLowerCase() === normalizedCity) return true;
+            const cityData = map[key];
+            if (!cityData || typeof cityData !== 'object') return false;
+            if (cityData.name && String(cityData.name).toLowerCase() === normalizedCity) return true;
+            if (Array.isArray(cityData.patterns) && cityData.patterns.some(p => String(p).toLowerCase() === normalizedCity)) return true;
+            if (Array.isArray(cityData.aliases) && cityData.aliases.some(a => String(a).toLowerCase() === normalizedCity)) return true;
+            return false;
+        });
         if (!matchedKey) return '';
         const matched = map[matchedKey];
         if (!matched || typeof matched !== 'object' || typeof matched.timezone !== 'string') return '';
@@ -6311,6 +6321,22 @@ TEXT:
             return parsed;
         }
         return null;
+    }
+
+    getLocalHour(dateObj, timezone) {
+        if (!dateObj || Number.isNaN(dateObj.getTime())) return null;
+        if (!timezone) return dateObj.getUTCHours();
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                hour: 'numeric',
+                hourCycle: 'h23'
+            });
+            const hourStr = formatter.format(dateObj);
+            return parseInt(hourStr, 10);
+        } catch (e) {
+            return dateObj.getUTCHours();
+        }
     }
 
     normalizeEventDates(startDate, endDate) {
