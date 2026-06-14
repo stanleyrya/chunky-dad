@@ -6048,8 +6048,23 @@ TEXT:
         console.log(`🤖 AI Web: Combined dates — combinedStartDate=${combinedStartDate instanceof Date ? combinedStartDate.toISOString() : combinedStartDate}, combinedEndDate=${combinedEndDate instanceof Date ? combinedEndDate.toISOString() : combinedEndDate}`);
 
         // For single-day events, if startDate is missing but endDate exists, use endDate as start
-        const finalStartDate = combinedStartDate || combinedEndDate;
-        const finalEndDate = combinedEndDate || combinedStartDate;
+        let finalStartDate = combinedStartDate || combinedEndDate;
+        let finalEndDate = combinedEndDate || combinedStartDate;
+
+        const hasStructuredData = !!dataFlags.jsonLd || !!dataFlags.meta;
+        const hasUnstructuredData = !!dataFlags.ocr || !!dataFlags.segment || !!dataFlags.content;
+
+        if (hasUnstructuredData && !hasStructuredData && finalStartDate instanceof Date && !Number.isNaN(finalStartDate.getTime())) {
+            // Because combineDateAndTime uses Date.UTC, getUTCHours() returns the originally extracted local hour
+            const localHour = finalStartDate.getUTCHours();
+            if (localHour >= 0 && localHour < 6) {
+                console.log(`🤖 AI Web: Adjusting late night event (+1 day) for unstructured data. Original start: ${finalStartDate.toISOString()}`);
+                finalStartDate = new Date(finalStartDate.getTime() + 24 * 60 * 60 * 1000);
+                if (finalEndDate instanceof Date && !Number.isNaN(finalEndDate.getTime())) {
+                    finalEndDate = new Date(finalEndDate.getTime() + 24 * 60 * 60 * 1000);
+                }
+            }
+        }
 
         const { startDate, endDate } = this.normalizeEventDates(finalStartDate, finalEndDate);
         console.log(`🤖 AI Web: Normalized dates — startDate=${startDate instanceof Date ? startDate.toISOString() : startDate}, endDate=${endDate instanceof Date ? endDate.toISOString() : endDate}`);
