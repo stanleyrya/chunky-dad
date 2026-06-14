@@ -2,11 +2,11 @@
   {
     "name": "EAGLE TOKYO",
     "city": "tokyo",
-    "gayCities": "https://tokyo.gaycities.com/bars/307927-eagle-tokyo",
     "address": "2 Chome-12-3 Shinjuku, Tokyo, Tōkyō-to 160-0022",
     "coordinates": "35.6904391, 139.7076017",
     "facebook": "https://www.facebook.com/eagletokyojp",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJAQCrt9yMGGARObx5wDPQtAA",
+    "gayCities": "https://tokyo.gaycities.com/bars/307927-eagle-tokyo",
     "gayCitiesLastScrapedAt": "2026-06-14T09:13:52.895Z"
   },
   {
