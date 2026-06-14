@@ -7,6 +7,7 @@ class BearDirectory {
         
         // Data storage
         this.bearData = [];
+        this.microlinkCache = {};
         this.filteredData = [];
         
         // Map instance
@@ -44,17 +45,18 @@ class BearDirectory {
         this.initMap();
         
         // Load data from Google Sheets
-        await this.loadGoogleSheetsData();
+        await this.loadMicrolinkCache().then(() => this.loadGoogleSheetsData());
         
         // Set up event listeners
         this.setupEventListeners();
         
         // Set up share button handlers
-        this.setupShareButtons();
+        // Handled in displayDirectory after tiles are rendered
+        // this.setupShareButtons();
         
         // Load Instagram embed script
         this.loadInstagramEmbed();
-        
+
         logger.timeEnd('DIRECTORY', 'initialization');
     }
     
@@ -129,6 +131,23 @@ class BearDirectory {
         }
     }
     
+
+    async loadMicrolinkCache() {
+        try {
+            // We load the statically generated cache instead of fetching live
+            const res = await fetch('data/microlink/directory-cache.json');
+            if (res.ok) {
+                this.microlinkCache = await res.json();
+                logger.debug('DIRECTORY', 'Loaded microlink cache', { size: Object.keys(this.microlinkCache).length });
+            } else {
+                this.microlinkCache = {};
+            }
+        } catch (e) {
+            console.error('Failed to load microlink cache', e);
+            this.microlinkCache = {};
+        }
+    }
+
     async loadGoogleSheetsData() {
         logger.apiCall('DIRECTORY', 'Loading Google Sheets data', { sheetId: this.sheetId });
         
@@ -216,16 +235,17 @@ class BearDirectory {
             const tile = this.createTile(item);
             this.elements.grid.appendChild(tile);
         });
-        
+
         // Reload Instagram embeds after DOM updates
         setTimeout(() => {
             this.processInstagramEmbeds();
         }, 200);
-        
+
         // Set up iframe timeouts
         this.setupIframeTimeouts();
-        
+
         // Set up share button handlers for new tiles
+        this.setupPreviewButtons();
         this.setupShareButtons();
         
         logger.timeEnd('DIRECTORY', 'displayDirectory');
@@ -233,122 +253,92 @@ class BearDirectory {
             displayedItems: this.filteredData.length 
         });
     }
-    
+
+
     createTile(item) {
         const tile = document.createElement('div');
         tile.className = 'directory-tile';
-        tile.setAttribute('data-type', item.type.toLowerCase());
-        tile.setAttribute('data-instagram-mode', this.instagramDisplayMode);
+        tile.setAttribute('data-type', (item.type || '').toLowerCase());
         
-        // Determine display content based on Display field
-        let displayContent = '';
-        const displayType = (item.display || '').toLowerCase();
+        // Generate a consistent gradient based on the item name
+        const gradients = [
+            'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)',
+            'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+            'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+            'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)',
+            'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
+            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+        ];
         
-        // Handle display based on the Display field value
-        if (displayType === 'instagram' && item.instagram) {
-            // Use Instagram embedding
-            displayContent = this.createInstagramContent(item);
-        } else if (displayType === 'shop' && item.shop) {
-            // Show shop iframe or preview with better error handling
-            displayContent = `
-                <div class="shop-preview-container" data-url="${item.shop}">
-                    <div class="shop-preview-header">
-                        <span class="shop-icon">🛍️</span>
-                        <span>Shop Preview</span>
-                    </div>
-                    <div class="iframe-wrapper">
-                        <iframe src="${item.shop}" 
-                                class="shop-preview-iframe" 
-                                loading="lazy"
-                                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                                onload="window.bearDirectory.handleIframeLoad(this)"
-                                onerror="window.bearDirectory.handleIframeError(this, 'shop')"
-                                referrerpolicy="no-referrer-when-downgrade">
-                        </iframe>
-                        <div class="iframe-loading">
-                            <div class="loading-spinner"></div>
-                            <p>Loading shop preview...</p>
-                        </div>
-                    </div>
-                    <a href="${item.shop}" target="_blank" class="shop-preview-link">
-                        Visit Shop →
-                    </a>
-                </div>`;
-        } else if ((displayType === 'web' || displayType === 'website') && item.website) {
-            // Show website iframe or preview with better error handling
-            displayContent = `
-                <div class="website-preview-container" data-url="${item.website}">
-                    <div class="website-preview-header">
-                        <span class="website-icon">🌐</span>
-                        <span>Website Preview</span>
-                    </div>
-                    <div class="iframe-wrapper">
-                        <iframe src="${item.website}" 
-                                class="website-preview-iframe" 
-                                loading="lazy"
-                                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                                onload="window.bearDirectory.handleIframeLoad(this)"
-                                onerror="window.bearDirectory.handleIframeError(this, 'website')"
-                                referrerpolicy="no-referrer-when-downgrade">
-                        </iframe>
-                        <div class="iframe-loading">
-                            <div class="loading-spinner"></div>
-                            <p>Loading website preview...</p>
-                        </div>
-                    </div>
-                    <a href="${item.website}" target="_blank" class="website-preview-link">
-                        Visit Website →
-                    </a>
-                </div>`;
-        } else if (item.instagram) {
-            // Default to Instagram if available and no display type specified
-            displayContent = this.createInstagramContent(item);
-        } else {
-            // No specific display content - show placeholder
-            const logoPath = window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png';
-            displayContent = `
-                <div class="tile-placeholder">
-                    <div class="bear-icon"><img src="${logoPath}" alt="chunky.dad" class="bear-directory-icon"></div>
-                </div>`;
+        let hash = 0;
+        const nameToHash = item.name || 'default';
+        for (let i = 0; i < nameToHash.length; i++) {
+            hash = nameToHash.charCodeAt(i) + ((hash << 5) - hash);
         }
+        const gradient = gradients[Math.abs(hash) % gradients.length];
+
+        // Use first letter of name for avatar placeholder
+        const initial = nameToHash.charAt(0).toUpperCase();
+
+        // Map types to icons/display names
+        const typeConfig = {
+            'artist': { icon: '🎨', name: 'Artist/Creator' },
+            'business': { icon: '💼', name: 'Bear Business' },
+            'organization': { icon: '🏳️‍🌈', name: 'Organization' },
+            'venue': { icon: '🍻', name: 'Venue/Bar' },
+            'event': { icon: '🗓️', name: 'Event/Party' }
+        };
+
+        const typeInfo = typeConfig[(item.type || '').toLowerCase()] || { icon: '🐻', name: item.type || 'Other' };
         
-        // Build tile content
         tile.innerHTML = `
-            ${displayContent}
+            <div class="tile-banner" style="background: ${gradient};">
+                <div class="tile-avatar">${initial}</div>
+            </div>
             <div class="tile-content">
                 <h3 class="tile-name">${item.name}</h3>
-                ${item.city ? `<p class="tile-city">📍 ${item.city}</p>` : ''}
-                <p class="tile-type">${this.getTypeIcon(item.type)} ${item.type}</p>
+                ${item.city ? `<p class="tile-city"><i class="bi bi-geo-alt-fill"></i> ${item.city}</p>` : ''}
+
+                <div class="tile-badges">
+                    <span class="tile-badge">${typeInfo.icon} ${typeInfo.name}</span>
+                </div>
+
+                <div class="preview-container" style="display: none;" data-loaded="false"></div>
+
                 <div class="tile-links">
                     ${item.shop ? `<a href="${item.shop}" target="_blank" rel="noopener" class="tile-link icon-only" title="Visit Shop" aria-label="Visit Shop"><i class="bi bi-bag"></i></a>` : ''}
                     ${item.website ? `<a href="${item.website}" target="_blank" rel="noopener" class="tile-link icon-only" title="Visit Website" aria-label="Visit Website"><i class="bi bi-globe"></i></a>` : ''}
                     ${item.instagram ? `<a href="https://instagram.com/${item.instagram}" target="_blank" rel="noopener" class="tile-link icon-only" title="View Instagram" aria-label="View Instagram"><i class="bi bi-instagram"></i></a>` : ''}
                     ${item.googleMaps ? `<a href="${item.googleMaps}" target="_blank" rel="noopener" class="tile-link icon-only" title="View on Map" aria-label="View on Map"><i class="bi bi-geo-alt"></i></a>` : ''}
-                    <button class="share-event-btn icon-only" data-item-name="${item.name}" data-item-type="${item.type}" data-item-city="${item.city}" data-item-instagram="${item.instagram || ''}" title="Share this business" aria-label="Share this business">
-                        <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
+                    <button class="share-event-btn icon-only tile-link" data-item-name="${item.name}" data-item-type="${item.type}" data-item-city="${item.city}" data-item-instagram="${item.instagram || ''}" title="Share this business" aria-label="Share this business">
+                        <i class="bi bi-share"></i>
                     </button>
+                    ${item.instagram || item.website || item.shop ? `
+                    <button class="preview-btn" data-url="${item.instagram ? `https://instagram.com/${item.instagram}` : (item.website || item.shop)}" title="Toggle Preview"><i class="bi bi-eye"></i></button>
+                    ` : ''}
                 </div>
             </div>
         `;
-        
         return tile;
     }
     
     createInstagramContent(item) {
         // Create Instagram embed or placeholder
-        const instagramContent = item.instagram ? 
+        const instagramContent = item.instagram ?
             `<div class="instagram-embed-container" data-instagram-user="${item.instagram}">
                 <div class="instagram-loading">
                     <div class="loading-spinner"></div>
                     <p>Loading @${item.instagram}</p>
                 </div>
-                <blockquote class="instagram-media" 
-                    data-instgrm-permalink="https://www.instagram.com/${item.instagram}/" 
+                <blockquote class="instagram-media"
+                    data-instgrm-permalink="https://www.instagram.com/${item.instagram}/"
                     data-instgrm-version="14"
                     style="background:#FFF; border:0; border-radius:3px; margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
                     <div style="padding:16px;">
-                        <a href="https://www.instagram.com/${item.instagram}/" 
-                           style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" 
+                        <a href="https://www.instagram.com/${item.instagram}/"
+                           style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;"
                            target="_blank">
                             View on Instagram
                         </a>
@@ -358,7 +348,7 @@ class BearDirectory {
             `<div class="tile-placeholder">
                 <div class="bear-icon"><img src="${window.pathUtils ? window.pathUtils.getLogoPath() : 'Rising_Star_Ryan_Head_Compressed.png'}" alt="chunky.dad" class="bear-directory-icon"></div>
             </div>`;
-            
+
         return instagramContent;
     }
     
@@ -517,14 +507,14 @@ class BearDirectory {
             this.instagramEmbedScript.async = true;
             this.instagramEmbedScript.defer = true;
             this.instagramEmbedScript.src = 'https://www.instagram.com/embed.js';
-            
+
             // Add error handling with retry
             this.instagramEmbedScript.onerror = (error) => {
                 logger.componentError('DIRECTORY', 'Failed to load Instagram embed script', {
                     error: error,
                     src: this.instagramEmbedScript.src
                 });
-                
+
                 // Retry once after a delay
                 if (!this.instagramRetried) {
                     this.instagramRetried = true;
@@ -535,22 +525,22 @@ class BearDirectory {
                     }, 2000);
                 }
             };
-            
+
             this.instagramEmbedScript.onload = () => {
                 logger.componentLoad('DIRECTORY', 'Instagram embed script loaded successfully');
                 // Process embeds after script loads with multiple retries
                 this.processInstagramEmbeds();
             };
-            
+
             document.body.appendChild(this.instagramEmbedScript);
-            
+
             logger.componentInit('DIRECTORY', 'Loading Instagram embed script');
         } else if (window.instgrm && window.instgrm.Embeds) {
             // If script already loaded, just process embeds
             this.processInstagramEmbeds();
         }
     }
-    
+
     processInstagramEmbeds(retryCount = 0) {
         const maxRetries = 3;
         
@@ -559,16 +549,16 @@ class BearDirectory {
                 if (window.instgrm && window.instgrm.Embeds) {
                     // Get all Instagram embed containers
                     const containers = document.querySelectorAll('.instagram-embed-container');
-                    
+
                     // Process embeds
                     window.instgrm.Embeds.process();
-                    
+
                     // Set up observers for each container to detect when embeds load
                     containers.forEach(container => {
                         if (container.classList.contains('loaded') || container.classList.contains('error')) {
                             return; // Skip already processed containers
                         }
-                        
+
                         // Create observer to watch for iframe insertion
                         const observer = new MutationObserver((mutations) => {
                             const iframe = container.querySelector('iframe');
@@ -577,39 +567,39 @@ class BearDirectory {
                                 container.classList.add('loaded');
                                 container.classList.remove('loading');
                                 observer.disconnect();
-                                
+
                                 // Ensure loading spinner is hidden
                                 const loadingEl = container.querySelector('.instagram-loading');
                                 if (loadingEl) {
                                     loadingEl.style.display = 'none';
                                 }
-                                
+
                                 logger.debug('DIRECTORY', `Instagram embed loaded for @${container.dataset.instagramUser}`);
                             }
                         });
-                        
+
                         // Start observing
-                        observer.observe(container, { 
-                            childList: true, 
-                            subtree: true 
+                        observer.observe(container, {
+                            childList: true,
+                            subtree: true
                         });
-                        
+
                         // Set timeout for this specific embed
                         setTimeout(() => {
                             if (!container.classList.contains('loaded') && !container.classList.contains('error')) {
                                 observer.disconnect();
                                 container.classList.add('error');
                                 container.classList.remove('loading');
-                                
+
                                 // Hide loading spinner
                                 const loadingEl = container.querySelector('.instagram-loading');
                                 if (loadingEl) {
                                     loadingEl.style.display = 'none';
                                 }
-                                
+
                                 const username = container.dataset.instagramUser;
                                 logger.warn('DIRECTORY', `Instagram embed timeout for @${username}`);
-                                
+
                                 // Show error message
                                 container.innerHTML = `
                                     <div class="instagram-error">
@@ -620,7 +610,7 @@ class BearDirectory {
                             }
                         }, 8000); // 8 second timeout per embed
                     });
-                    
+
                     logger.componentLoad('DIRECTORY', 'Instagram embeds processing started', {
                         retryCount: retryCount,
                         embedCount: containers.length
@@ -646,7 +636,7 @@ class BearDirectory {
                     stack: error.stack,
                     retryCount: retryCount
                 });
-                
+
                 if (retryCount < maxRetries) {
                     this.processInstagramEmbeds(retryCount + 1);
                 } else {
@@ -664,67 +654,7 @@ class BearDirectory {
         }, 500 * (retryCount + 1)); // Exponential backoff
     }
     
-    handleIframeLoad(iframe) {
-        // Hide loading spinner when iframe loads successfully
-        const wrapper = iframe.closest('.iframe-wrapper');
-        if (wrapper) {
-            const loadingEl = wrapper.querySelector('.iframe-loading');
-            if (loadingEl) {
-                loadingEl.style.display = 'none';
-            }
-        }
-        
-        // Check if iframe actually loaded content
-        try {
-            // Try to access iframe content to verify it loaded
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!iframeDoc || iframeDoc.body.innerHTML.length === 0) {
-                // Empty iframe, treat as error
-                this.handleIframeError(iframe, iframe.closest('.shop-preview-container') ? 'shop' : 'website');
-            } else {
-                logger.debug('DIRECTORY', 'Iframe loaded successfully', { 
-                    src: iframe.src 
-                });
-            }
-        } catch (e) {
-            // Cross-origin error - iframe loaded but we can't access it
-            // This is actually OK - the iframe is showing content
-            logger.debug('DIRECTORY', 'Iframe loaded (cross-origin)', { 
-                src: iframe.src 
-            });
-        }
-    }
     
-    handleIframeError(iframe, type) {
-        const container = iframe.closest(`.${type}-preview-container`);
-        if (!container) return;
-        
-        const url = container.dataset.url;
-        logger.warn('DIRECTORY', `Failed to load ${type} iframe`, { 
-            url: url,
-            reason: 'Likely blocked by X-Frame-Options or CSP'
-        });
-        
-        // Replace iframe with a more attractive error message and preview
-        const wrapper = iframe.closest('.iframe-wrapper');
-        if (wrapper) {
-            const domain = this.extractDomain(url);
-            wrapper.innerHTML = `
-                <div class="${type}-preview-error">
-                    <div class="preview-error-content">
-                        <div class="preview-error-icon">🔗</div>
-                        <h4>Direct Link Required</h4>
-                        <p class="preview-domain">${domain}</p>
-                        <p class="preview-error-reason">This site doesn't allow previews</p>
-                        <a href="${url}" target="_blank" class="preview-error-link">
-                            <span class="link-icon">${type === 'shop' ? '🛍️' : '🌐'}</span>
-                            Visit ${type === 'shop' ? 'Shop' : 'Website'}
-                        </a>
-                    </div>
-                </div>
-            `;
-        }
-    }
 
     extractDomain(url) {
         try {
@@ -734,40 +664,40 @@ class BearDirectory {
             return url;
         }
     }
-    
+
     setupIframeTimeouts() {
         // Set timeouts for all iframes to handle cases where neither load nor error fires
         const iframes = document.querySelectorAll('.shop-preview-iframe, .website-preview-iframe');
-        
+
         iframes.forEach(iframe => {
             // Store timeout ID on the iframe element
             iframe.iframeTimeout = setTimeout(() => {
                 // Check if iframe is still in loading state (loading spinner visible)
                 const wrapper = iframe.closest('.iframe-wrapper');
                 const loadingEl = wrapper ? wrapper.querySelector('.iframe-loading') : null;
-                
+
                 if (loadingEl && loadingEl.style.display !== 'none') {
                     // Still loading after timeout, treat as error
                     logger.warn('DIRECTORY', 'Iframe load timeout', { src: iframe.src });
                     this.handleIframeError(iframe, iframe.classList.contains('shop-preview-iframe') ? 'shop' : 'website');
                 }
             }, 6000); // 6 second timeout
-            
+
             // Clear timeout if iframe loads or errors before timeout
             const originalOnload = iframe.onload;
             const originalOnerror = iframe.onerror;
-            
+
             iframe.onload = function(event) {
                 clearTimeout(this.iframeTimeout);
                 if (originalOnload) originalOnload.call(this, event);
             };
-            
+
             iframe.onerror = function(event) {
                 clearTimeout(this.iframeTimeout);
                 if (originalOnerror) originalOnerror.call(this, event);
             };
         });
-        
+
         logger.debug('DIRECTORY', 'Iframe timeouts set', { count: iframes.length });
     }
     
@@ -823,6 +753,71 @@ class BearDirectory {
         logger.componentLoad('DIRECTORY', 'Display order updated');
     }
 
+
+
+    setupPreviewButtons() {
+        const previewButtons = document.querySelectorAll('.preview-btn');
+        previewButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const url = btn.dataset.url;
+                if (!url) return;
+
+                const tile = btn.closest('.directory-tile');
+                const container = tile.querySelector('.preview-container');
+                if (!container) return;
+
+                // Toggle if already loaded
+                if (container.dataset.loaded === 'true') {
+                    container.style.display = container.style.display === 'none' ? 'block' : 'none';
+                    return;
+                }
+
+                // Get item name key to look up in cache
+                const itemName = tile.querySelector('.tile-name').textContent.toLowerCase().trim();
+                const cacheData = this.microlinkCache ? this.microlinkCache[itemName] : null;
+
+                // If we have cached microlink data that was successful, use it!
+                if (cacheData && !cacheData.error && (cacheData.image || cacheData.description)) {
+                    let html = '<div class="preview-card" style="background: var(--surface-color-alt); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">';
+                    if (cacheData.image) {
+                        html += `<img src="${cacheData.image}" alt="Preview" style="width:100%; max-height:200px; object-fit:cover; display:block;">`;
+                    }
+                    if (cacheData.title || cacheData.description) {
+                        html += '<div style="padding: 12px; font-size: 0.85rem;">';
+                        if (cacheData.title) html += `<strong style="display:block; margin-bottom: 4px;">${cacheData.title}</strong>`;
+                        if (cacheData.description) html += `<span style="color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${cacheData.description}</span>`;
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    container.innerHTML = html;
+                } else {
+                    // Fallback to the live embeds
+                    if (url.includes('instagram.com/')) {
+                        container.innerHTML = `
+                            <div class="instagram-embed-container loading">
+                                <blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14"></blockquote>
+                            </div>
+                        `;
+                        // Trigger IG script to process it
+                        if (window.instgrm) {
+                            window.instgrm.Embeds.process();
+                        }
+                    } else {
+                        // For regular websites, fall back to an iframe
+                        container.innerHTML = `
+                            <div class="website-preview-container">
+                                <iframe src="${url}" class="website-preview-iframe" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
+                            </div>
+                        `;
+                    }
+                }
+
+                container.style.display = 'block';
+                container.dataset.loaded = 'true';
+            });
+        });
+    }
     setupShareButtons() {
         const shareButtons = document.querySelectorAll('.share-event-btn');
         
@@ -875,10 +870,13 @@ class BearDirectory {
                     const anyLink = tile.querySelector('.tile-link[href*="http"]');
                     if (anyLink) {
                         shareUrl = anyLink.href;
-                        shareText = `Check out ${itemName}`;
+                        shareText = `Check out ${itemName}'s website or shop`;
                     } else {
-                        return;
+                        // Create a link to the current page with a hash if nothing else exists
+                        shareUrl = window.location.href;
+                        shareText = `Check out ${itemName}`;
                     }
+
                 }
                 
                 logger.userInteraction('DIRECTORY', 'Share button clicked', {
