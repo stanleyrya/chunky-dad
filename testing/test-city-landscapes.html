@@ -461,6 +461,276 @@
       border-radius: 0 0 8px 0;
     }
 
+    /* Style 5: Paris (Eiffel Tower + Seine) */
+    .container-style-paris {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #b0c4de 0%, #ffdab9 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #6c7a89;
+    }
+
+    .container-style-paris .river {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 40px;
+      background: #4A90E2;
+      z-index: 2;
+    }
+
+    .container-style-paris .river::before {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 10px;
+      width: 60px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 2px;
+    }
+
+    .container-style-paris .river::after {
+      content: '';
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      width: 40px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 2px;
+    }
+
+    .container-style-paris .eiffel-base {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 40px;
+      border-top: 15px solid #2C3E50;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      box-sizing: border-box;
+      z-index: 1;
+    }
+
+    .container-style-paris .eiffel-base::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 30px;
+      background: #b0c4de;
+      border-radius: 50% 50% 0 0;
+      border-top: 5px solid #2C3E50;
+    }
+
+    .container-style-paris .eiffel-mid {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 60px;
+      background: #2C3E50;
+      clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+      z-index: 1;
+    }
+
+    .container-style-paris .eiffel-top {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 10px;
+      height: 60px;
+      background: #2C3E50;
+      clip-path: polygon(40% 0%, 60% 0%, 100% 100%, 0% 100%);
+      z-index: 1;
+    }
+
+    .container-style-paris .sun {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background: #FFF3D8;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #FFF3D8;
+    }
+
+    /* Style 6: Seattle (Space Needle + Pine + Rain) */
+    .container-style-seattle {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #78909c 0%, #37474f 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #263238;
+    }
+
+    .container-style-seattle .ground {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 40px;
+      background: #263238;
+      z-index: 3;
+    }
+
+    .container-style-seattle .needle-base {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 100px;
+      background: #546e7a;
+      clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+      z-index: 2;
+    }
+
+    .container-style-seattle .needle-disk {
+      position: absolute;
+      bottom: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 20px;
+      background: #cfd8dc;
+      border-radius: 50% 50% 10px 10px;
+      z-index: 3;
+    }
+
+    .container-style-seattle .needle-spire {
+      position: absolute;
+      bottom: 150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 40px;
+      background: #cfd8dc;
+      z-index: 2;
+    }
+
+    .container-style-seattle .pine {
+      position: absolute;
+      bottom: 30px;
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 40px solid #1b5e20;
+      z-index: 4;
+    }
+
+    .container-style-seattle .pine::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: -10px;
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 30px solid #1b5e20;
+    }
+
+    .container-style-seattle .pine1 { left: 10px; }
+    .container-style-seattle .pine2 { right: 10px; transform: scale(0.8); }
+
+    /* Style 7: Cityscape (New York / Chicago / General Metro) */
+    .container-style-cityscape {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #1A1C29 0%, #2c3e50 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #f39c12;
+    }
+
+    .container-style-cityscape .moon {
+      position: absolute;
+      top: 50px;
+      left: 30px;
+      width: 40px;
+      height: 40px;
+      background: #f1c40f;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(241, 196, 15, 0.6);
+    }
+
+    .container-style-cityscape .building-1 {
+      position: absolute;
+      bottom: 0;
+      left: 10px;
+      width: 30px;
+      height: 120px;
+      background: #111;
+      z-index: 2;
+    }
+
+    .container-style-cityscape .building-2 {
+      position: absolute;
+      bottom: 0;
+      left: 45px;
+      width: 45px;
+      height: 180px;
+      background: #0a0a0a;
+      z-index: 1;
+    }
+
+    .container-style-cityscape .building-2::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 15px;
+      width: 15px;
+      height: 20px;
+      background: #0a0a0a;
+    }
+
+    .container-style-cityscape .building-3 {
+      position: absolute;
+      bottom: 0;
+      right: 15px;
+      width: 35px;
+      height: 140px;
+      background: #1a1a1a;
+      z-index: 2;
+    }
+
+    .container-style-cityscape .window {
+      position: absolute;
+      width: 6px;
+      height: 8px;
+      background: #f1c40f;
+      box-shadow: 0 0 5px #f1c40f;
+    }
+
+    .container-style-cityscape .w1 { bottom: 30px; left: 8px; }
+    .container-style-cityscape .w2 { bottom: 70px; left: 16px; }
+    .container-style-cityscape .w3 { bottom: 100px; left: 10px; background: #333; box-shadow: none; }
+
+    .container-style-cityscape .w4 { bottom: 40px; left: 10px; }
+    .container-style-cityscape .w5 { bottom: 90px; left: 25px; }
+    .container-style-cityscape .w6 { bottom: 140px; left: 15px; }
+
+    .container-style-cityscape .w7 { bottom: 50px; left: 10px; }
+    .container-style-cityscape .w8 { bottom: 80px; left: 20px; }
+    .container-style-cityscape .w9 { bottom: 110px; left: 12px; background: #333; box-shadow: none; }
+
   </style>
 </head>
 <body>
@@ -496,7 +766,22 @@
     cities.forEach((city, i) => {
       if (!city.visible) return;
 
-      const styleType = i % 4;
+      // Match specific cities to specific styles if appropriate, else fallback
+      let styleType = i % 7; // Default round-robin
+
+      const p = city.patterns || [];
+      if (p.includes('paris')) {
+        styleType = 'paris';
+      } else if (p.includes('seattle')) {
+        styleType = 'seattle';
+      } else if (p.includes('new york') || p.includes('nyc') || p.includes('chicago') || p.includes('los angeles') || p.includes('london')) {
+        styleType = 'cityscape';
+      } else if (p.includes('las vegas') || p.includes('palm springs') || p.includes('phoenix')) {
+        styleType = 3; // Desert
+      } else if (p.includes('denver') || p.includes('poconos') || p.includes('montreal')) {
+        styleType = 0; // Mountains
+      }
+
       const card = document.createElement('div');
       card.className = 'landscape-card';
 
@@ -543,6 +828,48 @@
             <div class="dune-back"></div>
             <div class="dune-front"></div>
             <div class="cactus"></div>
+          </div>
+        `;
+      } else if (styleType === 'paris' || styleType === 4) {
+        landscapeHtml = `
+          <div class="container-style-paris">
+            <div class="sun"></div>
+            <div class="eiffel-top"></div>
+            <div class="eiffel-mid"></div>
+            <div class="eiffel-base"></div>
+            <div class="river"></div>
+          </div>
+        `;
+      } else if (styleType === 'seattle' || styleType === 5) {
+        landscapeHtml = `
+          <div class="container-style-seattle">
+            <div class="needle-spire"></div>
+            <div class="needle-disk"></div>
+            <div class="needle-base"></div>
+            <div class="ground"></div>
+            <div class="pine pine1"></div>
+            <div class="pine pine2"></div>
+          </div>
+        `;
+      } else if (styleType === 'cityscape' || styleType === 6) {
+        landscapeHtml = `
+          <div class="container-style-cityscape">
+            <div class="moon"></div>
+            <div class="building-1">
+              <div class="window w1"></div>
+              <div class="window w2"></div>
+              <div class="window w3"></div>
+            </div>
+            <div class="building-2">
+              <div class="window w4"></div>
+              <div class="window w5"></div>
+              <div class="window w6"></div>
+            </div>
+            <div class="building-3">
+              <div class="window w7"></div>
+              <div class="window w8"></div>
+              <div class="window w9"></div>
+            </div>
           </div>
         `;
       }
