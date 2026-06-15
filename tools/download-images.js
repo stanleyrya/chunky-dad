@@ -87,6 +87,27 @@ const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
 const CACHE_RANDOMIZATION = 2 * 24 * 60 * 60 * 1000;
 
 // Ensure directories exist
+// Helper to read existing failure count, increment it, and write metadata
+function saveFailureMetadata(metadataPathFallback, failureMetadata) {
+  let failureCount = 0;
+  if (fs.existsSync(metadataPathFallback)) {
+    try {
+      const existingData = JSON.parse(fs.readFileSync(metadataPathFallback, 'utf8'));
+      if (existingData.failureCount) {
+        failureCount = existingData.failureCount;
+      } else if (existingData.failedAt) {
+        // Migration for old format without failureCount
+        failureCount = 1;
+      }
+    } catch (e) {
+      console.warn(`⚠️  Could not read existing failure metadata for ${metadataPathFallback}:`, e.message);
+    }
+  }
+
+  failureMetadata.failureCount = failureCount + 1;
+  fs.writeFileSync(metadataPathFallback, JSON.stringify(failureMetadata, null, 2));
+}
+
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -222,7 +243,7 @@ async function downloadEventImage(imageUrl, eventInfo) {
       const filename = generateEventFilename(adjustedUrl, eventInfo, detectedExtension);
       const metadataPathFallback = path.join(dir, filename) + '.meta';
       ensureDir(dir);
-      fs.writeFileSync(metadataPathFallback, JSON.stringify(failureMetadata, null, 2));
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
     } catch (metaError) {
       console.error(`❌ Failed to write failure metadata for event image ${imageUrl}:`, metaError.message);
     }
@@ -551,7 +572,7 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
         type: type,
         filename: customFilename
       };
-      fs.writeFileSync(metadataPathFallback, JSON.stringify(failureMetadata, null, 2));
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
     } catch (metaError) {
       console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
     }
@@ -573,11 +594,20 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath) {
       // Check for failure backoff
       if (metadata.failedAt) {
         const failedAge = Date.now() - new Date(metadata.failedAt).getTime();
-        const backoffDuration = 7 * 24 * 60 * 60 * 1000; // 7 days
+        const failureCount = metadata.failureCount || 1;
+
+        let backoffDurationDays = 7;
+        if (failureCount === 2) {
+          backoffDurationDays = 14;
+        } else if (failureCount >= 3) {
+          backoffDurationDays = 30;
+        }
+
+        const backoffDuration = backoffDurationDays * 24 * 60 * 60 * 1000;
 
         if (failedAge < backoffDuration) {
           const daysRemaining = Math.ceil((backoffDuration - failedAge) / (24 * 60 * 60 * 1000));
-          return { shouldDownload: false, reason: `Previous download failed, backing off for ${daysRemaining} more days` };
+          return { shouldDownload: false, reason: `Previous download failed (${failureCount} times), backing off for ${daysRemaining} more days` };
         } else {
           return { shouldDownload: true, reason: 'Backoff period expired, retrying download' };
         }
@@ -673,7 +703,7 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
         filename: filename,
         size: size
       };
-      fs.writeFileSync(metadataPathFallback, JSON.stringify(failureMetadata, null, 2));
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
     } catch (metaError) {
       console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
     }
@@ -772,7 +802,7 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
         type: type,
         filename: filename
       };
-      fs.writeFileSync(metadataPathFallback, JSON.stringify(failureMetadata, null, 2));
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
     } catch (metaError) {
       console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
     }
