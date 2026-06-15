@@ -5,7 +5,6 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
-const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
 const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename } = require('../js/filename-utils.js');
@@ -217,24 +216,21 @@ async function extractLinktreeProfilePicture(linktreeUrl) {
     // Fetch the Linktree page HTML
     const html = await fetchPageContent(linktreeUrl);
     
-    // Parse HTML with JSDOM
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
-    
-    // Look for the profile picture element
-    const profilePictureDiv = document.querySelector('#profile-picture');
-    if (!profilePictureDiv) {
-      console.log('⚠️  No profile picture div found on Linktree page');
+    // Use regex to find the profile picture URL to avoid JSDOM CSS parsing errors
+    let profilePictureUrl = null;
+    const jsonMatch = html.match(/"profilePictureUrl":"([^"]+)"/);
+    if (jsonMatch && jsonMatch[1]) {
+      profilePictureUrl = jsonMatch[1];
+    } else {
+      const metaMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
+      if (metaMatch && metaMatch[1]) {
+        profilePictureUrl = metaMatch[1];
+      }
+    }
+    if (!profilePictureUrl) {
+      console.log('⚠️  No profile picture image found in HTML');
       return null;
     }
-    
-    const img = profilePictureDiv.querySelector('img');
-    if (!img || !img.src) {
-      console.log('⚠️  No profile picture image found in profile-picture div');
-      return null;
-    }
-    
-    const profilePictureUrl = img.src;
     console.log(`✅ Found profile picture URL: ${profilePictureUrl}`);
     
     return profilePictureUrl;
@@ -250,15 +246,11 @@ async function extractWikipediaLogo(wikipediaUrl) {
   console.log(`🔍 Extracting logo from Wikipedia: ${wikipediaUrl}`);
   
   const html = await fetchPageContent(wikipediaUrl);
-  const dom = new JSDOM(html);
-  const document = dom.window.document;
-  
-  const infoboxImage = document.querySelector('td.infobox-image img');
-  if (!infoboxImage?.src) {
+  const match = html.match(/<td[^>]*class="[^"]*infobox-image[^"]*"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"/i);
+  if (!match || !match[1]) {
     throw new Error('No logo found in Wikipedia infobox');
   }
-  
-  let logoUrl = infoboxImage.src;
+  let logoUrl = match[1];
   if (logoUrl.startsWith('//')) {
     logoUrl = 'https:' + logoUrl;
   } else if (logoUrl.startsWith('/')) {
@@ -747,7 +739,9 @@ async function extractImageUrls() {
   const imageUrls = {
     eventsWithInfo: [],  // Changed to array of event objects with image info
     favicons64: new Set(),  // Higher quality for map markers
-    favicons256: new Set()   // High quality for cards/OG
+    favicons256: new Set(),   // High quality for cards/OG
+    linktreeUrls: new Set(),
+    wikipediaUrls: new Set()
   };
   
   // Read all calendar files
