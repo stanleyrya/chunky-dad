@@ -849,7 +849,7 @@ class CalendarCore {
         
         // Extract just the day part if the dayCode includes occurrence (e.g., "-1SA" -> "SA")
         const dayPart = dayCode.replace(/^-?\d+/, '');
-        return dayMap[dayPart] || -1;
+        return dayMap[dayPart] !== undefined ? dayMap[dayPart] : -1;
     }
 
     // Helper method to get occurrence number from day code (e.g., "2TU" -> 2)
