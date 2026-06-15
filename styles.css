@@ -2710,27 +2710,27 @@ body.index-page main {
 
 
 /* Map Marker Selection States */
-.leaflet-marker-icon.marker-selected .favicon-marker-container {
+.marker-selected .favicon-marker-container {
     border-color: var(--primary-color) !important;
     border-width: 2px !important;
     position: relative !important;
     overflow: hidden !important;
 }
 
-.leaflet-marker-icon.marker-selected .favicon-marker-container:hover {
+.marker-selected .favicon-marker-container:hover {
 }
 
-.leaflet-marker-icon.marker-selected .favicon-marker-icon {
+.marker-selected .favicon-marker-icon {
     transform: none !important;
     position: relative !important;
 }
 
-.leaflet-marker-icon.marker-selected {
+.marker-selected {
     z-index: 1010 !important;
     position: relative !important;
 }
 
-.leaflet-marker-icon.marker-dimmed {
+.marker-dimmed {
     opacity: 0.6 !important;
     z-index: 1000 !important;
 }
