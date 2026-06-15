@@ -1827,22 +1827,10 @@ body.index-page main {
 }
 
 .calendar-day.current {
-    background: var(--solid-primary);
-    color: var(--text-inverse);
     border-color: var(--primary-color);
-    box-shadow: 0 4px 15px var(--shadow-primary);
 }
 
-.calendar-day.current::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--primary-color);
-    border-radius: 20px 20px 0 0;
-}
+
 
 .calendar-day.current:hover {
     transform: translateY(-5px) scale(1.02);
@@ -1858,9 +1846,7 @@ body.index-page main {
     flex-shrink: 0;
 }
 
-.calendar-day.current .day-header {
-    border-bottom-color: rgba(255,255,255,0.3);
-}
+
 
 .day-header h3 {
     font-size: 0.9rem;
@@ -1870,7 +1856,7 @@ body.index-page main {
 }
 
 .calendar-day.current .day-header h3 {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--primary-color);
 }
 
 .day-date {
@@ -1879,8 +1865,17 @@ body.index-page main {
     color: var(--text-primary);
 }
 
-.calendar-day.current .day-date {
-    color: var(--text-inverse);
+.calendar-day.current .day-date,
+.calendar-day.current .day-number {
+    background-color: var(--primary-color);
+    color: var(--text-inverse) !important;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin: 0;
 }
 
 .day-indicator {
@@ -1892,13 +1887,13 @@ body.index-page main {
     font-weight: 600;
 }
 
-.calendar-day.current .day-indicator {
-    background: rgba(255,255,255,0.3);
-}
+
 
 .calendar-day.other-month {
     opacity: 0.4;
     background: var(--background-light);
+    opacity: 0.5;
+    color: var(--text-secondary);
 }
 
 .calendar-day.other-month:hover {
@@ -1955,17 +1950,11 @@ body.index-page main {
 
 
 
-.calendar-day.current .event-item {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--shadow-primary);
-    color: var(--text-primary);
-}
+
 
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
-    .calendar-day.current .event-item:hover {
-        transform: scale(1.05);
-    }
+
 }
 
 /* Event name styling for city page calendar and events sections */
@@ -2011,9 +2000,7 @@ body.index-page main {
     font-size: 0.9rem;
 }
 
-.calendar-day.current .no-events {
-    color: rgba(255, 255, 255, 0.7);
-}
+
 
 @media (max-width: 768px) {
     .calendar-day {
@@ -2912,8 +2899,8 @@ footer {
 
     /* Enhanced Week View Mobile - Show full info on tablets */
     .calendar-grid.week-view-grid {
-        grid-template-columns: 1fr;
-    }
+    grid-template-columns: 1fr;
+}
 
     /* Remove container padding */
     .weekly-calendar .container {
@@ -3031,7 +3018,8 @@ footer {
         font-weight: 600;
         line-height: 1;
         margin: 0;
-    }
+        color: var(--text-primary);
+}
 
     .calendar-day.month-day .day-events {
         padding: 0;
@@ -3407,7 +3395,8 @@ footer {
 
     .calendar-day.month-day .day-number {
         font-size: 0.65rem;
-    }
+        color: var(--text-primary);
+}
 
     .calendar-day.month-day .day-indicator {
         font-size: 0.55rem;
@@ -3813,7 +3802,8 @@ footer {
 
     .calendar-day.month-day .day-number {
         font-size: 0.65rem;
-    }
+        color: var(--text-primary);
+}
 
     /* Hide today indicator in month view on very small screens */
     .calendar-day.month-day .day-indicator {
@@ -4251,39 +4241,14 @@ footer {
 /* For larger tablets, show both but make buttons smaller */
 @media (min-width: 769px) and (max-width: 1024px) {
     .calendar-grid.week-view-grid {
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    }
+    grid-template-columns: 1fr;
+}
 
-    .calendar-day.week-view {
-        min-height: 180px;
-        padding: 0.8rem;
-    }
 
-    .event-item.enhanced {
-        padding: 1rem 0;
-    }
 
-    /* Ensure full event information is displayed on tablets */
-    .event-item.enhanced .event-name {
-        display: block;
-        font-size: 0.9rem;
-    }
 
-    .event-item.enhanced .event-time {
-        display: block;
-        font-size: 0.8rem;
-    }
 
-    .event-item.enhanced .event-venue {
-        display: block;
-        font-size: 0.8rem;
-    }
 
-    /* Hide mobile-specific elements on tablets */
-    .event-item.enhanced .event-name-mobile,
-    .event-item.enhanced .event-venue-mobile {
-        display: none;
-    }
 
     /* Calendar Overview for tablets */
     .calendar-overview-grid {
@@ -4307,25 +4272,22 @@ footer {
 
 /* Month View Improvements */
 .calendar-day-header {
-    background: var(--solid-primary);
-    color: var(--text-inverse);
     text-align: center;
-    padding: 15px 8px;
+    padding: 8px 4px;
     font-weight: 600;
-    border-radius: 8px 8px 0 0;
-    border-bottom: 2px solid rgba(255,255,255,0.2);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-light);
+    background: none;
 }
 
-@media (max-width: 768px) {
-    .calendar-day-header {
-        padding: 8px 4px;
-    }
-}
+
 
 .calendar-day-header h4 {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* Month view uses same base styling as week view */
@@ -4393,62 +4355,27 @@ footer {
 
 /* Enhanced Today Highlighting for Week View */
 .calendar-day.week-view.current {
-    background: var(--solid-primary) !important;
-    color: var(--text-inverse) !important;
     border-color: var(--primary-color) !important;
-    transform: scale(1.02);
 }
 
-.calendar-day.week-view.current::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-    border-radius: inherit;
-    pointer-events: none;
-}
 
-.calendar-day.week-view.current .day-header {
-    border-bottom-color: rgba(255,255,255,0.3);
-}
 
-.calendar-day.week-view.current h3 {
-    color: white !important;
-}
 
-.calendar-day.week-view.current .day-date {
-    color: rgba(255,255,255,0.95) !important;
-}
 
-.calendar-day.week-view.current .day-indicator {
-    background: rgba(255,255,255,0.25) !important;
-    color: white !important;
-    border: 1px solid rgba(255,255,255,0.3);
-    font-weight: 600;
-}
 
-.calendar-day.week-view.current .event-count {
-    background: rgba(255,255,255,0.2) !important;
-    color: white !important;
-    border: 1px solid rgba(255,255,255,0.3);
-}
+
+
+
+
+
+
 
 /* Enhanced event styling for current day in week view */
-.calendar-day.week-view.current .event-item.enhanced {
-    background: rgba(255, 255, 255, 0.15) !important;
-    color: white !important;
-    border-left-color: rgba(255, 255, 255, 0.6) !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
-}
+
 
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
-    .calendar-day.week-view.current .event-item.enhanced:hover {
-        transform: scale(1.05);
-    }
+
 }
 
 .calendar-day.week-view.current .event-item.enhanced .event-name {
@@ -4476,27 +4403,7 @@ footer {
 
 /* Desktop and large screens - ensure full information is always shown */
 @media (min-width: 1025px) {
-    /* Always show full event information on desktop */
-    .event-item.enhanced .event-name {
-        display: block !important;
-        font-size: 1rem;
-    }
 
-    .event-item.enhanced .event-time {
-        display: block !important;
-        font-size: 0.85rem;
-    }
-
-    .event-item.enhanced .event-venue {
-        display: block !important;
-        font-size: 0.85rem;
-    }
-
-    /* Hide mobile-specific elements on desktop */
-    .event-item.enhanced .event-name-mobile,
-    .event-item.enhanced .event-venue-mobile {
-        display: none !important;
-    }
 
 
     .event-item.enhanced {
