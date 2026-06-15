@@ -23,6 +23,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # Note: GitHub App installation tokens will soon use a new stateless format (ghs_...)
+          # and may be longer (~520 characters). Avoid adding hardcoded length assumptions.
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node.js
