@@ -119,7 +119,7 @@
       text-align: center;
     }
 
-    /* Original Codepen SCSS Converted to standard CSS */
+    /* Style 1: Mountains & Tower (Codepen 1) */
     .container {
       position: relative;
       width: 160px;
@@ -131,31 +131,10 @@
       transform-origin: center;
     }
 
-    .mountain {
+    .container .mountain {
       position: absolute;
       top: 0;
       opacity: 1;
-    }
-
-    /* Birds Front */
-    .birds {
-      position: absolute;
-    }
-    .birds.front {
-      /* positioning for birds */
-    }
-
-    /* Simple placeholder styles based on the SCSS vars */
-    .container .range {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      height: 120px;
-      background: #F46435;
-      z-index: 3;
-    }
-
-    .container .mountain {
       width: 100%;
       height: 100%;
       z-index: 1;
@@ -168,7 +147,7 @@
       left: -20px;
       width: 200px;
       height: 200px;
-      background: #F59452; /* mountain1 */
+      background: #F59452;
       border-radius: 40%;
       transform: rotate(45deg);
     }
@@ -180,10 +159,19 @@
       left: 60px;
       width: 150px;
       height: 150px;
-      background: #F47A45; /* mountain2 */
+      background: #F47A45;
       border-radius: 30%;
       transform: rotate(45deg);
       z-index: 2;
+    }
+
+    .container .range {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 120px;
+      background: #F46435;
+      z-index: 3;
     }
 
     .container .tree {
@@ -198,7 +186,7 @@
       height: 0;
       border-left: 12px solid transparent;
       border-right: 12px solid transparent;
-      border-bottom: 35px solid #2D1427; /* tree1 */
+      border-bottom: 35px solid #2D1427;
     }
 
     .container .tree .mid {
@@ -219,14 +207,13 @@
     .container .tree2 .top, .container .tree2 .mid { border-bottom-color: #5A0831; }
     .container .tree3 .top, .container .tree3 .mid { border-bottom-color: #CD4D45; }
 
-    /* Tower */
     .container .tower {
       position: absolute;
       bottom: 40px;
       left: 65px;
       width: 30px;
       height: 80px;
-      background: #76122C; /* tower1 */
+      background: #76122C;
       z-index: 5;
     }
 
@@ -238,8 +225,242 @@
       height: 0;
       border-left: 20px solid transparent;
       border-right: 20px solid transparent;
-      border-bottom: 25px solid #C93D3D; /* tower2 */
+      border-bottom: 25px solid #C93D3D;
     }
+
+    /* Style 2: Night Sky (mr21 concept) */
+    .container-style-2 {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #1A1C29 0%, #302B4B 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      transform-origin: center;
+      border: 4px solid #F6D365;
+    }
+
+    .container-style-2 .moon {
+      position: absolute;
+      top: 40px;
+      right: 40px;
+      width: 40px;
+      height: 40px;
+      background: #FFF3D8;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #FFF3D8, inset -10px -5px 10px rgba(0,0,0,0.1);
+    }
+
+    .container-style-2 .stars {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 90px 40px, #fff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 120px 80px, #fff, rgba(0,0,0,0));
+      background-repeat: repeat;
+      opacity: 0.8;
+    }
+
+    .container-style-2 .mountain-back {
+      position: absolute;
+      bottom: 60px;
+      left: -20px;
+      width: 120px;
+      height: 120px;
+      background: #4B3F72;
+      transform: rotate(45deg);
+      border-radius: 15px;
+    }
+
+    .container-style-2 .mountain-mid {
+      position: absolute;
+      bottom: 40px;
+      right: -30px;
+      width: 140px;
+      height: 140px;
+      background: #392B58;
+      transform: rotate(45deg);
+      border-radius: 15px;
+    }
+
+    .container-style-2 .mountain-front {
+      position: absolute;
+      bottom: -20px;
+      left: 10px;
+      width: 160px;
+      height: 160px;
+      background: #1F1533;
+      transform: rotate(45deg);
+      border-radius: 20px;
+      z-index: 2;
+    }
+
+    .container-style-2 .ground {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 60px;
+      background: #110B1C;
+      z-index: 3;
+    }
+
+    .container-style-2 .pine {
+      position: absolute;
+      bottom: 40px;
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 30px solid #0A0612;
+      z-index: 4;
+    }
+
+    .container-style-2 .pine::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: -12px;
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-bottom: 35px solid #0A0612;
+    }
+
+    .container-style-2 .pine1 { left: 20px; transform: scale(1.2); }
+    .container-style-2 .pine2 { left: 50px; transform: scale(0.8); }
+    .container-style-2 .pine3 { right: 30px; transform: scale(1.5); bottom: 35px; }
+
+    /* Style 3: Sunrise */
+    .container-style-3 {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(to bottom, #E8B4B8 0%, #EED6D3 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #A49393;
+    }
+
+    .container-style-3 .sun {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      background: #F4A261;
+      border-radius: 50%;
+      box-shadow: 0 0 40px rgba(244, 162, 97, 0.6);
+    }
+
+    .container-style-3 .hill-back {
+      position: absolute;
+      bottom: 0;
+      left: -20px;
+      width: 120px;
+      height: 120px;
+      background: #A49393;
+      border-radius: 50% 50% 0 0;
+    }
+
+    .container-style-3 .hill-front {
+      position: absolute;
+      bottom: 0;
+      right: -30px;
+      width: 140px;
+      height: 100px;
+      background: #67595E;
+      border-radius: 50% 50% 0 0;
+      z-index: 2;
+    }
+
+    /* Style 4: Desert */
+    .container-style-4 {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #F9D423 0%, #FF4E50 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #3F0D12;
+    }
+
+    .container-style-4 .sun-desert {
+      position: absolute;
+      bottom: 120px;
+      left: 20px;
+      width: 80px;
+      height: 80px;
+      background: #FFE259;
+      border-radius: 50%;
+    }
+
+    .container-style-4 .dune-back {
+      position: absolute;
+      bottom: -40px;
+      left: -20px;
+      width: 200px;
+      height: 160px;
+      background: #C43A30;
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    .container-style-4 .dune-front {
+      position: absolute;
+      bottom: -60px;
+      right: -30px;
+      width: 180px;
+      height: 140px;
+      background: #3F0D12;
+      border-radius: 50%;
+      z-index: 2;
+    }
+
+    .container-style-4 .cactus {
+      position: absolute;
+      bottom: 30px;
+      left: 30px;
+      width: 8px;
+      height: 40px;
+      background: #110000;
+      border-radius: 4px;
+      z-index: 3;
+    }
+
+    .container-style-4 .cactus::before {
+      content: '';
+      position: absolute;
+      bottom: 15px;
+      left: -12px;
+      width: 15px;
+      height: 15px;
+      border-bottom: 6px solid #110000;
+      border-left: 6px solid #110000;
+      border-radius: 0 0 0 8px;
+    }
+
+    .container-style-4 .cactus::after {
+      content: '';
+      position: absolute;
+      bottom: 22px;
+      right: -12px;
+      width: 15px;
+      height: 15px;
+      border-bottom: 6px solid #110000;
+      border-right: 6px solid #110000;
+      border-radius: 0 0 8px 0;
+    }
+
   </style>
 </head>
 <body>
@@ -272,330 +493,63 @@
     const grid = document.getElementById('landscapes-grid');
     const cities = Object.values(CITY_CONFIG).sort((a, b) => a.name.localeCompare(b.name));
 
-    cities.forEach(city => {
+    cities.forEach((city, i) => {
       if (!city.visible) return;
 
+      const styleType = i % 4;
       const card = document.createElement('div');
       card.className = 'landscape-card';
 
+      let landscapeHtml = '';
+      if (styleType === 0) {
+        landscapeHtml = `
+          <div class="container">
+            <div class="mountain">
+              <div class="backdrop"></div>
+            </div>
+            <div class="range"></div>
+            <div class="tree treeBack tree1"><div class="top"></div><div class="mid"></div></div>
+            <div class="tree treeBack tree2"><div class="top"></div><div class="mid"></div></div>
+            <div class="tree treeBack tree3"><div class="top"></div><div class="mid"></div></div>
+            <div class="tower"><div class="roof1"></div></div>
+          </div>
+        `;
+      } else if (styleType === 1) {
+        landscapeHtml = `
+          <div class="container-style-2">
+            <div class="stars"></div>
+            <div class="moon"></div>
+            <div class="mountain-back"></div>
+            <div class="mountain-mid"></div>
+            <div class="mountain-front"></div>
+            <div class="ground"></div>
+            <div class="pine pine1"></div>
+            <div class="pine pine2"></div>
+            <div class="pine pine3"></div>
+          </div>
+        `;
+      } else if (styleType === 2) {
+        landscapeHtml = `
+          <div class="container-style-3">
+            <div class="sun"></div>
+            <div class="hill-back"></div>
+            <div class="hill-front"></div>
+          </div>
+        `;
+      } else if (styleType === 3) {
+        landscapeHtml = `
+          <div class="container-style-4">
+            <div class="sun-desert"></div>
+            <div class="dune-back"></div>
+            <div class="dune-front"></div>
+            <div class="cactus"></div>
+          </div>
+        `;
+      }
+
       card.innerHTML = `
         <h2>${city.emoji} ${city.name}</h2>
-        <div class="container">
-
-        <div class="birds front">
-          <div class="bird b1">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b2">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b3">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b4">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b5">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b6">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b7">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b8">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b9">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b10">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b11">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b12">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-        </div>
-        <div class="birds back">
-          <div class="bird b1">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b2">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b3">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b4">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b5">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b6">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b7">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b8">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b9">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b10">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b11">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-          <div class="bird b12">
-            <div class="body"></div>
-            <div class="wing1">
-              <div class="wing2">
-                <div class="wing3"></div>
-              </div>
-            </div>
-</div>
-        </div>
-        <div class="cloud big">
-          <div class="circle c0"></div>
-          <div class="circle c1"></div>
-          <div class="circle c2"></div>
-          <div class="circle c3"></div>
-          <div class="circle c4"></div>
-          <div class="circle c5"></div>
-          <div class="circle c6"></div>
-          <div class="circle c7"></div>
-          <div class="circle c8"></div>
-        </div>
-        <div class="cloud small">
-          <div class="circle c0"></div>
-          <div class="circle c1"></div>
-          <div class="circle c2"></div>
-          <div class="circle c3"></div>
-          <div class="circle c4"></div>
-          <div class="circle c5"></div>
-          <div class="circle c6"></div>
-          <div class="circle c7"></div>
-          <div class="circle c8"></div>
-        </div>
-        <div class="mountain">
-          <div class="backdrop"></div>
-          <div class="zig zag0">
-            <div class="top"></div>
-            <div class="mid"></div>
-            <div class="bot"></div>
-            <div class="base"></div>
-          </div>
-          <div class="zig zag1">
-            <div class="top"></div>
-            <div class="mid"></div>
-            <div class="bot"></div>
-            <div class="base"></div>
-          </div>
-          <div class="zig zag2">
-            <div class="top"></div>
-            <div class="mid"></div>
-            <div class="bot"></div>
-            <div class="base"></div>
-          </div>
-          <div class="zig zag3">
-            <div class="top"></div>
-            <div class="mid"></div>
-            <div class="bot"></div>
-            <div class="base"></div>
-          </div>
-          <div class="zig zag4">
-            <div class="top"></div>
-            <div class="mid"></div>
-            <div class="bot"></div>
-            <div class="base"></div>
-          </div>
-        </div>
-        <div class="range">
-          <div class="r1"></div>
-          <div class="r2"></div>
-          <div class="r3"></div>
-          <div class="r4"></div>
-          <div class="r5"></div>
-          <div class="r6"></div>
-          <div class="r7"></div>
-        </div>
-        <div class="tree treeBack tree1">
-          <div class="top"></div>
-          <div class="mid"></div>
-          <div class="bot"></div>
-          <div class="base"></div>
-        </div>
-        <div class="tree treeBack tree2">
-          <div class="top"></div>
-          <div class="mid"></div>
-          <div class="bot"></div>
-          <div class="base"></div>
-        </div>
-        <div class="tree treeBack tree3">
-          <div class="top"></div>
-          <div class="mid"></div>
-          <div class="bot"></div>
-          <div class="base"></div>
-        </div>
-        <div class="tree treeBack tree4">
-          <div class="top"></div>
-          <div class="mid"></div>
-          <div class="bot"></div>
-          <div class="base"></div>
-        </div>
-        <div class="tree treeBack tree5">
-          <div class="top"></div>
-          <div class="mid"></div>
-          <div class="bot"></div>
-          <div class="base"></div>
-        </div>
-        <div class="tree treeBack tree6">
-          <div class="top"></div>
-          <div class="mid"></div>
-          <div class="bot"></div>
-          <div class="base"></div>
-        </div>
-        <div class="tree treeBack tree7">
-          <div class="top"></div>
-          <div class="mid"></div>
-          <div class="bot"></div>
-          <div class="base"></div>
-        </div>
-        <div class="tree treeBack tree8">
-          <div class="top"></div>
-          <div class="mid"></div>
-          <div class="bot"></div>
-          <div class="base"></div>
-        </div>
-        <div class="tower">
-          <div class="shadow"></div>
-          <div class="flagPole"></div>
-          <div class="roof1"></div>
-        </div>
-        </div>
+        ${landscapeHtml}
       `;
 
       grid.appendChild(card);
