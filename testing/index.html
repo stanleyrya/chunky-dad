@@ -796,7 +796,7 @@
         let testFiles = [];
 
         try {
-          const manifestResponse = await fetch('./manifest.json?t=' + Date.now(), { cache: 'no-cache' });
+          const manifestResponse = await fetch('./manifest.json', { cache: 'no-cache' });
           debugPanel.addEntry('info', `Manifest fetch: ${manifestResponse.status} ${manifestResponse.statusText}`);
 
           if (manifestResponse.ok) {
