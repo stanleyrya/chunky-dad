@@ -6041,3 +6041,11 @@ body.loaded {
     height: 100%;
     border: none;
 }
+
+/* Home Map responsive height */
+#homeMap {
+    width: 100%;
+    min-height: 400px;
+    max-height: 70vh;
+    aspect-ratio: 16 / 9;
+}
