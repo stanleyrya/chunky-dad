@@ -606,9 +606,9 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.debug('MAP', 'Selected event has no map marker, dimming all markers', { eventSlug });
             // Dim all markers since selection is active but no marker is selected
             Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
-                if (marker._icon) {
-                    marker._icon.classList.remove('marker-selected');
-                    marker._icon.classList.add('marker-dimmed');
+                if (marker.getElement()) {
+                    marker.getElement().classList.remove('marker-selected');
+                    marker.getElement().classList.add('marker-dimmed');
                 }
             });
             logger.userInteraction('MAP', 'All markers dimmed (selection active but no marker selected)', { eventSlug });
@@ -618,16 +618,16 @@ class DynamicCalendarLoader extends CalendarCore {
         // Use CSS classes instead of inline styles
         if (window.eventsMapMarkersBySlug) {
             Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
-                if (marker._icon) {
+                if (marker.getElement()) {
                     // Remove all marker state classes
-                    marker._icon.classList.remove('marker-selected', 'marker-dimmed');
+                    marker.getElement().classList.remove('marker-selected', 'marker-dimmed');
                     
                     if (slug === eventSlug) {
                         // Highlight the selected marker
-                        marker._icon.classList.add('marker-selected');
+                        marker.getElement().classList.add('marker-selected');
                     } else {
                         // Dim unselected markers
-                        marker._icon.classList.add('marker-dimmed');
+                        marker.getElement().classList.add('marker-dimmed');
                     }
                 }
             });
@@ -642,9 +642,9 @@ class DynamicCalendarLoader extends CalendarCore {
         if (window.eventsMapMarkersBySlug) {
             const markerCount = Object.keys(window.eventsMapMarkersBySlug).length;
             Object.values(window.eventsMapMarkersBySlug).forEach(marker => {
-                if (marker._icon) {
+                if (marker.getElement()) {
                     // Remove all marker state classes
-                    marker._icon.classList.remove('marker-selected', 'marker-dimmed');
+                    marker.getElement().classList.remove('marker-selected', 'marker-dimmed');
                 }
             });
             logger.debug('MAP', 'All markers reset to normal appearance', { markerCount });
