@@ -87,6 +87,27 @@ const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
 const CACHE_RANDOMIZATION = 2 * 24 * 60 * 60 * 1000;
 
 // Ensure directories exist
+// Helper to read existing failure count, increment it, and write metadata
+function saveFailureMetadata(metadataPathFallback, failureMetadata) {
+  let failureCount = 0;
+  if (fs.existsSync(metadataPathFallback)) {
+    try {
+      const existingData = JSON.parse(fs.readFileSync(metadataPathFallback, 'utf8'));
+      if (existingData.failureCount) {
+        failureCount = existingData.failureCount;
+      } else if (existingData.failedAt) {
+        // Migration for old format without failureCount
+        failureCount = 1;
+      }
+    } catch (e) {
+      console.warn(`⚠️  Could not read existing failure metadata for ${metadataPathFallback}:`, e.message);
+    }
+  }
+
+  failureMetadata.failureCount = failureCount + 1;
+  fs.writeFileSync(metadataPathFallback, JSON.stringify(failureMetadata, null, 2));
+}
+
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -204,6 +225,29 @@ async function downloadEventImage(imageUrl, eventInfo) {
     
   } catch (error) {
     console.error(`❌ Failed to download event image from ${imageUrl}:`, error.message);
+
+    // Save failure metadata for backoff
+    try {
+      const failureMetadata = {
+        originalUrl: imageUrl,
+        failedAt: new Date().toISOString(),
+        error: error.message,
+        type: 'event'
+      };
+      // We assume localPath and metadataPath were constructed prior to the try block (or inside it if scope permits)
+      // Since localPath and metadataPath are inside the try block, we need to regenerate them here
+      const adjustedUrl = adjustEventbriteImageUrl(imageUrl);
+      const dirPath = getEventDirectoryPath(eventInfo, 'img/events');
+      const dir = path.join(ROOT, dirPath);
+      const detectedExtension = detectFileExtension(adjustedUrl);
+      const filename = generateEventFilename(adjustedUrl, eventInfo, detectedExtension);
+      const metadataPathFallback = path.join(dir, filename) + '.meta';
+      ensureDir(dir);
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
+    } catch (metaError) {
+      console.error(`❌ Failed to write failure metadata for event image ${imageUrl}:`, metaError.message);
+    }
+
     return { success: false, error: error.message, url: imageUrl };
   }
 }
@@ -516,18 +560,70 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
     
   } catch (error) {
     console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+
+    try {
+      const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+      const metadataPathFallback = path.join(dir, customFilename) + '.meta';
+      ensureDir(dir);
+      const failureMetadata = {
+        originalUrl: imageUrl,
+        failedAt: new Date().toISOString(),
+        error: error.message,
+        type: type,
+        filename: customFilename
+      };
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
+    } catch (metaError) {
+      console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
+    }
+
     return { success: false, error: error.message, url: imageUrl };
   }
 }
 
 // Check if we should download the image
 function shouldDownloadImage(imageUrl, localPath, metadataPath) {
-  // 1. Check if file exists
+  // 1. Check metadata for URL changes or recent failures
+  if (fs.existsSync(metadataPath)) {
+    try {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      if (metadata.originalUrl !== imageUrl) {
+        return { shouldDownload: true, reason: 'URL has changed' };
+      }
+
+      // Check for failure backoff
+      if (metadata.failedAt) {
+        const failedAge = Date.now() - new Date(metadata.failedAt).getTime();
+        const failureCount = metadata.failureCount || 1;
+
+        let backoffDurationDays = 7;
+        if (failureCount === 2) {
+          backoffDurationDays = 14;
+        } else if (failureCount >= 3) {
+          backoffDurationDays = 30;
+        }
+
+        const backoffDuration = backoffDurationDays * 24 * 60 * 60 * 1000;
+
+        if (failedAge < backoffDuration) {
+          const daysRemaining = Math.ceil((backoffDuration - failedAge) / (24 * 60 * 60 * 1000));
+          return { shouldDownload: false, reason: `Previous download failed (${failureCount} times), backing off for ${daysRemaining} more days` };
+        } else {
+          return { shouldDownload: true, reason: 'Backoff period expired, retrying download' };
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️  Could not read metadata for ${localPath}:`, error.message);
+      return { shouldDownload: true, reason: 'Invalid metadata file' };
+    }
+  }
+
+  // 2. Check if file exists
   if (!fs.existsSync(localPath)) {
     return { shouldDownload: true, reason: 'File does not exist' };
   }
   
-  // 2. Check file age with randomization
+  // 3. Check file age with randomization
   const fileAge = Date.now() - fs.statSync(localPath).mtime.getTime();
   
   // Generate a consistent random offset based on the filename to ensure
@@ -546,18 +642,7 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath) {
     return { shouldDownload: true, reason: `File is ${daysOld} days old (expires after ${effectiveDays} days)` };
   }
   
-  // 3. Check if URL changed
-  if (fs.existsSync(metadataPath)) {
-    try {
-      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-      if (metadata.originalUrl !== imageUrl) {
-        return { shouldDownload: true, reason: 'URL has changed' };
-      }
-    } catch (error) {
-      console.warn(`⚠️  Could not read metadata for ${localPath}:`, error.message);
-      return { shouldDownload: true, reason: 'Invalid metadata file' };
-    }
-  } else {
+  if (!fs.existsSync(metadataPath)) {
     return { shouldDownload: true, reason: 'No metadata file found' };
   }
   
@@ -604,6 +689,25 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
     
   } catch (error) {
     console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+
+    try {
+      const filename = generateFilename(imageUrl, type, size);
+      const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+      const metadataPathFallback = path.join(dir, filename) + '.meta';
+      ensureDir(dir);
+      const failureMetadata = {
+        originalUrl: imageUrl,
+        failedAt: new Date().toISOString(),
+        error: error.message,
+        type: type,
+        filename: filename,
+        size: size
+      };
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
+    } catch (metaError) {
+      console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
+    }
+
     return { success: false, error: error.message, url: imageUrl };
   }
 }
@@ -685,6 +789,24 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
     
   } catch (error) {
     console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+
+    try {
+      const filename = generateFilename(imageUrl, type);
+      const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+      const metadataPathFallback = path.join(dir, filename) + '.meta';
+      ensureDir(dir);
+      const failureMetadata = {
+        originalUrl: imageUrl,
+        failedAt: new Date().toISOString(),
+        error: error.message,
+        type: type,
+        filename: filename
+      };
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
+    } catch (metaError) {
+      console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
+    }
+
     return { success: false, error: error.message, url: imageUrl };
   }
 }
