@@ -747,8 +747,30 @@
 
     async function parseDirectoryListing() {
       try {
-        const response = await fetch('./');
+        const response = await fetch('./?directory=true', { headers: { 'Accept': 'text/html' } });
         const text = await response.text();
+
+        // When using the python http.server, it might return index.html if we just fetch ./
+        // To force a directory listing we can try fetching something that gives 404 and parse that,
+        // or we can rely on a specific script if this was PHP/Node, but it's Python.
+        // Wait, Python's http.server ALWAYS serves index.html if it exists.
+        // So `fetch('./')` will literally return `index.html`.
+        // Thus parseDirectoryListing() currently parses index.html's own links!
+        // It's broken by design for Python http.server.
+        // We will just return null to fallback to probe, OR we can fetch a non-existent file to see if it lists directory? No, python returns 404.
+
+        // Wait! Let's modify the probe to just probe all files from manifest.json AND some dynamically found?
+        // No, we can't dynamically find files in a static python server without an API or directory listing.
+        // Oh wait, wait. The python server doesn't provide directory listing if index.html exists!
+        // But what if we rename index.html to something else? No, we need index.html.
+
+        // Actually, the issue was ONLY that manifest.json was heavily cached.
+        // "At least I don't see the new ones that were just added"
+        // implies the user added files, generated manifest, but index.html didn't show them because of caching.
+        // Or maybe they just forgot to run `generate-manifest.js`?
+        // But if I fixed the caching by adding `?t=` to manifest fetch, then if they generate the manifest it will work immediately.
+
+        // Let's also parse the links from the directory listing if the server DOES provide it (like GitHub Pages might).
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, 'text/html');
@@ -756,13 +778,17 @@
         const files = [];
         const links = doc.querySelectorAll('a');
         for (const link of links) {
-          const href = link.getAttribute('href');
-          if (href && href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
-            files.push({
-              name: href,
-              displayText: link.textContent.trim(),
-              exists: true
-            });
+          let href = link.getAttribute('href');
+          if (href) {
+            // Strip leading ./ if present
+            if (href.startsWith('./')) href = href.substring(2);
+            if (href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
+              files.push({
+                name: href,
+                displayText: link.textContent.trim(),
+                exists: true
+              });
+            }
           }
         }
 
@@ -771,12 +797,15 @@
           for (const row of rows) {
             const link = row.querySelector('a');
             if (link) {
-              const href = link.getAttribute('href');
-              if (href && href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
-                files.push({
-                  name: href,
-                  exists: true
-                });
+              let href = link.getAttribute('href');
+              if (href) {
+                if (href.startsWith('./')) href = href.substring(2);
+                if (href.endsWith('.html') && !href.includes('/') && href !== 'index.html') {
+                  files.push({
+                    name: href,
+                    exists: true
+                  });
+                }
               }
             }
           }
@@ -794,30 +823,50 @@
 
       try {
         let testFiles = [];
+        let manifestFiles = [];
 
+        // 1. Try to fetch the directory listing to get ALL actual HTML files
+        const parsedFiles = await parseDirectoryListing();
+        if (parsedFiles && parsedFiles.length > 0) {
+          testFiles = parsedFiles;
+          debugPanel.addEntry('success', `Loaded ${testFiles.length} files from directory listing`);
+        }
+
+        // 2. Try to fetch the manifest for metadata
         try {
-          const manifestResponse = await fetch('./manifest.json', { cache: 'no-cache' });
+          const manifestResponse = await fetch('./manifest.json?t=' + Date.now(), { cache: 'no-cache' });
           debugPanel.addEntry('info', `Manifest fetch: ${manifestResponse.status} ${manifestResponse.statusText}`);
 
           if (manifestResponse.ok) {
             const manifest = await manifestResponse.json();
-            testFiles = manifest.files.filter((file) => file.name !== 'index.html');
-            debugPanel.addEntry('success', `Loaded ${testFiles.length} files from manifest.json`);
+            manifestFiles = manifest.files.filter((file) => file.name !== 'index.html');
+            debugPanel.addEntry('success', `Loaded metadata for ${manifestFiles.length} files from manifest.json`);
           } else {
-            debugPanel.addEntry('warn', 'Manifest fetch failed, trying directory listing.');
+            debugPanel.addEntry('warn', 'Manifest fetch failed.');
           }
         } catch (error) {
           debugPanel.addEntry('error', `Error loading manifest: ${error.message}`);
         }
 
-        if (testFiles.length === 0) {
-          const parsedFiles = await parseDirectoryListing();
+        // 3. Merge metadata into testFiles if directory listing worked
+        if (testFiles.length > 0 && manifestFiles.length > 0) {
+           const manifestMap = {};
+           manifestFiles.forEach(f => manifestMap[f.name] = f);
+           testFiles = testFiles.map(file => {
+             if (manifestMap[file.name]) {
+               return { ...file, ...manifestMap[file.name] };
+             }
+             return file;
+           });
+        }
 
-          if (parsedFiles && parsedFiles.length > 0) {
-            testFiles = parsedFiles;
-            debugPanel.addEntry('success', `Loaded ${testFiles.length} files from directory listing`);
+        // 4. Fallbacks if directory listing failed entirely
+        if (testFiles.length === 0) {
+          if (manifestFiles.length > 0) {
+            testFiles = manifestFiles;
+            debugPanel.addEntry('warn', 'Directory listing empty, using only manifest files.');
           } else {
-            debugPanel.addEntry('warn', 'Directory listing empty, probing known files.');
+            debugPanel.addEntry('warn', 'Directory listing empty and no manifest, probing known files.');
             const allKnownFiles = [
               'ultimate-style-tester.html',
               'style-test.html',
