@@ -743,7 +743,7 @@ function addProcessedUrl(imageUrls, result) {
 }
 
 // Extract image URLs from calendar data using calendar loader
-function extractImageUrls() {
+async function extractImageUrls() {
   const imageUrls = {
     eventsWithInfo: [],  // Changed to array of event objects with image info
     favicons64: new Set(),  // Higher quality for map markers
@@ -833,7 +833,46 @@ function extractImageUrls() {
     console.log('📁 No bars directory found, skipping bar logo extraction');
   }
   
+
+  // Process bear directory items from Google Sheets
+  try {
+    console.log('🐻 Processing Bear Directory data for favicons...');
+    const SHEET_ID = '1-ttoHpM6unij08U40voVi8YLn7j8Mhld4FkRsKrzql4';
+    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+    // We can use fetchPageContent to get the data as text
+    const text = await fetchPageContent(SHEET_URL);
+    if (text) {
+      const jsonString = text.substring(47).slice(0, -2);
+      const json = JSON.parse(jsonString);
+      const rows = json.table.rows;
+
+      let directoryItemsProcessed = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row.c || !row.c[0] || !row.c[0].v) continue;
+
+        const name = row.c[0] && row.c[0].v ? row.c[0].v.trim() : '';
+        const shop = row.c[1] && row.c[1].v ? row.c[1].v.trim() : '';
+        const website = row.c[2] && row.c[2].v ? row.c[2].v.trim() : '';
+        const instagram = row.c[3] && row.c[3].v ? row.c[3].v.trim() : '';
+
+        const finalUrl = website || shop || (instagram ? `https://instagram.com/${instagram}` : '');
+
+        if (finalUrl && !finalUrl.includes('instagram.com/')) {
+          const result = processWebsiteUrl(finalUrl, ` for directory item ${name}`);
+          addProcessedUrl(imageUrls, result);
+          directoryItemsProcessed++;
+        }
+      }
+      console.log(`✅ Processed ${directoryItemsProcessed} directory items for favicons`);
+    }
+  } catch (err) {
+    console.warn('⚠️  Could not process Bear Directory data:', err.message);
+  }
+
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
+
   const wikipediaCount = imageUrls.wikipediaUrls ? imageUrls.wikipediaUrls.size : 0;
   console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), ${linktreeCount} Linktree URLs, and ${wikipediaCount} Wikipedia URLs`);
   return imageUrls;
@@ -860,7 +899,7 @@ async function main() {
   ensureDir(path.join(ROOT, sampleOneTimeDir));
   
   // Extract image URLs from calendar data
-  const imageUrls = extractImageUrls();
+  const imageUrls = await extractImageUrls();
   
   let totalDownloaded = 0;
   let totalSkipped = 0;
