@@ -351,7 +351,7 @@ body.index-page header.visible {
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 1rem;
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
     position: relative;
     width: 100%;
@@ -1611,7 +1611,6 @@ body.index-page main {
 /* City Page Styles */
 .city-page {
     padding-top: 0px;
-    background: var(--solid-light);
 }
 
 
@@ -1663,7 +1662,7 @@ body.index-page main {
     .calendar-header {
         align-items: flex-start;
     }
-    
+
     .whats-the-vibe-header {
         text-align: left;
         margin-bottom: 0;
@@ -1784,6 +1783,7 @@ body.index-page main {
 
 .calendar-grid {
     background-color: var(--text-inverse);
+    border-radius: 15px;
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 0;
@@ -1822,18 +1822,11 @@ body.index-page main {
 }
 
 .calendar-day:hover {
-    transform: translateY(-2px);
     border-color: var(--primary-color);
 }
 
 .calendar-day.current {
     border-color: var(--primary-color);
-}
-
-
-
-.calendar-day.current:hover {
-    transform: translateY(-5px) scale(1.02);
 }
 
 .day-header {
@@ -1869,8 +1862,8 @@ body.index-page main {
 .calendar-day.current .day-number {
     background-color: var(--primary-color);
     color: var(--text-inverse) !important;
-    width: 30px;
-    height: 30px;
+    width: 1.6em;
+    height: 1.6em;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1990,6 +1983,10 @@ body.index-page main {
     hyphens: manual;
 }
 
+.event-item .event-venue {
+    display: none;
+}
+
 /* Remove color changes on hover - keep original colors */
 
 .no-events {
@@ -2007,34 +2004,34 @@ body.index-page main {
         padding: 0.4rem;
         min-height: 100px;
     }
-    
+
     .day-header h3 {
         font-size: 0.8rem;
     }
-    
+
     .day-date {
         font-size: 1rem;
     }
-    
+
     .event-item {
         font-size: 0.75rem;
         margin-bottom: 0.2rem;
     }
-    
+
     .event-name {
         font-size: 0.75rem;
     }
-    
+
     .event-time,
     .event-venue {
         font-size: 0.7rem;
     }
-    
+
     /* Hide venue on mobile for week view to save space */
     .calendar-day.week-view .event-venue {
         display: none;
     }
-    
+
     /* Hide day-indicator in month view on tablets and mobile */
     .calendar-day.month-day .day-indicator {
         display: none;
@@ -2042,35 +2039,35 @@ body.index-page main {
 }
 
 @media (max-width: 480px) {
-    
+
     .calendar-day {
         padding: 0.3rem;
         min-height: 80px;
     }
-    
+
     .day-header {
         padding-bottom: 0.3rem;
         margin-bottom: 0.3rem;
     }
-    
+
     .day-header h3 {
         font-size: 0.75rem;
     }
-    
+
     .day-date {
         font-size: 0.9rem;
     }
-    
+
     .event-item {
         font-size: 0.7rem;
         margin-bottom: 0.15rem;
     }
-    
+
     .event-name {
         font-size: 0.7rem;
         margin-bottom: 0.1rem;
     }
-    
+
     .event-time,
     .event-venue {
         font-size: 0.65rem;
@@ -2495,7 +2492,7 @@ body.index-page main {
         margin: 0;
         overflow-x: hidden;
     }
-    
+
     .events-map-section .container {
         padding: 0 1rem;
         overflow-x: hidden;
@@ -2710,27 +2707,26 @@ body.index-page main {
 
 
 /* Map Marker Selection States */
-.leaflet-marker-icon.marker-selected .favicon-marker-container {
+.marker-selected .favicon-marker-container {
     border-color: var(--primary-color) !important;
     border-width: 2px !important;
     position: relative !important;
     overflow: hidden !important;
 }
 
-.leaflet-marker-icon.marker-selected .favicon-marker-container:hover {
+.marker-selected .favicon-marker-container:hover {
 }
 
-.leaflet-marker-icon.marker-selected .favicon-marker-icon {
+.marker-selected .favicon-marker-icon {
     transform: none !important;
     position: relative !important;
 }
 
-.leaflet-marker-icon.marker-selected {
+.marker-selected {
     z-index: 1010 !important;
-    position: relative !important;
 }
 
-.leaflet-marker-icon.marker-dimmed {
+.marker-dimmed {
     opacity: 0.6 !important;
     z-index: 1000 !important;
 }
@@ -2756,11 +2752,11 @@ body.index-page main {
 
 
 @keyframes pulse {
-    0%, 100% { 
+    0%, 100% {
         background: var(--background-primary);
         border-color: var(--border-light);
     }
-    50% { 
+    50% {
         background: var(--background-light);
         border-color: var(--primary-color);
     }
@@ -2846,7 +2842,7 @@ footer {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    
+
     .nav-menu {
         position: fixed;
         top: 100%;
@@ -3065,11 +3061,11 @@ footer {
         width: auto;
         flex-shrink: 0;
     }
-    
+
     .view-toggle {
         order: 2;
     }
-    
+
     .today-btn {
         order: 3;
     }
@@ -3238,11 +3234,11 @@ footer {
     body {
         padding-top: 50px; /* Even smaller header height */
     }
-    
+
     header {
         height: 50px;
     }
-    
+
     .hero-content h2 {
         font-size: 2rem;
     }
@@ -3265,7 +3261,7 @@ footer {
     .logo h1 {
         font-size: 1.2rem;
     }
-    
+
     .city-switcher-btn {
         min-height: 32px;
         height: 32px;
@@ -3273,11 +3269,11 @@ footer {
         gap: 0.2rem;
         border-radius: 6px;
     }
-    
+
     .city-emoji {
         font-size: 1.2rem;
     }
-    
+
     .city-carrot {
         font-size: 0.6rem;
     }
@@ -3484,18 +3480,18 @@ footer {
     .event-card.detailed h3 {
         font-size: 1.1rem;
     }
-    
+
     /* Mobile share button adjustments */
     .share-event-btn {
         padding: 0.4rem 0.7rem;
         font-size: 0.75rem;
     }
-    
+
     .share-event-btn .share-icon {
         display: contents; /* Makes the span wrapper transparent to layout */
         color: var(--text-inverse);
     }
-    
+
     .share-event-btn .share-icon i {
         color: var(--text-inverse);
     }
@@ -3606,16 +3602,16 @@ footer {
     .view-toggle {
         flex-direction: row;
         gap: 2px;
-        padding: 2px;
+        padding: .25rem;
         flex-shrink: 0;
     }
-    
+
     .view-btn {
-        padding: 0.4rem 0.6rem;
+        padding: 0.4rem 0.5rem;
         font-size: 0.7rem;
         min-width: auto;
     }
-    
+
     .date-navigation {
         width: auto;
         flex-shrink: 0;
@@ -3624,19 +3620,19 @@ footer {
         padding: 0.25rem;
         gap: 0.5rem;
     }
-    
+
     .nav-btn {
         width: 30px;
         height: 30px;
         font-size: 0.9rem;
     }
-    
+
     .date-range {
         font-size: 0.7rem;
         min-width: 80px;
         padding: 0;
     }
-    
+
     .today-btn {
         padding: 0.5rem 0.8rem;
         font-size: 0.7rem;
@@ -3649,11 +3645,11 @@ footer {
     .events-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .business-categories {
         grid-template-columns: 1fr;
     }
-    
+
     .event-item {
         padding: 0.2rem;
     }
@@ -3665,34 +3661,34 @@ footer {
         flex-wrap: wrap;
         justify-content: center;
     }
-    
+
     .view-toggle {
         padding: 1px;
         gap: 1px;
     }
-    
+
     .view-btn {
         padding: 0.3rem 0.5rem;
         font-size: 0.65rem;
     }
-    
+
     .date-navigation {
         max-width: 180px;
         padding: 0.2rem;
         gap: 0.3rem;
     }
-    
+
     .nav-btn {
         width: 28px;
         height: 28px;
         font-size: 0.8rem;
     }
-    
+
     .date-range {
         font-size: 0.65rem;
         min-width: 70px;
     }
-    
+
     .today-btn {
         padding: 0.3rem 0.5rem;
         font-size: 0.65rem;
@@ -3766,35 +3762,35 @@ footer {
         flex-wrap: wrap;
         justify-content: center;
     }
-    
+
     .view-toggle {
         padding: 1px;
         gap: 1px;
     }
-    
+
     .view-btn {
         padding: 0.25rem 0.4rem;
         font-size: 0.6rem;
         min-width: auto;
     }
-    
+
     .date-navigation {
         max-width: 160px;
         padding: 0.15rem;
         gap: 0.25rem;
     }
-    
+
     .nav-btn {
         width: 24px;
         height: 24px;
         font-size: 0.7rem;
     }
-    
+
     .date-range {
         font-size: 0.6rem;
         min-width: 60px;
     }
-    
+
     .today-btn {
         padding: 0.25rem 0.4rem;
         font-size: 0.6rem;
@@ -3950,7 +3946,6 @@ footer {
 
 /* Event Card Selected State (persistent) */
 .event-card.selected {
-    border: 2px solid var(--primary-color);
     background: var(--background-primary);
 }
 
@@ -3968,6 +3963,10 @@ footer {
 }
 
 .event-item.selected .event-time {
+    color: var(--text-inverse) !important;
+}
+
+.event-item.selected .venue {
     color: var(--text-inverse) !important;
 }
 
@@ -4349,25 +4348,10 @@ footer {
     }
 }
 
-
-
-
-
 /* Enhanced Today Highlighting for Week View */
 .calendar-day.week-view.current {
     border-color: var(--primary-color) !important;
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* Enhanced event styling for current day in week view */
@@ -4403,18 +4387,6 @@ footer {
 
 /* Desktop and large screens - ensure full information is always shown */
 @media (min-width: 1025px) {
-
-
-
-    .event-item.enhanced {
-        padding: 0.5rem 0;
-        margin-bottom: 0.3rem;
-    }
-
-    .daily-events {
-        padding: 0.3rem 0;
-        gap: 0.2rem;
-    }
 
     /* Show city name on larger screens */
     .city-name {
@@ -5755,10 +5727,6 @@ body.loaded {
 .calendar-day {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
-}
-
-.calendar-day:hover {
-    transform: translateY(-4px);
 }
 
 /* Smooth event card interactions */

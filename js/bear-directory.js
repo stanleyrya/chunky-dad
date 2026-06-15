@@ -255,6 +255,8 @@ class BearDirectory {
     }
 
 
+
+
     createTile(item) {
         const tile = document.createElement('div');
         tile.className = 'directory-tile';
@@ -282,6 +284,22 @@ class BearDirectory {
         // Use first letter of name for avatar placeholder
         const initial = nameToHash.charAt(0).toUpperCase();
 
+        const finalUrl = item.website || item.shop || (item.instagram ? `https://instagram.com/${item.instagram}` : '');
+        let faviconHtml = `<div class="tile-avatar">${initial}</div>`;
+
+        if (finalUrl && !finalUrl.includes('instagram.com/')) {
+            const faviconPath = window.FilenameUtils ? window.FilenameUtils.convertWebsiteUrlToFaviconPath(finalUrl) : '';
+            if (faviconPath) {
+                // Try rendering the favicon, falling back to the initial text if it fails
+                faviconHtml = `
+                    <img src="${faviconPath}" class="tile-avatar favicon-avatar" alt="favicon"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                         style="object-fit: cover; background: white;">
+                    <div class="tile-avatar" style="display: none;">${initial}</div>
+                `;
+            }
+        }
+
         // Map types to icons/display names
         const typeConfig = {
             'artist': { icon: '🎨', name: 'Artist/Creator' },
@@ -295,7 +313,7 @@ class BearDirectory {
         
         tile.innerHTML = `
             <div class="tile-banner" style="background: ${gradient};">
-                <div class="tile-avatar">${initial}</div>
+                ${faviconHtml}
             </div>
             <div class="tile-content">
                 <h3 class="tile-name">${item.name}</h3>
@@ -391,11 +409,26 @@ class BearDirectory {
                     else if (item.type && item.type.toLowerCase().includes('gear')) markerText = '👕';
                     else if (item.name) markerText = item.name.charAt(0).toUpperCase();
 
+                    const finalUrl = item.website || item.shop || (item.instagram ? `https://instagram.com/${item.instagram}` : '');
+                    let markerContent = `<span class="marker-text" style="font-size: 16px;">${markerText}</span>`;
+
+                    if (finalUrl && !finalUrl.includes('instagram.com/')) {
+                        const faviconPath = window.FilenameUtils ? window.FilenameUtils.convertWebsiteUrlToFaviconPath(finalUrl) : '';
+                        if (faviconPath) {
+                            markerContent = `
+                                <img src="${faviconPath}" class="marker-favicon" alt="favicon"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"
+                                     style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: white;">
+                                <span class="marker-text" style="font-size: 16px; display: none;">${markerText}</span>
+                            `;
+                        }
+                    }
+
                     const el = document.createElement('div');
                     el.className = 'favicon-marker text-marker';
                     el.innerHTML = `
                         <div class="favicon-marker-container text-marker">
-                            <span class="marker-text" style="font-size: 16px;">${markerText}</span>
+                            ${markerContent}
                         </div>
                     `;
 

@@ -5,7 +5,6 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
-const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
 const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename } = require('../js/filename-utils.js');
@@ -88,6 +87,27 @@ const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
 const CACHE_RANDOMIZATION = 2 * 24 * 60 * 60 * 1000;
 
 // Ensure directories exist
+// Helper to read existing failure count, increment it, and write metadata
+function saveFailureMetadata(metadataPathFallback, failureMetadata) {
+  let failureCount = 0;
+  if (fs.existsSync(metadataPathFallback)) {
+    try {
+      const existingData = JSON.parse(fs.readFileSync(metadataPathFallback, 'utf8'));
+      if (existingData.failureCount) {
+        failureCount = existingData.failureCount;
+      } else if (existingData.failedAt) {
+        // Migration for old format without failureCount
+        failureCount = 1;
+      }
+    } catch (e) {
+      console.warn(`⚠️  Could not read existing failure metadata for ${metadataPathFallback}:`, e.message);
+    }
+  }
+
+  failureMetadata.failureCount = failureCount + 1;
+  fs.writeFileSync(metadataPathFallback, JSON.stringify(failureMetadata, null, 2));
+}
+
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -205,6 +225,29 @@ async function downloadEventImage(imageUrl, eventInfo) {
     
   } catch (error) {
     console.error(`❌ Failed to download event image from ${imageUrl}:`, error.message);
+
+    // Save failure metadata for backoff
+    try {
+      const failureMetadata = {
+        originalUrl: imageUrl,
+        failedAt: new Date().toISOString(),
+        error: error.message,
+        type: 'event'
+      };
+      // We assume localPath and metadataPath were constructed prior to the try block (or inside it if scope permits)
+      // Since localPath and metadataPath are inside the try block, we need to regenerate them here
+      const adjustedUrl = adjustEventbriteImageUrl(imageUrl);
+      const dirPath = getEventDirectoryPath(eventInfo, 'img/events');
+      const dir = path.join(ROOT, dirPath);
+      const detectedExtension = detectFileExtension(adjustedUrl);
+      const filename = generateEventFilename(adjustedUrl, eventInfo, detectedExtension);
+      const metadataPathFallback = path.join(dir, filename) + '.meta';
+      ensureDir(dir);
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
+    } catch (metaError) {
+      console.error(`❌ Failed to write failure metadata for event image ${imageUrl}:`, metaError.message);
+    }
+
     return { success: false, error: error.message, url: imageUrl };
   }
 }
@@ -217,24 +260,21 @@ async function extractLinktreeProfilePicture(linktreeUrl) {
     // Fetch the Linktree page HTML
     const html = await fetchPageContent(linktreeUrl);
     
-    // Parse HTML with JSDOM
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
-    
-    // Look for the profile picture element
-    const profilePictureDiv = document.querySelector('#profile-picture');
-    if (!profilePictureDiv) {
-      console.log('⚠️  No profile picture div found on Linktree page');
+    // Use regex to find the profile picture URL to avoid JSDOM CSS parsing errors
+    let profilePictureUrl = null;
+    const jsonMatch = html.match(/"profilePictureUrl":"([^"]+)"/);
+    if (jsonMatch && jsonMatch[1]) {
+      profilePictureUrl = jsonMatch[1];
+    } else {
+      const metaMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
+      if (metaMatch && metaMatch[1]) {
+        profilePictureUrl = metaMatch[1];
+      }
+    }
+    if (!profilePictureUrl) {
+      console.log('⚠️  No profile picture image found in HTML');
       return null;
     }
-    
-    const img = profilePictureDiv.querySelector('img');
-    if (!img || !img.src) {
-      console.log('⚠️  No profile picture image found in profile-picture div');
-      return null;
-    }
-    
-    const profilePictureUrl = img.src;
     console.log(`✅ Found profile picture URL: ${profilePictureUrl}`);
     
     return profilePictureUrl;
@@ -250,15 +290,11 @@ async function extractWikipediaLogo(wikipediaUrl) {
   console.log(`🔍 Extracting logo from Wikipedia: ${wikipediaUrl}`);
   
   const html = await fetchPageContent(wikipediaUrl);
-  const dom = new JSDOM(html);
-  const document = dom.window.document;
-  
-  const infoboxImage = document.querySelector('td.infobox-image img');
-  if (!infoboxImage?.src) {
+  const match = html.match(/<td[^>]*class="[^"]*infobox-image[^"]*"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"/i);
+  if (!match || !match[1]) {
     throw new Error('No logo found in Wikipedia infobox');
   }
-  
-  let logoUrl = infoboxImage.src;
+  let logoUrl = match[1];
   if (logoUrl.startsWith('//')) {
     logoUrl = 'https:' + logoUrl;
   } else if (logoUrl.startsWith('/')) {
@@ -524,18 +560,70 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
     
   } catch (error) {
     console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+
+    try {
+      const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+      const metadataPathFallback = path.join(dir, customFilename) + '.meta';
+      ensureDir(dir);
+      const failureMetadata = {
+        originalUrl: imageUrl,
+        failedAt: new Date().toISOString(),
+        error: error.message,
+        type: type,
+        filename: customFilename
+      };
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
+    } catch (metaError) {
+      console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
+    }
+
     return { success: false, error: error.message, url: imageUrl };
   }
 }
 
 // Check if we should download the image
 function shouldDownloadImage(imageUrl, localPath, metadataPath) {
-  // 1. Check if file exists
+  // 1. Check metadata for URL changes or recent failures
+  if (fs.existsSync(metadataPath)) {
+    try {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      if (metadata.originalUrl !== imageUrl) {
+        return { shouldDownload: true, reason: 'URL has changed' };
+      }
+
+      // Check for failure backoff
+      if (metadata.failedAt) {
+        const failedAge = Date.now() - new Date(metadata.failedAt).getTime();
+        const failureCount = metadata.failureCount || 1;
+
+        let backoffDurationDays = 7;
+        if (failureCount === 2) {
+          backoffDurationDays = 14;
+        } else if (failureCount >= 3) {
+          backoffDurationDays = 30;
+        }
+
+        const backoffDuration = backoffDurationDays * 24 * 60 * 60 * 1000;
+
+        if (failedAge < backoffDuration) {
+          const daysRemaining = Math.ceil((backoffDuration - failedAge) / (24 * 60 * 60 * 1000));
+          return { shouldDownload: false, reason: `Previous download failed (${failureCount} times), backing off for ${daysRemaining} more days` };
+        } else {
+          return { shouldDownload: true, reason: 'Backoff period expired, retrying download' };
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️  Could not read metadata for ${localPath}:`, error.message);
+      return { shouldDownload: true, reason: 'Invalid metadata file' };
+    }
+  }
+
+  // 2. Check if file exists
   if (!fs.existsSync(localPath)) {
     return { shouldDownload: true, reason: 'File does not exist' };
   }
   
-  // 2. Check file age with randomization
+  // 3. Check file age with randomization
   const fileAge = Date.now() - fs.statSync(localPath).mtime.getTime();
   
   // Generate a consistent random offset based on the filename to ensure
@@ -554,18 +642,7 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath) {
     return { shouldDownload: true, reason: `File is ${daysOld} days old (expires after ${effectiveDays} days)` };
   }
   
-  // 3. Check if URL changed
-  if (fs.existsSync(metadataPath)) {
-    try {
-      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-      if (metadata.originalUrl !== imageUrl) {
-        return { shouldDownload: true, reason: 'URL has changed' };
-      }
-    } catch (error) {
-      console.warn(`⚠️  Could not read metadata for ${localPath}:`, error.message);
-      return { shouldDownload: true, reason: 'Invalid metadata file' };
-    }
-  } else {
+  if (!fs.existsSync(metadataPath)) {
     return { shouldDownload: true, reason: 'No metadata file found' };
   }
   
@@ -612,6 +689,25 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
     
   } catch (error) {
     console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+
+    try {
+      const filename = generateFilename(imageUrl, type, size);
+      const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+      const metadataPathFallback = path.join(dir, filename) + '.meta';
+      ensureDir(dir);
+      const failureMetadata = {
+        originalUrl: imageUrl,
+        failedAt: new Date().toISOString(),
+        error: error.message,
+        type: type,
+        filename: filename,
+        size: size
+      };
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
+    } catch (metaError) {
+      console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
+    }
+
     return { success: false, error: error.message, url: imageUrl };
   }
 }
@@ -693,6 +789,24 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
     
   } catch (error) {
     console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
+
+    try {
+      const filename = generateFilename(imageUrl, type);
+      const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
+      const metadataPathFallback = path.join(dir, filename) + '.meta';
+      ensureDir(dir);
+      const failureMetadata = {
+        originalUrl: imageUrl,
+        failedAt: new Date().toISOString(),
+        error: error.message,
+        type: type,
+        filename: filename
+      };
+      saveFailureMetadata(metadataPathFallback, failureMetadata);
+    } catch (metaError) {
+      console.error(`❌ Failed to write failure metadata for ${type} image ${imageUrl}:`, metaError.message);
+    }
+
     return { success: false, error: error.message, url: imageUrl };
   }
 }
@@ -743,11 +857,13 @@ function addProcessedUrl(imageUrls, result) {
 }
 
 // Extract image URLs from calendar data using calendar loader
-function extractImageUrls() {
+async function extractImageUrls() {
   const imageUrls = {
     eventsWithInfo: [],  // Changed to array of event objects with image info
     favicons64: new Set(),  // Higher quality for map markers
-    favicons256: new Set()   // High quality for cards/OG
+    favicons256: new Set(),   // High quality for cards/OG
+    linktreeUrls: new Set(),
+    wikipediaUrls: new Set()
   };
   
   // Read all calendar files
@@ -833,7 +949,46 @@ function extractImageUrls() {
     console.log('📁 No bars directory found, skipping bar logo extraction');
   }
   
+
+  // Process bear directory items from Google Sheets
+  try {
+    console.log('🐻 Processing Bear Directory data for favicons...');
+    const SHEET_ID = '1-ttoHpM6unij08U40voVi8YLn7j8Mhld4FkRsKrzql4';
+    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+    // We can use fetchPageContent to get the data as text
+    const text = await fetchPageContent(SHEET_URL);
+    if (text) {
+      const jsonString = text.substring(47).slice(0, -2);
+      const json = JSON.parse(jsonString);
+      const rows = json.table.rows;
+
+      let directoryItemsProcessed = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row.c || !row.c[0] || !row.c[0].v) continue;
+
+        const name = row.c[0] && row.c[0].v ? row.c[0].v.trim() : '';
+        const shop = row.c[1] && row.c[1].v ? row.c[1].v.trim() : '';
+        const website = row.c[2] && row.c[2].v ? row.c[2].v.trim() : '';
+        const instagram = row.c[3] && row.c[3].v ? row.c[3].v.trim() : '';
+
+        const finalUrl = website || shop || (instagram ? `https://instagram.com/${instagram}` : '');
+
+        if (finalUrl && !finalUrl.includes('instagram.com/')) {
+          const result = processWebsiteUrl(finalUrl, ` for directory item ${name}`);
+          addProcessedUrl(imageUrls, result);
+          directoryItemsProcessed++;
+        }
+      }
+      console.log(`✅ Processed ${directoryItemsProcessed} directory items for favicons`);
+    }
+  } catch (err) {
+    console.warn('⚠️  Could not process Bear Directory data:', err.message);
+  }
+
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
+
   const wikipediaCount = imageUrls.wikipediaUrls ? imageUrls.wikipediaUrls.size : 0;
   console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), ${linktreeCount} Linktree URLs, and ${wikipediaCount} Wikipedia URLs`);
   return imageUrls;
@@ -860,7 +1015,7 @@ async function main() {
   ensureDir(path.join(ROOT, sampleOneTimeDir));
   
   // Extract image URLs from calendar data
-  const imageUrls = extractImageUrls();
+  const imageUrls = await extractImageUrls();
   
   let totalDownloaded = 0;
   let totalSkipped = 0;
@@ -1011,7 +1166,8 @@ async function main() {
   
   if (totalFailed > 0) {
     console.log('\n⚠️  Some images failed to download. Check the logs above for details.');
-    process.exit(1);
+    // We do not exit with 1 because network errors for some images are expected
+    // and should not fail the entire CI workflow. We will still log the failures.
   }
   
   console.log('\n🎉 Image download process completed successfully!');
