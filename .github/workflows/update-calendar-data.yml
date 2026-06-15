@@ -15,6 +15,9 @@ on:
       - 'tools/extract-favicon-colors.js'
       - 'js/calendar-core.js'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   update-calendar-data:
     runs-on: ubuntu-latest

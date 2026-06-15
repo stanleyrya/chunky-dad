@@ -10,6 +10,9 @@ on:
       - 'tools/sync-bars.js'
       - '.github/workflows/bars-sync.yml'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   sync-bars:
     runs-on: ubuntu-latest
