@@ -1919,19 +1919,12 @@ body.index-page main {
     background: var(--background-light);
     border: 1px solid var(--border-light);
     border-radius: 6px;
-    padding: 0.5rem;
+    padding: 0.2rem;
     margin-bottom: 0.25rem;
     transition: all 0.2s ease;
     cursor: pointer;
     font-size: 0.8rem;
     line-height: 1.3;
-}
-
-/* Mobile and tablet specific padding for event items */
-@media (max-width: 1024px) {
-    .event-item {
-        padding: 0.2rem;
-    }
 }
 
 /* Hover effects only on non-touch devices */
@@ -2895,8 +2888,8 @@ footer {
 
     /* Enhanced Week View Mobile - Show full info on tablets */
     .calendar-grid.week-view-grid {
-    grid-template-columns: 1fr;
-}
+        grid-template-columns: 1fr;
+    }
 
     /* Remove container padding */
     .weekly-calendar .container {
