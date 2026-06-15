@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="toolbox-icon" content="🌄">
+  <meta name="toolbox-description" content="City landscapes tester">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YKQBFFQR5E"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-YKQBFFQR5E');
+  </script>
+  <title>🌄 City Landscapes Tester | chunky.dad</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --page-bg: #0b0d13;
+      --panel-bg: #141826;
+      --text-primary: #f6f7ff;
+      --text-secondary: #c4c8e4;
+      --accent: #ffa24a;
+      --border: rgba(255, 255, 255, 0.08);
+      --sticky-header-offset: 4rem;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+      background: var(--page-bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .page-wrapper {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: calc(var(--sticky-header-offset) + 2rem) 1.25rem 3.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .tool-header {
+      background: rgba(11, 13, 19, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    .tool-nav {
+      display: flex;
+      align-items: center;
+      padding: 0.7rem 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .tool-nav .logo a {
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tool-nav .logo h1 {
+      margin: 0;
+      font-size: 1.45rem;
+      color: var(--text-primary);
+    }
+
+    .logo-img {
+      height: 36px;
+      width: auto;
+    }
+
+    .landscapes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 2rem;
+      align-items: center;
+      justify-items: center;
+    }
+
+    .landscape-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      transition: transform 0.2s ease;
+    }
+
+    .landscape-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .landscape-card h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    /* Style 1: Mountains & Tower (Codepen 1) */
+    .container {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: #FAE0C8;
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      transform-origin: center;
+    }
+
+    .container .mountain {
+      position: absolute;
+      top: 0;
+      opacity: 1;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .container .mountain::after {
+      content: '';
+      position: absolute;
+      bottom: 20px;
+      left: -20px;
+      width: 200px;
+      height: 200px;
+      background: #F59452;
+      border-radius: 40%;
+      transform: rotate(45deg);
+    }
+
+    .container .mountain::before {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: 60px;
+      width: 150px;
+      height: 150px;
+      background: #F47A45;
+      border-radius: 30%;
+      transform: rotate(45deg);
+      z-index: 2;
+    }
+
+    .container .range {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 120px;
+      background: #F46435;
+      z-index: 3;
+    }
+
+    .container .tree {
+      position: absolute;
+      z-index: 4;
+    }
+
+    .container .tree .top {
+      position: absolute;
+      bottom: 0;
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-bottom: 35px solid #2D1427;
+    }
+
+    .container .tree .mid {
+      position: absolute;
+      bottom: 15px;
+      left: -2px;
+      width: 0;
+      height: 0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-bottom: 40px solid #2D1427;
+    }
+
+    .container .tree1 { left: 10px; bottom: 30px; transform: scale(1.1); }
+    .container .tree2 { left: 35px; bottom: 40px; transform: scale(1.3); }
+    .container .tree3 { left: 110px; bottom: 35px; transform: scale(0.9); }
+
+    .container .tree2 .top, .container .tree2 .mid { border-bottom-color: #5A0831; }
+    .container .tree3 .top, .container .tree3 .mid { border-bottom-color: #CD4D45; }
+
+    .container .tower {
+      position: absolute;
+      bottom: 40px;
+      left: 65px;
+      width: 30px;
+      height: 80px;
+      background: #76122C;
+      z-index: 5;
+    }
+
+    .container .tower .roof1 {
+      position: absolute;
+      top: -25px;
+      left: -5px;
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 25px solid #C93D3D;
+    }
+
+    /* Style 2: Night Sky (mr21 concept) */
+    .container-style-2 {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #1A1C29 0%, #302B4B 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      transform-origin: center;
+      border: 4px solid #F6D365;
+    }
+
+    .container-style-2 .moon {
+      position: absolute;
+      top: 40px;
+      right: 40px;
+      width: 40px;
+      height: 40px;
+      background: #FFF3D8;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #FFF3D8, inset -10px -5px 10px rgba(0,0,0,0.1);
+    }
+
+    .container-style-2 .stars {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 90px 40px, #fff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 120px 80px, #fff, rgba(0,0,0,0));
+      background-repeat: repeat;
+      opacity: 0.8;
+    }
+
+    .container-style-2 .mountain-back {
+      position: absolute;
+      bottom: 60px;
+      left: -20px;
+      width: 120px;
+      height: 120px;
+      background: #4B3F72;
+      transform: rotate(45deg);
+      border-radius: 15px;
+    }
+
+    .container-style-2 .mountain-mid {
+      position: absolute;
+      bottom: 40px;
+      right: -30px;
+      width: 140px;
+      height: 140px;
+      background: #392B58;
+      transform: rotate(45deg);
+      border-radius: 15px;
+    }
+
+    .container-style-2 .mountain-front {
+      position: absolute;
+      bottom: -20px;
+      left: 10px;
+      width: 160px;
+      height: 160px;
+      background: #1F1533;
+      transform: rotate(45deg);
+      border-radius: 20px;
+      z-index: 2;
+    }
+
+    .container-style-2 .ground {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 60px;
+      background: #110B1C;
+      z-index: 3;
+    }
+
+    .container-style-2 .pine {
+      position: absolute;
+      bottom: 40px;
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 30px solid #0A0612;
+      z-index: 4;
+    }
+
+    .container-style-2 .pine::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: -12px;
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-bottom: 35px solid #0A0612;
+    }
+
+    .container-style-2 .pine1 { left: 20px; transform: scale(1.2); }
+    .container-style-2 .pine2 { left: 50px; transform: scale(0.8); }
+    .container-style-2 .pine3 { right: 30px; transform: scale(1.5); bottom: 35px; }
+
+    /* Style 3: Sunrise */
+    .container-style-3 {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(to bottom, #E8B4B8 0%, #EED6D3 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #A49393;
+    }
+
+    .container-style-3 .sun {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      background: #F4A261;
+      border-radius: 50%;
+      box-shadow: 0 0 40px rgba(244, 162, 97, 0.6);
+    }
+
+    .container-style-3 .hill-back {
+      position: absolute;
+      bottom: 0;
+      left: -20px;
+      width: 120px;
+      height: 120px;
+      background: #A49393;
+      border-radius: 50% 50% 0 0;
+    }
+
+    .container-style-3 .hill-front {
+      position: absolute;
+      bottom: 0;
+      right: -30px;
+      width: 140px;
+      height: 100px;
+      background: #67595E;
+      border-radius: 50% 50% 0 0;
+      z-index: 2;
+    }
+
+    /* Style 4: Desert */
+    .container-style-4 {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #F9D423 0%, #FF4E50 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #3F0D12;
+    }
+
+    .container-style-4 .sun-desert {
+      position: absolute;
+      bottom: 120px;
+      left: 20px;
+      width: 80px;
+      height: 80px;
+      background: #FFE259;
+      border-radius: 50%;
+    }
+
+    .container-style-4 .dune-back {
+      position: absolute;
+      bottom: -40px;
+      left: -20px;
+      width: 200px;
+      height: 160px;
+      background: #C43A30;
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    .container-style-4 .dune-front {
+      position: absolute;
+      bottom: -60px;
+      right: -30px;
+      width: 180px;
+      height: 140px;
+      background: #3F0D12;
+      border-radius: 50%;
+      z-index: 2;
+    }
+
+    .container-style-4 .cactus {
+      position: absolute;
+      bottom: 30px;
+      left: 30px;
+      width: 8px;
+      height: 40px;
+      background: #110000;
+      border-radius: 4px;
+      z-index: 3;
+    }
+
+    .container-style-4 .cactus::before {
+      content: '';
+      position: absolute;
+      bottom: 15px;
+      left: -12px;
+      width: 15px;
+      height: 15px;
+      border-bottom: 6px solid #110000;
+      border-left: 6px solid #110000;
+      border-radius: 0 0 0 8px;
+    }
+
+    .container-style-4 .cactus::after {
+      content: '';
+      position: absolute;
+      bottom: 22px;
+      right: -12px;
+      width: 15px;
+      height: 15px;
+      border-bottom: 6px solid #110000;
+      border-right: 6px solid #110000;
+      border-radius: 0 0 8px 0;
+    }
+
+    /* Style 5: Paris (Eiffel Tower + Seine) */
+    .container-style-paris {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #b0c4de 0%, #ffdab9 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #6c7a89;
+    }
+
+    .container-style-paris .river {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 40px;
+      background: #4A90E2;
+      z-index: 2;
+    }
+
+    .container-style-paris .river::before {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 10px;
+      width: 60px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 2px;
+    }
+
+    .container-style-paris .river::after {
+      content: '';
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      width: 40px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 2px;
+    }
+
+    .container-style-paris .eiffel-base {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 40px;
+      border-top: 15px solid #2C3E50;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      box-sizing: border-box;
+      z-index: 1;
+    }
+
+    .container-style-paris .eiffel-base::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 30px;
+      background: #b0c4de;
+      border-radius: 50% 50% 0 0;
+      border-top: 5px solid #2C3E50;
+    }
+
+    .container-style-paris .eiffel-mid {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 60px;
+      background: #2C3E50;
+      clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+      z-index: 1;
+    }
+
+    .container-style-paris .eiffel-top {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 10px;
+      height: 60px;
+      background: #2C3E50;
+      clip-path: polygon(40% 0%, 60% 0%, 100% 100%, 0% 100%);
+      z-index: 1;
+    }
+
+    .container-style-paris .sun {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background: #FFF3D8;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #FFF3D8;
+    }
+
+    /* Style 6: Seattle (Space Needle + Pine + Rain) */
+    .container-style-seattle {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #78909c 0%, #37474f 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #263238;
+    }
+
+    .container-style-seattle .ground {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 40px;
+      background: #263238;
+      z-index: 3;
+    }
+
+    .container-style-seattle .needle-base {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 100px;
+      background: #546e7a;
+      clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+      z-index: 2;
+    }
+
+    .container-style-seattle .needle-disk {
+      position: absolute;
+      bottom: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 20px;
+      background: #cfd8dc;
+      border-radius: 50% 50% 10px 10px;
+      z-index: 3;
+    }
+
+    .container-style-seattle .needle-spire {
+      position: absolute;
+      bottom: 150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 40px;
+      background: #cfd8dc;
+      z-index: 2;
+    }
+
+    .container-style-seattle .pine {
+      position: absolute;
+      bottom: 30px;
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 40px solid #1b5e20;
+      z-index: 4;
+    }
+
+    .container-style-seattle .pine::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: -10px;
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 30px solid #1b5e20;
+    }
+
+    .container-style-seattle .pine1 { left: 10px; }
+    .container-style-seattle .pine2 { right: 10px; transform: scale(0.8); }
+
+    /* Style 7: Cityscape (New York / Chicago / General Metro) */
+    .container-style-cityscape {
+      position: relative;
+      width: 160px;
+      height: 335px;
+      background: linear-gradient(180deg, #1A1C29 0%, #2c3e50 100%);
+      border-radius: 100px;
+      overflow: hidden;
+      transform: scale(0.9);
+      border: 4px solid #f39c12;
+    }
+
+    .container-style-cityscape .moon {
+      position: absolute;
+      top: 50px;
+      left: 30px;
+      width: 40px;
+      height: 40px;
+      background: #f1c40f;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(241, 196, 15, 0.6);
+    }
+
+    .container-style-cityscape .building-1 {
+      position: absolute;
+      bottom: 0;
+      left: 10px;
+      width: 30px;
+      height: 120px;
+      background: #111;
+      z-index: 2;
+    }
+
+    .container-style-cityscape .building-2 {
+      position: absolute;
+      bottom: 0;
+      left: 45px;
+      width: 45px;
+      height: 180px;
+      background: #0a0a0a;
+      z-index: 1;
+    }
+
+    .container-style-cityscape .building-2::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 15px;
+      width: 15px;
+      height: 20px;
+      background: #0a0a0a;
+    }
+
+    .container-style-cityscape .building-3 {
+      position: absolute;
+      bottom: 0;
+      right: 15px;
+      width: 35px;
+      height: 140px;
+      background: #1a1a1a;
+      z-index: 2;
+    }
+
+    .container-style-cityscape .window {
+      position: absolute;
+      width: 6px;
+      height: 8px;
+      background: #f1c40f;
+      box-shadow: 0 0 5px #f1c40f;
+    }
+
+    .container-style-cityscape .w1 { bottom: 30px; left: 8px; }
+    .container-style-cityscape .w2 { bottom: 70px; left: 16px; }
+    .container-style-cityscape .w3 { bottom: 100px; left: 10px; background: #333; box-shadow: none; }
+
+    .container-style-cityscape .w4 { bottom: 40px; left: 10px; }
+    .container-style-cityscape .w5 { bottom: 90px; left: 25px; }
+    .container-style-cityscape .w6 { bottom: 140px; left: 15px; }
+
+    .container-style-cityscape .w7 { bottom: 50px; left: 10px; }
+    .container-style-cityscape .w8 { bottom: 80px; left: 20px; }
+    .container-style-cityscape .w9 { bottom: 110px; left: 12px; background: #333; box-shadow: none; }
+
+  </style>
+</head>
+<body>
+  <header class="tool-header">
+    <nav>
+      <div class="tool-nav">
+        <div class="logo">
+          <a href="../index.html">
+            <img src="../favicons/favicon-96x96.png" alt="chunky.dad logo" class="logo-img">
+            <span style="margin-left: 10px; font-weight: 600;">chunky.dad | Testing</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="page-wrapper">
+    <div style="text-align: center;">
+      <h1 style="color: var(--accent);">City Landscapes</h1>
+      <p style="color: var(--text-muted);">Testing ideas for landscape art at the bottom of city pages.</p>
+    </div>
+
+    <div class="landscapes-grid" id="landscapes-grid">
+      <!-- Generated via JS -->
+    </div>
+  </div>
+
+  <script src="../js/city-config.js"></script>
+  <script>
+    const grid = document.getElementById('landscapes-grid');
+    const cities = Object.values(CITY_CONFIG).sort((a, b) => a.name.localeCompare(b.name));
+
+    cities.forEach((city, i) => {
+      if (!city.visible) return;
+
+      // Match specific cities to specific styles if appropriate, else fallback
+      let styleType = i % 7; // Default round-robin
+
+      const p = city.patterns || [];
+      if (p.includes('paris')) {
+        styleType = 'paris';
+      } else if (p.includes('seattle')) {
+        styleType = 'seattle';
+      } else if (p.includes('new york') || p.includes('nyc') || p.includes('chicago') || p.includes('los angeles') || p.includes('london')) {
+        styleType = 'cityscape';
+      } else if (p.includes('las vegas') || p.includes('palm springs') || p.includes('phoenix')) {
+        styleType = 3; // Desert
+      } else if (p.includes('denver') || p.includes('poconos') || p.includes('montreal')) {
+        styleType = 0; // Mountains
+      }
+
+      const card = document.createElement('div');
+      card.className = 'landscape-card';
+
+      let landscapeHtml = '';
+      if (styleType === 0) {
+        landscapeHtml = `
+          <div class="container">
+            <div class="mountain">
+              <div class="backdrop"></div>
+            </div>
+            <div class="range"></div>
+            <div class="tree treeBack tree1"><div class="top"></div><div class="mid"></div></div>
+            <div class="tree treeBack tree2"><div class="top"></div><div class="mid"></div></div>
+            <div class="tree treeBack tree3"><div class="top"></div><div class="mid"></div></div>
+            <div class="tower"><div class="roof1"></div></div>
+          </div>
+        `;
+      } else if (styleType === 1) {
+        landscapeHtml = `
+          <div class="container-style-2">
+            <div class="stars"></div>
+            <div class="moon"></div>
+            <div class="mountain-back"></div>
+            <div class="mountain-mid"></div>
+            <div class="mountain-front"></div>
+            <div class="ground"></div>
+            <div class="pine pine1"></div>
+            <div class="pine pine2"></div>
+            <div class="pine pine3"></div>
+          </div>
+        `;
+      } else if (styleType === 2) {
+        landscapeHtml = `
+          <div class="container-style-3">
+            <div class="sun"></div>
+            <div class="hill-back"></div>
+            <div class="hill-front"></div>
+          </div>
+        `;
+      } else if (styleType === 3) {
+        landscapeHtml = `
+          <div class="container-style-4">
+            <div class="sun-desert"></div>
+            <div class="dune-back"></div>
+            <div class="dune-front"></div>
+            <div class="cactus"></div>
+          </div>
+        `;
+      } else if (styleType === 'paris' || styleType === 4) {
+        landscapeHtml = `
+          <div class="container-style-paris">
+            <div class="sun"></div>
+            <div class="eiffel-top"></div>
+            <div class="eiffel-mid"></div>
+            <div class="eiffel-base"></div>
+            <div class="river"></div>
+          </div>
+        `;
+      } else if (styleType === 'seattle' || styleType === 5) {
+        landscapeHtml = `
+          <div class="container-style-seattle">
+            <div class="needle-spire"></div>
+            <div class="needle-disk"></div>
+            <div class="needle-base"></div>
+            <div class="ground"></div>
+            <div class="pine pine1"></div>
+            <div class="pine pine2"></div>
+          </div>
+        `;
+      } else if (styleType === 'cityscape' || styleType === 6) {
+        landscapeHtml = `
+          <div class="container-style-cityscape">
+            <div class="moon"></div>
+            <div class="building-1">
+              <div class="window w1"></div>
+              <div class="window w2"></div>
+              <div class="window w3"></div>
+            </div>
+            <div class="building-2">
+              <div class="window w4"></div>
+              <div class="window w5"></div>
+              <div class="window w6"></div>
+            </div>
+            <div class="building-3">
+              <div class="window w7"></div>
+              <div class="window w8"></div>
+              <div class="window w9"></div>
+            </div>
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        <h2>${city.emoji} ${city.name}</h2>
+        ${landscapeHtml}
+      `;
+
+      grid.appendChild(card);
+    });
+  </script>
+</body>
+</html>
