@@ -1812,7 +1812,7 @@ body.index-page main {
 
 .calendar-day {
     background: var(--background-primary);
-    border-radius: 8px;
+    border-radius: 15px;
     padding: 0.5rem;
     min-height: 120px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2898,7 +2898,7 @@ footer {
 
     .calendar-day.week-view {
         min-height: 100px;
-        border-radius: 8px;
+        border-radius: 15px;
     }
 
     .calendar-day.week-view .day-header {
@@ -3069,7 +3069,7 @@ footer {
 
     .calendar-day {
         padding: 0;
-        border-radius: 0;
+        border-radius: 15px;
     }
 
     .day-header {
@@ -3445,7 +3445,7 @@ footer {
 
     .calendar-day {
         padding: 0;
-        border-radius: 0;
+        border-radius: 15px;
     }
 
     .calendar-day h3 {
