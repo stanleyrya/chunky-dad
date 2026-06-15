@@ -234,7 +234,7 @@ class CalendarCore {
         }
         
         // Extract start date
-        const startMatch = sectionText.match(/DTSTART:(.+)/);
+        const startMatch = sectionText.match(/DTSTART(?:;[^:]+)?:(.+)/);
         if (startMatch) {
             section.dtstart = startMatch[1].trim();
         }
@@ -271,7 +271,7 @@ class CalendarCore {
                 }
             } else {
                 // No timezone parameter
-                const dateMatch = line.match(/DTSTART:(.+)/);
+                const dateMatch = line.match(/DTSTART(?:;[^:]+)?:(.+)/);
                 if (dateMatch) {
                     currentEvent.start = this.parseICalDate(dateMatch[1]);
                 }
@@ -287,7 +287,7 @@ class CalendarCore {
                 }
             } else {
                 // No timezone parameter
-                const dateMatch = line.match(/DTEND:(.+)/);
+                const dateMatch = line.match(/DTEND(?:;[^:]+)?:(.+)/);
                 if (dateMatch) {
                     currentEvent.end = this.parseICalDate(dateMatch[1]);
                 }
@@ -306,7 +306,7 @@ class CalendarCore {
                     currentEvent.recurrenceId = this.parseICalDate(`TZID=${match[1]}:${match[2]}`);
                 }
             } else {
-                const dateMatch = line.match(/RECURRENCE-ID:(.+)/);
+                const dateMatch = line.match(/RECURRENCE-ID(?:;[^:]+)?:(.+)/);
                 if (dateMatch) {
                     currentEvent.recurrenceId = this.parseICalDate(dateMatch[1]);
                 }
