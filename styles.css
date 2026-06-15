@@ -2727,7 +2727,6 @@ body.index-page main {
 
 .marker-selected {
     z-index: 1010 !important;
-    position: relative !important;
 }
 
 .marker-dimmed {
