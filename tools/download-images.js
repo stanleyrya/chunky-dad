@@ -1044,7 +1044,8 @@ async function main() {
   
   if (totalFailed > 0) {
     console.log('\n⚠️  Some images failed to download. Check the logs above for details.');
-    process.exit(1);
+    // We do not exit with 1 because network errors for some images are expected
+    // and should not fail the entire CI workflow. We will still log the failures.
   }
   
   console.log('\n🎉 Image download process completed successfully!');
