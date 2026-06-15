@@ -1784,6 +1784,7 @@ body.index-page main {
 .calendar-grid {
     background-color: var(--text-inverse);
     border-radius: 15px;
+    overflow: hidden;
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 0;
@@ -1812,7 +1813,7 @@ body.index-page main {
 
 .calendar-day {
     background: var(--background-primary);
-    border-radius: 15px;
+    border-radius: 0;
     padding: 0.5rem;
     min-height: 120px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2898,7 +2899,7 @@ footer {
 
     .calendar-day.week-view {
         min-height: 100px;
-        border-radius: 15px;
+        border-radius: 0;
     }
 
     .calendar-day.week-view .day-header {
@@ -3069,7 +3070,7 @@ footer {
 
     .calendar-day {
         padding: 0;
-        border-radius: 15px;
+        border-radius: 0;
     }
 
     .day-header {
@@ -3278,7 +3279,7 @@ footer {
 
     .calendar-day.week-view {
         min-height: auto;
-        border-radius: 6px;
+        border-radius: 0;
     }
 
     .calendar-day.week-view .day-header {
@@ -3445,7 +3446,7 @@ footer {
 
     .calendar-day {
         padding: 0;
-        border-radius: 15px;
+        border-radius: 0;
     }
 
     .calendar-day h3 {
