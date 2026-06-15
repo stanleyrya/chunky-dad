@@ -19,6 +19,12 @@
       "description": "Debug Scope - Look deep inside calendar processing (magnify those logs)"
     },
     {
+      "name": "test-city-landscapes.html",
+      "size": 23118,
+      "icon": "🌄",
+      "description": "City landscapes tester"
+    },
+    {
       "name": "test-google-sheets-loader.html",
       "size": 43013,
       "icon": "📊",
