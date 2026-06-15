@@ -4284,7 +4284,37 @@ footer {
 
 /* Month view uses same base styling as week view */
 .calendar-day.month-day {
-    /* Inherits from .calendar-day base styling */
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-day.month-day .day-header {
+    padding: 0.2rem;
+    margin: 0;
+    border: none;
+    background: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.calendar-day.month-day .day-number {
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.calendar-day.month-day .day-events {
+    padding: 0;
+    gap: 0.2rem;
+    flex: 1;
+}
+
+.calendar-grid.month-view-grid {
+    grid-template-rows: auto repeat(6, minmax(45px, auto));
 }
 
 
@@ -4416,6 +4446,10 @@ footer {
         margin: 0 auto;
     }
     
+    .nav-container {
+        padding: 0.5rem 2rem;
+    }
+
     /* City page grid layout - map to the right */
     .city-page {
         display: grid;
@@ -4425,6 +4459,7 @@ footer {
         max-width: 1600px;
         margin: 0 auto;
         padding: 0 2rem;
+        width: 100%;
     }
     
     .city-page .weekly-calendar {
