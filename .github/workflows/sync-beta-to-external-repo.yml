@@ -26,6 +26,8 @@ jobs:
       with:
         fetch-depth: 0
         ref: ${{ github.ref }}
+        # Note: GitHub App installation tokens will soon use a new stateless format (ghs_...)
+        # and may be longer (~520 characters). Avoid adding hardcoded length assumptions.
         token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Determine branch for workflow_dispatch
@@ -46,6 +48,8 @@ jobs:
       with:
         fetch-depth: 0
         ref: ${{ steps.branch.outputs.branch }}
+        # Note: GitHub App installation tokens will soon use a new stateless format (ghs_...)
+        # and may be longer (~520 characters). Avoid adding hardcoded length assumptions.
         token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Get current branch name
@@ -62,6 +66,8 @@ jobs:
     
     - name: Add external repository remote
       run: |
+        # Note: GitHub App installation tokens will soon use a new stateless format (ghs_...)
+        # and may be longer (~520 characters). Avoid adding hardcoded length assumptions.
         git remote add external https://${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git || true
         git remote set-url external https://${{ secrets.BETA_REPO_TOKEN }}@github.com/${{ secrets.BETA_REPO_OWNER }}/chunky-dad-beta.git
     
