@@ -351,7 +351,7 @@ body.index-page header.visible {
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 1rem;
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
     position: relative;
     width: 100%;
@@ -1981,6 +1981,10 @@ body.index-page main {
     word-wrap: break-word;
     overflow-wrap: break-word;
     hyphens: manual;
+}
+
+.event-item .event-venue {
+    display: none;
 }
 
 /* Remove color changes on hover - keep original colors */
@@ -4383,18 +4387,6 @@ footer {
 
 /* Desktop and large screens - ensure full information is always shown */
 @media (min-width: 1025px) {
-
-
-
-    .event-item.enhanced {
-        padding: 0.5rem 0;
-        margin-bottom: 0.3rem;
-    }
-
-    .daily-events {
-        padding: 0.3rem 0;
-        gap: 0.2rem;
-    }
 
     /* Show city name on larger screens */
     .city-name {
