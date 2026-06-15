@@ -5,7 +5,6 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
-const { JSDOM } = require('jsdom');
 
 // Import shared filename utilities
 const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename } = require('../js/filename-utils.js');
@@ -217,24 +216,21 @@ async function extractLinktreeProfilePicture(linktreeUrl) {
     // Fetch the Linktree page HTML
     const html = await fetchPageContent(linktreeUrl);
     
-    // Parse HTML with JSDOM
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
-    
-    // Look for the profile picture element
-    const profilePictureDiv = document.querySelector('#profile-picture');
-    if (!profilePictureDiv) {
-      console.log('⚠️  No profile picture div found on Linktree page');
+    // Use regex to find the profile picture URL to avoid JSDOM CSS parsing errors
+    let profilePictureUrl = null;
+    const jsonMatch = html.match(/"profilePictureUrl":"([^"]+)"/);
+    if (jsonMatch && jsonMatch[1]) {
+      profilePictureUrl = jsonMatch[1];
+    } else {
+      const metaMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
+      if (metaMatch && metaMatch[1]) {
+        profilePictureUrl = metaMatch[1];
+      }
+    }
+    if (!profilePictureUrl) {
+      console.log('⚠️  No profile picture image found in HTML');
       return null;
     }
-    
-    const img = profilePictureDiv.querySelector('img');
-    if (!img || !img.src) {
-      console.log('⚠️  No profile picture image found in profile-picture div');
-      return null;
-    }
-    
-    const profilePictureUrl = img.src;
     console.log(`✅ Found profile picture URL: ${profilePictureUrl}`);
     
     return profilePictureUrl;
@@ -250,15 +246,11 @@ async function extractWikipediaLogo(wikipediaUrl) {
   console.log(`🔍 Extracting logo from Wikipedia: ${wikipediaUrl}`);
   
   const html = await fetchPageContent(wikipediaUrl);
-  const dom = new JSDOM(html);
-  const document = dom.window.document;
-  
-  const infoboxImage = document.querySelector('td.infobox-image img');
-  if (!infoboxImage?.src) {
+  const match = html.match(/<td[^>]*class="[^"]*infobox-image[^"]*"[^>]*>[\s\S]*?<img[^>]*src="([^"]+)"/i);
+  if (!match || !match[1]) {
     throw new Error('No logo found in Wikipedia infobox');
   }
-  
-  let logoUrl = infoboxImage.src;
+  let logoUrl = match[1];
   if (logoUrl.startsWith('//')) {
     logoUrl = 'https:' + logoUrl;
   } else if (logoUrl.startsWith('/')) {
@@ -743,11 +735,13 @@ function addProcessedUrl(imageUrls, result) {
 }
 
 // Extract image URLs from calendar data using calendar loader
-function extractImageUrls() {
+async function extractImageUrls() {
   const imageUrls = {
     eventsWithInfo: [],  // Changed to array of event objects with image info
     favicons64: new Set(),  // Higher quality for map markers
-    favicons256: new Set()   // High quality for cards/OG
+    favicons256: new Set(),   // High quality for cards/OG
+    linktreeUrls: new Set(),
+    wikipediaUrls: new Set()
   };
   
   // Read all calendar files
@@ -833,7 +827,46 @@ function extractImageUrls() {
     console.log('📁 No bars directory found, skipping bar logo extraction');
   }
   
+
+  // Process bear directory items from Google Sheets
+  try {
+    console.log('🐻 Processing Bear Directory data for favicons...');
+    const SHEET_ID = '1-ttoHpM6unij08U40voVi8YLn7j8Mhld4FkRsKrzql4';
+    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+    // We can use fetchPageContent to get the data as text
+    const text = await fetchPageContent(SHEET_URL);
+    if (text) {
+      const jsonString = text.substring(47).slice(0, -2);
+      const json = JSON.parse(jsonString);
+      const rows = json.table.rows;
+
+      let directoryItemsProcessed = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row.c || !row.c[0] || !row.c[0].v) continue;
+
+        const name = row.c[0] && row.c[0].v ? row.c[0].v.trim() : '';
+        const shop = row.c[1] && row.c[1].v ? row.c[1].v.trim() : '';
+        const website = row.c[2] && row.c[2].v ? row.c[2].v.trim() : '';
+        const instagram = row.c[3] && row.c[3].v ? row.c[3].v.trim() : '';
+
+        const finalUrl = website || shop || (instagram ? `https://instagram.com/${instagram}` : '');
+
+        if (finalUrl && !finalUrl.includes('instagram.com/')) {
+          const result = processWebsiteUrl(finalUrl, ` for directory item ${name}`);
+          addProcessedUrl(imageUrls, result);
+          directoryItemsProcessed++;
+        }
+      }
+      console.log(`✅ Processed ${directoryItemsProcessed} directory items for favicons`);
+    }
+  } catch (err) {
+    console.warn('⚠️  Could not process Bear Directory data:', err.message);
+  }
+
   const linktreeCount = imageUrls.linktreeUrls ? imageUrls.linktreeUrls.size : 0;
+
   const wikipediaCount = imageUrls.wikipediaUrls ? imageUrls.wikipediaUrls.size : 0;
   console.log(`🔍 Found ${imageUrls.eventsWithInfo.length} event images, ${imageUrls.favicons64.size} favicon URLs (64px), ${imageUrls.favicons256.size} favicon URLs (256px), ${linktreeCount} Linktree URLs, and ${wikipediaCount} Wikipedia URLs`);
   return imageUrls;
@@ -860,7 +893,7 @@ async function main() {
   ensureDir(path.join(ROOT, sampleOneTimeDir));
   
   // Extract image URLs from calendar data
-  const imageUrls = extractImageUrls();
+  const imageUrls = await extractImageUrls();
   
   let totalDownloaded = 0;
   let totalSkipped = 0;
