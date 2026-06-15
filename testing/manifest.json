@@ -8,7 +8,7 @@
     },
     {
       "name": "index.html",
-      "size": 25825,
+      "size": 25841,
       "icon": "📄",
       "description": "Test file"
     },
@@ -17,6 +17,12 @@
       "size": 68633,
       "icon": "🔍",
       "description": "Debug Scope - Look deep inside calendar processing (magnify those logs)"
+    },
+    {
+      "name": "test-city-landscapes.html",
+      "size": 34609,
+      "icon": "🌄",
+      "description": "City landscapes tester"
     },
     {
       "name": "test-google-sheets-loader.html",
