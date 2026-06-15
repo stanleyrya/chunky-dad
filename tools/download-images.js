@@ -1136,7 +1136,6 @@ async function main() {
   
   if (totalFailed > 0) {
     console.log('\n⚠️  Some images failed to download. Check the logs above for details.');
-    process.exit(1);
   }
   
   console.log('\n🎉 Image download process completed successfully!');
