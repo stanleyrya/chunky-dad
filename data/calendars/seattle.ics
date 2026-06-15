@@ -163,6 +163,58 @@ SUMMARY:Leather Night
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260614T040000Z
+DTEND:20260614T100000Z
+DTSTAMP:20260615T101633Z
+UID:762BAD4A-F1D8-4519-BAC3-D755EF9BA263
+CREATED:20260514T005858Z
+DESCRIPTION:description: Bearracuda Seattle GLOW PARTY at MASSIVE - 619 E. 
+ Pine SATURDAY\, June 13th Doors at 9pm\, Party til 3am! Hot Go-Go&rsquo\;s\
+ , Chunky Visuals Decor by James Sharinghousen\, Photos by Matt Hoffman\, Ho
+ sted by Matt Bearracuda DJs Matt Stands DISCOUNTED tix for those in UV/Neon
+  Attire Our GLOW PARTY is coming to Seattle! We are offering DEEPLY discoun
+ ted tickets for those wearing UV Reactive or Neon Attire. Bearracuda reside
+ nt DJ\, Matt Stands spins all night with Hot GoGos\, Decor by James Sharing
+ housen…\nbar: MASSIVE\naddress: 619 E. Pine\nticketUrl: https://www.sickeni
+ ng.events/e/bearracuda-seattle-glow/tickets\ninstagram: https://www.instagr
+ am.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upl
+ oad/q_auto\,f_auto/v1776554715/saas/logos/image_1776554705644_n8exy3gc9.web
+ p\ncover: DISCOUNTED tix for those in UV/Neon Attire\nshortName: South Seat
+ tle Social\nwebsite: https://bearracuda.com/events/seattle-glow/\ngmaps: ht
+ tps://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine\
+ nkey: bearracuda-2026-06-14-seattle\ntimezone: America/Los_Angeles\noverrid
+ eUid: 6irujvg3effpkdu42krgr91osj@google.com\noverrideRecurrenceId: 20260614
+ T180000Z
+LAST-MODIFIED:20260514T012018Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda Seattle GLOW PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20250717T190000
+DTEND;TZID=America/Los_Angeles:20250718T020000
+RRULE:FREQ=MONTHLY;BYDAY=3TH
+DTSTAMP:20260615T101633Z
+UID:1dl55f6fm4qqv42go7r3nj5st9@google.com
+CREATED:20250712T180301Z
+DESCRIPTION:Bar: Diesel<br>Google Maps: <a href="https://maps.app.goo.gl/yD
+ DhdkV7M7p2mYEP7">https://maps.app.goo.gl/yDDhdkV7M7p2mYEP7</a><br>Website: 
+ <a href="https://dieselseattle.com/DIESEL.html">https://dieselseattle.com/D
+ IESEL.html</a><br>Facebook: <a href="https://www.facebook.com/DieselSeattle
+ ">https://www.facebook.com/DieselSeattle</a><br>Instagram: <a href="https:/
+ /www.instagram.com/dieselseattle">https://www.instagram.com/dieselseattle</
+ a>
+LAST-MODIFIED:20250719T040329Z
+LOCATION:47.61337340244105\, -122.31441768029491
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Leather Night
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART;TZID=America/New_York:20260614T000000
 DTEND;TZID=America/New_York:20260614T060000
 DTSTAMP:20260615T132035Z
