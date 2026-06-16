@@ -1272,7 +1272,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                                             <div class="modal-event-item" data-event-slug="${event.slug}">
                                     <div class="event-name">${event.name}</div>
                                     <div class="event-details">
-                                        <span class="event-time">${event.time}</span>
+                                        ${event.time ? `<span class="event-time">${event.time}</span>` : ''}
                                         <span class="event-venue">${event.bar}</span>
                                         ${event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `<span class="event-cover">${event.cover}</span>` : ''}
                                     </div>
@@ -1846,7 +1846,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
-                        <button class="share-event-btn icon-only" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day} ${event.time}" title="Share this event" aria-label="Share this event">
+                        <button class="share-event-btn icon-only" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day}${event.time ? ' ' + event.time : ''}" title="Share this event" aria-label="Share this event">
                             <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
                         </button>
                     </div>
@@ -2363,12 +2363,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const eventsHtml = filteredDayEvents.length > 0 
                 ? filteredDayEvents.map(event => {
-                    const mobileTime = this.formatTimeForMobile(event.time);
+                    const mobileTime = event.time ? this.formatTimeForMobile(event.time) : null;
                     
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
                             ${this.generateEventNameElements(event, hideEvents)}
-                            <div class="event-time">${mobileTime}</div>
+                            ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
@@ -2500,12 +2500,12 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    const mobileTime = this.formatTimeForMobile(event.time);
+                    const mobileTime = event.time ? this.formatTimeForMobile(event.time) : null;
                     
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'} - ${event.time}">
+                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
                             ${this.generateEventNameElements(event, hideEvents)}
-                            <div class="event-time">${mobileTime}</div>
+                            ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
                     `;
