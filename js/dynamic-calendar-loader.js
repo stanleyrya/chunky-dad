@@ -1153,6 +1153,8 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 let faviconUrl;
                 
+                let fallbackFaviconUrl = '';
+
                 if (event.favicon) {
                     let url = event.favicon;
                     // Ensure URL has protocol
@@ -1164,7 +1166,9 @@ class DynamicCalendarLoader extends CalendarCore {
                     } else {
                         faviconUrl = url;
                     }
-                } else if (event.website) {
+                }
+
+                if (!faviconUrl && event.website) {
                     let url = event.website;
                     // Ensure URL has protocol
                     if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -1174,6 +1178,11 @@ class DynamicCalendarLoader extends CalendarCore {
                     if (this.dataSource === 'cached') {
                         faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
 
+                        try {
+                            const hostname = new URL(url).hostname;
+                            fallbackFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+                        } catch(e) {}
+
                         logger.debug('MAP', 'Using local favicon for cached data', {
                             website: url,
                             localPath: faviconUrl,
@@ -1181,8 +1190,10 @@ class DynamicCalendarLoader extends CalendarCore {
                         });
                     } else {
                         // For live data, use Google favicon service with higher quality
-                        const hostname = new URL(url).hostname;
-                        faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+                        try {
+                            const hostname = new URL(url).hostname;
+                            faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+                        } catch(e) {}
                     }
                 }
                 
@@ -1192,16 +1203,23 @@ class DynamicCalendarLoader extends CalendarCore {
                     website: event.website,
                     favicon: event.favicon,
                     faviconUrl,
+                    fallbackFaviconUrl,
                     textFallback,
                     dataSource: this.dataSource
                 });
                 
                 const el = document.createElement('div');
                 el.className = 'favicon-marker';
+
+                let onErrorStr = `this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');`;
+                if (fallbackFaviconUrl) {
+                    onErrorStr = `this.onerror=function(){this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');}; this.src='${fallbackFaviconUrl}';`;
+                }
+
                 el.innerHTML = `
                     <div class="favicon-marker-container">
                         <img src="${faviconUrl}" alt="venue" class="favicon-marker-icon"
-                             onerror="this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');">
+                             onerror="${onErrorStr}">
                     </div>
                 `;
                 return el;
