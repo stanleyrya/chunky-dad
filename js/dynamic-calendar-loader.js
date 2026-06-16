@@ -2213,7 +2213,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     overrideCount: overrideEvents.length,
                     expandedRecurringCount: expandedRecurringEvents.length
                 });
-            } else {
+            } else if (expandedRecurringEvents.length > 0) {
                 // Keep expanded recurring events (these are the individual occurrences)
                 deduplicatedEvents.push(...expandedRecurringEvents);
                 logger.debug('CALENDAR', 'Keeping expanded recurring events', {
@@ -2221,6 +2221,9 @@ class DynamicCalendarLoader extends CalendarCore {
                     uid: key.split('-')[1],
                     expandedRecurringCount: expandedRecurringEvents.length
                 });
+            } else {
+                // Keep the first normal event
+                deduplicatedEvents.push(eventGroup[0]);
             }
         }
         
@@ -2253,8 +2256,9 @@ class DynamicCalendarLoader extends CalendarCore {
             const recurrenceId = event.recurrenceId || null;
             
             // Create a key that handles null recurrenceId properly
-            // For Date objects, use ISO string; for null, use 'null'
-            const recurrenceIdKey = recurrenceId instanceof Date ? recurrenceId.toISOString() : 'null';
+            // For expanded recurring events without an explicit recurrenceId, use their generated start date
+            const effectiveRecurrenceId = recurrenceId || (event.isExpanded ? event.startDate : null);
+            const recurrenceIdKey = effectiveRecurrenceId instanceof Date ? effectiveRecurrenceId.toISOString() : (effectiveRecurrenceId || 'null');
             const key = `${uid}-${recurrenceIdKey}`;
             
             logger.debug('CALENDAR', 'Processing event for UID/recurrenceId deduplication', {
@@ -2358,36 +2362,37 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Multi-day events check
                 if (this.isMultiDay(event)) {
                     const eventDate = new Date(event.startDate);
-                    eventDate.setHours(0, 0, 0, 0);
+                    const localEventDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                     const eventEndDate = new Date(event.endDate);
 
                     // Adjust end date if it's exactly midnight, so it doesn't spill over to the next day
                     if (eventEndDate.getHours() === 0 && eventEndDate.getMinutes() === 0 && eventEndDate.getSeconds() === 0) {
                         eventEndDate.setTime(eventEndDate.getTime() - 1);
                     }
-                    eventEndDate.setHours(0, 0, 0, 0);
+                    const localEventEndDate = new Date(eventEndDate.getFullYear(), eventEndDate.getMonth(), eventEndDate.getDate());
 
-                    return dayDate >= eventDate && dayDate <= eventEndDate;
+                    return dayDate.getTime() >= localEventDate.getTime() && dayDate.getTime() <= localEventEndDate.getTime();
                 }
 
                 // For already expanded recurring events, just check if the date matches
                 if (event.isExpanded) {
                     const eventDate = new Date(event.startDate);
-                    eventDate.setHours(0, 0, 0, 0);
-                    
-                    return eventDate.getTime() === dayDate.getTime();
+                const localEventDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+
+                return localEventDate.getTime() === dayDate.getTime();
                 }
                 
                 // For non-expanded recurring events, use the occurrence check
                 if (event.recurring) {
-                    return this.doesRecurringEventOccurOnDate(event, day);
+                    const matches = this.doesRecurringEventOccurOnDate(event, day);
+                    return matches;
                 }
                 
                 // For non-recurring events, check exact date match
                 const eventDate = new Date(event.startDate);
-                eventDate.setHours(0, 0, 0, 0);
+                const localEventDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                 
-                return eventDate.getTime() === dayDate.getTime();
+                return localEventDate.getTime() === dayDate.getTime();
             });
             
             // Events are already deduplicated in getFilteredEvents, so use them directly
@@ -2396,25 +2401,26 @@ class DynamicCalendarLoader extends CalendarCore {
             const eventsHtml = filteredDayEvents.length > 0 
                 ? filteredDayEvents.map(event => {
                     const isMultiDay = this.isMultiDay(event);
-                    const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (event.time ? this.formatTimeForMobile(event.time) : null);
+                    const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (!isMultiDay && event.time ? this.formatTimeForMobile(event.time) : null);
 
                     // Determine multi-day flow class
                     let flowClass = '';
                     if (isMultiDay) {
                         const eventStart = new Date(event.startDate);
-                        eventStart.setHours(0, 0, 0, 0);
+                        const localEventStart = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+
                         const eventEnd = new Date(event.endDate);
                         if (eventEnd.getHours() === 0 && eventEnd.getMinutes() === 0 && eventEnd.getSeconds() === 0) {
                             eventEnd.setTime(eventEnd.getTime() - 1);
                         }
-                        eventEnd.setHours(0, 0, 0, 0);
+                        const localEventEnd = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
 
                         const dayDate = new Date(day);
                         dayDate.setHours(0, 0, 0, 0);
 
-                        if (dayDate.getTime() === eventStart.getTime()) {
+                        if (dayDate.getTime() === localEventStart.getTime()) {
                             flowClass = ' multi-day multi-day-start';
-                        } else if (dayDate.getTime() === eventEnd.getTime()) {
+                        } else if (dayDate.getTime() === localEventEnd.getTime()) {
                             flowClass = ' multi-day multi-day-end';
                         } else {
                             flowClass = ' multi-day multi-day-middle';
@@ -2505,24 +2511,24 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Multi-day events check
                 if (this.isMultiDay(event)) {
                     const eventDate = new Date(event.startDate);
-                    eventDate.setHours(0, 0, 0, 0);
+                    const localEventDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                     const eventEndDate = new Date(event.endDate);
 
                     // Adjust end date if it's exactly midnight, so it doesn't spill over to the next day
                     if (eventEndDate.getHours() === 0 && eventEndDate.getMinutes() === 0 && eventEndDate.getSeconds() === 0) {
                         eventEndDate.setTime(eventEndDate.getTime() - 1);
                     }
-                    eventEndDate.setHours(0, 0, 0, 0);
+                    const localEventEndDate = new Date(eventEndDate.getFullYear(), eventEndDate.getMonth(), eventEndDate.getDate());
 
-                    return dayDate >= eventDate && dayDate <= eventEndDate;
+                    return dayDate.getTime() >= localEventDate.getTime() && dayDate.getTime() <= localEventEndDate.getTime();
                 }
 
                 // For already expanded recurring events, just check if the date matches
                 if (event.isExpanded) {
                     const eventDate = new Date(event.startDate);
-                    eventDate.setHours(0, 0, 0, 0);
+                    const localEventDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                     
-                    const matches = eventDate.getTime() === dayDate.getTime();
+                    const matches = localEventDate.getTime() === dayDate.getTime();
                     if (matches) {
                         logger.debug('CALENDAR', 'Month view: Expanded recurring event matches day', {
                             eventName: event.name,
@@ -2550,9 +2556,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 // For non-recurring events, check exact date match
                 const eventDate = new Date(event.startDate);
-                eventDate.setHours(0, 0, 0, 0);
+                const localEventDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                 
-                return eventDate.getTime() === dayDate.getTime();
+                return localEventDate.getTime() === dayDate.getTime();
             });
             
             // Events are already deduplicated in getFilteredEvents, so use them directly
@@ -2571,25 +2577,26 @@ class DynamicCalendarLoader extends CalendarCore {
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
                     const isMultiDay = this.isMultiDay(event);
-                    const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (event.time ? this.formatTimeForMobile(event.time) : null);
+                    const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (!isMultiDay && event.time ? this.formatTimeForMobile(event.time) : null);
 
                     // Determine multi-day flow class
                     let flowClass = '';
                     if (isMultiDay) {
                         const eventStart = new Date(event.startDate);
-                        eventStart.setHours(0, 0, 0, 0);
+                        const localEventStart = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+
                         const eventEnd = new Date(event.endDate);
                         if (eventEnd.getHours() === 0 && eventEnd.getMinutes() === 0 && eventEnd.getSeconds() === 0) {
                             eventEnd.setTime(eventEnd.getTime() - 1);
                         }
-                        eventEnd.setHours(0, 0, 0, 0);
+                        const localEventEnd = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
 
                         const dayDate = new Date(day);
                         dayDate.setHours(0, 0, 0, 0);
 
-                        if (dayDate.getTime() === eventStart.getTime()) {
+                        if (dayDate.getTime() === localEventStart.getTime()) {
                             flowClass = ' multi-day multi-day-start';
-                        } else if (dayDate.getTime() === eventEnd.getTime()) {
+                        } else if (dayDate.getTime() === localEventEnd.getTime()) {
                             flowClass = ' multi-day multi-day-end';
                         } else {
                             flowClass = ' multi-day multi-day-middle';

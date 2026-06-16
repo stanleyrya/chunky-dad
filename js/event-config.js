@@ -143,17 +143,27 @@ function getUpcomingEventDates(event) {
 
 // Format event dates for display
 function formatEventDates(event) {
-    const upcomingDates = getUpcomingEventDates(event);
-    if (!upcomingDates.startDate || !upcomingDates.endDate) return '';
+    let start, end;
+    if (event.startDate && event.endDate) {
+        start = new Date(event.startDate);
+        end = new Date(event.endDate);
+    } else {
+        const upcomingDates = getUpcomingEventDates(event);
+        if (!upcomingDates.startDate || !upcomingDates.endDate) return '';
+        start = new Date(upcomingDates.startDate);
+        end = new Date(upcomingDates.endDate);
+    }
     
-    const start = new Date(upcomingDates.startDate);
-    const end = new Date(upcomingDates.endDate);
+    // Account for end dates exactly at midnight
+    if (end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0) {
+        end = new Date(end.getTime() - 1);
+    }
     
     // Format as M/D (e.g., 8/11, 12/3)
     const startFormatted = `${start.getMonth() + 1}/${start.getDate()}`;
     const endFormatted = `${end.getMonth() + 1}/${end.getDate()}`;
     
-    if (start.getTime() === end.getTime()) {
+    if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth() && start.getDate() === end.getDate()) {
         return startFormatted;
     }
     
