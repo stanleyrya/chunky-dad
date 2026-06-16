@@ -102,6 +102,12 @@ function parseGoogleSheetsData(json) {
     const rows = json.table.rows;
     const data = [];
     
+    if (rows.length === 0) return data;
+
+    // Parse header to dynamically find columns if they exist beyond the hardcoded ones
+    const headers = rows[0].c.map(cell => cell?.v?.toLowerCase().trim());
+    const faviconIdx = headers.indexOf('favicon');
+
     // Skip header row
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
@@ -128,7 +134,8 @@ function parseGoogleSheetsData(json) {
             instagram: cells[7]?.v || '',      // H: instagram
             website: cells[8]?.v || '',        // I: website
             facebook: cells[9]?.v || '',       // J: facebook
-            image: ''                          // K: twitter (not used, image field empty for now)
+            image: '',                         // K: twitter (not used, image field empty for now)
+            favicon: faviconIdx !== -1 ? (cells[faviconIdx]?.v || '') : ''
         };
         
         // Clean Instagram username - remove @ symbol and trim
@@ -330,6 +337,7 @@ function cleanBarObject(bar) {
         'image',
         'wikipedia',
         'gayCities',
+        'favicon',
         'faviconBg',
         'faviconFg',
         'wikipediaExtractionFailureAt',

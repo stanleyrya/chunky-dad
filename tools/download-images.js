@@ -946,13 +946,19 @@ async function extractImageUrls() {
       console.log(`📋 Processing bar file: ${file} (${bars.length} bars)`);
       
       for (const bar of bars) {
-        // Process Wikipedia URLs for bar logos (prioritize over website favicons)
+        if (bar.favicon) {
+          const result = processWebsiteUrl(bar.favicon, ` (favicon override for ${bar.name})`);
+          addProcessedUrl(imageUrls, result);
+        }
+
+        // Process Wikipedia URLs for bar logos
         if (bar.wikipedia) {
           const result = processWebsiteUrl(bar.wikipedia, ` for ${bar.name}`);
           addProcessedUrl(imageUrls, result);
-          console.log(`📚 Using Wikipedia logo for ${bar.name} (skipping website favicon)`);
-        } else if (bar.website) {
-          // Only process website URLs for favicons if no Wikipedia URL exists
+        }
+
+        // Process website URLs for favicons
+        if (bar.website) {
           const result = processWebsiteUrl(bar.website, ` for ${bar.name}`);
           addProcessedUrl(imageUrls, result);
         }
