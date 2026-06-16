@@ -3830,6 +3830,7 @@ class DynamicCalendarLoader extends CalendarCore {
             description,
             coverImage: testEventData.coverImage || null,
             image: testEventData.image || null,
+            favicon: testEventData.favicon || null,
             heroImage: testEventData.heroImage || null,
             website: testEventData.website || null,
             tickets: testEventData.tickets || null,

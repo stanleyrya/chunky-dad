@@ -85,6 +85,7 @@ const EVENT_KEY_ALIASES = {
     map: 'gmaps',
 
     image: 'image',
+    favicon: 'favicon',
     img: 'image',
     photo: 'image',
     cover: 'cover',
@@ -123,7 +124,8 @@ const URL_LIKE_FIELDS = new Set([
     'facebook',
     'instagram',
     'twitter',
-    'image'
+    'image',
+    'favicon'
 ]);
 
 const DEFAULT_NOTES_EXCLUDED_FIELDS = new Set([
@@ -160,7 +162,8 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
     instagram: 'instagram',
     facebook: 'facebook',
     gmaps: 'gmaps',
-    image: 'image'
+    image: 'image',
+    favicon: 'favicon'
 });
 
 function normalizeAliasKey(key) {

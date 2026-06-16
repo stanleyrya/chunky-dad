@@ -2327,6 +2327,17 @@
                   </div>
                   <small>Image uploads aren’t allowed at this time, but you can add a public image link here.</small>
                 </div>
+                <div class="field-group">
+                  <label for="event-favicon">Favicon URL</label>
+                  <div class="input-with-action">
+                    <input type="url" id="event-favicon" placeholder="https://example.com/favicon.ico">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-favicon" aria-label="Paste favicon link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                  </div>
+                  <small>Custom favicon URL if you want to override the default.</small>
+                </div>
               </div>
 
               <div class="field-group">
@@ -3055,6 +3066,7 @@
         dom.facebookInput = document.getElementById('event-facebook');
         dom.gmapsInput = document.getElementById('event-gmaps');
         dom.imageInput = document.getElementById('event-image');
+        dom.faviconInput = document.getElementById('event-favicon');
         dom.resetButton = document.getElementById('reset-form');
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
         dom.addToGoogleCalendarButton = document.getElementById('add-to-google-calendar');
@@ -4260,6 +4272,7 @@
           gmaps: normalizeText(event.gmaps || ''),
           ticketUrl: normalizeText(event.ticketUrl || event.tickets || ''),
           image: normalizeText(event.image || ''),
+          favicon: normalizeText(event.favicon || ''),
           recurrence: normalizeText(event.recurrence || ''),
           recurring: Boolean(event.recurrence),
           recurrenceId,
@@ -6343,7 +6356,8 @@
         instagram: 'Instagram',
         facebook: 'Facebook',
         gmaps: 'Google Maps',
-        image: 'Image'
+        image: 'Image',
+        favicon: 'Favicon'
       });
 
       function snapshotFormFields(s) {
@@ -7158,6 +7172,7 @@ Example output:
           useVenueInstagram: false,
           useVenueFacebook: false,
           image: '',
+          favicon: '',
           isEditingExisting: false,
           editingExistingId: '',
           editingExistingMode: 'series',
@@ -7394,6 +7409,7 @@ Example output:
         if (dom.facebookInput) dom.facebookInput.value = state.facebook || '';
         if (dom.gmapsInput) dom.gmapsInput.value = state.gmaps || '';
         if (dom.imageInput) dom.imageInput.value = state.image || '';
+        if (dom.faviconInput) dom.faviconInput.value = state.favicon || '';
         updateTimeNotes();
         applyRecurrenceStateToForm();
         syncLinkFieldStates();
@@ -7619,6 +7635,12 @@ Example output:
         if (dom.imageInput) {
           dom.imageInput.addEventListener('input', event => {
             state.image = event.target.value;
+            refreshUi();
+          });
+        }
+        if (dom.faviconInput) {
+          dom.faviconInput.addEventListener('input', event => {
+            state.favicon = event.target.value;
             refreshUi();
           });
         }
@@ -8381,6 +8403,7 @@ Example output:
           dom.shortNameInput,
           dom.coverInput,
           dom.imageInput,
+          dom.faviconInput,
           dom.descriptionInput,
           dom.citySelect,
           dom.venueSelect,
@@ -9211,6 +9234,7 @@ Example output:
           setTextParam('searchEndDate', state.editingExistingSearchEndDate);
         }
         setTextParam('img', state.image);
+        setTextParam('favicon', state.favicon);
         const coordsValue = (state.location || '').trim();
         setTextParam('coords', coordsValue);
         const includeDebug = typeof options.includeDebug === 'boolean'
@@ -9297,6 +9321,7 @@ Example output:
         setParam('facebook', state.facebook);
         setParam('gmaps', state.gmaps);
         setParam('image', state.image);
+        setParam('favicon', state.favicon);
         const coordinates = parseCoordinates(state.location);
         setParam('lat', coordinates ? coordinates.lat : '');
         setParam('lng', coordinates ? coordinates.lng : '');
@@ -9741,6 +9766,7 @@ Example output:
             : null,
           isDeletingOverride: deletingCustomOverride,
           image: (state.image || '').trim() || null,
+          favicon: (state.favicon || '').trim() || null,
           website: (state.website || '').trim() || null,
           instagram: (state.instagram || '').trim() || null,
           facebook: (state.facebook || '').trim() || null,
@@ -9783,6 +9809,7 @@ Example output:
           overrideRecurrenceId: event.overrideRecurrenceId || null,
           durationMinutes: event.durationMinutes,
           image: event.image,
+          favicon: event.favicon,
           website: event.website,
           instagram: event.instagram,
           facebook: event.facebook,
