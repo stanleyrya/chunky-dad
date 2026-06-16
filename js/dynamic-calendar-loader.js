@@ -1159,7 +1159,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     if (!url.startsWith('http://') && !url.startsWith('https://')) {
                         url = 'https://' + url;
                     }
-                    if (this.dataSource === 'cached') {
+                    if (this.dataSource === 'cached' && !event.isTestEvent) {
                         faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
                     } else {
                         faviconUrl = url;
@@ -3703,6 +3703,29 @@ class DynamicCalendarLoader extends CalendarCore {
     addTestEvent(testEventData) {
         logger.info('CALENDAR', 'Test event added from test interface', testEventData);
         
+        // Change header when in testing flow
+        const headerBrandText = document.querySelector('.logo .brand-text');
+        if (headerBrandText) {
+            headerBrandText.textContent = 'TESTING NEW EVENT';
+            headerBrandText.style.color = '#ff7b2f';
+        } else {
+            const headerLinks = document.querySelectorAll('.logo a');
+            headerLinks.forEach(link => {
+                // If there's an image, keep it, just replace text nodes or add a span
+                const img = link.querySelector('img');
+                link.innerHTML = '';
+                if (img) link.appendChild(img);
+                const span = document.createElement('span');
+                span.textContent = 'TESTING NEW EVENT';
+                span.style.fontWeight = 'bold';
+                span.style.color = '#ff7b2f';
+                span.style.letterSpacing = '1px';
+                span.style.marginLeft = '0.5rem';
+                link.appendChild(span);
+                link.href = '#';
+            });
+        }
+
         if (!testEventData || typeof testEventData !== 'object') {
             logger.warn('CALENDAR', 'Invalid test event payload received from test interface', { testEventData });
             return;
@@ -3926,6 +3949,7 @@ class DynamicCalendarLoader extends CalendarCore {
         logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
         
         try {
+
             // Add timeout to prevent hanging initialization - 30s to account for delays + timeouts + slow networks
             const initPromise = this.renderCityPage();
             const timeoutPromise = new Promise((_, reject) => {
@@ -3936,6 +3960,21 @@ class DynamicCalendarLoader extends CalendarCore {
             this.isInitialized = true;
             logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
             
+            // Check for testEvent in sessionStorage
+            try {
+                const testEventParam = sessionStorage.getItem('testEventPayload');
+                if (testEventParam) {
+                    const testEventData = JSON.parse(testEventParam);
+                    logger.info('CALENDAR', 'Found test event in sessionStorage', testEventData);
+                    // Clear it so it doesn't persist across random navigations in the same tab later
+                    // (But keep it if they just reload? Let's not clear it so reload works,
+                    // they can close the tab to clear it)
+                    this.addTestEvent(testEventData);
+                }
+            } catch (e) {
+                logger.error('CALENDAR', 'Failed to parse testEvent from sessionStorage', e);
+            }
+
             if (window.parent && window.parent !== window) {
                 try {
                     window.parent.postMessage({
