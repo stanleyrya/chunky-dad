@@ -9195,6 +9195,7 @@ Example output:
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
+
             // Assume we are in testing/ folder, so go up one directory
             faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '../img/favicons');
             try {

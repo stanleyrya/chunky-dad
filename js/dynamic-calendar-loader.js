@@ -1174,27 +1174,24 @@ class DynamicCalendarLoader extends CalendarCore {
                     if (!url.startsWith('http://') && !url.startsWith('https://')) {
                         url = 'https://' + url;
                     }
-                    // Convert to local favicon URL if using cached data
-                    if (this.dataSource === 'cached') {
-                        faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
 
+                    // We only do live google fallback on the test flow
+                    if (event.isTestEvent) {
+                        faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
                         try {
                             const hostname = new URL(url).hostname;
                             fallbackFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
                         } catch(e) {}
-
-                        logger.debug('MAP', 'Using local favicon for cached data', {
-                            website: url,
-                            localPath: faviconUrl,
-                            dataSource: this.dataSource
-                        });
                     } else {
-                        // For live data, use Google favicon service with higher quality
-                        try {
-                            const hostname = new URL(url).hostname;
-                            faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
-                        } catch(e) {}
+                        faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
                     }
+
+                    logger.debug('MAP', 'Using local favicon for cached data', {
+                        website: url,
+                        localPath: faviconUrl,
+                        fallbackFaviconUrl,
+                        dataSource: this.dataSource
+                    });
                 }
                 
                 const textFallback = this.getMarkerText(event);
