@@ -2663,7 +2663,13 @@
         <div class="calendar-preview-card">
           <div class="preview-header">
             <h2>Website Preview</h2>
-            <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <button type="button" class="ghost-button action-button is-compact" id="open-preview-new-tab" aria-label="Open Preview in New Tab" style="border-color: rgba(255, 162, 74, 0.4); background: rgba(255, 162, 74, 0.1);">
+                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                <span>Open Tab</span>
+              </button>
+              <span id="calendar-status" class="status-badge status-loading">Loading calendar…</span>
+            </div>
           </div>
           <iframe id="calendar-preview" title="chunky.dad calendar preview" src="../city.html?city=nyc"></iframe>
         </div>
@@ -3166,6 +3172,7 @@
         dom.existingClearSummaryButton = document.getElementById('existing-clear-summary');
         dom.calendarIframe = document.getElementById('calendar-preview');
         dom.calendarStatus = document.getElementById('calendar-status');
+        dom.openPreviewNewTabButton = document.getElementById('open-preview-new-tab');
         dom.previewMedia = document.getElementById('preview-media');
         dom.previewImage = document.getElementById('preview-image');
         dom.previewCity = document.getElementById('preview-city');
@@ -7669,6 +7676,19 @@ Example output:
         if (dom.copyShareButton) {
           dom.copyShareButton.addEventListener('click', () => {
             openTellDadEmail(dom.copyShareButton);
+          });
+        }
+        if (dom.openPreviewNewTabButton) {
+          dom.openPreviewNewTabButton.addEventListener('click', () => {
+            const payload = buildMessagePayload();
+            if (!payload) {
+              showToast('Add start & end times to preview.', 'warn');
+              return;
+            }
+            sessionStorage.setItem('testEventPayload', JSON.stringify(payload));
+            const targetCity = state.city || 'nyc';
+            const newWindowUrl = `../city.html?city=${encodeURIComponent(targetCity)}`;
+            window.open(newWindowUrl, '_blank');
           });
         }
         if (dom.addToCalendarButton) {
