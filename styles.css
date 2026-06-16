@@ -1865,7 +1865,7 @@ body.index-page main {
     color: var(--text-inverse) !important;
     width: 1.6em;
     height: 1.6em;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
