@@ -757,7 +757,14 @@ class CalendarCore {
         
         if (endDate) {
             const endTime = formatTime(endDate);
-                            return `${startTime}-${endTime}`;
+            if ((startTime === '12AM' && endTime === '12AM') || (startTime === '12AM' && endTime === '11:59PM')) {
+                return null; // All day event, no time to display
+            }
+            return `${startTime}-${endTime}`;
+        }
+
+        if (startDate._wasUTC === false && startTime === '12AM' && startDate.getHours() === 0 && startDate.getMinutes() === 0) {
+            return null; // All day event, no time to display
         }
         
         return startTime;
@@ -975,7 +982,7 @@ class CalendarCore {
         };
         
         const abbreviatedDay = dayAbbrevMap[day] || day;
-        const baseDisplay = `${abbreviatedDay} ${time}`;
+        const baseDisplay = time ? `${abbreviatedDay} ${time}` : abbreviatedDay;
         
         logger.debug('CALENDAR', 'Enhanced day/time display (simplified)', {
             eventName: event.name,
