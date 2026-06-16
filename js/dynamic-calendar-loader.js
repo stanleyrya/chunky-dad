@@ -2020,7 +2020,7 @@ class DynamicCalendarLoader extends CalendarCore {
             
             // For all events (including expanded recurring events), check if they fall within the period
             const eventEndDate = event.endDate ? new Date(event.endDate) : null;
-            const isInPeriod = this.isEventInPeriod(new Date(event.startDate), start, end, eventEndDate) : (new Date(event.startDate) >= start && new Date(event.startDate) <= end);
+            const isInPeriod = this.isEventInPeriod(new Date(event.startDate), start, end, eventEndDate);
             logger.debug('CALENDAR', `🔍 FILTER: Event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
                 eventDate: new Date(event.startDate).toISOString(),
                 periodStart: start.toISOString(),
