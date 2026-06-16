@@ -1928,6 +1928,45 @@ body.index-page main {
     line-height: 1.3;
 }
 
+/* Multi-day Event Flow Styling */
+.event-item.multi-day-start {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+    margin-right: -10px; /* Overlap the gap */
+    padding-right: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.event-item.multi-day-middle {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    margin-left: -10px;
+    margin-right: -10px;
+    padding-left: 12px;
+    padding-right: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.event-item.multi-day-end {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+    margin-left: -10px;
+    padding-left: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Ensure multi-day events cover the parent calendar day paddings/gaps */
+.calendar-day .daily-events,
+.calendar-day .day-events {
+    overflow: visible; /* Needed to allow negative margins to bleed out */
+}
+
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
     .event-item:hover {
