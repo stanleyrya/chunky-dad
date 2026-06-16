@@ -2480,9 +2480,8 @@ class AiWebParser {
             'OCR_IMAGE_TEXT',
             String(text || '').trim()
         ];
-        if (eventSummary && typeof eventSummary === 'string' && eventSummary.trim().length > 0) {
-            parts.push('OCR_IMAGE_SUMMARY', String(eventSummary).trim());
-        }
+        // Note: OCR_IMAGE_SUMMARY is purposefully omitted here so it doesn't get swept into
+        // evidence checks. It is injected into the prompt separately via buildExtractionPrompt.
         return parts.filter(Boolean).join('\n');
     }
 
@@ -4229,36 +4228,63 @@ class AiWebParser {
             const partial = await runPartitionExtraction(promptFields, 'meta', 'meta');
             merged = this.mergeAiEventFields(merged, partial);
         } else if (payloadMode === 'exhaustive') {
-            const sharedSections = [sectionBundle.jsonLd, sectionBundle.metaFallback].filter(Boolean);
-            const snippets = this.buildPromptSnippets(sharedSections, sectionBundle.content ? [sectionBundle.content] : [], maxHtmlChars);
-            const fallbackSnippets = snippets.length > 0
-                ? snippets
-                : this.buildPromptSnippets([], [sectionBundle.jsonLd, sectionBundle.metaFallback, sectionBundle.content].filter(Boolean), maxHtmlChars);
-            // Exhaustive mode uses mixed data sources
-            const dataFlags = {
-                jsonLd: !!sectionBundle.jsonLd,
-                meta: !!sectionBundle.metaFallback,
-                content: !!sectionBundle.content
-            };
-            for (const field of promptFields) {
-                const remainingField = this.getRemainingPromptFields([field], merged);
-                if (remainingField.length === 0) continue;
-                const partial = await this.extractFieldsAcrossSnippets(
-                    htmlData,
-                    aiConfig,
-                    cityConfig,
-                    parserConfig,
-                    remainingField,
-                    fallbackSnippets,
-                    `exhaustive ${field}`,
-                    validationState,
-                    {
-                        partitionLabel: 'mixed',
-                        extractionTrace,
-                        dataFlags
-                    }
-                );
-                merged = this.mergeAiEventFields(merged, partial);
+            // In exhaustive mode, clearly separate structured data passes from unstructured passes.
+            // First, try structured data if available.
+            const structuredSections = [sectionBundle.jsonLd, sectionBundle.metaFallback].filter(Boolean);
+            if (structuredSections.length > 0) {
+                const structuredSnippets = this.buildPromptSnippets([], structuredSections, maxHtmlChars);
+                const structuredFlags = {
+                    jsonLd: !!sectionBundle.jsonLd,
+                    meta: !!sectionBundle.metaFallback
+                };
+                for (const field of promptFields) {
+                    const remainingField = this.getRemainingPromptFields([field], merged);
+                    if (remainingField.length === 0) continue;
+                    const partial = await this.extractFieldsAcrossSnippets(
+                        htmlData,
+                        aiConfig,
+                        cityConfig,
+                        parserConfig,
+                        remainingField,
+                        structuredSnippets,
+                        `exhaustive-structured ${field}`,
+                        validationState,
+                        {
+                            partitionLabel: 'structured',
+                            extractionTrace,
+                            dataFlags: structuredFlags
+                        }
+                    );
+                    merged = this.mergeAiEventFields(merged, partial);
+                }
+            }
+
+            // Second, try unstructured data (content) for remaining fields.
+            if (sectionBundle.content) {
+                const unstructuredSnippets = this.buildPromptSnippets([], [sectionBundle.content], maxHtmlChars);
+                const unstructuredFlags = {
+                    content: true
+                };
+                for (const field of promptFields) {
+                    const remainingField = this.getRemainingPromptFields([field], merged);
+                    if (remainingField.length === 0) continue;
+                    const partial = await this.extractFieldsAcrossSnippets(
+                        htmlData,
+                        aiConfig,
+                        cityConfig,
+                        parserConfig,
+                        remainingField,
+                        unstructuredSnippets,
+                        `exhaustive-unstructured ${field}`,
+                        validationState,
+                        {
+                            partitionLabel: 'unstructured',
+                            extractionTrace,
+                            dataFlags: unstructuredFlags
+                        }
+                    );
+                    merged = this.mergeAiEventFields(merged, partial);
+                }
             }
         } else {
             const promptGroups = this.getBestModePromptGroups(sectionBundle);
@@ -4701,20 +4727,29 @@ ${String(snippet || '')}`;
 
         let dataProvided = '';
         if (hasOcr || hasSegment) {
-            dataProvided += `DATA PROVIDED:
-`;
+            dataProvided += `DATA PROVIDED:\n`;
             if (hasOcr) {
-                dataProvided += `- OCR_IMAGE_TEXT: Raw text extracted from event images
-- OCR_IMAGE_SUMMARY: Summary of what\'s in the image
-`;
+                dataProvided += `- OCR_IMAGE_TEXT: Raw text extracted from event images\n`;
             }
             if (hasSegment) {
                 dataProvided += `- SEGMENT_IMAGE_URL: Image URLs associated with this segment
-- SEGMENT_LINK_URL: Link URLs from the page
-`;
+- SEGMENT_LINK_URL: Link URLs from the page\n`;
             }
-            dataProvided += `
-`;
+            dataProvided += `\n`;
+        }
+
+        let additionalContext = '';
+        if (hasOcr && htmlData && Array.isArray(htmlData.ocrResults) && htmlData.ocrResults.length > 0) {
+            const summaries = htmlData.ocrResults
+                .filter(r => r && typeof r.eventSummary === 'string' && r.eventSummary.trim().length > 0)
+                .map(r => r.eventSummary.trim());
+            if (summaries.length > 0) {
+                additionalContext += `ADDITIONAL CONTEXT (IMAGE SUMMARIES):\n`;
+                summaries.forEach(s => {
+                    additionalContext += `- ${s}\n`;
+                });
+                additionalContext += `\n`;
+            }
         }
 
         // Build SOURCE DATA section based on what's actually provided
@@ -4734,7 +4769,7 @@ ${String(snippet || '')}`;
 
         const templates = {
             default: `You are a data scraper. You are being provided part of a website that includes information about an event. You must check if any of the requested keys are within the provided scraped data and return it as ONLY valid JSON. If a requested key is not explicitly in the source text, skip and omit it.
-${dataProvided}${sourceData}Preferred keys:
+${dataProvided}${sourceData}${additionalContext}Preferred keys:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
@@ -4743,7 +4778,7 @@ Rules:
 
 `,
             alternate: `You are extracting specific event fields from web page source data. Carefully search the entire provided text for the listed fields — they may appear in metadata, structured data, or body text. Return only what you find as a single valid JSON object.
-${dataProvided}${sourceData}Fields to find:
+${dataProvided}${sourceData}${additionalContext}Fields to find:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
@@ -4753,7 +4788,7 @@ Rules:
 
 `,
             repair: `Convert this text into one strict JSON object for an event.
-Preferred keys:
+${additionalContext}Preferred keys:
 ${fieldContext}
 Rules:
 - JSON object only
@@ -4788,7 +4823,7 @@ TEXT:
         const snippetStr = String(snippet || '');
 
         // Check for OCR/segment markers in the snippet (for multi-event segments)
-        flags.ocr = snippetStr.includes('OCR_IMAGE_TEXT') || snippetStr.includes('OCR_IMAGE_SUMMARY');
+        flags.ocr = snippetStr.includes('OCR_IMAGE_TEXT');
         flags.segment = snippetStr.includes('SEGMENT_INDEX') || snippetStr.includes('SEGMENT_IMAGE_URL');
 
         // Check section bundle for other data sources
