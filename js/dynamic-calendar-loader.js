@@ -1142,41 +1142,55 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Create marker icon with favicon or three letters
     createMarkerIcon(event) {
-        if (event.website) {
+        if (event.favicon || event.website) {
             try {
                 logger.debug('MAP', 'Creating favicon marker', {
                     eventName: event.name,
                     website: event.website,
+                    favicon: event.favicon,
                     dataSource: this.dataSource
                 });
                 
-                // Ensure URL has protocol
-                let url = event.website;
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                    url = 'https://' + url;
-                }
-                
                 let faviconUrl;
                 
-                // Convert to local favicon URL if using cached data
-                if (this.dataSource === 'cached') {
-                    faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
-                    
-                    logger.debug('MAP', 'Using local favicon for cached data', {
-                        website: url,
-                        localPath: faviconUrl,
-                        dataSource: this.dataSource
-                    });
-                } else {
-                    // For live data, use Google favicon service with higher quality
-                    const hostname = new URL(url).hostname;
-                    faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+                if (event.favicon) {
+                    let url = event.favicon;
+                    // Ensure URL has protocol
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        url = 'https://' + url;
+                    }
+                    if (this.dataSource === 'cached') {
+                        faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+                    } else {
+                        faviconUrl = url;
+                    }
+                } else if (event.website) {
+                    let url = event.website;
+                    // Ensure URL has protocol
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        url = 'https://' + url;
+                    }
+                    // Convert to local favicon URL if using cached data
+                    if (this.dataSource === 'cached') {
+                        faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+
+                        logger.debug('MAP', 'Using local favicon for cached data', {
+                            website: url,
+                            localPath: faviconUrl,
+                            dataSource: this.dataSource
+                        });
+                    } else {
+                        // For live data, use Google favicon service with higher quality
+                        const hostname = new URL(url).hostname;
+                        faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+                    }
                 }
                 
                 const textFallback = this.getMarkerText(event);
                 
                 logger.debug('MAP', 'Favicon URL generated', {
-                    website: url,
+                    website: event.website,
+                    favicon: event.favicon,
                     faviconUrl,
                     textFallback,
                     dataSource: this.dataSource
