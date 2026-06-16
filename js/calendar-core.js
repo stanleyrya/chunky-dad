@@ -390,6 +390,9 @@ class CalendarCore {
                     if (additionalData.image) {
                         eventData.image = additionalData.image;
                     }
+                    if (additionalData.favicon) {
+                        eventData.favicon = additionalData.favicon;
+                    }
                     eventData.tea = additionalData.tea || additionalData.description;
                     eventData.address = additionalData.address || null;
                     eventData.website = additionalData.website;
@@ -639,7 +642,7 @@ class CalendarCore {
                     
                     
                     // Additional validation for URLs
-                    if (['website', 'instagram', 'facebook', 'gmaps', 'image', 'ticketUrl'].includes(mappedKey)) {
+                    if (['website', 'instagram', 'facebook', 'gmaps', 'image', 'favicon', 'ticketUrl'].includes(mappedKey)) {
                         // Ensure we have a valid URL
                         if (value.startsWith('http://') || value.startsWith('https://')) {
                             data[mappedKey] = value;

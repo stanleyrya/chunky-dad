@@ -313,6 +313,7 @@ class ScriptableUrlParser {
             'ticketUrl',
             'cover',
             'image',
+            'favicon',
             'source',
             'isBearEvent',
             'shortName',
