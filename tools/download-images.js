@@ -7,7 +7,7 @@ const http = require('http');
 const { URL } = require('url');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, isImageUrl } = require('../js/filename-utils.js');
 
 /**
  * Adjust Eventbrite image URLs to get uncropped versions
@@ -814,6 +814,11 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
 // Process a website URL and add it to the appropriate collection
 function processWebsiteUrl(url, context = '') {
   try {
+    if (isImageUrl(url)) {
+      console.log(`🖼️  Found direct image URL${context}: ${url}`);
+      return { type: 'favicon_direct', url };
+    }
+
     const domain = new URL(url).hostname;
     
     // Check if it's a Linktree URL
@@ -853,6 +858,9 @@ function addProcessedUrl(imageUrls, result) {
   } else if (result.type === 'favicon') {
     imageUrls.favicons64.add(result.urls.favicon64);
     imageUrls.favicons256.add(result.urls.favicon256);
+  } else if (result.type === 'favicon_direct') {
+    imageUrls.faviconsDirect = imageUrls.faviconsDirect || new Set();
+    imageUrls.faviconsDirect.add(result.url);
   }
 }
 
@@ -862,6 +870,7 @@ async function extractImageUrls() {
     eventsWithInfo: [],  // Changed to array of event objects with image info
     favicons64: new Set(),  // Higher quality for map markers
     favicons256: new Set(),   // High quality for cards/OG
+    faviconsDirect: new Set(), // Direct image favicons
     linktreeUrls: new Set(),
     wikipediaUrls: new Set()
   };
@@ -912,8 +921,12 @@ async function extractImageUrls() {
       }
       
       // Extract website URLs for favicons
+      if (event.favicon) {
+        const result = processWebsiteUrl(event.favicon, ` (favicon override for ${event.name})`);
+        addProcessedUrl(imageUrls, result);
+      }
       if (event.website) {
-        const result = processWebsiteUrl(event.website);
+        const result = processWebsiteUrl(event.website, ` for ${event.name}`);
         addProcessedUrl(imageUrls, result);
       }
     }
@@ -1071,6 +1084,24 @@ async function main() {
     }
   }
   
+  // Download direct image favicons
+  if (imageUrls.faviconsDirect && imageUrls.faviconsDirect.size > 0) {
+    console.log('\n🖼️  Downloading direct image favicons...');
+    for (const url of imageUrls.faviconsDirect) {
+      // Use size '64' so it generates the consistent -64px.ext filename expected by convertWebsiteUrlToFaviconPath
+      const result = await downloadImageWithSize(url, 'favicon', '64');
+      if (result.success) {
+        if (result.skipped) {
+          totalSkipped++;
+        } else {
+          totalDownloaded++;
+        }
+      } else {
+        totalFailed++;
+      }
+    }
+  }
+
   // Process Linktree profile pictures with multiple sizes
   if (imageUrls.linktreeUrls && imageUrls.linktreeUrls.size > 0) {
     console.log('\n🔗 Processing Linktree profile pictures with multiple sizes...');

@@ -226,6 +226,21 @@ function convertFaviconUrlToLocalPath(faviconUrl, basePath = 'img/favicons') {
 }
 
 /**
+ * Return true if the URL points to a direct image file.
+ * @param {string} url - The URL to check
+ * @returns {boolean}
+ */
+function isImageUrl(url) {
+    if (!url) return false;
+    try {
+        const parsedUrl = new URL(url);
+        return /\.(png|jpg|jpeg|gif|webp|svg|ico|bmp|tiff)$/i.test(parsedUrl.pathname);
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Return true if the URL is a Linktree page.
  * @param {string} url - The URL to check
  * @returns {boolean}
@@ -294,6 +309,10 @@ function generateWikipediaFaviconFilename(wikipediaUrl, size = '32') {
  * @returns {string} - The local file path
  */
 function convertWebsiteUrlToFaviconPath(websiteUrl, basePath = 'img/favicons') {
+    if (isImageUrl(websiteUrl)) {
+        return convertFaviconUrlToLocalPath(websiteUrl, basePath);
+    }
+
     const parsedUrl = new URL(websiteUrl);
     
     // Check if it's a Linktree URL
@@ -392,7 +411,8 @@ if (typeof module !== 'undefined' && module.exports) {
         generateWikipediaFaviconFilename,
         detectFileExtension,
         slugify,
-        simpleHash
+        simpleHash,
+        isImageUrl
     };
 }
 
@@ -413,6 +433,7 @@ if (typeof window !== 'undefined') {
         generateWikipediaFaviconFilename,
         detectFileExtension,
         slugify,
-        simpleHash
+        simpleHash,
+        isImageUrl
     };
 }
