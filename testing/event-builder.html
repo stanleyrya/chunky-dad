@@ -2343,15 +2343,15 @@
                   <small>Image uploads aren’t allowed at this time, but you can add a public image link here.</small>
                 </div>
                 <div class="field-group">
-                  <label for="event-favicon">Favicon URL</label>
+                  <label for="event-favicon">Custom Icon URL</label>
                   <div class="input-with-action">
                     <input type="url" id="event-favicon" placeholder="https://example.com/favicon.ico">
-                    <button type="button" class="field-action field-action-inline" data-paste-target="event-favicon" aria-label="Paste favicon link">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-favicon" aria-label="Paste icon link">
                       <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
                       <span>Paste</span>
                     </button>
                   </div>
-                  <small>Custom favicon URL if you want to override the default.</small>
+                  <small>Custom icon URL. If blank, we try to use the icon from the Website link.</small>
                 </div>
               </div>
 
@@ -2640,7 +2640,7 @@
             <div class="preview-body">
               <div class="preview-city" id="preview-city">City</div>
               <div class="preview-title-container">
-                <img id="preview-favicon" class="preview-favicon is-hidden" alt="" loading="lazy" onerror="this.classList.add('is-hidden')">
+                <img id="preview-favicon" class="preview-favicon is-hidden" alt="" loading="lazy">
                 <h3 class="preview-title" id="preview-title">Untitled event</h3>
               </div>
               <p class="preview-time" id="preview-time">Add start and end times to preview timing.</p>
@@ -2886,6 +2886,7 @@
 
   <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+  <script src="../js/filename-utils.js"></script>
   <script src="../js/logger.js"></script>
   <script src="../js/event-schema.js"></script>
   <script src="../js/calendar-core.js"></script>
@@ -6383,7 +6384,7 @@
         facebook: 'Facebook',
         gmaps: 'Google Maps',
         image: 'Image',
-        favicon: 'Favicon'
+        favicon: 'Icon URL'
       });
 
       function snapshotFormFields(s) {
@@ -9186,9 +9187,43 @@ Example output:
             dom.previewImage.alt = '';
           }
         }
-        const faviconUrl = (state.favicon || '').trim();
+        let faviconUrl = (state.favicon || '').trim();
+        let fallbackFaviconUrl = '';
+
+        if (!faviconUrl && state.website && window.FilenameUtils) {
+            let url = state.website;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+
+            // Assume we are in testing/ folder, so go up one directory
+            faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '../img/favicons');
+            try {
+                const hostname = new URL(url).hostname;
+                fallbackFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+            } catch (error) {
+                // Ignore invalid URLs
+            }
+        }
+
         if (dom.previewFavicon) {
+          // Clear any previous error handlers to avoid leaks or infinite loops
+          dom.previewFavicon.onerror = null;
+
           if (faviconUrl) {
+            if (fallbackFaviconUrl) {
+                dom.previewFavicon.onerror = function() {
+                    // Prevent infinite loops if fallback also fails
+                    this.onerror = function() {
+                        this.classList.add('is-hidden');
+                    };
+                    this.src = fallbackFaviconUrl;
+                };
+            } else {
+                dom.previewFavicon.onerror = function() {
+                    this.classList.add('is-hidden');
+                };
+            }
             dom.previewFavicon.src = faviconUrl;
             dom.previewFavicon.classList.remove('is-hidden');
           } else {
