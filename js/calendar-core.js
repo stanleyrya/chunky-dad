@@ -1504,8 +1504,45 @@ class CalendarCore {
         return { start, end };
     }
 
+    // Check if event is a multi-day event
+    isMultiDay(event) {
+        if (!event.startDate || !event.endDate) return false;
+
+        const start = new Date(event.startDate);
+        const end = new Date(event.endDate);
+
+        // Use local dates to avoid timezone issues
+        const startKey = `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`;
+        const endKey = `${end.getFullYear()}-${end.getMonth()}-${end.getDate()}`;
+
+        // Account for end dates that are just exactly at midnight the next day
+        // Some all-day events are 2026-06-26 00:00:00 to 2026-06-27 00:00:00
+        if (startKey !== endKey) {
+            // Check if end date is exactly 12:00 AM
+            if (end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0) {
+                // Adjust end date back by 1 millisecond for comparison
+                const adjustedEnd = new Date(end.getTime() - 1);
+                const adjustedEndKey = `${adjustedEnd.getFullYear()}-${adjustedEnd.getMonth()}-${adjustedEnd.getDate()}`;
+                return startKey !== adjustedEndKey;
+            }
+            return true;
+        }
+        return false;
+    }
+
     // Check if event falls within a date range
-    isEventInPeriod(eventDate, start, end) {
+    isEventInPeriod(eventDate, start, end, eventEndDate = null) {
+        // If it's a multi-day event and we have an end date, check if any part of the event overlaps with the period
+        if (eventEndDate) {
+            // Adjust end date if it's exactly midnight, so it doesn't spill over to the next day
+            const adjustedEnd = new Date(eventEndDate);
+            if (adjustedEnd.getHours() === 0 && adjustedEnd.getMinutes() === 0) {
+                 adjustedEnd.setTime(adjustedEnd.getTime() - 1);
+            }
+            return (eventDate <= end && adjustedEnd >= start);
+        }
+
+        // Single day event
         return eventDate >= start && eventDate <= end;
     }
 
@@ -1558,7 +1595,8 @@ class CalendarCore {
     filterEventsByDateRange(events, startDate, endDate) {
         return events.filter(event => {
             const eventDate = new Date(event.startDate);
-            return this.isEventInPeriod(eventDate, startDate, endDate) ||
+            const eventEndDate = event.endDate ? new Date(event.endDate) : null;
+            return this.isEventInPeriod(eventDate, startDate, endDate, eventEndDate) ||
                    this.isRecurringEventInPeriod(event, startDate, endDate);
         });
     }

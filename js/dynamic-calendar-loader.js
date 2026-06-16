@@ -1814,6 +1814,9 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Event badges
         const formatDayTime = (event) => {
+            if (this.isMultiDay(event) && window.formatEventDates) {
+                return window.formatEventDates(event);
+            }
             return this.getEnhancedDayTimeDisplay(event, this.currentView, periodBounds);
         };
         
@@ -2016,7 +2019,8 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             
             // For all events (including expanded recurring events), check if they fall within the period
-            const isInPeriod = this.isEventInPeriod(event.startDate, start, end);
+            const eventEndDate = event.endDate ? new Date(event.endDate) : null;
+            const isInPeriod = this.isEventInPeriod(new Date(event.startDate), start, end, eventEndDate) : (new Date(event.startDate) >= start && new Date(event.startDate) <= end);
             logger.debug('CALENDAR', `🔍 FILTER: Event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
                 eventDate: new Date(event.startDate).toISOString(),
                 periodStart: start.toISOString(),
@@ -2035,8 +2039,21 @@ class DynamicCalendarLoader extends CalendarCore {
             const dateA = new Date(a.startDate);
             const dateB = new Date(b.startDate);
             
-            // If dates are the same, sort by start time
+            // If dates are the same, sort by start time/multi-day
             if (dateA.toDateString() === dateB.toDateString()) {
+                const aIsMultiDay = this.isMultiDay(a);
+                const bIsMultiDay = this.isMultiDay(b);
+                const aIsAllDay = !a.time;
+                const bIsAllDay = !b.time;
+
+                // 1. Multi-day events go first
+                if (aIsMultiDay && !bIsMultiDay) return -1;
+                if (!aIsMultiDay && bIsMultiDay) return 1;
+
+                // 2. All-day events go second
+                if (aIsAllDay && !bIsAllDay) return -1;
+                if (!aIsAllDay && bIsAllDay) return 1;
+
                 return dateA.getTime() - dateB.getTime();
             }
             
@@ -2334,12 +2351,29 @@ class DynamicCalendarLoader extends CalendarCore {
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
                 
+                // Set dayDate for comparisons
+                const dayDate = new Date(day);
+                dayDate.setHours(0, 0, 0, 0);
+
+                // Multi-day events check
+                if (this.isMultiDay(event)) {
+                    const eventDate = new Date(event.startDate);
+                    eventDate.setHours(0, 0, 0, 0);
+                    const eventEndDate = new Date(event.endDate);
+
+                    // Adjust end date if it's exactly midnight, so it doesn't spill over to the next day
+                    if (eventEndDate.getHours() === 0 && eventEndDate.getMinutes() === 0 && eventEndDate.getSeconds() === 0) {
+                        eventEndDate.setTime(eventEndDate.getTime() - 1);
+                    }
+                    eventEndDate.setHours(0, 0, 0, 0);
+
+                    return dayDate >= eventDate && dayDate <= eventEndDate;
+                }
+
                 // For already expanded recurring events, just check if the date matches
                 if (event.isExpanded) {
                     const eventDate = new Date(event.startDate);
                     eventDate.setHours(0, 0, 0, 0);
-                    const dayDate = new Date(day);
-                    dayDate.setHours(0, 0, 0, 0);
                     
                     return eventDate.getTime() === dayDate.getTime();
                 }
@@ -2352,8 +2386,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 // For non-recurring events, check exact date match
                 const eventDate = new Date(event.startDate);
                 eventDate.setHours(0, 0, 0, 0);
-                const dayDate = new Date(day);
-                dayDate.setHours(0, 0, 0, 0);
                 
                 return eventDate.getTime() === dayDate.getTime();
             });
@@ -2363,10 +2395,34 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const eventsHtml = filteredDayEvents.length > 0 
                 ? filteredDayEvents.map(event => {
-                    const mobileTime = event.time ? this.formatTimeForMobile(event.time) : null;
+                    const isMultiDay = this.isMultiDay(event);
+                    const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (event.time ? this.formatTimeForMobile(event.time) : null);
+
+                    // Determine multi-day flow class
+                    let flowClass = '';
+                    if (isMultiDay) {
+                        const eventStart = new Date(event.startDate);
+                        eventStart.setHours(0, 0, 0, 0);
+                        const eventEnd = new Date(event.endDate);
+                        if (eventEnd.getHours() === 0 && eventEnd.getMinutes() === 0 && eventEnd.getSeconds() === 0) {
+                            eventEnd.setTime(eventEnd.getTime() - 1);
+                        }
+                        eventEnd.setHours(0, 0, 0, 0);
+
+                        const dayDate = new Date(day);
+                        dayDate.setHours(0, 0, 0, 0);
+
+                        if (dayDate.getTime() === eventStart.getTime()) {
+                            flowClass = ' multi-day multi-day-start';
+                        } else if (dayDate.getTime() === eventEnd.getTime()) {
+                            flowClass = ' multi-day multi-day-end';
+                        } else {
+                            flowClass = ' multi-day multi-day-middle';
+                        }
+                    }
                     
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
+                        <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
                             <div class="event-venue">${event.bar || ''}</div>
@@ -2443,12 +2499,28 @@ class DynamicCalendarLoader extends CalendarCore {
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
                 
+                const dayDate = new Date(day);
+                dayDate.setHours(0, 0, 0, 0);
+
+                // Multi-day events check
+                if (this.isMultiDay(event)) {
+                    const eventDate = new Date(event.startDate);
+                    eventDate.setHours(0, 0, 0, 0);
+                    const eventEndDate = new Date(event.endDate);
+
+                    // Adjust end date if it's exactly midnight, so it doesn't spill over to the next day
+                    if (eventEndDate.getHours() === 0 && eventEndDate.getMinutes() === 0 && eventEndDate.getSeconds() === 0) {
+                        eventEndDate.setTime(eventEndDate.getTime() - 1);
+                    }
+                    eventEndDate.setHours(0, 0, 0, 0);
+
+                    return dayDate >= eventDate && dayDate <= eventEndDate;
+                }
+
                 // For already expanded recurring events, just check if the date matches
                 if (event.isExpanded) {
                     const eventDate = new Date(event.startDate);
                     eventDate.setHours(0, 0, 0, 0);
-                    const dayDate = new Date(day);
-                    dayDate.setHours(0, 0, 0, 0);
                     
                     const matches = eventDate.getTime() === dayDate.getTime();
                     if (matches) {
@@ -2479,8 +2551,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 // For non-recurring events, check exact date match
                 const eventDate = new Date(event.startDate);
                 eventDate.setHours(0, 0, 0, 0);
-                const dayDate = new Date(day);
-                dayDate.setHours(0, 0, 0, 0);
                 
                 return eventDate.getTime() === dayDate.getTime();
             });
@@ -2500,10 +2570,34 @@ class DynamicCalendarLoader extends CalendarCore {
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
-                    const mobileTime = event.time ? this.formatTimeForMobile(event.time) : null;
+                    const isMultiDay = this.isMultiDay(event);
+                    const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (event.time ? this.formatTimeForMobile(event.time) : null);
+
+                    // Determine multi-day flow class
+                    let flowClass = '';
+                    if (isMultiDay) {
+                        const eventStart = new Date(event.startDate);
+                        eventStart.setHours(0, 0, 0, 0);
+                        const eventEnd = new Date(event.endDate);
+                        if (eventEnd.getHours() === 0 && eventEnd.getMinutes() === 0 && eventEnd.getSeconds() === 0) {
+                            eventEnd.setTime(eventEnd.getTime() - 1);
+                        }
+                        eventEnd.setHours(0, 0, 0, 0);
+
+                        const dayDate = new Date(day);
+                        dayDate.setHours(0, 0, 0, 0);
+
+                        if (dayDate.getTime() === eventStart.getTime()) {
+                            flowClass = ' multi-day multi-day-start';
+                        } else if (dayDate.getTime() === eventEnd.getTime()) {
+                            flowClass = ' multi-day multi-day-end';
+                        } else {
+                            flowClass = ' multi-day multi-day-middle';
+                        }
+                    }
                     
                     return `
-                        <div class="event-item" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
+                        <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
                             ${this.generateEventNameElements(event, hideEvents)}
                             ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
                             <div class="event-venue">${event.bar || ''}</div>
