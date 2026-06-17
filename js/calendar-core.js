@@ -1506,18 +1506,9 @@ class CalendarCore {
 
     getLocalHour(dateObj, timezone) {
         if (!dateObj || Number.isNaN(dateObj.getTime())) return null;
-        if (!timezone) return dateObj.getUTCHours();
-        try {
-            const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: timezone,
-                hour: 'numeric',
-                hourCycle: 'h23'
-            });
-            const hourStr = formatter.format(dateObj);
-            return parseInt(hourStr, 10);
-        } catch (e) {
-            return dateObj.getUTCHours();
-        }
+        // Event dates are stored as local Date objects representing their calendar's local time,
+        // so getHours() directly gives the correct local hour without secondary timezone conversion.
+        return dateObj.getHours();
     }
 
     // Get logical start date for event (shifts late-night events < 6am to previous day)
