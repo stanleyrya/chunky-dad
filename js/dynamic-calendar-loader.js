@@ -2114,6 +2114,10 @@ class DynamicCalendarLoader extends CalendarCore {
                     originalStartDate: event.startDate // Keep reference to original
                 };
                 
+                if (event.endDate && event.startDate) {
+                    const duration = new Date(event.endDate).getTime() - new Date(event.startDate).getTime();
+                    expandedEvent.endDate = new Date(occurrence.getTime() + duration);
+                }
                 
                 expandedEvents.push(expandedEvent);
             }
