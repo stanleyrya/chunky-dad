@@ -2351,6 +2351,8 @@ class DynamicCalendarLoader extends CalendarCore {
             hideEvents
         });
 
+        let seenMultiDayEvents = new Set();
+
         return days.map(day => {
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
@@ -2394,8 +2396,26 @@ class DynamicCalendarLoader extends CalendarCore {
                 return eventDate.getTime() === dayDate.getTime();
             });
             
-            // Events are already deduplicated in getFilteredEvents, so use them directly
-            const filteredDayEvents = dayEvents;
+            // Events are already deduplicated in getFilteredEvents, but need to be sorted for the day
+            const filteredDayEvents = dayEvents.sort((a, b) => {
+                const aIsMultiDay = this.isMultiDay(a);
+                const bIsMultiDay = this.isMultiDay(b);
+                const aIsAllDay = !a.time;
+                const bIsAllDay = !b.time;
+
+                // 1. Multi-day events go first
+                if (aIsMultiDay && !bIsMultiDay) return -1;
+                if (!aIsMultiDay && bIsMultiDay) return 1;
+
+                // 2. All-day events go second
+                if (aIsAllDay && !bIsAllDay) return -1;
+                if (!aIsAllDay && bIsAllDay) return 1;
+
+                // 3. Sort by start time
+                const dateA = new Date(a.startDate);
+                const dateB = new Date(b.startDate);
+                return dateA.getTime() - dateB.getTime();
+            });
 
             const eventsHtml = filteredDayEvents.length > 0 
                 ? filteredDayEvents.map(event => {
@@ -2404,6 +2424,8 @@ class DynamicCalendarLoader extends CalendarCore {
 
                     // Determine multi-day flow class
                     let flowClass = '';
+                    let showTitle = true;
+
                     if (isMultiDay) {
                         const eventStart = new Date(event.startDate);
                         eventStart.setHours(0, 0, 0, 0);
@@ -2423,11 +2445,18 @@ class DynamicCalendarLoader extends CalendarCore {
                         } else {
                             flowClass = ' multi-day multi-day-middle';
                         }
+
+                        const eventId = event.uid || event.slug;
+                        if (seenMultiDayEvents.has(eventId)) {
+                            showTitle = false;
+                        } else {
+                            seenMultiDayEvents.add(eventId);
+                        }
                     }
                     
                     return `
                         <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
-                            ${this.generateEventNameElements(event, hideEvents)}
+                            ${showTitle ? this.generateEventNameElements(event, hideEvents) : ''}
                             ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -2499,7 +2528,12 @@ class DynamicCalendarLoader extends CalendarCore {
             hideEvents
         });
 
+        let seenMultiDayEvents = new Set();
+
         const daysHtml = days.map(day => {
+            if (day.getDay() === 0) {
+                seenMultiDayEvents.clear();
+            }
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
                 
@@ -2559,8 +2593,26 @@ class DynamicCalendarLoader extends CalendarCore {
                 return eventDate.getTime() === dayDate.getTime();
             });
             
-            // Events are already deduplicated in getFilteredEvents, so use them directly
-            const filteredDayEvents = dayEvents;
+            // Events are already deduplicated in getFilteredEvents, but need to be sorted for the day
+            const filteredDayEvents = dayEvents.sort((a, b) => {
+                const aIsMultiDay = this.isMultiDay(a);
+                const bIsMultiDay = this.isMultiDay(b);
+                const aIsAllDay = !a.time;
+                const bIsAllDay = !b.time;
+
+                // 1. Multi-day events go first
+                if (aIsMultiDay && !bIsMultiDay) return -1;
+                if (!aIsMultiDay && bIsMultiDay) return 1;
+
+                // 2. All-day events go second
+                if (aIsAllDay && !bIsAllDay) return -1;
+                if (!aIsAllDay && bIsAllDay) return 1;
+
+                // 3. Sort by start time
+                const dateA = new Date(a.startDate);
+                const dateB = new Date(b.startDate);
+                return dateA.getTime() - dateB.getTime();
+            });
 
             const isToday = day.getTime() === today.getTime();
             const isCurrentMonth = day.getMonth() === start.getMonth();
@@ -2579,6 +2631,8 @@ class DynamicCalendarLoader extends CalendarCore {
 
                     // Determine multi-day flow class
                     let flowClass = '';
+                    let showTitle = true;
+
                     if (isMultiDay) {
                         const eventStart = new Date(event.startDate);
                         eventStart.setHours(0, 0, 0, 0);
@@ -2598,11 +2652,18 @@ class DynamicCalendarLoader extends CalendarCore {
                         } else {
                             flowClass = ' multi-day multi-day-middle';
                         }
+
+                        const eventId = event.uid || event.slug;
+                        if (seenMultiDayEvents.has(eventId)) {
+                            showTitle = false;
+                        } else {
+                            seenMultiDayEvents.add(eventId);
+                        }
                     }
                     
                     return `
                         <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
-                            ${this.generateEventNameElements(event, hideEvents)}
+                            ${showTitle ? this.generateEventNameElements(event, hideEvents) : ''}
                             ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>

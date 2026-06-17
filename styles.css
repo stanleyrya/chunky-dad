@@ -3347,6 +3347,13 @@ footer {
         display: none;
     }
 
+    /* Force event time to display for multi-day events on mobile to show date range */
+    .event-item.enhanced.multi-day-start .event-time,
+    .event-item.enhanced.multi-day-middle .event-time,
+    .event-item.enhanced.multi-day-end .event-time {
+        display: block;
+    }
+
     .event-item.enhanced .event-venue {
         display: none;
     }
@@ -3983,23 +3990,28 @@ footer {
 }
 
 /* Calendar Event Item Selected State */
-.event-item.selected {
-    background: var(--primary-color) !important;
-    color: white !important;
+.event-item.selected,
+.event-item.enhanced.selected {
+    background-color: var(--primary-color) !important;
+    color: var(--text-inverse) !important;
     font-weight: bold;
     border-radius: 4px;
 }
 
 /* Selected event text colors */
-.event-item.selected .event-name {
+.event-item.selected .event-name,
+.event-item.enhanced.selected .event-name {
     color: var(--text-inverse) !important;
 }
 
-.event-item.selected .event-time {
+.event-item.selected .event-time,
+.event-item.enhanced.selected .event-time {
     color: var(--text-inverse) !important;
 }
 
-.event-item.selected .venue {
+.event-item.selected .venue,
+.event-item.selected .event-venue,
+.event-item.enhanced.selected .event-venue {
     color: var(--text-inverse) !important;
 }
 
