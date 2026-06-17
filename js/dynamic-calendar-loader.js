@@ -2439,10 +2439,12 @@ class DynamicCalendarLoader extends CalendarCore {
                         }
 
                         const eventId = event.uid || event.slug;
-                        if (seenMultiDayEvents.has(eventId)) {
+                        // Track occurrences uniquely by appending the eventStart timestamp
+                        const occurrenceId = `${eventId}_${eventStart.getTime()}`;
+                        if (seenMultiDayEvents.has(occurrenceId)) {
                             showTitle = false;
                         } else {
-                            seenMultiDayEvents.add(eventId);
+                            seenMultiDayEvents.add(occurrenceId);
                         }
                     }
                     
@@ -2638,10 +2640,12 @@ class DynamicCalendarLoader extends CalendarCore {
                         }
 
                         const eventId = event.uid || event.slug;
-                        if (seenMultiDayEvents.has(eventId)) {
+                        // Track occurrences uniquely by appending the eventStart timestamp
+                        const occurrenceId = `${eventId}_${eventStart.getTime()}`;
+                        if (seenMultiDayEvents.has(occurrenceId)) {
                             showTitle = false;
                         } else {
-                            seenMultiDayEvents.add(eventId);
+                            seenMultiDayEvents.add(occurrenceId);
                         }
                     }
                     
