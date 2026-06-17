@@ -1504,12 +1504,29 @@ class CalendarCore {
         return { start, end };
     }
 
+    getLocalHour(dateObj, timezone) {
+        if (!dateObj || Number.isNaN(dateObj.getTime())) return null;
+        if (!timezone) return dateObj.getUTCHours();
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                hour: 'numeric',
+                hourCycle: 'h23'
+            });
+            const hourStr = formatter.format(dateObj);
+            return parseInt(hourStr, 10);
+        } catch (e) {
+            return dateObj.getUTCHours();
+        }
+    }
+
     // Get logical start date for event (shifts late-night events < 6am to previous day)
     getLogicalStartDate(event) {
         if (!event.startDate) return null;
         const logicalDate = new Date(event.startDate);
         const isAllDay = event.time === null;
-        if (!isAllDay && logicalDate.getHours() < 6) {
+        const localHour = this.getLocalHour(logicalDate, this.calendarTimezone);
+        if (!isAllDay && localHour !== null && localHour < 6) {
             logicalDate.setDate(logicalDate.getDate() - 1);
         }
         return logicalDate;
@@ -1521,11 +1538,15 @@ class CalendarCore {
         const logicalDate = new Date(event.endDate);
         const isAllDay = event.time === null;
 
-        if (logicalDate.getHours() === 0 && logicalDate.getMinutes() === 0 && logicalDate.getSeconds() === 0) {
+        let localHour = this.getLocalHour(logicalDate, this.calendarTimezone);
+
+        if (localHour !== null && localHour === 0 && logicalDate.getMinutes() === 0 && logicalDate.getSeconds() === 0) {
             logicalDate.setTime(logicalDate.getTime() - 1);
+            // Recalculate localHour after the 1-second adjustment
+            localHour = this.getLocalHour(logicalDate, this.calendarTimezone);
         }
 
-        if (!isAllDay && logicalDate.getHours() < 6) {
+        if (!isAllDay && localHour !== null && localHour < 6) {
             logicalDate.setDate(logicalDate.getDate() - 1);
         }
         return logicalDate;
