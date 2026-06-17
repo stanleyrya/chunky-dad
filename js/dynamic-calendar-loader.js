@@ -2802,13 +2802,6 @@ class DynamicCalendarLoader extends CalendarCore {
         }
 
         try {
-            logger.debug('MAP', 'Removing existing map if present');
-            // Remove existing map if it exists
-            if (window.eventsMap) {
-                window.eventsMap.remove();
-                window.eventsMap = null;
-            }
-
             // Filter events with valid coordinates
             const eventsWithCoords = events.filter(event => 
                 event.coordinates?.lat && event.coordinates?.lng && 
@@ -2819,65 +2812,77 @@ class DynamicCalendarLoader extends CalendarCore {
             let mapCenter = [cityConfig.coordinates.lat, cityConfig.coordinates.lng];
             let mapZoom = cityConfig.mapZoom || 10; // Reduced from 11 to 10 for better overview on desktop
 
-            // Store original view state globally
+            let map;
 
-            const map = new maplibregl.Map({
-                container: 'events-map',
-                style: 'https://tiles.openfreemap.org/styles/liberty',
-                center: [mapCenter[1], mapCenter[0]],
-                zoom: mapZoom,
-                renderWorldCopies: false
-            });
+            if (window.eventsMap) {
+                logger.debug('MAP', 'Reusing existing map');
+                map = window.eventsMap;
 
-            map.on('style.load', () => {
-                this.applyTheme(map);
-            });
-
-
-
-            // Add custom controls to maplibregl
-            class FitMarkersControl {
-                onAdd(map) {
-                    this._map = map;
-                    this._container = document.createElement('div');
-                    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-                    this._container.innerHTML = `
-                        <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
-                            <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
-                        </button>
-                    `;
-                    return this._container;
+                // Clear existing markers
+                if (window.eventsMapMarkers) {
+                    window.eventsMapMarkers.forEach(marker => marker.remove());
                 }
-                onRemove() {
-                    this._container.parentNode.removeChild(this._container);
-                    this._map = undefined;
+
+                // Update map center and zoom in case the city changed
+                map.jumpTo({ center: [mapCenter[1], mapCenter[0]], zoom: mapZoom });
+            } else {
+                logger.debug('MAP', 'Creating new map instance');
+                map = new maplibregl.Map({
+                    container: 'events-map',
+                    style: 'https://tiles.openfreemap.org/styles/liberty',
+                    center: [mapCenter[1], mapCenter[0]],
+                    zoom: mapZoom,
+                    renderWorldCopies: false
+                });
+
+                map.on('style.load', () => {
+                    this.applyTheme(map);
+                });
+
+                // Add custom controls to maplibregl
+                class FitMarkersControl {
+                    onAdd(map) {
+                        this._map = map;
+                        this._container = document.createElement('div');
+                        this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                        this._container.innerHTML = `
+                            <button class="map-control-btn" id="zoom-to-fit-btn" onclick="fitAllMarkers()" title="Show All Events">
+                                <i class="bi bi-pin-map" id="zoom-to-fit-icon"></i>
+                            </button>
+                        `;
+                        return this._container;
+                    }
+                    onRemove() {
+                        this._container.parentNode.removeChild(this._container);
+                        this._map = undefined;
+                    }
                 }
+                map.addControl(new FitMarkersControl(), 'top-left');
+
+                class MyLocationControl {
+                    onAdd(map) {
+                        this._map = map;
+                        this._container = document.createElement('div');
+                        this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                        this._container.innerHTML = `
+                            <button class="map-control-btn" id="location-btn" onclick="showMyLocation(true)" title="Show My Location">
+                                <i class="bi bi-crosshair2" id="location-icon"></i>
+                            </button>
+                        `;
+                        return this._container;
+                    }
+                    onRemove() {
+                        this._container.parentNode.removeChild(this._container);
+                        this._map = undefined;
+                    }
+                }
+                map.addControl(new MyLocationControl(), 'top-left');
+                // Add navigation controls (zoom in/out)
+                map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+
+                // Initialize location status
+                updateLocationStatus();
             }
-            map.addControl(new FitMarkersControl(), 'top-left');
-
-            class MyLocationControl {
-                onAdd(map) {
-                    this._map = map;
-                    this._container = document.createElement('div');
-                    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-                    this._container.innerHTML = `
-                        <button class="map-control-btn" id="location-btn" onclick="showMyLocation(true)" title="Show My Location">
-                            <i class="bi bi-crosshair2" id="location-icon"></i>
-                        </button>
-                    `;
-                    return this._container;
-                }
-                onRemove() {
-                    this._container.parentNode.removeChild(this._container);
-                    this._map = undefined;
-                }
-            }
-            map.addControl(new MyLocationControl(), 'top-left');
-            // Add navigation controls (zoom in/out)
-            map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
-            
-            // Initialize location status
-            updateLocationStatus();
             
             let markersAdded = 0;
             const markers = []; // Store markers for fit all function
