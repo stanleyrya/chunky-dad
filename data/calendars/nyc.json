@@ -1,0 +1,580 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/New_York",
+    "timezoneData": {
+      "tzid": "America/New_York",
+      "location": "America/New_York",
+      "daylight": {
+        "offsetFrom": "-0500",
+        "offsetTo": "-0400",
+        "name": "EDT",
+        "dtstart": "19700308T020000",
+        "rrule": "FREQ=YEARLY;BYMONTH=3;BYDAY=2SU"
+      },
+      "standard": {
+        "offsetFrom": "-0400",
+        "offsetTo": "-0500",
+        "name": "EST",
+        "dtstart": "19701101T020000",
+        "rrule": "FREQ=YEARLY;BYMONTH=11;BYDAY=1SU"
+      }
+    }
+  },
+  "events": [
+    {
+      "name": "CHUNK Brooklyn 7/4",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.68830519999999,
+        "lng": -73.9569221
+      },
+      "startDate": "2026-07-05T02:00:00.000Z",
+      "endDate": "2026-07-05T08:00:00.000Z",
+      "unprocessedDescription": "description: CHUNK BROOKLYN Presents DC Legend KEENAN ORR with \rsupport from CHUNK Residents DICAP & DJ JAMES MICHELIN STAR BEARD HOT GOGO BEARS ALL NIGHT LONG // Hosted by JEREMY & BRIAN & BIG CLAUDE C'MON EVERYBODY // 325 FRANKLIN AVE // 10PM - CLOSE\nbar: C'mon Everybody\naddress: 325 Franklin Ave, Brooklyn, NY 11238, USA\nticketUrl: https://www.chunk-party.com/event-details/chunk-brooklyn-7-4\ncover: $20.50 - $30.75\nimage: https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nwebsite: https://www.chunk-party.com\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA\nkey: chunk-brooklyn-7/4|2026-07-05|c'mon everybody",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "AAC4129A-BE69-4DDF-87BE-D788FA75C0CC",
+      "uid": "AAC4129A-BE69-4DDF-87BE-D788FA75C0CC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "C'mon Everybody",
+      "cover": "$20.50 - $30.75",
+      "image": "https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg",
+      "tea": "CHUNK BROOKLYN Presents DC Legend KEENAN ORR with support from CHUNK Residents DICAP & DJ JAMES MICHELIN STAR BEARD HOT GOGO BEARS ALL NIGHT LONG // Hosted by JEREMY & BRIAN & BIG CLAUDE C'MON EVERYBODY // 325 FRANKLIN AVE // 10PM - CLOSE",
+      "address": "325 Franklin Ave, Brooklyn, NY 11238, USA",
+      "website": "https://www.chunk-party.com",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-brooklyn-7-4",
+      "shortName": "CHUNK",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-7-4",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "chunk-brooklyn-74-31b4fb03"
+    },
+    {
+      "name": "Bears Are Animals",
+      "day": "Thursday",
+      "time": "7PM-10PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "coordinates": {
+        "lat": 40.71739735291992,
+        "lng": -73.94930680925715
+      },
+      "startDate": "2025-07-10T23:00:00.000Z",
+      "endDate": "2025-07-11T02:00:00.000Z",
+      "unprocessedDescription": "Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww\rw.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/XvrwkXqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
+      "uid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Animal",
+      "tea": "Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
+      "address": null,
+      "website": "https://animal.nyc",
+      "instagram": "https://www.instagram.com/bearsareanimals",
+      "gmaps": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
+      "shortName": "Animal",
+      "shorterName": "BAA",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://animal.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearsareanimals",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-are-animals-4cf796ee"
+    },
+    {
+      "name": "Bears Night Out",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "coordinates": {
+        "lat": 40.7326824,
+        "lng": -74.0097099
+      },
+      "startDate": "2025-07-06T02:00:00.000Z",
+      "endDate": "2025-07-06T08:00:00.000Z",
+      "unprocessedDescription": "Tea: Go-Go Bears, Cubs and LOTS of other fun things to grab on\rto!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https://www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nBar: Rockbar\nShorter: BNO",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "suljenhlak65mplsbrft5rgcd0@google.com",
+      "uid": "suljenhlak65mplsbrft5rgcd0@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "Rockbar",
+      "cover": "$10",
+      "tea": "Go-Go Bears, Cubs and LOTS of other fun things to grab onto!",
+      "address": null,
+      "website": "https://www.theurbanbear.com/",
+      "instagram": "https://www.instagram.com/urbanbearnyc",
+      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+      "shorterName": "BNO",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.theurbanbear.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/urbanbearnyc",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-night-out-3d00f897"
+    },
+    {
+      "name": "Fat dad",
+      "day": "Saturday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-06-20T04:00:00.000Z",
+      "endDate": "2026-06-21T04:00:00.000Z",
+      "unprocessedDescription": null,
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "t9c4ekcr125qg5chcflc59is5c@google.com",
+      "uid": "t9c4ekcr125qg5chcflc59is5c@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "website": null,
+      "slug": "fat-dad-54af58a5"
+    },
+    {
+      "name": "CHUNK Brooklyn - 5/9",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.68830519999999,
+        "lng": -73.9569221
+      },
+      "startDate": "2026-05-10T02:00:00.000Z",
+      "endDate": "2026-05-10T08:00:00.000Z",
+      "unprocessedDescription": "description: CHUNK returns to Brooklyn Saturday May 9th CHUNK p\rresents SPRFRK w/ support from residents DICAP & THCKRTANKER // GOGO BEARS all night long // Hosted by Damiano // C'MON EVERYBODY 325 Franklin Ave // 10pm - close\nbar: C'mon Everybody\naddress: 325 Franklin Ave, Brooklyn, NY 11238, USA\nticketUrl: https://www.chunk-party.com/event-details/chunk-brooklyn-5-9\ncover: $15.38 - $25.63\nimage: https://static.wixstatic.com/media/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg/v1/fill/w_1360,h_1700,al_c,q_90/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA\nkey: chunk-brooklyn-5/9|2026-05-10|c'mon everybody",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "90FA8B9E-8070-4539-B1B9-BF76B041D037",
+      "uid": "90FA8B9E-8070-4539-B1B9-BF76B041D037",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "C'mon Everybody",
+      "cover": "$15.38 - $25.63",
+      "image": "https://static.wixstatic.com/media/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg/v1/fill/w_1360,h_1700,al_c,q_90/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg",
+      "tea": "CHUNK returns to Brooklyn Saturday May 9th CHUNK presents SPRFRK w/ support from residents DICAP & THCKRTANKER // GOGO BEARS all night long // Hosted by Damiano // C'MON EVERYBODY 325 Franklin Ave // 10pm - close",
+      "address": "325 Franklin Ave, Brooklyn, NY 11238, USA",
+      "website": null,
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
+      "shortName": "CHUNK",
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "chunk-brooklyn-59-7ffcc74a"
+    },
+    {
+      "name": "Rockstrap",
+      "day": "Friday",
+      "time": "10PM-4AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "coordinates": {
+        "lat": 40.7326824,
+        "lng": -74.0097099
+      },
+      "startDate": "2025-07-05T02:00:00.000Z",
+      "endDate": "2025-07-05T08:00:00.000Z",
+      "unprocessedDescription": "Tea: Jockstraps encouraged, clothes check available!\nCover: $\r10 entry, $1 clothes check\nInstagram: https://www.instagram.com/rockbarny\nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nNickname: Rock-strap\nBar: Rockbar\nShorter: RBR",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "bdstnukmpv6keg7pon3fram2qg@google.com",
+      "uid": "bdstnukmpv6keg7pon3fram2qg@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Rockbar",
+      "cover": "$10 entry, $1 clothes check",
+      "tea": "Jockstraps encouraged, clothes check available!",
+      "address": null,
+      "website": null,
+      "instagram": "https://www.instagram.com/rockbarny",
+      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+      "shortName": "Rock-strap",
+      "shorterName": "RBR",
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/rockbarny",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "rockstrap-42266312"
+    },
+    {
+      "name": "Pride",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-06-26T04:00:00.000Z",
+      "endDate": "2026-06-29T04:00:00.000Z",
+      "unprocessedDescription": null,
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
+      "uid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "website": null,
+      "slug": "pride-059058a4"
+    },
+    {
+      "name": "GOLDILOXX MDW",
+      "day": "Saturday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "recurrence": null,
+      "coordinates": {
+        "lat": 40.75775322645565,
+        "lng": -73.99257438113817
+      },
+      "startDate": "2026-05-24T01:00:00.000Z",
+      "endDate": "2026-05-24T08:00:00.000Z",
+      "unprocessedDescription": "description: GOLDILOXX is an NYC based monthly bear party for b\rears and their admirers. When you arrive you get to select a color coded cup for whatever your mood is. Follow us on instagram for more updates ! @goldiloxx__ 🩵Blue Cup=DTF 🩷Pink Cup=Kiss 🧡Orange Cup=Side 💚Green Cup=Watch The party has two floors with two different vibes. Upstairs is flirty/dance/mingle Downstairs is ;););) Sexy Beefy Gogos all night **CLOTHING CHECK AVAILABLE**\nbar: Red Eye NY\naddress: 355 West 41st Street, New York NY 10036\nimage: https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/landscape_cover/8d628768-dd07-417e-8a43-b8e0669a624e/561602dc-734a-4e1a-aed8-f8baaee3c52d/a99044f121e5cedc1ec9a411/gl_5_23_26_scruff_eb75.jpg?v=a99044f121e5cedc1ec9a411397e16db9727cb379509afa5bcdb83516ffa7031\nticketUrl: https://redeyetickets.com/events/goldiloxx-mdw\ncover: $15 - $30 (as of 5/20)\nshortName: GOLDI-LOXX\nshorterName: GLX\ninstagram: https://www.instagram.com/goldiloxx__\ngmaps: https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036\nkey: goldiloxx-mdw|2026-05-24|red eye ny\noverrideUid: 88ctfpug1icbk4iofj0kgj4u78@google.com\noverrideRecurrenceId: 20260531T010000Z",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B44747B4-59F4-4410-A7CB-A7DDA263B4B6",
+      "uid": "88ctfpug1icbk4iofj0kgj4u78@google.com",
+      "recurrenceId": "2026-05-31T01:00:00.000Z",
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": "custom",
+      "bar": "Red Eye NY",
+      "cover": "$15 - $30 (as of 5/20)",
+      "image": "https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/landscape_cover/8d628768-dd07-417e-8a43-b8e0669a624e/561602dc-734a-4e1a-aed8-f8baaee3c52d/a99044f121e5cedc1ec9a411/gl_5_23_26_scruff_eb75.jpg?v=a99044f121e5cedc1ec9a411397e16db9727cb379509afa5bcdb83516ffa7031",
+      "tea": "GOLDILOXX is an NYC based monthly bear party for bears and their admirers. When you arrive you get to select a color coded cup for whatever your mood is. Follow us on instagram for more updates ! @goldiloxx__ 🩵Blue Cup=DTF 🩷Pink Cup=Kiss 🧡Orange Cup=Side 💚Green Cup=Watch The party has two floors with two different vibes. Upstairs is flirty/dance/mingle Downstairs is ;););) Sexy Beefy Gogos all night **CLOTHING CHECK AVAILABLE**",
+      "address": "355 West 41st Street, New York NY 10036",
+      "website": null,
+      "instagram": "https://www.instagram.com/goldiloxx__",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036",
+      "ticketUrl": "https://redeyetickets.com/events/goldiloxx-mdw",
+      "shortName": "GOLDI-LOXX",
+      "shorterName": "GLX",
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/goldiloxx__",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://redeyetickets.com/events/goldiloxx-mdw",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "goldiloxx-mdw-43e392ec"
+    },
+    {
+      "name": "CHUNK BROOKLYN - The Return!",
+      "day": "Saturday",
+      "time": "10:30PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.68830519999999,
+        "lng": -73.9569221
+      },
+      "startDate": "2026-02-15T03:30:00.000Z",
+      "endDate": "2026-02-15T09:00:00.000Z",
+      "unprocessedDescription": "description: CHUNK returns to NY - Saturday February 14th // fe\raturing DJs RON LIKE HELL (Wrecked) & residents DICAP & MR PICKLES // HOT GOGO BEARS // C'MON EVERYBODY - 325 Franklin Ave - 10\\:30pm - 4am\nbar: Brooklyn\naddress: 325 Franklin Ave, Brooklyn, NY 11238, USA\ntimezone: America/New_York\nurl: https://www.chunk-party.com/event-details/chunk-brooklyn-the-return\nticketUrl: https://www.chunk-party.com/event-details/chunk-brooklyn-the-return\ncover: $15.38 - $25.63\nimage: https://static.wixstatic.com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg/v1/fill/w_1344,h_1345,al_c,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://www.google.com/maps/search/?api=1&query=325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA\nkey: chunk-brooklyn-the-return|2026-02-15|brooklyn",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "6DD23624-8818-401B-9BC1-13BB87366576",
+      "uid": "6DD23624-8818-401B-9BC1-13BB87366576",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Brooklyn",
+      "cover": "$15.38 - $25.63",
+      "image": "https://static.wixstatic.com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg/v1/fill/w_1344,h_1345,al_c,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg",
+      "tea": "CHUNK returns to NY - Saturday February 14th // featuring DJs RON LIKE HELL (Wrecked) & residents DICAP & MR PICKLES // HOT GOGO BEARS // C'MON EVERYBODY - 325 Franklin Ave - 10:30pm - 4am",
+      "address": "325 Franklin Ave, Brooklyn, NY 11238, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
+      "shortName": "CHUNK",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "chunk-brooklyn-the-return-5dd73bae"
+    },
+    {
+      "name": "Beer Blast",
+      "day": "Sunday",
+      "time": "5PM-4AM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "coordinates": {
+        "lat": 40.75168692425323,
+        "lng": -74.00431317114098
+      },
+      "startDate": "2025-07-06T21:00:00.000Z",
+      "endDate": "2025-07-07T08:00:00.000Z",
+      "unprocessedDescription": "Name: Beer Blast\nBar: Eagle NYC \nCover: No cover till 9PM, $\r20 cover at 9PM\nWebsite: https://eagle-ny.com\nGoogle Maps: https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA\nNickname: Eagle\nShorter: EGL",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "96d0b400rgfpagk14sc2bd1aks@google.com",
+      "uid": "96d0b400rgfpagk14sc2bd1aks@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle NYC",
+      "cover": "No cover till 9PM, $20 cover at 9PM",
+      "address": null,
+      "website": "https://eagle-ny.com",
+      "gmaps": "https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA",
+      "shortName": "Eagle",
+      "shorterName": "EGL",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eagle-ny.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beer-blast-15963ca2"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "startDate": "2025-07-10T21:00:00.000Z",
+      "endDate": "2025-07-11T01:00:00.000Z",
+      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week in Manhattan.\nInstagram: https://www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "6thhos5ct3pllq5kmvsp7infd8@google.com",
+      "uid": "6thhos5ct3pllq5kmvsp7infd8@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Check instagram for this week’s location.",
+      "tea": "Popular happy hour that changes location every week in Manhattan.",
+      "address": null,
+      "website": "https://linktr.ee/bearhappyhour",
+      "instagram": "https://www.instagram.com/bearhappyhournyc",
+      "shorterName": "BHH",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/bearhappyhour",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhournyc",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "bear-happy-hour-66e240de"
+    },
+    {
+      "name": "FUZZY",
+      "day": "Friday",
+      "time": "10PM-4AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=4FR",
+      "coordinates": {
+        "lat": 40.7316977,
+        "lng": -73.9841737
+      },
+      "startDate": "2022-02-26T03:00:00.000Z",
+      "endDate": "2022-02-26T09:00:00.000Z",
+      "unprocessedDescription": "shortName: FUZZY\ntea: A monthly social for NYC’s friendly faun\ra. Serving pop, house, rock, new wave and disco dusted with pink glitter.\ncover: $5\nbar: Nowhere Bar\naddress: 322 E 14th St, New York, NY 10003\ntimezone: America/New_York\nuid: fuzzy-20260503T203532Z@chunky.dad\nwebsite: https://fuzzy.nyc/\ninstagram: https://instagram.com/fuzzy_nyc\nfacebook: https://www.facebook.com/fuzzy.nyc\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "fuzzy-20260503T203532Z@chunky.dad",
+      "uid": "fuzzy-20260503T203532Z@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 7,
+      "overrideIdentityType": null,
+      "bar": "Nowhere Bar",
+      "cover": "$5",
+      "tea": "A monthly social for NYC’s friendly fauna. Serving pop, house, rock, new wave and disco dusted with pink glitter.",
+      "address": "322 E 14th St, New York, NY 10003",
+      "website": "https://fuzzy.nyc/",
+      "instagram": "https://instagram.com/fuzzy_nyc",
+      "facebook": "https://www.facebook.com/fuzzy.nyc",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY",
+      "shortName": "FUZZY",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://fuzzy.nyc/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/fuzzy_nyc",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/fuzzy.nyc",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "fuzzy-0380f9f1"
+    }
+  ]
+}
