@@ -2456,7 +2456,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     
                     return `
                         <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
-                            ${showTitle ? this.generateEventNameElements(event, hideEvents) : ''}
+                            ${showTitle ? this.generateEventNameElements(event, hideEvents) : `<div style="visibility: hidden;">${this.generateEventNameElements(event, hideEvents)}</div>`}
                             ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
@@ -2663,7 +2663,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     
                     return `
                         <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
-                            ${showTitle ? this.generateEventNameElements(event, hideEvents) : ''}
+                            ${showTitle ? this.generateEventNameElements(event, hideEvents) : `<div style="visibility: hidden;">${this.generateEventNameElements(event, hideEvents)}</div>`}
                             ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
                             <div class="event-venue">${event.bar || ''}</div>
                         </div>
