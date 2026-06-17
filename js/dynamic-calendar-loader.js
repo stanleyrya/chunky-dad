@@ -2146,7 +2146,18 @@ class DynamicCalendarLoader extends CalendarCore {
         // Check each day in the period
         while (current <= end) {
             if (this.doesRecurringEventOccurOnDate(event, current)) {
-                occurrences.push(new Date(current));
+                const occurrenceDate = new Date(current);
+                const originalStart = new Date(event.startDate);
+
+                // Preserve the original event's local time components
+                occurrenceDate.setHours(
+                    originalStart.getHours(),
+                    originalStart.getMinutes(),
+                    originalStart.getSeconds(),
+                    originalStart.getMilliseconds()
+                );
+
+                occurrences.push(occurrenceDate);
             }
             current.setDate(current.getDate() + 1);
         }
