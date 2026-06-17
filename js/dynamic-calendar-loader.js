@@ -2019,8 +2019,8 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             
             // For all events (including expanded recurring events), check if they fall within the period
-            const eventEndDate = event.endDate ? new Date(event.endDate) : null;
-            const isInPeriod = this.isEventInPeriod(new Date(event.startDate), start, end, eventEndDate);
+            const eventEndDate = this.getLogicalEndDate(event);
+            const isInPeriod = this.isEventInPeriod(this.getLogicalStartDate(event), start, end, eventEndDate);
             logger.debug('CALENDAR', `🔍 FILTER: Event ${event.name}: ${isInPeriod ? 'INCLUDED' : 'EXCLUDED'}`, {
                 eventDate: new Date(event.startDate).toISOString(),
                 periodStart: start.toISOString(),
@@ -2363,14 +2363,9 @@ class DynamicCalendarLoader extends CalendarCore {
 
                 // Multi-day events check
                 if (this.isMultiDay(event)) {
-                    const eventDate = new Date(event.startDate);
+                    const eventDate = this.getLogicalStartDate(event);
                     eventDate.setHours(0, 0, 0, 0);
-                    const eventEndDate = new Date(event.endDate);
-
-                    // Adjust end date if it's exactly midnight, so it doesn't spill over to the next day
-                    if (eventEndDate.getHours() === 0 && eventEndDate.getMinutes() === 0 && eventEndDate.getSeconds() === 0) {
-                        eventEndDate.setTime(eventEndDate.getTime() - 1);
-                    }
+                    const eventEndDate = this.getLogicalEndDate(event);
                     eventEndDate.setHours(0, 0, 0, 0);
 
                     return dayDate >= eventDate && dayDate <= eventEndDate;
@@ -2378,7 +2373,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
                 // For already expanded recurring events, just check if the date matches
                 if (event.isExpanded) {
-                    const eventDate = new Date(event.startDate);
+                    const eventDate = this.getLogicalStartDate(event);
                     eventDate.setHours(0, 0, 0, 0);
                     
                     return eventDate.getTime() === dayDate.getTime();
@@ -2390,7 +2385,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
                 
                 // For non-recurring events, check exact date match
-                const eventDate = new Date(event.startDate);
+                const eventDate = this.getLogicalStartDate(event);
                 eventDate.setHours(0, 0, 0, 0);
                 
                 return eventDate.getTime() === dayDate.getTime();
@@ -2427,12 +2422,9 @@ class DynamicCalendarLoader extends CalendarCore {
                     let showTitle = true;
 
                     if (isMultiDay) {
-                        const eventStart = new Date(event.startDate);
+                        const eventStart = this.getLogicalStartDate(event);
                         eventStart.setHours(0, 0, 0, 0);
-                        const eventEnd = new Date(event.endDate);
-                        if (eventEnd.getHours() === 0 && eventEnd.getMinutes() === 0 && eventEnd.getSeconds() === 0) {
-                            eventEnd.setTime(eventEnd.getTime() - 1);
-                        }
+                        const eventEnd = this.getLogicalEndDate(event);
                         eventEnd.setHours(0, 0, 0, 0);
 
                         const dayDate = new Date(day);
@@ -2542,14 +2534,9 @@ class DynamicCalendarLoader extends CalendarCore {
 
                 // Multi-day events check
                 if (this.isMultiDay(event)) {
-                    const eventDate = new Date(event.startDate);
+                    const eventDate = this.getLogicalStartDate(event);
                     eventDate.setHours(0, 0, 0, 0);
-                    const eventEndDate = new Date(event.endDate);
-
-                    // Adjust end date if it's exactly midnight, so it doesn't spill over to the next day
-                    if (eventEndDate.getHours() === 0 && eventEndDate.getMinutes() === 0 && eventEndDate.getSeconds() === 0) {
-                        eventEndDate.setTime(eventEndDate.getTime() - 1);
-                    }
+                    const eventEndDate = this.getLogicalEndDate(event);
                     eventEndDate.setHours(0, 0, 0, 0);
 
                     return dayDate >= eventDate && dayDate <= eventEndDate;
@@ -2557,7 +2544,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
                 // For already expanded recurring events, just check if the date matches
                 if (event.isExpanded) {
-                    const eventDate = new Date(event.startDate);
+                    const eventDate = this.getLogicalStartDate(event);
                     eventDate.setHours(0, 0, 0, 0);
                     
                     const matches = eventDate.getTime() === dayDate.getTime();
@@ -2587,7 +2574,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
                 
                 // For non-recurring events, check exact date match
-                const eventDate = new Date(event.startDate);
+                const eventDate = this.getLogicalStartDate(event);
                 eventDate.setHours(0, 0, 0, 0);
                 
                 return eventDate.getTime() === dayDate.getTime();
@@ -2634,12 +2621,9 @@ class DynamicCalendarLoader extends CalendarCore {
                     let showTitle = true;
 
                     if (isMultiDay) {
-                        const eventStart = new Date(event.startDate);
+                        const eventStart = this.getLogicalStartDate(event);
                         eventStart.setHours(0, 0, 0, 0);
-                        const eventEnd = new Date(event.endDate);
-                        if (eventEnd.getHours() === 0 && eventEnd.getMinutes() === 0 && eventEnd.getSeconds() === 0) {
-                            eventEnd.setTime(eventEnd.getTime() - 1);
-                        }
+                        const eventEnd = this.getLogicalEndDate(event);
                         eventEnd.setHours(0, 0, 0, 0);
 
                         const dayDate = new Date(day);

@@ -1504,30 +1504,44 @@ class CalendarCore {
         return { start, end };
     }
 
+    // Get logical start date for event (shifts late-night events < 6am to previous day)
+    getLogicalStartDate(event) {
+        if (!event.startDate) return null;
+        const logicalDate = new Date(event.startDate);
+        const isAllDay = event.time === null;
+        if (!isAllDay && logicalDate.getHours() < 6) {
+            logicalDate.setDate(logicalDate.getDate() - 1);
+        }
+        return logicalDate;
+    }
+
+    // Get logical end date for event
+    getLogicalEndDate(event) {
+        if (!event.endDate) return null;
+        const logicalDate = new Date(event.endDate);
+        const isAllDay = event.time === null;
+
+        if (logicalDate.getHours() === 0 && logicalDate.getMinutes() === 0 && logicalDate.getSeconds() === 0) {
+            logicalDate.setTime(logicalDate.getTime() - 1);
+        }
+
+        if (!isAllDay && logicalDate.getHours() < 6) {
+            logicalDate.setDate(logicalDate.getDate() - 1);
+        }
+        return logicalDate;
+    }
+
     // Check if event is a multi-day event
     isMultiDay(event) {
         if (!event.startDate || !event.endDate) return false;
 
-        const start = new Date(event.startDate);
-        const end = new Date(event.endDate);
+        const logicalStart = this.getLogicalStartDate(event);
+        const logicalEnd = this.getLogicalEndDate(event);
 
-        // Use local dates to avoid timezone issues
-        const startKey = `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`;
-        const endKey = `${end.getFullYear()}-${end.getMonth()}-${end.getDate()}`;
+        const startKey = `${logicalStart.getFullYear()}-${logicalStart.getMonth()}-${logicalStart.getDate()}`;
+        const endKey = `${logicalEnd.getFullYear()}-${logicalEnd.getMonth()}-${logicalEnd.getDate()}`;
 
-        // Account for end dates that are just exactly at midnight the next day
-        // Some all-day events are 2026-06-26 00:00:00 to 2026-06-27 00:00:00
-        if (startKey !== endKey) {
-            // Check if end date is exactly 12:00 AM
-            if (end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0) {
-                // Adjust end date back by 1 millisecond for comparison
-                const adjustedEnd = new Date(end.getTime() - 1);
-                const adjustedEndKey = `${adjustedEnd.getFullYear()}-${adjustedEnd.getMonth()}-${adjustedEnd.getDate()}`;
-                return startKey !== adjustedEndKey;
-            }
-            return true;
-        }
-        return false;
+        return startKey !== endKey;
     }
 
     // Check if event falls within a date range
