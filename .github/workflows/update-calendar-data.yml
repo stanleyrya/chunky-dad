@@ -230,6 +230,11 @@ jobs:
             });
           EOF
       
+
+      - name: Process calendars into JSON
+        run: |
+          node tools/process-calendars.js
+
       - name: Commit updated calendar data
         run: |
           git config --local user.email "action@github.com"

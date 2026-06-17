@@ -1400,8 +1400,34 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.loadCalendarDataFallback(cityKey, cityConfig);
         }
         
+        // Helper function to process dates recursively
+        const reviveDates = (obj) => {
+            if (obj === null || typeof obj !== 'object') return obj;
+            if (Array.isArray(obj)) return obj.map(reviveDates);
+
+            const revived = {};
+            for (const key of Object.keys(obj)) {
+                if ((key === 'startDate' || key === 'endDate' || key === 'recurrenceId') && obj[key] !== null) {
+                    const d = new Date(obj[key]);
+                    revived[key] = d;
+                } else {
+                    revived[key] = reviveDates(obj[key]);
+                }
+            }
+
+            // Re-apply `_wasUTC` on Date objects if `wasUTC` property exists on the event level
+            if (revived.wasUTC !== undefined) {
+                if (revived.startDate) revived.startDate._wasUTC = revived.wasUTC;
+                if (revived.endDate) revived.endDate._wasUTC = revived.wasUTC;
+            }
+            return revived;
+        };
+
+        const isJsonCity = (cityKey === 'nyc' || cityKey === 'seattle');
+        const ext = isJsonCity ? 'json' : 'ics';
+
         // Normal flow: Try to load cached calendar data first
-        const cachedDataUrl = this.buildLocalCalendarUrl(cityKey);
+        const cachedDataUrl = this.buildLocalCalendarUrl(cityKey, ext);
         
         try {
             logger.debug('CALENDAR', `Attempting to load cached calendar data`, {
@@ -1416,7 +1442,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const response = await fetch(cachedDataUrl, {
                 method: 'GET',
                 headers: {
-                    'Accept': 'text/calendar,text/plain,*/*'
+                    'Accept': isJsonCity ? 'application/json' : 'text/calendar,text/plain,*/*'
                 },
                 cache: 'default' // Use browser cache for efficiency
             });
@@ -1425,46 +1451,71 @@ class DynamicCalendarLoader extends CalendarCore {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
-            const icalText = await response.text();
-            
-            // Validate that we got actual iCal data
-            if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
-                throw new Error('Invalid iCal data in cached file');
+            if (isJsonCity) {
+                const jsonData = await response.json();
+
+                logger.debug('CALENDAR', `Cached JSON data retrieved, reviving...`, {
+                    eventsLength: jsonData.events?.length
+                });
+
+                const events = reviveDates(jsonData.events);
+
+                this.allEvents = events;
+
+                // Set metadata to class properties so they are accessible
+                if (jsonData.metadata) {
+                    this.calendarTimezone = jsonData.metadata.calendarTimezone;
+                    this.timezoneData = jsonData.metadata.timezoneData;
+                }
+
+                this.eventsData = {
+                    cityConfig,
+                    events,
+                    calendarTimezone: this.calendarTimezone,
+                    timezoneData: this.timezoneData
+                };
+            } else {
+                const icalText = await response.text();
+
+                // Validate that we got actual iCal data
+                if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
+                    throw new Error('Invalid iCal data in cached file');
+                }
+
+                logger.apiCall('CALENDAR', `Successfully loaded cached calendar data`, {
+                    dataLength: icalText.length,
+                    city: cityConfig.name,
+                    url: cachedDataUrl,
+                    method: 'cached_data_success'
+                });
+
+                // Log sample of the fetched data for debugging
+                logger.debug('CALENDAR', 'Cached iCal data validation', {
+                    firstLine: icalText.split('\n')[0],
+                    hasEvents: icalText.includes('BEGIN:VEVENT'),
+                    eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
+                    calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
+                    encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format',
+                    dataSize: `${(icalText.length / 1024).toFixed(1)}KB`,
+                    source: 'cached_github_actions'
+                });
+
+                const events = this.parseICalData(icalText);
+
+                // Store all events for filtering
+                this.allEvents = events;
+
+                this.eventsData = {
+                    cityConfig,
+                    events,
+                    calendarTimezone: this.calendarTimezone,
+                    timezoneData: this.timezoneData
+                };
             }
-            
-            logger.apiCall('CALENDAR', `Successfully loaded cached calendar data`, {
-                dataLength: icalText.length,
-                city: cityConfig.name,
-                url: cachedDataUrl,
-                method: 'cached_data_success'
-            });
-            
-            // Log sample of the fetched data for debugging
-            logger.debug('CALENDAR', 'Cached iCal data validation', {
-                firstLine: icalText.split('\n')[0],
-                hasEvents: icalText.includes('BEGIN:VEVENT'),
-                eventCount: (icalText.match(/BEGIN:VEVENT/g) || []).length,
-                calendarName: icalText.match(/X-WR-CALNAME:(.+)/)?.[1]?.trim() || 'Unknown',
-                encoding: icalText.includes('BEGIN:VCALENDAR') ? 'Valid iCal' : 'Invalid format',
-                dataSize: `${(icalText.length / 1024).toFixed(1)}KB`,
-                source: 'cached_github_actions'
-            });
-            
-            const events = this.parseICalData(icalText);
-            
-            // Store all events for filtering
-            this.allEvents = events;
-            
-            this.eventsData = {
-                cityConfig,
-                events,
-                calendarTimezone: this.calendarTimezone,
-                timezoneData: this.timezoneData
-            };
             
             logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
             logger.componentLoad('CALENDAR', `Successfully processed cached calendar data for ${cityConfig.name}`, {
-                eventCount: events.length,
+                eventCount: this.allEvents.length,
                 cityKey,
                 calendarTimezone: this.calendarTimezone,
                 hasTimezoneData: !!this.timezoneData,
@@ -1550,13 +1601,13 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
     // Resolve correct local calendar URL depending on current page location
-    buildLocalCalendarUrl(cityKey) {
+    buildLocalCalendarUrl(cityKey, ext = 'ics') {
         try {
             const pathname = window.location.pathname || '';
             
             // Use PathUtils if available for consistent path resolution
             if (window.pathUtils) {
-                return window.pathUtils.resolvePath(`data/calendars/${cityKey}.ics`);
+                return window.pathUtils.resolvePath(`data/calendars/${cityKey}.${ext}`);
             }
             
             // Fallback logic for path detection
@@ -1572,7 +1623,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const needsParentPath = isTesting || isInCitySubdirectory;
             const prefix = needsParentPath ? '../' : '';
             
-            return `${prefix}data/calendars/${cityKey}.ics`;
+            return `${prefix}data/calendars/${cityKey}.${ext}`;
         } catch (e) {
             // Safe fallback
             return `data/calendars/${cityKey}.ics`;
