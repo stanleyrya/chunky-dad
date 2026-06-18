@@ -1782,6 +1782,7 @@ body.index-page main {
 /* Floating clear button removed - was ugly and unnecessary */
 
 .calendar-grid {
+    --day-padding: 0.5rem;
     background-color: var(--text-inverse);
     border-radius: 15px;
     overflow: hidden;
@@ -1859,10 +1860,7 @@ body.index-page main {
     color: var(--text-primary);
 }
 
-.calendar-day.current .day-date,
-.calendar-day.current .day-number {
-    background-color: var(--primary-color);
-    color: var(--text-inverse) !important;
+.day-date, .day-number {
     width: 1.6em;
     height: 1.6em;
     display: inline-flex;
@@ -1870,6 +1868,12 @@ body.index-page main {
     justify-content: center;
     border-radius: 50%;
     margin: 0;
+}
+
+.calendar-day.current .day-date,
+.calendar-day.current .day-number {
+    background-color: var(--primary-color);
+    color: var(--text-inverse) !important;
 }
 
 .day-indicator {
@@ -1933,7 +1937,7 @@ body.index-page main {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     border-right: none;
-    margin-right: -10px; /* Overlap the gap */
+    margin-right: calc(-1 * var(--day-padding)); /* Overlap the gap */
     padding-right: 12px;
     position: relative;
     z-index: 1;
@@ -1943,8 +1947,8 @@ body.index-page main {
     border-radius: 0;
     border-left: none;
     border-right: none;
-    margin-left: -10px;
-    margin-right: -10px;
+    margin-left: calc(-1 * var(--day-padding));
+    margin-right: calc(-1 * var(--day-padding));
     padding-left: 12px;
     padding-right: 12px;
     position: relative;
@@ -1955,7 +1959,7 @@ body.index-page main {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     border-left: none;
-    margin-left: -10px;
+    margin-left: calc(-1 * var(--day-padding));
     padding-left: 12px;
     position: relative;
     z-index: 1;
@@ -1969,7 +1973,7 @@ body.index-page main {
 
 /* Hover effects only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
-    .event-item:hover {
+    .event-item:not(.multi-day-start):not(.multi-day-middle):not(.multi-day-end):hover {
         transform: scale(1.05);
     }
 }
