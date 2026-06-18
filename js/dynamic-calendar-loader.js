@@ -2166,11 +2166,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 };
                 
                 if (event.endDate && event.startDate) {
-                    let duration = new Date(event.endDate).getTime() - new Date(event.startDate).getTime();
-                    // If duration is negative, it's likely a crossover midnight issue in the original data. Add 24h.
-                    if (duration < 0) {
-                        duration += 24 * 60 * 60 * 1000;
-                    }
+                    const duration = new Date(event.endDate).getTime() - new Date(event.startDate).getTime();
                     expandedEvent.endDate = new Date(occurrence.getTime() + duration);
                 }
                 
