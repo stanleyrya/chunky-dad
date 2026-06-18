@@ -84,7 +84,16 @@ async function processCalendars() {
                 events: events
             };
 
-            fs.writeFileSync(jsonPath, JSON.stringify(output, null, 2));
+            const dateReplacer = function(key, value) {
+                if (this[key] instanceof Date) {
+                    const pad = (n) => n.toString().padStart(2, '0');
+                    const date = this[key];
+                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+                }
+                return value;
+            };
+
+            fs.writeFileSync(jsonPath, JSON.stringify(output, dateReplacer, 2));
             console.log(`✓ Processed ${cityKey}.ics -> ${cityKey}.json (${events.length} events)`);
             successCount++;
         } catch (error) {
