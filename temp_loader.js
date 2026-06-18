@@ -1,23 +1,25 @@
-// Dynamic Google Calendar Loader - Supports multiple cities and calendars
+
+  const CalendarCore = require('./js/calendar-core.js');
+  // Dynamic Google Calendar Loader - Supports multiple cities and calendars
 class DynamicCalendarLoader extends CalendarCore {
     constructor() {
         super();
         this.currentCity = null;
         this.currentCityConfig = null;
-        
+
         // Initialization state to prevent multiple inits
         this.isInitialized = false;
         this.isInitializing = false;
         this.controlsSetup = false;
-        
+
         // View state management - enhanced with new calendar overview
         this.currentView = 'week'; // 'week' or 'month'
         this.currentDate = new Date();
-        
+
         // Event selection state (for URL sync)
         this.selectedEventSlug = null;
         this.selectedEventDateISO = null;
-        
+
         // Enhanced swipe functionality
         this.touchStartX = 0;
         this.touchStartY = 0;
@@ -33,23 +35,23 @@ class DynamicCalendarLoader extends CalendarCore {
         this.swipeVelocity = 0;
         this.lastTouchTime = 0;
         this.lastTouchX = 0;
-        
+
         // Set up message listener for testing interface
         this.setupMessageListener();
-        
+
         // Cache for event names - only recalculate on screen size change
         this.cachedEventNames = new Map();
         this.lastScreenWidth = window.innerWidth;
         this.currentBreakpoint = this.getCurrentBreakpoint();
-        
+
         // Location features
         this.userLocation = null;
         this.locationFeaturesEnabled = false;
         this.hasWarnedMissingFilenameUtils = false;
-        
+
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
-        
+
         logger.componentInit('CALENDAR', 'Dynamic CalendarLoader initialized');
     }
 
@@ -72,7 +74,7 @@ class DynamicCalendarLoader extends CalendarCore {
             this.swipeVelocity = 0;
             this.lastTouchTime = this.touchStartTime;
             this.lastTouchX = this.touchStartX;
-            
+
             logger.userInteraction('CALENDAR', 'Touch start detected', {
                 x: this.touchStartX,
                 y: this.touchStartY,
@@ -83,35 +85,35 @@ class DynamicCalendarLoader extends CalendarCore {
         // Touch move - track finger movement in real-time
         calendarGrid.addEventListener('touchmove', (e) => {
             if (!this.touchStartX) return; // No active touch
-            
+
             this.touchCurrentX = e.touches[0].clientX;
             this.touchCurrentY = e.touches[0].clientY;
             const currentTime = Date.now();
-            
+
             // Calculate velocity
             const timeDelta = currentTime - this.lastTouchTime;
             if (timeDelta > 0) {
                 const distanceDelta = this.touchCurrentX - this.lastTouchX;
                 this.swipeVelocity = distanceDelta / timeDelta;
             }
-            
+
             this.lastTouchTime = currentTime;
             this.lastTouchX = this.touchCurrentX;
-            
+
             // Calculate horizontal movement
             const deltaX = this.touchCurrentX - this.touchStartX;
             const deltaY = this.touchCurrentY - this.touchStartY;
-            
+
             // Check if this is a horizontal swipe (reduced threshold for better responsiveness)
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 5) {
                 this.isSwiping = true;
-                
+
                 // Apply visual feedback - move the calendar with the finger
                 this.updateSwipeVisualFeedback(deltaX);
-                
+
                 // Prevent default to avoid scrolling
                 e.preventDefault();
-                
+
                 logger.debug('CALENDAR', 'Swipe in progress', {
                     deltaX,
                     deltaY,
@@ -124,30 +126,30 @@ class DynamicCalendarLoader extends CalendarCore {
         // Touch end
         calendarGrid.addEventListener('touchend', (e) => {
             if (!this.touchStartX) return; // No active touch
-            
+
             this.touchEndX = e.changedTouches[0].clientX;
             this.touchEndY = e.changedTouches[0].clientY;
             const touchEndTime = Date.now();
             const duration = touchEndTime - this.touchStartTime;
-            
+
             logger.userInteraction('CALENDAR', 'Touch end detected', {
                 x: this.touchEndX,
                 y: this.touchEndY,
                 duration,
                 isSwiping: this.isSwiping,
                 totalDistance: Math.sqrt(
-                    Math.pow(this.touchEndX - this.touchStartX, 2) + 
+                    Math.pow(this.touchEndX - this.touchStartX, 2) +
                     Math.pow(this.touchEndY - this.touchStartY, 2)
                 )
             });
-            
+
             if (this.isSwiping) {
                 this.handleSwipe(duration);
             } else {
                 // Only reset visual feedback if not swiping
                 this.resetSwipeVisualFeedback();
             }
-            
+
             // Reset touch state
             this.touchStartX = 0;
             this.touchStartY = 0;
@@ -173,57 +175,57 @@ class DynamicCalendarLoader extends CalendarCore {
     updateSwipeVisualFeedback(deltaX) {
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) return;
-        
+
         // Calculate opacity and transform based on swipe distance
         const maxDistance = window.innerWidth * 0.4; // 40% of screen width for better visual feedback
         const progress = Math.min(Math.abs(deltaX) / maxDistance, 1);
         const opacity = 1 - (progress * 0.2); // Reduce opacity as user swipes (less dramatic)
         const translateX = deltaX * 0.5; // Move calendar with finger (50% of finger movement for more responsive feel)
-        
+
         // Apply transform, opacity, subtle scale, and rotation effects
         const scale = 1 - (progress * 0.05); // Slight scale down as user swipes
         const rotation = (deltaX / window.innerWidth) * 2; // Subtle rotation based on swipe distance
         calendarGrid.style.transform = `translateX(${translateX}px) scale(${scale}) rotateY(${rotation}deg)`;
         calendarGrid.style.opacity = opacity;
-        
+
         // Keep the same styling without background color changes
-        
+
         // Add subtle shadow effect for depth
         const shadowBlur = Math.min(progress * 20, 10);
         const shadowOffset = Math.min(progress * 10, 5);
         calendarGrid.style.boxShadow = `0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${progress * 0.3})`;
-        
+
     }
 
     // Reset visual feedback
     resetSwipeVisualFeedback() {
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) return;
-        
+
         // Only reset if we're not in the middle of a transition animation
         if (calendarGrid.style.transition && calendarGrid.style.transition.includes('0.3s')) {
             logger.debug('CALENDAR', 'Skipping visual feedback reset during transition animation');
             return;
         }
-        
+
         // Reset transform, opacity, scale, and rotation with smooth transition
         calendarGrid.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
         calendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
         calendarGrid.style.opacity = '1';
         calendarGrid.style.boxShadow = '';
-        
+
         // Remove transition after animation completes
         setTimeout(() => {
             calendarGrid.style.transition = '';
         }, 200);
-        
+
     }
 
     handleSwipe(duration) {
         const deltaX = this.touchEndX - this.touchStartX;
         const deltaY = this.touchEndY - this.touchStartY;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        
+
         // Check if it's a valid swipe
         if (duration > this.maxSwipeTime || distance < this.minSwipeDistance) {
             logger.debug('CALENDAR', 'Swipe invalid - too slow or too short', {
@@ -236,7 +238,7 @@ class DynamicCalendarLoader extends CalendarCore {
             this.resetSwipeVisualFeedback();
             return;
         }
-        
+
         // Check if it's more horizontal than vertical (swipe vs scroll)
         if (Math.abs(deltaX) < Math.abs(deltaY)) {
             logger.debug('CALENDAR', 'Swipe ignored - more vertical than horizontal');
@@ -244,18 +246,18 @@ class DynamicCalendarLoader extends CalendarCore {
             this.resetSwipeVisualFeedback();
             return;
         }
-        
+
         // Determine swipe direction based on distance or velocity
-        const shouldNavigate = Math.abs(deltaX) > this.swipeThreshold || 
+        const shouldNavigate = Math.abs(deltaX) > this.swipeThreshold ||
                               Math.abs(this.swipeVelocity) > 0.3; // Lower velocity threshold for better responsiveness
-        
+
         if (shouldNavigate) {
             const direction = deltaX > 0 ? 'prev' : 'next';
             logger.userInteraction('CALENDAR', `Swipe ${direction === 'prev' ? 'right' : 'left'} detected - navigating to ${direction} period`, {
                 distance: deltaX,
                 velocity: this.swipeVelocity
             });
-            
+
             // Animate the swipe transition
             this.animateSwipeTransition(direction, deltaX);
         } else {
@@ -273,43 +275,43 @@ class DynamicCalendarLoader extends CalendarCore {
     animateSwipeTransition(direction, deltaX) {
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) return;
-        
+
         logger.debug('CALENDAR', 'Starting swipe transition animation', {
             direction,
             deltaX,
             currentTransform: calendarGrid.style.transform
         });
-        
+
         // Calculate the target position (off-screen)
         const screenWidth = window.innerWidth;
         const targetTranslateX = direction === 'prev' ? screenWidth : -screenWidth;
-        
+
         // Remove transition temporarily to set initial position
         calendarGrid.style.transition = 'none';
-        
+
         // Set the current position from the swipe
         const currentTranslateX = deltaX * 0.5; // Match the visual feedback position
         calendarGrid.style.transform = `translateX(${currentTranslateX}px) scale(1) rotateY(0deg)`;
-        
+
         // Force a reflow to ensure the position is set
         calendarGrid.offsetHeight;
-        
+
         // Add smooth transition for the animation
         calendarGrid.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-        
+
         // Animate to off-screen position
         requestAnimationFrame(() => {
             calendarGrid.style.transform = `translateX(${targetTranslateX}px) scale(0.95) rotateY(${direction === 'prev' ? 5 : -5}deg)`;
             calendarGrid.style.opacity = '0.7';
-            
+
             // After animation completes, update content and animate new content in
             setTimeout(async () => {
                 // Update the calendar content (skip immediate display update)
                 this.navigatePeriod(direction, false);
-                
+
                 // Update the display to get new content
                 await this.updateCalendarDisplay();
-                
+
                 // Prepare new content to slide in from opposite direction
                 const newCalendarGrid = document.querySelector('.calendar-grid');
                 if (newCalendarGrid) {
@@ -318,16 +320,16 @@ class DynamicCalendarLoader extends CalendarCore {
                     newCalendarGrid.style.transition = 'none';
                     newCalendarGrid.style.transform = `translateX(${initialTranslateX}px) scale(0.95) rotateY(${direction === 'prev' ? -5 : 5}deg)`;
                     newCalendarGrid.style.opacity = '0.7';
-                    
+
                     // Force reflow
                     newCalendarGrid.offsetHeight;
-                    
+
                     // Animate to center position
                     newCalendarGrid.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
                     requestAnimationFrame(() => {
                         newCalendarGrid.style.transform = 'translateX(0) scale(1) rotateY(0deg)';
                         newCalendarGrid.style.opacity = '1';
-                        
+
                         // Clean up after animation
                         setTimeout(() => {
                             newCalendarGrid.style.transition = '';
@@ -380,12 +382,12 @@ class DynamicCalendarLoader extends CalendarCore {
             const dateParam = url.searchParams.get('date');
             const viewParam = url.searchParams.get('view');
             const eventParam = url.searchParams.get('event');
-            
+
             // View
             if (viewParam === 'week' || viewParam === 'month') {
                 this.currentView = viewParam;
             }
-            
+
             // Date (YYYY-MM-DD)
             if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
                 const parts = dateParam.split('-');
@@ -394,7 +396,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     this.currentDate = parsed;
                 }
             }
-            
+
             // Event selection from URL (no slug->date inference)
             if (eventParam) {
                 this.selectedEventSlug = eventParam;
@@ -407,7 +409,7 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.warn('CALENDAR', 'Failed to parse state from URL', { error: e?.message });
         }
     }
-    
+
     // Build ISO date string from Date
     formatDateToISO(date) {
         try {
@@ -419,7 +421,7 @@ class DynamicCalendarLoader extends CalendarCore {
             return '';
         }
     }
-    
+
     // Sync current state to URL (replaceState to avoid history spam)
     syncUrl(replace = true) {
         try {
@@ -429,14 +431,14 @@ class DynamicCalendarLoader extends CalendarCore {
             // View + date
             params.set('view', this.currentView);
             params.set('date', this.formatDateToISO(this.currentDate));
-            
+
             // Event parameter only when selected
             if (this.selectedEventSlug) {
                 params.set('event', this.selectedEventSlug);
             } else {
                 params.delete('event');
             }
-            
+
             // Apply and replace
             const newUrl = `${url.pathname}?${params.toString()}${url.hash || ''}`;
             if (replace) {
@@ -449,7 +451,7 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.warn('CALENDAR', 'Failed to sync URL', { error: e?.message });
         }
     }
-    
+
     // Clear current event selection
     clearEventSelection() {
         const hadSelection = !!this.selectedEventSlug;
@@ -462,28 +464,28 @@ class DynamicCalendarLoader extends CalendarCore {
             this.updateSelectionVisualState();
         }
     }
-    
+
     // Toggle/select event for URL/state
     toggleEventSelection(eventSlug, eventDateISO) {
         if (!eventSlug) return;
         const normalizedDateISO = eventDateISO && /^\d{4}-\d{2}-\d{2}$/.test(eventDateISO) ? eventDateISO : this.formatDateToISO(this.currentDate);
-        
+
         // Check if this event is already selected
         const wasAlreadySelected = this.selectedEventSlug === eventSlug && this.selectedEventDateISO === normalizedDateISO;
-        
+
         logger.debug('EVENT', 'Toggle event selection', {
             eventSlug,
             date: normalizedDateISO,
             wasAlreadySelected,
             currentSelection: this.selectedEventSlug
         });
-        
+
         // Always clear current selection first (but don't call updateSelectionVisualState yet)
         const hadSelection = !!this.selectedEventSlug;
         const previousSlug = this.selectedEventSlug;
         this.selectedEventSlug = null;
         this.selectedEventDateISO = null;
-        
+
         // If the clicked event wasn't already selected, select it
         if (!wasAlreadySelected) {
             this.selectedEventSlug = eventSlug;
@@ -498,10 +500,10 @@ class DynamicCalendarLoader extends CalendarCore {
         } else {
             logger.userInteraction('EVENT', 'Event deselected (was already selected)', { eventSlug, date: normalizedDateISO });
         }
-        
+
         // Update visual selection state once (handles both selection and deselection)
         this.updateSelectionVisualState();
-        
+
         // Reflect selection in URL
         this.syncUrl(true);
     }
@@ -513,10 +515,10 @@ class DynamicCalendarLoader extends CalendarCore {
             mapExists: !!window.eventsMap,
             markersBySlugExists: !!window.eventsMapMarkersBySlug
         });
-        
+
         // Clear all previous selections
         const selectedElements = document.querySelectorAll('.event-card.selected, .event-item.selected');
-        logger.debug('EVENT', 'Clearing previous selections', { 
+        logger.debug('EVENT', 'Clearing previous selections', {
             count: selectedElements.length,
             elements: Array.from(selectedElements).map(el => ({
                 tagName: el.tagName,
@@ -527,7 +529,7 @@ class DynamicCalendarLoader extends CalendarCore {
         selectedElements.forEach(el => {
             el.classList.remove('selected');
         });
-        
+
         const eventsList = document.querySelector('.events-list');
 
         if (this.selectedEventSlug) {
@@ -540,17 +542,17 @@ class DynamicCalendarLoader extends CalendarCore {
             if (eventsList) {
                 eventsList.classList.add('selection-mode');
             }
-            
+
             // Mark selected event items in calendar views
             const calendarItems = document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
             calendarItems.forEach(item => {
                 item.classList.add('selected');
             });
-            
+
             // Highlight map marker
             this.highlightMapMarker(this.selectedEventSlug);
-            
-            logger.debug('EVENT', 'Updated selection visual state', { 
+
+            logger.debug('EVENT', 'Updated selection visual state', {
                 selectedSlug: this.selectedEventSlug,
                 cardFound: !!selectedCard,
                 calendarItemsFound: calendarItems.length,
@@ -567,11 +569,11 @@ class DynamicCalendarLoader extends CalendarCore {
 
             // Reset all markers to normal appearance
             this.resetAllMapMarkers();
-            
+
             // Explicitly ensure all calendar event items are unselected
             // This is important to handle cases where the calendar is re-rendered
             const allCalendarItems = document.querySelectorAll('.event-item');
-            logger.debug('EVENT', 'Explicitly clearing all calendar items', { 
+            logger.debug('EVENT', 'Explicitly clearing all calendar items', {
                 count: allCalendarItems.length,
                 items: Array.from(allCalendarItems).map(item => ({
                     tagName: item.tagName,
@@ -583,12 +585,12 @@ class DynamicCalendarLoader extends CalendarCore {
             allCalendarItems.forEach(item => {
                 item.classList.remove('selected');
             });
-            
+
             logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
         }
     }
 
-    
+
 
     // Helper method to highlight a specific map marker
     highlightMapMarker(eventSlug) {
@@ -600,7 +602,7 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             return;
         }
-        
+
         // If the selected event doesn't have a map marker, dim all markers (selection is still active)
         if (!window.eventsMapMarkersBySlug[eventSlug]) {
             logger.debug('MAP', 'Selected event has no map marker, dimming all markers', { eventSlug });
@@ -614,14 +616,14 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.userInteraction('MAP', 'All markers dimmed (selection active but no marker selected)', { eventSlug });
             return;
         }
-        
+
         // Use CSS classes instead of inline styles
         if (window.eventsMapMarkersBySlug) {
             Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
                 if (marker.getElement()) {
                     // Remove all marker state classes
                     marker.getElement().classList.remove('marker-selected', 'marker-dimmed');
-                    
+
                     if (slug === eventSlug) {
                         // Highlight the selected marker
                         marker.getElement().classList.add('marker-selected');
@@ -632,7 +634,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             });
         }
-        
+
         logger.debug('MAP', 'Selected marker highlighted, unselected markers dimmed', { eventSlug });
         logger.userInteraction('MAP', 'Marker highlighted and unselected markers dimmed', { eventSlug });
     }
@@ -680,7 +682,7 @@ class DynamicCalendarLoader extends CalendarCore {
     // Set up city selector and populate with available cities
     setupCitySelector() {
         const availableCitiesList = document.getElementById('available-cities-list');
-        
+
 
 
         // Populate available cities list for error page
@@ -699,12 +701,12 @@ class DynamicCalendarLoader extends CalendarCore {
     showCityNotFound() {
         const cityNotFound = document.querySelector('.city-not-found');
         const cityPage = document.querySelector('.city-page');
-        
+
         if (cityNotFound && cityPage) {
             cityNotFound.style.display = 'block';
             cityPage.style.display = 'none';
         }
-        
+
         document.title = 'City Not Found - chunky.dad';
     }
 
@@ -714,18 +716,18 @@ class DynamicCalendarLoader extends CalendarCore {
         const eventData = super.parseEventData(calendarEvent);
         if (eventData) {
             eventData.citySlug = this.currentCity;
-            
+
             // Only generate short-name if not provided by user
             // This prevents double-trimming when user has already provided a shortName
             if (!eventData.shortName) {
                 eventData.shortName = eventData.name || eventData.bar || '';
             }
-            
+
             // Convert image URLs based on data source
             if (eventData.image && this.dataSource === 'cached') {
                 const originalImageUrl = eventData.image;
                 eventData.image = this.convertImageUrlToLocal(originalImageUrl, eventData);
-                
+
                 logger.debug('CALENDAR', 'Converted image URL for cached data', {
                     eventName: eventData.name,
                     originalUrl: originalImageUrl,
@@ -745,7 +747,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
     // ========== SOFT HYPHENATION METHODS ==========
-    
+
     /**
      * Insert soft hyphens at intelligent break points
      * @param {string} text - The text to process
@@ -754,7 +756,7 @@ class DynamicCalendarLoader extends CalendarCore {
      */
     insertSoftHyphens(text, isShortName = false) {
         if (!text) return text;
-        
+
         // For shortName: unescaped '-' => &shy;, '\-' stays '-'
         if (isShortName) {
             const softHyphen = '&shy;';
@@ -762,43 +764,43 @@ class DynamicCalendarLoader extends CalendarCore {
             processed = processed.replace(/-/g, softHyphen);
             return processed.replace(/§HARD_HYPHEN§/g, '-');
         }
-        
+
         // For fullName: unchanged
         return text;
     }
-    
 
-    
+
+
 
 
 
 
     getSmartEventNameForBreakpoint(event, breakpoint) {
         logger.info('CALENDAR', `🔍 SMART_NAME: Starting getSmartEventNameForBreakpoint for breakpoint: ${breakpoint}`);
-        
+
         const fullName = event.name || '';
         const shorterName = event.shorter || '';
         const shortName = event.shortName || event.nickname || '';
-        
+
         logger.info('CALENDAR', `🔍 SMART_NAME: Event names`, { fullName, shorterName, shortName, breakpoint });
-        
+
         const charsPerPixel = this.charsPerPixel || this.calculateCharsPerPixel();
         const availableWidth = this.getEventTextWidth();
-        
+
         logger.info('CALENDAR', `🔍 SMART_NAME: Got measurement data`, {
             charsPerPixel: charsPerPixel?.toFixed(4),
             availableWidth: availableWidth?.toFixed(2),
             breakpoint
         });
-        
+
         // Measurement not ready → use full name as fallback
         if (availableWidth === null) {
             logger.debug('CALENDAR', `🔍 SMART_NAME: Measurement not ready, using fullName as fallback`);
             return fullName;
         }
-        
+
         const charLimitPerLine = Math.floor(availableWidth * charsPerPixel);
-        
+
         logger.info('CALENDAR', `🔍 SMART_NAME: Character limit calculation`, {
             availableWidth: availableWidth?.toFixed(2),
             charsPerPixel: charsPerPixel?.toFixed(4),
@@ -807,7 +809,7 @@ class DynamicCalendarLoader extends CalendarCore {
             shorterNameLength: shorterName?.length || 0,
             shortNameLength: shortName?.length || 0
         });
-        
+
         // Check if the name can fit properly by considering word wrapping
         // For names longer than one line, we need to be more conservative
         const canFitInOneLineWithBreaking = (name) => {
@@ -815,34 +817,34 @@ class DynamicCalendarLoader extends CalendarCore {
             if (name.length <= charLimitPerLine) {
                 return true;
             }
-            
+
             // For longer names, check if they can break nicely across lines
             // We need to account for word boundaries and hyphenation
             const words = name.split(/[\s-]+/);
             const longestWord = Math.max(...words.map(word => word.length));
-            
+
             // If the longest word fits in one line, the name can wrap
             return longestWord <= charLimitPerLine;
         };
-        
+
         // 1. Use full title if it can fit properly with word wrapping
         if (canFitInOneLineWithBreaking(fullName)) {
             logger.info('CALENDAR', `🔍 SMART_NAME: Full title can fit with proper wrapping, using: "${fullName}"`);
             return fullName;
         }
-        
+
         // 2. Use shorter name if we have one and it fits properly
         if (shorterName && canFitInOneLineWithBreaking(shorterName)) {
             logger.info('CALENDAR', `🔍 SMART_NAME: Shorter name fits with proper wrapping, using: "${shorterName}"`);
             return shorterName;
         }
-        
+
         // 3. Otherwise use short name with soft hyphens (fallback)
         if (shortName) {
             logger.info('CALENDAR', `🔍 SMART_NAME: Using short name with soft hyphens: "${shortName}"`);
             return this.insertSoftHyphens(shortName, true);
         }
-        
+
         // Final fallback to full name
         logger.info('CALENDAR', `🔍 SMART_NAME: No short names available, using full name as final fallback: "${fullName}"`);
         return fullName;
@@ -850,13 +852,13 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
 
-    
+
 
 
     // Calculate characters per pixel ratio for dynamic text fitting
     calculateCharsPerPixel() {
         logger.info('CALENDAR', '🔍 CALCULATION: Starting calculateCharsPerPixel()');
-        
+
         try {
             // Create a temporary element to measure character width
             const testElement = document.createElement('div');
@@ -870,30 +872,30 @@ class DynamicCalendarLoader extends CalendarCore {
                 font-weight: var(--event-name-font-weight);
                 line-height: var(--event-name-line-height);
             `;
-            
-            // Use a string that better represents actual event names 
+
+            // Use a string that better represents actual event names
             // Focus on uppercase letters without spaces (spaces are narrow and skew the average)
             const testString = 'BEARHAPPYHOURNIGHTOUTWEEKLYSOCIALEVENTS';
             testElement.textContent = testString;
             document.body.appendChild(testElement);
-            
+
             const width = testElement.getBoundingClientRect().width;
             const charCount = testElement.textContent.length;
             const pixelsPerChar = width / charCount;
             // Apply defensive reduction of 0.02 to prevent edge overflow
             const charsPerPixel = (1 / pixelsPerChar) - 0.02;
-            
+
             // Get the computed styles to verify what we're actually using
             const computedStyles = window.getComputedStyle(testElement);
             const actualFontSize = computedStyles.fontSize;
             const actualFontWeight = computedStyles.fontWeight;
             const actualFontFamily = computedStyles.fontFamily;
-            
+
             // Get visual zoom for logging purposes only - don't adjust calculation
             const visualZoom = (window.visualViewport && window.visualViewport.scale) || 1;
-            
+
             document.body.removeChild(testElement);
-            
+
             logger.info('CALENDAR', `🔍 CALCULATION: Calculated chars per pixel: ${charsPerPixel.toFixed(4)} (${pixelsPerChar.toFixed(2)}px per char, zoom: ${visualZoom.toFixed(2)})`, {
                 width: width.toFixed(2),
                 charCount,
@@ -908,7 +910,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 testString: testString,
                 note: 'Base calculation with 0.02 defensive reduction applied directly to charsPerPixel'
             });
-            
+
             // Cache the result
             this.charsPerPixel = charsPerPixel;
             logger.info('CALENDAR', `🔍 CALCULATION: Cached charsPerPixel = ${charsPerPixel.toFixed(4)}`);
@@ -922,30 +924,30 @@ class DynamicCalendarLoader extends CalendarCore {
     // Get the actual width available for event text from the fake event rendered invisibly
     getEventTextWidth() {
         logger.info('CALENDAR', '🔍 MEASUREMENT: Starting getEventTextWidth()');
-        
+
         // Check if we already have a cached measurement
         if (this.cachedEventTextWidth) {
             logger.info('CALENDAR', `🔍 MEASUREMENT: Using cached event text width: ${this.cachedEventTextWidth}px`);
             return this.cachedEventTextWidth;
         }
-        
+
         // Find ALL event-name elements to understand what we're measuring
         const allEventNames = document.querySelectorAll('.event-name');
         logger.info('CALENDAR', `🔍 MEASUREMENT: Found ${allEventNames.length} .event-name elements`);
-        
+
         // Find the first visible event-name element (should be our measurement element)
         const eventName = document.querySelector('.event-name');
-        
+
         // If the element doesn't exist yet, we can't measure - return null to indicate measurement not ready
         if (!eventName) {
             logger.debug('CALENDAR', '🔍 MEASUREMENT: Event name element not found for measurement - DOM not ready yet');
             return null;
         }
-        
+
         // Log details about the element we're measuring
         const isVisible = eventName.offsetParent !== null;
         const hasContent = eventName.textContent && eventName.textContent.trim().length > 0;
-        
+
         logger.info('CALENDAR', `🔍 MEASUREMENT: Measuring event-name element`, {
             elementFound: true,
             isVisible,
@@ -954,7 +956,7 @@ class DynamicCalendarLoader extends CalendarCore {
             tagName: eventName.tagName,
             className: eventName.className
         });
-        
+
         // Measure the event name element directly - this IS the text container
         const eventNameRect = eventName.getBoundingClientRect();
         const eventNameStyle = window.getComputedStyle(eventName);
@@ -962,15 +964,15 @@ class DynamicCalendarLoader extends CalendarCore {
         const paddingRight = parseFloat(eventNameStyle.paddingRight) || 0;
         const borderLeft = parseFloat(eventNameStyle.borderLeftWidth) || 0;
         const borderRight = parseFloat(eventNameStyle.borderRightWidth) || 0;
-        
+
         // Calculate the actual available width for text content
         const rawAvailableWidth = eventNameRect.width - paddingLeft - paddingRight - borderLeft - borderRight;
-        
+
         // No defensive padding applied to width - defensive reduction is applied directly to charsPerPixel calculation
         const availableWidth = rawAvailableWidth;
-        
+
         this.cachedEventTextWidth = Math.max(availableWidth, 20); // Minimum 20px
-        
+
         logger.info('CALENDAR', `🔍 MEASUREMENT: Measured actual event text width from .event-name element: ${this.cachedEventTextWidth}px`, {
             elementRect: {
                 width: eventNameRect.width,
@@ -997,7 +999,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 note: 'No width padding applied - defensive reduction applied directly to charsPerPixel'
             }
         });
-        
+
         return this.cachedEventTextWidth;
     }
 
@@ -1005,10 +1007,10 @@ class DynamicCalendarLoader extends CalendarCore {
     clearMeasurementCache() {
         const hadCachedWidth = !!this.cachedEventTextWidth;
         const hadCharsPerPixel = !!this.charsPerPixel;
-        
+
         this.cachedEventTextWidth = null;
         this.charsPerPixel = null;
-        
+
         logger.info('CALENDAR', '🔍 CACHE_CLEAR: Measurement cache cleared', {
             hadCachedWidth,
             hadCharsPerPixel,
@@ -1020,7 +1022,7 @@ class DynamicCalendarLoader extends CalendarCore {
     clearEventNameCache() {
         const cacheSize = this.cachedEventNames.size;
         this.cachedEventNames.clear();
-        
+
         logger.info('CALENDAR', '🔍 CACHE_CLEAR: Event name cache cleared', {
             previousCacheSize: cacheSize,
             reason: 'screen_size_change'
@@ -1031,25 +1033,25 @@ class DynamicCalendarLoader extends CalendarCore {
     getCurrentBreakpoint() {
         const width = window.innerWidth;
         if (width <= 374) return 'xs';
-        if (width <= 767) return 'sm'; 
+        if (width <= 767) return 'sm';
         if (width <= 1023) return 'md';
         return 'lg';
     }
 
 
-    
+
     // Generate event name element for current breakpoint only
     generateEventNameElements(event, hideEvents = false) {
         const fullName = event.name || '';
         const hasShortName = !!(event.shortName || event.nickname);
-        
+
         logger.info('CALENDAR', `🔍 EVENT_NAME_GEN: Generating event name elements`, {
             eventName: fullName,
             hasShortName,
             hideEvents,
             mode: hideEvents ? 'MEASUREMENT' : 'DISPLAY'
         });
-        
+
         // For measurement mode, use full name to get accurate width measurement
         // This gives us a realistic event name length for proper width calculation
         if (hideEvents) {
@@ -1061,9 +1063,9 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             return `<div class="event-name">${fullName}</div>`;
         }
-        
+
         // DISPLAY MODE: Use full smart name logic with caching
-        
+
         // If no shortname, just return the full name
         if (!hasShortName) {
             logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: No shortname available, using full name', {
@@ -1073,32 +1075,32 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             return `<div class="event-name">${fullName}</div>`;
         }
-        
+
         // Create a cache key for this event + current breakpoint
         const eventKey = `${event.name || ''}-${event.shortName || ''}-${event.nickname || ''}-${this.currentBreakpoint}`;
-        
+
         // For display mode, check cache first
         if (this.cachedEventNames.has(eventKey)) {
             const cachedName = this.cachedEventNames.get(eventKey);
-            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Using cached event name', { 
-                eventKey, 
-                breakpoint: this.currentBreakpoint, 
+            logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Using cached event name', {
+                eventKey,
+                breakpoint: this.currentBreakpoint,
                 cachedName: cachedName,
                 hideEvents: false,
                 source: 'cache'
             });
             return `<div class="event-name">${cachedName}</div>`;
         }
-        
+
         // Calculate name for current breakpoint (display mode only)
-        logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Calculating event name for current breakpoint', { 
-            eventKey, 
+        logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Calculating event name for current breakpoint', {
+            eventKey,
             breakpoint: this.currentBreakpoint,
             hideEvents,
             source: 'fresh_calculation'
         });
         const eventName = this.getSmartEventNameForBreakpoint(event, this.currentBreakpoint);
-        
+
         // Cache the result for display mode
         this.cachedEventNames.set(eventKey, eventName);
         logger.info('CALENDAR', '🔍 EVENT_NAME_GEN: Cached calculated event name', {
@@ -1108,24 +1110,24 @@ class DynamicCalendarLoader extends CalendarCore {
             fullName: fullName,
             cached: true
         });
-        
+
         return `<div class="event-name">${eventName}</div>`;
     }
 
     // Format time for mobile display with simplified format (4a-5p)
     formatTimeForMobile(timeString) {
         if (!timeString) return '';
-        
+
         // Check if it's a time range
         const timeRangeRegex = /(\d{1,2}(?::\d{2})?(?:AM|PM))-(\d{1,2}(?::\d{2})?(?:AM|PM))/i;
         const match = timeString.match(timeRangeRegex);
-        
+
         if (match) {
             const startTime = match[1];
             const endTime = match[2];
             return this.simplifyTimeFormat(startTime) + '-' + this.simplifyTimeFormat(endTime);
         }
-        
+
         // For single times, just simplify
         return this.simplifyTimeFormat(timeString);
     }
@@ -1133,7 +1135,7 @@ class DynamicCalendarLoader extends CalendarCore {
     // Convert time format to simplified version (4 AM -> 4a, 5 PM -> 5p)
     simplifyTimeFormat(timeString) {
         if (!timeString) return '';
-        
+
         return timeString.replace(/(\d{1,2}(?::\d{2})?)\s*(AM|PM)/gi, (match, time, period) => {
             return time + (period.toLowerCase() === 'am' ? 'a' : 'p');
         });
@@ -1150,9 +1152,9 @@ class DynamicCalendarLoader extends CalendarCore {
                     favicon: event.favicon,
                     dataSource: this.dataSource
                 });
-                
+
                 let faviconUrl;
-                
+
                 let fallbackFaviconUrl = '';
 
                 if (event.favicon) {
@@ -1193,9 +1195,9 @@ class DynamicCalendarLoader extends CalendarCore {
                         dataSource: this.dataSource
                     });
                 }
-                
+
                 const textFallback = this.getMarkerText(event);
-                
+
                 logger.debug('MAP', 'Favicon URL generated', {
                     website: event.website,
                     favicon: event.favicon,
@@ -1204,7 +1206,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     textFallback,
                     dataSource: this.dataSource
                 });
-                
+
                 const el = document.createElement('div');
                 el.className = 'favicon-marker';
 
@@ -1224,7 +1226,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 logger.warn('MAP', 'Failed to create favicon marker', { website: event.website, error: error.message });
             }
         }
-        
+
         // Use text from shorter field or shortName or name
         const markerText = this.getMarkerText(event);
         const el = document.createElement('div');
@@ -1244,7 +1246,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     getCurrentPeriodBounds() {
-        return this.currentView === 'week' 
+        return this.currentView === 'week'
             ? this.getWeekBounds(this.currentDate)
             : this.getMonthBounds(this.currentDate);
     }
@@ -1252,22 +1254,22 @@ class DynamicCalendarLoader extends CalendarCore {
     // Show events for a specific day (used by calendar overview)
     showDayEvents(dateString, events) {
         const date = new Date(dateString);
-        
+
         // Create modal or popup to show events
         const modal = document.createElement('div');
         modal.className = 'day-events-modal';
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Events for ${date.toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        month: 'long', 
-                        day: 'numeric' 
+                    <h3>Events for ${date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric'
                     })}</h3>
                     <button class="modal-close" onclick="this.closest('.day-events-modal').remove()">&times;</button>
                 </div>
                 <div class="modal-body">
-                    ${events.length > 0 
+                    ${events.length > 0
                         ? events.map(event => `
                                                             <div class="modal-event-item" data-event-slug="${event.slug}">
                                     <div class="event-name">${event.name}</div>
@@ -1288,10 +1290,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 </div>
             </div>
         `;
-        
+
         // Add modal to page
         document.body.appendChild(modal);
-        
+
         // Add click handler to close modal when clicking outside
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
@@ -1304,14 +1306,14 @@ class DynamicCalendarLoader extends CalendarCore {
     async switchToWeekView(dateString) {
         this.currentDate = new Date(dateString);
         this.currentView = 'week';
-        
+
         // Update active button
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('.view-btn[data-view="week"]').classList.add('active');
-        
+
         // Remove modal
         document.querySelector('.day-events-modal')?.remove();
-        
+
         // Clear current selection when jumping views
         this.clearEventSelection();
         await this.updateCalendarDisplay();
@@ -1320,13 +1322,13 @@ class DynamicCalendarLoader extends CalendarCore {
 
     async navigatePeriod(direction, skipAnimation = false) {
         const delta = direction === 'next' ? 1 : -1;
-        
+
         logger.userInteraction('CALENDAR', `Navigating ${direction} period`, {
             currentView: this.currentView,
             currentDate: this.currentDate.toISOString(),
             skipAnimation
         });
-        
+
         if (this.currentView === 'week') {
             this.currentDate.setDate(this.currentDate.getDate() + (delta * 7));
         } else {
@@ -1341,11 +1343,11 @@ class DynamicCalendarLoader extends CalendarCore {
             ).getDate();
             this.currentDate.setDate(Math.min(previousDay, lastDayOfTargetMonth));
         }
-        
+
         // Changing period clears selection and syncs URL
         this.clearEventSelection();
         this.syncUrl(true);
-        
+
         // Only update display immediately if not part of a swipe animation
         if (skipAnimation) {
             await this.updateCalendarDisplay();
@@ -1361,7 +1363,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
     formatDateRange(start, end) {
         const options = { month: 'short', day: 'numeric' };
-        
+
         if (this.currentView === 'week') {
             if (start.getMonth() === end.getMonth()) {
                 return `${start.toLocaleDateString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}`;
@@ -1380,16 +1382,16 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.componentError('CALENDAR', `No calendar configuration found for city: ${cityKey}`);
             return null;
         }
-        
+
         // Check for proxy URL parameter - only use proxy when explicitly requested
         const urlParams = new URLSearchParams(window.location.search);
         const useProxy = urlParams.has('proxy');
-        
+
         // Track data source for image URL conversion
         this.dataSource = 'cached'; // Default to cached, will be updated based on actual source used
-        
+
         logger.time('CALENDAR', `Loading ${cityConfig.name} calendar data`);
-        
+
         // If proxy parameter is set, skip cached data and go directly to proxy
         if (useProxy) {
             logger.info('CALENDAR', 'Proxy parameter detected - using proxy for calendar data');
@@ -1399,7 +1401,7 @@ class DynamicCalendarLoader extends CalendarCore {
             this.dataSource = 'fallback';
             return this.loadCalendarDataFallback(cityKey, cityConfig);
         }
-        
+
         // Helper function to process dates recursively
         const reviveDates = (obj) => {
             if (obj === null || typeof obj !== 'object') return obj;
@@ -1428,17 +1430,17 @@ class DynamicCalendarLoader extends CalendarCore {
 
         // Normal flow: Try to load cached calendar data first
         const cachedDataUrl = this.buildLocalCalendarUrl(cityKey, ext);
-        
+
         try {
             logger.debug('CALENDAR', `Attempting to load cached calendar data`, {
                 url: cachedDataUrl,
                 city: cityConfig.name,
                 method: 'cached_data_direct_fetch'
             });
-            
+
             // Update loading message
             this.updateLoadingMessage(1, 'cached');
-            
+
             const response = await fetch(cachedDataUrl, {
                 method: 'GET',
                 headers: {
@@ -1446,11 +1448,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 },
                 cache: 'default' // Use browser cache for efficiency
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             if (isJsonCity) {
                 const jsonData = await response.json();
 
@@ -1512,7 +1514,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     timezoneData: this.timezoneData
                 };
             }
-            
+
             logger.timeEnd('CALENDAR', `Loading ${cityConfig.name} calendar data`);
             logger.componentLoad('CALENDAR', `Successfully processed cached calendar data for ${cityConfig.name}`, {
                 eventCount: this.allEvents.length,
@@ -1528,9 +1530,9 @@ class DynamicCalendarLoader extends CalendarCore {
                     cityConfigName: this.eventsData.cityConfig?.name || 'no name'
                 }
             });
-            
+
             return this.eventsData;
-            
+
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to load cached calendar data, trying fallback', {
                 cityKey,
@@ -1540,7 +1542,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 errorName: error.name,
                 willTryFallback: true
             });
-            
+
             // Fallback 1: try via CORS proxy providers
             try {
                 this.dataSource = 'proxy';
@@ -1555,7 +1557,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     error: proxyError.message
                 });
             }
-            
+
             // Fallback 2: try to load directly from Google (will likely fail due to CORS, but worth trying)
             try {
                 this.dataSource = 'fallback';
@@ -1566,7 +1568,7 @@ class DynamicCalendarLoader extends CalendarCore {
             }
         }
     }
-    
+
     // Convert external image URL to local path for cached data
     convertImageUrlToLocal(imageUrl, eventData) {
         const filenameUtils = window.FilenameUtils;
@@ -1604,32 +1606,32 @@ class DynamicCalendarLoader extends CalendarCore {
     buildLocalCalendarUrl(cityKey, ext = 'ics') {
         try {
             const pathname = window.location.pathname || '';
-            
+
             // Use PathUtils if available for consistent path resolution
             if (window.pathUtils) {
                 return window.pathUtils.resolvePath(`data/calendars/${cityKey}.${ext}`);
             }
-            
+
             // Fallback logic for path detection
             // Test pages are served under /testing/, need to go up one level
             const isTesting = pathname.includes('/testing/');
-            
+
             // City subdirectories (like /nyc/, /seattle/) need to go up one level
             const pathSegments = pathname.split('/').filter(Boolean);
-            const isInCitySubdirectory = pathSegments.length > 0 && 
-                window.CITY_CONFIG && 
+            const isInCitySubdirectory = pathSegments.length > 0 &&
+                window.CITY_CONFIG &&
                 window.CITY_CONFIG[pathSegments[0].toLowerCase()];
-            
+
             const needsParentPath = isTesting || isInCitySubdirectory;
             const prefix = needsParentPath ? '../' : '';
-            
+
             return `${prefix}data/calendars/${cityKey}.${ext}`;
         } catch (e) {
             // Safe fallback
             return `data/calendars/${cityKey}.ics`;
         }
     }
-    
+
     // Try multiple free CORS proxies to fetch Google Calendar ICS
     async loadCalendarDataViaProxy(cityKey, cityConfig) {
         this.updateLoadingMessage(1, 'proxy');
@@ -1649,7 +1651,7 @@ class DynamicCalendarLoader extends CalendarCore {
             return null;
         }
     }
-     
+
      // Fallback method: try direct Google Calendar access (will likely fail due to CORS)
      async loadCalendarDataFallback(cityKey, cityConfig) {
          logger.info('CALENDAR', 'Attempting fallback: direct Google Calendar access', {
@@ -1657,12 +1659,12 @@ class DynamicCalendarLoader extends CalendarCore {
              cityName: cityConfig.name,
              warning: 'This will likely fail due to CORS, but trying anyway'
          });
-         
+
          const icalUrl = `https://calendar.google.com/calendar/ical/${cityConfig.calendarId}/public/basic.ics`;
-         
+
          try {
              this.updateLoadingMessage(1, 'direct');
-             
+
              // Simple timeout implementation using Promise.race
              const fetchPromise = fetch(icalUrl, {
                  method: 'GET',
@@ -1671,43 +1673,43 @@ class DynamicCalendarLoader extends CalendarCore {
                  },
                  cache: 'no-cache'
              });
-             
+
              const timeoutPromise = new Promise((_, reject) => {
                  setTimeout(() => {
                      reject(new Error('Request timed out after 25 seconds'));
                  }, 25000); // 25 second timeout for CORS fallback
              });
-             
+
              const response = await Promise.race([fetchPromise, timeoutPromise]);
-             
+
              if (!response.ok) {
                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
              }
-             
+
              const icalText = await response.text();
-             
+
              if (!icalText || !icalText.includes('BEGIN:VCALENDAR')) {
                  throw new Error('Invalid iCal data received from Google');
              }
-             
+
              logger.info('CALENDAR', '🎉 Fallback succeeded: Direct Google Calendar access worked!', {
                  cityKey,
                  dataLength: icalText.length,
                  note: 'This suggests Google may have added CORS headers'
              });
-             
+
              const events = this.parseICalData(icalText);
              this.allEvents = events;
-             
+
              this.eventsData = {
                  cityConfig,
                  events,
                  calendarTimezone: this.calendarTimezone,
                  timezoneData: this.timezoneData
              };
-             
+
              return this.eventsData;
-             
+
          } catch (error) {
              // Handle timeout specifically
              if (error.message.includes('timed out')) {
@@ -1725,14 +1727,14 @@ class DynamicCalendarLoader extends CalendarCore {
                      recommendation: 'Calendar data will be updated by GitHub Actions within 2 hours'
                  });
              }
-             
+
              // Clear fake event from allEvents to prevent it from showing
              this.allEvents = [];
             this.showCalendarError('loadCalendarDataFallback');
             return null;
          }
      }
- 
+
     // Show calendar error - only in the events container for cleaner display
     showCalendarError(errorSource = 'unknown') {
         // Check if events are already successfully displayed - don't overwrite them
@@ -1740,7 +1742,7 @@ class DynamicCalendarLoader extends CalendarCore {
         if (eventsContainer) {
             const hasEventCards = eventsContainer.querySelector('.event-card');
             const hasLoadingMessage = eventsContainer.querySelector('.loading-message');
-            
+
             if (hasEventCards) {
                 logger.warn('CALENDAR', `🚨 PREVENTED CALENDAR ERROR from overwriting successful events (source: ${errorSource})`, {
                     currentCity: this.currentCity,
@@ -1752,7 +1754,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 return; // Don't show error if events are already displayed
             }
         }
-        
+
         logger.error('CALENDAR', `🚨 SHOWING CALENDAR ERROR from source: ${errorSource}`, {
             currentCity: this.currentCity,
             currentCityConfig: this.currentCityConfig?.name || 'no config',
@@ -1761,7 +1763,7 @@ class DynamicCalendarLoader extends CalendarCore {
             isInitializing: this.isInitializing,
             stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n') || 'no stack'
         });
-        
+
         const errorMessage = `
             <div class="error-message">
                 <h3>📅 Calendar Temporarily Unavailable</h3>
@@ -1771,7 +1773,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 <!-- Debug: Error source: ${errorSource} -->
             </div>
         `;
-        
+
         // Only show error in the events container to avoid duplication
         if (eventsContainer) {
             eventsContainer.innerHTML = errorMessage;
@@ -1796,7 +1798,7 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.warn('CALENDAR', 'Events container not found when trying to clear error');
         }
     }
- 
+
      // Update loading message with method information
      updateLoadingMessage(attemptNumber, method) {
          const eventsList = document.querySelector('.events-list');
@@ -1810,14 +1812,14 @@ class DynamicCalendarLoader extends CalendarCore {
              } else if (method === 'proxy') {
                  message = '📅 Loading events (via secure proxy)...';
              }
-             
+
              const loadingDiv = eventsList.querySelector('.loading-message');
              if (loadingDiv) {
                  loadingDiv.textContent = message;
              } else {
                  eventsList.innerHTML = `<div class="loading-message">${message}</div>`;
              }
-             
+
              // Keep detailed logging for debugging (hidden from users)
              logger.debug('CALENDAR', 'Updated loading message for new caching approach', {
                  attemptNumber,
@@ -1862,7 +1864,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
         // Get current calendar period bounds for contextual date display
         const periodBounds = this.getCurrentPeriodBounds();
-        
+
         // Event badges
         const formatDayTime = (event) => {
             if (this.isMultiDay(event) && window.formatEventDates) {
@@ -1870,17 +1872,17 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             return this.getEnhancedDayTimeDisplay(event, this.currentView, periodBounds);
         };
-        
+
         const recurringBadgeContent = this.getRecurringBadgeContent(event);
-        const recurringBadge = recurringBadgeContent ? 
+        const recurringBadge = recurringBadgeContent ?
             `<span class="recurring-badge">${recurringBadgeContent}</span>` : '';
-        
+
         const dateBadgeContent = this.getDateBadgeContent(event, periodBounds);
-        const dateBadge = dateBadgeContent ? 
+        const dateBadge = dateBadgeContent ?
             `<span class="date-badge">${dateBadgeContent}</span>` : '';
-        
+
         // Add distance badge if location features are enabled and distance is available
-        const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ? 
+        const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ?
             `<span class="distance-badge" title="Distance from your location"><i class="bi bi-geo-alt"></i> ${event.distanceFromUser} mi</span>` : '';
 
         return `
@@ -1912,32 +1914,32 @@ class DynamicCalendarLoader extends CalendarCore {
     // Setup share button handlers for event cards
     setupShareButtons() {
         const shareButtons = document.querySelectorAll('.share-event-btn');
-        
+
         shareButtons.forEach(button => {
             button.addEventListener('click', async (e) => {
                 e.stopPropagation(); // Prevent event card click
-                
+
                 const eventSlug = button.dataset.eventSlug;
                 const eventName = button.dataset.eventName;
                 const eventVenue = button.dataset.eventVenue;
                 const eventTime = button.dataset.eventTime;
-                
+
                 // Build share URL with date + view for accurate deep link
                 const citySlug = this.currentCity || window.location.pathname.replace(/\//g, '');
                 const dateISO = this.formatDateToISO(this.currentDate);
                 const view = this.currentView;
                 const shareUrl = `${window.location.origin}/${citySlug}/${eventSlug}?date=${encodeURIComponent(dateISO)}&view=${encodeURIComponent(view)}`;
-                
+
                 // Build share text
                 const shareTitle = `${eventName}`;
                 const shareText = `Check out ${eventName} at ${eventVenue} - ${eventTime}`;
-                
+
                 logger.userInteraction('EVENT', 'Share button clicked', {
                     eventSlug,
                     eventName,
                     shareUrl
                 });
-                
+
                 // Use Web Share API if available, otherwise copy to clipboard
                 if (navigator.share) {
                     try {
@@ -1975,10 +1977,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             });
         });
-        
+
         logger.debug('EVENT', `Set up ${shareButtons.length} share button handlers`);
     }
-    
+
     // Show toast notification for share feedback
     showShareToast(message) {
         // Remove any existing toast
@@ -1986,7 +1988,7 @@ class DynamicCalendarLoader extends CalendarCore {
         if (existingToast) {
             existingToast.remove();
         }
-        
+
         // Create new toast
         const toast = document.createElement('div');
         toast.className = 'share-toast';
@@ -2004,7 +2006,7 @@ class DynamicCalendarLoader extends CalendarCore {
             animation: slideUp 0.3s ease-out;
             font-family: 'Poppins', sans-serif;
         `;
-        
+
         // Add animation keyframes if not already present
         if (!document.querySelector('#share-toast-animations')) {
             const style = document.createElement('style');
@@ -2023,9 +2025,9 @@ class DynamicCalendarLoader extends CalendarCore {
             `;
             document.head.appendChild(style);
         }
-        
+
         document.body.appendChild(toast);
-        
+
         // Remove toast after 3 seconds
         setTimeout(() => {
             toast.style.animation = 'slideUp 0.3s ease-out reverse';
@@ -2044,31 +2046,31 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             return [];
         }
-        
+
         const { start, end } = this.getCurrentPeriodBounds();
-        
+
         logger.debug('CALENDAR', '🔍 FILTER: Starting event filtering', {
             totalEvents: this.allEvents.length,
             periodStart: start.toISOString(),
             periodEnd: end.toISOString(),
             currentView: this.currentView
         });
-        
+
         // Expand recurring events into separate instances for each occurrence
         const expandedEvents = this.expandRecurringEvents(this.allEvents, start, end);
-        
+
         const filtered = expandedEvents.filter(event => {
             // Special case: Always include measurement test events
             if (event.slug === 'measurement-test') {
                 logger.debug('CALENDAR', `🔍 FILTER: Measurement test event ${event.name}: INCLUDED (special case)`);
                 return true;
             }
-            
+
             if (!event.startDate) {
                 logger.debug('CALENDAR', `🔍 FILTER: Event has no startDate: ${event.name}`);
                 return false;
             }
-            
+
             // For all events (including expanded recurring events), check if they fall within the period
             const eventEndDate = this.getLogicalEndDate(event);
             const isInPeriod = this.isEventInPeriod(this.getLogicalStartDate(event), start, end, eventEndDate);
@@ -2081,15 +2083,15 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             return isInPeriod;
         });
-        
+
         // Apply simple deduplication: for each date, show either recurring event OR override, never both
         const deduplicatedEvents = this.deduplicateByDate(filtered);
-        
+
         // Sort events by upcoming time (earliest first)
         deduplicatedEvents.sort((a, b) => {
             const dateA = new Date(a.startDate);
             const dateB = new Date(b.startDate);
-            
+
             // If dates are the same, sort by start time/multi-day
             if (dateA.toDateString() === dateB.toDateString()) {
                 const aIsMultiDay = this.isMultiDay(a);
@@ -2107,18 +2109,18 @@ class DynamicCalendarLoader extends CalendarCore {
 
                 return dateA.getTime() - dateB.getTime();
             }
-            
+
             // Otherwise sort by date
             return dateA.getTime() - dateB.getTime();
         });
-        
+
         logger.debug('CALENDAR', '🔍 FILTER: Event filtering complete with deduplication', {
             totalEvents: this.allEvents.length,
             filteredEvents: filtered.length,
             deduplicatedEvents: deduplicatedEvents.length,
             filteredEventNames: deduplicatedEvents.map(e => e.name)
         });
-        
+
         return deduplicatedEvents;
     }
 
@@ -2139,7 +2141,7 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             overrideRecurrenceIdsByUid.get(uid).add(recurrenceKey);
         }
-        
+
         for (const event of events) {
             // Always include non-recurring events
             if (!event.recurring) {
@@ -2149,10 +2151,10 @@ class DynamicCalendarLoader extends CalendarCore {
 
             const uid = event.uid || event.slug || event.name;
             const overrideRecurrenceIds = uid ? overrideRecurrenceIdsByUid.get(uid) : null;
-            
+
             // For recurring events, create separate instances for each occurrence
             const occurrences = this.getRecurringEventOccurrences(event, start, end);
-            
+
             for (const occurrence of occurrences) {
                 if (overrideRecurrenceIds && overrideRecurrenceIds.has(this.getLocalDateKey(occurrence))) {
                     continue;
@@ -2164,7 +2166,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     isExpanded: true, // Mark as expanded instance
                     originalStartDate: event.startDate // Keep reference to original
                 };
-                
+
                 if (event.endDate && event.startDate) {
                     let duration = new Date(event.endDate).getTime() - new Date(event.startDate).getTime();
                     // If duration is negative, it's likely a crossover midnight issue in the original data. Add 24h.
@@ -2173,31 +2175,31 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                     expandedEvent.endDate = new Date(occurrence.getTime() + duration);
                 }
-                
+
                 expandedEvents.push(expandedEvent);
             }
         }
-        
+
         logger.debug('CALENDAR', 'Recurring events expanded', {
             originalEvents: events.length,
             expandedEvents: expandedEvents.length,
             recurringEvents: events.filter(e => e.recurring).length,
             expandedRecurringEvents: expandedEvents.filter(e => e.isExpanded).length
         });
-        
+
         return expandedEvents;
     }
-    
+
     // Get all occurrences of a recurring event within a date range
     getRecurringEventOccurrences(event, start, end) {
         const occurrences = [];
-        
+
         if (!event.recurring || !event.startDate) {
             return occurrences;
         }
-        
+
         const current = new Date(start);
-        
+
         // Check each day in the period
         while (current <= end) {
             if (this.doesRecurringEventOccurOnDate(event, current)) {
@@ -2216,15 +2218,15 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             current.setDate(current.getDate() + 1);
         }
-        
+
         return occurrences;
     }
 
     isRecurringEventInPeriod(event, start, end) {
         if (!event.startDate) return false;
-        
+
         const current = new Date(start);
-        
+
         // Check each day in the period
         while (current <= end) {
             if (this.doesRecurringEventOccurOnDate(event, current)) {
@@ -2232,7 +2234,7 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             current.setDate(current.getDate() + 1);
         }
-        
+
         return false;
     }
 
@@ -2244,36 +2246,36 @@ class DynamicCalendarLoader extends CalendarCore {
 
         // Group events by date and UID
         const eventsByDateAndUID = new Map();
-        
+
         for (const event of events) {
             const eventDate = new Date(event.startDate);
             // Use local date components instead of UTC to avoid timezone conversion issues
             const dateKey = this.getLocalDateKey(eventDate);
             const uid = event.uid || event.slug || event.name;
             const key = `${dateKey}-${uid}`;
-            
-            
+
+
             if (!eventsByDateAndUID.has(key)) {
                 eventsByDateAndUID.set(key, []);
             }
             eventsByDateAndUID.get(key).push(event);
         }
-        
+
         // For each date/UID combination, keep only the appropriate event
         const deduplicatedEvents = [];
-        
+
         for (const [key, eventGroup] of eventsByDateAndUID) {
-            
+
             // If there's only one event for this date/UID, keep it
             if (eventGroup.length === 1) {
                 deduplicatedEvents.push(eventGroup[0]);
                 continue;
             }
-            
+
             // If there are multiple events for the same date/UID, prioritize overrides
             const overrideEvents = eventGroup.filter(e => e.recurrenceId);
             const expandedRecurringEvents = eventGroup.filter(e => e.isExpanded && e.recurring && !e.recurrenceId);
-            
+
             // Keep override events if they exist, otherwise keep expanded recurring events
             if (overrideEvents.length > 0) {
                 deduplicatedEvents.push(...overrideEvents);
@@ -2293,13 +2295,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 });
             }
         }
-        
+
         logger.debug('CALENDAR', 'Date-based deduplication complete', {
             originalEvents: events.length,
             deduplicatedEvents: deduplicatedEvents.length,
             removedDuplicates: events.length - deduplicatedEvents.length
         });
-        
+
         return deduplicatedEvents;
     }
 
@@ -2311,22 +2313,22 @@ class DynamicCalendarLoader extends CalendarCore {
 
         // Group events by UID and recurrenceId
         const eventsByUIDAndRecurrenceId = new Map();
-        
+
         for (const event of events) {
             // Skip events without proper identification
             if (!event) {
                 logger.warn('CALENDAR', 'Skipping null/undefined event in deduplication');
                 continue;
             }
-            
+
             const uid = event.uid || event.slug || event.name;
             const recurrenceId = event.recurrenceId || null;
-            
+
             // Create a key that handles null recurrenceId properly
             // For Date objects, use ISO string; for null, use 'null'
             const recurrenceIdKey = recurrenceId instanceof Date ? recurrenceId.toISOString() : 'null';
             const key = `${uid}-${recurrenceIdKey}`;
-            
+
             logger.debug('CALENDAR', 'Processing event for UID/recurrenceId deduplication', {
                 eventName: event.name,
                 uid: uid,
@@ -2334,16 +2336,16 @@ class DynamicCalendarLoader extends CalendarCore {
                 recurrenceIdKey: recurrenceIdKey,
                 key: key
             });
-            
+
             if (!eventsByUIDAndRecurrenceId.has(key)) {
                 eventsByUIDAndRecurrenceId.set(key, []);
             }
             eventsByUIDAndRecurrenceId.get(key).push(event);
         }
-        
+
         // For each UID/recurrenceId combination, keep only one event
         const deduplicatedEvents = [];
-        
+
         for (const [key, eventGroup] of eventsByUIDAndRecurrenceId) {
             if (eventGroup.length === 1) {
                 // Only one event for this UID/recurrenceId combination
@@ -2357,7 +2359,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Multiple events with same UID and recurrenceId - keep the first one
                 const eventToKeep = eventGroup[0];
                 deduplicatedEvents.push(eventToKeep);
-                
+
                 logger.info('CALENDAR', 'Deduplicating multiple events with same UID/recurrenceId for list/map', {
                     uid: eventToKeep.uid,
                     recurrenceId: eventToKeep.recurrenceId,
@@ -2367,14 +2369,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 });
             }
         }
-        
+
         logger.info('CALENDAR', 'UID and recurrenceId-based deduplication complete for list/map', {
             originalEvents: events.length,
             deduplicatedEvents: deduplicatedEvents.length,
             removedDuplicates: events.length - deduplicatedEvents.length,
             uniqueUIDRecurrenceIdCombinations: eventsByUIDAndRecurrenceId.size
         });
-        
+
         return deduplicatedEvents;
     }
 
@@ -2403,7 +2405,7 @@ class DynamicCalendarLoader extends CalendarCore {
     generateWeekView(events, start, end, today, hideEvents = false) {
         const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const days = [];
-        
+
         for (let i = 0; i < 7; i++) {
             const currentDay = new Date(start);
             currentDay.setDate(start.getDate() + i);
@@ -2422,7 +2424,7 @@ class DynamicCalendarLoader extends CalendarCore {
         return days.map(day => {
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
-                
+
                 // Set dayDate for comparisons
                 const dayDate = new Date(day);
                 dayDate.setHours(0, 0, 0, 0);
@@ -2441,22 +2443,22 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (event.isExpanded) {
                     const eventDate = this.getLogicalStartDate(event);
                     eventDate.setHours(0, 0, 0, 0);
-                    
+
                     return eventDate.getTime() === dayDate.getTime();
                 }
-                
+
                 // For non-expanded recurring events, use the occurrence check
                 if (event.recurring) {
                     return this.doesRecurringEventOccurOnDate(event, day);
                 }
-                
+
                 // For non-recurring events, check exact date match
                 const eventDate = this.getLogicalStartDate(event);
                 eventDate.setHours(0, 0, 0, 0);
-                
+
                 return eventDate.getTime() === dayDate.getTime();
             });
-            
+
             // Events are already deduplicated in getFilteredEvents, but need to be sorted for the day
             const filteredDayEvents = dayEvents.sort((a, b) => {
                 const aIsMultiDay = this.isMultiDay(a);
@@ -2478,7 +2480,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 return dateA.getTime() - dateB.getTime();
             });
 
-            const eventsHtml = filteredDayEvents.length > 0 
+            const eventsHtml = filteredDayEvents.length > 0
                 ? filteredDayEvents.map(event => {
                     const isMultiDay = this.isMultiDay(event);
                     const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (event.time ? this.formatTimeForMobile(event.time) : null);
@@ -2513,7 +2515,7 @@ class DynamicCalendarLoader extends CalendarCore {
                             seenMultiDayEvents.add(occurrenceId);
                         }
                     }
-                    
+
                     return `
                         <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
                             ${showTitle ? this.generateEventNameElements(event, hideEvents) : `<div style="visibility: hidden;">${this.generateEventNameElements(event, hideEvents)}</div>`}
@@ -2553,31 +2555,31 @@ class DynamicCalendarLoader extends CalendarCore {
                 <h4>${day}</h4>
             </div>
         `).join('');
-        
+
         // For month view, create a grid including days from previous/next month to fill the calendar
         const firstDay = new Date(start);
         const lastDay = new Date(end);
-        
+
         // Get the first day of the calendar grid (might be from previous month)
         const calendarStart = new Date(firstDay);
         calendarStart.setDate(firstDay.getDate() - firstDay.getDay());
-        
+
         // Calculate the minimum number of weeks needed to display the month
         const totalDays = Math.ceil((lastDay.getTime() - calendarStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         const weeksNeeded = Math.ceil(totalDays / 7);
-        
+
         // Get the last day of the calendar grid (optimized to avoid extra rows)
         const calendarEnd = new Date(calendarStart);
         calendarEnd.setDate(calendarStart.getDate() + (weeksNeeded * 7) - 1);
-        
+
         const days = [];
         const current = new Date(calendarStart);
-        
+
         while (current <= calendarEnd) {
             days.push(new Date(current));
             current.setDate(current.getDate() + 1);
         }
-        
+
         logger.debug('CALENDAR', `Generated month view with ${weeksNeeded} weeks (${days.length} days)`, {
             monthStart: start.toISOString().split('T')[0],
             monthEnd: end.toISOString().split('T')[0],
@@ -2596,7 +2598,7 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             const dayEvents = events.filter(event => {
                 if (!event.startDate) return false;
-                
+
                 const dayDate = new Date(day);
                 dayDate.setHours(0, 0, 0, 0);
 
@@ -2614,7 +2616,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (event.isExpanded) {
                     const eventDate = this.getLogicalStartDate(event);
                     eventDate.setHours(0, 0, 0, 0);
-                    
+
                     const matches = eventDate.getTime() === dayDate.getTime();
                     if (matches) {
                         logger.debug('CALENDAR', 'Month view: Expanded recurring event matches day', {
@@ -2626,7 +2628,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                     return matches;
                 }
-                
+
                 // For non-expanded recurring events, use the occurrence check
                 if (event.recurring) {
                     const matches = this.doesRecurringEventOccurOnDate(event, day);
@@ -2640,14 +2642,14 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                     return matches;
                 }
-                
+
                 // For non-recurring events, check exact date match
                 const eventDate = this.getLogicalStartDate(event);
                 eventDate.setHours(0, 0, 0, 0);
-                
+
                 return eventDate.getTime() === dayDate.getTime();
             });
-            
+
             // Events are already deduplicated in getFilteredEvents, but need to be sorted for the day
             const filteredDayEvents = dayEvents.sort((a, b) => {
                 const aIsMultiDay = this.isMultiDay(a);
@@ -2678,8 +2680,8 @@ class DynamicCalendarLoader extends CalendarCore {
             // Ultra-simplified month view: show only 2 events with shortened names for better mobile viewing
             const eventsToShow = filteredDayEvents.slice(0, 2);
             const additionalEventsCount = Math.max(0, filteredDayEvents.length - 2);
-            
-            const eventsHtml = eventsToShow.length > 0 
+
+            const eventsHtml = eventsToShow.length > 0
                 ? eventsToShow.map(event => {
                     const isMultiDay = this.isMultiDay(event);
                     const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (event.time ? this.formatTimeForMobile(event.time) : null);
@@ -2714,7 +2716,7 @@ class DynamicCalendarLoader extends CalendarCore {
                             seenMultiDayEvents.add(occurrenceId);
                         }
                     }
-                    
+
                     return `
                         <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
                             ${showTitle ? this.generateEventNameElements(event, hideEvents) : `<div style="visibility: hidden;">${this.generateEventNameElements(event, hideEvents)}</div>`}
@@ -2807,8 +2809,8 @@ class DynamicCalendarLoader extends CalendarCore {
 
         try {
             // Filter events with valid coordinates
-            const eventsWithCoords = events.filter(event => 
-                event.coordinates?.lat && event.coordinates?.lng && 
+            const eventsWithCoords = events.filter(event =>
+                event.coordinates?.lat && event.coordinates?.lng &&
                 !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)
             );
 
@@ -2887,29 +2889,29 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Initialize location status
                 updateLocationStatus();
             }
-            
+
             let markersAdded = 0;
             const markers = []; // Store markers for fit all function
-            
+
             logger.debug('MAP', 'Starting marker creation', {
                 totalEvents: events.length,
                 eventsWithCoords: eventsWithCoords.length
             });
-            
+
             events.forEach((event, index) => {
-                if (event.coordinates?.lat && event.coordinates?.lng && 
+                if (event.coordinates?.lat && event.coordinates?.lng &&
                     !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)) {
-                    
+
                     try {
                         logger.debug('MAP', `Creating marker ${index + 1}/${events.length}`, {
                             eventName: event.name,
                             coordinates: event.coordinates,
                             hasWebsite: !!event.website
                         });
-                        
+
                         // Create custom marker icon with favicon or fallback
                         const markerIcon = this.createMarkerIcon(event);
-                        
+
                         const marker = new maplibregl.Marker({
                             element: markerIcon,
                             anchor: 'bottom'
@@ -2928,7 +2930,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         marker.eventSlug = event.slug;
                         markers.push(marker);
                         markersAdded++;
-                        
+
                         logger.debug('MAP', `Marker ${index + 1} created successfully`);
                     } catch (markerError) {
                         logger.warn('MAP', `Failed to create marker for event: ${event.name}`, {
@@ -2960,7 +2962,7 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             window.eventsMap = map;
             window.eventsMapMarkers = markers; // Store markers globally for controls
-            
+
             // Store marker references by event slug for easy access
             window.eventsMapMarkersBySlug = {};
             markers.forEach(marker => {
@@ -2969,7 +2971,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     window.eventsMapMarkersBySlug[eventSlug] = marker;
                 }
             });
-            
+
             logger.debug('MAP', 'Map markers created and stored by slug', {
                 totalMarkers: markers.length,
                 markersBySlugCount: Object.keys(window.eventsMapMarkersBySlug).length,
@@ -2989,7 +2991,7 @@ class DynamicCalendarLoader extends CalendarCore {
     async updateCalendarDisplay(hideEvents = false) {
         logger.time('CALENDAR', 'Calendar display update');
         const filteredEvents = this.getFilteredEvents();
-        
+
         logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
             view: this.currentView,
             eventCount: filteredEvents.length,
@@ -3002,7 +3004,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 currentBreakpoint: this.currentBreakpoint
             }
         });
-        
+
         // Update calendar title
         try {
             const calendarTitle = document.getElementById('calendar-title');
@@ -3016,7 +3018,7 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to update calendar title', { error: error.message });
         }
-        
+
         // Update date range
         try {
             const dateRange = document.getElementById('date-range');
@@ -3030,14 +3032,14 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to update date range', { error: error.message });
         }
-        
+
         // Update calendar grid
         try {
             const calendarGrid = document.querySelector('.calendar-grid');
             if (calendarGrid) {
                 logger.debug('CALENDAR', 'Updating calendar grid HTML');
                 calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
-                
+
                 // For measurement mode, make the grid invisible to users but keep same layout constraints
                 if (hideEvents) {
                     // Keep the element in its normal position but hide it behind background
@@ -3056,10 +3058,10 @@ class DynamicCalendarLoader extends CalendarCore {
                     calendarGrid.style.visibility = 'visible';
                     logger.debug('CALENDAR', 'Calendar grid set to display mode (visible)');
                 }
-                
+
                 logger.debug('CALENDAR', 'Attaching calendar interactions');
                 this.attachCalendarInteractions();
-                
+
                 // Update visual selection state after calendar is rendered
                 this.updateSelectionVisualState();
             } else {
@@ -3068,7 +3070,7 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to update calendar grid', { error: error.message });
         }
-        
+
         // Update grid layout based on view (outside try-catch since calendarGrid might not be defined)
         try {
             const calendarGrid = document.querySelector('.calendar-grid');
@@ -3076,15 +3078,15 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (this.currentView === 'month') {
                     calendarGrid.className = 'calendar-grid month-view-grid';
                     calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                    
+
                     // Calculate the optimal number of rows based on the actual content
                     const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
                     const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
                     const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
                     const totalRows = headerRows + dayRows;
-                    
+
                     calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
-                    
+
                     logger.debug('CALENDAR', `Updated month view grid layout`, {
                         totalElements: dayElements.length,
                         headerRows: headerRows,
@@ -3101,13 +3103,13 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (layoutError) {
             logger.warn('CALENDAR', 'Failed to update grid layout', { error: layoutError.message });
         }
-        
+
         // Update events list (show for both week and month views)
         const eventsList = document.querySelector('.events-list');
         const eventsSection = document.querySelector('.events');
         if (eventsList && eventsSection) {
             eventsSection.style.display = 'block';
-            
+
             logger.debug('CALENDAR', '🔍 UPDATE_DISPLAY: Events list update logic', {
                 hideEvents,
                 filteredEventsLength: filteredEvents?.length || 0,
@@ -3117,7 +3119,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 hasExistingError: !!eventsList.querySelector('.error-message'),
                 hasExistingLoading: !!eventsList.querySelector('.loading-message')
             });
-            
+
             if (hideEvents) {
                 // Keep existing loading message when hideEvents is true
                 if (!eventsList.querySelector('.loading-message')) {
@@ -3129,7 +3131,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (existingError) {
                     logger.info('CALENDAR', 'Clearing previous error message - calendar loaded successfully');
                 }
-                
+
                 try {
                     // Events are already sorted by upcoming time in getFilteredEvents()
                     logger.debug('CALENDAR', '🔍 UPDATE_DISPLAY: Generating event cards', {
@@ -3141,16 +3143,16 @@ class DynamicCalendarLoader extends CalendarCore {
                             hasBar: !!filteredEvents[0].bar
                         } : 'no events'
                     });
-                    
+
                     // Apply UID/recurrenceId deduplication for list view
                     logger.info('CALENDAR', 'Applying UID/recurrenceId deduplication for list view', {
                         originalEventCount: filteredEvents.length
                     });
                     const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
-                    
+
                     const eventCardsHtml = listDeduplicatedEvents.map(event => this.generateEventCard(event)).join('');
                     eventsList.innerHTML = eventCardsHtml;
-                    
+
                     logger.debug('CALENDAR', '✅ UPDATE_DISPLAY: Successfully updated events list', {
                         htmlLength: eventCardsHtml.length,
                         originalEventCount: filteredEvents.length,
@@ -3164,10 +3166,10 @@ class DynamicCalendarLoader extends CalendarCore {
 
                 // Add share button event handlers
                 this.setupShareButtons();
-                
+
                 // Add card click handlers for selection toggle and URL sync
                 this.attachEventCardSelectionHandlers();
-                
+
                 // Update visual selection state after rendering
                 this.updateSelectionVisualState();
             } else {
@@ -3178,7 +3180,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 });
             }
         }
-        
+
         // Update map (show for both week and month views)
         // Initialize map if not in hideEvents mode
         try {
@@ -3193,7 +3195,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const mapDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
                 this.initializeMap(this.currentCityConfig, mapDeduplicatedEvents);
                 logger.debug('CALENDAR', 'Map initialization completed');
-                
+
                 // Update visual selection state again after map is initialized
                 // This ensures map markers are properly highlighted for auto-loaded slugs
                 logger.debug('MAP', 'Calling updateSelectionVisualState after map initialization', {
@@ -3201,30 +3203,30 @@ class DynamicCalendarLoader extends CalendarCore {
                     markersBySlugCount: window.eventsMapMarkersBySlug ? Object.keys(window.eventsMapMarkersBySlug).length : 0
                 });
                 this.updateSelectionVisualState();
-                
+
                 // Initialize location features after map is ready
                 try {
                     if (!window.locationManager) {
                         window.locationManager = new LocationManager();
                     }
-                    
+
                     const location = await window.locationManager.getLocationForFeatures();
-                    
+
                     if (location) {
                         this.userLocation = location;
                         window.userLocation = location;
                         this.locationFeaturesEnabled = true;
-                        
+
                         // Calculate distances for all events
                         this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, location);
-                        
+
                         // Show user location on map
                         showMyLocation(false);
-                        
-                        logger.info('CALENDAR', 'Location features enabled', { 
-                            lat: location.lat, 
+
+                        logger.info('CALENDAR', 'Location features enabled', {
+                            lat: location.lat,
                             lng: location.lng,
-                            source: location.source 
+                            source: location.source
                         });
                     } else {
                         logger.debug('CALENDAR', 'No user location available for features');
@@ -3240,7 +3242,7 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to initialize map', { error: error.message });
         }
-        
+
         logger.timeEnd('CALENDAR', 'Calendar display update');
         logger.performance('CALENDAR', `Calendar display updated successfully`, {
             view: this.currentView,
@@ -3262,9 +3264,9 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.debug('CALENDAR', 'Calendar controls already set up, skipping');
             return;
         }
-        
+
         logger.componentInit('CALENDAR', 'Setting up calendar controls');
-        
+
         // View toggle buttons
         document.querySelectorAll('.view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -3272,11 +3274,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (newView !== this.currentView) {
                     logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
                     this.currentView = newView;
-                    
+
                     // Update active button
                     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
                     e.target.classList.add('active');
-                    
+
                     // View change clears selection and syncs URL
                     this.clearEventSelection();
                     this.updateCalendarDisplay();
@@ -3284,49 +3286,49 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             });
         });
-        
+
         // Navigation buttons
         const prevBtn = document.getElementById('prev-period');
         const nextBtn = document.getElementById('next-period');
         const todayBtn = document.getElementById('today-btn');
-        
+
         if (prevBtn) {
             prevBtn.addEventListener('click', () => {
                 logger.userInteraction('CALENDAR', 'Previous period clicked');
                 this.navigatePeriod('prev', true);
             });
         }
-        
+
         if (nextBtn) {
             nextBtn.addEventListener('click', () => {
                 logger.userInteraction('CALENDAR', 'Next period clicked');
                 this.navigatePeriod('next', true);
             });
         }
-        
+
         if (todayBtn) {
             todayBtn.addEventListener('click', () => {
                 logger.userInteraction('CALENDAR', 'Today button clicked');
                 this.goToToday();
             });
         }
-        
+
         // Clear selection button removed - was ugly and unnecessary
-        
+
         // Setup swipe handlers for mobile navigation
         this.setupSwipeHandlers();
-        
+
         // Setup keyboard navigation
         this.setupKeyboardHandlers();
-        
+
         // Ensure active state matches current view
         this.updateViewToggleActive();
-        
+
         logger.componentLoad('CALENDAR', 'Calendar controls setup complete', {
             hasNavigation: !!(prevBtn && nextBtn && todayBtn),
             viewButtons: document.querySelectorAll('.view-btn').length
         });
-        
+
         this.controlsSetup = true;
     }
 
@@ -3337,7 +3339,7 @@ class DynamicCalendarLoader extends CalendarCore {
             if (!calendarSection || calendarSection.classList.contains('content-hidden')) {
                 return;
             }
-            
+
             switch (e.key) {
                 case 'ArrowLeft':
                     e.preventDefault();
@@ -3356,7 +3358,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     break;
             }
         });
-        
+
         logger.componentLoad('CALENDAR', 'Keyboard handlers setup complete');
     }
 
@@ -3366,7 +3368,7 @@ class DynamicCalendarLoader extends CalendarCore {
     updatePageContent(cityConfig, events, hideEvents = false) {
         // Store city config for later use
         this.currentCityConfig = cityConfig;
-        
+
         // Update CTA text
         const cityCTAText = document.getElementById('city-cta-text');
         if (cityCTAText) {
@@ -3379,7 +3381,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // Update calendar with initial display
         const calendarSection = document.querySelector('.weekly-calendar');
         calendarSection?.classList.remove('content-hidden');
-        
+
         // Update events section
         const eventsSection = document.querySelector('.events');
         eventsSection?.classList.remove('content-hidden');
@@ -3392,11 +3394,11 @@ class DynamicCalendarLoader extends CalendarCore {
         document.title = `${cityConfig.name} - chunky.dad Bear Guide`;
         const metaDescription = document.querySelector('meta[name="description"]');
         if (metaDescription) {
-            metaDescription.setAttribute('content', 
+            metaDescription.setAttribute('content',
                 `Complete gay bear guide to ${cityConfig.name} - events, bars, and the hottest bear scene`
             );
         }
-        
+
         // Update calendar display with hideEvents parameter
         this.updateCalendarDisplay(hideEvents);
     }
@@ -3406,9 +3408,9 @@ class DynamicCalendarLoader extends CalendarCore {
         try {
             logger.debug('CALENDAR', 'Starting to attach calendar interactions');
             const eventItems = document.querySelectorAll('.event-item');
-            
+
             logger.debug('CALENDAR', `Found ${eventItems.length} event items to attach interactions to`);
-            
+
             eventItems.forEach((item, index) => {
                 try {
                     item.addEventListener('click', (e) => {
@@ -3426,7 +3428,7 @@ class DynamicCalendarLoader extends CalendarCore {
                                 selectedEventDateISO: this.selectedEventDateISO,
                                 city: this.currentCity
                             });
-                            
+
                             // Toggle selection and sync URL
                             this.toggleEventSelection(eventSlug, dayISO);
                         } catch (clickError) {
@@ -3437,7 +3439,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     logger.warn('CALENDAR', `Failed to add event listener to item ${index}`, { error: addEventListenerError.message });
                 }
             });
-            
+
             logger.debug('CALENDAR', `Successfully attached interactions to ${eventItems.length} calendar items`);
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to attach calendar interactions', { error: error.message });
@@ -3455,7 +3457,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     generateLocationHtml(event) {
-        return event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
+        return event.coordinates && event.coordinates.lat && event.coordinates.lng ?
             `<div class="detail-row">
                 <span class="label">Location:</span>
                 <span class="value">
@@ -3535,8 +3537,8 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     createCoverElement(event) {
-        if (!event.cover || !event.cover.trim() || 
-            event.cover.toLowerCase() === 'free' || 
+        if (!event.cover || !event.cover.trim() ||
+            event.cover.toLowerCase() === 'free' ||
             event.cover.toLowerCase() === 'no cover') {
             return null;
         }
@@ -3566,7 +3568,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 const dayISO = this.selectedEventSlug === slug && this.selectedEventDateISO ? this.selectedEventDateISO : this.formatDateToISO(this.currentDate);
                 logger.userInteraction('EVENT', 'Event card clicked', { slug, date: dayISO });
                 this.toggleEventSelection(slug, dayISO);
-                
+
                 // Selection state is handled by updateSelectionVisualState()
             });
         });
@@ -3587,42 +3589,42 @@ class DynamicCalendarLoader extends CalendarCore {
     async renderCityPage() {
         this.currentCity = this.getCityFromURL();
         this.currentCityConfig = getCityConfig(this.currentCity);
-        
+
         // Parse initial state (view/date/event) from URL before rendering
         this.parseStateFromUrl();
-        
+
         logger.info('CITY', `Rendering city page for: ${this.currentCity}`);
-        
+
         // Header update is now handled immediately during page load - no longer needed here
         // This prevents blocking header updates on slow calendar initialization
-        
+
         // Set up city selector
         this.setupCitySelector();
-        
+
         // Check if city exists and has calendar
         if (!this.currentCityConfig) {
             logger.componentError('CITY', `City configuration not found: ${this.currentCity}`);
             this.showCityNotFound();
             return;
         }
-        
+
         if (!hasCityCalendar(this.currentCity)) {
             logger.info('CITY', `City ${this.currentCity} doesn't have calendar configured yet`);
             // Show empty calendar when no events are configured
             this.updatePageContent(this.currentCityConfig, []);
             return;
         }
-        
+
         logger.info('CALENDAR', 'Starting calendar initialization with proper order of operations');
-        
+
         // STEP 1: Create a fake event for accurate width measurement
         // Ensure the fake event date falls within the current period bounds
         const { start, end } = this.getCurrentPeriodBounds();
-        
+
         // Use the start of the period as the base date to ensure it's always within bounds
         const fakeEventDate = new Date(start);
         fakeEventDate.setHours(12, 0, 0, 0); // Set to noon to ensure it's within the period
-        
+
         const fakeEvent = {
             name: 'Sample Event Name For Width Measurement Testing',
             shortName: 'Sample Event', // Shorter than full name to trigger smart name logic
@@ -3633,21 +3635,21 @@ class DynamicCalendarLoader extends CalendarCore {
             slug: 'measurement-test',
             recurring: false
         };
-        
+
         logger.info('CALENDAR', '🔍 RENDER: Step 1: Creating calendar structure with fake event (hideEvents: true)', {
             fakeEventName: fakeEvent.name,
             fakeEventShortName: fakeEvent.shortName,
             fakeEventHasShortName: !!fakeEvent.shortName,
             willTriggerSmartNameLogic: !!fakeEvent.shortName
         });
-        
+
         // Set the fake event as allEvents for measurement
         this.allEvents = [fakeEvent];
-        
+
         // Debug: Check what the period bounds are and if fake event will be included
         const fakeEventDateForCheck = new Date(fakeEvent.startDate);
         const isInPeriod = fakeEventDateForCheck >= start && fakeEventDateForCheck <= end;
-        
+
         logger.info('CALENDAR', '🔍 DEBUG: Fake event filtering check', {
             fakeEventDate: fakeEventDateForCheck.toISOString(),
             periodStart: start.toISOString(),
@@ -3657,13 +3659,13 @@ class DynamicCalendarLoader extends CalendarCore {
             currentView: this.currentView,
             fakeEventBasedOn: 'period start (guaranteed to be in bounds)'
         });
-        
+
         // Show calendar structure with fake event but hidden for measurements
         this.updatePageContent(this.currentCityConfig, [fakeEvent], true); // hideEvents = true
-        
+
         // STEP 2: Wait for DOM to be fully updated and then measure
         logger.info('CALENDAR', '🔍 RENDER: Step 2: Waiting for DOM to be ready for measurement');
-        
+
         // Use requestAnimationFrame to ensure DOM is rendered AND responsive CSS is applied
         await new Promise(resolve => {
             requestAnimationFrame(() => {
@@ -3676,12 +3678,12 @@ class DynamicCalendarLoader extends CalendarCore {
                 });
             });
         });
-        
+
         logger.info('CALENDAR', '🔍 RENDER: Step 2b: DOM ready, starting measurements');
-        
+
         // Measure the fake event width - should work reliably now
         const measurementWidth = this.getEventTextWidth();
-        
+
         if (measurementWidth === null) {
             logger.warn('CALENDAR', '🔍 RENDER: Failed to measure event text width - using fallback calculation');
             // Force calculate chars per pixel as fallback
@@ -3691,16 +3693,16 @@ class DynamicCalendarLoader extends CalendarCore {
             // Now calculate chars per pixel using the measured width
             const charsPerPixel = this.calculateCharsPerPixel();
             logger.info('CALENDAR', `🔍 RENDER: Calculated charsPerPixel: ${charsPerPixel?.toFixed(4)} using measured width: ${measurementWidth}px`);
-            
+
 
         }
-        
+
         // STEP 3: Load calendar data from the API
         logger.info('CALENDAR', '🔍 RENDER: Step 3: Loading real calendar data');
-        
+
         try {
             const data = await this.loadCalendarData(this.currentCity);
-            
+
             logger.debug('CALENDAR', '🔍 RENDER: Calendar data loaded, checking structure', {
                 dataExists: !!data,
                 dataType: typeof data,
@@ -3711,7 +3713,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 cityConfigName: data && data.cityConfig ? data.cityConfig.name : 'no name',
                 allEventsLength: this.allEvents.length
             });
-            
+
             if (!data || !data.events || !data.cityConfig) {
                 logger.error('CALENDAR', '🔍 RENDER: Failed to load calendar data - showing error message', {
                     dataIsNull: data === null,
@@ -3729,31 +3731,31 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.showCalendarError('renderCityPage_dataValidation');
                 return;
             }
-            
+
             // STEP 4: Display the real events with hideEvents: false
             logger.info('CALENDAR', '🔍 RENDER: Step 4: Displaying real events (hideEvents: false)', {
                 eventCount: data.events.length,
                 cachedWidth: this.cachedEventTextWidth,
                 cachedCharsPerPixel: this.charsPerPixel?.toFixed(4)
             });
-            
+
             // Clear any existing error messages before showing successful content
             logger.debug('CALENDAR', '🔍 RENDER: Clearing any existing error messages');
             this.clearCalendarError();
-            
+
             logger.debug('CALENDAR', '🔍 RENDER: Updating page content with real events', {
                 cityConfig: data.cityConfig.name,
                 eventCount: data.events.length,
                 hideEvents: false
             });
             this.updatePageContent(data.cityConfig, data.events, false); // hideEvents = false
-            
+
             // Ensure URL reflects initial state after first render
             this.syncUrl(true);
-            
+
         } catch (error) {
             logger.componentError('CALENDAR', '🔍 RENDER: Calendar loading failed with error', error);
-            
+
             // Only show error and clear events if this is a critical failure
             // Check if the error occurred before we loaded any data
             if (!this.allEvents || this.allEvents.length === 0) {
@@ -3777,7 +3779,7 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             return;
         }
-        
+
         // STEP 5: Final validation and summary
         logger.info('CALENDAR', '🔍 RENDER: Step 5: Final validation and summary', {
             totalSteps: 5,
@@ -3798,7 +3800,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 note: 'Defensive reduction of 0.02 applied directly to charsPerPixel to achieve ~0.11 (down from ~0.13)'
             }
         });
-        
+
         logger.componentLoad('CITY', `City page rendered successfully for ${this.currentCity}`, {
             eventCount: this.allEvents ? this.allEvents.length : 0,
             measurementWidth: measurementWidth
@@ -3808,16 +3810,16 @@ class DynamicCalendarLoader extends CalendarCore {
     // Update characters per pixel ratio (for new dynamic system)
     updateCharsPerPixel(newRatio) {
         logger.info('CALENDAR', 'Characters per pixel ratio updated from test interface', newRatio);
-        
+
         // Store the new single ratio
         this.charsPerPixel = newRatio;
-        
+
         // Force a refresh of the calendar display to apply new ratio
         if (this.allEvents && this.allEvents.length > 0) {
             this.updateCalendarDisplay();
         }
     }
-    
+
     // Set up message listener for testing interface communication
     setupMessageListener() {
         window.addEventListener('message', (event) => {
@@ -3840,22 +3842,22 @@ class DynamicCalendarLoader extends CalendarCore {
                 logger.error('CALENDAR', 'Error handling message from testing interface', error);
             }
         });
-        
+
         logger.debug('CALENDAR', 'Message listener set up for testing interface communication');
     }
-    
+
     // Set up resize listener to clear measurement cache when layout changes
     setupResizeListener() {
         let resizeTimeout;
         let lastVisualViewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-        
+
         const handleLayoutChange = (eventType = 'resize', forceCheck = false) => {
             const newWidth = window.innerWidth;
             const newBreakpoint = this.getCurrentBreakpoint();
             const breakpointChanged = newBreakpoint !== this.currentBreakpoint;
             const significantWidthChange = Math.abs(newWidth - this.lastScreenWidth) > 50; // 50px threshold
             const shouldProcess = breakpointChanged || significantWidthChange || forceCheck;
-            
+
             // Only log if there's actually a significant change to avoid console spam
             if (shouldProcess) {
                 logger.info('CALENDAR', `🔍 LAYOUT_CHANGE: Significant layout change detected via ${eventType}`, {
@@ -3869,13 +3871,13 @@ class DynamicCalendarLoader extends CalendarCore {
                     significantWidthChange,
                     cacheCleared: true
                 });
-                
+
                 // Clear measurements and update tracking variables
                 this.clearMeasurementCache();
                 this.clearEventNameCache();
                 this.lastScreenWidth = newWidth;
                 this.currentBreakpoint = newBreakpoint;
-                
+
                 // Debounce the calendar re-render to avoid excessive updates
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
@@ -3893,25 +3895,25 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             }
         };
-        
+
         // Listen to window resize events
         window.addEventListener('resize', () => handleLayoutChange('resize'));
-        
+
         // Listen to orientation changes (important for mobile/tablet)
         window.addEventListener('orientationchange', () => handleLayoutChange('orientationchange', true));
-        
+
         // Listen for visual viewport changes (crucial for iPad split screen)
         if (window.visualViewport) {
             let visualViewportTimeout;
-            
+
             window.visualViewport.addEventListener('resize', () => {
                 const currentVisualViewportWidth = window.visualViewport.width;
-                
+
                 // Only process if the visual viewport width actually changed
                 // This filters out scroll-triggered resize events that don't change layout
                 if (Math.abs(currentVisualViewportWidth - lastVisualViewportWidth) > 1) { // 1px tolerance for rounding
                     lastVisualViewportWidth = currentVisualViewportWidth;
-                    
+
                     clearTimeout(visualViewportTimeout);
                     visualViewportTimeout = setTimeout(() => {
                         handleLayoutChange('visualViewport.resize');
@@ -3921,7 +3923,7 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             // Note: We don't listen to visualViewport scroll as that's just scrolling, not layout change
         }
-        
+
         logger.debug('CALENDAR', 'Layout change listeners set up with width-change filtering', {
             events: ['resize', 'orientationchange', 'visualViewport.resize'],
             hasVisualViewport: !!window.visualViewport,
@@ -3929,13 +3931,13 @@ class DynamicCalendarLoader extends CalendarCore {
             visualViewportWidthTolerance: 1
         });
     }
-    
 
-    
+
+
     // Add test event (for testing functionality)
     addTestEvent(testEventData) {
         logger.info('CALENDAR', 'Test event added from test interface', testEventData);
-        
+
         // Change header when in testing flow
         const headerBrandText = document.querySelector('.logo .brand-text');
         if (headerBrandText) {
@@ -3963,28 +3965,28 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.warn('CALENDAR', 'Invalid test event payload received from test interface', { testEventData });
             return;
         }
-        
+
         if (!this.allEvents) {
             this.allEvents = [];
         }
-        
+
         const toDate = (value) => {
             if (!value) return null;
             const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
             return Number.isNaN(date.getTime()) ? null : date;
         };
-        
+
         const fallbackDurationMinutes = 120;
         const now = new Date();
         const startDate = toDate(testEventData.startDate) || now;
-        
+
         let endDate = toDate(testEventData.endDate);
         if (!endDate || endDate <= startDate) {
             const durationMinutes = parseInt(testEventData.durationMinutes, 10);
             const duration = Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : fallbackDurationMinutes;
             endDate = new Date(startDate.getTime() + duration * 60000);
         }
-        
+
         const timezone = testEventData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         const testUid = testEventData.uid ? String(testEventData.uid).trim() : '';
         const testRecurrenceId = toDate(testEventData.recurrenceId);
@@ -4006,13 +4008,13 @@ class DynamicCalendarLoader extends CalendarCore {
         const effectiveUid = testUid || testOverrideUid;
         const effectiveRecurrenceId = testRecurrenceId || testOverrideRecurrenceId;
         const isOverride = Boolean(effectiveRecurrenceId);
-        
+
         const formatTimeComponent = (date) => {
             const options = { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: timezone };
             const formatted = date.toLocaleTimeString('en-US', options);
             return formatted.replace(':00', '').replace(' ', '');
         };
-        
+
         const autoTime = () => {
             const startLabel = formatTimeComponent(startDate);
             const endLabel = formatTimeComponent(endDate);
@@ -4021,11 +4023,11 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             return `${startLabel}-${endLabel}`;
         };
-        
+
         const timeLabel = testEventData.time && typeof testEventData.time === 'string' && testEventData.time.trim()
             ? testEventData.time.trim()
             : autoTime();
-        
+
         const slugifyText = (text) => {
             if (!text) return '';
             return String(text)
@@ -4037,11 +4039,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 .replace(/^-|-$/g, '')
                 .substring(0, 60);
         };
-        
+
         const slugBase = testEventData.slug || testEventData.shortName || testEventData.name || 'test-event';
         const slugSuffix = startDate ? startDate.getTime() : Date.now();
         const slug = `test-event-${slugifyText(slugBase) || 'preview'}-${slugSuffix}`;
-        
+
         const uniqueLinks = new Map();
         const pushLink = (link) => {
             if (!link || !link.url) return;
@@ -4054,11 +4056,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 type: link.type || 'link'
             });
         };
-        
+
         if (Array.isArray(testEventData.links)) {
             testEventData.links.forEach(pushLink);
         }
-        
+
         if (testEventData.website) {
             pushLink({
                 label: testEventData.websiteLabel || '🌐 More Info',
@@ -4066,7 +4068,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 type: 'website'
             });
         }
-        
+
         if (testEventData.tickets) {
             pushLink({
                 label: testEventData.ticketsLabel || '🎟 Tickets',
@@ -4074,13 +4076,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 type: 'tickets'
             });
         }
-        
+
         const normalizedLinks = Array.from(uniqueLinks.values());
-        
+
         const fallbackVenue = testEventData.bar || testEventData.venue || 'Venue TBA';
         const dayLabel = testEventData.day || startDate.toLocaleDateString('en-US', { weekday: 'long' });
         const description = testEventData.tea || testEventData.description || '';
-        
+
         const testEvent = {
             name: testEventData.name || 'Untitled Event',
             shortName: testEventData.shortName || '',
@@ -4115,7 +4117,7 @@ class DynamicCalendarLoader extends CalendarCore {
             slug,
             isTestEvent: true
         };
-        
+
         // Ensure preview edits/overrides replace existing events by UID (+recurrenceId).
         const shouldRemoveExistingEvent = (event) => {
             if (!event) return false;
@@ -4141,18 +4143,18 @@ class DynamicCalendarLoader extends CalendarCore {
 
         // Remove any existing test events or matching base/override entry
         this.allEvents = this.allEvents.filter(event => !shouldRemoveExistingEvent(event));
-        
+
         // Add the new test event at the front of the list
         this.allEvents.unshift(testEvent);
-        
+
         // Jump the calendar to the event date and highlight it
         this.currentDate = new Date(startDate);
         this.selectedEventSlug = slug;
         this.selectedEventDateISO = this.formatDateToISO(startDate);
-        
+
         // Refresh the display
         this.updateCalendarDisplay();
-        
+
         if (window.parent && window.parent !== window) {
             try {
                 window.parent.postMessage({
@@ -4177,10 +4179,10 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.warn('CALENDAR', 'Calendar already initialized or initializing, skipping duplicate init');
             return;
         }
-        
+
         this.isInitializing = true;
         logger.info('CALENDAR', 'Initializing DynamicCalendarLoader...');
-        
+
         try {
 
             // Add timeout to prevent hanging initialization - 30s to account for delays + timeouts + slow networks
@@ -4188,11 +4190,11 @@ class DynamicCalendarLoader extends CalendarCore {
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('Calendar initialization timeout after 30 seconds')), 30000);
             });
-            
+
             await Promise.race([initPromise, timeoutPromise]);
             this.isInitialized = true;
             logger.componentLoad('CALENDAR', 'Dynamic CalendarLoader initialization completed successfully');
-            
+
             // Check for testEvent in sessionStorage
             try {
                 const testEventParam = sessionStorage.getItem('testEventPayload');
@@ -4254,7 +4256,7 @@ function showOnMap(lat, lng, eventName, barName) {
         if (mapSection) {
             mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-        
+
         // Then center the map on the location with a slight delay
         setTimeout(() => {
             window.eventsMap.setCenter([lng, lat]);
@@ -4268,7 +4270,7 @@ function showOnMap(lat, lng, eventName, barName) {
                 });
             }
         }, 300);
-        
+
         logger.userInteraction('MAP', 'showOnMap called', { lat, lng, eventName, barName });
     }
 }
@@ -4284,7 +4286,7 @@ function fitAllMarkers() {
             padding: 20,
             maxZoom: window.eventsMapCityZoom || 11
         });
-        
+
         logger.userInteraction('MAP', 'Fit all markers clicked', {
             markerCount: window.eventsMapMarkers.length
         });
@@ -4300,7 +4302,7 @@ async function showMyLocation(panMap = true) {
     try {
         // Update button to show loading state
         updateLocationButtonStatus('loading');
-        
+
         // Initialize LocationManager if not already available
         if (!window.locationManager) {
             window.locationManager = new LocationManager();
@@ -4308,13 +4310,13 @@ async function showMyLocation(panMap = true) {
 
         // Get location with caching and permission awareness
         const location = await window.locationManager.getLocationForMap(true);
-        
+
         if (window.eventsMap) {
             // Remove existing location circle
             if (window.myLocationCircle) {
                 window.myLocationCircle.remove();
             }
-            
+
             // Create popup text with accuracy info
             let popupText = '📍 Your Location';
             if (location.accuracy) {
@@ -4324,7 +4326,7 @@ async function showMyLocation(panMap = true) {
             if (location.stale) {
                 popupText += ' (cached)';
             }
-            
+
             // Note: Maplibre doesn't have an equivalent to L.circle out-of-the-box in the same way without adding a layer source.
             // Using a simple HTML marker for the location dot
             const locationEl = document.createElement('div');
@@ -4341,19 +4343,19 @@ async function showMyLocation(panMap = true) {
                 .setLngLat([location.lng, location.lat])
                 .setPopup(popup)
                 .addTo(window.eventsMap);
-            
+
             // Center on user location if requested
             if (panMap) {
                 window.eventsMap.setCenter([location.lng, location.lat]);
                 window.eventsMap.setZoom(14);
 
             }
-            
+
             // Update button to show success state
             updateLocationButtonStatus('success', location.stale ? 'cached' : 'fresh');
-            
-            logger.userInteraction('MAP', 'My location shown with events visible', { 
-                lat: location.lat, 
+
+            logger.userInteraction('MAP', 'My location shown with events visible', {
+                lat: location.lat,
                 lng: location.lng,
                 accuracy: location.accuracy,
                 source: location.source,
@@ -4362,27 +4364,27 @@ async function showMyLocation(panMap = true) {
         }
     } catch (error) {
         logger.error('MAP', 'Location request failed', { error: error.message });
-        
+
         // Update button to show error state
         updateLocationButtonStatus('error');
-        
+
         // Show user-friendly error message
         const errorMessage = error.message || 'Unable to get your location. Please try again.';
-        
+
         // Create a temporary error message instead of alert
         if (window.eventsMap) {
             // Remove any existing error popup
             if (window.locationErrorPopup) {
                 window.locationErrorPopup.remove();
             }
-            
+
             // Show error as map popup
             const center = window.eventsMap.getCenter();
             window.locationErrorPopup = new maplibregl.Popup({ closeOnClick: false })
                 .setLngLat(center)
                 .setHTML(`<div style="text-align: center; color: #d32f2f; font-weight: 500;">${errorMessage}</div>`)
                 .addTo(window.eventsMap);
-            
+
             // Auto-close after 5 seconds
             setTimeout(() => {
                 if (window.locationErrorPopup) {
@@ -4401,12 +4403,12 @@ async function showMyLocation(panMap = true) {
 function updateLocationButtonStatus(status, detail = '') {
     const iconEl = document.getElementById('location-icon');
     const btnEl = document.getElementById('location-btn');
-    
+
     if (!iconEl || !btnEl) return;
-    
+
     // Remove existing status classes
     btnEl.classList.remove('location-loading', 'location-success', 'location-error');
-    
+
     switch (status) {
         case 'loading':
             btnEl.classList.add('location-loading');
@@ -4432,15 +4434,15 @@ async function updateLocationStatus() {
         if (!window.locationManager) {
             window.locationManager = new LocationManager();
         }
-        
+
         // Let LocationManager handle all location logic and UI updates
         const location = await window.locationManager.updateLocationStatus(updateLocationButtonStatus);
-        
+
         if (location) {
-            logger.debug('MAP', 'Location status updated successfully', { 
-                lat: location.lat, 
+            logger.debug('MAP', 'Location status updated successfully', {
+                lat: location.lat,
                 lng: location.lng,
-                source: location.source 
+                source: location.source
             });
         } else {
             logger.debug('MAP', 'No location available');
@@ -4455,3 +4457,4 @@ async function updateLocationStatus() {
 if (typeof window !== 'undefined') {
     window.DynamicCalendarLoader = DynamicCalendarLoader;
 }
+  module.exports = DynamicCalendarLoader;
