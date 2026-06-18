@@ -1401,28 +1401,6 @@ class DynamicCalendarLoader extends CalendarCore {
         }
         
         // Helper function to process dates recursively
-        const reviveDates = (obj) => {
-            if (obj === null || typeof obj !== 'object') return obj;
-            if (Array.isArray(obj)) return obj.map(reviveDates);
-
-            const revived = {};
-            for (const key of Object.keys(obj)) {
-                if ((key === 'startDate' || key === 'endDate' || key === 'recurrenceId') && obj[key] !== null) {
-                    const d = new Date(obj[key]);
-                    revived[key] = d;
-                } else {
-                    revived[key] = reviveDates(obj[key]);
-                }
-            }
-
-            // Re-apply `_wasUTC` on Date objects if `wasUTC` property exists on the event level
-            if (revived.wasUTC !== undefined) {
-                if (revived.startDate) revived.startDate._wasUTC = revived.wasUTC;
-                if (revived.endDate) revived.endDate._wasUTC = revived.wasUTC;
-            }
-            return revived;
-        };
-
         const isJsonCity = (cityKey === 'nyc' || cityKey === 'seattle');
         const ext = isJsonCity ? 'json' : 'ics';
 
@@ -1452,15 +1430,36 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             
             if (isJsonCity) {
-                const jsonData = await response.json();
+                const rawText = await response.text();
+
+                const dateReviver = function(key, value) {
+                    if ((key === 'startDate' || key === 'endDate' || key === 'recurrenceId') && value !== null) {
+                        // JSON strings from the backend are formatted as local times without 'Z'
+                        // (e.g. "YYYY-MM-DDTHH:mm:ss"). `new Date()` automatically parses this as
+                        // the target city's local time, exactly preserving `.getHours()`.
+                        return new Date(value);
+                    }
+                    return value;
+                };
+
+                const jsonData = JSON.parse(rawText, dateReviver);
 
                 logger.debug('CALENDAR', `Cached JSON data retrieved, reviving...`, {
                     eventsLength: jsonData.events?.length
                 });
 
-                const events = reviveDates(jsonData.events);
+                // Re-apply `_wasUTC` flag on Date objects for downstream logic
+                const events = jsonData.events;
+                if (events) {
+                    events.forEach(event => {
+                        if (event.wasUTC !== undefined) {
+                            if (event.startDate) event.startDate._wasUTC = event.wasUTC;
+                            if (event.endDate) event.endDate._wasUTC = event.wasUTC;
+                        }
+                    });
+                }
 
-                this.allEvents = events;
+                this.allEvents = events || [];
 
                 // Set metadata to class properties so they are accessible
                 if (jsonData.metadata) {
