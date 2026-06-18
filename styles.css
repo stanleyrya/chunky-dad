@@ -1861,13 +1861,15 @@ body.index-page main {
 }
 
 .day-date, .day-number {
-    width: 1.6em;
-    height: 1.6em;
+    width: 1.4em;
+    height: 1.4em;
+    line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     margin: 0;
+    padding: 0;
 }
 
 .calendar-day.current .day-date,
@@ -1937,7 +1939,7 @@ body.index-page main {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     border-right: none;
-    margin-right: calc(-1 * var(--day-padding)); /* Overlap the gap */
+    margin-right: calc(-1 * var(--day-padding) - 1px); /* Overlap the gap */
     padding-right: 12px;
     position: relative;
     z-index: 1;
@@ -1947,8 +1949,8 @@ body.index-page main {
     border-radius: 0;
     border-left: none;
     border-right: none;
-    margin-left: calc(-1 * var(--day-padding));
-    margin-right: calc(-1 * var(--day-padding));
+    margin-left: calc(-1 * var(--day-padding) - 1px);
+    margin-right: calc(-1 * var(--day-padding) - 1px);
     padding-left: 12px;
     padding-right: 12px;
     position: relative;
@@ -1959,7 +1961,7 @@ body.index-page main {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     border-left: none;
-    margin-left: calc(-1 * var(--day-padding));
+    margin-left: calc(-1 * var(--day-padding) - 1px);
     padding-left: 12px;
     position: relative;
     z-index: 1;
@@ -2957,6 +2959,7 @@ footer {
         gap: 0.2rem;
         display: flex;
         align-items: center;
+        justify-content: flex-end;
     }
 
     .calendar-day.week-view h3 {
@@ -3052,6 +3055,9 @@ footer {
         line-height: 1;
         margin: 0;
         color: var(--text-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
 }
 
     .calendar-day.month-day .day-events {
@@ -4002,6 +4008,21 @@ footer {
     border-radius: 4px;
 }
 
+/* Maintain multi-day shape when selected */
+.event-item.multi-day-start.selected {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.event-item.multi-day-middle.selected {
+    border-radius: 0 !important;
+}
+
+.event-item.multi-day-end.selected {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}
+
 /* Selected event text colors */
 .event-item.selected .event-name,
 .event-item.enhanced.selected .event-name {
@@ -4361,6 +4382,9 @@ footer {
     line-height: 1;
     margin: 0;
     color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .calendar-day.month-day .day-events {
