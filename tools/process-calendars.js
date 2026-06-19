@@ -86,9 +86,24 @@ async function processCalendars() {
 
             const dateReplacer = function(key, value) {
                 if (this[key] instanceof Date) {
-                    const pad = (n) => n.toString().padStart(2, '0');
                     const date = this[key];
-                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+                    const calendarTimezone = cityCalendar.calendarTimezone || "America/New_York";
+                    const formatter = new Intl.DateTimeFormat('en-CA', {
+                        timeZone: calendarTimezone,
+                        year: 'numeric', month: '2-digit', day: '2-digit',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                        hour12: false
+                    });
+                    const parts = formatter.formatToParts(date);
+                    const y = parts.find(p => p.type === 'year')?.value;
+                    const mo = parts.find(p => p.type === 'month')?.value;
+                    const d = parts.find(p => p.type === 'day')?.value;
+                    let h = parts.find(p => p.type === 'hour')?.value;
+                    if (h === '24') h = '00';
+                    const mi = parts.find(p => p.type === 'minute')?.value;
+                    const s = parts.find(p => p.type === 'second')?.value;
+
+                    return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
                 }
                 return value;
             };
