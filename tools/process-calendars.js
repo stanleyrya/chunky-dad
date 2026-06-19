@@ -88,7 +88,20 @@ async function processCalendars() {
                 if (this[key] instanceof Date) {
                     const pad = (n) => n.toString().padStart(2, '0');
                     const date = this[key];
-                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+                    const localString = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+
+                    // DEBUG LOGGING FOR DATE SHIFT ISSUE
+                    if (key === 'startDate' || key === 'endDate') {
+                        console.log(`[PROCESS-CALENDARS-DEBUG] replacer for ${key}:`, {
+                            originalDateStr: date.toString(),
+                            isoString: date.toISOString(),
+                            getDate: date.getDate(),
+                            getHours: date.getHours(),
+                            generatedString: localString
+                        });
+                    }
+
+                    return localString;
                 }
                 return value;
             };

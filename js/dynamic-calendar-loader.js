@@ -1437,7 +1437,20 @@ class DynamicCalendarLoader extends CalendarCore {
                         // JSON strings from the backend are formatted as local times without 'Z'
                         // (e.g. "YYYY-MM-DDTHH:mm:ss"). `new Date()` automatically parses this as
                         // the target city's local time, exactly preserving `.getHours()`.
-                        return new Date(value);
+                        const revivedDate = new Date(value);
+
+                        // DEBUG LOGGING FOR DATE SHIFT ISSUE
+                        if (key === 'startDate' || key === 'endDate') {
+                            logger.info('CALENDAR-DEBUG-REVIVER', `Reviver for ${key}`, {
+                                inputString: value,
+                                revivedDateStr: revivedDate.toString(),
+                                revivedISO: revivedDate.toISOString(),
+                                getDate: revivedDate.getDate(),
+                                getHours: revivedDate.getHours()
+                            });
+                        }
+
+                        return revivedDate;
                     }
                     return value;
                 };
@@ -2166,6 +2179,19 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 if (event.endDate && event.startDate) {
                     const duration = new Date(event.endDate).getTime() - new Date(event.startDate).getTime();
+
+                    // DEBUG LOGGING FOR DATE SHIFT ISSUE
+                    if (duration < 0) {
+                        logger.warn('CALENDAR-DEBUG-DURATION', 'Negative duration calculated', {
+                            eventName: event.name,
+                            startDateStr: event.startDate.toString(),
+                            endDateStr: event.endDate.toString(),
+                            startDateISO: event.startDate.toISOString(),
+                            endDateISO: event.endDate.toISOString(),
+                            durationMs: duration
+                        });
+                    }
+
                     expandedEvent.endDate = new Date(occurrence.getTime() + duration);
                 }
                 
