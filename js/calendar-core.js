@@ -468,6 +468,19 @@ class CalendarCore {
                 });
             }
 
+            // DEBUG LOGGING FOR DATE SHIFT ISSUE
+            logger.info('CALENDAR-DEBUG-PARSE', 'Event parsed dates', {
+                eventName: eventData.name,
+                originalStart: calendarEvent.start ? calendarEvent.start.toISOString() : null,
+                originalEnd: calendarEvent.end ? calendarEvent.end.toISOString() : null,
+                parsedStart: eventData.startDate ? eventData.startDate.toString() : null,
+                parsedEnd: eventData.endDate ? eventData.endDate.toString() : null,
+                startGetHours: eventData.startDate ? eventData.startDate.getHours() : null,
+                endGetHours: eventData.endDate ? eventData.endDate.getHours() : null,
+                startGetDate: eventData.startDate ? eventData.startDate.getDate() : null,
+                endGetDate: eventData.endDate ? eventData.endDate.getDate() : null
+            });
+
             return eventData;
         } catch (error) {
             logger.componentError('CALENDAR', 'Failed to parse event data', error);
