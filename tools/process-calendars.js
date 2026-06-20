@@ -73,7 +73,9 @@ async function processCalendars() {
                 }
             } catch (_) {}
 
+            console.log(`[${cityKey}] Starting ICS parsing...`);
             const events = cityCalendar.parseICalData(icalText) || [];
+            console.log(`[${cityKey}] Finished ICS parsing. Found ${events.length} events.`);
 
             // Also store calendar metadata in the JSON if available
             const output = {
@@ -84,10 +86,16 @@ async function processCalendars() {
                 events: events
             };
 
+            console.log(`[${cityKey}] Starting JSON serialization with dateReplacer...`);
             const dateReplacer = function(key, value) {
                 if (this[key] instanceof Date) {
                     const date = this[key];
                     const calendarTimezone = cityCalendar.calendarTimezone || "America/New_York";
+
+                    console.log(`\n[DateReplacer - ${key || 'root'}] Original Date object (ISO): ${date.toISOString()}`);
+                    console.log(`[DateReplacer - ${key || 'root'}] Original Date object (Local): ${date.toString()}`);
+                    console.log(`[DateReplacer - ${key || 'root'}] Intended target timezone: ${calendarTimezone}`);
+
                     const formatter = new Intl.DateTimeFormat('en-CA', {
                         timeZone: calendarTimezone,
                         year: 'numeric', month: '2-digit', day: '2-digit',
@@ -95,20 +103,32 @@ async function processCalendars() {
                         hour12: false
                     });
                     const parts = formatter.formatToParts(date);
+                    console.log(`[DateReplacer - ${key || 'root'}] Formatter parts:`, JSON.stringify(parts));
+
                     const y = parts.find(p => p.type === 'year')?.value;
                     const mo = parts.find(p => p.type === 'month')?.value;
                     const d = parts.find(p => p.type === 'day')?.value;
                     let h = parts.find(p => p.type === 'hour')?.value;
-                    if (h === '24') h = '00';
+
+                    console.log(`[DateReplacer - ${key || 'root'}] Extracted hour before 24 check: ${h}`);
+                    if (h === '24') {
+                        console.log(`[DateReplacer - ${key || 'root'}] Hour is 24, adjusting to 00`);
+                        h = '00';
+                    }
+
                     const mi = parts.find(p => p.type === 'minute')?.value;
                     const s = parts.find(p => p.type === 'second')?.value;
 
-                    return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
+                    const finalString = `${y}-${mo}-${d}T${h}:${mi}:${s}`;
+                    console.log(`[DateReplacer - ${key || 'root'}] Final serialized string: ${finalString}`);
+                    return finalString;
                 }
                 return value;
             };
 
-            fs.writeFileSync(jsonPath, JSON.stringify(output, dateReplacer, 2));
+            const jsonString = JSON.stringify(output, dateReplacer, 2);
+            fs.writeFileSync(jsonPath, jsonString);
+            console.log(`[${cityKey}] Finished JSON serialization.`);
             console.log(`✓ Processed ${cityKey}.ics -> ${cityKey}.json (${events.length} events)`);
             successCount++;
         } catch (error) {
