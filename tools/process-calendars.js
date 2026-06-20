@@ -90,37 +90,26 @@ async function processCalendars() {
             const dateReplacer = function(key, value) {
                 if (this[key] instanceof Date) {
                     const date = this[key];
-                    const calendarTimezone = cityCalendar.calendarTimezone || "America/New_York";
 
-                    console.log(`\n[DateReplacer - ${key || 'root'}] Original Date object (ISO): ${date.toISOString()}`);
-                    console.log(`[DateReplacer - ${key || 'root'}] Original Date object (Local): ${date.toString()}`);
-                    console.log(`[DateReplacer - ${key || 'root'}] Intended target timezone: ${calendarTimezone}`);
+                    // Dates parsed by CalendarCore are constructed using local Date components
+                    // that directly correspond to the target timezone's time.
+                    // For example, an event starting at 5:00 PM EDT is parsed into a Date object
+                    // such that date.getFullYear(), date.getMonth(), and date.getHours() (which is 17)
+                    // directly match the EDT time.
+                    // Therefore, we must format it using its raw local methods rather than
+                    // applying an Intl.DateTimeFormat conversion, which would treat the local system's
+                    // offset as UTC/another timezone and mistakenly shift it again.
 
-                    const formatter = new Intl.DateTimeFormat('en-CA', {
-                        timeZone: calendarTimezone,
-                        year: 'numeric', month: '2-digit', day: '2-digit',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit',
-                        hour12: false
-                    });
-                    const parts = formatter.formatToParts(date);
-                    console.log(`[DateReplacer - ${key || 'root'}] Formatter parts:`, JSON.stringify(parts));
-
-                    const y = parts.find(p => p.type === 'year')?.value;
-                    const mo = parts.find(p => p.type === 'month')?.value;
-                    const d = parts.find(p => p.type === 'day')?.value;
-                    let h = parts.find(p => p.type === 'hour')?.value;
-
-                    console.log(`[DateReplacer - ${key || 'root'}] Extracted hour before 24 check: ${h}`);
-                    if (h === '24') {
-                        console.log(`[DateReplacer - ${key || 'root'}] Hour is 24, adjusting to 00`);
-                        h = '00';
-                    }
-
-                    const mi = parts.find(p => p.type === 'minute')?.value;
-                    const s = parts.find(p => p.type === 'second')?.value;
+                    const pad = (n) => n.toString().padStart(2, '0');
+                    const y = date.getFullYear();
+                    const mo = pad(date.getMonth() + 1);
+                    const d = pad(date.getDate());
+                    const h = pad(date.getHours());
+                    const mi = pad(date.getMinutes());
+                    const s = pad(date.getSeconds());
 
                     const finalString = `${y}-${mo}-${d}T${h}:${mi}:${s}`;
-                    console.log(`[DateReplacer - ${key || 'root'}] Final serialized string: ${finalString}`);
+
                     return finalString;
                 }
                 return value;
