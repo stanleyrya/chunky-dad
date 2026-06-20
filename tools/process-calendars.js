@@ -100,7 +100,7 @@ async function processCalendars() {
                         timeZone: calendarTimezone,
                         year: 'numeric', month: '2-digit', day: '2-digit',
                         hour: '2-digit', minute: '2-digit', second: '2-digit',
-                        hour12: false
+                        hourCycle: 'h23'
                     });
                     const parts = formatter.formatToParts(date);
                     console.log(`[DateReplacer - ${key || 'root'}] Formatter parts:`, JSON.stringify(parts));
@@ -109,12 +109,6 @@ async function processCalendars() {
                     const mo = parts.find(p => p.type === 'month')?.value;
                     const d = parts.find(p => p.type === 'day')?.value;
                     let h = parts.find(p => p.type === 'hour')?.value;
-
-                    console.log(`[DateReplacer - ${key || 'root'}] Extracted hour before 24 check: ${h}`);
-                    if (h === '24') {
-                        console.log(`[DateReplacer - ${key || 'root'}] Hour is 24, adjusting to 00`);
-                        h = '00';
-                    }
 
                     const mi = parts.find(p => p.type === 'minute')?.value;
                     const s = parts.find(p => p.type === 'second')?.value;
