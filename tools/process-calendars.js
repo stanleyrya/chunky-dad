@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEBUG = process.env.DEBUG === 'true';
+const DEBUG = process.env.DEBUG === 'true' ||
+              process.env.RUNNER_DEBUG === '1' ||
+              process.env.ACTIONS_STEP_DEBUG === 'true';
 
 function debugLog(...args) {
     if (DEBUG) {
