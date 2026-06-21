@@ -77,6 +77,15 @@ async function processCalendars() {
             const events = cityCalendar.parseICalData(icalText) || [];
             console.log(`[${cityKey}] Finished ICS parsing. Found ${events.length} events.`);
 
+            // Log raw parsed events before serialization specifically to check if they shifted
+            for (let i = 0; i < Math.min(5, events.length); i++) {
+                const e = events[i];
+                console.log(`\n[Pre-Serialization Check] Event: ${e.name}`);
+                console.log(`  Raw startDate: ${e.startDate ? e.startDate.toISOString() : null}`);
+                console.log(`  Raw endDate:   ${e.endDate ? e.endDate.toISOString() : null}`);
+                if (e.recurrence) console.log(`  Recurrence: ${e.recurrence}`);
+            }
+
             // Also store calendar metadata in the JSON if available
             const output = {
                 metadata: {
@@ -110,11 +119,17 @@ async function processCalendars() {
                     const d = parts.find(p => p.type === 'day')?.value;
                     let h = parts.find(p => p.type === 'hour')?.value;
 
+                    console.log(`[DateReplacer - ${key || 'root'}] Extracted components -> Year: ${y}, Month: ${mo}, Day: ${d}, Hour: ${h}`);
+
                     const mi = parts.find(p => p.type === 'minute')?.value;
                     const s = parts.find(p => p.type === 'second')?.value;
 
                     const finalString = `${y}-${mo}-${d}T${h}:${mi}:${s}`;
                     console.log(`[DateReplacer - ${key || 'root'}] Final serialized string: ${finalString}`);
+
+                    // Validate string isn't shifting unexpectedly due to Node bug or format
+                    console.log(`[DateReplacer - ${key || 'root'}] Final components mapping check -> ${finalString} matches extracted: ${y}-${mo}-${d}`);
+
                     return finalString;
                 }
                 return value;
