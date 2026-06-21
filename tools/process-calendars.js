@@ -1,6 +1,16 @@
 const fs = require('fs');
 const path = require('path');
 
+const DEBUG = process.env.DEBUG === 'true' ||
+              process.env.RUNNER_DEBUG === '1' ||
+              process.env.ACTIONS_STEP_DEBUG === 'true';
+
+function debugLog(...args) {
+    if (DEBUG) {
+        console.log(...args);
+    }
+}
+
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
 
@@ -80,10 +90,10 @@ async function processCalendars() {
             // Log raw parsed events before serialization specifically to check if they shifted
             for (let i = 0; i < events.length; i++) {
                 const e = events[i];
-                console.log(`\n[Pre-Serialization Check] Event: ${e.name} (UID: ${e.uid})`);
-                console.log(`  Raw startDate: ${e.startDate ? e.startDate.toISOString() : null}`);
-                console.log(`  Raw endDate:   ${e.endDate ? e.endDate.toISOString() : null}`);
-                if (e.recurrence) console.log(`  Recurrence: ${e.recurrence}`);
+                debugLog(`\n[Pre-Serialization Check] Event: ${e.name} (UID: ${e.uid})`);
+                debugLog(`  Raw startDate: ${e.startDate ? e.startDate.toISOString() : null}`);
+                debugLog(`  Raw endDate:   ${e.endDate ? e.endDate.toISOString() : null}`);
+                if (e.recurrence) debugLog(`  Recurrence: ${e.recurrence}`);
             }
 
             // Also store calendar metadata in the JSON if available
@@ -102,9 +112,9 @@ async function processCalendars() {
                     const calendarTimezone = cityCalendar.calendarTimezone || "America/New_York";
                     const eventIdentifier = this.name || this.uid || 'Unknown Event';
 
-                    console.log(`\n[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Original Date object (ISO): ${date.toISOString()}`);
-                    console.log(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Original Date object (Local): ${date.toString()}`);
-                    console.log(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Intended target timezone: ${calendarTimezone}`);
+                    debugLog(`\n[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Original Date object (ISO): ${date.toISOString()}`);
+                    debugLog(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Original Date object (Local): ${date.toString()}`);
+                    debugLog(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Intended target timezone: ${calendarTimezone}`);
 
                     const formatter = new Intl.DateTimeFormat('en-CA', {
                         timeZone: calendarTimezone,
@@ -113,23 +123,23 @@ async function processCalendars() {
                         hourCycle: 'h23'
                     });
                     const parts = formatter.formatToParts(date);
-                    console.log(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Formatter parts:`, JSON.stringify(parts));
+                    debugLog(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Formatter parts:`, JSON.stringify(parts));
 
                     const y = parts.find(p => p.type === 'year')?.value;
                     const mo = parts.find(p => p.type === 'month')?.value;
                     const d = parts.find(p => p.type === 'day')?.value;
                     let h = parts.find(p => p.type === 'hour')?.value;
 
-                    console.log(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Extracted components -> Year: ${y}, Month: ${mo}, Day: ${d}, Hour: ${h}`);
+                    debugLog(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Extracted components -> Year: ${y}, Month: ${mo}, Day: ${d}, Hour: ${h}`);
 
                     const mi = parts.find(p => p.type === 'minute')?.value;
                     const s = parts.find(p => p.type === 'second')?.value;
 
                     const finalString = `${y}-${mo}-${d}T${h}:${mi}:${s}`;
-                    console.log(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Final serialized string: ${finalString}`);
+                    debugLog(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Final serialized string: ${finalString}`);
 
                     // Validate string isn't shifting unexpectedly due to Node bug or format
-                    console.log(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Final components mapping check -> ${finalString} matches extracted: ${y}-${mo}-${d}`);
+                    debugLog(`[DateReplacer - ${key || 'root'} for Event: ${eventIdentifier}] Final components mapping check -> ${finalString} matches extracted: ${y}-${mo}-${d}`);
 
                     return finalString;
                 }
