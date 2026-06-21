@@ -1230,7 +1230,7 @@ class CalendarCore {
                                 hour: '2-digit',
                                 minute: '2-digit',
                                 second: '2-digit',
-                                hour12: false
+                                hourCycle: 'h23'
                             });
                             const tzParts = tzFormatter.formatToParts(provisionalUTC);
                             const tzY = parseInt(tzParts.find(p => p.type === 'year')?.value);
@@ -1290,7 +1290,7 @@ class CalendarCore {
                                 hour: '2-digit',
                                 minute: '2-digit',
                                 second: '2-digit',
-                                hour12: false
+                                hourCycle: 'h23'
                             });
                             const cityParts = cityFormatter.formatToParts(date);
                             const localYear = parseInt(cityParts.find(p => p.type === 'year')?.value);
