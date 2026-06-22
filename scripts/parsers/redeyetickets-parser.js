@@ -29,7 +29,7 @@ class RedEyeTicketsParser {
     }
 
     // Main parsing method - receives response data and returns events + additional links
-    parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
+    parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null, httpAdapter = null) {
         try {
             const rawText = htmlData.html;
             const discoveryOnly = parserConfig.discoveryOnly === true;

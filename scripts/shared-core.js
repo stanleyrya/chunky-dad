@@ -689,7 +689,8 @@ class SharedCore {
                     allowParserAutoSwitch,
                     parserConfig: perPageParserConfig,
                     mainConfig,
-                    displayAdapter
+                    displayAdapter,
+                    httpAdapter
                 });
 
                 if (currentDepth === 0 && urlClassifications && typeof urlClassifications === 'object') {
@@ -826,7 +827,8 @@ class SharedCore {
         mainConfig = null,
         displayAdapter,
         logClassification = true,
-        logParserSwitch = true
+        logParserSwitch = true,
+        httpAdapter
     }) {
         const pageClassification = this.classifyPage(url, htmlData.html);
         if (logClassification) {
@@ -849,7 +851,7 @@ class SharedCore {
             throw new Error(`Parser '${urlParserName}' not found`);
         }
         const parseResult = await Promise.resolve(
-            urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null, pageClassification)
+            urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null, pageClassification, httpAdapter)
         );
         return { pageClassification, parseResult, urlParserName };
     }
@@ -3881,6 +3883,201 @@ class SharedCore {
         
         return event;
     }
+
+
+
+    // ============================================================================
+    // AI ORCHESTRATION HELPERS
+    // ============================================================================
+
+    buildAiPayload(aiConfig, prompt, base64Image = null) {
+        if (aiConfig.provider === 'ollama') {
+            const payload = {
+                model: aiConfig.model,
+                prompt: prompt,
+                format: "json",
+                stream: false,
+                think: aiConfig.think,
+                keep_alive: aiConfig.keepAlive,
+                options: {
+                    num_ctx: aiConfig.numCtx,
+                    num_predict: aiConfig.numPredict,
+                    temperature: aiConfig.temperature
+                }
+            };
+            if (base64Image) {
+                payload.images = [base64Image];
+            }
+            return payload;
+        }
+
+        if (aiConfig.provider === 'openai') {
+            let userContent;
+            if (base64Image) {
+                userContent = [
+                    { type: "text", text: prompt },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: `data:image/png;base64,${base64Image}`
+                        }
+                    }
+                ];
+            } else {
+                userContent = prompt;
+            }
+
+            const payload = {
+                model: aiConfig.model,
+                messages: [
+                    { role: "user", content: userContent }
+                ],
+                temperature: aiConfig.temperature,
+                max_tokens: Math.floor(aiConfig.numPredict)
+            };
+
+            const responseFormat = aiConfig.openai?.responseFormat;
+            if (responseFormat !== 'none') {
+                payload.response_format = { type: responseFormat || "json_object" };
+            }
+
+            return payload;
+        }
+
+        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
+    }
+
+    extractAiResponse(aiConfig, responseBody) {
+        if (!responseBody) return null;
+
+        if (aiConfig.provider === 'ollama') {
+            return responseBody.response;
+        }
+
+        if (aiConfig.provider === 'openai') {
+            return responseBody.choices?.[0]?.message?.content;
+        }
+
+        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
+    }
+
+    extractFirstJsonObject(text) {
+        if (!text) return null;
+        const source = String(text).trim();
+        const firstBrace = source.indexOf('{');
+        if (firstBrace < 0) return null;
+        let depth = 0;
+        let inString = false;
+        let escaped = false;
+        for (let i = firstBrace; i < source.length; i++) {
+            const ch = source[i];
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (ch === '\\') {
+                    escaped = true;
+                } else if (ch === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (ch === '"') {
+                inString = true;
+                continue;
+            }
+            if (ch === '{') depth++;
+            if (ch === '}') {
+                depth--;
+                if (depth === 0) {
+                    return source.slice(firstBrace, i + 1);
+                }
+            }
+        }
+        return null;
+    }
+
+    parseAiEventResponse(rawText) {
+        if (!rawText) return null;
+        try {
+            const parsed = JSON.parse(rawText);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (parseError) {
+            const jsonObject = this.extractFirstJsonObject(rawText);
+            if (!jsonObject) return null;
+            try {
+                const parsed = JSON.parse(jsonObject);
+                return parsed && typeof parsed === 'object' ? parsed : null;
+            } catch (jsonError) {
+                return null;
+            }
+        }
+    }
+
+    async callAiGenerate(aiConfig, prompt, passLabel, httpAdapter, promptHistoryRecorder = null, base64Image = null) {
+        if (!prompt) return null;
+        const payload = this.buildAiPayload(aiConfig, prompt, base64Image);
+        const label = passLabel ? ` (${passLabel} pass)` : '';
+        const promptChars = prompt.length;
+
+        if (promptHistoryRecorder) {
+            promptHistoryRecorder(prompt, passLabel, aiConfig);
+        }
+
+        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, provider: ${aiConfig.provider}, prompt: ${promptChars} chars`);
+        console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
+
+        const startTime = Date.now();
+        try {
+            if (!httpAdapter || typeof httpAdapter.postJson !== 'function') {
+                throw new Error('No HTTP adapter available for AI request');
+            }
+
+            const response = await httpAdapter.postJson(aiConfig.endpoint, payload, {
+                timeoutSeconds: aiConfig.timeoutSeconds
+            });
+
+            if (!response.ok) {
+                console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
+                if (response.text) {
+                    console.log(`🤖 AI Web: Error response body${label}\n${response.text}`);
+                }
+                return null;
+            }
+
+            let responseJson = null;
+            if (response.text) {
+                try {
+                    responseJson = JSON.parse(response.text);
+                } catch (parseError) {
+                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${response.text.length} chars)`);
+                    console.log(`🤖 AI Web: Raw response payload${label}\n${response.text}`);
+                    return null;
+                }
+            }
+
+            const elapsed = Date.now() - startTime;
+            const responseContent = this.extractAiResponse(aiConfig, responseJson);
+
+            if (responseContent && typeof responseContent === 'string' && responseContent.length > 0) {
+                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseContent.length} chars`);
+                console.log(`🤖 AI Web: Model response text${label}\n${responseContent}`);
+                return responseContent;
+            }
+
+            const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
+            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
+            if (response.text) {
+                console.log(`🤖 AI Web: Raw response payload${label}\n${response.text}`);
+            }
+            return null;
+        } catch (error) {
+            const elapsed = Date.now() - startTime;
+            const errorType = error && error.name ? error.name : 'Error';
+            console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
+            return null;
+        }
+    }
+
 }
 
 // Export for both environments
@@ -3891,4 +4088,6 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
     // Scriptable environment
     this.SharedCore = SharedCore;
+
+
 }

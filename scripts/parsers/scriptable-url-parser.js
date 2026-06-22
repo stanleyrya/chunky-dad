@@ -30,7 +30,7 @@ class ScriptableUrlParser {
         this.eventSchema = options.eventSchema;
     }
 
-    parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
+    parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null, httpAdapter = null) {
         try {
             if (parserConfig.discoveryOnly === true) {
                 return this.buildEmptyResult(htmlData);
