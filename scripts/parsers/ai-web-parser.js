@@ -4891,20 +4891,6 @@ TEXT:
     }
 
 
-    /**
-     * Maps common inputs, images, and provider-specific configurations into the exact payload.
-     * @param {Object} aiConfig - Your unified configuration object
-     * @param {string} prompt - The text extraction prompt
-     * @param {string|null} base64Image - Optional base64 image data string
-     */
-
-    /**
-     * Extracts the raw string content out of varying provider response shapes.
-     */
-
-
-
-
     getAiValidationConfig(parserConfig = {}) {
         const aiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
             ? parserConfig.ai
