@@ -35,7 +35,7 @@ class BearraccudaParser {
     }
 
     // Main parsing method - receives HTML data and returns events + additional links
-    parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
+    parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null, httpAdapter = null) {
         try {
             const events = [];
             const html = htmlData.html;

@@ -309,7 +309,57 @@ class WebAdapter {
         return Number.isFinite(statusCode) ? statusCode : null;
     }
 
-    async saveFailureNote(url, error, metadata = {}) {
+
+    async fetchImageAsBase64(url, timeoutSeconds = 30) {
+        if (this.isNode) {
+            try {
+                const response = await fetch(url, { signal: AbortSignal.timeout(timeoutSeconds * 1000) });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const buffer = await response.arrayBuffer();
+                return Buffer.from(buffer).toString('base64');
+            } catch (error) {
+                throw new Error(`Failed to fetch image as base64: ${error.message}`);
+            }
+        } else {
+            try {
+                const response = await fetch(url, { signal: AbortSignal.timeout(timeoutSeconds * 1000) });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const buffer = await response.arrayBuffer();
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                for (let i = 0; i < bytes.length; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+            } catch (error) {
+                throw new Error(`Failed to fetch image as base64: ${error.message}`);
+            }
+        }
+    }
+
+    async postJson(url, payload, options = {}) {
+        const timeout = options.timeoutSeconds ? options.timeoutSeconds * 1000 : this.config.timeout;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(timeout)
+            });
+            return {
+                ok: response.ok,
+                status: response.status,
+                text: await response.text()
+            };
+        } catch (error) {
+            throw new Error(`POST request failed: ${error.message}`);
+        }
+    }
+
+async saveFailureNote(url, error, metadata = {}) {
         if (metadata && metadata.retryable === true) {
             return false;
         }

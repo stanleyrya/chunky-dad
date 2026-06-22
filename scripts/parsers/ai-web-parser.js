@@ -274,7 +274,8 @@ class AiWebParser {
         }
     }
 
-    async parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null) {
+    async parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null, httpAdapter = null) {
+
         var discoveredSegments = null;
         var ocrResults = [];
         try {
@@ -287,7 +288,7 @@ class AiWebParser {
             // regardless of whether discoveryOnly mode is enabled
             const ocrConfig = this.getOcrConfig(parserConfig);
             ocrResults = ocrConfig.enabled
-                ? await this.extractOcrFromAllImages(htmlData, ocrConfig)
+                ? await this.extractOcrFromAllImages(htmlData, ocrConfig, httpAdapter)
                 : [];
             if (ocrResults.length > 0) {
                 console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
@@ -2195,45 +2196,9 @@ class AiWebParser {
         }
     }
 
-    async loadImageAsBase64(imageUrl, timeoutSeconds) {
-        const rawUrl = String(imageUrl || '').trim();
-        const normalizedUrl = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
-        if (!normalizedUrl) {
-            throw new Error('Missing image URL');
-        }
-        const isScriptable = typeof Request !== 'undefined' && typeof Data !== 'undefined' && typeof FileManager !== 'undefined';
-        if (isScriptable) {
-            const request = new Request(normalizedUrl);
-            request.timeoutInterval = timeoutSeconds;
-            const image = await request.loadImage();
-            const jpegData = Data.fromJPEG(image);
-            return jpegData.toBase64String();
-        }
-        if (typeof fetch === 'function') {
-            const response = await fetch(normalizedUrl, {
-                signal: AbortSignal.timeout(timeoutSeconds * 1000)
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status} while downloading OCR image`);
-            }
-            const buffer = await response.arrayBuffer();
-            if (typeof Buffer !== 'undefined') {
-                return Buffer.from(buffer).toString('base64');
-            }
-            if (typeof btoa === 'function') {
-                let binary = '';
-                const bytes = new Uint8Array(buffer);
-                for (let i = 0; i < bytes.length; i++) {
-                    binary += String.fromCharCode(bytes[i]);
-                }
-                return btoa(binary);
-            }
-        }
-        throw new Error('No image HTTP client available');
-    }
 
     parseOcrResponseWithClassification(rawText) {
-        const parsed = this.parseAiEventResponse(rawText);
+        const parsed = this.core.parseAiEventResponse(rawText);
         if (!parsed) return null;
 
         return {
@@ -2315,7 +2280,7 @@ class AiWebParser {
         return false;
     }
 
-    async extractOcrFromAllImages(htmlData, ocrConfig = {}) {
+    async extractOcrFromAllImages(htmlData, ocrConfig = {}, httpAdapter = null) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
 
@@ -2331,7 +2296,7 @@ class AiWebParser {
 
         // Batch OCR requests using Promise.all
         const ocrPromises = imageUrls.map(url =>
-            this.getOcrTextForImage(url, ocrConfig, 'ocr-all').catch(err => null)
+            this.getOcrTextForImage(url, ocrConfig, 'ocr-all', httpAdapter).catch(err => null)
         );
         const results = await Promise.all(ocrPromises);
 
@@ -2685,17 +2650,21 @@ class AiWebParser {
         return `${text}||${classification}`;
     }
 
-    async getOcrTextForImage(imageUrl, ocrConfig = {}, passLabel = 'ocr') {
+    async getOcrTextForImage(imageUrl, ocrConfig = {}, passLabel = 'ocr', httpAdapter = null) {
         const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
         if (cached) {
             console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
             return cached;
         }
 
-        const base64Image = await this.loadImageAsBase64(imageUrl, ocrConfig.timeoutSeconds);
+        const rawUrl = String(imageUrl || '').trim();
+        const normalizedUrl = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
+        if (!normalizedUrl) {
+            throw new Error('Missing image URL');
+        }
+        const base64Image = await httpAdapter.fetchImageAsBase64(normalizedUrl, ocrConfig.timeoutSeconds);
         console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars)`);
-        const payload = this.buildAiPayload(ocrConfig, ocrConfig.prompt, base64Image);
-        const rawResponse = await this.sendAiRequest(ocrConfig, payload, passLabel, ocrConfig.prompt);
+        const rawResponse = await this.core.callAiGenerate(ocrConfig, ocrConfig.prompt, passLabel, httpAdapter, this.recordAiPrompt.bind(this), base64Image);
         if (!rawResponse) return null;
         const parsed = this.parseOcrResponseWithClassification(rawResponse);
         if (!parsed) {
@@ -4871,7 +4840,7 @@ TEXT:
         if (hasUnstructuredData && !hasStructuredData) {
             console.log(`🤖 AI Web: Running context pre-extraction pass${passSuffix}`);
             const contextPrompt = this.buildContextPrePrompt(snippet);
-            const contextResponse = await this.callAiGenerate(aiConfig, contextPrompt, 'context-prep');
+            const contextResponse = await this.core.callAiGenerate(aiConfig, contextPrompt, 'context-prep', httpAdapter, this.recordAiPrompt.bind(this));
             if (contextResponse) {
                 const strippedContext = contextResponse.replace(/[^a-z0-9]/gi, '').trim();
                 if (strippedContext.length >= 5) {
@@ -4885,9 +4854,9 @@ TEXT:
         // PASS 1: Try standard extraction
         console.log(`🤖 AI Web: Starting extraction pass${passSuffix}`);
         let extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, useAlternate ? 'alternate' : 'default', dataFlags);
-        let rawResponse = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
+        let rawResponse = await this.core.callAiGenerate(aiConfig, extractPrompt, 'extraction', httpAdapter, this.recordAiPrompt.bind(this));
         if (!rawResponse) return null;
-        let event = this.parseAiEventResponse(rawResponse);
+        let event = this.core.parseAiEventResponse(rawResponse);
         if (event) {
             console.log(`🤖 AI Web: Extraction pass${passSuffix} succeeded`);
             return event;
@@ -4897,9 +4866,9 @@ TEXT:
         if (useAlternate) {
             console.log(`🤖 AI Web: Standard pass${passSuffix} failed; trying alternate prompt`);
             extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, 'alternate', dataFlags);
-            rawResponse = await this.callAiGenerate(aiConfig, extractPrompt, 'extraction');
+            rawResponse = await this.core.callAiGenerate(aiConfig, extractPrompt, 'extraction', httpAdapter, this.recordAiPrompt.bind(this));
             if (!rawResponse) return null;
-            event = this.parseAiEventResponse(rawResponse);
+            event = this.core.parseAiEventResponse(rawResponse);
             if (event) {
                 console.log(`🤖 AI Web: Alternate pass${passSuffix} succeeded`);
                 return event;
@@ -4909,9 +4878,9 @@ TEXT:
         // PASS 3: Try repair if extraction returned unparseable JSON
         console.warn(`🤖 AI Web: Extraction pass${passSuffix} returned unparseable JSON; attempting repair`);
         const repairPrompt = this.buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags);
-        const repairResponse = await this.callAiGenerate(aiConfig, repairPrompt, 'repair');
+        const repairResponse = await this.core.callAiGenerate(aiConfig, repairPrompt, 'repair', httpAdapter, this.recordAiPrompt.bind(this));
         if (!repairResponse) return null;
-        event = this.parseAiEventResponse(repairResponse);
+        event = this.core.parseAiEventResponse(repairResponse);
         if (event) {
             console.log(`🤖 AI Web: Repair pass${passSuffix} succeeded`);
             return event;
@@ -4921,84 +4890,6 @@ TEXT:
         return null;
     }
 
-    async sendAiRequest(aiConfig, payload, passLabel, promptForHistory = '') {
-        const label = passLabel ? ` (${passLabel} pass)` : '';
-        const prompt = String(promptForHistory || (payload && typeof payload.prompt === 'string' ? payload.prompt : ''));
-        const promptChars = prompt.length;
-        if (prompt) {
-            this.recordAiPrompt(prompt, passLabel, aiConfig);
-        }
-        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, provider: ${aiConfig.provider}, prompt: ${promptChars} chars`);
-        if (prompt) {
-            console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
-        }
-        const startTime = Date.now();
-        try {
-            let responseText = null;
-            let responseJson = null;
-            const isScriptable = typeof Request !== 'undefined' && typeof Data !== 'undefined' && typeof FileManager !== 'undefined';
-            if (isScriptable) {
-                const request = new Request(aiConfig.endpoint);
-                request.method = 'POST';
-                request.headers = { 'Content-Type': 'application/json' };
-                request.body = JSON.stringify(payload);
-                request.timeoutInterval = aiConfig.timeoutSeconds;
-                responseText = await request.loadString();
-                if (request.response && request.response.statusCode >= 400) {
-                    console.warn(`🤖 AI Web: AI request${label} returned HTTP ${request.response.statusCode} after ${Date.now() - startTime}ms`);
-                    if (responseText) {
-                        console.log(`🤖 AI Web: Error response body${label}\n${responseText}`);
-                    }
-                    return null;
-                }
-            } else if (typeof fetch === 'function') {
-                const response = await fetch(aiConfig.endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    signal: AbortSignal.timeout(aiConfig.timeoutSeconds * 1000)
-                });
-                responseText = await response.text();
-                if (!response.ok) {
-                    console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
-                    if (responseText) {
-                        console.log(`🤖 AI Web: Error response body${label}\n${responseText}`);
-                    }
-                    return null;
-                }
-            } else {
-                console.warn(`🤖 AI Web: AI request${label} failed - no HTTP client available (Request/fetch missing)`);
-                return null;
-            }
-            if (responseText) {
-                try {
-                    responseJson = JSON.parse(responseText);
-                } catch (parseError) {
-                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${responseText.length} chars)`);
-                    console.log(`🤖 AI Web: Raw response payload${label}\n${responseText}`);
-                    return null;
-                }
-            }
-            const elapsed = Date.now() - startTime;
-            const responseContent = this.extractAiResponse(aiConfig, responseJson);
-            if (responseContent && typeof responseContent === 'string' && responseContent.length > 0) {
-                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseContent.length} chars`);
-                console.log(`🤖 AI Web: Model response text${label}\n${responseContent}`);
-                return responseContent;
-            }
-            const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
-            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
-            if (responseText) {
-                console.log(`🤖 AI Web: Raw response payload${label}\n${responseText}`);
-            }
-            return null;
-        } catch (error) {
-            const elapsed = Date.now() - startTime;
-            const errorType = error && error.name ? error.name : 'Error';
-            console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
-            return null;
-        }
-    }
 
     /**
      * Maps common inputs, images, and provider-specific configurations into the exact payload.
@@ -5006,137 +4897,13 @@ TEXT:
      * @param {string} prompt - The text extraction prompt
      * @param {string|null} base64Image - Optional base64 image data string
      */
-    buildAiPayload(aiConfig, prompt, base64Image = null) {
-        if (aiConfig.provider === 'ollama') {
-            const payload = {
-                model: aiConfig.model,
-                prompt: prompt,
-                format: "json",
-                stream: false,
-                think: aiConfig.think,
-                keep_alive: aiConfig.keepAlive,
-                options: {
-                    num_ctx: aiConfig.numCtx,
-                    num_predict: aiConfig.numPredict,
-                    temperature: aiConfig.temperature
-                }
-            };
-            if (base64Image) {
-                payload.images = [base64Image];
-            }
-            return payload;
-        }
-
-        if (aiConfig.provider === 'openai') {
-            let userContent;
-            if (base64Image) {
-                userContent = [
-                    { type: "text", text: prompt },
-                    {
-                        type: "image_url",
-                        image_url: {
-                            url: `data:image/png;base64,${base64Image}`
-                        }
-                    }
-                ];
-            } else {
-                userContent = prompt;
-            }
-
-            const payload = {
-                model: aiConfig.model,
-                messages: [
-                    { role: "user", content: userContent }
-                ],
-                temperature: aiConfig.temperature,
-                max_tokens: Math.floor(aiConfig.numPredict)
-            };
-
-            const responseFormat = aiConfig.openai?.responseFormat;
-            if (responseFormat !== 'none') {
-                payload.response_format = { type: responseFormat || "json_object" };
-            }
-
-            return payload;
-        }
-
-        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
-    }
 
     /**
      * Extracts the raw string content out of varying provider response shapes.
      */
-    extractAiResponse(aiConfig, responseBody) {
-        if (!responseBody) return null;
 
-        if (aiConfig.provider === 'ollama') {
-            return responseBody.response;
-        }
 
-        if (aiConfig.provider === 'openai') {
-            return responseBody.choices?.[0]?.message?.content;
-        }
 
-        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
-    }
-
-    async callAiGenerate(aiConfig, prompt, passLabel) {
-        if (!prompt) return null;
-        const payload = this.buildAiPayload(aiConfig, prompt);
-        return this.sendAiRequest(aiConfig, payload, passLabel, prompt);
-    }
-
-    extractFirstJsonObject(text) {
-        if (!text) return null;
-        const source = String(text).trim();
-        const firstBrace = source.indexOf('{');
-        if (firstBrace < 0) return null;
-        let depth = 0;
-        let inString = false;
-        let escaped = false;
-        for (let i = firstBrace; i < source.length; i++) {
-            const ch = source[i];
-            if (inString) {
-                if (escaped) {
-                    escaped = false;
-                } else if (ch === '\\') {
-                    escaped = true;
-                } else if (ch === '"') {
-                    inString = false;
-                }
-                continue;
-            }
-            if (ch === '"') {
-                inString = true;
-                continue;
-            }
-            if (ch === '{') depth++;
-            if (ch === '}') {
-                depth--;
-                if (depth === 0) {
-                    return source.slice(firstBrace, i + 1);
-                }
-            }
-        }
-        return null;
-    }
-
-    parseAiEventResponse(rawText) {
-        if (!rawText) return null;
-        try {
-            const parsed = JSON.parse(rawText);
-            return parsed && typeof parsed === 'object' ? parsed : null;
-        } catch (parseError) {
-            const jsonObject = this.extractFirstJsonObject(rawText);
-            if (!jsonObject) return null;
-            try {
-                const parsed = JSON.parse(jsonObject);
-                return parsed && typeof parsed === 'object' ? parsed : null;
-            } catch (jsonError) {
-                return null;
-            }
-        }
-    }
 
     getAiValidationConfig(parserConfig = {}) {
         const aiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
