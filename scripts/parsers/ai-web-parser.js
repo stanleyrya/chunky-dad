@@ -342,8 +342,8 @@ class AiWebParser {
             const dataFlags = this.getDataFlagsForPartition(sectionBundle, payloadMode, '');
             const promptFields = this.getAiPromptFields(parserConfig, dataFlags);
             const events = pageClassification === 'multi-event-page'
-                ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults)
-                : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults);
+                ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter)
+                : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
 
             return {
                 events,
@@ -369,7 +369,7 @@ class AiWebParser {
         }
     }
 
-    async extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = []) {
+    async extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = [], httpAdapter = null) {
         const segmentHtmlData = {
             ...htmlData,
             ocrResults: ocrResults
@@ -384,11 +384,11 @@ class AiWebParser {
         // Recalculate prompt fields because OCR results might have changed the preferred date format (e.g. from start/end to split fields)
         const adjustedPromptFields = this.getAiPromptFields(parserConfig, dataFlags);
 
-        const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, adjustedPromptFields, dataFlags);
+        const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, adjustedPromptFields, dataFlags, httpAdapter);
         return event ? [event] : [];
     }
 
-    async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = []) {
+    async extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = [], httpAdapter = null) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
 
@@ -408,7 +408,7 @@ class AiWebParser {
             try {
                 const segment = segments[i];
                 const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults);
-                const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags);
+                const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags, httpAdapter);
                 if (!event) continue;
                 event._multiEventSegment = {
                     index: i + 1,
@@ -423,7 +423,7 @@ class AiWebParser {
         return events;
     }
 
-    async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields, dataFlags = null) {
+    async extractSingleEvent(htmlData, parserConfig, cityConfig, promptFields, dataFlags = null, httpAdapter = null) {
         // Add OCR results to prompt context by prepending to HTML
         const ocrResults = htmlData && htmlData.ocrResults;
         let promptHtmlData = htmlData;
@@ -450,7 +450,7 @@ class AiWebParser {
 
         console.log(`🤖 AI Web: Using extraction fields: ${Array.isArray(promptFields) ? promptFields.join(', ') : 'none'}`);
 
-        const aiEvent = await this.getAiEvent(promptHtmlData, parserConfig, cityConfig, promptFields, computedDataFlags);
+        const aiEvent = await this.getAiEvent(promptHtmlData, parserConfig, cityConfig, promptFields, computedDataFlags, httpAdapter);
         if (!aiEvent) {
             return null;
         }
@@ -3292,7 +3292,7 @@ class AiWebParser {
         return result;
     }
 
-    async getAiEvent(htmlData, parserConfig, cityConfig, selectedPromptFields = null, dataFlags = {}) {
+    async getAiEvent(htmlData, parserConfig, cityConfig, selectedPromptFields = null, dataFlags = {}, httpAdapter = null) {
         if (!htmlData || typeof htmlData !== 'object') return null;
         if (htmlData.aiEvent && typeof htmlData.aiEvent === 'object') return htmlData.aiEvent;
         if (htmlData.aiExtraction && typeof htmlData.aiExtraction.event === 'object') {
@@ -3311,7 +3311,7 @@ class AiWebParser {
         }
         console.log(`🤖 AI Web: Prompt fields selected (${promptFields.length}): ${promptFields.join(', ')}`);
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
-        const extracted = await this.extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, promptFields);
+        const extracted = await this.extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, promptFields, httpAdapter);
         if (!extracted || typeof extracted !== 'object') {
             return extracted;
         }
@@ -4069,7 +4069,7 @@ class AiWebParser {
 
     // === Main: Extract Fields Across Multiple Snippets ===
 
-    async extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, fields, snippets, passLabelPrefix, validationState = null, options = {}) {
+    async extractFieldsAcrossSnippets(htmlData, aiConfig, cityConfig, parserConfig, fields, snippets, passLabelPrefix, validationState = null, options = {}, httpAdapter = null) {
         // === STEP 1: Setup ===
         let merged = {};
         const promptFields = Array.isArray(fields) ? fields : [];
@@ -4127,7 +4127,7 @@ class AiWebParser {
             }
 
             // Extract from snippet using two-pass strategy
-            const partial = await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, remainingFields, snippetText, passLabel, { ...options, dataFlags });
+            const partial = await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, remainingFields, snippetText, passLabel, { ...options, dataFlags }, httpAdapter);
 
             // Validate extracted fields
             const validatedPartial = this.validateAiEventEvidence(partial, htmlData, parserConfig, remainingFields, {
@@ -4157,7 +4157,7 @@ class AiWebParser {
         return merged;
     }
 
-    async extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, fields) {
+    async extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, fields, httpAdapter = null) {
         const promptFields = Array.isArray(fields) ? fields : [];
         const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
         const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
@@ -4186,7 +4186,8 @@ class AiWebParser {
                     extractionTrace,
                     dataFlags,
                     ...extractionOptions
-                }
+                },
+                httpAdapter
             );
         };
 
@@ -4218,11 +4219,8 @@ class AiWebParser {
                         structuredSnippets,
                         `exhaustive-structured ${field}`,
                         validationState,
-                        {
-                            partitionLabel: 'structured',
-                            extractionTrace,
-                            dataFlags: structuredFlags
-                        }
+                        { partitionLabel: 'structured', extractionTrace, dataFlags: structuredFlags },
+                        httpAdapter
                     );
                     merged = this.mergeAiEventFields(merged, partial);
                 }
@@ -4246,11 +4244,8 @@ class AiWebParser {
                         unstructuredSnippets,
                         `exhaustive-unstructured ${field}`,
                         validationState,
-                        {
-                            partitionLabel: 'unstructured',
-                            extractionTrace,
-                            dataFlags: unstructuredFlags
-                        }
+                        { partitionLabel: 'unstructured', extractionTrace, dataFlags: unstructuredFlags },
+                        httpAdapter
                     );
                     merged = this.mergeAiEventFields(merged, partial);
                 }
@@ -4826,7 +4821,7 @@ TEXT:
 
     // === Main: Two-Pass Extraction with Fallback ===
 
-    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, passLabel = '', options = {}) {
+    async extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, passLabel = '', options = {}, httpAdapter = null) {
         // Setup
         const passSuffix = passLabel ? ` ${passLabel}` : '';
         const dataFlags = options && options.dataFlags && typeof options.dataFlags === 'object' ? options.dataFlags : {};
