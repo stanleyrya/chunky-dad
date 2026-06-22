@@ -1,8 +1,9 @@
 {
   "originalUrl": "https://www.google.com/s2/favicons?domain=www.bearylife.art&sz=256",
-  "failedAt": "2026-06-15T04:52:54.145Z",
+  "failedAt": "2026-06-22T13:52:28.480Z",
   "error": "HTTP 404: Not Found",
   "type": "favicon",
   "filename": "favicon-bearylife.art-256px.ico",
-  "size": "256"
+  "size": "256",
+  "failureCount": 2
 }
