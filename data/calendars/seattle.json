@@ -28,60 +28,51 @@
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 47.6150572,
-        "lng": -122.3236574
+        "lat": 47.61337340244105,
+        "lng": -122.31441768029491
       },
-      "startDate": "2026-01-31T21:00:00",
-      "endDate": "2026-02-01T03:00:00",
-      "unprocessedDescription": "description: WINTER BEEF BALL!\n\nMusic & Entertainment\n• Beat\rs by MATT STANDS &amp; FREDDY KOP\nbar: MASSIVE\naddress: 619 E Pine, Seattle, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/seattlebeef/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/seattlejan26.jpg\nfacebook: https://www.facebook.com/events/698055449765272\nticketUrl: https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122\nkey: bearracuda-2026-02-01-seattle",
-      "startTimezone": null,
-      "endTimezone": null,
+      "startDate": "2025-07-17T19:00:00",
+      "endDate": "2025-07-18T02:00:00",
+      "unprocessedDescription": "Bar: Diesel<br>Google Maps: <a href=\"https://maps.app.goo.gl/yD\rDhdkV7M7p2mYEP7\">https://maps.app.goo.gl/yDDhdkV7M7p2mYEP7</a><br>Website: <a href=\"https://dieselseattle.com/DIESEL.html\">https://dieselseattle.com/DIESEL.html</a><br>Facebook: <a href=\"https://www.facebook.com/DieselSeattle\">https://www.facebook.com/DieselSeattle</a><br>Instagram: <a href=\"https://www.instagram.com/dieselseattle\">https://www.instagram.com/dieselseattle</a>",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
       "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "33B9EEB8-F6D3-4068-9A20-64B8DE33B103",
-      "uid": "33B9EEB8-F6D3-4068-9A20-64B8DE33B103",
+      "wasUTC": false,
+      "sourceUid": "1dl55f6fm4qqv42go7r3nj5st9@google.com",
+      "uid": "1dl55f6fm4qqv42go7r3nj5st9@google.com",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 1,
       "overrideIdentityType": null,
-      "bar": "MASSIVE",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/12/seattlejan26.jpg",
-      "tea": "WINTER BEEF BALL!",
-      "address": "619 E Pine, Seattle, WA 98122",
-      "website": "https://bearracuda.com/events/seattlebeef/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/698055449765272",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947",
-      "shortName": "Bear-rac-uda",
+      "bar": "Diesel",
+      "address": null,
+      "website": "https://dieselseattle.com/DIESEL.html",
+      "instagram": "https://www.instagram.com/dieselseattle",
+      "facebook": "https://www.facebook.com/DieselSeattle",
+      "gmaps": "https://maps.app.goo.gl/yDDhdkV7M7p2mYEP7",
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/seattlebeef/",
+          "url": "https://dieselseattle.com/DIESEL.html",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
+          "url": "https://www.instagram.com/dieselseattle",
           "label": "📷 Instagram"
         },
         {
           "type": "facebook",
-          "url": "https://www.facebook.com/events/698055449765272",
+          "url": "https://www.facebook.com/DieselSeattle",
           "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E%20Pine%2C%20Seattle%2C%20WA%2098122",
+          "url": "https://maps.app.goo.gl/yDDhdkV7M7p2mYEP7",
           "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-seattle-winter-beef-ball-2026-tickets-1977102214947",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-seattle-winter-beef-ball-2026-5d3a67cd"
+      "slug": "leather-night-51e2ca8d"
     },
     {
       "name": "South Seattle Bear Social",
