@@ -27,8 +27,8 @@ BEGIN:VTIMEZONE
 TZID:America/Vancouver
 X-LIC-LOCATION:America/Vancouver
 BEGIN:STANDARD
-TZOFFSETFROM:-0800
-TZOFFSETTO:-0800
+TZOFFSETFROM:-0700
+TZOFFSETTO:-0700
 TZNAME:PST
 DTSTART:19700101T000000
 END:STANDARD
@@ -36,7 +36,7 @@ END:VTIMEZONE
 BEGIN:VEVENT
 DTSTART:20251026T050000Z
 DTEND:20251026T120000Z
-DTSTAMP:20260623T125617Z
+DTSTAMP:20260623T212530Z
 UID:342C3C24-21CD-4149-8634-E60F5CB0A57A
 CREATED:20250921T003523Z
 DESCRIPTION:description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED
@@ -57,83 +57,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260607T040000Z
-DTEND:20260607T090000Z
-DTSTAMP:20260623T125617Z
-UID:FC6AD30A-ABEE-4135-91A0-18E30D96674D
-CREATED:20260512T171311Z
-DESCRIPTION:description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th
- e Globe\naddress: 740 South Broadway\, Los Angeles\, CA 90014\nticketUrl: h
- ttps://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-glob
- e-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_amer
- ica\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11
- 83615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=
- crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc8
- 0cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\:
-  [object Object]\,[object Object]\n_aiValidation\\: [object Object]\nwebsit
- e: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/s
- earch/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angel
- es%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2
- 026-06-07|the globe
-LAST-MODIFIED:20260514T005410Z
-LOCATION:34.044092\,-118.2542355
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20250720T150000
-DTEND;TZID=America/Los_Angeles:20250720T210000
-RRULE:FREQ=MONTHLY;BYDAY=3SU
-DTSTAMP:20260623T125617Z
-UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
-CREATED:20250719T050204Z
-DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
- oMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?ig
- sh=MWxjZHprZnl6NWc0NQ==
-LAST-MODIFIED:20250719T051145Z
-LOCATION:34.0498043\, -118.2493258
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Club Chub
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250831T040000Z
-DTEND:20250831T090000Z
-DTSTAMP:20260623T125617Z
-UID:848D15A3-27B4-4F56-AAD0-9D7D66DD12A1
-CREATED:20250823T205552Z
-DESCRIPTION:description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF 
- \nreturn to close out the Summer Tour in you —\nSATURDAY\, AUGUST 30th  and
-  it’s all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard\, L
- ong Beach\, CA 90805\ntimezone: America/Los_Angeles\nurl: https://www.event
- brite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639
- \nticketUrl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-lo
- ng-beach-tickets-1520432868639\ncover: $11.58 - $20 (as of 8/30)\nimage: ht
- tps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185
- 013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=4
- 60&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6
- 687d67975f54c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagr
- am.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&q
- uery=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8B
- ZHBGg\nkey: megawoof|2025-08-31|falcon north|eventbrite
-LAST-MODIFIED:20250830T170547Z
-LOCATION:33.87445400000001\, -118.1680614
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260517T040000Z
 DTEND:20260517T090000Z
-DTSTAMP:20260623T125617Z
+DTSTAMP:20260623T212530Z
 UID:F5435015-D350-4B57-8C02-6227EB96FDE1
 CREATED:20260512T171310Z
 DESCRIPTION:description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N
@@ -159,9 +85,70 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260607T040000Z
+DTEND:20260607T090000Z
+DTSTAMP:20260623T212530Z
+UID:FC6AD30A-ABEE-4135-91A0-18E30D96674D
+CREATED:20260512T171311Z
+DESCRIPTION:description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th
+ e Globe\naddress: 740 South Broadway\, Los Angeles\, CA 90014\nticketUrl: h
+ ttps://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-glob
+ e-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_amer
+ ica\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11
+ 83615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=
+ crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc8
+ 0cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\:
+  [object Object]\,[object Object]\n_aiValidation\\: [object Object]\nwebsit
+ e: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/s
+ earch/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angel
+ es%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2
+ 026-06-07|the globe
+LAST-MODIFIED:20260514T005410Z
+LOCATION:34.044092\,-118.2542355
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Vancouver:20250717T170000
+DTEND;TZID=America/Vancouver:20250717T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260623T212530Z
+UID:9vnvsm6kjpievu62279lco139k@google.com
+CREATED:20250715T045103Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nShorter: BHH\nInstagram: https:
+ //www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161157Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20250720T150000
+DTEND;TZID=America/Los_Angeles:20250720T210000
+RRULE:FREQ=MONTHLY;BYDAY=3SU
+DTSTAMP:20260623T212530Z
+UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
+CREATED:20250719T050204Z
+DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
+ oMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?ig
+ sh=MWxjZHprZnl6NWc0NQ==
+LAST-MODIFIED:20250719T051145Z
+LOCATION:34.0498043\, -118.2493258
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Club Chub
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20250817T050000Z
 DTEND:20250817T100000Z
-DTSTAMP:20260623T125617Z
+DTSTAMP:20260623T212530Z
 UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
 CREATED:20250719T045039Z
 DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
@@ -173,7 +160,7 @@ DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
  2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format
  %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe
  04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-s
- ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as
+ ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as 
  of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036
  %2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k
 LAST-MODIFIED:20250817T033530Z
@@ -184,19 +171,32 @@ SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/Vancouver:20250717T170000
-DTEND;TZID=America/Vancouver:20250717T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260623T125617Z
-UID:9vnvsm6kjpievu62279lco139k@google.com
-CREATED:20250715T045103Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nShorter: BHH\nInstagram: https:
- //www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161157Z
+DTSTART:20250831T040000Z
+DTEND:20250831T090000Z
+DTSTAMP:20260623T212530Z
+UID:848D15A3-27B4-4F56-AAD0-9D7D66DD12A1
+CREATED:20250823T205552Z
+DESCRIPTION:description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF 
+ \nreturn to close out the Summer Tour in you —\nSATURDAY\, AUGUST 30th  and
+  it’s all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard\, L
+ ong Beach\, CA 90805\ntimezone: America/Los_Angeles\nurl: https://www.event
+ brite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639
+ \nticketUrl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-lo
+ ng-beach-tickets-1520432868639\ncover: $11.58 - $20 (as of 8/30)\nimage: ht
+ tps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185
+ 013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=4
+ 60&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6
+ 687d67975f54c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagr
+ am.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&q
+ uery=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8B
+ ZHBGg\nkey: megawoof|2025-08-31|falcon north|eventbrite
+LAST-MODIFIED:20250830T170547Z
+LOCATION:33.87445400000001\, -118.1680614
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
+SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 END:VCALENDAR
