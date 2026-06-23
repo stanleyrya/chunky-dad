@@ -920,7 +920,44 @@ class ScriptableAdapter {
         return Number.isFinite(statusCode) ? statusCode : null;
     }
 
-    async saveFailureNote(url, error, metadata = {}) {
+
+    async fetchImageAsBase64(url, timeoutSeconds = 30) {
+        try {
+            const request = new Request(url);
+            request.timeoutInterval = timeoutSeconds;
+            const image = await request.loadImage();
+            const jpegData = Data.fromJPEG(image);
+            return jpegData.toBase64String();
+        } catch (error) {
+            throw new Error(`Failed to fetch image as base64: ${error.message}`);
+        }
+    }
+
+    async postJson(url, payload, options = {}) {
+        try {
+            const request = new Request(url);
+            request.method = 'POST';
+            request.headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            request.body = JSON.stringify(payload);
+            if (options.timeoutSeconds) {
+                request.timeoutInterval = options.timeoutSeconds;
+            }
+            const responseText = await request.loadString();
+            const statusCode = request.response ? request.response.statusCode : 200;
+            return {
+                ok: statusCode >= 200 && statusCode < 300,
+                status: statusCode,
+                text: responseText
+            };
+        } catch (error) {
+            throw new Error(`POST request failed: ${error.message}`);
+        }
+    }
+
+async saveFailureNote(url, error, metadata = {}) {
         if (metadata && metadata.retryable === true) {
             return false;
         }

@@ -2,6 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { AiWebParser } = require('./ai-web-parser');
+const { SharedCore } = require('../shared-core');
+const { EventSchema } = require('../event-schema');
 
 function normalizeUrl(url, baseUrl = 'https://furball.example/events') {
   const value = String(url || '').trim();
@@ -15,7 +17,9 @@ function normalizeUrl(url, baseUrl = 'https://furball.example/events') {
 }
 
 function createParser() {
-  return new AiWebParser({ normalizeUrl });
+  const parser = new AiWebParser({ normalizeUrl });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  return parser;
 }
 
 test('pairs nearby row-split event images to the matching multi-event segments', () => {
@@ -198,7 +202,7 @@ test('buildAiPayload and extractAiResponse support both Ollama and OpenAI', () =
     temperature: 0,
     keepAlive: '5m'
   };
-  const ollamaPayload = parser.buildAiPayload(ollamaConfig, prompt, base64Image);
+  const ollamaPayload = parser.core.buildAiPayload(ollamaConfig, prompt, base64Image);
   assert.equal(ollamaPayload.model, 'qwen3.5:4b');
   assert.equal(ollamaPayload.prompt, prompt);
   assert.deepEqual(ollamaPayload.images, [base64Image]);
@@ -211,7 +215,7 @@ test('buildAiPayload and extractAiResponse support both Ollama and OpenAI', () =
     numPredict: 1024,
     temperature: 0.5
   };
-  const openaiPayloadText = parser.buildAiPayload(openaiConfig, prompt);
+  const openaiPayloadText = parser.core.buildAiPayload(openaiConfig, prompt);
   assert.equal(openaiPayloadText.model, 'gpt-4o');
   assert.equal(openaiPayloadText.messages[0].role, 'user');
   assert.equal(openaiPayloadText.messages[0].content, prompt);
@@ -219,7 +223,7 @@ test('buildAiPayload and extractAiResponse support both Ollama and OpenAI', () =
   assert.deepEqual(openaiPayloadText.response_format, { type: 'json_object' });
 
   // OpenAI Payload (Vision)
-  const openaiPayloadVision = parser.buildAiPayload(openaiConfig, prompt, base64Image);
+  const openaiPayloadVision = parser.core.buildAiPayload(openaiConfig, prompt, base64Image);
   assert.ok(Array.isArray(openaiPayloadVision.messages[0].content));
   assert.equal(openaiPayloadVision.messages[0].content[0].type, 'text');
   assert.equal(openaiPayloadVision.messages[0].content[0].text, prompt);
@@ -228,8 +232,8 @@ test('buildAiPayload and extractAiResponse support both Ollama and OpenAI', () =
 
   // Response Extraction
   const ollamaResponse = { response: '{"title": "Ollama Event"}' };
-  assert.equal(parser.extractAiResponse(ollamaConfig, ollamaResponse), '{"title": "Ollama Event"}');
+  assert.equal(parser.core.extractAiResponse(ollamaConfig, ollamaResponse), '{"title": "Ollama Event"}');
 
   const openaiResponse = { choices: [{ message: { content: '{"title": "OpenAI Event"}' } }] };
-  assert.equal(parser.extractAiResponse(openaiConfig, openaiResponse), '{"title": "OpenAI Event"}');
+  assert.equal(parser.core.extractAiResponse(openaiConfig, openaiResponse), '{"title": "OpenAI Event"}');
 });

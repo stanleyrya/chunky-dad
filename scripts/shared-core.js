@@ -56,6 +56,7 @@ class SharedCore {
         // Store cities config for timezone assignment
         this.cities = cities;
         this.eventSchema = schema;
+        this.normalizerPipeline = options.normalizerPipeline || null;
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
             ...(options.additionalExcludedFields || [])
@@ -689,7 +690,8 @@ class SharedCore {
                     allowParserAutoSwitch,
                     parserConfig: perPageParserConfig,
                     mainConfig,
-                    displayAdapter
+                    displayAdapter,
+                    httpAdapter
                 });
 
                 if (currentDepth === 0 && urlClassifications && typeof urlClassifications === 'object') {
@@ -708,7 +710,7 @@ class SharedCore {
                 }
 
                 if (!discoveryOnly) {
-                    const parsedEvents = this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification);
+                    const parsedEvents = this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline);
                     if (parsedEvents.length > 0) {
                         allEvents.push(...parsedEvents);
                     }
@@ -802,16 +804,22 @@ class SharedCore {
             : additionalLinks;
     }
 
-    prepareParsedEvents(events, parserConfig, mainConfig, pageClassification) {
+    prepareParsedEvents(events, parserConfig, mainConfig, pageClassification, normalizerPipeline) {
         if (!Array.isArray(events) || events.length === 0) {
             return [];
         }
         const filteredEvents = events.map(event =>
             this.applyFieldPriorities(event, parserConfig, mainConfig)
         );
-        const enrichedEvents = filteredEvents.map(event =>
-            this.enrichEventLocation(this.normalizeEventTextFields(event))
-        );
+
+        // Pass events through normalizer pipeline if provided
+        // Use the passed pipeline or the instance property
+        const pipelineToUse = normalizerPipeline || this.normalizerPipeline;
+
+        const enrichedEvents = pipelineToUse
+            ? pipelineToUse.normalizeEvents(filteredEvents)
+            : filteredEvents.map(event => this.normalizeEventTextFields(event));
+
         enrichedEvents.forEach(event => { event._pageClassification = pageClassification; });
         return enrichedEvents;
     }
@@ -826,7 +834,8 @@ class SharedCore {
         mainConfig = null,
         displayAdapter,
         logClassification = true,
-        logParserSwitch = true
+        logParserSwitch = true,
+        httpAdapter
     }) {
         const pageClassification = this.classifyPage(url, htmlData.html);
         if (logClassification) {
@@ -849,7 +858,7 @@ class SharedCore {
             throw new Error(`Parser '${urlParserName}' not found`);
         }
         const parseResult = await Promise.resolve(
-            urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null, pageClassification)
+            urlParser.parseEvents(htmlData, parserConfig, mainConfig?.cities || null, pageClassification, httpAdapter)
         );
         return { pageClassification, parseResult, urlParserName };
     }
@@ -1392,10 +1401,13 @@ class SharedCore {
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
         
-        // Re-enrich the merged event with location data
+        // Run the merged event through the normalizer pipeline again
         // This ensures that gmaps URLs are regenerated if they were removed during merge
-        const enrichedMergedEvent = this.enrichEventLocation(mergedEvent);
-        
+        // and other normalizers can clean up the merged result
+        const enrichedMergedEvent = this.normalizerPipeline
+            ? this.normalizerPipeline.normalizeEvent(mergedEvent)
+            : mergedEvent;
+
         // Regenerate notes after enrichment to include any newly generated fields
         enrichedMergedEvent.notes = this.formatEventNotes(enrichedMergedEvent);
         
@@ -2414,118 +2426,6 @@ class SharedCore {
             return `https://www.google.com/maps/search/?api=1&query=${encodedFallbackQuery}${placeIdParam}`;
         }
         return null;
-    }
-    
-    // ============================================================================
-    // EVENT ENRICHMENT - Add Google Maps links, validate addresses, extract cities
-    // ============================================================================
-    
-    // Enrich event with Google Maps links and city information
-    enrichEventLocation(event) {
-        if (!event) return event;
-
-        // Keep url/website aliases in sync before enrichment.
-        this.syncUrlAndWebsiteFields(event);
-
-        // DEBUG: Check URL field before enrichment
-        const hadUrlBefore = 'url' in event;
-        const urlValueBefore = event.url;
-        
-        // Extract and normalize city (parser may have set it for venue-specific logic, but we need to normalize it)
-        const extractedCity = this.extractCityFromEvent(event);
-        if (extractedCity) {
-            event.city = extractedCity;
-        }
-        
-        // Warn when the event references a city we have no config for (timezone-aware key building would fall back to UTC)
-        if (!event.timezone && event.city && !this.cities[event.city]) {
-            const title = event.title || 'unknown';
-            this.warnOnce(
-                `timezone:${event.city}`,
-                `🚨 SharedCore: No timezone config for city "${event.city}" (event: "${title}")`
-            );
-        }
-        
-        // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
-        const isTBAVenue = event.bar && (
-                          event.bar.toLowerCase().includes('tba') || 
-                          event.bar.toLowerCase().includes('to be announced'));
-        
-        if (isTBAVenue) {
-            console.log(`🗺️ SharedCore: TBA venue "${event.bar}" detected - removing fake location data`);
-            // Remove all location data for TBA venues (coordinates are usually fake city center)
-            event.location = null;
-            event.address = null;
-            event.gmaps = '';
-            return event;
-        }
-        
-        // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
-        // Always generate if gmaps field is empty or undefined - merge strategies are handled later
-        if (!event.gmaps) {
-            // Try to enhance incomplete addresses with city information before gmaps generation
-            if (event.address && event.city && !this.isFullAddress(event.address)) {
-                const enhancedAddress = this.enhanceAddressWithCity(event.address, event.city);
-                if (enhancedAddress !== event.address) {
-                    event.address = enhancedAddress;
-                }
-            }
-            
-            // Parse coordinates from location field if available
-            let coordinates = null;
-            if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-                const [lat, lng] = event.location.split(',').map(coord => parseFloat(coord.trim()));
-                if (!isNaN(lat) && !isNaN(lng)) {
-                    coordinates = { lat, lng };
-                }
-            }
-            
-            const hasFullAddress = event.address && this.isFullAddress(event.address);
-            const shouldPreferAddress = hasFullAddress && !event.placeId;
-            const addressForMaps = (hasFullAddress || !coordinates) ? event.address : null;
-            const coordinatesForMaps = shouldPreferAddress ? null : coordinates;
-            const venueNameForMaps = typeof event.bar === 'string' ? event.bar.trim() : null;
-            const cityNameForMaps = this.getPrimaryCityName(event.city);
-
-            // Use available data to generate iOS-compatible URL
-            const urlData = {
-                coordinates: coordinatesForMaps,
-                placeId: event.placeId || null,
-                address: addressForMaps,
-                venueName: venueNameForMaps,
-                cityName: cityNameForMaps
-            };
-            
-            event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
-            
-            if (event.gmaps) {
-                const method = event.placeId ? 
-                    (coordinates ? 'place_id + coordinates' : 'place_id + address') : 
-                    (coordinates ? 'coordinates only' : 'address only');
-
-            }
-        }
-        
-        // Clean up location data based on what we have
-        if (event.address && this.isFullAddress(event.address)) {
-            // Keep address and gmaps URL
-        } else if (!event.address && event.location && event.gmaps) {
-            // Keep coordinates and gmaps URL
-        } else if (!event.address && event.location && !event.gmaps) {
-            // No valid address or gmaps URL - keep location data anyway
-        }
-        
-        // DEBUG: Check URL field after enrichment
-        const hasUrlAfter = 'url' in event;
-        const urlValueAfter = event.url;
-        
-        if (hadUrlBefore !== hasUrlAfter || urlValueBefore !== urlValueAfter) {
-            console.error(`🗺️ SharedCore: URL FIELD LOST in enrichEventLocation for "${event.title}"!`);
-            console.error(`🗺️ SharedCore: Before: hadUrl=${hadUrlBefore}, value="${urlValueBefore}"`);
-            console.error(`🗺️ SharedCore: After: hasUrl=${hasUrlAfter}, value="${urlValueAfter}"`);
-        }
-        
-        return event;
     }
     
     // =========================================================================
@@ -3881,6 +3781,201 @@ class SharedCore {
         
         return event;
     }
+
+
+
+    // ============================================================================
+    // AI ORCHESTRATION HELPERS
+    // ============================================================================
+
+    buildAiPayload(aiConfig, prompt, base64Image = null) {
+        if (aiConfig.provider === 'ollama') {
+            const payload = {
+                model: aiConfig.model,
+                prompt: prompt,
+                format: "json",
+                stream: false,
+                think: aiConfig.think,
+                keep_alive: aiConfig.keepAlive,
+                options: {
+                    num_ctx: aiConfig.numCtx,
+                    num_predict: aiConfig.numPredict,
+                    temperature: aiConfig.temperature
+                }
+            };
+            if (base64Image) {
+                payload.images = [base64Image];
+            }
+            return payload;
+        }
+
+        if (aiConfig.provider === 'openai') {
+            let userContent;
+            if (base64Image) {
+                userContent = [
+                    { type: "text", text: prompt },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: `data:image/png;base64,${base64Image}`
+                        }
+                    }
+                ];
+            } else {
+                userContent = prompt;
+            }
+
+            const payload = {
+                model: aiConfig.model,
+                messages: [
+                    { role: "user", content: userContent }
+                ],
+                temperature: aiConfig.temperature,
+                max_tokens: Math.floor(aiConfig.numPredict)
+            };
+
+            const responseFormat = aiConfig.openai?.responseFormat;
+            if (responseFormat !== 'none') {
+                payload.response_format = { type: responseFormat || "json_object" };
+            }
+
+            return payload;
+        }
+
+        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
+    }
+
+    extractAiResponse(aiConfig, responseBody) {
+        if (!responseBody) return null;
+
+        if (aiConfig.provider === 'ollama') {
+            return responseBody.response;
+        }
+
+        if (aiConfig.provider === 'openai') {
+            return responseBody.choices?.[0]?.message?.content;
+        }
+
+        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
+    }
+
+    extractFirstJsonObject(text) {
+        if (!text) return null;
+        const source = String(text).trim();
+        const firstBrace = source.indexOf('{');
+        if (firstBrace < 0) return null;
+        let depth = 0;
+        let inString = false;
+        let escaped = false;
+        for (let i = firstBrace; i < source.length; i++) {
+            const ch = source[i];
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (ch === '\\') {
+                    escaped = true;
+                } else if (ch === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (ch === '"') {
+                inString = true;
+                continue;
+            }
+            if (ch === '{') depth++;
+            if (ch === '}') {
+                depth--;
+                if (depth === 0) {
+                    return source.slice(firstBrace, i + 1);
+                }
+            }
+        }
+        return null;
+    }
+
+    parseAiEventResponse(rawText) {
+        if (!rawText) return null;
+        try {
+            const parsed = JSON.parse(rawText);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (parseError) {
+            const jsonObject = this.extractFirstJsonObject(rawText);
+            if (!jsonObject) return null;
+            try {
+                const parsed = JSON.parse(jsonObject);
+                return parsed && typeof parsed === 'object' ? parsed : null;
+            } catch (jsonError) {
+                return null;
+            }
+        }
+    }
+
+    async callAiGenerate(aiConfig, prompt, passLabel, httpAdapter, promptHistoryRecorder = null, base64Image = null) {
+        if (!prompt) return null;
+        const payload = this.buildAiPayload(aiConfig, prompt, base64Image);
+        const label = passLabel ? ` (${passLabel} pass)` : '';
+        const promptChars = prompt.length;
+
+        if (promptHistoryRecorder) {
+            promptHistoryRecorder(prompt, passLabel, aiConfig);
+        }
+
+        console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, provider: ${aiConfig.provider}, prompt: ${promptChars} chars`);
+        console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
+
+        const startTime = Date.now();
+        try {
+            if (!httpAdapter || typeof httpAdapter.postJson !== 'function') {
+                throw new Error('No HTTP adapter available for AI request');
+            }
+
+            const response = await httpAdapter.postJson(aiConfig.endpoint, payload, {
+                timeoutSeconds: aiConfig.timeoutSeconds
+            });
+
+            if (!response.ok) {
+                console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
+                if (response.text) {
+                    console.log(`🤖 AI Web: Error response body${label}\n${response.text}`);
+                }
+                return null;
+            }
+
+            let responseJson = null;
+            if (response.text) {
+                try {
+                    responseJson = JSON.parse(response.text);
+                } catch (parseError) {
+                    console.warn(`🤖 AI Web: AI request${label} returned non-JSON payload (${response.text.length} chars)`);
+                    console.log(`🤖 AI Web: Raw response payload${label}\n${response.text}`);
+                    return null;
+                }
+            }
+
+            const elapsed = Date.now() - startTime;
+            const responseContent = this.extractAiResponse(aiConfig, responseJson);
+
+            if (responseContent && typeof responseContent === 'string' && responseContent.length > 0) {
+                console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseContent.length} chars`);
+                console.log(`🤖 AI Web: Model response text${label}\n${responseContent}`);
+                return responseContent;
+            }
+
+            const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
+            console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
+            if (response.text) {
+                console.log(`🤖 AI Web: Raw response payload${label}\n${response.text}`);
+            }
+            return null;
+        } catch (error) {
+            const elapsed = Date.now() - startTime;
+            const errorType = error && error.name ? error.name : 'Error';
+            console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
+            return null;
+        }
+    }
+
 }
 
 // Export for both environments
@@ -3891,4 +3986,6 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
     // Scriptable environment
     this.SharedCore = SharedCore;
+
+
 }
