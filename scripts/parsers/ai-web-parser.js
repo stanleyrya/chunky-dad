@@ -5638,15 +5638,7 @@ TEXT:
 
         // === STEP 4: Return Result ===
         if (report.dropped.length > 0) {
-            // Only use console.warn directly if core is missing
-            if (this.core && typeof this.core.warnOnce === 'function') {
-                this.core.warnOnce(
-                    `ai-evidence-drop-${validated.title || 'unknown'}-${Date.now()}`,
-                    `🤖 AI Web: Dropped ${report.dropped.length} field(s) lacking source evidence: ${report.dropped.map(entry => entry.key).join(', ')}`
-                );
-            } else {
-                console.warn(`🤖 AI Web: Dropped ${report.dropped.length} field(s) lacking source evidence: ${report.dropped.map(entry => entry.key).join(', ')}`);
-            }
+            console.warn(`🤖 AI Web: Dropped ${report.dropped.length} field(s) lacking source evidence: ${report.dropped.map(entry => entry.key).join(', ')}`);
         }
         return { event: validated, report };
     }

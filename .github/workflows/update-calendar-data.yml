@@ -60,12 +60,15 @@ jobs:
               // Remove empty lines created by removing timestamps
               .replace(/\n\n+/g, '\n');
             
-            // Sort VEVENT blocks by their string content rather than just UID,
-            // because multiple events can have the same UID (e.g. recurrence overrides)
+            // Sort VEVENT blocks by UID so reordering doesn't count as a change
             const veventRegex = /BEGIN:VEVENT[\s\S]*?END:VEVENT/g;
             const vevents = normalized.match(veventRegex) || [];
             if (vevents.length > 0) {
-              vevents.sort((a, b) => a.localeCompare(b));
+              vevents.sort((a, b) => {
+                const uidA = (a.match(/^UID:(.*)$/m) || ['', ''])[1].trim();
+                const uidB = (b.match(/^UID:(.*)$/m) || ['', ''])[1].trim();
+                return uidA.localeCompare(uidB);
+              });
               let eventIndex = 0;
               normalized = normalized.replace(veventRegex, () => vevents[eventIndex++]);
             }

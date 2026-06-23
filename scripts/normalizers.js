@@ -65,10 +65,29 @@ class BasicDataNormalizer extends BaseNormalizer {
     normalize(event) {
         if (!this.core) return event;
         // Sync URL and website fields
-        event = this.core.syncUrlAndWebsiteFields(event);
+        event = this.syncUrlAndWebsiteFields(event);
 
         // Normalize basic text fields
         return this.core.normalizeEventTextFields(event);
+    }
+
+    syncUrlAndWebsiteFields(event) {
+        if (!event || typeof event !== 'object') {
+            return event;
+        }
+
+        const hasUrl = typeof event.url === 'string' && event.url.trim().length > 0;
+        const hasWebsite = typeof event.website === 'string' && event.website.trim().length > 0;
+
+        if (!hasWebsite && hasUrl) {
+            event.website = event.url;
+        }
+
+        if (!hasUrl && hasWebsite) {
+            event.url = event.website;
+        }
+
+        return event;
     }
 }
 
@@ -76,15 +95,14 @@ class LocationNormalizer extends BaseNormalizer {
     normalize(event) {
         if (!event || !this.core) return event;
 
-        // Ensure url/website is synced before enrichment (redundant but safe)
-        event = this.core.syncUrlAndWebsiteFields(event);
+        // (Removed duplicate call to syncUrlAndWebsiteFields)
 
         // DEBUG: Check URL field before enrichment
         const hadUrlBefore = 'url' in event;
         const urlValueBefore = event.url;
 
         // Extract and normalize city
-        const extractedCity = this.core.extractCityFromEvent(event);
+        const extractedCity = this.extractCityFromEvent(event);
         if (extractedCity) {
             event.city = extractedCity;
         }
@@ -114,8 +132,8 @@ class LocationNormalizer extends BaseNormalizer {
         // Generate Google Maps URL
         if (!event.gmaps) {
             // Try to enhance incomplete addresses with city information
-            if (event.address && event.city && !this.core.isFullAddress(event.address)) {
-                const enhancedAddress = this.core.enhanceAddressWithCity(event.address, event.city);
+            if (event.address && event.city && !this.isFullAddress(event.address)) {
+                const enhancedAddress = this.enhanceAddressWithCity(event.address, event.city);
                 if (enhancedAddress !== event.address) {
                     event.address = enhancedAddress;
                 }
@@ -130,12 +148,12 @@ class LocationNormalizer extends BaseNormalizer {
                 }
             }
 
-            const hasFullAddress = event.address && this.core.isFullAddress(event.address);
+            const hasFullAddress = event.address && this.isFullAddress(event.address);
             const shouldPreferAddress = hasFullAddress && !event.placeId;
             const addressForMaps = (hasFullAddress || !coordinates) ? event.address : null;
             const coordinatesForMaps = shouldPreferAddress ? null : coordinates;
             const venueNameForMaps = typeof event.bar === 'string' ? event.bar.trim() : null;
-            const cityNameForMaps = this.core.getPrimaryCityName(event.city);
+            const cityNameForMaps = this.getPrimaryCityName(event.city);
 
             const urlData = {
                 coordinates: coordinatesForMaps,
@@ -145,15 +163,11 @@ class LocationNormalizer extends BaseNormalizer {
                 cityName: cityNameForMaps
             };
 
-            // Access static method via core constructor or global if possible
-            const coreClass = this.core.constructor;
-            if (coreClass && typeof coreClass.generateGoogleMapsUrl === 'function') {
-                event.gmaps = coreClass.generateGoogleMapsUrl(urlData);
-            }
+            event.gmaps = LocationNormalizer.generateGoogleMapsUrl(urlData);
         }
 
         // Clean up location data based on what we have
-        if (event.address && this.core.isFullAddress(event.address)) {
+        if (event.address && this.isFullAddress(event.address)) {
             // Keep address and gmaps URL
         } else if (!event.address && event.location && event.gmaps) {
             // Keep coordinates and gmaps URL
@@ -172,6 +186,309 @@ class LocationNormalizer extends BaseNormalizer {
         }
 
         return event;
+    }
+
+    // Static method to generate iOS-compatible Google Maps URLs
+    static generateGoogleMapsUrl({ coordinates, placeId, address, venueName, cityName }) {
+        const lat = coordinates ? parseFloat(coordinates.lat) : null;
+        const lng = coordinates ? parseFloat(coordinates.lng) : null;
+        const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+        const normalizedAddress = typeof address === 'string' ? address.trim() : '';
+        const hasAddress = normalizedAddress.length > 0;
+        const normalizedVenue = typeof venueName === 'string' ? venueName.trim() : '';
+        const hasVenue = normalizedVenue.length > 0;
+        const normalizedCity = typeof cityName === 'string' ? cityName.trim() : '';
+        const hasCity = normalizedCity.length > 0;
+        const shouldCombineVenue = hasAddress &&
+            hasVenue &&
+            !normalizedAddress.toLowerCase().includes(normalizedVenue.toLowerCase());
+        const addressQuery = shouldCombineVenue ? `${normalizedVenue}, ${normalizedAddress}` : normalizedAddress;
+        const shouldCombineCity = hasVenue &&
+            hasCity &&
+            !normalizedVenue.toLowerCase().includes(normalizedCity.toLowerCase());
+        const fallbackQuery = shouldCombineCity ? `${normalizedVenue}, ${normalizedCity}` :
+            (hasVenue ? normalizedVenue : normalizedCity);
+        const hasFallbackQuery = (hasVenue || hasCity) && fallbackQuery.length > 0;
+        const encodedCoordinates = hasCoordinates ? encodeURIComponent(`${lat},${lng}`) : null;
+        const encodedAddress = hasAddress ? encodeURIComponent(addressQuery) : null;
+        const encodedFallbackQuery = hasFallbackQuery ? encodeURIComponent(fallbackQuery) : null;
+
+        if (placeId && hasCoordinates) {
+            return `https://www.google.com/maps/search/?api=1&query=${encodedCoordinates}&query_place_id=${placeId}`;
+        } else if (placeId && hasAddress) {
+            return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}&query_place_id=${placeId}`;
+        } else if (hasAddress) {
+            return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+        } else if (hasCoordinates) {
+            return `https://www.google.com/maps/search/?api=1&query=${encodedCoordinates}`;
+        } else if (encodedFallbackQuery) {
+            const placeIdParam = placeId ? `&query_place_id=${placeId}` : '';
+            return `https://www.google.com/maps/search/?api=1&query=${encodedFallbackQuery}${placeIdParam}`;
+        }
+        return null;
+    }
+
+    // Check if an address is a full address (not just a city or region)
+    isFullAddress(address) {
+        if (!address || typeof address !== 'string') return false;
+
+        const cleanAddress = address.trim();
+        if (cleanAddress.length < 10) return false;
+
+        if (/^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(cleanAddress)) {
+            return false;
+        }
+
+        const placeholderPatterns = [
+            /^(venue|location|address)?\s*(tba|tbd|pending|coming soon|announced soon)$/i,
+            /^(details|info|information)?\s*(coming|to follow|tba|tbd)$/i,
+            /^(will be announced|location pending|venue pending)$/i
+        ];
+
+        if (placeholderPatterns.some(pattern => pattern.test(cleanAddress))) {
+            return false;
+        }
+
+        const partialAddressPatterns = [
+            /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
+            /^[A-Za-z\s]+\s+(District|Area|Zone|Neighborhood)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i
+        ];
+
+        if (partialAddressPatterns.some(pattern => pattern.test(cleanAddress))) {
+            return false;
+        }
+
+        const fullAddressPatterns = [
+            /\d+\s+\w+.*street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i,
+            /\d+\s+\w+.*\s+\w+/i
+        ];
+
+        const hasAddressPattern = fullAddressPatterns.some(pattern => pattern.test(cleanAddress));
+        if (!hasAddressPattern) return false;
+
+        const cityOnlyPatterns = [
+            /^(new york|nyc|los angeles|san francisco|chicago|atlanta|miami|seattle|portland|denver|las vegas|vegas|boston|philadelphia|austin|dallas|houston|phoenix|toronto|london|berlin|palm springs|sitges)$/i,
+            /^[a-z\s]{3,25}$/i
+        ];
+
+        const isCityOnly = cityOnlyPatterns.some(pattern => pattern.test(cleanAddress)) &&
+                          !/\d/.test(cleanAddress) &&
+                          !/street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i.test(cleanAddress);
+
+        return !isCityOnly;
+    }
+
+    // Enhance address with city information if it's incomplete
+    enhanceAddressWithCity(address, city) {
+        if (!address || !city || !this.core || !this.core.cityMappings) {
+            return address;
+        }
+
+        let cityName = '';
+        for (const [patterns, mappedCity] of Object.entries(this.core.cityMappings)) {
+            if (mappedCity === city) {
+                const patternList = patterns.split('|');
+                cityName = patternList.reduce((longest, current) =>
+                    current.length > longest.length ? current : longest
+                );
+                break;
+            }
+        }
+
+        if (!cityName) {
+            return address;
+        }
+
+        const lowerAddress = address.toLowerCase();
+        const lowerCityName = cityName.toLowerCase();
+
+        const stateAbbreviations = [
+            'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'dc', 'fl',
+            'ga', 'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me',
+            'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh',
+            'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri',
+            'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy'
+        ];
+
+        if (lowerAddress.includes(lowerCityName) ||
+            stateAbbreviations.some(state => lowerAddress.includes(`, ${state}`))) {
+            return address;
+        }
+
+        const needsEnhancement =
+            address.length < 15 ||
+            !address.includes(',') ||
+            /^\d+\s+[NSEW]?\.?\s*[A-Za-z\s]+$/i.test(address.trim());
+
+        if (needsEnhancement) {
+            const properCityName = cityName.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+
+            return `${address.trim()}, ${properCityName}`;
+        }
+
+        return address;
+    }
+
+    // Resolve a primary city name for map queries from a city key
+    getPrimaryCityName(cityKey) {
+        if (!cityKey || !this.core || !this.core.cityMappings) {
+            return '';
+        }
+
+        const normalizedKey = String(cityKey).trim();
+        if (!normalizedKey || normalizedKey === 'unknown') {
+            return '';
+        }
+
+        for (const [patterns, mappedCity] of Object.entries(this.core.cityMappings)) {
+            if (mappedCity === normalizedKey) {
+                const patternList = patterns.split('|').map(pattern => pattern.trim()).filter(Boolean);
+                if (patternList.length > 0) {
+                    return patternList[0];
+                }
+                break;
+            }
+        }
+
+        return normalizedKey;
+    }
+
+    // Extract city from address string
+    extractCityFromAddress(address) {
+        if (!address || typeof address !== 'string' || !this.core || !this.core.cityMappings) return null;
+
+        const lowerAddress = address.toLowerCase();
+
+        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
+            const patternList = patterns.split('|');
+            for (const pattern of patternList) {
+                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                if (regex.test(lowerAddress)) {
+                    return city;
+                }
+            }
+        }
+
+        const addressParts = address.split(',').map(part => part.trim());
+
+        for (const part of addressParts) {
+            const cityName = part.toLowerCase();
+
+            for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
+                const patternList = patterns.split('|');
+                for (const pattern of patternList) {
+                    if (cityName === pattern) {
+                        return city;
+                    }
+                    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                    if (regex.test(cityName)) {
+                        return city;
+                    }
+                }
+            }
+        }
+
+        if (addressParts.length > 0) {
+            const firstPart = addressParts[0].toLowerCase();
+            const normalizedCity = this.normalizeCityName(firstPart);
+            return normalizedCity;
+        }
+
+        return null;
+    }
+
+    // Extract city from text content
+    extractCityFromText(text) {
+        if (!text || typeof text !== 'string' || !this.core || !this.core.cityMappings) return null;
+
+        const lowerText = text.toLowerCase();
+
+        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
+            const patternList = patterns.split('|');
+            for (const pattern of patternList) {
+                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                if (regex.test(lowerText)) {
+                    return city;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    // Extract city from event data or URL
+    extractCityFromEvent(event) {
+        if (event.city) {
+            const normalizedCity = this.normalizeCityName(String(event.city));
+            return normalizedCity;
+        }
+
+        if (!this.core || !this.core.cityMappings) return 'unknown';
+
+        const title = String(event.title || '').toLowerCase();
+
+        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
+            const cityPatterns = patterns.split('|');
+            for (const pattern of cityPatterns) {
+                if (title.includes(pattern)) {
+                    return city;
+                }
+            }
+        }
+
+        const venue = String(event.bar || '').toLowerCase();
+        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
+            const cityPatterns = patterns.split('|');
+            for (const pattern of cityPatterns) {
+                if (venue.includes(pattern)) {
+                    return city;
+                }
+            }
+        }
+
+        if (event.venue?.address) {
+            const address = event.venue.address;
+            const cityFromAddress = address.city || address.localized_area_display || '';
+            if (cityFromAddress) {
+                return this.normalizeCityName(cityFromAddress);
+            }
+        }
+
+        if (event.address) {
+            const cityFromAddress = this.extractCityFromAddress(event.address);
+            if (cityFromAddress) {
+                return cityFromAddress;
+            }
+        }
+
+        const searchText = `${event.title || event.name || ''} ${event.description || ''} ${event.bar || ''}`;
+        const cityFromText = this.extractCityFromText(searchText);
+        if (cityFromText) {
+            return cityFromText;
+        }
+
+        return 'unknown';
+    }
+
+    // Normalize city name to lowercase, handle common variations
+    normalizeCityName(cityName) {
+        if (!cityName || typeof cityName !== 'string' || !this.core || !this.core.cityMappings) return null;
+
+        const normalized = cityName.toLowerCase().trim();
+
+        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
+            const patternList = patterns.split('|');
+            if (patternList.includes(normalized)) {
+                return city;
+            }
+        }
+
+        if (normalized && this.core.cities && !this.core.cities[normalized]) {
+            this.core.warnOnce(`city:${normalized}`, `⚠️ LocationNormalizer: Unknown city "${normalized}" (no mapping or timezone)`);
+        }
+        return normalized;
     }
 }
 
