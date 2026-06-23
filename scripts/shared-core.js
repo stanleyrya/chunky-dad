@@ -65,7 +65,7 @@ class SharedCore {
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
         this.loggedWarnings = new Set();
         this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
-        
+
         // URL-to-parser mapping for automatic parser detection
         this.urlParserMappings = [
             {
