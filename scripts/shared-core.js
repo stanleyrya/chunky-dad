@@ -1133,8 +1133,8 @@ class SharedCore {
             throw new Error('Format is required for generateKeyFromFormat');
         }
         
-        // Extract city from event data
-        const city = this.extractCityFromEvent(event);
+        // Use resolved city from normalizers pipeline
+        const city = event.city || 'unknown';
         
         // Handle normalized title (with the original title normalization logic)
         let normalizedTitle = String(event.originalTitle || event.title || '').toLowerCase().trim();
@@ -1514,9 +1514,6 @@ class SharedCore {
         // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
         // The merge strategy above has already chosen the correct gmaps URL
         
-        // Keep url/website aliases in sync before generating notes and final output.
-        this.syncUrlAndWebsiteFields(mergedObject);
-        
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);
         
@@ -1572,25 +1569,6 @@ class SharedCore {
         return finalEvent;
     }
 
-    syncUrlAndWebsiteFields(event) {
-        if (!event || typeof event !== 'object') {
-            return event;
-        }
-
-        const hasUrl = typeof event.url === 'string' && event.url.trim().length > 0;
-        const hasWebsite = typeof event.website === 'string' && event.website.trim().length > 0;
-
-        if (!hasWebsite && hasUrl) {
-            event.website = event.url;
-        }
-
-        if (!hasUrl && hasWebsite) {
-            event.url = event.website;
-        }
-
-        return event;
-    }
-    
     // ============================================================================
     // ESCAPE CHARACTER UTILITIES - Handle escaped colons in text
     // ============================================================================
