@@ -71,6 +71,7 @@ class BearEventScraperOrchestrator {
             // Load core modules
             const sharedCoreModule = importModule('shared-core');
             const eventSchemaModule = importModule('event-schema');
+            const normalizersModule = importModule('normalizers');
             const scriptableAdapterModule = importModule('adapters/scriptable-adapter');
             
             // Load parsers
@@ -85,6 +86,7 @@ class BearEventScraperOrchestrator {
             this.modules = {
                 SharedCore: sharedCoreModule.SharedCore,
                 EventSchema: eventSchemaModule.EventSchema,
+                NormalizerPipeline: normalizersModule.NormalizerPipeline,
                 adapter: scriptableAdapterModule.ScriptableAdapter,
                 parsers: {
                     bearracuda: bearracudaParserModule.BearraccudaParser,
@@ -109,6 +111,7 @@ class BearEventScraperOrchestrator {
             // Load core modules using require
             const sharedCoreModule = require('./shared-core');
             const eventSchemaModule = require('./event-schema');
+            const normalizersModule = require('./normalizers');
             const webAdapterModule = require('./adapters/web-adapter');
             
             // Load parsers
@@ -123,6 +126,7 @@ class BearEventScraperOrchestrator {
             this.modules = {
                 SharedCore: sharedCoreModule.SharedCore,
                 EventSchema: eventSchemaModule.EventSchema,
+                NormalizerPipeline: normalizersModule.NormalizerPipeline,
                 adapter: webAdapterModule.WebAdapter,
                 parsers: {
                     bearracuda: bearracudaParserModule.BearraccudaParser,
@@ -146,7 +150,7 @@ class BearEventScraperOrchestrator {
             
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
-                'EventSchema', 'SharedCore', 'WebAdapter',
+                'EventSchema', 'SharedCore', 'NormalizerPipeline', 'WebAdapter',
                 'BearraccudaParser', 'ChunkParser', 'LinktreeParser', 'RedEyeTicketsParser'
             ];
             
@@ -174,6 +178,7 @@ class BearEventScraperOrchestrator {
             this.modules = {
                 EventSchema: window.EventSchema,
                 SharedCore: window.SharedCore,
+                NormalizerPipeline: window.NormalizerPipeline,
                 adapter: window.WebAdapter,
                 parsers
             };
@@ -220,13 +225,20 @@ class BearEventScraperOrchestrator {
             // Load configuration early so we can pass cities config to SharedCore
             const config = await adapter.loadConfiguration();
             
+            // Create the normalizer pipeline first
+            const normalizerPipeline = new this.modules.NormalizerPipeline();
+
             // Create shared core instance with cities configuration
             const sharedCore = new this.modules.SharedCore(config.cities, {
                 eventSchema: this.modules.EventSchema,
+                normalizerPipeline: normalizerPipeline,
                 additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
                 pageClassificationRules: config.config?.pageClassificationRules || []
             });
             
+            // Wire the core back into the pipeline
+            normalizerPipeline.setCore(sharedCore);
+
             // Create adapter with cities configuration
             let finalAdapter = adapter;
             if (config.cities) {

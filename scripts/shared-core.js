@@ -56,6 +56,7 @@ class SharedCore {
         // Store cities config for timezone assignment
         this.cities = cities;
         this.eventSchema = schema;
+        this.normalizerPipeline = options.normalizerPipeline || null;
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
             ...(options.additionalExcludedFields || [])
@@ -709,7 +710,7 @@ class SharedCore {
                 }
 
                 if (!discoveryOnly) {
-                    const parsedEvents = this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification);
+                    const parsedEvents = this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline);
                     if (parsedEvents.length > 0) {
                         allEvents.push(...parsedEvents);
                     }
@@ -803,16 +804,22 @@ class SharedCore {
             : additionalLinks;
     }
 
-    prepareParsedEvents(events, parserConfig, mainConfig, pageClassification) {
+    prepareParsedEvents(events, parserConfig, mainConfig, pageClassification, normalizerPipeline) {
         if (!Array.isArray(events) || events.length === 0) {
             return [];
         }
         const filteredEvents = events.map(event =>
             this.applyFieldPriorities(event, parserConfig, mainConfig)
         );
-        const enrichedEvents = filteredEvents.map(event =>
-            this.enrichEventLocation(this.normalizeEventTextFields(event))
-        );
+
+        // Pass events through normalizer pipeline if provided
+        // Use the passed pipeline or the instance property
+        const pipelineToUse = normalizerPipeline || this.normalizerPipeline;
+
+        const enrichedEvents = pipelineToUse
+            ? pipelineToUse.normalizeEvents(filteredEvents)
+            : filteredEvents.map(event => this.normalizeEventTextFields(event));
+
         enrichedEvents.forEach(event => { event._pageClassification = pageClassification; });
         return enrichedEvents;
     }
@@ -1126,8 +1133,8 @@ class SharedCore {
             throw new Error('Format is required for generateKeyFromFormat');
         }
         
-        // Extract city from event data
-        const city = this.extractCityFromEvent(event);
+        // Use resolved city from normalizers pipeline
+        const city = event.city || 'unknown';
         
         // Handle normalized title (with the original title normalization logic)
         let normalizedTitle = String(event.originalTitle || event.title || '').toLowerCase().trim();
@@ -1394,10 +1401,13 @@ class SharedCore {
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
         
-        // Re-enrich the merged event with location data
+        // Run the merged event through the normalizer pipeline again
         // This ensures that gmaps URLs are regenerated if they were removed during merge
-        const enrichedMergedEvent = this.enrichEventLocation(mergedEvent);
-        
+        // and other normalizers can clean up the merged result
+        const enrichedMergedEvent = this.normalizerPipeline
+            ? this.normalizerPipeline.normalizeEvent(mergedEvent)
+            : mergedEvent;
+
         // Regenerate notes after enrichment to include any newly generated fields
         enrichedMergedEvent.notes = this.formatEventNotes(enrichedMergedEvent);
         
@@ -1504,9 +1514,6 @@ class SharedCore {
         // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
         // The merge strategy above has already chosen the correct gmaps URL
         
-        // Keep url/website aliases in sync before generating notes and final output.
-        this.syncUrlAndWebsiteFields(mergedObject);
-        
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);
         
@@ -1562,25 +1569,6 @@ class SharedCore {
         return finalEvent;
     }
 
-    syncUrlAndWebsiteFields(event) {
-        if (!event || typeof event !== 'object') {
-            return event;
-        }
-
-        const hasUrl = typeof event.url === 'string' && event.url.trim().length > 0;
-        const hasWebsite = typeof event.website === 'string' && event.website.trim().length > 0;
-
-        if (!hasWebsite && hasUrl) {
-            event.website = event.url;
-        }
-
-        if (!hasUrl && hasWebsite) {
-            event.url = event.website;
-        }
-
-        return event;
-    }
-    
     // ============================================================================
     // ESCAPE CHARACTER UTILITIES - Handle escaped colons in text
     // ============================================================================
@@ -2416,422 +2404,6 @@ class SharedCore {
             return `https://www.google.com/maps/search/?api=1&query=${encodedFallbackQuery}${placeIdParam}`;
         }
         return null;
-    }
-    
-    // ============================================================================
-    // EVENT ENRICHMENT - Add Google Maps links, validate addresses, extract cities
-    // ============================================================================
-    
-    // Enrich event with Google Maps links and city information
-    enrichEventLocation(event) {
-        if (!event) return event;
-
-        // Keep url/website aliases in sync before enrichment.
-        this.syncUrlAndWebsiteFields(event);
-
-        // DEBUG: Check URL field before enrichment
-        const hadUrlBefore = 'url' in event;
-        const urlValueBefore = event.url;
-        
-        // Extract and normalize city (parser may have set it for venue-specific logic, but we need to normalize it)
-        const extractedCity = this.extractCityFromEvent(event);
-        if (extractedCity) {
-            event.city = extractedCity;
-        }
-        
-        // Warn when the event references a city we have no config for (timezone-aware key building would fall back to UTC)
-        if (!event.timezone && event.city && !this.cities[event.city]) {
-            const title = event.title || 'unknown';
-            this.warnOnce(
-                `timezone:${event.city}`,
-                `🚨 SharedCore: No timezone config for city "${event.city}" (event: "${title}")`
-            );
-        }
-        
-        // Check if venue name indicates TBA/placeholder (these often have fake addresses/coordinates)
-        const isTBAVenue = event.bar && (
-                          event.bar.toLowerCase().includes('tba') || 
-                          event.bar.toLowerCase().includes('to be announced'));
-        
-        if (isTBAVenue) {
-            console.log(`🗺️ SharedCore: TBA venue "${event.bar}" detected - removing fake location data`);
-            // Remove all location data for TBA venues (coordinates are usually fake city center)
-            event.location = null;
-            event.address = null;
-            event.gmaps = '';
-            return event;
-        }
-        
-        // Generate iOS-compatible Google Maps URL using available data (address, coordinates, place_id)
-        // Always generate if gmaps field is empty or undefined - merge strategies are handled later
-        if (!event.gmaps) {
-            // Try to enhance incomplete addresses with city information before gmaps generation
-            if (event.address && event.city && !this.isFullAddress(event.address)) {
-                const enhancedAddress = this.enhanceAddressWithCity(event.address, event.city);
-                if (enhancedAddress !== event.address) {
-                    event.address = enhancedAddress;
-                }
-            }
-            
-            // Parse coordinates from location field if available
-            let coordinates = null;
-            if (event.location && typeof event.location === 'string' && event.location.includes(',')) {
-                const [lat, lng] = event.location.split(',').map(coord => parseFloat(coord.trim()));
-                if (!isNaN(lat) && !isNaN(lng)) {
-                    coordinates = { lat, lng };
-                }
-            }
-            
-            const hasFullAddress = event.address && this.isFullAddress(event.address);
-            const shouldPreferAddress = hasFullAddress && !event.placeId;
-            const addressForMaps = (hasFullAddress || !coordinates) ? event.address : null;
-            const coordinatesForMaps = shouldPreferAddress ? null : coordinates;
-            const venueNameForMaps = typeof event.bar === 'string' ? event.bar.trim() : null;
-            const cityNameForMaps = this.getPrimaryCityName(event.city);
-
-            // Use available data to generate iOS-compatible URL
-            const urlData = {
-                coordinates: coordinatesForMaps,
-                placeId: event.placeId || null,
-                address: addressForMaps,
-                venueName: venueNameForMaps,
-                cityName: cityNameForMaps
-            };
-            
-            event.gmaps = SharedCore.generateGoogleMapsUrl(urlData);
-            
-            if (event.gmaps) {
-                const method = event.placeId ? 
-                    (coordinates ? 'place_id + coordinates' : 'place_id + address') : 
-                    (coordinates ? 'coordinates only' : 'address only');
-
-            }
-        }
-        
-        // Clean up location data based on what we have
-        if (event.address && this.isFullAddress(event.address)) {
-            // Keep address and gmaps URL
-        } else if (!event.address && event.location && event.gmaps) {
-            // Keep coordinates and gmaps URL
-        } else if (!event.address && event.location && !event.gmaps) {
-            // No valid address or gmaps URL - keep location data anyway
-        }
-        
-        // DEBUG: Check URL field after enrichment
-        const hasUrlAfter = 'url' in event;
-        const urlValueAfter = event.url;
-        
-        if (hadUrlBefore !== hasUrlAfter || urlValueBefore !== urlValueAfter) {
-            console.error(`🗺️ SharedCore: URL FIELD LOST in enrichEventLocation for "${event.title}"!`);
-            console.error(`🗺️ SharedCore: Before: hadUrl=${hadUrlBefore}, value="${urlValueBefore}"`);
-            console.error(`🗺️ SharedCore: After: hasUrl=${hasUrlAfter}, value="${urlValueAfter}"`);
-        }
-        
-        return event;
-    }
-    
-    // =========================================================================
-    // CITY UTILITIES - Shared location detection and mapping
-    // =========================================================================
-    
-    // Check if an address is a full address (not just a city or region)
-    isFullAddress(address) {
-        if (!address || typeof address !== 'string') return false;
-        
-        // Clean up the address
-        const cleanAddress = address.trim();
-        if (cleanAddress.length < 10) return false; // Too short to be a full address
-        
-        // Check for TBA or similar placeholder values (including venue names)
-        if (/^(TBA|TBD|To Be Announced|To Be Determined)$/i.test(cleanAddress)) {
-            return false;
-        }
-        
-        // Check for other placeholder patterns that indicate incomplete addresses
-        const placeholderPatterns = [
-            /^(venue|location|address)?\s*(tba|tbd|pending|coming soon|announced soon)$/i,
-            /^(details|info|information)?\s*(coming|to follow|tba|tbd)$/i,
-            /^(will be announced|location pending|venue pending)$/i
-        ];
-        
-        if (placeholderPatterns.some(pattern => pattern.test(cleanAddress))) {
-            return false;
-        }
-        
-        // Check for partial addresses that are just area/neighborhood + city + zip
-        // Examples: "DTLA Los Angeles, CA 90013", "Downtown Denver, CO 80202"
-        const partialAddressPatterns = [
-            /^(DTLA|Downtown|Midtown|Uptown|North|South|East|West|Central)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i,
-            /^[A-Za-z\s]+\s+(District|Area|Zone|Neighborhood)\s*,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}$/i
-        ];
-        
-        // If it matches a partial address pattern, it's not a full address
-        if (partialAddressPatterns.some(pattern => pattern.test(cleanAddress))) {
-            return false;
-        }
-        
-        // Check for common full address patterns
-        const fullAddressPatterns = [
-            /\d+\s+\w+.*street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i,
-            /\d+\s+\w+.*\s+\w+/i // Number + words (likely street address)
-        ];
-        
-        // Must contain at least one full address pattern
-        const hasAddressPattern = fullAddressPatterns.some(pattern => pattern.test(cleanAddress));
-        if (!hasAddressPattern) return false;
-        
-        // Check if it's just a city name (common city patterns to exclude)
-        const cityOnlyPatterns = [
-            /^(new york|nyc|los angeles|san francisco|chicago|atlanta|miami|seattle|portland|denver|las vegas|vegas|boston|philadelphia|austin|dallas|houston|phoenix|toronto|london|berlin|palm springs|sitges)$/i,
-            /^[a-z\s]{3,25}$/i // Simple city name pattern (3-25 characters, letters and spaces only)
-        ];
-        
-        // If it matches a city-only pattern and has no numbers/street indicators, it's not a full address
-        const isCityOnly = cityOnlyPatterns.some(pattern => pattern.test(cleanAddress)) && 
-                          !/\d/.test(cleanAddress) && 
-                          !/street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln|way|place|pl|court|ct/i.test(cleanAddress);
-        
-        return !isCityOnly;
-    }
-    
-    // Enhance address with city information if it's incomplete
-    enhanceAddressWithCity(address, city) {
-        if (!address || !city || !this.cityMappings) {
-            return address;
-        }
-
-        // Find city data from cityMappings (which uses "patterns|patterns" format)
-        let cityName = '';
-        for (const [patterns, mappedCity] of Object.entries(this.cityMappings)) {
-            if (mappedCity === city) {
-                // Use the longest pattern as it's likely the most complete city name
-                const patternList = patterns.split('|');
-                cityName = patternList.reduce((longest, current) => 
-                    current.length > longest.length ? current : longest
-                );
-                break;
-            }
-        }
-
-        if (!cityName) {
-            return address; // No city patterns found
-        }
-
-        // Check if address already contains city information (city name or state)
-        const lowerAddress = address.toLowerCase();
-        const lowerCityName = cityName.toLowerCase();
-        
-        // Check for city name or any US state abbreviation
-        const stateAbbreviations = [
-            'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'dc', 'fl',
-            'ga', 'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me',
-            'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh',
-            'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri',
-            'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy'
-        ];
-        
-        if (lowerAddress.includes(lowerCityName) || 
-            stateAbbreviations.some(state => lowerAddress.includes(`, ${state}`))) {
-            return address; // Already contains city/state info
-        }
-
-        // Check if address needs enhancement (incomplete street address)
-        const needsEnhancement = 
-            // Very short addresses
-            address.length < 15 ||
-            // No comma (likely missing city/state)
-            !address.includes(',') ||
-            // Just street number and name pattern
-            /^\d+\s+[NSEW]?\.?\s*[A-Za-z\s]+$/i.test(address.trim());
-
-        if (needsEnhancement) {
-            // Add proper capitalization to city name
-            const properCityName = cityName.split(' ')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-            
-            return `${address.trim()}, ${properCityName}`;
-        }
-
-        return address;
-    }
-
-    // Resolve a primary city name for map queries from a city key
-    getPrimaryCityName(cityKey) {
-        if (!cityKey || !this.cityMappings) {
-            return '';
-        }
-
-        const normalizedKey = String(cityKey).trim();
-        if (!normalizedKey || normalizedKey === 'unknown') {
-            return '';
-        }
-
-        for (const [patterns, mappedCity] of Object.entries(this.cityMappings)) {
-            if (mappedCity === normalizedKey) {
-                const patternList = patterns.split('|').map(pattern => pattern.trim()).filter(Boolean);
-                if (patternList.length > 0) {
-                    return patternList[0];
-                }
-                break;
-            }
-        }
-
-        return normalizedKey;
-    }
-    
-    // Extract city from address string
-    extractCityFromAddress(address) {
-        if (!address || typeof address !== 'string') return null;
-        
-        const lowerAddress = address.toLowerCase();
-        
-        // First try exact matches in address
-        for (const [patterns, city] of Object.entries(this.cityMappings)) {
-            const patternList = patterns.split('|');
-            for (const pattern of patternList) {
-                // Use word boundaries to avoid substring matches (e.g., "la" in "Atlanta")
-                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                if (regex.test(lowerAddress)) {
-                    return city;
-                }
-            }
-        }
-        
-        // Try to extract city name from address components
-        const addressParts = address.split(',').map(part => part.trim());
-        
-        // Check each address part for city matches
-        for (const part of addressParts) {
-            const cityName = part.toLowerCase();
-            
-            // Check if the city matches our mappings (includes misspellings in patterns)
-            for (const [patterns, city] of Object.entries(this.cityMappings)) {
-                const patternList = patterns.split('|');
-                for (const pattern of patternList) {
-                    // Try exact match first (simpler and more reliable)
-                    if (cityName === pattern) {
-                        return city;
-                    }
-                    // Then use word boundaries to avoid substring matches
-                    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                    if (regex.test(cityName)) {
-                        return city;
-                    }
-                }
-            }
-        }
-        
-        // If no city found in any part, try normalizing the first part
-        if (addressParts.length > 0) {
-            const firstPart = addressParts[0].toLowerCase();
-            const normalizedCity = this.normalizeCityName(firstPart);
-            return normalizedCity;
-        }
-        
-        return null;
-    }
-    
-    // Extract city from text content (titles, descriptions, etc.)
-    extractCityFromText(text) {
-        if (!text || typeof text !== 'string') return null;
-        
-        const lowerText = text.toLowerCase();
-        
-        // Check each city mapping pattern
-        for (const [patterns, city] of Object.entries(this.cityMappings)) {
-            const patternList = patterns.split('|');
-            for (const pattern of patternList) {
-                // Use word boundaries for precise matching
-                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                if (regex.test(lowerText)) {
-                    return city;
-                }
-            }
-        }
-        
-        return null;
-    }
-    
-    // Extract city from event data or URL
-    extractCityFromEvent(event) {
-        // Try city field first
-        if (event.city) {
-            // Normalize the city name to handle misspellings like "boton" -> "boston"
-            const normalizedCity = this.normalizeCityName(String(event.city));
-            return normalizedCity;
-        }
-        
-        // Try to extract from title
-        const title = String(event.title || '').toLowerCase();
-        
-        // Check for city names in title
-        for (const [patterns, city] of Object.entries(this.cityMappings)) {
-            const cityPatterns = patterns.split('|');
-            for (const pattern of cityPatterns) {
-                if (title.includes(pattern)) {
-                    return city;
-                }
-            }
-        }
-        
-        // Try to extract from venue address or name
-        const venue = String(event.bar || '').toLowerCase();
-        for (const [patterns, city] of Object.entries(this.cityMappings)) {
-            const cityPatterns = patterns.split('|');
-            for (const pattern of cityPatterns) {
-                if (venue.includes(pattern)) {
-                    return city;
-                }
-            }
-        }
-        
-        // Try venue address first (keeping venue for backward compatibility with eventbrite data structure)
-        if (event.venue?.address) {
-            const address = event.venue.address;
-            const cityFromAddress = address.city || address.localized_area_display || '';
-            if (cityFromAddress) {
-                return this.normalizeCityName(cityFromAddress);
-            }
-        }
-        
-        // Try address field
-        if (event.address) {
-            const cityFromAddress = this.extractCityFromAddress(event.address);
-            if (cityFromAddress) {
-                return cityFromAddress;
-            }
-        }
-
-        // Try extracting from text content
-        const searchText = `${event.title || event.name || ''} ${event.description || ''} ${event.bar || ''}`;
-        const cityFromText = this.extractCityFromText(searchText);
-        if (cityFromText) {
-            return cityFromText;
-        }
-        
-        return 'unknown';
-    }
-    
-    // Normalize city name to lowercase, handle common variations
-    normalizeCityName(cityName) {
-        if (!cityName || typeof cityName !== 'string') return null;
-        
-        const normalized = cityName.toLowerCase().trim();
-        
-        // Check if normalized name matches any of our mappings
-        for (const [patterns, city] of Object.entries(this.cityMappings)) {
-            const patternList = patterns.split('|');
-            if (patternList.includes(normalized)) {
-                return city;
-            }
-        }
-        
-        // Return as-is if no mapping found
-        if (normalized && this.cities && !this.cities[normalized]) {
-            this.warnOnce(`city:${normalized}`, `⚠️ SharedCore: Unknown city "${normalized}" (no mapping or timezone)`);
-        }
-        return normalized;
     }
     
     getResolvedFieldPriorities(parserConfig) {
