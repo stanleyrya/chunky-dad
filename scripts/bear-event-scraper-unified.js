@@ -70,6 +70,7 @@ class BearEventScraperOrchestrator {
             
             // Load core modules
             const sharedCoreModule = importModule('shared-core');
+            const normalizersModule = importModule('normalizers');
             const eventSchemaModule = importModule('event-schema');
             const scriptableAdapterModule = importModule('adapters/scriptable-adapter');
             
@@ -84,6 +85,7 @@ class BearEventScraperOrchestrator {
             // Store modules
             this.modules = {
                 SharedCore: sharedCoreModule.SharedCore,
+                normalizers: normalizersModule,
                 EventSchema: eventSchemaModule.EventSchema,
                 adapter: scriptableAdapterModule.ScriptableAdapter,
                 parsers: {
@@ -108,6 +110,7 @@ class BearEventScraperOrchestrator {
             
             // Load core modules using require
             const sharedCoreModule = require('./shared-core');
+            const normalizersModule = require('./normalizers');
             const eventSchemaModule = require('./event-schema');
             const webAdapterModule = require('./adapters/web-adapter');
             
@@ -122,6 +125,7 @@ class BearEventScraperOrchestrator {
             // Store modules
             this.modules = {
                 SharedCore: sharedCoreModule.SharedCore,
+                normalizers: normalizersModule,
                 EventSchema: eventSchemaModule.EventSchema,
                 adapter: webAdapterModule.WebAdapter,
                 parsers: {
@@ -146,7 +150,7 @@ class BearEventScraperOrchestrator {
             
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
-                'EventSchema', 'SharedCore', 'WebAdapter',
+                'EventSchema', 'SharedCore', 'WebAdapter', 'NormalizerPipeline', 'BasicDataNormalizer', 'LocationNormalizer',
                 'BearraccudaParser', 'ChunkParser', 'LinktreeParser', 'RedEyeTicketsParser'
             ];
             
@@ -174,6 +178,11 @@ class BearEventScraperOrchestrator {
             this.modules = {
                 EventSchema: window.EventSchema,
                 SharedCore: window.SharedCore,
+                normalizers: {
+                    NormalizerPipeline: window.NormalizerPipeline,
+                    BasicDataNormalizer: window.BasicDataNormalizer,
+                    LocationNormalizer: window.LocationNormalizer
+                },
                 adapter: window.WebAdapter,
                 parsers
             };
@@ -221,6 +230,11 @@ class BearEventScraperOrchestrator {
             const config = await adapter.loadConfiguration();
             
             // Create shared core instance with cities configuration
+            const normalizerPipeline = new this.modules.normalizers.NormalizerPipeline([
+                new this.modules.normalizers.BasicDataNormalizer(this.modules.EventSchema),
+                new this.modules.normalizers.LocationNormalizer(config.cities)
+            ]);
+
             const sharedCore = new this.modules.SharedCore(config.cities, {
                 eventSchema: this.modules.EventSchema,
                 additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
@@ -262,6 +276,11 @@ class BearEventScraperOrchestrator {
 
             // Process events using shared core
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
+
+            // Normalize extracted events
+            if (results.allProcessedEvents) {
+                results.allProcessedEvents = results.allProcessedEvents.map(event => normalizerPipeline.normalize(event));
+            }
             results.config = config;
             if (!Array.isArray(results.analyzedEvents)) {
                 results.analyzedEvents = [];
@@ -280,7 +299,18 @@ class BearEventScraperOrchestrator {
                 // Perform cross-parser deduplication to merge events from different parsers
                 const deduplicatedEvents = sharedCore.deduplicateEvents(results.allProcessedEvents);
                 
-                const analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config);
+                let analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config);
+
+                // Re-normalize analyzed/merged events
+                if (analyzedEvents) {
+                    analyzedEvents = analyzedEvents.map(event => {
+                        const normalized = normalizerPipeline.normalize(event);
+                        if (normalized && sharedCore) {
+                            normalized.notes = sharedCore.formatEventNotes(normalized);
+                        }
+                        return normalized;
+                    });
+                }
                 console.log(`🐻 Orchestrator: Calendar analysis complete (${deduplicatedEvents.length} unique)`);
                 
                 // Store analyzed events back into results for display
