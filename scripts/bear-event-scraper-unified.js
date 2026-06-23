@@ -237,6 +237,7 @@ class BearEventScraperOrchestrator {
 
             const sharedCore = new this.modules.SharedCore(config.cities, {
                 eventSchema: this.modules.EventSchema,
+                normalizerPipeline: normalizerPipeline,
                 additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
                 pageClassificationRules: config.config?.pageClassificationRules || []
             });
@@ -277,10 +278,7 @@ class BearEventScraperOrchestrator {
             // Process events using shared core
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
 
-            // Normalize extracted events
-            if (results.allProcessedEvents) {
-                results.allProcessedEvents = results.allProcessedEvents.map(event => normalizerPipeline.normalize(event));
-            }
+
             results.config = config;
             if (!Array.isArray(results.analyzedEvents)) {
                 results.analyzedEvents = [];
@@ -297,13 +295,11 @@ class BearEventScraperOrchestrator {
                 
                 // Always prepare events for analysis (even in dry run mode) to show action types
                 // Perform cross-parser deduplication to merge events from different parsers
-                const deduplicatedEvents = sharedCore.deduplicateEvents(results.allProcessedEvents);
-                
-                let analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config);
+                let deduplicatedEvents = sharedCore.deduplicateEvents(results.allProcessedEvents);
 
-                // Re-normalize analyzed/merged events
-                if (analyzedEvents) {
-                    analyzedEvents = analyzedEvents.map(event => {
+                // Re-normalize after events are merged across parsers
+                if (deduplicatedEvents) {
+                    deduplicatedEvents = deduplicatedEvents.map(event => {
                         const normalized = normalizerPipeline.normalize(event);
                         if (normalized && sharedCore) {
                             normalized.notes = sharedCore.formatEventNotes(normalized);
@@ -311,6 +307,10 @@ class BearEventScraperOrchestrator {
                         return normalized;
                     });
                 }
+
+                let analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config);
+
+
                 console.log(`🐻 Orchestrator: Calendar analysis complete (${deduplicatedEvents.length} unique)`);
                 
                 // Store analyzed events back into results for display

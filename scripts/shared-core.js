@@ -56,6 +56,7 @@ class SharedCore {
         // Store cities config for timezone assignment
         this.cities = cities;
         this.eventSchema = schema;
+        this.normalizerPipeline = options.normalizerPipeline;
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
             ...(options.additionalExcludedFields || [])
@@ -790,8 +791,11 @@ class SharedCore {
         const filteredEvents = events.map(event =>
             this.applyFieldPriorities(event, parserConfig, mainConfig)
         );
-        filteredEvents.forEach(event => { event._pageClassification = pageClassification; });
-        return filteredEvents;
+        const normalizedEvents = filteredEvents.map(event =>
+            this.normalizerPipeline ? this.normalizerPipeline.normalize(event) : event
+        );
+        normalizedEvents.forEach(event => { event._pageClassification = pageClassification; });
+        return normalizedEvents;
     }
 
     async parsePageForCrawl({
@@ -1368,6 +1372,11 @@ class SharedCore {
             }
         });
         
+        // Re-normalize after calendar merge
+        if (this.normalizerPipeline) {
+            mergedEvent = this.normalizerPipeline.normalize(mergedEvent);
+        }
+
         // Regenerate notes from all merged fields
         mergedEvent.notes = this.formatEventNotes(mergedEvent);
         
