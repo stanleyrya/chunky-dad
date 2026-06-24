@@ -1467,6 +1467,16 @@ async saveFailureNote(url, error, metadata = {}) {
             
             config.cities = cities;
 
+            const bars = loadConfigFile(
+                'scraper-bars.js',
+                'scraper-bars',
+                'Bars configuration file not found at iCloud Drive/Scriptable/scraper-bars.js',
+                'Bars configuration file is empty',
+                { optional: true }
+            );
+
+            config.bars = bars || {};
+
             if (parserNameOverride) {
                 const { parserConfig } = this.buildParserNameOverrideConfig(parserNameOverride, config);
                 config.parsers = [parserConfig];

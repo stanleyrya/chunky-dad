@@ -233,7 +233,8 @@ class BearEventScraperOrchestrator {
                 eventSchema: this.modules.EventSchema,
                 normalizerPipeline: normalizerPipeline,
                 additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
-                pageClassificationRules: config.config?.pageClassificationRules || []
+                pageClassificationRules: config.config?.pageClassificationRules || [],
+                bars: config.bars || {}
             });
             
             // Wire the core back into the pipeline
