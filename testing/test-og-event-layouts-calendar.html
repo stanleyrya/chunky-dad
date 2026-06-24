@@ -105,21 +105,6 @@
     .layout-split-screen .venue { font-size: 20px; color: #fff; opacity: 0.8; }
     .layout-split-screen .right-side { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; display: flex; align-items: center; justify-content: center; z-index: 0; }
     .layout-split-screen .event-image { width: 400px; height: 500px; background-size: cover; background-position: center; z-index: 1; box-shadow: -20px 0 60px rgba(0,0,0,0.5); }
-    .layout-split-screen .description { position: absolute; bottom: 60px; right: 60px; width: 380px; font-size: 18px; color: #fff; opacity: 0.9; line-height: 1.5; z-index: 2; text-align: right; }
-
-    /* LAYOUT: Minimal */
-    .layout-minimal { background: #fff; position: relative; }
-    .layout-minimal .card { position: absolute; inset: 0; background: #fff; overflow: hidden; z-index: 1; }
-    .layout-minimal .card-header { height: 280px; position: relative; overflow: hidden; }
-    .layout-minimal .card-header .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.4; }
-    .layout-minimal .card-header .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%); }
-    .layout-minimal .card-header .date-badge { position: absolute; top: 30px; right: 30px; background: #fff; color: #333; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
-    .layout-minimal .event-image { position: absolute; bottom: 40px; left: 60px; width: 160px; height: 160px; z-index: 2; background: transparent; object-fit: contain; }
-    .layout-minimal .card-body { padding: 60px 60px 40px 260px; position: relative; }
-    .layout-minimal .event-title { font-size: 48px; font-weight: 900; color: #333; line-height: 1.1; margin-bottom: 15px; }
-    .layout-minimal .venue { font-size: 20px; color: #666; margin-bottom: 20px; }
-    .layout-minimal .description { font-size: 16px; color: #888; line-height: 1.6; }
-    .layout-minimal .brand { position: absolute; bottom: 30px; left: 60px; font-size: 14px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
     /* LAYOUT: Glass Card */
     .layout-glass { position: relative; backdrop-filter: blur(0px); }
@@ -129,115 +114,6 @@
     .layout-glass .event-title { font-size: 72px; font-weight: 900; line-height: 0.95; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
     .layout-glass .event-date { margin-top: 16px; font-size: 26px; opacity: 0.95; }
     .layout-glass .venue { margin-top: 8px; font-size: 22px; opacity: 0.85; }
-    .layout-glass .description { position: absolute; left: 40px; right: 40px; bottom: 40px; font-size: 18px; opacity: 0.95; }
-
-    /* LAYOUT: Circle Focus */
-    .layout-circle { position: relative; background: #0b0b0f; }
-    .layout-circle .ring { position: absolute; width: 560px; height: 560px; border-radius: 50%; left: 60px; top: 35px; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 60%); border: 3px solid rgba(255,255,255,0.18); }
-    .layout-circle .event-image { position: absolute; left: 100px; top: 75px; width: 480px; height: 480px; border-radius: 50%; background-size: cover; background-position: center; box-shadow: 0 20px 80px rgba(0,0,0,0.6); }
-    .layout-circle .text { position: absolute; right: 60px; top: 100px; width: 480px; color: #fff; }
-    .layout-circle .event-title { font-size: 72px; line-height: 0.95; font-weight: 900; }
-    .layout-circle .event-date { margin-top: 10px; font-size: 26px; opacity: 0.9; }
-    .layout-circle .venue { margin-top: 6px; font-size: 22px; opacity: 0.8; }
-    .layout-circle .description { position: absolute; bottom: 60px; right: 60px; width: 480px; color: #fff; opacity: 0.9; line-height: 1.5; }
-
-    /* Speech Bubble (logo talks) */
-    .layout-speech { position: relative; }
-    .layout-speech .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.2; }
-    .layout-speech .logo-avatar { position: absolute; left: 80px; bottom: 80px; width: 160px; height: 160px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); object-fit: contain; }
-    .layout-speech .speech-bubble { position: absolute; left: 270px; bottom: 160px; max-width: 760px; background: #fff; color: #111; border-radius: 22px; padding: 22px 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); font-size: 26px; line-height: 1.25; }
-    .layout-speech .speech-bubble:after { content: ""; position: absolute; left: -28px; bottom: 22px; width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-right: 28px solid #fff; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.2)); }
-    .layout-speech .headline { position: absolute; left: 80px; top: 70px; right: 60px; color: #fff; font-size: 64px; line-height: 0.95; font-weight: 900; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
-    .layout-speech .event-image { position: absolute; right: 80px; top: 80px; width: 340px; height: 220px; background-size: cover; background-position: center; border: 8px solid rgba(255,255,255,0.9); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
-    .layout-speech .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.85); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 14px; }
-
-    /* Event Image Speaks */
-    .layout-speech-event { position: relative; }
-    .layout-speech-event .event-avatar { position: absolute; right: 80px; bottom: 80px; width: 200px; height: 200px; border-radius: 50%; box-shadow: 0 15px 50px rgba(0,0,0,0.5); border: 8px solid rgba(255,255,255,0.95); background-size: cover; background-position: center; }
-    .layout-speech-event .speech-bubble { position: absolute; right: 320px; bottom: 180px; max-width: 700px; background: #fff; color: #111; border-radius: 25px; padding: 28px 32px; box-shadow: 0 25px 70px rgba(0,0,0,0.4); font-size: 28px; line-height: 1.3; font-weight: 600; }
-    .layout-speech-event .speech-bubble:after { content: ""; position: absolute; right: -32px; bottom: 28px; width: 0; height: 0; border-top: 24px solid transparent; border-bottom: 24px solid transparent; border-left: 32px solid #fff; filter: drop-shadow(0 8px 8px rgba(0,0,0,0.2)); }
-    .layout-speech-event .title-bg { position: absolute; left: 60px; top: 60px; right: 60px; height: 140px; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); border-radius: 20px; border: 2px solid rgba(255,255,255,0.25); }
-    .layout-speech-event .event-title { position: absolute; left: 80px; top: 90px; right: 80px; color: #fff; font-size: 56px; line-height: 0.95; font-weight: 900; text-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align: center; }
-    .layout-speech-event .brand { position: absolute; left: 80px; bottom: 40px; color: rgba(255,255,255,0.9); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 16px; }
-
-
-    /* Retro Terminal */
-    .layout-speech-terminal { background: #0f3460; position: relative; }
-    .layout-speech-terminal:before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px); }
-    .layout-speech-terminal .terminal-window { position: absolute; inset: 60px; background: #001122; border: 2px solid #00ff00; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,255,0,0.1); }
-    .layout-speech-terminal .terminal-header { position: absolute; top: 0; left: 0; right: 0; height: 30px; background: #003366; border-bottom: 1px solid #00ff00; display: flex; align-items: center; padding: 0 10px; }
-    .layout-speech-terminal .terminal-buttons { display: flex; gap: 5px; }
-    .layout-speech-terminal .terminal-button { width: 12px; height: 12px; border-radius: 50%; background: #00ff00; }
-    .layout-speech-terminal .terminal-content { position: absolute; top: 40px; left: 20px; right: 20px; bottom: 20px; font-family: 'Courier New', monospace; color: #00ff00; font-size: 18px; line-height: 1.4; }
-    .layout-speech-terminal .event-image { position: absolute; right: 40px; bottom: 40px; width: 200px; height: 150px; background-size: cover; background-position: center; border: 2px solid #00ff00; filter: contrast(1.2) brightness(0.9); }
-    .layout-speech-terminal .cursor { animation: blink 1s infinite; }
-    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
-
-    /* Instagram Story */
-    .layout-speech-story { background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%); position: relative; }
-    .layout-speech-story .story-frame { position: absolute; inset: 40px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-    .layout-speech-story .story-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.7); }
-    .layout-speech-story .story-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.6) 100%); }
-    .layout-speech-story .profile-section { position: absolute; top: 30px; left: 30px; right: 30px; display: flex; align-items: center; gap: 15px; }
-    .layout-speech-story .profile-avatar { width: 60px; height: 60px; object-fit: contain; }
-    .layout-speech-story .profile-info { color: #fff; }
-    .layout-speech-story .profile-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
-    .layout-speech-story .profile-time { font-size: 12px; opacity: 0.8; }
-    .layout-speech-story .story-bubble { position: absolute; left: 30px; right: 30px; bottom: 80px; background: rgba(255,255,255,0.95); color: #333; border-radius: 25px; padding: 24px 28px; font-size: 22px; line-height: 1.3; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-    .layout-speech-story .event-title { position: absolute; left: 30px; right: 30px; top: 50%; transform: translateY(-50%); color: #fff; font-size: 42px; line-height: 1.1; font-weight: 900; text-align: center; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
-
-    /* Thought Cloud */
-    .layout-speech-thought { position: relative; }
-    .layout-speech-thought .dreamer { position: absolute; left: 80px; bottom: 80px; width: 180px; height: 180px; object-fit: contain; }
-    .layout-speech-thought .thought-cloud { position: absolute; left: 320px; bottom: 200px; max-width: 700px; background: #fff; color: #333; border-radius: 50px; padding: 32px 40px; box-shadow: 0 25px 60px rgba(0,0,0,0.3); font-size: 24px; line-height: 1.4; position: relative; }
-    .layout-speech-thought .thought-bubble-1 { position: absolute; left: -40px; bottom: 30px; width: 30px; height: 30px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-    .layout-speech-thought .thought-bubble-2 { position: absolute; left: -20px; bottom: 10px; width: 20px; height: 20px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-    .layout-speech-thought .thought-bubble-3 { position: absolute; left: -8px; bottom: -5px; width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-    .layout-speech-thought .event-image { position: absolute; right: 80px; top: 80px; width: 320px; height: 240px; background-size: cover; background-position: center; border-radius: 20px; border: 6px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
-    .layout-speech-thought .event-title { position: absolute; left: 80px; top: 80px; max-width: 500px; color: #fff; font-size: 52px; line-height: 1.1; font-weight: 900; text-shadow: 0 6px 25px rgba(0,0,0,0.5); }
-
-    /* Messenger Chat */
-    .layout-speech-messenger { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; }
-    .layout-speech-messenger .chat-container { position: absolute; inset: 60px; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
-    .layout-speech-messenger .chat-header { position: absolute; top: 0; left: 0; right: 0; height: 80px; background: #4267B2; display: flex; align-items: center; padding: 0 20px; gap: 15px; }
-    .layout-speech-messenger .chat-avatar { width: 50px; height: 50px; object-fit: contain; }
-    .layout-speech-messenger .chat-title { color: #fff; font-size: 20px; font-weight: 700; }
-    .layout-speech-messenger .chat-body { position: absolute; top: 80px; left: 0; right: 0; bottom: 0; padding: 30px; background: #f0f2f5; }
-    .layout-speech-messenger .message-bubble { background: #4267B2; color: #fff; border-radius: 20px; padding: 16px 20px; font-size: 18px; line-height: 1.4; max-width: 400px; margin-left: auto; margin-bottom: 15px; }
-    .layout-speech-messenger .message-image { width: 300px; height: 200px; background-size: cover; background-position: center; border-radius: 15px; margin-left: auto; margin-bottom: 15px; }
-    .layout-speech-messenger .typing-indicator { display: flex; align-items: center; gap: 8px; color: #65676b; font-size: 14px; }
-    .layout-speech-messenger .typing-dots { display: flex; gap: 3px; }
-    .layout-speech-messenger .typing-dot { width: 6px; height: 6px; background: #65676b; border-radius: 50%; animation: typingDot 1.4s infinite ease-in-out; }
-    .layout-speech-messenger .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-    .layout-speech-messenger .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-    @keyframes typingDot { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-
-    /* Discord Chat */
-    .layout-speech-discord { background: #36393f; position: relative; }
-    .layout-speech-discord .discord-container { position: absolute; inset: 40px; background: #2f3136; border-radius: 8px; overflow: hidden; }
-    .layout-speech-discord .discord-sidebar { position: absolute; left: 0; top: 0; bottom: 0; width: 200px; background: #202225; border-right: 1px solid #40444b; }
-    .layout-speech-discord .discord-main { position: absolute; left: 200px; top: 0; right: 0; bottom: 0; }
-    .layout-speech-discord .discord-header { position: absolute; top: 0; left: 0; right: 0; height: 60px; background: #36393f; border-bottom: 1px solid #40444b; display: flex; align-items: center; padding: 0 20px; }
-    .layout-speech-discord .channel-name { color: #fff; font-size: 18px; font-weight: 600; }
-    .layout-speech-discord .discord-messages { position: absolute; top: 60px; left: 0; right: 0; bottom: 0; padding: 20px; }
-    .layout-speech-discord .message { display: flex; gap: 15px; margin-bottom: 20px; }
-    .layout-speech-discord .message-avatar { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; }
-    .layout-speech-discord .message-content { flex: 1; }
-    .layout-speech-discord .message-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; }
-    .layout-speech-discord .message-author { color: #fff; font-size: 16px; font-weight: 600; }
-    .layout-speech-discord .message-time { color: #72767d; font-size: 12px; }
-    .layout-speech-discord .message-text { color: #dcddde; font-size: 16px; line-height: 1.4; }
-    .layout-speech-discord .message-embed { background: #2f3136; border-left: 4px solid #5865f2; border-radius: 4px; padding: 15px; margin-top: 10px; }
-    .layout-speech-discord .embed-image { width: 300px; height: 180px; background-size: cover; background-position: center; border-radius: 4px; margin-top: 10px; }
-
-    /* SIMPLE LAYOUTS - Clean and Easy */
-
-    /* Simple Speech - Just chunky.dad talking */
-    .layout-simple-speech { position: relative; }
-    .layout-simple-speech .chunky-avatar { position: absolute; left: 80px; bottom: 80px; width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 8px 24px rgba(0,0,0,0.3)); }
-    .layout-simple-speech .simple-bubble { position: absolute; left: 250px; right: 80px; bottom: 100px; background: #fff; color: #111; border-radius: 28px; padding: 32px 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); font-size: 32px; line-height: 1.3; font-weight: 600; }
-    .layout-simple-speech .simple-bubble:after { content: ""; position: absolute; left: -20px; bottom: 40px; width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-right: 20px solid #fff; }
-    .layout-simple-speech .brand-badge { position: absolute; top: 60px; left: 80px; background: rgba(255,255,255,0.95); color: #333; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 18px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
 
     /* Bold & Centered - Big typography */
     .layout-bold-centered { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px; }
@@ -255,15 +131,6 @@
     .layout-side-by-side .event-venue { font-size: 24px; color: #fff; opacity: 0.9; margin-bottom: 24px; }
     .layout-side-by-side .description { font-size: 20px; color: #fff; opacity: 0.85; line-height: 1.5; }
     .layout-side-by-side .chunky-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 30px; }
-
-    /* Photo Frame - Polaroid style */
-    .layout-photo-frame { background: #f5f5f5; position: relative; display: flex; align-items: center; justify-content: center; }
-    .layout-photo-frame .polaroid { background: #fff; padding: 20px 20px 60px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); transform: rotate(-2deg); max-width: 900px; }
-    .layout-photo-frame .photo-area { width: 100%; aspect-ratio: 16/10; background: #ddd; margin-bottom: 20px; overflow: hidden; position: relative; }
-    .layout-photo-frame .photo-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
-    .layout-photo-frame .photo-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.5) 100%); }
-    .layout-photo-frame .photo-title { position: absolute; bottom: 20px; left: 20px; right: 20px; color: #fff; font-size: 42px; font-weight: 900; text-shadow: 0 4px 12px rgba(0,0,0,0.6); }
-    .layout-photo-frame .caption { font-family: 'Courier New', monospace; text-align: center; font-size: 24px; color: #333; padding: 0 20px; line-height: 1.4; }
 
     /* Banner - Billboard style */
     .layout-banner { position: relative; }
@@ -899,32 +766,14 @@
               const t = artboard.querySelector('.event-title');
               const d = artboard.querySelector('.event-date');
               const v = artboard.querySelector('.venue');
-              const desc = artboard.querySelector('.description');
               const img = artboard.querySelector('.event-image');
               const leftSide = artboard.querySelector('.left-side');
               if (t) t.textContent = data.event;
               if (d) d.textContent = `${data.date} · ${data.time}`;
               if (v) v.textContent = `@ ${data.venue}`;
-              if (desc) desc.textContent = data.description;
               if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
               if (leftSide) {
                 const cover = leftSide.querySelector('.cover');
-                if (cover && data.cover) cover.style.backgroundImage = `url('${data.cover}')`;
-              }
-              break;
-            }
-            case 'minimal': {
-              const t = artboard.querySelector('.event-title');
-              const v = artboard.querySelector('.venue');
-              const desc = artboard.querySelector('.description');
-              const dateBadge = artboard.querySelector('.date-badge');
-              const cardHeader = artboard.querySelector('.card-header');
-              if (t) t.textContent = data.event;
-              if (v) v.textContent = `@ ${data.venue} · ${data.time}`;
-              if (desc) desc.textContent = data.description;
-              if (dateBadge) dateBadge.textContent = data.date;
-              if (cardHeader) {
-                const cover = cardHeader.querySelector('.cover');
                 if (cover && data.cover) cover.style.backgroundImage = `url('${data.cover}')`;
               }
               break;
@@ -933,104 +782,11 @@
               const t = artboard.querySelector('.event-title');
               const d = artboard.querySelector('.event-date');
               const v = artboard.querySelector('.venue');
-              const desc = artboard.querySelector('.description');
               const cov = artboard.querySelector('.cover');
               if (t) t.textContent = data.event;
               if (d) d.textContent = `${data.date} · ${data.time}`;
               if (v) v.textContent = `@ ${data.venue}`;
-              if (desc) desc.textContent = data.description;
               if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            }
-            case 'circle': {
-              const t = artboard.querySelector('.event-title');
-              const d = artboard.querySelector('.event-date');
-              const v = artboard.querySelector('.venue');
-              const desc = artboard.querySelector('.description');
-              const img = artboard.querySelector('.event-image');
-              if (t) t.textContent = data.event;
-              if (d) d.textContent = `${data.date} · ${data.time}`;
-              if (v) v.textContent = `@ ${data.venue}`;
-              if (desc) desc.textContent = data.description;
-              if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
-              break;
-            } {
-              const head = artboard.querySelector('.headline');
-              const bubble = artboard.querySelector('.speech-bubble');
-              const img = artboard.querySelector('.event-image');
-              const cov = artboard.querySelector('.cover');
-              if (head) head.textContent = data.event;
-              if (bubble) bubble.textContent = `${data.date} · ${data.time} @ ${data.venue}. ${data.description}`;
-              if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
-              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            } {
-              const title = artboard.querySelector('.event-title');
-              const bubble = artboard.querySelector('.speech-bubble');
-              const avatar = artboard.querySelector('.event-avatar');
-              if (title) title.textContent = data.event;
-              if (bubble) bubble.textContent = `Join us ${data.date} at ${data.time}! We're hosting an amazing event at ${data.venue}. ${data.description}`;
-              if (avatar && data.cover) avatar.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            } {
-              const content = artboard.querySelector('.terminal-content');
-              const img = artboard.querySelector('.event-image');
-              if (content) {
-                content.innerHTML = `$ cat event_info.txt<br/>
-EVENT: ${data.event}<br/>
-DATE: ${data.date}<br/>
-TIME: ${data.time}<br/>
-VENUE: ${data.venue}<br/>
-INFO: ${data.description}<br/>
-$ ./join_event.sh<br/>
-Loading... <span class="cursor">█</span>`;
-              }
-              if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            } {
-              const title = artboard.querySelector('.event-title');
-              const bubble = artboard.querySelector('.story-bubble');
-              const bg = artboard.querySelector('.story-bg');
-              const name = artboard.querySelector('.profile-name');
-              const time = artboard.querySelector('.profile-time');
-              if (title) title.textContent = data.event;
-              if (bubble) bubble.textContent = `Can't wait for this! ${data.date} at ${data.time} 🎉`;
-              if (bg && data.cover) bg.style.backgroundImage = `url('${data.cover}')`;
-              if (name) name.textContent = 'chunky.dad';
-              if (time) time.textContent = '2h ago';
-              break;
-            } {
-              const title = artboard.querySelector('.event-title');
-              const cloud = artboard.querySelector('.thought-cloud');
-              const img = artboard.querySelector('.event-image');
-              if (title) title.textContent = data.event;
-              if (cloud) cloud.textContent = `I'm dreaming about ${data.event}... ${data.date} at ${data.venue} will be perfect! ${data.description}`;
-              if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            } {
-              const title = artboard.querySelector('.chat-title');
-              const bubble = artboard.querySelector('.message-bubble');
-              const img = artboard.querySelector('.message-image');
-              if (title) title.textContent = data.event;
-              if (bubble) bubble.textContent = `Hey! ${data.event} is happening ${data.date} at ${data.time} @ ${data.venue}. You coming?`;
-              if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            } {
-              const channel = artboard.querySelector('.channel-name');
-              const author = artboard.querySelector('.message-author');
-              const time = artboard.querySelector('.message-time');
-              const text = artboard.querySelector('.message-text');
-              const img = artboard.querySelector('.embed-image');
-              if (channel) channel.textContent = `# ${data.event.toLowerCase().replace(/\s+/g, '-')}`;
-              if (author) author.textContent = 'chunky.dad';
-              if (time) time.textContent = 'Today at 12:34 PM';
-              if (text) text.textContent = `@everyone ${data.event} is happening ${data.date} at ${data.venue}!`;
-              if (img && data.cover) img.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            }
-            case 'simple-speech': {
-              const bubble = artboard.querySelector('.simple-bubble');
-              if (bubble) bubble.textContent = `${data.event} is happening ${data.date} at ${data.time} @ ${data.venue}! ${data.description}`;
               break;
             }
             case 'bold-centered': {
@@ -1046,19 +802,9 @@ Loading... <span class="cursor">█</span>`;
               const title = artboard.querySelector('.event-title');
               const date = artboard.querySelector('.event-date');
               const venue = artboard.querySelector('.event-venue');
-              const desc = artboard.querySelector('.description');
               if (title) title.textContent = data.event;
               if (date) date.textContent = data.date;
               if (venue) venue.textContent = `@ ${data.venue} · ${data.time}`;
-              if (desc) desc.textContent = data.description;
-              break;
-            } {
-              const photoTitle = artboard.querySelector('.photo-title');
-              const caption = artboard.querySelector('.caption');
-              const photoBg = artboard.querySelector('.photo-bg');
-              if (photoTitle) photoTitle.textContent = data.event;
-              if (caption) caption.textContent = `${data.date} at ${data.time} @ ${data.venue}`;
-              if (photoBg && data.cover) photoBg.style.backgroundImage = `url('${data.cover}')`;
               break;
             }
             case 'banner': {
@@ -1123,22 +869,6 @@ Loading... <span class="cursor">█</span>`;
               </div>
               <div class="description"></div>
             `,
-            'minimal': `
-              <div class="card">
-                <div class="card-header">
-                  <div class="cover"></div>
-                  <div class="overlay"></div>
-                  <div class="date-badge"></div>
-                </div>
-                <img class="event-image" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
-                <div class="card-body">
-                  <div class="event-title"></div>
-                  <div class="venue"></div>
-                  <div class="description"></div>
-                </div>
-                <div class="brand">chunky.dad</div>
-              </div>
-            `,
             'glass': `
               <div class="cover"></div>
               <div class="glass">
@@ -1149,21 +879,6 @@ Loading... <span class="cursor">█</span>`;
                   <div class="description"></div>
                 </div>
               </div>
-            `,
-            'circle': `
-              <div class="ring"></div>
-              <div class="event-image"></div>
-              <div class="text">
-                <div class="event-title"></div>
-                <div class="event-date"></div>
-                <div class="venue"></div>
-              </div>
-              <div class="description"></div>
-            `,
-            'simple-speech': `
-              <img class="chunky-avatar" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
-              <div class="simple-bubble"></div>
-              <div class="brand-badge">chunky.dad</div>
             `,
             'bold-centered': `
               <div class="event-title"></div>
@@ -1223,23 +938,12 @@ Loading... <span class="cursor">█</span>`;
             if (textEl) textEl.innerHTML = '<span class="no-colors">No favicon colors detected for this event</span>';
           }
           const VARIANTS = [
-            // Pattern Layouts with Colored Rim
             { key: 'css-pattern', name: '🧩 CSS Pattern.com', class: 'layout-css-pattern', description: 'Downloaded gradient pattern background' },
-            // Simple & Clean Layouts
-            { key: 'simple-speech', name: '💬 Simple Speech', class: 'layout-simple-speech', description: 'Clean chunky.dad speech bubble' },
             { key: 'bold-centered', name: '⚡ Bold & Centered', class: 'layout-bold-centered', description: 'Big typography, centered text' },
             { key: 'side-by-side', name: '📐 Side by Side', class: 'layout-side-by-side', description: 'Simple two-column layout' },
             { key: 'banner', name: '🎯 Banner', class: 'layout-banner', description: 'Billboard/hero banner style' },
-            
-            // Creative Layouts
             { key: 'split', name: 'Split Screen', class: 'layout-split-screen', description: 'Dynamic diagonal composition' },
-            { key: 'minimal', name: 'Minimalist Card', class: 'layout-minimal', description: 'Clean modern card design' },
             { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass backdrop' },
-            { key: 'circle', name: 'Circle Focus', class: 'layout-circle', description: 'Circular image focus' },
-
-            // Speech Bubble Variations
-
-            // Pattern Layouts with Colored Rim
           ];
 
           grid.innerHTML = '';
