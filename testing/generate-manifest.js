@@ -42,7 +42,6 @@ const files = fs.readdirSync(testingDir)
     
     return {
       name: file,
-      size: stats.size,
       icon: metadata.icon,
       description: metadata.description
       // Removed modified timestamp to prevent unnecessary changes during CI

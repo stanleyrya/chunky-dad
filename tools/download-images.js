@@ -43,7 +43,6 @@ function adjustEventbriteImageUrl(imageUrl) {
       // Remove any query parameters to get the uncropped version
       const innerUrlObj = new URL(innerUrl);
       const uncroppedUrl = `${innerUrlObj.protocol}//${innerUrlObj.host}${innerUrlObj.pathname}`;
-      
       console.log(`🎫 Eventbrite: Adjusted image URL from cropped to uncropped: ${imageUrl} -> ${uncroppedUrl}`);
       return uncroppedUrl;
     }
@@ -157,33 +156,27 @@ async function downloadEventImage(imageUrl, eventInfo) {
     // If we got a different content type, regenerate filename with correct extension
     if (downloadResult.contentType) {
       const actualExtension = detectFileExtension(adjustedUrl, downloadResult.contentType);
-      
       if (actualExtension !== detectedExtension) {
         console.log(`🔄 Content type detected different extension: ${actualExtension} (was ${detectedExtension})`);
-        
-        // Generate new filename with correct extension
+          // Generate new filename with correct extension
         const correctFilename = generateEventFilename(adjustedUrl, eventInfo, actualExtension);
         const correctPath = path.join(dir, correctFilename);
         const correctMetadataPath = correctPath + '.meta';
-        
-        // Move the file to the correct name
+          // Move the file to the correct name
         if (fs.existsSync(localPath)) {
           fs.renameSync(localPath, correctPath);
           if (fs.existsSync(metadataPath)) {
             fs.renameSync(metadataPath, correctMetadataPath);
           }
         }
-        
-        // Update variables to use correct paths
+          // Update variables to use correct paths
         const finalFilename = correctFilename;
         const finalPath = correctPath;
         const finalMetadataPath = correctMetadataPath;
-        
-        // Save metadata with event information
+          // Save metadata with event information
         const metadata = {
           originalUrl: imageUrl,
           adjustedUrl: adjustedUrl,
-          downloadedAt: new Date().toISOString(),
           type: 'event',
           filename: finalFilename,
           contentType: downloadResult.contentType,
@@ -194,10 +187,8 @@ async function downloadEventImage(imageUrl, eventInfo) {
             recurring: eventInfo.recurring
           }
         };
-        
-        fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
-        
-        console.log(`✅ Downloaded event image: ${finalFilename} (${actualExtension})`);
+          fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
+          console.log(`✅ Downloaded event image: ${finalFilename} (${actualExtension})`);
         return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
       }
     }
@@ -206,7 +197,6 @@ async function downloadEventImage(imageUrl, eventInfo) {
     const metadata = {
       originalUrl: imageUrl,
       adjustedUrl: adjustedUrl,
-      downloadedAt: new Date().toISOString(),
       type: 'event',
       filename: filename,
       contentType: downloadResult.contentType,
@@ -230,7 +220,6 @@ async function downloadEventImage(imageUrl, eventInfo) {
     try {
       const failureMetadata = {
         originalUrl: imageUrl,
-        failedAt: new Date().toISOString(),
         error: error.message,
         type: 'event'
       };
@@ -324,24 +313,19 @@ async function fetchPageContent(url) {
       }
     }, (response) => {
       let stream = response;
-      
       // Handle gzip/deflate decompression
       if (response.headers['content-encoding'] === 'gzip') {
         stream = response.pipe(zlib.createGunzip());
       } else if (response.headers['content-encoding'] === 'deflate') {
         stream = response.pipe(zlib.createInflate());
       }
-      
       let data = '';
-      
       stream.on('data', (chunk) => {
         data += chunk;
       });
-      
       stream.on('end', () => {
         resolve(data);
       });
-      
       stream.on('error', (err) => {
         reject(err);
       });
@@ -410,10 +394,8 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
         reject(new Error(`Too many redirects (max: ${maxRedirects})`));
         return;
       }
-      
       const parsedUrl = new URL(currentUrl);
       const client = parsedUrl.protocol === 'https:' ? https : http;
-      
       const request = client.get(currentUrl, {
         timeout: timeout,
         headers: {
@@ -428,11 +410,9 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
           downloadWithRedirects(redirectUrl, redirectCount + 1);
           return;
         }
-        
-        if (response.statusCode >= 200 && response.statusCode < 300) {
+          if (response.statusCode >= 200 && response.statusCode < 300) {
           const fileStream = fs.createWriteStream(outputPath);
           response.pipe(fileStream);
-          
           fileStream.on('finish', () => {
             fileStream.close();
             // Return content type information
@@ -441,7 +421,6 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
               contentLength: response.headers['content-length']
             });
           });
-          
           fileStream.on('error', (err) => {
             fs.unlink(outputPath, () => {}); // Delete partial file
             reject(err);
@@ -450,7 +429,6 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
           reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
         }
       });
-      
       request.on('error', reject);
       request.on('timeout', () => {
         request.destroy();
@@ -470,13 +448,11 @@ function generateFilename(url, type = 'event', size = null) {
             // Check if filename already contains a size suffix to avoid double suffixes
             const ext = path.extname(baseFilename);
             const nameWithoutExt = path.basename(baseFilename, ext);
-            
-            // If the filename already contains a size suffix (like -64px), don't add another one
+              // If the filename already contains a size suffix (like -64px), don't add another one
             if (nameWithoutExt.includes('-64px') || nameWithoutExt.includes('-32px') || nameWithoutExt.includes('-256px')) {
                 return baseFilename;
             }
-            
-            // Add size suffix for higher quality favicons
+              // Add size suffix for higher quality favicons
             return `${nameWithoutExt}-${size}px${ext}`;
         }
         return baseFilename;
@@ -509,14 +485,11 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
     if (isLinktreeProfile && type === 'favicon') {
       const tempPath = localPath + '.temp';
       const optimizedPath = localPath + '.optimized';
-      
       try {
         // Move original to temp location
         fs.renameSync(localPath, tempPath);
-        
         // Process and optimize the image
         const processed = await processProfilePicture(tempPath, optimizedPath, targetSize);
-        
         if (processed) {
           // Replace original with optimized version
           fs.renameSync(optimizedPath, localPath);
@@ -525,7 +498,6 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
           // Fallback: restore original if processing failed
           fs.renameSync(tempPath, localPath);
         }
-        
         // Clean up temp file
         if (fs.existsSync(tempPath)) {
           fs.unlinkSync(tempPath);
@@ -545,7 +517,6 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
     // Save metadata
     const metadata = {
       originalUrl: imageUrl,
-      downloadedAt: new Date().toISOString(),
       type: type,
       filename: customFilename,
       contentType: downloadResult.contentType,
@@ -567,7 +538,6 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
       ensureDir(dir);
       const failureMetadata = {
         originalUrl: imageUrl,
-        failedAt: new Date().toISOString(),
         error: error.message,
         type: type,
         filename: customFilename
@@ -674,7 +644,6 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
     // Save metadata
     const metadata = {
       originalUrl: imageUrl,
-      downloadedAt: new Date().toISOString(),
       type: type,
       filename: filename,
       size: size,
@@ -697,7 +666,6 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
       ensureDir(dir);
       const failureMetadata = {
         originalUrl: imageUrl,
-        failedAt: new Date().toISOString(),
         error: error.message,
         type: type,
         filename: filename,
@@ -738,14 +706,11 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
     if (isLinktreeProfile && type === 'favicon') {
       const tempPath = localPath + '.temp';
       const optimizedPath = localPath + '.optimized';
-      
       try {
         // Move original to temp location
         fs.renameSync(localPath, tempPath);
-        
         // Process and optimize the image
         const processed = await processProfilePicture(tempPath, optimizedPath, targetSize);
-        
         if (processed) {
           // Replace original with optimized version
           fs.renameSync(optimizedPath, localPath);
@@ -754,7 +719,6 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
           // Fallback: restore original if processing failed
           fs.renameSync(tempPath, localPath);
         }
-        
         // Clean up temp file
         if (fs.existsSync(tempPath)) {
           fs.unlinkSync(tempPath);
@@ -774,7 +738,6 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
     // Save metadata
     const metadata = {
       originalUrl: imageUrl,
-      downloadedAt: new Date().toISOString(),
       type: type,
       filename: filename,
       contentType: downloadResult.contentType,
@@ -797,7 +760,6 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
       ensureDir(dir);
       const failureMetadata = {
         originalUrl: imageUrl,
-        failedAt: new Date().toISOString(),
         error: error.message,
         type: type,
         filename: filename
@@ -832,11 +794,9 @@ function processWebsiteUrl(url, context = '') {
       // Use Google's favicon service for regular domains with multiple sizes
       const faviconUrl64 = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
       const faviconUrl256 = `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
-      
       console.log(`🌐 Found website for favicons${context}: ${domain}`);
       console.log(`   🗺️  Map HD (64px): ${faviconUrl64}`);
       console.log(`   🎨 Cards/OG (256px): ${faviconUrl256}`);
-      
       return { type: 'favicon', urls: { favicon64: faviconUrl64, favicon256: faviconUrl256 } };
     }
   } catch (error) {
@@ -905,7 +865,6 @@ async function extractImageUrls() {
         if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
           // Adjust Eventbrite image URLs to get uncropped versions
           const adjustedUrl = adjustEventbriteImageUrl(cleanUrl);
-          
           // Store event with its image URL
           imageUrls.eventsWithInfo.push({
             imageUrl: adjustedUrl,
@@ -919,7 +878,6 @@ async function extractImageUrls() {
           }
         }
       }
-      
       // Extract website URLs for favicons
       if (event.favicon) {
         const result = processWebsiteUrl(event.favicon, ` (favicon override for ${event.name})`);
@@ -942,9 +900,7 @@ async function extractImageUrls() {
     for (const file of barFiles) {
       const filePath = path.join(barsDir, file);
       const bars = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      
       console.log(`📋 Processing bar file: ${file} (${bars.length} bars)`);
-      
       for (const bar of bars) {
         if (bar.favicon) {
           const result = processWebsiteUrl(bar.favicon, ` (favicon override for ${bar.name})`);
@@ -1115,19 +1071,15 @@ async function main() {
       try {
         // Extract profile picture URL from Linktree page
         const profilePictureUrl = await extractLinktreeProfilePicture(linktreeUrl);
-        
         if (profilePictureUrl) {
           // Generate multiple sizes for Linktree profile pictures
           const sizes = [
             { size: '64', targetSize: 64, description: 'Map markers (64px)' },
             { size: '256', targetSize: 256, description: 'Cards/OG images (256px)' }
           ];
-          
           for (const { size, targetSize, description } of sizes) {
             const linktreeFilename = generateLinktreeFaviconFilename(linktreeUrl, size);
-            
             console.log(`📥 Processing Linktree ${description}: ${linktreeFilename}`);
-            
             // Download and process the profile picture with the custom filename
             const result = await downloadImageWithCustomFilename(profilePictureUrl, linktreeFilename, 'favicon', true, targetSize);
             if (result.success) {
@@ -1158,19 +1110,15 @@ async function main() {
       try {
         // Extract logo URL from Wikipedia page
         const logoUrl = await extractWikipediaLogo(wikipediaUrl);
-        
         if (logoUrl) {
           // Generate multiple sizes for Wikipedia logos
           const sizes = [
             { size: '64', targetSize: 64, description: 'Map markers (64px)' },
             { size: '256', targetSize: 256, description: 'Cards/OG images (256px)' }
           ];
-          
           for (const { size, targetSize, description } of sizes) {
             const wikipediaFilename = generateWikipediaFaviconFilename(wikipediaUrl, size);
-            
             console.log(`📥 Processing Wikipedia ${description}: ${wikipediaFilename}`);
-            
             // Download and process the logo with the custom filename
             const result = await downloadImageWithCustomFilename(logoUrl, wikipediaFilename, 'favicon', true, targetSize);
             if (result.success) {

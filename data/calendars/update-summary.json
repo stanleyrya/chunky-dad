@@ -1,159 +1,136 @@
 {
-  "lastUpdated": "2026-06-23T22:26:58.553Z",
   "cities": {
-    "nyc": {
-      "name": "New York",
+    "atlanta": {
+      "name": "Atlanta",
       "status": "success",
-      "dataLength": 10992,
-      "eventCount": 12,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "seattle": {
-      "name": "Seattle",
-      "status": "success",
-      "dataLength": 12362,
-      "eventCount": 10,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "la": {
-      "name": "Los Angeles",
-      "status": "success",
-      "dataLength": 8423,
-      "eventCount": 7,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "toronto": {
-      "name": "Toronto",
-      "status": "success",
-      "dataLength": 197,
-      "eventCount": 0,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "london": {
-      "name": "London",
-      "status": "success",
-      "dataLength": 193,
-      "eventCount": 0,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "chicago": {
-      "name": "Chicago",
-      "status": "success",
-      "dataLength": 13565,
-      "eventCount": 12,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
+      "dataLength": 4933,
+      "eventCount": 4
     },
     "berlin": {
       "name": "Berlin",
       "status": "success",
       "dataLength": 193,
-      "eventCount": 0,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "palm-springs": {
-      "name": "Palm Springs",
-      "status": "success",
-      "dataLength": 1487,
-      "eventCount": 1,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "denver": {
-      "name": "Denver",
-      "status": "success",
-      "dataLength": 6856,
-      "eventCount": 6,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "dallas": {
-      "name": "Dallas",
-      "status": "success",
-      "dataLength": 195,
-      "eventCount": 0,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "dc": {
-      "name": "DC",
-      "status": "success",
-      "dataLength": 1503,
-      "eventCount": 1,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "vegas": {
-      "name": "Las Vegas",
-      "status": "success",
-      "dataLength": 4410,
-      "eventCount": 3,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "atlanta": {
-      "name": "Atlanta",
-      "status": "success",
-      "dataLength": 4933,
-      "eventCount": 4,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "nola": {
-      "name": "New Orleans",
-      "status": "success",
-      "dataLength": 2367,
-      "eventCount": 2,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "sf": {
-      "name": "San Francisco",
-      "status": "success",
-      "dataLength": 15367,
-      "eventCount": 12,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "portland": {
-      "name": "Portland",
-      "status": "success",
-      "dataLength": 18474,
-      "eventCount": 14,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
-    },
-    "sitges": {
-      "name": "Sitges",
-      "status": "success",
-      "dataLength": 193,
-      "eventCount": 0,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
+      "eventCount": 0
     },
     "boston": {
       "name": "Boston",
       "status": "success",
       "dataLength": 196,
-      "eventCount": 0,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
+      "eventCount": 0
     },
-    "phoenix": {
-      "name": "Phoenix",
+    "chicago": {
+      "name": "Chicago",
       "status": "success",
-      "dataLength": 2874,
-      "eventCount": 2,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
+      "dataLength": 13565,
+      "eventCount": 12
     },
-    "ptown": {
-      "name": "Provincetown",
+    "dallas": {
+      "name": "Dallas",
       "status": "success",
-      "dataLength": 202,
-      "eventCount": 0,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
+      "dataLength": 195,
+      "eventCount": 0
     },
-    "san-diego": {
-      "name": "San Diego",
+    "dc": {
+      "name": "DC",
       "status": "success",
-      "dataLength": 4073,
-      "eventCount": 3,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
+      "dataLength": 1503,
+      "eventCount": 1
+    },
+    "denver": {
+      "name": "Denver",
+      "status": "success",
+      "dataLength": 6856,
+      "eventCount": 6
+    },
+    "la": {
+      "name": "Los Angeles",
+      "status": "success",
+      "dataLength": 8423,
+      "eventCount": 7
+    },
+    "london": {
+      "name": "London",
+      "status": "success",
+      "dataLength": 193,
+      "eventCount": 0
+    },
+    "nola": {
+      "name": "New Orleans",
+      "status": "success",
+      "dataLength": 2367,
+      "eventCount": 2
+    },
+    "nyc": {
+      "name": "New York",
+      "status": "success",
+      "dataLength": 10992,
+      "eventCount": 12
+    },
+    "palm-springs": {
+      "name": "Palm Springs",
+      "status": "success",
+      "dataLength": 1487,
+      "eventCount": 1
     },
     "philly": {
       "name": "Philadelphia",
       "status": "success",
       "dataLength": 4689,
-      "eventCount": 3,
-      "lastUpdated": "2026-06-23T22:26:58.553Z"
+      "eventCount": 3
+    },
+    "phoenix": {
+      "name": "Phoenix",
+      "status": "success",
+      "dataLength": 2874,
+      "eventCount": 2
+    },
+    "portland": {
+      "name": "Portland",
+      "status": "success",
+      "dataLength": 18474,
+      "eventCount": 14
+    },
+    "ptown": {
+      "name": "Provincetown",
+      "status": "success",
+      "dataLength": 202,
+      "eventCount": 0
+    },
+    "san-diego": {
+      "name": "San Diego",
+      "status": "success",
+      "dataLength": 4073,
+      "eventCount": 3
+    },
+    "seattle": {
+      "name": "Seattle",
+      "status": "success",
+      "dataLength": 12362,
+      "eventCount": 10
+    },
+    "sf": {
+      "name": "San Francisco",
+      "status": "success",
+      "dataLength": 15367,
+      "eventCount": 12
+    },
+    "sitges": {
+      "name": "Sitges",
+      "status": "success",
+      "dataLength": 193,
+      "eventCount": 0
+    },
+    "toronto": {
+      "name": "Toronto",
+      "status": "success",
+      "dataLength": 197,
+      "eventCount": 0
+    },
+    "vegas": {
+      "name": "Las Vegas",
+      "status": "success",
+      "dataLength": 4410,
+      "eventCount": 3
     }
   }
 }

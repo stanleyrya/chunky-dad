@@ -180,7 +180,7 @@ jobs:
               }
               
               const summary = {
-                lastUpdated: new Date().toISOString(),
+
                 cities: {}
               };
               
@@ -193,7 +193,7 @@ jobs:
                     name: result.config.name,
                     status: 'error',
                     error: result.error,
-                    lastUpdated: new Date().toISOString()
+
                   };
                   errorCount++;
                 } else {
@@ -202,12 +202,19 @@ jobs:
                     status: 'success',
                     dataLength: result.icalData.length,
                     eventCount: (result.icalData.match(/BEGIN:VEVENT/g) || []).length,
-                    lastUpdated: new Date().toISOString()
+
                   };
                   successCount++;
                 }
               });
               
+              // Sort cities alphabetically
+              const sortedCities = Object.keys(summary.cities).sort().reduce((acc, key) => {
+                acc[key] = summary.cities[key];
+                return acc;
+              }, {});
+              summary.cities = sortedCities;
+
               // Save summary
               fs.writeFileSync('data/calendars/update-summary.json', JSON.stringify(summary, null, 2));
               

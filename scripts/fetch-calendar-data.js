@@ -83,7 +83,7 @@ async function fetchCalendarData() {
         const results = await Promise.all(fetchPromises);
         
         const summary = {
-            lastUpdated: new Date().toISOString(),
+
             cities: {}
         };
         
@@ -96,7 +96,7 @@ async function fetchCalendarData() {
                     name: result.config.name,
                     status: 'error',
                     error: result.error,
-                    lastUpdated: new Date().toISOString()
+
                 };
                 errorCount++;
             } else {
@@ -105,12 +105,19 @@ async function fetchCalendarData() {
                     status: 'success',
                     dataLength: result.icalData.length,
                     eventCount: (result.icalData.match(/BEGIN:VEVENT/g) || []).length,
-                    lastUpdated: new Date().toISOString()
+
                 };
                 successCount++;
             }
         });
         
+        // Sort cities alphabetically
+        const sortedCities = Object.keys(summary.cities).sort().reduce((acc, key) => {
+            acc[key] = summary.cities[key];
+            return acc;
+        }, {});
+        summary.cities = sortedCities;
+
         // Save summary
         const summaryPath = path.join(dataDir, 'update-summary.json');
         fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
