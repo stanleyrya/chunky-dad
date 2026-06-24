@@ -2,49 +2,41 @@
   "files": [
     {
       "name": "event-builder.html",
-      "size": 422857,
       "icon": "🛠️",
       "description": "Build chunky.dad calendar events and preview them instantly."
     },
     {
       "name": "index.html",
-      "size": 25825,
       "icon": "📄",
       "description": "Test file"
     },
     {
       "name": "test-calendar-logging.html",
-      "size": 68633,
       "icon": "🔍",
       "description": "Debug Scope - Look deep inside calendar processing (magnify those logs)"
     },
     {
       "name": "test-city-landscapes.html",
-      "size": 23118,
       "icon": "🌄",
       "description": "City landscapes tester"
     },
     {
       "name": "test-google-sheets-loader.html",
-      "size": 43013,
       "icon": "📊",
       "description": "Sheet Metal Worker - Loads and shapes Google Sheets data"
     },
     {
       "name": "test-og-event-layouts-calendar.html",
-      "size": 76657,
       "icon": "📅",
       "description": "Old School Blueprint - Classic event layouts, tried and true"
     },
     {
       "name": "test-unified-scraper.html",
-      "size": 46169,
       "icon": "🪛",
       "description": "Scraper Tool - Extract that data, nice and smooth"
     },
     {
       "name": "ultimate-style-tester.html",
-      "size": 65988,
       "icon": "🔨",
       "description": "The Big Hammer - Pound your styles into perfect shape with live preview"
     }

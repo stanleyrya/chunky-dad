@@ -63,7 +63,7 @@ async function syncBars() {
         if (extractionFailures.length > 0) {
             console.error(`❌ External extraction failed for ${extractionFailures.length} bars:`);
             extractionFailures.forEach((failure) => {
-                console.error(`   - [${failure.source}] ${failure.bar} (${failure.city}) at ${failure.failedAt}: ${failure.error}`);
+                console.error(`   - [${failure.source}] ${failure.bar} (${failure.city}) at ${failure.error}`);
             });
             throw new Error('One or more external extractions failed. Check extraction failure fields in saved bars data, investigate source pages/logs, then trigger a new bars sync run.');
         }
@@ -489,14 +489,11 @@ async function enrichBarsWithExternalData(bars) {
                 
                 console.log(`✅ Enriched ${bar.name} with Wikipedia data`);
             } catch (error) {
-                const failedAt = new Date().toISOString();
-                enrichedBar.wikipediaExtractionFailureAt = failedAt;
                 enrichedBar.wikipediaExtractionFailureMessage = error.message;
                 extractionFailures.push({
                     bar: bar.name,
                     city: bar.city,
                     source: 'Wikipedia',
-                    failedAt,
                     error: error.message
                 });
                 console.warn(`⚠️  Failed to scrape Wikipedia data for ${bar.name}:`, error.message);
@@ -535,13 +532,10 @@ async function enrichBarsWithExternalData(bars) {
                 delete enrichedBar.gayCitiesExtractionFailureAt;
                 delete enrichedBar.gayCitiesExtractionFailureMessage;
                 delete enrichedBar.gayCitiesExtractionFailureCount;
-                enrichedBar.gayCitiesLastScrapedAt = new Date().toISOString();
                 
                 console.log(`✅ Enriched ${bar.name} with GayCities data`);
             } catch (error) {
-                const failedAt = new Date().toISOString();
                 const previousCount = enrichedBar.gayCitiesExtractionFailureCount || localBar?.gayCitiesExtractionFailureCount || 0;
-                enrichedBar.gayCitiesExtractionFailureAt = failedAt;
                 enrichedBar.gayCitiesExtractionFailureMessage = error.message;
                 enrichedBar.gayCitiesExtractionFailureCount = previousCount + 1;
 
@@ -549,7 +543,6 @@ async function enrichBarsWithExternalData(bars) {
                     bar: bar.name,
                     city: bar.city,
                     source: 'GayCities',
-                    failedAt,
                     error: error.message
                 });
                 console.warn(`⚠️  Failed to scrape GayCities data for ${bar.name}:`, error.message);
