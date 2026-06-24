@@ -316,35 +316,85 @@
       "slug": "bearracuda-seattle-serious-wood-4a1720dd"
     },
     {
-      "name": "Treasure Trail Seattle",
-      "day": "Friday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-05-08T21:00:00",
-      "endDate": "2026-05-09T03:00:00",
-      "unprocessedDescription": "description: Clothes check available\n\nMusic & Entertainment\n\r• Beats by MATT STANDS &amp; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E. Pine St, Seattle, WA\ntimezone: America/Los_Angeles\nimage: https://bearracuda.com/wp-content/uploads/2026/01/45-2.jpg\nfacebook: https://www.facebook.com/events/1574328850293138/\nticketUrl: https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\n_staticFields: [object Object]\ngmaps: https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA\nkey: bearracuda-2026-05-09-seattle",
-      "startTimezone": null,
-      "endTimezone": null,
+      "name": "South Seattle Bear Social",
+      "day": "Sunday",
+      "time": "11AM-4PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "coordinates": {
+        "lat": 47.51652271569908,
+        "lng": -122.35487284211817
+      },
+      "startDate": "2025-07-06T11:00:00",
+      "endDate": "2025-07-06T16:00:00",
+      "unprocessedDescription": "Instagram: https://www.instagram.com/southseattlebearsocial/\nB\rar: Lumberyard\nGoogle Maps: https://maps.app.goo.gl/SDUbV4qsRpivNiX39\nShortName: South Seattle Social",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
       "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "C2EDB500-501A-4F94-9060-3A0EEE8AC165",
-      "uid": "C2EDB500-501A-4F94-9060-3A0EEE8AC165",
+      "wasUTC": false,
+      "sourceUid": "6irujvg3effpkdu42krgr91osj@google.com",
+      "uid": "6irujvg3effpkdu42krgr91osj@google.com",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "MASSIVE",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/01/45-2.jpg",
-      "tea": "Clothes check available",
-      "address": "619 E. Pine St, Seattle, WA",
+      "bar": "Lumberyard",
+      "address": null,
       "website": null,
+      "instagram": "https://www.instagram.com/southseattlebearsocial/",
+      "gmaps": "https://maps.app.goo.gl/SDUbV4qsRpivNiX39",
+      "shortName": "South Seattle Social",
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/southseattlebearsocial/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/SDUbV4qsRpivNiX39",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "south-seattle-bear-social-3b330fb1"
+    },
+    {
+      "name": "Treasure Trail: SEATTLE",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2025-09-26T21:00:00",
+      "endDate": "2025-09-27T03:00:00",
+      "unprocessedDescription": "description: Treasure Trail returns to Seattle and we invite yo\ru to choose your own ADVENTURE! Now our guys can grab a wristband when you walk in\\:\n\nMusic & Entertainment\n• Hard Tunes by BIG SIR &amp; TIGERBEATZ\nbar: MASSIVE\naddress: 619 E Pine, Seattle, WA 98122\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/treasureseattle/\ncover: $15.65 - $30.54 (as of 9/20)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/treasuretrailweb.jpg\nfacebook: https://www.facebook.com/events/1113055394051303\nticketUrl: https://www.eventbrite.com/e/treasure-trail-seattle-tickets-1497840042889\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401\nkey: bearracuda-2025-09-27-seattle",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "19A871C3-E891-4C93-BF2E-A0234C04BF1E",
+      "uid": "19A871C3-E891-4C93-BF2E-A0234C04BF1E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "MASSIVE",
+      "cover": "$15.65 - $30.54 (as of 9/20)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/treasuretrailweb.jpg",
+      "tea": "Treasure Trail returns to Seattle and we invite you to choose your own ADVENTURE! Now our guys can grab a wristband when you walk in:",
+      "address": "619 E Pine, Seattle, WA 98122",
+      "website": "https://bearracuda.com/events/treasureseattle/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/1574328850293138/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA",
-      "ticketUrl": "https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets",
+      "facebook": "https://www.facebook.com/events/1113055394051303",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
+      "ticketUrl": "https://www.eventbrite.com/e/treasure-trail-seattle-tickets-1497840042889",
       "shortName": "Bear-rac-uda",
       "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/treasureseattle/",
+          "label": "🌐 Website"
+        },
         {
           "type": "instagram",
           "url": "https://www.instagram.com/bearracuda",
@@ -352,21 +402,21 @@
         },
         {
           "type": "facebook",
-          "url": "https://www.facebook.com/events/1574328850293138/",
+          "url": "https://www.facebook.com/events/1113055394051303",
           "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine%20St%2C%20Seattle%2C%20WA",
+          "url": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://sickening.events/e/bearracuda-treasure-trail-seattle-4/tickets",
+          "url": "https://www.eventbrite.com/e/treasure-trail-seattle-tickets-1497840042889",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "treasure-trail-seattle-7e9ae5d5"
+      "slug": "treasure-trail-seattle-4a6fa455"
     },
     {
       "name": "Treasure Trail Seattle: Wish BONED!",
@@ -533,7 +583,7 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=47.6150572%2C-122.3236574&query_place_id=101730401",
+          "url": "https://www.google.com/maps/search/?api=1&query=MASSIVE%2C%20619%20E.%20Pine",
           "label": "🗺️ Google Maps"
         },
         {
