@@ -24,8 +24,8 @@ class NormalizerPipeline {
         this.core = core;
         this.normalizers = [
             new BasicDataNormalizer(),
-            new BarDataNormalizer(),
-            new LocationNormalizer()
+            new LocationNormalizer(),
+            new BarDataNormalizer()
         ];
     }
 
@@ -101,15 +101,28 @@ class BarDataNormalizer extends BaseNormalizer {
 
         let matchedBar = null;
 
+        const normalizeStr = str => str.replace(/[^a-z0-9]/g, '');
+
         // Try exact/substring match by bar name if event.bar is set
         if (typeof event.bar === 'string' && event.bar.trim().length > 0) {
             const lowerEventBar = event.bar.trim().toLowerCase();
-            matchedBar = cityBars.find(b => typeof b.name === 'string' && b.name.toLowerCase() === lowerEventBar);
+            const normalizedEventBar = normalizeStr(lowerEventBar);
+
+            matchedBar = cityBars.find(b => {
+                if (typeof b.name !== 'string') return false;
+                return normalizeStr(b.name.toLowerCase()) === normalizedEventBar;
+            });
             if (!matchedBar) {
-                matchedBar = cityBars.find(b => typeof b.name === 'string' && lowerEventBar.includes(b.name.toLowerCase()));
+                matchedBar = cityBars.find(b => {
+                    if (typeof b.name !== 'string') return false;
+                    return normalizedEventBar.includes(normalizeStr(b.name.toLowerCase()));
+                });
             }
             if (!matchedBar) {
-                matchedBar = cityBars.find(b => typeof b.name === 'string' && b.name.toLowerCase().includes(lowerEventBar));
+                matchedBar = cityBars.find(b => {
+                    if (typeof b.name !== 'string') return false;
+                    return normalizeStr(b.name.toLowerCase()).includes(normalizedEventBar);
+                });
             }
         }
 
