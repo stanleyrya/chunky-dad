@@ -4901,7 +4901,7 @@ TEXT:
         return {
             enabled: rawValidation.enabled !== false,
             strictDefault: rawValidation.strict !== false,
-            fuzzyDescription: rawValidation.fuzzyDescription !== false,
+            fuzzyDescription: rawValidation.fuzzyDescription === true,
             perField: rawValidation.perField && typeof rawValidation.perField === 'object'
                 ? rawValidation.perField
                 : {},
