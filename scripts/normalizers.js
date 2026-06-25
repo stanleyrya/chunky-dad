@@ -24,6 +24,7 @@ class NormalizerPipeline {
         this.core = core;
         this.normalizers = [
             new BasicDataNormalizer(),
+            new BarDataNormalizer(),
             new LocationNormalizer()
         ];
     }
@@ -85,6 +86,85 @@ class BasicDataNormalizer extends BaseNormalizer {
 
         if (!hasUrl && hasWebsite) {
             event.url = event.website;
+        }
+
+        return event;
+    }
+}
+
+class BarDataNormalizer extends BaseNormalizer {
+    normalize(event) {
+        if (!event || !this.core || !this.core.bars) return event;
+
+        const cityBars = this.core.bars[event.city];
+        if (!cityBars || !Array.isArray(cityBars)) return event;
+
+        let matchedBar = null;
+
+        // Try exact/substring match by bar name if event.bar is set
+        if (typeof event.bar === 'string' && event.bar.trim().length > 0) {
+            const lowerEventBar = event.bar.trim().toLowerCase();
+            matchedBar = cityBars.find(b => typeof b.name === 'string' && b.name.toLowerCase() === lowerEventBar);
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => typeof b.name === 'string' && lowerEventBar.includes(b.name.toLowerCase()));
+            }
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => typeof b.name === 'string' && b.name.toLowerCase().includes(lowerEventBar));
+            }
+        }
+
+        // Try match by event.address or event.location if not matched yet
+        if (!matchedBar && typeof event.address === 'string' && event.address.trim().length > 0) {
+            const lowerAddress = event.address.trim().toLowerCase();
+            matchedBar = cityBars.find(b => typeof b.address === 'string' && b.address.toLowerCase() === lowerAddress);
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => typeof b.address === 'string' && lowerAddress.includes(b.address.toLowerCase()));
+            }
+        }
+
+        if (!matchedBar && typeof event.location === 'string' && event.location.trim().length > 0) {
+            const eventLocation = event.location.trim();
+            matchedBar = cityBars.find(b => typeof b.coordinates === 'string' && b.coordinates.trim() === eventLocation);
+        }
+
+        if (matchedBar) {
+            let modified = false;
+
+            // Set bar name if not already set (since we matched by address/location)
+            if (matchedBar.name && (!event.bar || event.bar.trim() === '')) {
+                event.bar = matchedBar.name;
+                modified = true;
+            }
+
+            // Prefer the bar's full address if missing or short in event
+            if (matchedBar.address) {
+                if (!event.address || event.address.length < matchedBar.address.length) {
+                    event.address = matchedBar.address;
+                    modified = true;
+                }
+            }
+
+            // Prefer the bar's coordinates if missing in event
+            if (matchedBar.coordinates && !event.location) {
+                event.location = matchedBar.coordinates;
+                modified = true;
+            }
+
+            // Prefer the bar's Google Maps link if missing in event
+            if (matchedBar.googleMaps && !event.gmaps) {
+                event.gmaps = matchedBar.googleMaps;
+                modified = true;
+            }
+
+            // Prefer the bar's Instagram link if missing in event
+            if (matchedBar.instagram && !event.instagram) {
+                event.instagram = matchedBar.instagram;
+                modified = true;
+            }
+
+            if (modified && typeof this.core.formatEventNotes === 'function') {
+                event = this.core.formatEventNotes(event);
+            }
         }
 
         return event;
@@ -494,14 +574,16 @@ class LocationNormalizer extends BaseNormalizer {
 
 // Export for both environments
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { NormalizerPipeline, BasicDataNormalizer, LocationNormalizer };
+    module.exports = { NormalizerPipeline, BasicDataNormalizer, LocationNormalizer, BarDataNormalizer };
 } else if (typeof window !== 'undefined') {
     window.NormalizerPipeline = NormalizerPipeline;
     window.BasicDataNormalizer = BasicDataNormalizer;
     window.LocationNormalizer = LocationNormalizer;
+    window.BarDataNormalizer = BarDataNormalizer;
 } else {
     // Scriptable environment
     this.NormalizerPipeline = NormalizerPipeline;
     this.BasicDataNormalizer = BasicDataNormalizer;
     this.LocationNormalizer = LocationNormalizer;
+    this.BarDataNormalizer = BarDataNormalizer;
 }

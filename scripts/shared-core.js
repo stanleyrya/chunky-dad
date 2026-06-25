@@ -57,6 +57,7 @@ class SharedCore {
         this.cities = cities;
         this.eventSchema = schema;
         this.normalizerPipeline = options.normalizerPipeline || null;
+        this.bars = options.bars || {};
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
             ...(options.additionalExcludedFields || [])

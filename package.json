@@ -9,7 +9,7 @@
     "dev": "python3 -m http.server 8000",
     "update-test-index": "cd testing && node generate-file-list.js",
     "update-test-manifest": "cd testing && node generate-manifest.js",
-    "sync-bars": "node tools/sync-bars.js",
+    "sync-bars": "node tools/sync-bars.js && node tools/generate-scraper-bars.js",
     "download-images": "node tools/download-images.js",
     "extract-favicon-colors": "node tools/extract-favicon-colors.js",
     "sync-data": "npm run sync-bars && npm run download-images && npm run extract-favicon-colors",
@@ -30,6 +30,6 @@
     "express": "^5.1.0",
     "playwright": "^1.61.0",
     "puppeteer": "^22.15.0",
-    "sharp": "^0.33.0"
+    "sharp": "^0.33.5"
   }
 }

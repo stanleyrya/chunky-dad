@@ -408,6 +408,14 @@ async saveFailureNote(url, error, metadata = {}) {
                 const citiesPath = require('path').join(__dirname, '..', 'scraper-cities.js');
                 delete require.cache[require.resolve(citiesPath)]; // Clear cache for fresh load
                 cities = require(citiesPath);
+
+                const barsPath = require('path').join(__dirname, '..', 'scraper-bars.js');
+                if (require('fs').existsSync(barsPath)) {
+                    delete require.cache[require.resolve(barsPath)]; // Clear cache for fresh load
+                    config.bars = require(barsPath);
+                } else {
+                    config.bars = {};
+                }
             } else {
                 // Browser environment - use pre-loaded globals if available (loaded via script tags),
                 // otherwise fall back to fetching (only works when page is served from scripts/ directory)
@@ -448,6 +456,27 @@ async saveFailureNote(url, error, metadata = {}) {
                     
                     eval(citiesText);
                     cities = window.scraperCities;
+                }
+
+                if (typeof window.scraperBars !== 'undefined') {
+                    config.bars = window.scraperBars;
+                } else {
+                    try {
+                        const barsResponse = await fetch('./scraper-bars.js');
+                        if (barsResponse.ok) {
+                            const barsText = await barsResponse.text();
+                            if (barsText && barsText.trim().length > 0) {
+                                eval(barsText);
+                                config.bars = window.scraperBars || {};
+                            } else {
+                                config.bars = {};
+                            }
+                        } else {
+                            config.bars = {};
+                        }
+                    } catch (e) {
+                        config.bars = {};
+                    }
                 }
             }
             
