@@ -291,7 +291,7 @@ class BearEventScraperOrchestrator {
                 
                 // Always prepare events for analysis (even in dry run mode) to show action types
                 // Perform cross-parser deduplication to merge events from different parsers
-                const deduplicatedEvents = sharedCore.deduplicateEvents(results.allProcessedEvents);
+                const deduplicatedEvents = await sharedCore.deduplicateEvents(results.allProcessedEvents, finalAdapter);
                 
                 const analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config);
                 console.log(`🐻 Orchestrator: Calendar analysis complete (${deduplicatedEvents.length} unique)`);

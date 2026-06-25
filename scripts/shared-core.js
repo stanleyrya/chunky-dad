@@ -450,7 +450,7 @@ class SharedCore {
         // Filter and process events
         const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
         const bearEvents = this.filterBearEvents(futureEvents, effectiveParserConfig);
-        const deduplicatedEvents = this.deduplicateEvents(bearEvents);
+        const deduplicatedEvents = await this.deduplicateEvents(bearEvents, httpAdapter);
         
         // Calculate deduplication stats
         const duplicatesRemoved = bearEvents.length - deduplicatedEvents.length;
@@ -711,7 +711,7 @@ class SharedCore {
                 }
 
                 if (!discoveryOnly) {
-                    const parsedEvents = this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline);
+                    const parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter);
                     if (parsedEvents.length > 0) {
                         allEvents.push(...parsedEvents);
                     }
@@ -805,7 +805,7 @@ class SharedCore {
             : additionalLinks;
     }
 
-    prepareParsedEvents(events, parserConfig, mainConfig, pageClassification, normalizerPipeline) {
+    async prepareParsedEvents(events, parserConfig, mainConfig, pageClassification, normalizerPipeline, httpAdapter) {
         if (!Array.isArray(events) || events.length === 0) {
             return [];
         }
@@ -818,7 +818,7 @@ class SharedCore {
         const pipelineToUse = normalizerPipeline || this.normalizerPipeline;
 
         const enrichedEvents = pipelineToUse
-            ? pipelineToUse.normalizeEvents(filteredEvents)
+            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter)
             : filteredEvents.map(event => this.normalizeEventTextFields(event));
 
         enrichedEvents.forEach(event => { event._pageClassification = pageClassification; });
@@ -1065,7 +1065,7 @@ class SharedCore {
         return this.bearKeywords.some(keyword => searchText.includes(keyword));
     }
 
-    deduplicateEvents(events) {
+    async deduplicateEvents(events, httpAdapter) {
         const seen = new Map();
         const deduplicated = [];
         
