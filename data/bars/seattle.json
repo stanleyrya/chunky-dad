@@ -2,16 +2,16 @@
   {
     "name": "Diesel",
     "city": "seattle",
+    "address": "1413 14th Ave, Seattle, WA 98122",
     "coordinates": "47.6133, -122.3143",
     "website": "http://dieselseattle.com/DIESEL.html",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJCfyfcs5qkFQR84fyFrPsC58",
     "wikipedia": "https://en.wikipedia.org/wiki/Diesel_(gay_bar)",
     "gayCities": "https://seattle.gaycities.com/bars/302690-diesel",
     "faviconBg": "#335a91",
     "faviconFg": "#c3cbd4",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z",
-    "address": "1413 14th Ave, Seattle, WA 98122",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJCfyfcs5qkFQR84fyFrPsC58",
-    "gayCitiesLastScrapedAt": "2026-06-26T17:08:40.863Z"
+    "gayCitiesLastScrapedAt": "2026-06-26T17:08:40.863Z",
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z"
   },
   {
     "name": "The Lumber Yard Bar",
@@ -35,14 +35,14 @@
   {
     "name": "Seattle Eagle",
     "city": "seattle",
+    "address": "314 E Pike St, Seattle, WA 98122",
     "coordinates": "47.61427, -122.32708",
     "website": "http://seattleeagle.com",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJOcPt38pqkFQRWmTOs3bUrgk",
     "wikipedia": "https://en.wikipedia.org/wiki/Seattle_Eagle",
     "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z",
-    "address": "314 E Pike St, Seattle, WA 98122",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJOcPt38pqkFQRWmTOs3bUrgk",
-    "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z"
+    "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
   },
   {
     "name": "CC’s Seattle",
