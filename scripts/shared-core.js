@@ -1037,15 +1037,27 @@ class SharedCore {
             null;
 
         return events.filter(event => {
-            if (!event.startDate) return false;
+            if (!event.startDate) {
+                console.log(`⚠️ SharedCore: Filtering out event "${event.title || 'Unknown'}" - missing startDate`);
+                return false;
+            }
             
             const eventDate = event.startDate instanceof Date ? event.startDate : new Date(event.startDate);
-            if (Number.isNaN(eventDate.getTime())) return false;
+            if (Number.isNaN(eventDate.getTime())) {
+                console.log(`⚠️ SharedCore: Filtering out event "${event.title || 'Unknown'}" - invalid startDate "${event.startDate}"`);
+                return false;
+            }
             
             // Skip past events unless explicitly allowed
-            if (!allowPastEvents && eventDate <= now) return false;
+            if (!allowPastEvents && eventDate.getTime() <= now.getTime()) {
+                console.log(`⚠️ SharedCore: Filtering out event "${event.title || 'Unknown'}" - eventDate (${eventDate.toISOString()}) is past or equal to now (${now.toISOString()})`);
+                return false;
+            }
             
-            if (cutoffDate && eventDate > cutoffDate) return false;
+            if (cutoffDate && eventDate.getTime() > cutoffDate.getTime()) {
+                console.log(`⚠️ SharedCore: Filtering out event "${event.title || 'Unknown'}" - eventDate (${eventDate.toISOString()}) is beyond cutoffDate (${cutoffDate.toISOString()}) [daysToLookAhead: ${daysToLookAhead}]`);
+                return false;
+            }
             
             return true;
         });
