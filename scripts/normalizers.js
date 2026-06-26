@@ -7,7 +7,7 @@
 // ❌ NO environment detection (typeof importModule, typeof window)
 // ❌ NO Scriptable APIs (Request, Calendar, FileManager, Alert)
 // ❌ NO DOM APIs (DOMParser, document, window, fetch)
-// ❌ NO HTTP requests (parsers and adapters do that)
+// ❌ NO HTTP requests without using the provided httpAdapter
 // ❌ NO calendar operations
 //
 // ✅ THIS FILE SHOULD ONLY CONTAIN:
@@ -25,7 +25,8 @@ class NormalizerPipeline {
         this.normalizers = [
             new BasicDataNormalizer(),
             new LocationNormalizer(),
-            new BarDataNormalizer()
+            new BarDataNormalizer(),
+            new OpenStreetMapNormalizer()
         ];
     }
 
@@ -49,6 +50,27 @@ class NormalizerPipeline {
     normalizeEvents(events) {
         if (!Array.isArray(events)) return [];
         return events.map(event => this.normalizeEvent(event));
+    }
+
+    async normalizeEventAsync(event, httpAdapter) {
+        if (!event) return event;
+        let normalized = { ...event };
+        for (const normalizer of this.normalizers) {
+            normalized = normalizer.normalize(normalized);
+            if (typeof normalizer.normalizeAsync === 'function') {
+                normalized = await normalizer.normalizeAsync(normalized, httpAdapter);
+            }
+        }
+        return normalized;
+    }
+
+    async normalizeEventsAsync(events, httpAdapter) {
+        if (!Array.isArray(events)) return [];
+        const normalizedEvents = [];
+        for (const event of events) {
+            normalizedEvents.push(await this.normalizeEventAsync(event, httpAdapter));
+        }
+        return normalizedEvents;
     }
 }
 
@@ -585,18 +607,169 @@ class LocationNormalizer extends BaseNormalizer {
     }
 }
 
+
+class OpenStreetMapNormalizer extends BaseNormalizer {
+    constructor(core) {
+        super(core);
+        this.lastRequestTime = 0;
+        this.memoryCache = {}; // In-memory cache for this run
+    }
+
+    async delayForRateLimit() {
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        const minimumDelay = 1100; // 1.1 seconds (Nominatim allows 1 request per second max)
+
+        if (timeSinceLastRequest < minimumDelay) {
+            const delay = minimumDelay - timeSinceLastRequest;
+            await new Promise(resolve => {
+                if (typeof setTimeout !== 'undefined') {
+                    setTimeout(resolve, delay);
+                } else if (typeof Timer !== 'undefined') {
+                    const timer = new Timer();
+                    timer.timeInterval = delay;
+                    timer.schedule(() => resolve());
+                } else {
+                    resolve();
+                }
+            });
+        }
+        this.lastRequestTime = Date.now();
+    }
+
+    async checkPersistentCache(url, httpAdapter) {
+        if (!httpAdapter || typeof httpAdapter.getPageCacheConfig !== 'function' || typeof httpAdapter.readCachedPage !== 'function') {
+            return null;
+        }
+        try {
+            const config = httpAdapter.getPageCacheConfig();
+            if (config && config.enabled) {
+                const cached = await httpAdapter.readCachedPage(url, config);
+                if (cached && cached.html) {
+                    try {
+                        return JSON.parse(cached.html);
+                    } catch (e) {
+                        return null;
+                    }
+                }
+            }
+        } catch (e) {
+            // Ignore cache read errors
+        }
+        return null;
+    }
+
+    async fetchDataWithCacheAndRateLimit(url, options, httpAdapter) {
+        // 1. Check in-memory cache
+        if (this.memoryCache[url]) {
+            return this.memoryCache[url];
+        }
+
+        // 2. Check persistent cache
+        const persistentData = await this.checkPersistentCache(url, httpAdapter);
+        if (persistentData) {
+            this.memoryCache[url] = persistentData;
+            return persistentData;
+        }
+
+        // 3. Not cached, so we must fetch. Delay for rate limit first.
+        await this.delayForRateLimit();
+
+        // 4. Fetch the data
+        const response = await httpAdapter.fetchData(url, options);
+        let data = null;
+
+        if (typeof response === 'string') {
+            data = JSON.parse(response);
+        } else if (response && response.html) {
+            data = JSON.parse(response.html);
+        } else if (response && (Array.isArray(response) || typeof response === 'object')) {
+            data = response;
+        }
+
+        // Save to in-memory cache
+        if (data) {
+            this.memoryCache[url] = data;
+        }
+
+        return data;
+    }
+
+    async normalizeAsync(event, httpAdapter) {
+        if (!event || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return event;
+
+        const hasAddress = typeof event.address === 'string' && event.address.trim().length > 0;
+        const hasLocation = typeof event.location === 'string' && event.location.trim().length > 0 && event.location.includes(',');
+
+        let modified = false;
+
+        const options = {
+            headers: {
+                'User-Agent': 'ChunkyDadScraper/1.0 (https://github.com/chunkeydad)'
+            }
+        };
+
+        if (hasAddress && !hasLocation) {
+            const query = encodeURIComponent(event.address.trim());
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`;
+
+            try {
+                const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
+                if (Array.isArray(data) && data.length > 0) {
+                    const firstResult = data[0];
+                    if (firstResult.lat && firstResult.lon) {
+                        event.location = `${firstResult.lat}, ${firstResult.lon}`;
+                        modified = true;
+                        console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
+                    }
+                }
+            } catch (err) {
+                console.log(`🗺️ OpenStreetMapNormalizer: Failed to geocode address "${event.address}": ${err.message}`);
+            }
+        } else if (hasLocation && !hasAddress) {
+            const parts = event.location.split(',').map(p => p.trim());
+            if (parts.length === 2) {
+                const lat = parseFloat(parts[0]);
+                const lon = parseFloat(parts[1]);
+
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+                    try {
+                        const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
+                        if (data && data.display_name) {
+                            event.address = data.display_name;
+                            modified = true;
+                            console.log(`🗺️ OpenStreetMapNormalizer: Found address for coordinates "${event.location}" -> ${event.address}`);
+                        }
+                    } catch (err) {
+                        console.log(`🗺️ OpenStreetMapNormalizer: Failed to reverse geocode location "${event.location}": ${err.message}`);
+                    }
+                }
+            }
+        }
+
+        if (modified && this.core && typeof this.core.formatEventNotes === 'function') {
+            event = this.core.formatEventNotes(event);
+        }
+
+        return event;
+    }
+}
+
 // Export for both environments
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { NormalizerPipeline, BasicDataNormalizer, LocationNormalizer, BarDataNormalizer };
+    module.exports = { NormalizerPipeline, BasicDataNormalizer, LocationNormalizer, BarDataNormalizer, OpenStreetMapNormalizer };
 } else if (typeof window !== 'undefined') {
     window.NormalizerPipeline = NormalizerPipeline;
     window.BasicDataNormalizer = BasicDataNormalizer;
     window.LocationNormalizer = LocationNormalizer;
     window.BarDataNormalizer = BarDataNormalizer;
+    window.OpenStreetMapNormalizer = OpenStreetMapNormalizer;
 } else {
     // Scriptable environment
     this.NormalizerPipeline = NormalizerPipeline;
     this.BasicDataNormalizer = BasicDataNormalizer;
     this.LocationNormalizer = LocationNormalizer;
     this.BarDataNormalizer = BarDataNormalizer;
+    this.OpenStreetMapNormalizer = OpenStreetMapNormalizer;
 }
