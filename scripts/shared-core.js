@@ -334,7 +334,11 @@ class SharedCore {
                 // Collect all processed events
                 if (parserResult.events && parserResult.events.length > 0) {
                     // Add parser config reference to each event for later use
-                    parserResult.events.forEach(event => {
+                    parserResult.events.forEach((event, index, arr) => {
+                        if (!Object.isExtensible(event)) {
+                            event = { ...event };
+                            arr[index] = event;
+                        }
                         event._parserConfig = parserConfig;
                     });
                     results.allProcessedEvents.push(...parserResult.events);
