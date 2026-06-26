@@ -310,7 +310,24 @@ function mergeBars(sheetsBars, localBars) {
             const existing = merged.get(key);
             Object.entries(normalizedBar).forEach(([field, value]) => {
                 if (field === 'name' || field === 'city') return;
-                if (!hasMeaningfulValue(existing[field]) && hasMeaningfulValue(value)) {
+
+                // For extraction tracking metadata fields, we want to always preserve them from local files
+                // if they are not in the sheet (sheets won't have these fields)
+                const metadataFields = [
+                    'wikipediaExtractionFailureAt',
+                    'wikipediaExtractionFailureMessage',
+                    'gayCitiesExtractionFailureAt',
+                    'gayCitiesExtractionFailureMessage',
+                    'gayCitiesExtractionFailureCount',
+                    'gayCitiesLastScrapedAt',
+                    'wikipediaLastScrapedAt'
+                ];
+
+                if (metadataFields.includes(field)) {
+                    if (!existing[field] && value) {
+                        existing[field] = value;
+                    }
+                } else if (!hasMeaningfulValue(existing[field]) && hasMeaningfulValue(value)) {
                     existing[field] = value;
                 }
             });
@@ -345,7 +362,8 @@ function cleanBarObject(bar) {
         'gayCitiesExtractionFailureAt',
         'gayCitiesExtractionFailureMessage',
         'gayCitiesExtractionFailureCount',
-        'gayCitiesLastScrapedAt'
+        'gayCitiesLastScrapedAt',
+        'wikipediaLastScrapedAt'
     ];
     
     fieldsToKeep.forEach(field => {
@@ -365,17 +383,25 @@ function shouldScrapeWikipediaBar(bar, localBar) {
         return false;
     }
 
+    const lastScrapedAt = bar.wikipediaLastScrapedAt || localBar?.wikipediaLastScrapedAt;
+
+    // Check if URL changed from what we have saved locally
+    const urlChanged = bar.wikipedia && localBar?.wikipedia && bar.wikipedia !== localBar.wikipedia;
+    if (urlChanged) {
+        console.log(`🔄 ${bar.name} Wikipedia URL changed: ${localBar?.wikipedia} → ${bar.wikipedia}`);
+        return true;
+    }
+
+    if (lastScrapedAt && !urlChanged) {
+        // We've already successfully scraped this URL, any missing fields are truly missing
+        return false;
+    }
+
     const missingFields = [];
     
     if (!bar.address || bar.address.trim() === '') missingFields.push('address');
     if (!bar.coordinates || bar.coordinates.trim() === '') missingFields.push('coordinates');
     if (!bar.image || bar.image.trim() === '') missingFields.push('image');
-    
-    // Check if URL changed from what we have saved locally
-    if (bar.wikipedia && localBar?.wikipedia && bar.wikipedia !== localBar.wikipedia) {
-        console.log(`🔄 ${bar.name} Wikipedia URL changed: ${localBar.wikipedia} → ${bar.wikipedia}`);
-        return true;
-    }
     
     if (missingFields.length > 0) {
         console.log(`📋 ${bar.name} missing Wikipedia scrapable fields: ${missingFields.join(', ')}`);
@@ -484,11 +510,13 @@ async function enrichBarsWithExternalData(bars) {
                     enrichedBar.image = scrapedData.image;
                 }
 
+                enrichedBar.wikipediaLastScrapedAt = new Date().toISOString();
                 delete enrichedBar.wikipediaExtractionFailureAt;
                 delete enrichedBar.wikipediaExtractionFailureMessage;
                 
                 console.log(`✅ Enriched ${bar.name} with Wikipedia data`);
             } catch (error) {
+                enrichedBar.wikipediaExtractionFailureAt = new Date().toISOString();
                 enrichedBar.wikipediaExtractionFailureMessage = error.message;
                 extractionFailures.push({
                     bar: bar.name,
@@ -529,6 +557,7 @@ async function enrichBarsWithExternalData(bars) {
                     enrichedBar.googleMaps = scrapedData.googleMaps;
                 }
 
+                enrichedBar.gayCitiesLastScrapedAt = new Date().toISOString();
                 delete enrichedBar.gayCitiesExtractionFailureAt;
                 delete enrichedBar.gayCitiesExtractionFailureMessage;
                 delete enrichedBar.gayCitiesExtractionFailureCount;
@@ -536,6 +565,7 @@ async function enrichBarsWithExternalData(bars) {
                 console.log(`✅ Enriched ${bar.name} with GayCities data`);
             } catch (error) {
                 const previousCount = enrichedBar.gayCitiesExtractionFailureCount || localBar?.gayCitiesExtractionFailureCount || 0;
+                enrichedBar.gayCitiesExtractionFailureAt = new Date().toISOString();
                 enrichedBar.gayCitiesExtractionFailureMessage = error.message;
                 enrichedBar.gayCitiesExtractionFailureCount = previousCount + 1;
 
