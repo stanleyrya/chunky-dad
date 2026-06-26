@@ -1782,7 +1782,6 @@ body.index-page main {
 /* Floating clear button removed - was ugly and unnecessary */
 
 .calendar-grid {
-    --day-padding: 0.5rem;
     background-color: var(--text-inverse);
     border-radius: 15px;
     overflow: hidden;
@@ -1813,9 +1812,10 @@ body.index-page main {
 }
 
 .calendar-day {
+    --day-padding: 0.5rem;
     background: var(--background-primary);
     border-radius: 0;
-    padding: 0.5rem;
+    padding: var(--day-padding);
     min-height: 120px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
@@ -2040,7 +2040,8 @@ body.index-page main {
 
 @media (max-width: 768px) {
     .calendar-day {
-        padding: 0.4rem;
+        --day-padding: 0.4rem;
+        padding: var(--day-padding);
         min-height: 100px;
     }
 
@@ -2080,7 +2081,8 @@ body.index-page main {
 @media (max-width: 480px) {
 
     .calendar-day {
-        padding: 0.3rem;
+        --day-padding: 0.3rem;
+        padding: var(--day-padding);
         min-height: 80px;
     }
 
@@ -3118,7 +3120,8 @@ footer {
     }
 
     .calendar-day {
-        padding: 0;
+        --day-padding: 0px;
+        padding: var(--day-padding);
         border-radius: 0;
     }
 
@@ -3501,7 +3504,8 @@ footer {
     }
 
     .calendar-day {
-        padding: 0;
+        --day-padding: 0px;
+        padding: var(--day-padding);
         border-radius: 0;
     }
 
