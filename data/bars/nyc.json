@@ -29,7 +29,12 @@
     "gayCities": "https://newyork.gaycities.com/bars/400-eagle-nyc",
     "faviconBg": "#f0f0f0",
     "faviconFg": "#565656",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.784Z"
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.784Z",
+    "address": "554 W 28th St, New York, NY 10001",
+    "instagram": "https://www.instagram.com/eaglenyc",
+    "facebook": "https://www.facebook.com/eaglenyc",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJmaM5RbZZwokRwpJUp-ClLKw",
+    "gayCitiesLastScrapedAt": "2026-06-26T17:08:38.515Z"
   },
   {
     "name": "3 Dollar Bill",

@@ -8,7 +8,10 @@
     "gayCities": "https://seattle.gaycities.com/bars/302690-diesel",
     "faviconBg": "#335a91",
     "faviconFg": "#c3cbd4",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z"
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z",
+    "address": "1413 14th Ave, Seattle, WA 98122",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJCfyfcs5qkFQR84fyFrPsC58",
+    "gayCitiesLastScrapedAt": "2026-06-26T17:08:40.863Z"
   },
   {
     "name": "The Lumber Yard Bar",
@@ -36,7 +39,10 @@
     "website": "http://seattleeagle.com",
     "wikipedia": "https://en.wikipedia.org/wiki/Seattle_Eagle",
     "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z",
+    "address": "314 E Pike St, Seattle, WA 98122",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJOcPt38pqkFQRWmTOs3bUrgk",
+    "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z"
   },
   {
     "name": "CC’s Seattle",
