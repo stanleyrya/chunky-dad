@@ -42,10 +42,10 @@
   {
     "name": "Red Room",
     "city": "ptown",
-    "gayCities": "https://ptown.gaycities.com/bars/309562-red-room",
     "address": "258 Commercial St, Provincetown, MA 02657",
     "coordinates": "42.0510476, -70.1876737",
     "instagram": "https://www.instagram.com/redroomptown",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak"
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+    "gayCities": "https://ptown.gaycities.com/bars/309562-red-room"
   }
 ]

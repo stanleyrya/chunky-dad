@@ -2,11 +2,11 @@
   {
     "name": "Station 4",
     "city": "dallas",
-    "gayCities": "https://dallas.gaycities.com/bars/213-station",
     "address": "3911 Cedar Springs Rd, Dallas, TX 75219",
     "coordinates": "32.810535, -96.8110709",
     "instagram": "https://www.instagram.com/s4dallas",
     "facebook": "https://www.facebook.com/S4Dallas",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJd6m0dcmeToYR3R7XzdFC07U"
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJd6m0dcmeToYR3R7XzdFC07U",
+    "gayCities": "https://dallas.gaycities.com/bars/213-station"
   }
 ]
