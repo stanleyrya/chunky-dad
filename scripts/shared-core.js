@@ -809,9 +809,13 @@ class SharedCore {
         if (!Array.isArray(events) || events.length === 0) {
             return [];
         }
-        const filteredEvents = events.map(event =>
-            this.applyFieldPriorities(event, parserConfig, mainConfig)
-        );
+        const filteredEvents = events.map(event => {
+            // Ensure event is extensible before mutating it in applyFieldPriorities
+            if (!Object.isExtensible(event)) {
+                event = { ...event };
+            }
+            return this.applyFieldPriorities(event, parserConfig, mainConfig);
+        });
 
         // Pass events through normalizer pipeline if provided
         // Use the passed pipeline or the instance property
@@ -821,7 +825,13 @@ class SharedCore {
             ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter)
             : filteredEvents.map(event => this.normalizeEventTextFields(event));
 
-        enrichedEvents.forEach(event => { event._pageClassification = pageClassification; });
+        enrichedEvents.forEach((event, index) => {
+            if (!Object.isExtensible(event)) {
+                event = { ...event };
+                enrichedEvents[index] = event;
+            }
+            event._pageClassification = pageClassification;
+        });
         return enrichedEvents;
     }
 
