@@ -1039,7 +1039,8 @@ class SharedCore {
         return events.filter(event => {
             if (!event.startDate) return false;
             
-            const eventDate = event.startDate;
+            const eventDate = event.startDate instanceof Date ? event.startDate : new Date(event.startDate);
+            if (Number.isNaN(eventDate.getTime())) return false;
             
             // Skip past events unless explicitly allowed
             if (!allowPastEvents && eventDate <= now) return false;

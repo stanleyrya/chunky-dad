@@ -103,6 +103,19 @@ const scraperBars = {
       "gayCitiesLastScrapedAt": "2026-06-14T01:14:36.735Z"
     }
   ],
+  "dallas": [
+    {
+      "name": "Station 4",
+      "city": "dallas",
+      "address": "3911 Cedar Springs Rd, Dallas, TX 75219",
+      "coordinates": "32.810535, -96.8110709",
+      "instagram": "https://www.instagram.com/s4dallas",
+      "facebook": "https://www.facebook.com/S4Dallas",
+      "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJd6m0dcmeToYR3R7XzdFC07U",
+      "gayCities": "https://dallas.gaycities.com/bars/213-station",
+      "gayCitiesLastScrapedAt": "2026-06-26T15:16:43.357Z"
+    }
+  ],
   "fort-lauderdale": [
     {
       "name": "Eagle",
@@ -332,12 +345,18 @@ const scraperBars = {
     {
       "name": "Eagle NYC",
       "city": "nyc",
+      "address": "554 W 28th St, New York, NY 10001",
       "coordinates": "40.751694, -74.004306",
       "website": "http://eagle-ny.com",
+      "instagram": "https://www.instagram.com/eaglenyc",
+      "facebook": "https://www.facebook.com/eaglenyc",
+      "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJmaM5RbZZwokRwpJUp-ClLKw",
       "wikipedia": "https://en.wikipedia.org/wiki/Eagle_NYC",
       "gayCities": "https://newyork.gaycities.com/bars/400-eagle-nyc",
       "faviconBg": "#f0f0f0",
-      "faviconFg": "#565656"
+      "faviconFg": "#565656",
+      "gayCitiesLastScrapedAt": "2026-06-26T17:08:38.515Z",
+      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.784Z"
     },
     {
       "name": "3 Dollar Bill",
@@ -460,6 +479,18 @@ const scraperBars = {
       "gayCitiesLastScrapedAt": "2026-06-13T16:37:24.689Z"
     }
   ],
+  "poconos": [
+    {
+      "name": "Camp Out",
+      "city": "poconos",
+      "address": "446 MT NEBO RD, EAST STROUDSBURG, PA, 18301",
+      "coordinates": "41.0219799, -75.1167816",
+      "website": "https://campoutpoconos.com",
+      "instagram": "https://www.instagram.com/campoutpoconos",
+      "facebook": "https://www.facebook.com/campout.poconos",
+      "googleMaps": "https://maps.app.goo.gl/LYwCKGeMJAJTy8hx9?g_st=ic"
+    }
+  ],
   "portland": [
     {
       "name": "CC Slaughters",
@@ -511,6 +542,16 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJE9zxSn6n_IkRbOMJFiVbw_k",
       "gayCities": "https://ptown.gaycities.com/bars/543-purgatory-gifford-house",
       "gayCitiesLastScrapedAt": "2026-06-14T01:14:29.670Z"
+    },
+    {
+      "name": "Red Room",
+      "city": "ptown",
+      "address": "258 Commercial St, Provincetown, MA 02657",
+      "coordinates": "42.0510476, -70.1876737",
+      "instagram": "https://www.instagram.com/redroomptown",
+      "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "gayCities": "https://ptown.gaycities.com/bars/309562-red-room",
+      "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z"
     }
   ],
   "pv": [
@@ -539,12 +580,16 @@ const scraperBars = {
     {
       "name": "Diesel",
       "city": "seattle",
+      "address": "1413 14th Ave, Seattle, WA 98122",
       "coordinates": "47.6133, -122.3143",
       "website": "http://dieselseattle.com/DIESEL.html",
+      "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJCfyfcs5qkFQR84fyFrPsC58",
       "wikipedia": "https://en.wikipedia.org/wiki/Diesel_(gay_bar)",
       "gayCities": "https://seattle.gaycities.com/bars/302690-diesel",
       "faviconBg": "#335a91",
-      "faviconFg": "#c3cbd4"
+      "faviconFg": "#c3cbd4",
+      "gayCitiesLastScrapedAt": "2026-06-26T17:08:40.863Z",
+      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z"
     },
     {
       "name": "The Lumber Yard Bar",
@@ -568,10 +613,14 @@ const scraperBars = {
     {
       "name": "Seattle Eagle",
       "city": "seattle",
+      "address": "314 E Pike St, Seattle, WA 98122",
       "coordinates": "47.61427, -122.32708",
       "website": "http://seattleeagle.com",
+      "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJOcPt38pqkFQRWmTOs3bUrgk",
       "wikipedia": "https://en.wikipedia.org/wiki/Seattle_Eagle",
-      "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle"
+      "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
+      "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
+      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
     },
     {
       "name": "CC’s Seattle",
