@@ -4999,7 +4999,7 @@ TEXT:
             else if (normalizedField === 'cover') mode = 'cover';
             else if (normalizedField === 'description') mode = validationConfig.fuzzyDescription ? 'fuzzy' : 'exact';
             else if (normalizedField === 'image') mode = 'image';
-            else if (normalizedField === 'url' || normalizedField === 'ticketurl' || normalizedField === 'instagram' || normalizedField === 'facebook' || normalizedField === 'gmaps') mode = 'url';
+            else if (normalizedField === 'url' || normalizedField === 'website' || normalizedField === 'ticketurl' || normalizedField === 'instagram' || normalizedField === 'facebook' || normalizedField === 'gmaps') mode = 'url';
             else mode = 'exact';
         }
 
@@ -5120,6 +5120,18 @@ TEXT:
         if (!normalized) return false;
         if (this.hasExactEvidence(evidenceContext, normalized)) {
             return true;
+        }
+        if (typeof normalized === 'string') {
+            const withoutProtocol = normalized.replace(/^https?:\/\//i, '');
+            if (this.hasExactEvidence(evidenceContext, withoutProtocol)) {
+                return true;
+            }
+            if (withoutProtocol.startsWith('www.')) {
+                const withoutWww = withoutProtocol.replace(/^www\./i, '');
+                if (this.hasExactEvidence(evidenceContext, withoutWww)) {
+                    return true;
+                }
+            }
         }
         return this.hasExactEvidence(evidenceContext, String(value || '').trim());
     }
