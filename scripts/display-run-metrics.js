@@ -487,8 +487,43 @@ class MetricsDisplay {
       const overrides = {};
       parsers.forEach(parser => {
         const name = parser?.name ? String(parser.name).toLowerCase() : '';
-        const iconUrl = parser?.iconUrl || parser?.faviconUrl || null;
-        if (!name || !iconUrl) return;
+        if (!name) return;
+
+        let iconUrl = parser?.iconUrl || parser?.faviconUrl || null;
+
+        if (!iconUrl && parser.urls && parser.urls.length > 0) {
+          const url = parser.urls[0];
+          try {
+            // Very simple parser for URLs since Scriptable has limited URL class features
+            // but we'll use regex for hostname and pathname
+            const match = url.match(/^https?:\/\/([^\/]+)(\/.*)?$/);
+            if (match) {
+              const hostname = match[1];
+              const pathname = match[2] || '/';
+
+              let filename;
+              if (hostname === 'linktr.ee' || hostname === 'www.linktr.ee') {
+                const cleanPath = pathname.substring(1)
+                  .replace(/[^a-zA-Z0-9._-]/g, '-')
+                  .replace(/-+/g, '-')
+                  .replace(/^-|-$/g, '');
+                filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
+              } else {
+                const cleanDomain = hostname
+                  .replace(/^www\./, '')
+                  .replace(/[^a-zA-Z0-9.-]/g, '-')
+                  .replace(/-+/g, '-')
+                  .replace(/^-|-$/g, '');
+                filename = `favicon-${cleanDomain}-64px.ico`;
+              }
+              iconUrl = `https://chunky.dad/img/favicons/${filename}`;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        if (!iconUrl) return;
         overrides[name] = String(iconUrl);
       });
       return overrides;

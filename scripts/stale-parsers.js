@@ -164,10 +164,43 @@ class StaleParsersChecker {
       const parsers = Array.isArray(scraperConfig?.parsers) ? scraperConfig.parsers : [];
       return parsers
         .filter(parser => parser && parser.name)
-        .map(parser => ({
-          name: parser.name,
-          iconUrl: parser.iconUrl || parser.faviconUrl || null
-        }));
+        .map(parser => {
+          let iconUrl = parser.iconUrl || parser.faviconUrl || null;
+
+          if (!iconUrl && parser.urls && parser.urls.length > 0) {
+            const url = parser.urls[0];
+            try {
+              const match = url.match(/^https?:\/\/([^\/]+)(\/.*)?$/);
+              if (match) {
+                const hostname = match[1];
+                const pathname = match[2] || '/';
+                let filename;
+                if (hostname === 'linktr.ee' || hostname === 'www.linktr.ee') {
+                  const cleanPath = pathname.substring(1)
+                    .replace(/[^a-zA-Z0-9._-]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                  filename = `favicon-linktr.ee-${cleanPath}-64px.png`;
+                } else {
+                  const cleanDomain = hostname
+                    .replace(/^www\./, '')
+                    .replace(/[^a-zA-Z0-9.-]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                  filename = `favicon-${cleanDomain}-64px.ico`;
+                }
+                iconUrl = `https://chunky.dad/img/favicons/${filename}`;
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+
+          return {
+            name: parser.name,
+            iconUrl: iconUrl
+          };
+        });
     } catch (error) {
       console.log(`StaleParsers: Could not load scraper-input: ${error.message}`);
       return [];
