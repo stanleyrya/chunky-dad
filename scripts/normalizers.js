@@ -198,7 +198,7 @@ class BarDataNormalizer extends BaseNormalizer {
             }
 
             if (modified && typeof this.core.formatEventNotes === 'function') {
-                event = this.core.formatEventNotes(event);
+                event.notes = this.core.formatEventNotes(event);
             }
         }
 
@@ -749,7 +749,7 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         }
 
         if (modified && this.core && typeof this.core.formatEventNotes === 'function') {
-            event = this.core.formatEventNotes(event);
+            event.notes = this.core.formatEventNotes(event);
         }
 
         return event;
