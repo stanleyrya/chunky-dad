@@ -78,7 +78,6 @@ const scraperConfig = {
   parsers: [
     {
       name: "Megawoof America",
-      iconUrl: "https://ugc.production.linktr.ee/YY9vP9AGQ9OTFY9iXiDi_hcmot5ynjOsfwPWJ?io=true&size=avatar-v3_0",
       enabled: true,
       automation: {
         automationEnabled: true
@@ -103,7 +102,6 @@ const scraperConfig = {
     },
     {
       name: "Coach After Dark",
-      iconUrl: "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64",
       enabled: true,
       automation: {
         automationEnabled: true
@@ -140,7 +138,6 @@ const scraperConfig = {
     },
     {
       name: "Bearracuda Events",
-      iconUrl: "https://www.google.com/s2/favicons?domain=bearracuda.com&sz=64",
       enabled: true,
       parser: "ai-web",
       automation: {
@@ -180,7 +177,6 @@ const scraperConfig = {
     },
     {
       name: "CHUNK",
-      iconUrl: "https://www.google.com/s2/favicons?domain=www.chunk-party.com&sz=64",
       enabled: true,
       automation: {
         automationEnabled: true
@@ -224,7 +220,6 @@ const scraperConfig = {
     },
     {
       name: "Furball",
-      iconUrl: "https://www.google.com/s2/favicons?domain=www.furball.nyc&sz=64",
       enabled: true,
       automation: {
         automationEnabled: false
@@ -251,7 +246,6 @@ const scraperConfig = {
     },
     {
       name: "Cubhouse",
-      iconUrl: "https://ugc.production.linktr.ee/48e9facd-5c7d-41e3-a7d0-04752baa27f1_IMG-5519.jpeg?io=true&size=avatar-v3_0",
       enabled: true,
       automation: {
         automationEnabled: true
@@ -292,7 +286,6 @@ const scraperConfig = {
     },
     {
       name: "Goldiloxx",
-      iconUrl: "https://www.google.com/s2/favicons?domain=redeyetickets.com&sz=64",
       enabled: true,
       automation: {
         automationEnabled: true
@@ -333,7 +326,6 @@ const scraperConfig = {
     },
     {
       name: "Twisted Bear",
-      iconUrl: "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64",
       enabled: true,
       automation: {
         automationEnabled: true
@@ -356,7 +348,6 @@ const scraperConfig = {
     },
     {
       name: "Dallas Eagle",
-      iconUrl: "https://www.google.com/s2/favicons?domain=www.eventbrite.com&sz=64",
       enabled: true,
       automation: {
         automationEnabled: false
@@ -381,7 +372,6 @@ const scraperConfig = {
     },
     {
       name: "AI Web Parser (Sample)",
-      iconUrl: "https://www.google.com/s2/favicons?domain=example.com&sz=64",
       enabled: false,
       automation: {
         automationEnabled: false
@@ -427,7 +417,6 @@ const scraperConfig = {
     },
     {
       name: "AI Web Parser (OpenAI Sample)",
-      iconUrl: "https://www.google.com/s2/favicons?domain=openai.com&sz=64",
       enabled: false,
       automation: {
         automationEnabled: false
