@@ -2436,6 +2436,17 @@ class SharedCore {
     
     getResolvedFieldPriorities(parserConfig) {
         const explicitPriorities = parserConfig?.fieldPriorities || {};
+
+        // Auto-infer "static" with "clobber" for fields present in metadata but missing from explicitPriorities
+        const inferredPriorities = {};
+        if (parserConfig?.metadata) {
+            Object.keys(parserConfig.metadata).forEach(key => {
+                if (!explicitPriorities[key]) {
+                    inferredPriorities[key] = { priority: ["static"], merge: "clobber" };
+                }
+            });
+        }
+
         const defaultPriorities = {
             title: { priority: ["ai-web"], merge: "clobber" },
             instagram: { priority: ["ai-web"], merge: "clobber" },
@@ -2453,7 +2464,7 @@ class SharedCore {
             cover: { priority: ["ai-web"], merge: "clobber" },
             ticketUrl: { priority: ["ai-web"], merge: "clobber" }
         };
-        return { ...defaultPriorities, ...explicitPriorities };
+        return { ...defaultPriorities, ...inferredPriorities, ...explicitPriorities };
     }
 
     // Apply field-level priority strategies from the parser config
