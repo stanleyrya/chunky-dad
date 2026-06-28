@@ -361,13 +361,11 @@ const scraperConfig = {
         instagram: { priority: ["static"], merge: "clobber" },
         facebook: { priority: ["static"], merge: "clobber" },
         website: { priority: ["static"], merge: "clobber" },
-        mastodon: { priority: ["static"], merge: "clobber" },
       },
       metadata: {
         website: { value: "https://www.thedallaseagle.com" },
         facebook: { value: "https://www.facebook.com/lonestareagle" },
         instagram: { value: "https://www.instagram.com/thedallaseagle/" },
-        mastodon: { value: "https://mastodon.social/@dallaseagle" }
       }
     },
     {

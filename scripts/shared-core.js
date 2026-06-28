@@ -2441,7 +2441,6 @@ class SharedCore {
             instagram: { priority: ["ai-web"], merge: "clobber" },
             facebook: { priority: ["ai-web"], merge: "clobber" },
             website: { priority: ["ai-web"], merge: "clobber" },
-            mastodon: { priority: ["ai-web"], merge: "clobber" },
             description: { priority: ["ai-web"], merge: "clobber" },
             bar: { priority: ["ai-web"], merge: "clobber" },
             address: { priority: ["ai-web"], merge: "clobber" },
