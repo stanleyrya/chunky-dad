@@ -88,10 +88,7 @@ const scraperConfig = {
       maxAdditionalUrls: null,
       dryRun: false,
       fieldPriorities: {
-        title: { priority: ["static"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
-        instagram: { priority: ["static"], merge: "clobber" },
-        url: { priority: ["static"], merge: "clobber" },
       },
       metadata: {
         title: { value: "MEGAWOOF" },
@@ -113,7 +110,6 @@ const scraperConfig = {
       dryRun: false,
       fieldPriorities: {
         shortName: { priority: ["static"], merge: "upsert" },
-        instagram: { priority: ["static"], merge: "clobber" },
       },
       metadata: {
         shortName: {
@@ -155,7 +151,6 @@ const scraperConfig = {
       fieldPriorities: {
         title: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
-        instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["bearracuda", "ai-web"], merge: "clobber" },
         bar: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
         address: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
@@ -198,7 +193,6 @@ const scraperConfig = {
       fieldPriorities: {
         title: { priority: ["chunk"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
-        instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["chunk"], merge: "clobber" },
         bar: { priority: ["chunk"], merge: "clobber" },
         address: { priority: ["chunk"], merge: "clobber" },
@@ -236,7 +230,6 @@ const scraperConfig = {
       fieldPriorities: {
         title: { priority: ["ai-web", "static"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
-        instagram: { priority: ["static"], merge: "clobber" },
       },
       metadata: {
         title: { value: "FURBALL" },
@@ -263,7 +256,6 @@ const scraperConfig = {
       fieldPriorities: {
         title: { priority: ["ai-web", "linktree"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
-        instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["ai-web", "linktree"], merge: "clobber" },
         bar: { priority: ["ai-web", "linktree"], merge: "clobber" },
         address: { priority: ["ai-web", "linktree"], merge: "clobber" },
@@ -299,9 +291,6 @@ const scraperConfig = {
       // Field priorities for merging data from different sources
       fieldPriorities: {
         title: { priority: ["redeyetickets"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "clobber" },
-        shorterName: { priority: ["static"], merge: "clobber" },
-        instagram: { priority: ["static"], merge: "clobber" },
         description: { priority: ["redeyetickets"], merge: "clobber" },
         bar: { priority: ["redeyetickets"], merge: "clobber" },
         address: { priority: ["redeyetickets"], merge: "clobber" },
@@ -337,8 +326,6 @@ const scraperConfig = {
       dryRun: false,
       fieldPriorities: {
         shortName: { priority: ["static"], merge: "upsert" },
-        instagram: { priority: ["static"], merge: "clobber" },
-        facebook: { priority: ["static"], merge: "clobber" },
       },
       metadata: {
         shortName: { value: "TWIST-ED BEAR" },
@@ -358,9 +345,6 @@ const scraperConfig = {
       maxAdditionalUrls: null,
       dryRun: false,
       fieldPriorities: {
-        instagram: { priority: ["static"], merge: "clobber" },
-        facebook: { priority: ["static"], merge: "clobber" },
-        website: { priority: ["static"], merge: "clobber" },
       },
       metadata: {
         website: { value: "https://www.thedallaseagle.com" },
