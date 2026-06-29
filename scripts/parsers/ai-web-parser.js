@@ -4708,7 +4708,7 @@ ${String(snippet || '')}`;
                 .filter(r => r && typeof r.eventSummary === 'string' && r.eventSummary.trim().length > 0)
                 .map(r => r.eventSummary.trim());
             if (summaries.length > 0) {
-                additionalContext += `ADDITIONAL CONTEXT (IMAGE SUMMARIES):\n`;
+                additionalContext += `ADDITIONAL CONTEXT (DO NOT EXTRACT FROM THIS — for disambiguation only, e.g. resolving festival vs. event name conflicts):\n`;
                 summaries.forEach(s => {
                     additionalContext += `- ${s}\n`;
                 });
@@ -4731,6 +4731,8 @@ ${String(snippet || '')}`;
 `;
         }
 
+        const exampleOutput = `EXAMPLE OUTPUT FORMAT (structure only, not real data):\n{"city": {"value": "miami", "evidence": "Miami, FL", "confidence": 90}, "bar": {"value": "Eagle Bar", "evidence": "@ Eagle Bar", "confidence": 95}}`;
+
         const templates = {
             default: `You are a data scraper. You are being provided part of a website that includes information about an event. You must check if any of the requested keys are within the provided scraped data and return it as ONLY valid JSON. If a requested key is not explicitly in the source text, skip and omit it.
 
@@ -4742,6 +4744,8 @@ Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list, formatted as objects with value, evidence, and confidence (0-100)
 - Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.
+
+${exampleOutput}
 
 `,
             alternate: `You are extracting specific event fields from web page source data. Carefully search the entire provided text for the listed fields — they may appear in metadata, structured data, or body text. Return only what you find as a single valid JSON object.
@@ -4755,6 +4759,8 @@ Rules:
 - Include only fields whose values are found verbatim in the text below, formatted as objects with value, evidence, and confidence (0-100)
 - Do not guess, invent, or infer missing values
 - Omit any field not explicitly present in the source
+
+${exampleOutput}
 
 `,
             repair: `Convert this text into one strict JSON object for an event.
@@ -4770,6 +4776,8 @@ Rules:
 - No commentary
 - Omit unknown fields
 - Do not infer missing facts; keep only details explicitly supported by source text
+
+${exampleOutput}
 
 TEXT:
 `
