@@ -4733,30 +4733,63 @@ ${String(snippet || '')}`;
 
         const templates = {
             default: `You are a data scraper. You are being provided part of a website that includes information about an event. You must check if any of the requested keys are within the provided scraped data and return it as ONLY valid JSON. If a requested key is not explicitly in the source text, skip and omit it.
+
+Format each extracted field as a JSON object containing "value", "evidence", and "confidence".
+Example:
+{
+  "title": {
+    "value": "Annual Bear Party",
+    "evidence": "Join us for the Annual Bear Party!",
+    "confidence": 95
+  }
+}
+
 ${dataProvided}${sourceData}${additionalContext}Preferred keys:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
-- Return only keys from the Preferred keys list
+- Return only keys from the Preferred keys list, formatted as objects with value, evidence, and confidence (0-100)
 - Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.
 
 `,
             alternate: `You are extracting specific event fields from web page source data. Carefully search the entire provided text for the listed fields — they may appear in metadata, structured data, or body text. Return only what you find as a single valid JSON object.
+
+Format each extracted field as a JSON object containing "value", "evidence", and "confidence".
+Example:
+{
+  "title": {
+    "value": "Annual Bear Party",
+    "evidence": "Join us for the Annual Bear Party!",
+    "confidence": 95
+  }
+}
+
 ${dataProvided}${sourceData}${additionalContext}Fields to find:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
-- Include only fields whose values are found verbatim in the text below
+- Include only fields whose values are found verbatim in the text below, formatted as objects with value, evidence, and confidence (0-100)
 - Do not guess, invent, or infer missing values
 - Omit any field not explicitly present in the source
 
 `,
             repair: `Convert this text into one strict JSON object for an event.
+
+Format each extracted field as a JSON object containing "value", "evidence", and "confidence".
+Example:
+{
+  "title": {
+    "value": "Annual Bear Party",
+    "evidence": "Join us for the Annual Bear Party!",
+    "confidence": 95
+  }
+}
+
 ${additionalContext}Preferred keys:
 ${fieldContext}
 Rules:
 - JSON object only
-- Use only the preferred keys
+- Use only the preferred keys, formatted as objects with value, evidence, and confidence (0-100)
 - No markdown
 - No commentary
 - Omit unknown fields
@@ -4827,6 +4860,35 @@ TEXT:
         const dataFlags = options && options.dataFlags && typeof options.dataFlags === 'object' ? options.dataFlags : {};
         const useAlternate = options && options.promptVariant === 'alternate';
 
+        const parseAndFilterConfidence = (rawResponse) => {
+            if (!rawResponse) return null;
+            let event = this.core.parseAiEventResponse(rawResponse);
+            if (!event) return null;
+
+            const filteredEvent = {};
+            for (const key in event) {
+                if (!Object.prototype.hasOwnProperty.call(event, key)) continue;
+                if (this.isInternalAiFieldKey(key)) {
+                    filteredEvent[key] = event[key];
+                    continue;
+                }
+
+                const fieldData = event[key];
+                if (fieldData && typeof fieldData === 'object' && 'value' in fieldData) {
+                    const confidence = fieldData.confidence;
+                    if (typeof confidence === 'number' && confidence < 50) {
+                        console.log(`🤖 AI Web: Dropping field ${key} due to low confidence (${confidence})`);
+                        continue; // Drop it
+                    }
+                    filteredEvent[key] = fieldData.value;
+                } else {
+                    // Fallback in case AI doesn't follow the format perfectly
+                    filteredEvent[key] = fieldData;
+                }
+            }
+            return filteredEvent;
+        };
+
         let processedSnippet = snippet;
 
         const hasStructuredData = !!dataFlags.jsonLd || !!dataFlags.meta;
@@ -4851,7 +4913,7 @@ TEXT:
         let extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, useAlternate ? 'alternate' : 'default', dataFlags);
         let rawResponse = await this.core.callAiGenerate(aiConfig, extractPrompt, 'extraction', httpAdapter, this.recordAiPrompt.bind(this));
         if (!rawResponse) return null;
-        let event = this.core.parseAiEventResponse(rawResponse);
+        let event = parseAndFilterConfidence(rawResponse);
         if (event) {
             console.log(`🤖 AI Web: Extraction pass${passSuffix} succeeded`);
             return event;
@@ -4863,7 +4925,7 @@ TEXT:
             extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, 'alternate', dataFlags);
             rawResponse = await this.core.callAiGenerate(aiConfig, extractPrompt, 'extraction', httpAdapter, this.recordAiPrompt.bind(this));
             if (!rawResponse) return null;
-            event = this.core.parseAiEventResponse(rawResponse);
+            event = parseAndFilterConfidence(rawResponse);
             if (event) {
                 console.log(`🤖 AI Web: Alternate pass${passSuffix} succeeded`);
                 return event;
@@ -4875,7 +4937,7 @@ TEXT:
         const repairPrompt = this.buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags);
         const repairResponse = await this.core.callAiGenerate(aiConfig, repairPrompt, 'repair', httpAdapter, this.recordAiPrompt.bind(this));
         if (!repairResponse) return null;
-        event = this.core.parseAiEventResponse(repairResponse);
+        event = parseAndFilterConfidence(repairResponse);
         if (event) {
             console.log(`🤖 AI Web: Repair pass${passSuffix} succeeded`);
             return event;
