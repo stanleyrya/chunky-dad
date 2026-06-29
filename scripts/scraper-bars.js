@@ -488,7 +488,9 @@ const scraperBars = {
       "website": "https://campoutpoconos.com",
       "instagram": "https://www.instagram.com/campoutpoconos",
       "facebook": "https://www.facebook.com/campout.poconos",
-      "googleMaps": "https://maps.app.goo.gl/LYwCKGeMJAJTy8hx9?g_st=ic"
+      "googleMaps": "https://maps.app.goo.gl/LYwCKGeMJAJTy8hx9?g_st=ic",
+      "faviconBg": "#f4f3ef",
+      "faviconFg": "#60514d"
     }
   ],
   "portland": [
