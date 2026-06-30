@@ -162,12 +162,48 @@ class BarDataNormalizer extends BaseNormalizer {
             matchedBar = cityBars.find(b => typeof b.coordinates === 'string' && b.coordinates.trim() === eventLocation);
         }
 
+        let descriptionWasVenue = false;
+
+        if (!matchedBar && typeof event.description === 'string' && event.description.trim().length > 0 && event.description.length <= 50) {
+            const lowerDesc = event.description.trim().toLowerCase();
+            const normalizedDesc = normalizeStr(lowerDesc);
+
+            matchedBar = cityBars.find(b => {
+                if (typeof b.name !== 'string') return false;
+                return normalizeStr(b.name.toLowerCase()) === normalizedDesc;
+            });
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => {
+                    if (typeof b.name !== 'string') return false;
+                    const normalizedBarName = normalizeStr(b.name.toLowerCase());
+                    return normalizedBarName.length > 3 && normalizedDesc.includes(normalizedBarName);
+                });
+            }
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => {
+                    if (typeof b.name !== 'string') return false;
+                    const normalizedBarName = normalizeStr(b.name.toLowerCase());
+                    return normalizedDesc.length > 3 && normalizedBarName.includes(normalizedDesc);
+                });
+            }
+
+            if (matchedBar) {
+                descriptionWasVenue = true;
+            }
+        }
+
         if (matchedBar) {
             let modified = false;
 
-            // Set bar name if not already set (since we matched by address/location)
+            // Set bar name if not already set (since we matched by address/location/description)
             if (matchedBar.name && (!event.bar || event.bar.trim() === '')) {
                 event.bar = matchedBar.name;
+                modified = true;
+            }
+
+            // Remove description if it was just the venue name
+            if (descriptionWasVenue && event.description) {
+                delete event.description;
                 modified = true;
             }
 
