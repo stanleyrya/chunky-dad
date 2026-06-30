@@ -43,7 +43,7 @@ const scraperConfig = {
       payloadMode: "best",
       maxHtmlChars: 6000,
       numCtx: 2048,
-      numPredict: 512,
+      numPredict: 2000,
       temperature: 0,
       think: false,
       timeoutSeconds: 120,
@@ -374,7 +374,7 @@ const scraperConfig = {
         payloadMode: "best",
         maxHtmlChars: 6000,
         numCtx: 2048,
-        numPredict: 512,
+        numPredict: 2000,
         temperature: 0,
         think: false,
         timeoutSeconds: 120,
@@ -414,7 +414,7 @@ const scraperConfig = {
         provider: "openai",
         endpoint: "https://api.openai.com/v1/chat/completions",
         model: "gpt-4o",
-        numPredict: 1024,
+        numPredict: 2000,
         temperature: 0,
         openai: {
           responseFormat: "json_object"
