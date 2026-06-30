@@ -196,7 +196,7 @@ class BarDataNormalizer extends BaseNormalizer {
             let modified = false;
 
             // Set bar name if not already set (since we matched by address/location/description)
-            if (matchedBar.name && (!event.bar || event.bar.trim() === '')) {
+            if (matchedBar.name && (!event.bar || event.bar.trim() === '' || descriptionWasVenue)) {
                 event.bar = matchedBar.name;
                 modified = true;
             }
