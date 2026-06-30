@@ -4849,6 +4849,18 @@ TEXT:
             let event = this.core.parseAiEventResponse(rawResponse);
             if (!event) return null;
 
+            if (
+                typeof event === 'object' &&
+                'value' in event &&
+                Object.keys(event).every(k => ['value', 'evidence', 'confidence', 'reason'].includes(k)) &&
+                Array.isArray(fields) &&
+                fields.length === 1
+            ) {
+                const wrappedEvent = {};
+                wrappedEvent[fields[0]] = event;
+                event = wrappedEvent;
+            }
+
             const filteredEvent = {};
             for (const key in event) {
                 if (!Object.prototype.hasOwnProperty.call(event, key)) continue;
