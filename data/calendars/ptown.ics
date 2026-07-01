@@ -5,4 +5,52 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-provincetown
 X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20260712T020000Z
+DTSTAMP:20260701T145900Z
+UID:D0D6C7F9-24C0-48F2-B9AB-8F785BF13389
+CREATED:20260701T132042Z
+DESCRIPTION:description: Official 26th Anniversary Opening Party\nbar: Boat
+ slip\naddress: 161 Commercial St\, Provincetown\, MA 02657\ntimezone: Ameri
+ ca/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/fu
+ rball-official-bear-week-underwear-opening-party-2026\ninstagram: https://i
+ nstagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_
+ 4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_296\,h_370\,al_c\,q_80\,
+ usm_0.66_1.00_0.01\,enc_avif\,quality_auto/238fae_4a9e61a8ba4b43bd857ed15af
+ 7901591~mv2.jpg\ncover: FREE FOR BEAR WEEK PACKAGE REGISTRANTS\nshortName: 
+ FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/m
+ aps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St
+LAST-MODIFIED:20260701T132042Z
+LOCATION:42.0470329\, -70.1901852
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260717T020000Z
+DTSTAMP:20260701T145900Z
+UID:EA8572E1-44B4-47B7-A8F3-9D128EE5C5A5
+CREATED:20260701T132043Z
+DESCRIPTION:description: MUSIC\\: GSP + HARLOW | JOCKS · UNDERWEAR · GEAR |
+  LIMITED CLOTHES CHECK (FIRST COME\, FIRST SERVED) | $5 DISCOUNT WITH BEAR 
+ TAGS\nbar: REDROOM\naddress: 258 Commercial St\, Provincetown\, MA 02657\nt
+ imezone: America/New_York\ninstagram: https://instagram.com/furballnyc/\nim
+ age: https://static.wixstatic.com/media/238fae_ccecfe5565134a15b54c70f056f0
+ e4c0~mv2.png/v1/fill/w_296\,h_476\,al_c\,q_85\,usm_0.66_1.00_0.01\,enc_avif
+ \,quality_auto/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png\ncover: $5 D
+ ISCOUNT WITH BEAR TAGS\nshortName: FUR-BALL\nwebsite: https://www.furball.n
+ yc\ngmaps: https://www.google.com/maps/search/?api=1&query=REDROOM%2C%20258
+ %20COMMERCIAL%20ST%2C%20PROVINCETOWN%2C%20MA
+LAST-MODIFIED:20260701T132043Z
+LOCATION:42.0510476\, -70.1876737
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

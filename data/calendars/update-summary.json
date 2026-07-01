@@ -27,8 +27,8 @@
     "dallas": {
       "name": "Dallas",
       "status": "success",
-      "dataLength": 195,
-      "eventCount": 0
+      "dataLength": 1200,
+      "eventCount": 1
     },
     "dc": {
       "name": "DC",
@@ -93,8 +93,8 @@
     "ptown": {
       "name": "Provincetown",
       "status": "success",
-      "dataLength": 202,
-      "eventCount": 0
+      "dataLength": 2443,
+      "eventCount": 2
     },
     "san-diego": {
       "name": "San Diego",

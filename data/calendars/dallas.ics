@@ -5,4 +5,27 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dallas
 X-WR-TIMEZONE:America/Chicago
+BEGIN:VEVENT
+DTSTART:20260705T220000Z
+DTSTAMP:20260701T145900Z
+UID:53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D
+CREATED:20260701T132043Z
+DESCRIPTION:bar: STATION 4\naddress: 3911 Cedar Springs Rd\, Dallas\, TX 75
+ 219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/ti
+ ckets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instag
+ ram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335ea
+ cf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296\,h_525\,al_c\,q_80\,usm_0
+ .66_1.00_0.01\,enc_avif\,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994f
+ c5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: h
+ ttps://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar
+ %20Springs%20Rd
+LAST-MODIFIED:20260701T132044Z
+LOCATION:32.810535\, -96.8110709
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR
