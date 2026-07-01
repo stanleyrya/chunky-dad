@@ -2025,7 +2025,7 @@ async saveFailureNote(url, error, metadata = {}) {
         }
         const automationRun = Boolean(config?.runtime?.automationRun) || runContext?.type === 'automated';
         const hasAutomationParsers = Array.isArray(config?.parsers)
-            && config.parsers.some(parser => parser?.automation?.automationEnabled === true);
+            && config.parsers.some(parser => parser?.automationEnabled === true);
         return automationRun && hasAutomationParsers;
     }
 
@@ -2114,7 +2114,7 @@ async saveFailureNote(url, error, metadata = {}) {
             const automationRunForSave = Boolean(runtimeForSave.automationRun) || runtimeForSave.type === 'automated';
             const activeParsers = parserConfigs.filter(parser => {
                 if (automationRunForSave) {
-                    return parser?.automation?.automationEnabled === true;
+                    return parser?.automationEnabled === true;
                 }
                 return parser?.enabled !== false;
             });
