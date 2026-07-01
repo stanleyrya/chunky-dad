@@ -272,8 +272,7 @@ class SharedCore {
         if (!automationContext || !automationContext.filterParsers) {
             return { shouldRun: true, reason: null };
         }
-        const automation = parserConfig ? parserConfig.automation : null;
-        if (!automation || automation.automationEnabled !== true) {
+        if (!parserConfig || parserConfig.automationEnabled !== true) {
             return { shouldRun: false, reason: 'automation-disabled' };
         }
         return { shouldRun: true, reason: null };
