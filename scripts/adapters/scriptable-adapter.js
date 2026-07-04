@@ -6098,6 +6098,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
   // Helper method to determine if time conflicts should be merged
   shouldMergeTimeConflict(existingEvent, newEvent) {
+    // Extract parsed fields from notes because existingEvent is a CalendarEvent
+    const parsedExistingNotes = this.parseNotesIntoFields(
+      existingEvent.notes || "",
+    );
+
     // Check if both events are similar enough to be the same event
     const existingTitle = (existingEvent.title || existingEvent.name || "")
       .toLowerCase()
@@ -6112,7 +6117,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       .trim();
 
     // Check shortNames as well
-    const existingShortName = (existingEvent.shortName || "")
+    const existingShortName = (
+      existingEvent.shortName ||
+      parsedExistingNotes.shortName ||
+      ""
+    )
       .toLowerCase()
       .trim();
     const newShortName = (newEvent.shortName || "").toLowerCase().trim();
@@ -6136,16 +6145,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       existingShortName === newShortName
     ) {
       console.log(
-        `📱 Scriptable: Exact shortName match - should merge: "${existingEvent.shortName}"`,
+        `📱 Scriptable: Exact shortName match - should merge: "${existingShortName}"`,
       );
       return true;
     }
 
     // Exact address and coordinates match
+    const existingAddress = existingEvent.address || parsedExistingNotes.address;
     const addressMatch =
-      existingEvent.address &&
+      existingAddress &&
       newEvent.address &&
-      existingEvent.address.toLowerCase().trim() ===
+      existingAddress.toLowerCase().trim() ===
         newEvent.address.toLowerCase().trim();
     const coordMatch =
       existingEvent.coordinates &&
