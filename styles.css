@@ -6038,28 +6038,9 @@ body.loaded {
 }
 
 /* About Page Styles */
-body.about-page {
-    background-color: var(--background-light); /* Override default primary background */
-    color: var(--text-primary);
-}
 
-.about-hero {
-    background: var(--gradient-hero);
-    color: var(--text-inverse);
-    padding: 120px 0 80px 0;
-    text-align: center;
-}
 
-.about-hero h2 {
-    font-size: 3.5rem;
-    font-weight: 700;
-    margin-bottom: 10px;
-}
 
-.about-subtitle {
-    font-size: 1.2rem;
-    opacity: 0.9;
-}
 
 .about-content {
     padding: 80px 0;
@@ -6100,6 +6081,7 @@ body.about-page {
 }
 
 .about-text-wrapper {
+    color: var(--text-primary);
     background: var(--background-primary);
     padding: 40px;
     border-radius: 20px;
@@ -6120,9 +6102,6 @@ body.about-page {
 }
 
 @media (max-width: 768px) {
-    .about-hero h2 {
-        font-size: 2.5rem;
-    }
     .about-grid {
         grid-template-columns: 1fr;
         gap: 40px;
@@ -6132,6 +6111,7 @@ body.about-page {
         top: 15px;
     }
     .about-text-wrapper {
+    color: var(--text-primary);
         padding: 30px 20px;
     }
 }
