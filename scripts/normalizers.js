@@ -148,6 +148,37 @@ class BarDataNormalizer extends BaseNormalizer {
             }
         }
 
+        let titleWasVenue = false;
+
+        // Try exact/substring match by title to see if it is venue, ONLY IF bar name didn't match
+        if (!matchedBar && typeof event.title === 'string' && event.title.trim().length > 0 && event.title.length <= 50) {
+            const lowerTitle = event.title.trim().toLowerCase();
+            const normalizedTitle = normalizeStr(lowerTitle);
+
+            matchedBar = cityBars.find(b => {
+                if (typeof b.name !== 'string') return false;
+                return normalizeStr(b.name.toLowerCase()) === normalizedTitle;
+            });
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => {
+                    if (typeof b.name !== 'string') return false;
+                    const normalizedBarName = normalizeStr(b.name.toLowerCase());
+                    return normalizedBarName.length > 3 && normalizedTitle.includes(normalizedBarName);
+                });
+            }
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => {
+                    if (typeof b.name !== 'string') return false;
+                    const normalizedBarName = normalizeStr(b.name.toLowerCase());
+                    return normalizedTitle.length > 3 && normalizedBarName.includes(normalizedTitle);
+                });
+            }
+
+            if (matchedBar) {
+                titleWasVenue = true;
+            }
+        }
+
         // Try match by event.address or event.location if not matched yet
         if (!matchedBar && typeof event.address === 'string' && event.address.trim().length > 0) {
             const lowerAddress = event.address.trim().toLowerCase();
@@ -195,8 +226,17 @@ class BarDataNormalizer extends BaseNormalizer {
         if (matchedBar) {
             let modified = false;
 
-            // Set bar name if not already set (since we matched by address/location/description)
-            if (matchedBar.name && (!event.bar || event.bar.trim() === '' || descriptionWasVenue)) {
+            // Set bar name if not already set (since we matched by address/location/description/title)
+            if (matchedBar.name && (!event.bar || event.bar.trim() === '' || descriptionWasVenue || titleWasVenue)) {
+                if (titleWasVenue && event.bar && event.bar.trim() !== '') {
+                    // Title was a venue, so swap bar name into title
+                    event.title = event.bar;
+
+                    // Since description is usually also the bar when this bug happens, let's clear it
+                    if (event.description && event.bar && event.description.trim() === event.bar.trim()) {
+                        delete event.description;
+                    }
+                }
                 event.bar = matchedBar.name;
                 modified = true;
             }
