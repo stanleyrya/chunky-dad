@@ -6141,6 +6141,32 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       return true;
     }
 
+    // Exact address and coordinates match
+    const addressMatch =
+      existingEvent.address &&
+      newEvent.address &&
+      existingEvent.address.toLowerCase().trim() ===
+        newEvent.address.toLowerCase().trim();
+    const coordMatch =
+      existingEvent.coordinates &&
+      newEvent.coordinates &&
+      existingEvent.coordinates.lat === newEvent.coordinates.lat &&
+      existingEvent.coordinates.lng === newEvent.coordinates.lng;
+
+    // Check times using getTime() because we're in Scriptable realm
+    const timeMatch =
+      existingEvent.startDate &&
+      newEvent.startDate &&
+      new Date(existingEvent.startDate).getTime() ===
+        new Date(newEvent.startDate).getTime();
+
+    if (timeMatch && (addressMatch || coordMatch)) {
+      console.log(
+        `📱 Scriptable: Location and time match - should merge: "${existingEvent.title || existingEvent.name}" vs "${newTitle}"`,
+      );
+      return true;
+    }
+
     // Generic pattern detection for events with complex text formatting
     // This helps merge events that have variations like "A>B>C", "A-B-C", "A B C"
     const hasComplexPattern = (text) => {
