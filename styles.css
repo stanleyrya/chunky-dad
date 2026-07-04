@@ -6036,3 +6036,82 @@ body.loaded {
     max-height: 70vh;
     aspect-ratio: 16 / 9;
 }
+
+/* About Page Styles */
+
+
+
+
+.about-content {
+    padding: 80px 0;
+}
+
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.about-image-wrapper {
+    position: relative;
+}
+
+.about-img {
+    width: 100%;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    position: relative;
+    z-index: 2;
+    display: block;
+}
+
+.about-image-backdrop {
+    position: absolute;
+    top: 20px;
+    left: -20px;
+    width: 100%;
+    height: 100%;
+    background: var(--solid-secondary);
+    border-radius: 20px;
+    z-index: 1;
+    opacity: 0.8;
+}
+
+.about-text-wrapper {
+    color: var(--text-primary);
+    background: var(--background-primary);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+}
+
+.about-text-wrapper h3 {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+.about-text-wrapper p {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+    .about-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+    .about-image-backdrop {
+        left: 15px;
+        top: 15px;
+    }
+    .about-text-wrapper {
+    color: var(--text-primary);
+        padding: 30px 20px;
+    }
+}
