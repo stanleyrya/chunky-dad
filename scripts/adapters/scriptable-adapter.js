@@ -29,8 +29,66 @@
  *  * wrap(fn, args): Wrap the function calls you want to monitor with this wrapper.
  *  * appendPerformanceDataToFile(relativePath): Use at the end of your script to write the metrics to the CSV file at the relative file path.
  */
-class PerformanceDebugger{constructor(){this.performanceResultsInMillis={}}async wrap(e,t,i){const r=Date.now(),s=await e.apply(null,t),n=Date.now(),a=i||e.name;return this.performanceResultsInMillis[a]=n-r,s}async appendPerformanceDataToFile(e){const t=this.getFileManager(),i=this.getCurrentDir()+e,r=e.split("/");if(r>1){const e=r[r.length-1],s=i.replace("/"+e,"");t.createDirectory(s,!0)}if(t.fileExists(i)&&t.isDirectory(i))throw"Performance file is a directory, please delete!";let s,n,a=Object.getOwnPropertyNames(this.performanceResultsInMillis);if(t.fileExists(i)){console.log("File exists, reading headers. To keep things easy we're only going to write to these headers."),await t.downloadFileFromiCloud(i),n=t.readString(i),s=this.getFirstLine(n).split(",")}else console.log("File doesn't exist, using available headers."),n=(s=a).toString();n=n.concat("\n");for(const e of s)this.performanceResultsInMillis[e]&&(n=n.concat(this.performanceResultsInMillis[e])),n=n.concat(",");n=n.slice(0,-1),t.writeString(i,n)}getFirstLine(e){var t=e.indexOf("\n");return-1===t&&(t=void 0),e.substring(0,t)}getFileManager(){try{return FileManager.iCloud()}catch(e){return FileManager.local()}}getCurrentDir(){const e=this.getFileManager(),t=module.filename;return t.replace(e.fileName(t,!0),"")}}
-const performanceDebugger = new PerformanceDebugger()
+class PerformanceDebugger {
+  constructor() {
+    this.performanceResultsInMillis = {};
+  }
+  async wrap(e, t, i) {
+    const r = Date.now(),
+      s = await e.apply(null, t),
+      n = Date.now(),
+      a = i || e.name;
+    return ((this.performanceResultsInMillis[a] = n - r), s);
+  }
+  async appendPerformanceDataToFile(e) {
+    const t = this.getFileManager(),
+      i = this.getCurrentDir() + e,
+      r = e.split("/");
+    if (r > 1) {
+      const e = r[r.length - 1],
+        s = i.replace("/" + e, "");
+      t.createDirectory(s, !0);
+    }
+    if (t.fileExists(i) && t.isDirectory(i))
+      throw "Performance file is a directory, please delete!";
+    let s,
+      n,
+      a = Object.getOwnPropertyNames(this.performanceResultsInMillis);
+    if (t.fileExists(i)) {
+      (console.log(
+        "File exists, reading headers. To keep things easy we're only going to write to these headers.",
+      ),
+        await t.downloadFileFromiCloud(i),
+        (n = t.readString(i)),
+        (s = this.getFirstLine(n).split(",")));
+    } else
+      (console.log("File doesn't exist, using available headers."),
+        (n = (s = a).toString()));
+    n = n.concat("\n");
+    for (const e of s)
+      (this.performanceResultsInMillis[e] &&
+        (n = n.concat(this.performanceResultsInMillis[e])),
+        (n = n.concat(",")));
+    ((n = n.slice(0, -1)), t.writeString(i, n));
+  }
+  getFirstLine(e) {
+    var t = e.indexOf("\n");
+    return (-1 === t && (t = void 0), e.substring(0, t));
+  }
+  getFileManager() {
+    try {
+      return FileManager.iCloud();
+    } catch (e) {
+      return FileManager.local();
+    }
+  }
+  getCurrentDir() {
+    const e = this.getFileManager(),
+      t = module.filename;
+    return t.replace(e.fileName(t, !0), "");
+  }
+}
+const performanceDebugger = new PerformanceDebugger();
 
 /**
  * Author: Ryan Stanley (stanleyrya@gmail.com)
@@ -46,62 +104,62 @@ const performanceDebugger = new PerformanceDebugger()
  *  * read(relativePath): Reads JSON object from a relative path.
  */
 class JSONFileManager {
-    write(relativePath, jsonObject) {
-        const fm = this.getFileManager();
-        const fullPath = this.getCurrentDir() + relativePath;
-        const pathParts = relativePath.split("/");
-        
-        // Create directory if needed
-        if (pathParts.length > 1) {
-            const fileName = pathParts[pathParts.length - 1];
-            const dirPath = fullPath.replace("/" + fileName, "");
-            fm.createDirectory(dirPath, true);
-        }
-        
-        // Check if path is a directory
-        if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
-            throw new Error("JSON file is a directory, please delete!");
-        }
-        
-        fm.writeString(fullPath, JSON.stringify(jsonObject));
+  write(relativePath, jsonObject) {
+    const fm = this.getFileManager();
+    const fullPath = this.getCurrentDir() + relativePath;
+    const pathParts = relativePath.split("/");
+
+    // Create directory if needed
+    if (pathParts.length > 1) {
+      const fileName = pathParts[pathParts.length - 1];
+      const dirPath = fullPath.replace("/" + fileName, "");
+      fm.createDirectory(dirPath, true);
     }
-    
-    read(relativePath) {
-        const fm = this.getFileManager();
-        const fullPath = this.getCurrentDir() + relativePath;
-        
-        if (!fm.fileExists(fullPath)) {
-            throw new Error("JSON file does not exist! Could not load: " + fullPath);
-        }
-        
-        if (fm.isDirectory(fullPath)) {
-            throw new Error("JSON file is a directory! Could not load: " + fullPath);
-        }
-        
-        fm.downloadFileFromiCloud(fullPath);
-        const content = fm.readString(fullPath);
-        const parsed = JSON.parse(content);
-        
-        if (parsed !== null) {
-            return parsed;
-        }
-        
-        throw new Error("Could not read file as JSON! Could not load: " + fullPath);
+
+    // Check if path is a directory
+    if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
+      throw new Error("JSON file is a directory, please delete!");
     }
-    
-    getFileManager() {
-        try {
-            return FileManager.iCloud();
-        } catch (e) {
-            return FileManager.local();
-        }
+
+    fm.writeString(fullPath, JSON.stringify(jsonObject));
+  }
+
+  read(relativePath) {
+    const fm = this.getFileManager();
+    const fullPath = this.getCurrentDir() + relativePath;
+
+    if (!fm.fileExists(fullPath)) {
+      throw new Error("JSON file does not exist! Could not load: " + fullPath);
     }
-    
-    getCurrentDir() {
-        const fm = this.getFileManager();
-        const filename = module.filename;
-        return filename.replace(fm.fileName(filename, true), "");
+
+    if (fm.isDirectory(fullPath)) {
+      throw new Error("JSON file is a directory! Could not load: " + fullPath);
     }
+
+    fm.downloadFileFromiCloud(fullPath);
+    const content = fm.readString(fullPath);
+    const parsed = JSON.parse(content);
+
+    if (parsed !== null) {
+      return parsed;
+    }
+
+    throw new Error("Could not read file as JSON! Could not load: " + fullPath);
+  }
+
+  getFileManager() {
+    try {
+      return FileManager.iCloud();
+    } catch (e) {
+      return FileManager.local();
+    }
+  }
+
+  getCurrentDir() {
+    const fm = this.getFileManager();
+    const filename = module.filename;
+    return filename.replace(fm.fileName(filename, true), "");
+  }
 }
 const jsonFileManager = new JSONFileManager();
 
@@ -119,236 +177,252 @@ const jsonFileManager = new JSONFileManager();
  *  * writeLogs(relativePath): Writes the stored logs to the relative file path.
  */
 class FileLogger {
-    constructor(options = {}) {
-        this.entries = [];
-        this.totalBytes = 0;
-        this.maxLines = Number.isFinite(options.maxLines) ? options.maxLines : 8000;
-        this.maxBytes = Number.isFinite(options.maxBytes) ? options.maxBytes : 1000000;
-        this.captureMode = options.captureMode || 'all';
-        this.consoleWrapped = false;
-        this.originalConsole = null;
+  constructor(options = {}) {
+    this.entries = [];
+    this.totalBytes = 0;
+    this.maxLines = Number.isFinite(options.maxLines) ? options.maxLines : 8000;
+    this.maxBytes = Number.isFinite(options.maxBytes)
+      ? options.maxBytes
+      : 1000000;
+    this.captureMode = options.captureMode || "all";
+    this.consoleWrapped = false;
+    this.originalConsole = null;
+  }
+
+  configure(options = {}) {
+    if (Number.isFinite(options.maxLines)) {
+      this.maxLines = options.maxLines;
     }
-    
-    configure(options = {}) {
-        if (Number.isFinite(options.maxLines)) {
-            this.maxLines = options.maxLines;
-        }
-        if (Number.isFinite(options.maxBytes)) {
-            this.maxBytes = options.maxBytes;
-        }
-        if (typeof options.captureMode === 'string') {
-            this.captureMode = options.captureMode;
-        }
+    if (Number.isFinite(options.maxBytes)) {
+      this.maxBytes = options.maxBytes;
     }
-    
-    get logs() {
-        return this.getLogText({ mode: 'full' });
+    if (typeof options.captureMode === "string") {
+      this.captureMode = options.captureMode;
     }
-    
-    log(line) {
-        this.append('info', line);
+  }
+
+  get logs() {
+    return this.getLogText({ mode: "full" });
+  }
+
+  log(line) {
+    this.append("info", line);
+  }
+
+  warn(line) {
+    this.append("warn", line);
+  }
+
+  error(line) {
+    this.append("error", line);
+  }
+
+  captureConsole() {
+    if (this.consoleWrapped) {
+      return;
     }
-    
-    warn(line) {
-        this.append('warn', line);
+    this.consoleWrapped = true;
+    this.originalConsole = {
+      log: typeof console.log === "function" ? console.log : null,
+      warn: typeof console.warn === "function" ? console.warn : null,
+      error: typeof console.error === "function" ? console.error : null,
+    };
+
+    const callOriginal = (method, message) => {
+      const original =
+        this.originalConsole?.[method] || this.originalConsole?.log;
+      if (typeof original === "function") {
+        original.call(console, message);
+      }
+    };
+
+    console.log = (...args) => {
+      const message = this.formatArgs(args);
+      this.append("info", message);
+      callOriginal("log", message);
+    };
+
+    if (typeof console.warn === "function") {
+      console.warn = (...args) => {
+        const message = this.formatArgs(args);
+        this.append("warn", message);
+        callOriginal("warn", message);
+      };
     }
-    
-    error(line) {
-        this.append('error', line);
+
+    if (typeof console.error === "function") {
+      console.error = (...args) => {
+        const message = this.formatArgs(args);
+        this.append("error", message);
+        callOriginal("error", message);
+      };
     }
-    
-    captureConsole() {
-        if (this.consoleWrapped) {
-            return;
-        }
-        this.consoleWrapped = true;
-        this.originalConsole = {
-            log: typeof console.log === 'function' ? console.log : null,
-            warn: typeof console.warn === 'function' ? console.warn : null,
-            error: typeof console.error === 'function' ? console.error : null
-        };
-        
-        const callOriginal = (method, message) => {
-            const original = this.originalConsole?.[method] || this.originalConsole?.log;
-            if (typeof original === 'function') {
-                original.call(console, message);
-            }
-        };
-        
-        console.log = (...args) => {
-            const message = this.formatArgs(args);
-            this.append('info', message);
-            callOriginal('log', message);
-        };
-        
-        if (typeof console.warn === 'function') {
-            console.warn = (...args) => {
-                const message = this.formatArgs(args);
-                this.append('warn', message);
-                callOriginal('warn', message);
-            };
-        }
-        
-        if (typeof console.error === 'function') {
-            console.error = (...args) => {
-                const message = this.formatArgs(args);
-                this.append('error', message);
-                callOriginal('error', message);
-            };
-        }
+  }
+
+  append(level, message) {
+    const normalized = this.normalizeLevel(level);
+    if (this.captureMode === "none") {
+      return;
     }
-    
-    append(level, message) {
-        const normalized = this.normalizeLevel(level);
-        if (this.captureMode === 'none') {
-            return;
-        }
-        if (this.captureMode === 'errors' && normalized === 'info') {
-            return;
-        }
-        const line = this.formatEntry(normalized, message);
-        const byteSize = line.length + 1;
-        this.entries.push({ level: normalized, line, byteSize });
-        this.totalBytes += byteSize;
-        this.trimEntries();
+    if (this.captureMode === "errors" && normalized === "info") {
+      return;
     }
-    
-    formatEntry(level, message) {
-        const safeMessage = typeof message === 'string' ? message : this.formatArgs([message]);
-        return `${new Date().toISOString()} [${level.toUpperCase()}] ${safeMessage}`;
+    const line = this.formatEntry(normalized, message);
+    const byteSize = line.length + 1;
+    this.entries.push({ level: normalized, line, byteSize });
+    this.totalBytes += byteSize;
+    this.trimEntries();
+  }
+
+  formatEntry(level, message) {
+    const safeMessage =
+      typeof message === "string" ? message : this.formatArgs([message]);
+    return `${new Date().toISOString()} [${level.toUpperCase()}] ${safeMessage}`;
+  }
+
+  formatArgs(args) {
+    if (!Array.isArray(args) || args.length === 0) {
+      return "";
     }
-    
-    formatArgs(args) {
-        if (!Array.isArray(args) || args.length === 0) {
-            return '';
-        }
-        return args.map(arg => this.formatArg(arg)).join(' ');
+    return args.map((arg) => this.formatArg(arg)).join(" ");
+  }
+
+  formatArg(arg) {
+    if (arg instanceof Error) {
+      return arg.stack || arg.message || String(arg);
     }
-    
-    formatArg(arg) {
-        if (arg instanceof Error) {
-            return arg.stack || arg.message || String(arg);
-        }
-        if (arg === null) return 'null';
-        if (arg === undefined) return 'undefined';
-        const argType = typeof arg;
-        if (argType === 'string') return arg;
-        if (argType === 'number' || argType === 'boolean' || argType === 'bigint') {
-            return String(arg);
-        }
-        if (argType === 'function') {
-            return `[Function ${arg.name || 'anonymous'}]`;
-        }
-        if (argType === 'object') {
-            try {
-                return JSON.stringify(arg);
-            } catch (e) {
-                return String(arg);
-            }
-        }
+    if (arg === null) return "null";
+    if (arg === undefined) return "undefined";
+    const argType = typeof arg;
+    if (argType === "string") return arg;
+    if (argType === "number" || argType === "boolean" || argType === "bigint") {
+      return String(arg);
+    }
+    if (argType === "function") {
+      return `[Function ${arg.name || "anonymous"}]`;
+    }
+    if (argType === "object") {
+      try {
+        return JSON.stringify(arg);
+      } catch (e) {
         return String(arg);
+      }
     }
-    
-    normalizeLevel(level) {
-        const normalized = String(level || 'info').toLowerCase();
-        if (normalized === 'warn' || normalized === 'warning') return 'warn';
-        if (normalized === 'error') return 'error';
-        return 'info';
+    return String(arg);
+  }
+
+  normalizeLevel(level) {
+    const normalized = String(level || "info").toLowerCase();
+    if (normalized === "warn" || normalized === "warning") return "warn";
+    if (normalized === "error") return "error";
+    return "info";
+  }
+
+  trimEntries() {
+    const hasMaxLines = Number.isFinite(this.maxLines) && this.maxLines > 0;
+    const hasMaxBytes = Number.isFinite(this.maxBytes) && this.maxBytes > 0;
+
+    while (hasMaxLines && this.entries.length > this.maxLines) {
+      const removed = this.entries.shift();
+      this.totalBytes -= removed ? removed.byteSize : 0;
     }
-    
-    trimEntries() {
-        const hasMaxLines = Number.isFinite(this.maxLines) && this.maxLines > 0;
-        const hasMaxBytes = Number.isFinite(this.maxBytes) && this.maxBytes > 0;
-        
-        while (hasMaxLines && this.entries.length > this.maxLines) {
-            const removed = this.entries.shift();
-            this.totalBytes -= removed ? removed.byteSize : 0;
-        }
-        
-        while (hasMaxBytes && this.totalBytes > this.maxBytes && this.entries.length > 0) {
-            const removed = this.entries.shift();
-            this.totalBytes -= removed ? removed.byteSize : 0;
-        }
+
+    while (
+      hasMaxBytes &&
+      this.totalBytes > this.maxBytes &&
+      this.entries.length > 0
+    ) {
+      const removed = this.entries.shift();
+      this.totalBytes -= removed ? removed.byteSize : 0;
     }
-    
-    getLogText(options = {}) {
-        const mode = String(options.mode || 'full').toLowerCase();
-        if (mode === 'summary' || mode === 'none' || mode === 'off') {
-            return '';
-        }
-        
-        let entries = this.entries;
-        if (mode === 'errors' || mode === 'error') {
-            entries = entries.filter(entry => entry.level === 'error' || entry.level === 'warn');
-        }
-        
-        if (Number.isFinite(options.maxLines) && options.maxLines > 0 && entries.length > options.maxLines) {
-            entries = entries.slice(-options.maxLines);
-        }
-        
-        if (Number.isFinite(options.maxBytes) && options.maxBytes > 0) {
-            let totalBytes = 0;
-            const trimmed = [];
-            for (let i = entries.length - 1; i >= 0; i -= 1) {
-                const entry = entries[i];
-                totalBytes += entry.byteSize;
-                if (totalBytes > options.maxBytes) {
-                    break;
-                }
-                trimmed.push(entry);
-            }
-            entries = trimmed.reverse();
-        }
-        
-        if (!entries.length) {
-            return '';
-        }
-        
-        return `${entries.map(entry => entry.line).join('\n')}\n`;
+  }
+
+  getLogText(options = {}) {
+    const mode = String(options.mode || "full").toLowerCase();
+    if (mode === "summary" || mode === "none" || mode === "off") {
+      return "";
     }
-    
-    writeLogs(relativePath, options = {}) {
-        const fm = this.getFileManager();
-        const fullPath = this.getCurrentDir() + relativePath;
-        const pathParts = relativePath.split("/");
-        
-        if (pathParts.length > 1) {
-            const fileName = pathParts[pathParts.length - 1];
-            const dirPath = fullPath.replace("/" + fileName, "");
-            try {
-                fm.createDirectory(dirPath, true);
-            } catch (dirErr) {
-                console.log(`📱 FileLogger: Directory creation failed: ${dirErr.message}`);
-            }
-        }
-        
-        if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
-            throw new Error("Log file is a directory, please delete!");
-        }
-        
-        const content = this.getLogText(options);
-        try {
-            fm.writeString(fullPath, content);
-            console.log(`📱 Scriptable: Successfully wrote logs to ${fullPath}`);
-        } catch (writeErr) {
-            console.log(`📱 Scriptable: Failed to write logs: ${writeErr.message}`);
-            throw writeErr;
-        }
+
+    let entries = this.entries;
+    if (mode === "errors" || mode === "error") {
+      entries = entries.filter(
+        (entry) => entry.level === "error" || entry.level === "warn",
+      );
     }
-    
-    getFileManager() {
-        try {
-            return FileManager.iCloud();
-        } catch (e) {
-            return FileManager.local();
+
+    if (
+      Number.isFinite(options.maxLines) &&
+      options.maxLines > 0 &&
+      entries.length > options.maxLines
+    ) {
+      entries = entries.slice(-options.maxLines);
+    }
+
+    if (Number.isFinite(options.maxBytes) && options.maxBytes > 0) {
+      let totalBytes = 0;
+      const trimmed = [];
+      for (let i = entries.length - 1; i >= 0; i -= 1) {
+        const entry = entries[i];
+        totalBytes += entry.byteSize;
+        if (totalBytes > options.maxBytes) {
+          break;
         }
+        trimmed.push(entry);
+      }
+      entries = trimmed.reverse();
     }
-    
-    getCurrentDir() {
-        const fm = this.getFileManager();
-        const filename = module.filename;
-        return filename.replace(fm.fileName(filename, true), "");
+
+    if (!entries.length) {
+      return "";
     }
+
+    return `${entries.map((entry) => entry.line).join("\n")}\n`;
+  }
+
+  writeLogs(relativePath, options = {}) {
+    const fm = this.getFileManager();
+    const fullPath = this.getCurrentDir() + relativePath;
+    const pathParts = relativePath.split("/");
+
+    if (pathParts.length > 1) {
+      const fileName = pathParts[pathParts.length - 1];
+      const dirPath = fullPath.replace("/" + fileName, "");
+      try {
+        fm.createDirectory(dirPath, true);
+      } catch (dirErr) {
+        console.log(
+          `📱 FileLogger: Directory creation failed: ${dirErr.message}`,
+        );
+      }
+    }
+
+    if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
+      throw new Error("Log file is a directory, please delete!");
+    }
+
+    const content = this.getLogText(options);
+    try {
+      fm.writeString(fullPath, content);
+      console.log(`📱 Scriptable: Successfully wrote logs to ${fullPath}`);
+    } catch (writeErr) {
+      console.log(`📱 Scriptable: Failed to write logs: ${writeErr.message}`);
+      throw writeErr;
+    }
+  }
+
+  getFileManager() {
+    try {
+      return FileManager.iCloud();
+    } catch (e) {
+      return FileManager.local();
+    }
+  }
+
+  getCurrentDir() {
+    const fm = this.getFileManager();
+    const filename = module.filename;
+    return filename.replace(fm.fileName(filename, true), "");
+  }
 }
 const logger = new FileLogger();
 logger.captureConsole();
@@ -357,2378 +431,2822 @@ const DEFAULT_CAPTURE_LOG_MAX_LINES = 30000;
 const DEFAULT_CAPTURE_LOG_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_DISPLAY_LOG_MAX_LINES = 12000;
 // Captures: 1=scheme, 2=authority, 3=path, 4=query (without fragment).
-const SIMPLE_URL_PARSE_REGEX = /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i;
+const SIMPLE_URL_PARSE_REGEX =
+  /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i;
 
-const HEADER_LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
-const HEADER_LOGO_CACHE_FILE = 'logo-hero.png';
+const HEADER_LOGO_URL = "https://chunky.dad/favicons/logo-hero.png";
+const HEADER_LOGO_CACHE_FILE = "logo-hero.png";
 const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const { EventSchema: SharedEventSchema } = importModule('event-schema');
-const { SharedCore } = importModule('shared-core');
+const { EventSchema: SharedEventSchema } = importModule("event-schema");
+const { SharedCore } = importModule("shared-core");
 
-if (!SharedEventSchema || typeof SharedEventSchema.parseNotesIntoFields !== 'function') {
-    throw new Error('ScriptableAdapter requires EventSchema to be loaded before adapter initialization');
+if (
+  !SharedEventSchema ||
+  typeof SharedEventSchema.parseNotesIntoFields !== "function"
+) {
+  throw new Error(
+    "ScriptableAdapter requires EventSchema to be loaded before adapter initialization",
+  );
 }
 
 class ScriptableAdapter {
-    constructor(config = {}) {
-        this.config = {
-            timeout: config.timeout || 30000,
-            userAgent: config.userAgent || 'chunky-dad-scraper/1.0',
-            ...config
-        };
-        
-        // Store cities configuration for calendar mapping
-        this.cities = config.cities || {};
-        this.lastResults = null; // Store last results for calendar display
+  constructor(config = {}) {
+    this.config = {
+      timeout: config.timeout || 30000,
+      userAgent: config.userAgent || "chunky-dad-scraper/1.0",
+      ...config,
+    };
 
-        // FileManager available for fallbacks
-        this.fm = FileManager.iCloud();
-        
-        // Initialize directory paths
-        const documentsDir = this.fm.documentsDirectory();
-        this.baseDir = this.fm.joinPath(documentsDir, 'chunky-dad-scraper');
-        this.runsDir = this.fm.joinPath(this.baseDir, 'runs');
-        this.logsDir = this.fm.joinPath(this.baseDir, 'logs');
-        this.metricsDir = this.fm.joinPath(this.baseDir, 'metrics');
-        this.storageDir = this.fm.joinPath(this.baseDir, 'storage');
-        this.pageStorageDir = this.fm.joinPath(this.storageDir, 'pages');
-        this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
-        
-        this.runtimeContext = this.getScriptableRuntimeContext();
-        this.runStartedAt = new Date();
-        this.warnCount = 0;
-        this.lastExecutionActionCounts = null;
+    // Store cities configuration for calendar mapping
+    this.cities = config.cities || {};
+    this.lastResults = null; // Store last results for calendar display
+
+    // FileManager available for fallbacks
+    this.fm = FileManager.iCloud();
+
+    // Initialize directory paths
+    const documentsDir = this.fm.documentsDirectory();
+    this.baseDir = this.fm.joinPath(documentsDir, "chunky-dad-scraper");
+    this.runsDir = this.fm.joinPath(this.baseDir, "runs");
+    this.logsDir = this.fm.joinPath(this.baseDir, "logs");
+    this.metricsDir = this.fm.joinPath(this.baseDir, "metrics");
+    this.storageDir = this.fm.joinPath(this.baseDir, "storage");
+    this.pageStorageDir = this.fm.joinPath(this.storageDir, "pages");
+    this.cacheDir = this.fm.joinPath(this.baseDir, "cache");
+
+    this.runtimeContext = this.getScriptableRuntimeContext();
+    this.runStartedAt = new Date();
+    this.warnCount = 0;
+    this.lastExecutionActionCounts = null;
+  }
+
+  getScriptableRuntimeContext() {
+    const runtime = {
+      environment: "scriptable",
+      type: "manual",
+      trigger: "app",
+      runsInWidget: false,
+      runsInApp: false,
+      runsInActionExtension: false,
+      runsWithSiri: false,
+      widgetFamily: null,
+      widgetParameter: null,
+      queryParameters: {},
+      shortcutParameter: null,
+      plainTexts: [],
+    };
+
+    try {
+      if (typeof config !== "undefined") {
+        runtime.runsInWidget = !!config.runsInWidget;
+        runtime.runsInApp = !!config.runsInApp;
+        runtime.runsInActionExtension = !!config.runsInActionExtension;
+        runtime.runsWithSiri = !!config.runsWithSiri;
+        runtime.widgetFamily = config.widgetFamily || null;
+      }
+      if (typeof args !== "undefined") {
+        runtime.widgetParameter = args.widgetParameter || null;
+        runtime.queryParameters = args.queryParameters || {};
+        runtime.shortcutParameter = args.shortcutParameter || null;
+        runtime.plainTexts = Array.isArray(args.plainTexts)
+          ? args.plainTexts
+          : [];
+      }
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Run context detection failed: ${error.message}`,
+      );
     }
 
-    getScriptableRuntimeContext() {
-        const runtime = {
-            environment: 'scriptable',
-            type: 'manual',
-            trigger: 'app',
-            runsInWidget: false,
-            runsInApp: false,
-            runsInActionExtension: false,
-            runsWithSiri: false,
-            widgetFamily: null,
-            widgetParameter: null,
-            queryParameters: {},
-            shortcutParameter: null,
-            plainTexts: []
-        };
-        
-        try {
-            if (typeof config !== 'undefined') {
-                runtime.runsInWidget = !!config.runsInWidget;
-                runtime.runsInApp = !!config.runsInApp;
-                runtime.runsInActionExtension = !!config.runsInActionExtension;
-                runtime.runsWithSiri = !!config.runsWithSiri;
-                runtime.widgetFamily = config.widgetFamily || null;
-            }
-            if (typeof args !== 'undefined') {
-                runtime.widgetParameter = args.widgetParameter || null;
-                runtime.queryParameters = args.queryParameters || {};
-                runtime.shortcutParameter = args.shortcutParameter || null;
-                runtime.plainTexts = Array.isArray(args.plainTexts) ? args.plainTexts : [];
-            }
-        } catch (error) {
-            console.log(`📱 Scriptable: Run context detection failed: ${error.message}`);
-        }
-        
-        if (runtime.runsInWidget) {
-            runtime.trigger = 'widget';
-        } else if (runtime.runsInActionExtension) {
-            runtime.trigger = 'action-extension';
-        } else if (runtime.runsWithSiri) {
-            runtime.trigger = 'siri';
-        } else {
-            runtime.trigger = runtime.runsInApp ? 'app' : 'unknown';
-        }
-        
-        runtime.type = (runtime.runsInWidget || runtime.runsInActionExtension || runtime.runsWithSiri)
-            ? 'automated'
-            : 'manual';
-        
-        return runtime;
+    if (runtime.runsInWidget) {
+      runtime.trigger = "widget";
+    } else if (runtime.runsInActionExtension) {
+      runtime.trigger = "action-extension";
+    } else if (runtime.runsWithSiri) {
+      runtime.trigger = "siri";
+    } else {
+      runtime.trigger = runtime.runsInApp ? "app" : "unknown";
     }
 
-    applyAutomationRunContext(runtimeContext, automationRun, automationOverride) {
-        const updated = { ...(runtimeContext || {}) };
-        if (automationRun) {
-            updated.type = 'automated';
-            if (!updated.trigger || updated.trigger === 'app' || updated.trigger === 'unknown') {
-                updated.trigger = automationOverride !== null ? 'shortcut' : updated.trigger;
-            }
-        } else if (automationOverride === false) {
-            updated.type = 'manual';
-        }
-        updated.automationRun = automationRun === true;
-        if (automationOverride !== null && automationOverride !== undefined) {
-            updated.automationOverride = automationOverride;
-        }
-        return updated;
+    runtime.type =
+      runtime.runsInWidget ||
+      runtime.runsInActionExtension ||
+      runtime.runsWithSiri
+        ? "automated"
+        : "manual";
+
+    return runtime;
+  }
+
+  applyAutomationRunContext(runtimeContext, automationRun, automationOverride) {
+    const updated = { ...(runtimeContext || {}) };
+    if (automationRun) {
+      updated.type = "automated";
+      if (
+        !updated.trigger ||
+        updated.trigger === "app" ||
+        updated.trigger === "unknown"
+      ) {
+        updated.trigger =
+          automationOverride !== null ? "shortcut" : updated.trigger;
+      }
+    } else if (automationOverride === false) {
+      updated.type = "manual";
+    }
+    updated.automationRun = automationRun === true;
+    if (automationOverride !== null && automationOverride !== undefined) {
+      updated.automationOverride = automationOverride;
+    }
+    return updated;
+  }
+
+  resolveRunContext(results) {
+    const runtimeContext =
+      this.runtimeContext || this.getScriptableRuntimeContext();
+    const providedContext = results?.runContext || null;
+
+    if (results?._isDisplayingSavedRun) {
+      if (providedContext && providedContext.type === "display") {
+        return providedContext;
+      }
+      return {
+        type: "display",
+        environment: runtimeContext.environment,
+        trigger: "saved-run",
+        original: results?._savedRunContext || providedContext || null,
+      };
     }
 
-    resolveRunContext(results) {
-        const runtimeContext = this.runtimeContext || this.getScriptableRuntimeContext();
-        const providedContext = results?.runContext || null;
-        
-        if (results?._isDisplayingSavedRun) {
-            if (providedContext && providedContext.type === 'display') {
-                return providedContext;
-            }
+    return providedContext || runtimeContext;
+  }
+
+  formatRunContext(runContext) {
+    if (!runContext) return "Unknown";
+
+    const typeValue = String(runContext.type || "manual");
+    const label = typeValue.charAt(0).toUpperCase() + typeValue.slice(1);
+
+    if (typeValue === "display") {
+      if (runContext.original && runContext.original.type) {
+        const originalType = runContext.original.type;
+        const originalTrigger = runContext.original.trigger
+          ? `/${runContext.original.trigger}`
+          : "";
+        return `${label} (original: ${originalType}${originalTrigger})`;
+      }
+      if (runContext.trigger) {
+        return `${label} (${runContext.trigger})`;
+      }
+      return label;
+    }
+
+    if (runContext.trigger) {
+      return `${label} (${runContext.trigger})`;
+    }
+
+    return label;
+  }
+
+  async loadHeaderLogoData() {
+    const logoImage = await this.loadHeaderLogoImage();
+    return logoImage ? this.imageToDataUri(logoImage) : null;
+  }
+
+  async loadHeaderLogoImage() {
+    try {
+      if (!this.fm.fileExists(this.cacheDir)) {
+        this.fm.createDirectory(this.cacheDir, true);
+      }
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Logo cache dir setup failed: ${error.message}`,
+      );
+    }
+
+    const cachePath = this.fm.joinPath(this.cacheDir, HEADER_LOGO_CACHE_FILE);
+    try {
+      if (this.fm.fileExists(cachePath)) {
+        const mtime = this.fm.modificationDate(cachePath);
+        if (mtime && Date.now() - mtime.getTime() < HEADER_LOGO_CACHE_TTL_MS) {
+          return Image.fromFile(cachePath);
+        }
+      }
+    } catch (error) {
+      console.log(`📱 Scriptable: Logo cache read failed: ${error.message}`);
+    }
+
+    try {
+      const request = new Request(HEADER_LOGO_URL);
+      const image = await request.loadImage();
+      this.fm.writeImage(cachePath, image);
+      return image;
+    } catch (error) {
+      console.log(`📱 Scriptable: Logo download failed: ${error.message}`);
+      return null;
+    }
+  }
+
+  imageToDataUri(image) {
+    if (!image) return null;
+    try {
+      const data = Data.fromPNG(image);
+      return `data:image/png;base64,${data.toBase64String()}`;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Logo data conversion failed: ${error.message}`,
+      );
+      return null;
+    }
+  }
+
+  sanitizeEventForRunSave(event) {
+    if (!event || typeof event !== "object") return event;
+    const seen = new WeakSet();
+
+    try {
+      return JSON.parse(
+        JSON.stringify(event, (key, value) => {
+          if (key === "_parserConfig" && value) {
             return {
-                type: 'display',
-                environment: runtimeContext.environment,
-                trigger: 'saved-run',
-                original: results?._savedRunContext || providedContext || null
+              name: value.name,
+              parser: value.parser,
+              dryRun: value.dryRun,
+              city: value.city,
+              calendarSearchRangeDays: value.calendarSearchRangeDays,
             };
-        }
-        
-        return providedContext || runtimeContext;
-    }
-
-    formatRunContext(runContext) {
-        if (!runContext) return 'Unknown';
-        
-        const typeValue = String(runContext.type || 'manual');
-        const label = typeValue.charAt(0).toUpperCase() + typeValue.slice(1);
-        
-        if (typeValue === 'display') {
-            if (runContext.original && runContext.original.type) {
-                const originalType = runContext.original.type;
-                const originalTrigger = runContext.original.trigger ? `/${runContext.original.trigger}` : '';
-                return `${label} (original: ${originalType}${originalTrigger})`;
-            }
-            if (runContext.trigger) {
-                return `${label} (${runContext.trigger})`;
-            }
-            return label;
-        }
-        
-        if (runContext.trigger) {
-            return `${label} (${runContext.trigger})`;
-        }
-        
-        return label;
-    }
-
-    async loadHeaderLogoData() {
-        const logoImage = await this.loadHeaderLogoImage();
-        return logoImage ? this.imageToDataUri(logoImage) : null;
-    }
-
-    async loadHeaderLogoImage() {
-        try {
-            if (!this.fm.fileExists(this.cacheDir)) {
-                this.fm.createDirectory(this.cacheDir, true);
-            }
-        } catch (error) {
-            console.log(`📱 Scriptable: Logo cache dir setup failed: ${error.message}`);
-        }
-        
-        const cachePath = this.fm.joinPath(this.cacheDir, HEADER_LOGO_CACHE_FILE);
-        try {
-            if (this.fm.fileExists(cachePath)) {
-                const mtime = this.fm.modificationDate(cachePath);
-                if (mtime && (Date.now() - mtime.getTime()) < HEADER_LOGO_CACHE_TTL_MS) {
-                    return Image.fromFile(cachePath);
-                }
-            }
-        } catch (error) {
-            console.log(`📱 Scriptable: Logo cache read failed: ${error.message}`);
-        }
-        
-        try {
-            const request = new Request(HEADER_LOGO_URL);
-            const image = await request.loadImage();
-            this.fm.writeImage(cachePath, image);
-            return image;
-        } catch (error) {
-            console.log(`📱 Scriptable: Logo download failed: ${error.message}`);
-            return null;
-        }
-    }
-
-    imageToDataUri(image) {
-        if (!image) return null;
-        try {
-            const data = Data.fromPNG(image);
-            return `data:image/png;base64,${data.toBase64String()}`;
-        } catch (error) {
-            console.log(`📱 Scriptable: Logo data conversion failed: ${error.message}`);
-            return null;
-        }
-    }
-
-    sanitizeEventForRunSave(event) {
-        if (!event || typeof event !== 'object') return event;
-        const seen = new WeakSet();
-        
-        try {
-            return JSON.parse(JSON.stringify(event, (key, value) => {
-                if (key === '_parserConfig' && value) {
-                    return {
-                        name: value.name,
-                        parser: value.parser,
-                        dryRun: value.dryRun,
-                        city: value.city,
-                        calendarSearchRangeDays: value.calendarSearchRangeDays
-                    };
-                }
-                if (key === '_existingEvent' && value) {
-                    return {
-                        title: value.title,
-                        identifier: value.identifier,
-                        startDate: value.startDate,
-                        endDate: value.endDate,
-                        location: value.location,
-                        url: value.url
-                    };
-                }
-                if (key === '_conflicts' && value && Array.isArray(value)) {
-                    return value.map(conflict => ({
-                        title: conflict.title,
-                        startDate: conflict.startDate,
-                        endDate: conflict.endDate,
-                        identifier: conflict.identifier
-                    }));
-                }
-                if (key === 'calendar' && value && value.title && value.identifier) {
-                    return {
-                        title: value.title,
-                        identifier: value.identifier
-                    };
-                }
-                if (typeof value === 'function') {
-                    return undefined;
-                }
-                if (value && typeof value === 'object') {
-                    if (seen.has(value)) {
-                        return undefined;
-                    }
-                    seen.add(value);
-                }
-                return value;
+          }
+          if (key === "_existingEvent" && value) {
+            return {
+              title: value.title,
+              identifier: value.identifier,
+              startDate: value.startDate,
+              endDate: value.endDate,
+              location: value.location,
+              url: value.url,
+            };
+          }
+          if (key === "_conflicts" && value && Array.isArray(value)) {
+            return value.map((conflict) => ({
+              title: conflict.title,
+              startDate: conflict.startDate,
+              endDate: conflict.endDate,
+              identifier: conflict.identifier,
             }));
-        } catch (error) {
-            console.log(`📱 Scriptable: Failed to serialize event "${event.title || event.name || 'unknown'}": ${error.message}`);
+          }
+          if (key === "calendar" && value && value.title && value.identifier) {
             return {
-                title: event.title || event.name || '',
-                startDate: event.startDate || null,
-                endDate: event.endDate || null,
-                location: event.location || event.venue || '',
-                url: event.url || '',
-                city: event.city || '',
-                _action: event._action || null,
-                _analysis: event._analysis || null,
-                _mergeDiff: event._mergeDiff || null,
-                _original: event._original || null
+              title: value.title,
+              identifier: value.identifier,
             };
-        }
-    }
-
-    sanitizeEventsForRunSave(events) {
-        if (!Array.isArray(events)) return [];
-        return events.map(event => this.sanitizeEventForRunSave(event)).filter(Boolean);
-    }
-
-    // Detect all-day events at save-time based on DateTime patterns
-    isAllDayEvent(event) {
-        if (!event || !event.startDate || !event.endDate) return false;
-        
-        const startDate = new Date(event.startDate);
-        const endDate = new Date(event.endDate);
-        
-        // Check if start time is 00:00:00
-        const isStartMidnight = startDate.getHours() === 0 && 
-                               startDate.getMinutes() === 0 && 
-                               startDate.getSeconds() === 0;
-        
-        // Check if end time is 23:59:59 (or 23:59:00)
-        const isEndLateNight = endDate.getHours() === 23 && 
-                              (endDate.getMinutes() === 59 || endDate.getMinutes() === 0);
-        
-        // Check if it's the same day
-        const isSameDay = startDate.toDateString() === endDate.toDateString();
-        
-        return isStartMidnight && isEndLateNight && isSameDay;
-    }
-
-    // Get calendar name for a city
-    getCalendarName(city) {
-        if (city && this.cities[city] && this.cities[city].calendar) {
-            return this.cities[city].calendar;
-        }
-        // Return fallback name - system will handle missing calendar appropriately
-        return `chunky-dad-${city}`;
-    }
-
-    // Get timezone for a city
-    getTimezoneForCity(city) {
-        if (city && this.cities[city] && this.cities[city].timezone) {
-            return this.cities[city].timezone;
-        }
-        // NO FALLBACKS - throw error if timezone not found
-        throw new Error(`No timezone configuration found for city: ${city}`);
-    }
-
-    // Get timezone for display purposes - falls back to UTC for unknown cities.
-    // Use this instead of getTimezoneForCity in all display/rendering contexts so that
-    // events with unresolved cities (e.g. city="unknown") still render rather than crashing.
-    getTimezoneForCityOrUtc(city) {
-        try {
-            return this.getTimezoneForCity(city);
-        } catch (e) {
-            return 'UTC';
-        }
-    }
-
-    // HTTP Adapter Implementation
-    getPageCacheConfig() {
-        const pageCache = this.config.pageCache || {};
-        const ttlDays = Number(pageCache.ttlDays);
-        return {
-            enabled: pageCache.enabled === true,
-            ttlDays: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays : 3
-        };
-    }
-
-    normalizePageCacheUrl(url) {
-        try {
-            const normalized = new URL(String(url));
-            normalized.hash = '';
-            normalized.protocol = normalized.protocol.toLowerCase();
-            normalized.hostname = normalized.hostname.toLowerCase();
-
-            const searchEntries = Array.from(normalized.searchParams.entries())
-                .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
-                    if (leftKey === rightKey) {
-                        return leftValue.localeCompare(rightValue);
-                    }
-                    return leftKey.localeCompare(rightKey);
-                });
-
-            normalized.search = '';
-            searchEntries.forEach(([key, value]) => normalized.searchParams.append(key, value));
-
-            return normalized.toString();
-        } catch (_) {
-            return String(url || '').trim();
-        }
-    }
-
-    parsePageCacheUrl(url) {
-        const input = String(url || '').trim();
-        if (!input) {
-            return null;
-        }
-
-        try {
-            return new URL(input);
-        } catch (_) {}
-
-        const match = input.match(SIMPLE_URL_PARSE_REGEX);
-        if (!match) {
-            return null;
-        }
-
-        const authority = String(match[2] || '').toLowerCase();
-        let host = authority;
-        const authSeparatorIndex = host.lastIndexOf('@');
-        if (authSeparatorIndex >= 0) {
-            host = host.slice(authSeparatorIndex + 1);
-        }
-
-        let hostname = host;
-        if (host.startsWith('[')) {
-            const ipv6EndIndex = host.indexOf(']');
-            hostname = ipv6EndIndex > 0 ? host.slice(0, ipv6EndIndex + 1) : host;
-        } else {
-            hostname = host.split(':')[0] || '';
-        }
-
-        return {
-            host,
-            hostname,
-            pathname: match[3] || '/',
-            search: match[4] || ''
-        };
-    }
-
-    sanitizePageCacheSegment(segment) {
-        return String(segment || 'index')
-            .toLowerCase()
-            .replace(/[^a-z0-9._-]+/g, '-')
-            .replace(/^-+|-+$/g, '') || 'index';
-    }
-
-    hashPageCacheValue(value) {
-        // FNV-1a 32-bit hash for compact deterministic cache keys.
-        let hash = 2166136261;
-        const input = String(value || '');
-        for (let i = 0; i < input.length; i++) {
-            hash ^= input.charCodeAt(i);
-            hash = Math.imul(hash, 16777619);
-        }
-        return (hash >>> 0).toString(36);
-    }
-
-    getPageCachePathParts(url) {
-        const normalizedUrl = this.normalizePageCacheUrl(url);
-        const parsed = this.parsePageCacheUrl(normalizedUrl);
-
-        if (parsed) {
-            const hostDir = this.sanitizePageCacheSegment(parsed.host || parsed.hostname || 'unknown-host');
-            const pathSegments = (parsed.pathname || '/')
-                .split('/')
-                .filter(Boolean)
-                .map(segment => this.sanitizePageCacheSegment(segment));
-
-            let fileBase = pathSegments.length > 0 ? pathSegments.join('__') : 'index';
-            if (parsed.search) {
-                fileBase += `--q-${this.hashPageCacheValue(parsed.search)}`;
+          }
+          if (typeof value === "function") {
+            return undefined;
+          }
+          if (value && typeof value === "object") {
+            if (seen.has(value)) {
+              return undefined;
             }
-            if (fileBase.length > 120) {
-                fileBase = `${fileBase.slice(0, 80)}--${this.hashPageCacheValue(fileBase)}`;
-            }
+            seen.add(value);
+          }
+          return value;
+        }),
+      );
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Failed to serialize event "${event.title || event.name || "unknown"}": ${error.message}`,
+      );
+      return {
+        title: event.title || event.name || "",
+        startDate: event.startDate || null,
+        endDate: event.endDate || null,
+        location: event.location || event.venue || "",
+        url: event.url || "",
+        city: event.city || "",
+        _action: event._action || null,
+        _analysis: event._analysis || null,
+        _mergeDiff: event._mergeDiff || null,
+        _original: event._original || null,
+      };
+    }
+  }
 
-            return {
-                normalizedUrl,
-                hostDir,
-                fileName: `${fileBase}.json`
-            };
-        }
+  sanitizeEventsForRunSave(events) {
+    if (!Array.isArray(events)) return [];
+    return events
+      .map((event) => this.sanitizeEventForRunSave(event))
+      .filter(Boolean);
+  }
 
-        const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
-        return {
-            normalizedUrl,
-            hostDir: 'unknown-host',
-            fileName: fallbackName
-        };
+  // Detect all-day events at save-time based on DateTime patterns
+  isAllDayEvent(event) {
+    if (!event || !event.startDate || !event.endDate) return false;
+
+    const startDate = new Date(event.startDate);
+    const endDate = new Date(event.endDate);
+
+    // Check if start time is 00:00:00
+    const isStartMidnight =
+      startDate.getHours() === 0 &&
+      startDate.getMinutes() === 0 &&
+      startDate.getSeconds() === 0;
+
+    // Check if end time is 23:59:59 (or 23:59:00)
+    const isEndLateNight =
+      endDate.getHours() === 23 &&
+      (endDate.getMinutes() === 59 || endDate.getMinutes() === 0);
+
+    // Check if it's the same day
+    const isSameDay = startDate.toDateString() === endDate.toDateString();
+
+    return isStartMidnight && isEndLateNight && isSameDay;
+  }
+
+  // Get calendar name for a city
+  getCalendarName(city) {
+    if (city && this.cities[city] && this.cities[city].calendar) {
+      return this.cities[city].calendar;
+    }
+    // Return fallback name - system will handle missing calendar appropriately
+    return `chunky-dad-${city}`;
+  }
+
+  // Get timezone for a city
+  getTimezoneForCity(city) {
+    if (city && this.cities[city] && this.cities[city].timezone) {
+      return this.cities[city].timezone;
+    }
+    // NO FALLBACKS - throw error if timezone not found
+    throw new Error(`No timezone configuration found for city: ${city}`);
+  }
+
+  // Get timezone for display purposes - falls back to UTC for unknown cities.
+  // Use this instead of getTimezoneForCity in all display/rendering contexts so that
+  // events with unresolved cities (e.g. city="unknown") still render rather than crashing.
+  getTimezoneForCityOrUtc(city) {
+    try {
+      return this.getTimezoneForCity(city);
+    } catch (e) {
+      return "UTC";
+    }
+  }
+
+  // HTTP Adapter Implementation
+  getPageCacheConfig() {
+    const pageCache = this.config.pageCache || {};
+    const ttlDays = Number(pageCache.ttlDays);
+    return {
+      enabled: pageCache.enabled === true,
+      ttlDays: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays : 3,
+    };
+  }
+
+  normalizePageCacheUrl(url) {
+    try {
+      const normalized = new URL(String(url));
+      normalized.hash = "";
+      normalized.protocol = normalized.protocol.toLowerCase();
+      normalized.hostname = normalized.hostname.toLowerCase();
+
+      const searchEntries = Array.from(normalized.searchParams.entries()).sort(
+        ([leftKey, leftValue], [rightKey, rightValue]) => {
+          if (leftKey === rightKey) {
+            return leftValue.localeCompare(rightValue);
+          }
+          return leftKey.localeCompare(rightKey);
+        },
+      );
+
+      normalized.search = "";
+      searchEntries.forEach(([key, value]) =>
+        normalized.searchParams.append(key, value),
+      );
+
+      return normalized.toString();
+    } catch (_) {
+      return String(url || "").trim();
+    }
+  }
+
+  parsePageCacheUrl(url) {
+    const input = String(url || "").trim();
+    if (!input) {
+      return null;
     }
 
-    ensureDirectoryExists(path) {
-        if (!this.fm.fileExists(path)) {
-            this.fm.createDirectory(path, true);
-        }
+    try {
+      return new URL(input);
+    } catch (_) {}
+
+    const match = input.match(SIMPLE_URL_PARSE_REGEX);
+    if (!match) {
+      return null;
     }
 
-    ensurePageCacheDir(hostDir) {
-        this.ensureDirectoryExists(this.baseDir);
-        this.ensureDirectoryExists(this.storageDir);
-        this.ensureDirectoryExists(this.pageStorageDir);
-        const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
-        this.ensureDirectoryExists(hostDirPath);
-        return hostDirPath;
+    const authority = String(match[2] || "").toLowerCase();
+    let host = authority;
+    const authSeparatorIndex = host.lastIndexOf("@");
+    if (authSeparatorIndex >= 0) {
+      host = host.slice(authSeparatorIndex + 1);
     }
 
-    async readCachedPage(url, pageCacheConfig) {
-        if (!pageCacheConfig.enabled) {
-            return null;
-        }
-
-        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
-        const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
-        const cachePath = this.fm.joinPath(hostDirPath, fileName);
-
-        try {
-            if (!this.fm.fileExists(cachePath)) {
-                return null;
-            }
-
-            const modifiedAt = this.fm.modificationDate(cachePath);
-            const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
-            if (modifiedAt && (Date.now() - modifiedAt.getTime()) > maxAgeMs) {
-                return null;
-            }
-
-            try {
-                await this.fm.downloadFileFromiCloud(cachePath);
-            } catch (_) {}
-
-            const cached = JSON.parse(this.fm.readString(cachePath));
-            const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
-            if (fetchState === 'failed' && cached.failure && cached.failure.nonRetryable === true) {
-                const failureMessage = typeof cached.failure.error === 'string'
-                    ? cached.failure.error
-                    : (cached.failure.error && typeof cached.failure.error.message === 'string'
-                        ? cached.failure.error.message
-                        : `Cached non-retryable failure for ${normalizedUrl}`);
-                const failureError = new Error(failureMessage);
-                failureError.retryable = false;
-                failureError.cachedFailure = true;
-                if (Number.isFinite(cached.statusCode)) {
-                    failureError.statusCode = cached.statusCode;
-                }
-                throw failureError;
-            }
-            if (fetchState !== 'downloaded') {
-                return null;
-            }
-            if (!cached || typeof cached.html !== 'string' || cached.html.length === 0) {
-                return null;
-            }
-
-            return {
-                html: cached.html,
-                url: cached.url || normalizedUrl,
-                statusCode: cached.statusCode || 200,
-                headers: cached.headers || {},
-                fetchedAt: cached.fetchedAt || null,
-                cachePath
-            };
-        } catch (error) {
-            if (error?.cachedFailure) {
-                throw error;
-            }
-            console.log(`📱 Scriptable: Page cache read failed for ${url}: ${error.message}`);
-            return null;
-        }
+    let hostname = host;
+    if (host.startsWith("[")) {
+      const ipv6EndIndex = host.indexOf("]");
+      hostname = ipv6EndIndex > 0 ? host.slice(0, ipv6EndIndex + 1) : host;
+    } else {
+      hostname = host.split(":")[0] || "";
     }
 
-    async writeCachedPage(url, responseData, pageCacheConfig) {
-        if (!pageCacheConfig.enabled || !responseData || typeof responseData.html !== 'string' || responseData.html.length === 0) {
-            return;
-        }
+    return {
+      host,
+      hostname,
+      pathname: match[3] || "/",
+      search: match[4] || "",
+    };
+  }
 
-        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
-        const hostDirPath = this.ensurePageCacheDir(hostDir);
-        const cachePath = this.fm.joinPath(hostDirPath, fileName);
-        const payload = {
-            url: normalizedUrl,
-            fetchedAt: new Date().toISOString(),
-            statusCode: responseData.statusCode || 200,
-            headers: responseData.headers || {},
-            fetchState: 'downloaded',
-            html: responseData.html
-        };
+  sanitizePageCacheSegment(segment) {
+    return (
+      String(segment || "index")
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "index"
+    );
+  }
 
-        try {
-            this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
-        } catch (error) {
-            console.log(`📱 Scriptable: Page cache write failed for ${url}: ${error.message}`);
-        }
+  hashPageCacheValue(value) {
+    // FNV-1a 32-bit hash for compact deterministic cache keys.
+    let hash = 2166136261;
+    const input = String(value || "");
+    for (let i = 0; i < input.length; i++) {
+      hash ^= input.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36);
+  }
+
+  getPageCachePathParts(url) {
+    const normalizedUrl = this.normalizePageCacheUrl(url);
+    const parsed = this.parsePageCacheUrl(normalizedUrl);
+
+    if (parsed) {
+      const hostDir = this.sanitizePageCacheSegment(
+        parsed.host || parsed.hostname || "unknown-host",
+      );
+      const pathSegments = (parsed.pathname || "/")
+        .split("/")
+        .filter(Boolean)
+        .map((segment) => this.sanitizePageCacheSegment(segment));
+
+      let fileBase =
+        pathSegments.length > 0 ? pathSegments.join("__") : "index";
+      if (parsed.search) {
+        fileBase += `--q-${this.hashPageCacheValue(parsed.search)}`;
+      }
+      if (fileBase.length > 120) {
+        fileBase = `${fileBase.slice(0, 80)}--${this.hashPageCacheValue(fileBase)}`;
+      }
+
+      return {
+        normalizedUrl,
+        hostDir,
+        fileName: `${fileBase}.json`,
+      };
     }
 
-    extractHttpStatusCodeFromError(error) {
-        const message = error && typeof error.message === 'string' ? error.message : '';
-        const match = message.match(/HTTP\s+(\d{3})/i);
-        if (!match) {
-            return null;
-        }
-        const statusCode = Number(match[1]);
-        return Number.isFinite(statusCode) ? statusCode : null;
+    const fallbackName = `${this.hashPageCacheValue(normalizedUrl || url)}.json`;
+    return {
+      normalizedUrl,
+      hostDir: "unknown-host",
+      fileName: fallbackName,
+    };
+  }
+
+  ensureDirectoryExists(path) {
+    if (!this.fm.fileExists(path)) {
+      this.fm.createDirectory(path, true);
+    }
+  }
+
+  ensurePageCacheDir(hostDir) {
+    this.ensureDirectoryExists(this.baseDir);
+    this.ensureDirectoryExists(this.storageDir);
+    this.ensureDirectoryExists(this.pageStorageDir);
+    const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+    this.ensureDirectoryExists(hostDirPath);
+    return hostDirPath;
+  }
+
+  async readCachedPage(url, pageCacheConfig) {
+    if (!pageCacheConfig.enabled) {
+      return null;
     }
 
+    const { hostDir, fileName, normalizedUrl } =
+      this.getPageCachePathParts(url);
+    const hostDirPath = this.fm.joinPath(this.pageStorageDir, hostDir);
+    const cachePath = this.fm.joinPath(hostDirPath, fileName);
 
-    async fetchImageAsBase64(url, timeoutSeconds = 30) {
-        try {
-            const request = new Request(url);
-            request.timeoutInterval = timeoutSeconds;
-            const image = await request.loadImage();
-            const jpegData = Data.fromJPEG(image);
-            return jpegData.toBase64String();
-        } catch (error) {
-            throw new Error(`Failed to fetch image as base64: ${error.message}`);
-        }
-    }
-
-    async postJson(url, payload, options = {}) {
-        try {
-            const request = new Request(url);
-            request.method = 'POST';
-            request.headers = {
-                'Content-Type': 'application/json',
-                ...options.headers
-            };
-            request.body = JSON.stringify(payload);
-            if (options.timeoutSeconds) {
-                request.timeoutInterval = options.timeoutSeconds;
-            }
-            const responseText = await request.loadString();
-            const statusCode = request.response ? request.response.statusCode : 200;
-            return {
-                ok: statusCode >= 200 && statusCode < 300,
-                status: statusCode,
-                text: responseText
-            };
-        } catch (error) {
-            throw new Error(`POST request failed: ${error.message}`);
-        }
-    }
-
-async saveFailureNote(url, error, metadata = {}) {
-        if (metadata && metadata.retryable === true) {
-            return false;
-        }
-
-        const { hostDir, fileName, normalizedUrl } = this.getPageCachePathParts(url);
-        const hostDirPath = this.ensurePageCacheDir(hostDir);
-        const cachePath = this.fm.joinPath(hostDirPath, fileName);
-        const statusCode = Number.isFinite(metadata.statusCode)
-            ? metadata.statusCode
-            : this.extractHttpStatusCodeFromError(error);
-        const payload = {
-            url: normalizedUrl,
-            fetchedAt: new Date().toISOString(),
-            statusCode: Number.isFinite(statusCode) ? statusCode : null,
-            headers: {},
-            fetchState: 'failed',
-            failure: {
-                nonRetryable: true,
-                context: metadata.context || 'crawl',
-                error: error && error.message ? error.message : 'Unknown error'
-            }
-        };
-
-        this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
-        console.log(`📱 Scriptable: 📝 Saved non-retryable failure cache entry to ${cachePath}`);
-        return true;
-    }
-
-    async fetchData(url, options = {}) {
-        try {
-            const pageCacheConfig = this.getPageCacheConfig();
-            const canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
-            if (canUseCache) {
-                const cachedPage = await this.readCachedPage(url, pageCacheConfig);
-                if (cachedPage) {
-                    return cachedPage;
-                }
-            }
-
-            const request = new Request(url);
-            request.method = options.method || 'GET';
-            request.headers = {
-                'User-Agent': this.config.userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                ...options.headers
-            };
-            
-            if (options.body) {
-                request.body = options.body;
-            }
-            
-            const response = await request.loadString();
-            
-            // Check response status
-            const statusCode = request.response ? request.response.statusCode : 200;
-            
-            if (statusCode >= 400) {
-                throw new Error(`HTTP ${statusCode} error from ${url}`);
-            }
-            
-            if (response && response.length > 0) {
-                const responseData = {
-                    html: response,
-                    url: url,
-                    statusCode: statusCode,
-                    headers: request.response ? request.response.headers : {}
-                };
-
-                if (canUseCache) {
-                    await this.writeCachedPage(url, responseData, pageCacheConfig);
-                }
-
-                return responseData;
-            } else {
-                console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
-                throw new Error(`Empty response from ${url}`);
-            }
-            
-        } catch (error) {
-            if (error?.cachedFailure) {
-                throw error;
-            }
-            const errorMessage = `📱 Scriptable: ✗ HTTP request failed for ${url}: ${error.message}`;
-            console.log(errorMessage);
-            throw new Error(`HTTP request failed for ${url}: ${error.message}`);
-        }
-    }
-
-    hasNonEmptyValue(value) {
-        if (value === null || value === undefined) return false;
-        if (Array.isArray(value)) {
-            return value.some(item => this.hasNonEmptyValue(item));
-        }
-        return String(value).trim().length > 0;
-    }
-
-    parseBoolean(value) {
-        if (value === null || value === undefined || value === '') return null;
-        const normalized = String(value).toLowerCase().trim();
-        if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
-        if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+    try {
+      if (!this.fm.fileExists(cachePath)) {
         return null;
-    }
+      }
 
-    getQueryValue(queryParameters, keys) {
-        if (!queryParameters || typeof queryParameters !== 'object') {
-            return null;
-        }
-        for (const key of keys) {
-            if (queryParameters[key] !== undefined && queryParameters[key] !== null) {
-                const value = queryParameters[key];
-                if (this.hasNonEmptyValue(value)) {
-                    return Array.isArray(value) ? value[0] : value;
-                }
-            }
-        }
+      const modifiedAt = this.fm.modificationDate(cachePath);
+      const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
+      if (modifiedAt && Date.now() - modifiedAt.getTime() > maxAgeMs) {
         return null;
+      }
+
+      try {
+        await this.fm.downloadFileFromiCloud(cachePath);
+      } catch (_) {}
+
+      const cached = JSON.parse(this.fm.readString(cachePath));
+      const fetchState =
+        typeof cached.fetchState === "string"
+          ? cached.fetchState.toLowerCase()
+          : "";
+      if (
+        fetchState === "failed" &&
+        cached.failure &&
+        cached.failure.nonRetryable === true
+      ) {
+        const failureMessage =
+          typeof cached.failure.error === "string"
+            ? cached.failure.error
+            : cached.failure.error &&
+                typeof cached.failure.error.message === "string"
+              ? cached.failure.error.message
+              : `Cached non-retryable failure for ${normalizedUrl}`;
+        const failureError = new Error(failureMessage);
+        failureError.retryable = false;
+        failureError.cachedFailure = true;
+        if (Number.isFinite(cached.statusCode)) {
+          failureError.statusCode = cached.statusCode;
+        }
+        throw failureError;
+      }
+      if (fetchState !== "downloaded") {
+        return null;
+      }
+      if (
+        !cached ||
+        typeof cached.html !== "string" ||
+        cached.html.length === 0
+      ) {
+        return null;
+      }
+
+      return {
+        html: cached.html,
+        url: cached.url || normalizedUrl,
+        statusCode: cached.statusCode || 200,
+        headers: cached.headers || {},
+        fetchedAt: cached.fetchedAt || null,
+        cachePath,
+      };
+    } catch (error) {
+      if (error?.cachedFailure) {
+        throw error;
+      }
+      console.log(
+        `📱 Scriptable: Page cache read failed for ${url}: ${error.message}`,
+      );
+      return null;
+    }
+  }
+
+  async writeCachedPage(url, responseData, pageCacheConfig) {
+    if (
+      !pageCacheConfig.enabled ||
+      !responseData ||
+      typeof responseData.html !== "string" ||
+      responseData.html.length === 0
+    ) {
+      return;
     }
 
-    getUrlInputPayload() {
-        const queryParameters = this.runtimeContext?.queryParameters || {};
-        if (!queryParameters || Object.keys(queryParameters).length === 0) {
-            return null;
-        }
-        return this.buildInputPayloadFromQuery(queryParameters, 'url-scheme');
+    const { hostDir, fileName, normalizedUrl } =
+      this.getPageCachePathParts(url);
+    const hostDirPath = this.ensurePageCacheDir(hostDir);
+    const cachePath = this.fm.joinPath(hostDirPath, fileName);
+    const payload = {
+      url: normalizedUrl,
+      fetchedAt: new Date().toISOString(),
+      statusCode: responseData.statusCode || 200,
+      headers: responseData.headers || {},
+      fetchState: "downloaded",
+      html: responseData.html,
+    };
+
+    try {
+      this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Page cache write failed for ${url}: ${error.message}`,
+      );
+    }
+  }
+
+  extractHttpStatusCodeFromError(error) {
+    const message =
+      error && typeof error.message === "string" ? error.message : "";
+    const match = message.match(/HTTP\s+(\d{3})/i);
+    if (!match) {
+      return null;
+    }
+    const statusCode = Number(match[1]);
+    return Number.isFinite(statusCode) ? statusCode : null;
+  }
+
+  async fetchImageAsBase64(url, timeoutSeconds = 30) {
+    try {
+      const request = new Request(url);
+      request.timeoutInterval = timeoutSeconds;
+      const image = await request.loadImage();
+      const jpegData = Data.fromJPEG(image);
+      return jpegData.toBase64String();
+    } catch (error) {
+      throw new Error(`Failed to fetch image as base64: ${error.message}`);
+    }
+  }
+
+  async postJson(url, payload, options = {}) {
+    try {
+      const request = new Request(url);
+      request.method = "POST";
+      request.headers = {
+        "Content-Type": "application/json",
+        ...options.headers,
+      };
+      request.body = JSON.stringify(payload);
+      if (options.timeoutSeconds) {
+        request.timeoutInterval = options.timeoutSeconds;
+      }
+      const responseText = await request.loadString();
+      const statusCode = request.response ? request.response.statusCode : 200;
+      return {
+        ok: statusCode >= 200 && statusCode < 300,
+        status: statusCode,
+        text: responseText,
+      };
+    } catch (error) {
+      throw new Error(`POST request failed: ${error.message}`);
+    }
+  }
+
+  async saveFailureNote(url, error, metadata = {}) {
+    if (metadata && metadata.retryable === true) {
+      return false;
     }
 
-    buildInputPayloadFromQuery(queryParameters, source) {
-        if (!queryParameters || typeof queryParameters !== 'object') {
-            return null;
+    const { hostDir, fileName, normalizedUrl } =
+      this.getPageCachePathParts(url);
+    const hostDirPath = this.ensurePageCacheDir(hostDir);
+    const cachePath = this.fm.joinPath(hostDirPath, fileName);
+    const statusCode = Number.isFinite(metadata.statusCode)
+      ? metadata.statusCode
+      : this.extractHttpStatusCodeFromError(error);
+    const payload = {
+      url: normalizedUrl,
+      fetchedAt: new Date().toISOString(),
+      statusCode: Number.isFinite(statusCode) ? statusCode : null,
+      headers: {},
+      fetchState: "failed",
+      failure: {
+        nonRetryable: true,
+        context: metadata.context || "crawl",
+        error: error && error.message ? error.message : "Unknown error",
+      },
+    };
+
+    this.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+    console.log(
+      `📱 Scriptable: 📝 Saved non-retryable failure cache entry to ${cachePath}`,
+    );
+    return true;
+  }
+
+  async fetchData(url, options = {}) {
+    try {
+      const pageCacheConfig = this.getPageCacheConfig();
+      const canUseCache =
+        pageCacheConfig.enabled &&
+        (options.method || "GET").toUpperCase() === "GET" &&
+        !options.body;
+      if (canUseCache) {
+        const cachedPage = await this.readCachedPage(url, pageCacheConfig);
+        if (cachedPage) {
+          return cachedPage;
+        }
+      }
+
+      const request = new Request(url);
+      request.method = options.method || "GET";
+      request.headers = {
+        "User-Agent": this.config.userAgent,
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        ...options.headers,
+      };
+
+      if (options.body) {
+        request.body = options.body;
+      }
+
+      const response = await request.loadString();
+
+      // Check response status
+      const statusCode = request.response ? request.response.statusCode : 200;
+
+      if (statusCode >= 400) {
+        throw new Error(`HTTP ${statusCode} error from ${url}`);
+      }
+
+      if (response && response.length > 0) {
+        const responseData = {
+          html: response,
+          url: url,
+          statusCode: statusCode,
+          headers: request.response ? request.response.headers : {},
+        };
+
+        if (canUseCache) {
+          await this.writeCachedPage(url, responseData, pageCacheConfig);
         }
 
-        const reservedKeys = new Set([
-            'scriptname', 'script', 'action', 'callback', 'callbackurl',
-            'xsuccess', 'xerror', 'xcancel', 'xsource',
-            'openeditor', 'event', 'eventjson', 'payload', 'data'
-        ]);
-        const hasEventFields = Object.entries(queryParameters).some(([key, value]) => {
-            const normalizedKey = String(key).toLowerCase().replace(/[\s\-_]/g, '');
-            if (reservedKeys.has(normalizedKey)) {
-                return false;
-            }
-            return this.hasNonEmptyValue(value);
-        });
+        return responseData;
+      } else {
+        console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
+        throw new Error(`Empty response from ${url}`);
+      }
+    } catch (error) {
+      if (error?.cachedFailure) {
+        throw error;
+      }
+      const errorMessage = `📱 Scriptable: ✗ HTTP request failed for ${url}: ${error.message}`;
+      console.log(errorMessage);
+      throw new Error(`HTTP request failed for ${url}: ${error.message}`);
+    }
+  }
 
-        if (!hasEventFields) {
-            return null;
+  hasNonEmptyValue(value) {
+    if (value === null || value === undefined) return false;
+    if (Array.isArray(value)) {
+      return value.some((item) => this.hasNonEmptyValue(item));
+    }
+    return String(value).trim().length > 0;
+  }
+
+  parseBoolean(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const normalized = String(value).toLowerCase().trim();
+    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
+    return null;
+  }
+
+  getQueryValue(queryParameters, keys) {
+    if (!queryParameters || typeof queryParameters !== "object") {
+      return null;
+    }
+    for (const key of keys) {
+      if (queryParameters[key] !== undefined && queryParameters[key] !== null) {
+        const value = queryParameters[key];
+        if (this.hasNonEmptyValue(value)) {
+          return Array.isArray(value) ? value[0] : value;
         }
+      }
+    }
+    return null;
+  }
 
-        return {
+  getUrlInputPayload() {
+    const queryParameters = this.runtimeContext?.queryParameters || {};
+    if (!queryParameters || Object.keys(queryParameters).length === 0) {
+      return null;
+    }
+    return this.buildInputPayloadFromQuery(queryParameters, "url-scheme");
+  }
+
+  buildInputPayloadFromQuery(queryParameters, source) {
+    if (!queryParameters || typeof queryParameters !== "object") {
+      return null;
+    }
+
+    const reservedKeys = new Set([
+      "scriptname",
+      "script",
+      "action",
+      "callback",
+      "callbackurl",
+      "xsuccess",
+      "xerror",
+      "xcancel",
+      "xsource",
+      "openeditor",
+      "event",
+      "eventjson",
+      "payload",
+      "data",
+    ]);
+    const hasEventFields = Object.entries(queryParameters).some(
+      ([key, value]) => {
+        const normalizedKey = String(key)
+          .toLowerCase()
+          .replace(/[\s\-_]/g, "");
+        if (reservedKeys.has(normalizedKey)) {
+          return false;
+        }
+        return this.hasNonEmptyValue(value);
+      },
+    );
+
+    if (!hasEventFields) {
+      return null;
+    }
+
+    return {
+      queryParameters,
+      receivedAt: new Date().toISOString(),
+      source: source || "input",
+    };
+  }
+
+  parseJsonValue(rawValue) {
+    if (rawValue === null || rawValue === undefined) {
+      return null;
+    }
+    if (typeof rawValue === "object") {
+      return rawValue;
+    }
+    if (typeof rawValue !== "string") {
+      return null;
+    }
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
+      return null;
+    }
+    try {
+      return JSON.parse(trimmed);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  extractQueryParametersFromJson(jsonValue) {
+    if (
+      !jsonValue ||
+      typeof jsonValue !== "object" ||
+      Array.isArray(jsonValue)
+    ) {
+      return null;
+    }
+
+    if (
+      jsonValue.queryParameters &&
+      typeof jsonValue.queryParameters === "object"
+    ) {
+      return jsonValue.queryParameters;
+    }
+    if (jsonValue.query && typeof jsonValue.query === "object") {
+      return jsonValue.query;
+    }
+    if (jsonValue.params && typeof jsonValue.params === "object") {
+      return jsonValue.params;
+    }
+    if (jsonValue.event && typeof jsonValue.event === "object") {
+      return jsonValue.event;
+    }
+
+    return jsonValue;
+  }
+
+  getJsonInputPayloadCandidates() {
+    const candidates = [];
+    const shortcutValue = this.runtimeContext?.shortcutParameter;
+    const shortcutParsed = this.parseJsonValue(shortcutValue);
+    const shortcutParameters =
+      this.extractQueryParametersFromJson(shortcutParsed);
+    if (shortcutParameters) {
+      candidates.push({
+        queryParameters: shortcutParameters,
+        source: "shortcutParameter",
+      });
+    }
+
+    const plainTexts = this.runtimeContext?.plainTexts;
+    if (Array.isArray(plainTexts)) {
+      for (const plainText of plainTexts) {
+        const parsed = this.parseJsonValue(plainText);
+        const queryParameters = this.extractQueryParametersFromJson(parsed);
+        if (queryParameters) {
+          candidates.push({
             queryParameters,
-            receivedAt: new Date().toISOString(),
-            source: source || 'input'
+            source: "plainTexts",
+          });
+          break;
+        }
+      }
+    }
+
+    return candidates;
+  }
+
+  getJsonInputPayload() {
+    const candidates = this.getJsonInputPayloadCandidates();
+    for (const candidate of candidates) {
+      const payload = this.buildInputPayloadFromQuery(
+        candidate.queryParameters,
+        candidate.source,
+      );
+      if (payload) {
+        return payload;
+      }
+    }
+    return null;
+  }
+
+  getParserNameFromParams(queryParameters) {
+    if (!queryParameters || typeof queryParameters !== "object") {
+      return null;
+    }
+
+    const parserName = this.getQueryValue(queryParameters, [
+      "parserName",
+      "parser",
+      "parser_name",
+    ]);
+
+    if (!this.hasNonEmptyValue(parserName)) {
+      return null;
+    }
+
+    return String(parserName).trim();
+  }
+
+  getParserNameOverrideFromQuery() {
+    const queryParameters = this.runtimeContext?.queryParameters || {};
+    return this.getParserNameFromParams(queryParameters);
+  }
+
+  getParserNameOverrideFromJson() {
+    const candidates = this.getJsonInputPayloadCandidates();
+    for (const candidate of candidates) {
+      const parserName = this.getParserNameFromParams(
+        candidate.queryParameters,
+      );
+      if (parserName) {
+        return parserName;
+      }
+    }
+    return null;
+  }
+
+  parseAutomationMode(value) {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+    const parsedBoolean = this.parseBoolean(value);
+    if (parsedBoolean !== null) {
+      return parsedBoolean;
+    }
+    const normalized = String(value).toLowerCase().trim();
+    if (
+      [
+        "auto",
+        "automated",
+        "automation",
+        "schedule",
+        "scheduled",
+        "cron",
+      ].includes(normalized)
+    ) {
+      return true;
+    }
+    if (["manual", "interactive"].includes(normalized)) {
+      return false;
+    }
+    return null;
+  }
+
+  getAutomationFlagFromParams(queryParameters) {
+    if (!queryParameters || typeof queryParameters !== "object") {
+      return null;
+    }
+    const automationValue = this.getQueryValue(queryParameters, [
+      "automation",
+      "automated",
+      "auto",
+      "runMode",
+      "run_mode",
+      "mode",
+      "schedule",
+      "scheduled",
+    ]);
+    return this.parseAutomationMode(automationValue);
+  }
+
+  getAutomationOverrideFromQuery() {
+    const queryParameters = this.runtimeContext?.queryParameters || {};
+    return this.getAutomationFlagFromParams(queryParameters);
+  }
+
+  getAutomationOverrideFromJson() {
+    const candidates = this.getJsonInputPayloadCandidates();
+    for (const candidate of candidates) {
+      const automationOverride = this.getAutomationFlagFromParams(
+        candidate.queryParameters,
+      );
+      if (automationOverride !== null) {
+        return automationOverride;
+      }
+    }
+    return null;
+  }
+
+  normalizeParserName(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase();
+  }
+
+  buildParserNameOverrideConfig(parserName, config) {
+    if (!config || !Array.isArray(config.parsers)) {
+      throw new Error("Configuration missing parsers array");
+    }
+
+    const normalizedTarget = this.normalizeParserName(parserName);
+    const matchingParser = config.parsers.find((parser) => {
+      const name = parser && parser.name ? parser.name : "";
+      return this.normalizeParserName(name) === normalizedTarget;
+    });
+
+    if (!matchingParser) {
+      const availableParsers = config.parsers
+        .map((parser) => (parser && parser.name ? parser.name : ""))
+        .filter((name) => this.hasNonEmptyValue(name));
+      const availableLabel =
+        availableParsers.length > 0 ? availableParsers.join(", ") : "(none)";
+      throw new Error(
+        `Parser "${parserName}" not found in scraper-input.js. Available parsers: ${availableLabel}`,
+      );
+    }
+
+    return {
+      parserConfig: {
+        ...matchingParser,
+        enabled: true,
+      },
+    };
+  }
+
+  parseUrlInputOptions(queryParameters) {
+    const options = {};
+
+    const allowPastEventsValue = this.getQueryValue(queryParameters, [
+      "allowPastEvents",
+      "allow_past_events",
+      "allowPast",
+    ]);
+    const allowPastEvents = this.parseBoolean(allowPastEventsValue);
+    if (allowPastEvents !== null) {
+      options.allowPastEvents = allowPastEvents;
+    }
+
+    const alwaysBearValue = this.getQueryValue(queryParameters, [
+      "alwaysBear",
+      "always_bear",
+    ]);
+    const alwaysBear = this.parseBoolean(alwaysBearValue);
+    if (alwaysBear !== null) {
+      options.alwaysBear = alwaysBear;
+    }
+
+    const dryRunValue = this.getQueryValue(queryParameters, [
+      "dryRun",
+      "dry_run",
+    ]);
+    const dryRun = this.parseBoolean(dryRunValue);
+    if (dryRun !== null) {
+      options.dryRun = dryRun;
+    }
+
+    const daysToLookAheadValue = this.getQueryValue(queryParameters, [
+      "daysToLookAhead",
+      "days_to_look_ahead",
+      "days",
+    ]);
+    if (daysToLookAheadValue !== null && daysToLookAheadValue !== undefined) {
+      const parsedDays = Number(daysToLookAheadValue);
+      if (Number.isFinite(parsedDays)) {
+        options.daysToLookAhead = parsedDays;
+      }
+    }
+
+    const keyTemplate = this.getQueryValue(queryParameters, [
+      "keyTemplate",
+      "key_template",
+      "keyFormat",
+      "key_format",
+    ]);
+    if (this.hasNonEmptyValue(keyTemplate)) {
+      options.keyTemplate = String(keyTemplate).trim();
+    }
+
+    return options;
+  }
+
+  buildUrlInputParserConfig(urlInput) {
+    const queryParameters = urlInput?.queryParameters || {};
+    const options = this.parseUrlInputOptions(queryParameters);
+    const alwaysBear =
+      typeof options.alwaysBear === "boolean" ? options.alwaysBear : true;
+
+    const parserConfig = {
+      name: "Scriptable URL Input",
+      enabled: true,
+      urls: ["scriptable-input://event"],
+      alwaysBear: alwaysBear,
+      allowPastEvents: options.allowPastEvents === true,
+      urlDiscoveryDepth: 0,
+      maxAdditionalUrls: 0,
+      input: urlInput,
+    };
+
+    if (options.keyTemplate) {
+      parserConfig.keyTemplate = options.keyTemplate;
+    }
+
+    return {
+      parserConfig,
+      configOverrides: options,
+    };
+  }
+
+  // Configuration Loading
+  async loadConfiguration() {
+    try {
+      const fm = FileManager.iCloud();
+      const scriptableDir = fm.documentsDirectory();
+      const parserNameFromQuery = this.getParserNameOverrideFromQuery();
+      let parserNameOverride = parserNameFromQuery;
+      let urlInput = null;
+      const automationOverrideFromQuery = this.getAutomationOverrideFromQuery();
+      const automationOverrideFromJson =
+        automationOverrideFromQuery === null
+          ? this.getAutomationOverrideFromJson()
+          : null;
+      const automationOverride =
+        automationOverrideFromQuery !== null
+          ? automationOverrideFromQuery
+          : automationOverrideFromJson;
+      const baseRuntimeContext =
+        this.runtimeContext || this.getScriptableRuntimeContext();
+      const automationRun =
+        typeof automationOverride === "boolean"
+          ? automationOverride
+          : baseRuntimeContext.type === "automated";
+      this.runtimeContext = this.applyAutomationRunContext(
+        baseRuntimeContext,
+        automationRun,
+        automationOverride,
+      );
+
+      if (!parserNameOverride) {
+        urlInput = this.getUrlInputPayload();
+      }
+
+      if (!parserNameOverride && !urlInput) {
+        parserNameOverride = this.getParserNameOverrideFromJson();
+      }
+
+      if (!parserNameOverride && !urlInput) {
+        urlInput = this.getJsonInputPayload();
+      }
+
+      const loadConfigFile = (
+        fileName,
+        moduleName,
+        missingMessage,
+        emptyMessage,
+        options = {},
+      ) => {
+        const configPath = fm.joinPath(scriptableDir, fileName);
+
+        if (!fm.fileExists(configPath)) {
+          if (options.optional) {
+            return null;
+          }
+          console.error(
+            `📱 Scriptable: ✗ Configuration file not found at: ${configPath}`,
+          );
+          // List files in directory for debugging
+          try {
+            const files = fm.listContents(scriptableDir);
+            console.log(
+              `📱 Scriptable: Files in ${scriptableDir}: ${JSON.stringify(files)}`,
+            );
+          } catch (listError) {
+            console.log(
+              `📱 Scriptable: ✗ Failed to list directory contents: ${listError.message}`,
+            );
+          }
+          throw new Error(missingMessage);
+        }
+
+        const configText = fm.readString(configPath);
+
+        if (!configText || configText.trim().length === 0) {
+          throw new Error(emptyMessage);
+        }
+
+        // Use importModule to load the JS configuration file
+        const configModule = importModule(moduleName);
+        return configModule || eval(configText);
+      };
+
+      let config = loadConfigFile(
+        "scraper-input.js",
+        "scraper-input",
+        "Configuration file not found at iCloud Drive/Scriptable/scraper-input.js",
+        "Configuration file is empty",
+        { optional: Boolean(urlInput) && !parserNameOverride },
+      );
+
+      if (!config && urlInput) {
+        const inputSource = urlInput.source || "input";
+        const label = inputSource === "url-scheme" ? "URL" : inputSource;
+        console.log(
+          `📱 Scriptable: Using ${label} input without scraper-input.js`,
+        );
+        config = {
+          config: {
+            dryRun: true,
+            daysToLookAhead: null,
+          },
+          parsers: [],
         };
+      }
+
+      const cities = loadConfigFile(
+        "scraper-cities.js",
+        "scraper-cities",
+        "City configuration file not found at iCloud Drive/Scriptable/scraper-cities.js",
+        "City configuration file is empty",
+      );
+
+      config.cities = cities;
+
+      const bars = loadConfigFile(
+        "scraper-bars.js",
+        "scraper-bars",
+        "Bars configuration file not found at iCloud Drive/Scriptable/scraper-bars.js",
+        "Bars configuration file is empty",
+        { optional: true },
+      );
+
+      config.bars = bars || {};
+
+      if (parserNameOverride) {
+        const { parserConfig } = this.buildParserNameOverrideConfig(
+          parserNameOverride,
+          config,
+        );
+        config.parsers = [parserConfig];
+        console.log(
+          `📱 Scriptable: Parser override detected - running "${parserConfig.name}"`,
+        );
+      } else if (urlInput) {
+        const { parserConfig, configOverrides } =
+          this.buildUrlInputParserConfig(urlInput);
+        config.parsers = [parserConfig];
+
+        if (!config.config || typeof config.config !== "object") {
+          config.config = { dryRun: true, daysToLookAhead: null };
+        }
+        if (typeof configOverrides.dryRun === "boolean") {
+          config.config.dryRun = configOverrides.dryRun;
+        }
+        if (Number.isFinite(configOverrides.daysToLookAhead)) {
+          config.config.daysToLookAhead = configOverrides.daysToLookAhead;
+        }
+
+        const inputSource = urlInput.source || "input";
+        const label = inputSource === "url-scheme" ? "URL" : inputSource;
+        console.log(
+          `📱 Scriptable: ${label} input detected - using scriptable input parser`,
+        );
+      }
+
+      // Validate configuration structure
+      if (!config.parsers || !Array.isArray(config.parsers)) {
+        throw new Error("Configuration missing parsers array");
+      }
+
+      if (!config.cities || typeof config.cities !== "object") {
+        throw new Error("Configuration missing cities data");
+      }
+
+      const automationFilter =
+        automationRun && !parserNameOverride && !urlInput;
+      config.runtime = {
+        ...this.runtimeContext,
+        automationRun: automationRun === true,
+        automationOverride,
+        automationFilter,
+      };
+      if (automationRun) {
+        const filterLabel = automationFilter ? "enabled" : "disabled";
+        console.log(
+          `📱 Scriptable: Automation run detected (schedule ${filterLabel})`,
+        );
+      }
+
+      this.applyLogConfig(config);
+
+      return config;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Failed to load configuration: ${error.message}`,
+      );
+      throw new Error(`Configuration loading failed: ${error.message}`);
     }
+  }
 
-    parseJsonValue(rawValue) {
-        if (rawValue === null || rawValue === undefined) {
-            return null;
-        }
-        if (typeof rawValue === 'object') {
-            return rawValue;
-        }
-        if (typeof rawValue !== 'string') {
-            return null;
-        }
-        const trimmed = rawValue.trim();
-        if (!trimmed) {
-            return null;
-        }
-        try {
-            return JSON.parse(trimmed);
-        } catch (error) {
-            return null;
-        }
-    }
+  // Get existing events for a specific event (called by shared-core)
+  async getExistingEvents(event) {
+    try {
+      // Determine calendar name from city
+      const city = event.city || "default";
+      const calendarName = this.getCalendarName(city);
+      const calendar = await this.getOrCreateCalendar(calendarName);
 
-    extractQueryParametersFromJson(jsonValue) {
-        if (!jsonValue || typeof jsonValue !== 'object' || Array.isArray(jsonValue)) {
-            return null;
+      const coerceDate = (value) => {
+        if (!value) return null;
+        if (value instanceof Date) {
+          return isNaN(value.getTime()) ? null : value;
         }
+        const parsed = new Date(value);
+        return isNaN(parsed.getTime()) ? null : parsed;
+      };
 
-        if (jsonValue.queryParameters && typeof jsonValue.queryParameters === 'object') {
-            return jsonValue.queryParameters;
-        }
-        if (jsonValue.query && typeof jsonValue.query === 'object') {
-            return jsonValue.query;
-        }
-        if (jsonValue.params && typeof jsonValue.params === 'object') {
-            return jsonValue.params;
-        }
-        if (jsonValue.event && typeof jsonValue.event === 'object') {
-            return jsonValue.event;
-        }
+      const identifierRaw =
+        event && (event.identifier || event.id)
+          ? String(event.identifier || event.id).trim()
+          : "";
+      const hasIdentifier = Boolean(identifierRaw);
 
-        return jsonValue;
-    }
+      // Parse dates from formatted event
+      const startDate = coerceDate(event.startDate);
+      const endDate = coerceDate(event.endDate || event.startDate);
+      const searchStartDate = coerceDate(event.searchStartDate);
+      const searchEndDate = coerceDate(event.searchEndDate);
+      const dateCandidates = hasIdentifier
+        ? [searchStartDate, searchEndDate].filter(Boolean)
+        : [startDate, endDate].filter(Boolean);
 
-    getJsonInputPayloadCandidates() {
-        const candidates = [];
-        const shortcutValue = this.runtimeContext?.shortcutParameter;
-        const shortcutParsed = this.parseJsonValue(shortcutValue);
-        const shortcutParameters = this.extractQueryParametersFromJson(shortcutParsed);
-        if (shortcutParameters) {
-            candidates.push({
-                queryParameters: shortcutParameters,
-                source: 'shortcutParameter'
-            });
-        }
+      if (hasIdentifier && dateCandidates.length === 0) {
+        console.log(
+          "📱 Scriptable: Identifier search requires searchStartDate/searchEndDate",
+        );
+        return [];
+      }
 
-        const plainTexts = this.runtimeContext?.plainTexts;
-        if (Array.isArray(plainTexts)) {
-            for (const plainText of plainTexts) {
-                const parsed = this.parseJsonValue(plainText);
-                const queryParameters = this.extractQueryParametersFromJson(parsed);
-                if (queryParameters) {
-                    candidates.push({
-                        queryParameters,
-                        source: 'plainTexts'
-                    });
-                    break;
-                }
-            }
-        }
+      if (dateCandidates.length === 0) {
+        return [];
+      }
 
-        return candidates;
-    }
+      const identifierLabel = identifierRaw || "(none)";
+      console.log(
+        `📱 Scriptable: Existing event search (hasIdentifier=${hasIdentifier}) identifier="${identifierLabel}"`,
+      );
+      const wildcardMatchKey =
+        typeof event.matchKey === "string" ? event.matchKey : "";
+      const hasWildcardMatchKey = wildcardMatchKey.includes("*");
+      const relatedHint = (() => {
+        if (!hasWildcardMatchKey) return "";
+        const fromMatchKey = wildcardMatchKey
+          .split("|")[0]
+          .replace(/\*/g, "")
+          .trim()
+          .toLowerCase();
+        if (fromMatchKey) return fromMatchKey;
+        const fromTitle = String(event.title || event.name || "")
+          .toLowerCase()
+          .trim();
+        const firstWord = fromTitle.split(/\s+/).find(Boolean) || "";
+        return firstWord;
+      })();
 
-    getJsonInputPayload() {
-        const candidates = this.getJsonInputPayloadCandidates();
-        for (const candidate of candidates) {
-            const payload = this.buildInputPayloadFromQuery(candidate.queryParameters, candidate.source);
-            if (payload) {
-                return payload;
-            }
-        }
-        return null;
-    }
+      const configuredRangeDays = Number(
+        event._parserConfig?.calendarSearchRangeDays || 0,
+      );
+      const rangeDays =
+        Number.isFinite(configuredRangeDays) && configuredRangeDays > 0
+          ? configuredRangeDays
+          : 2;
 
-    getParserNameFromParams(queryParameters) {
-        if (!queryParameters || typeof queryParameters !== 'object') {
-            return null;
-        }
+      const buildWindow = (date, days) => {
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - days);
+        const end = new Date(date);
+        end.setHours(23, 59, 59, 999);
+        end.setDate(end.getDate() + days);
+        return { start, end };
+      };
 
-        const parserName = this.getQueryValue(queryParameters, [
-            'parserName', 'parser', 'parser_name'
-        ]);
+      const dedupeEventsByIdentifier = (events) => {
+        const list = Array.isArray(events) ? events : [];
+        if (list.length === 0) return [];
+        const seen = new Set();
+        const deduped = [];
+        list.forEach((existingEvent) => {
+          if (!existingEvent) return;
+          const identifier = this.getEventIdentifier(existingEvent);
+          if (identifier && seen.has(identifier)) {
+            return;
+          }
+          if (identifier) {
+            seen.add(identifier);
+          }
+          deduped.push(existingEvent);
+        });
+        return deduped;
+      };
 
-        if (!this.hasNonEmptyValue(parserName)) {
-            return null;
-        }
+      const classifyEventsForMatching = (events) => {
+        const list = Array.isArray(events) ? events : [];
+        const eventMetadata = list
+          .map((existingEvent) => {
+            if (!existingEvent) return null;
+            const identity = this.getEventOverrideIdentity(existingEvent);
+            const sourceUid = this.normalizeOverrideUid(
+              identity.sourceUid || this.getEventUid(existingEvent),
+            );
+            const startDate =
+              existingEvent.startDate instanceof Date
+                ? existingEvent.startDate
+                : new Date(existingEvent.startDate || 0);
+            const eventDateKey = this.normalizeEventDate(startDate);
+            const overrideDateKey = identity.recurrenceDateKey || eventDateKey;
+            return {
+              event: existingEvent,
+              sourceUid,
+              eventDateKey,
+              isOverride: Boolean(identity.overrideKey),
+              overrideDateKey,
+            };
+          })
+          .filter(Boolean);
 
-        return String(parserName).trim();
-    }
-
-    getParserNameOverrideFromQuery() {
-        const queryParameters = this.runtimeContext?.queryParameters || {};
-        return this.getParserNameFromParams(queryParameters);
-    }
-
-    getParserNameOverrideFromJson() {
-        const candidates = this.getJsonInputPayloadCandidates();
-        for (const candidate of candidates) {
-            const parserName = this.getParserNameFromParams(candidate.queryParameters);
-            if (parserName) {
-                return parserName;
-            }
-        }
-        return null;
-    }
-
-    parseAutomationMode(value) {
-        if (value === null || value === undefined || value === '') {
-            return null;
-        }
-        const parsedBoolean = this.parseBoolean(value);
-        if (parsedBoolean !== null) {
-            return parsedBoolean;
-        }
-        const normalized = String(value).toLowerCase().trim();
-        if (['auto', 'automated', 'automation', 'schedule', 'scheduled', 'cron'].includes(normalized)) {
-            return true;
-        }
-        if (['manual', 'interactive'].includes(normalized)) {
-            return false;
-        }
-        return null;
-    }
-
-    getAutomationFlagFromParams(queryParameters) {
-        if (!queryParameters || typeof queryParameters !== 'object') {
-            return null;
-        }
-        const automationValue = this.getQueryValue(queryParameters, [
-            'automation', 'automated', 'auto', 'runMode', 'run_mode', 'mode', 'schedule', 'scheduled'
-        ]);
-        return this.parseAutomationMode(automationValue);
-    }
-
-    getAutomationOverrideFromQuery() {
-        const queryParameters = this.runtimeContext?.queryParameters || {};
-        return this.getAutomationFlagFromParams(queryParameters);
-    }
-
-    getAutomationOverrideFromJson() {
-        const candidates = this.getJsonInputPayloadCandidates();
-        for (const candidate of candidates) {
-            const automationOverride = this.getAutomationFlagFromParams(candidate.queryParameters);
-            if (automationOverride !== null) {
-                return automationOverride;
-            }
-        }
-        return null;
-    }
-
-    normalizeParserName(value) {
-        return String(value || '').trim().toLowerCase();
-    }
-
-    buildParserNameOverrideConfig(parserName, config) {
-        if (!config || !Array.isArray(config.parsers)) {
-            throw new Error('Configuration missing parsers array');
-        }
-
-        const normalizedTarget = this.normalizeParserName(parserName);
-        const matchingParser = config.parsers.find(parser => {
-            const name = parser && parser.name ? parser.name : '';
-            return this.normalizeParserName(name) === normalizedTarget;
+        const overridesByUidDate = new Set();
+        eventMetadata.forEach((item) => {
+          if (!item.isOverride || !item.sourceUid || !item.overrideDateKey) {
+            return;
+          }
+          overridesByUidDate.add(
+            `${item.sourceUid.toLowerCase()}::${item.overrideDateKey}`,
+          );
         });
 
-        if (!matchingParser) {
-            const availableParsers = config.parsers
-                .map(parser => parser && parser.name ? parser.name : '')
-                .filter(name => this.hasNonEmptyValue(name));
-            const availableLabel = availableParsers.length > 0 ? availableParsers.join(', ') : '(none)';
-            throw new Error(`Parser "${parserName}" not found in scraper-input.js. Available parsers: ${availableLabel}`);
-        }
+        // Flatten by shadowing source events when an override exists for same uid+date.
+        // Keep all unrelated occurrences so recurring series can still match non-overridden dates.
+        const flattened = eventMetadata
+          .filter((item) => {
+            if (item.isOverride) return true;
+            if (!item.sourceUid || !item.eventDateKey) return true;
+            const shadowKey = `${item.sourceUid.toLowerCase()}::${item.eventDateKey}`;
+            return !overridesByUidDate.has(shadowKey);
+          })
+          .map((item) => item.event);
 
-        return {
-            parserConfig: {
-                ...matchingParser,
-                enabled: true
-            }
-        };
+        return dedupeEventsByIdentifier(flattened);
+      };
+
+      // Keep the tighter, multi-window logic scoped to identifier-based edits only.
+      // For normal scraper runs, use the original single-window approach.
+      if (!hasIdentifier) {
+        const earliestTime = Math.min(
+          ...dateCandidates.map((date) => date.getTime()),
+        );
+        const latestTime = Math.max(
+          ...dateCandidates.map((date) => date.getTime()),
+        );
+        const searchStart = new Date(earliestTime);
+        searchStart.setHours(0, 0, 0, 0);
+        const searchEnd = new Date(latestTime);
+        searchEnd.setHours(23, 59, 59, 999);
+        if (Number.isFinite(configuredRangeDays) && configuredRangeDays > 0) {
+          searchStart.setDate(searchStart.getDate() - configuredRangeDays);
+          searchEnd.setDate(searchEnd.getDate() + configuredRangeDays);
+        }
+        console.log(
+          `📱 Scriptable: Existing event search window: ${searchStart.toISOString()} → ${searchEnd.toISOString()}`,
+        );
+        const existingEvents = await CalendarEvent.between(
+          searchStart,
+          searchEnd,
+          [calendar],
+        );
+        console.log(
+          `📱 Scriptable: Existing events found=${existingEvents.length}`,
+        );
+        if (relatedHint) {
+          const relatedEvents = existingEvents.filter((existing) =>
+            String(existing.title || "")
+              .toLowerCase()
+              .includes(relatedHint),
+          );
+          console.log(
+            `📱 Scriptable: Related existing titles for "${relatedHint}"=${relatedEvents.length}`,
+          );
+          relatedEvents.slice(0, 3).forEach((existing, index) => {
+            const startIso =
+              existing.startDate instanceof Date &&
+              !isNaN(existing.startDate.getTime())
+                ? existing.startDate.toISOString()
+                : String(existing.startDate || "(no date)");
+            console.log(
+              `📱 Scriptable: Related[${index + 1}] "${existing.title || "(no title)"}" @ ${startIso}`,
+            );
+          });
+        }
+        const flattenedEvents = classifyEventsForMatching(existingEvents);
+        console.log(
+          `📱 Scriptable: Existing events flattened=${flattenedEvents.length} (raw=${existingEvents.length})`,
+        );
+        return flattenedEvents;
+      }
+
+      // Identifier edit: only use the old visible date (pre-edit).
+      const primaryDates = [searchStartDate, searchEndDate].filter(Boolean);
+
+      const windowKeys = new Set();
+      const windows = [];
+      primaryDates.forEach((date) => {
+        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        if (windowKeys.has(key)) return;
+        windowKeys.add(key);
+        windows.push(buildWindow(date, rangeDays));
+      });
+
+      console.log(
+        `📱 Scriptable: Existing event search windows=${windows.length} rangeDays=${rangeDays}`,
+      );
+
+      const allEvents = [];
+      for (const w of windows) {
+        console.log(
+          `📱 Scriptable: Window ${w.start.toISOString()} → ${w.end.toISOString()}`,
+        );
+        const slice = await CalendarEvent.between(w.start, w.end, [calendar]);
+        if (Array.isArray(slice) && slice.length > 0) {
+          allEvents.push(...slice);
+        }
+      }
+      console.log(`📱 Scriptable: Existing events found=${allEvents.length}`);
+      if (relatedHint) {
+        const relatedEvents = allEvents.filter((existing) =>
+          String(existing.title || "")
+            .toLowerCase()
+            .includes(relatedHint),
+        );
+        console.log(
+          `📱 Scriptable: Related existing titles for "${relatedHint}"=${relatedEvents.length}`,
+        );
+        relatedEvents.slice(0, 3).forEach((existing, index) => {
+          const startIso =
+            existing.startDate instanceof Date &&
+            !isNaN(existing.startDate.getTime())
+              ? existing.startDate.toISOString()
+              : String(existing.startDate || "(no date)");
+          console.log(
+            `📱 Scriptable: Related[${index + 1}] "${existing.title || "(no title)"}" @ ${startIso}`,
+          );
+        });
+      }
+      const flattenedEvents = classifyEventsForMatching(allEvents);
+      console.log(
+        `📱 Scriptable: Existing events flattened=${flattenedEvents.length} (raw=${allEvents.length})`,
+      );
+      return flattenedEvents;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Failed to get existing events: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
+  isEventRecurring(event) {
+    if (!event || typeof event !== "object") return false;
+    if (typeof event.isRecurring === "boolean") {
+      return event.isRecurring;
+    }
+    if (
+      typeof event.recurrenceRule === "string" &&
+      event.recurrenceRule.trim().length > 0
+    ) {
+      return true;
+    }
+    if (
+      Array.isArray(event.recurrenceRules) &&
+      event.recurrenceRules.length > 0
+    ) {
+      return true;
+    }
+    const notes = String(event.notes || "").toLowerCase();
+    if (notes.includes("recurrence:") || notes.includes("rrule")) {
+      return true;
+    }
+    return false;
+  }
+
+  getEventIdentifier(event) {
+    if (!event || typeof event !== "object") return "";
+    const uid = this.getEventUid(event);
+    const startDate =
+      event.startDate instanceof Date
+        ? event.startDate
+        : new Date(event.startDate || 0);
+    const startIso =
+      startDate instanceof Date && !isNaN(startDate.getTime())
+        ? startDate.toISOString()
+        : "";
+    const title = String(event.title || "")
+      .trim()
+      .toLowerCase();
+    return [uid, startIso, title].join("|");
+  }
+
+  normalizeOverrideUid(value) {
+    return SharedCore.normalizeOverrideUid(value);
+  }
+
+  normalizeOverrideRecurrenceId(value) {
+    return SharedCore.normalizeOverrideRecurrenceId(value);
+  }
+
+  normalizeEventDate(dateInput) {
+    return SharedCore.normalizeEventDate(dateInput);
+  }
+
+  buildOverrideKey(overrideUid, overrideRecurrenceId) {
+    return SharedCore.buildOverrideKey(overrideUid, overrideRecurrenceId);
+  }
+
+  parseScriptableIdentifier(value) {
+    if (!value) return { uid: null, recurrenceDate: null };
+    const raw = String(value).trim();
+    if (!raw) return { uid: null, recurrenceDate: null };
+    const colonIndex = raw.indexOf(":");
+    const afterColon = colonIndex >= 0 ? raw.slice(colonIndex + 1) : raw;
+    const ridMatch = afterColon.match(/\/RID=(\d+)/i);
+    const uid = ridMatch ? afterColon.slice(0, ridMatch.index) : afterColon;
+    return {
+      uid: uid && uid.length > 0 ? uid : null,
+      recurrenceDate: null,
+    };
+  }
+
+  parseNotesIntoFields(notes) {
+    return SharedEventSchema.parseNotesIntoFields(notes);
+  }
+
+  getEventUid(event) {
+    if (!event || typeof event !== "object") return "";
+    const fields = this.parseNotesIntoFields(event.notes || "");
+    const identifierInfo = this.parseScriptableIdentifier(
+      event.identifier || "",
+    );
+    const uid =
+      identifierInfo.uid ||
+      this.normalizeOverrideUid(
+        fields.uid || fields.identifier || fields.id || "",
+      );
+    return uid || "";
+  }
+
+  getEventOverrideIdentity(event) {
+    if (!event || typeof event !== "object") {
+      return {
+        overrideUid: "",
+        overrideRecurrenceId: "",
+        overrideKey: "",
+        sourceUid: "",
+        recurrenceDateKey: "",
+      };
+    }
+    const fields = this.parseNotesIntoFields(event.notes || "");
+    const parsedIdentifier = this.parseScriptableIdentifier(
+      event.identifier || "",
+    );
+    const sourceUid = this.normalizeOverrideUid(
+      fields.uid ||
+        fields.identifier ||
+        fields.id ||
+        parsedIdentifier.uid ||
+        "",
+    );
+    const overrideUid = this.normalizeOverrideUid(
+      fields.overrideUid || event.overrideUid || "",
+    );
+    const overrideRecurrenceId = this.normalizeOverrideRecurrenceId(
+      fields.overrideRecurrenceId || event.overrideRecurrenceId || "",
+    );
+    const recurrenceDate =
+      event.startDate instanceof Date
+        ? event.startDate
+        : new Date(event.startDate || 0);
+    const recurrenceDateKey =
+      recurrenceDate instanceof Date && !isNaN(recurrenceDate.getTime())
+        ? this.normalizeEventDate(recurrenceDate)
+        : "";
+    return {
+      overrideUid,
+      overrideRecurrenceId,
+      overrideKey: this.buildOverrideKey(overrideUid, overrideRecurrenceId),
+      sourceUid,
+      recurrenceDateKey,
+    };
+  }
+
+  // Execute calendar actions determined by shared-core
+  async executeCalendarActions(analyzedEvents, config) {
+    if (!analyzedEvents || analyzedEvents.length === 0) {
+      console.log("📱 Scriptable: No events to process");
+      this.lastExecutionActionCounts = {
+        create: 0,
+        update: 0,
+        skip: 0,
+        failed: 0,
+        processed: 0,
+        analyzed: 0,
+      };
+      return 0;
     }
 
-    parseUrlInputOptions(queryParameters) {
-        const options = {};
+    try {
+      console.log(
+        `📱 Scriptable: Executing actions for ${analyzedEvents.length} events`,
+      );
 
-        const allowPastEventsValue = this.getQueryValue(queryParameters, [
-            'allowPastEvents', 'allow_past_events', 'allowPast'
-        ]);
-        const allowPastEvents = this.parseBoolean(allowPastEventsValue);
-        if (allowPastEvents !== null) {
-            options.allowPastEvents = allowPastEvents;
-        }
+      const failedEvents = [];
+      const actionCounts = { merge: [], skip: [], create: [] };
+      let processedCount = 0;
 
-        const alwaysBearValue = this.getQueryValue(queryParameters, [
-            'alwaysBear', 'always_bear'
-        ]);
-        const alwaysBear = this.parseBoolean(alwaysBearValue);
-        if (alwaysBear !== null) {
-            options.alwaysBear = alwaysBear;
-        }
-
-        const dryRunValue = this.getQueryValue(queryParameters, ['dryRun', 'dry_run']);
-        const dryRun = this.parseBoolean(dryRunValue);
-        if (dryRun !== null) {
-            options.dryRun = dryRun;
-        }
-
-        const daysToLookAheadValue = this.getQueryValue(queryParameters, [
-            'daysToLookAhead', 'days_to_look_ahead', 'days'
-        ]);
-        if (daysToLookAheadValue !== null && daysToLookAheadValue !== undefined) {
-            const parsedDays = Number(daysToLookAheadValue);
-            if (Number.isFinite(parsedDays)) {
-                options.daysToLookAhead = parsedDays;
-            }
-        }
-
-        const keyTemplate = this.getQueryValue(queryParameters, [
-            'keyTemplate', 'key_template', 'keyFormat', 'key_format'
-        ]);
-        if (this.hasNonEmptyValue(keyTemplate)) {
-            options.keyTemplate = String(keyTemplate).trim();
-        }
-
-        return options;
-    }
-
-    buildUrlInputParserConfig(urlInput) {
-        const queryParameters = urlInput?.queryParameters || {};
-        const options = this.parseUrlInputOptions(queryParameters);
-        const alwaysBear = typeof options.alwaysBear === 'boolean' ? options.alwaysBear : true;
-
-        const parserConfig = {
-            name: 'Scriptable URL Input',
-            enabled: true,
-            urls: ['scriptable-input://event'],
-            alwaysBear: alwaysBear,
-            allowPastEvents: options.allowPastEvents === true,
-            urlDiscoveryDepth: 0,
-            maxAdditionalUrls: 0,
-            input: urlInput
-        };
-
-        if (options.keyTemplate) {
-            parserConfig.keyTemplate = options.keyTemplate;
-        }
-
-        return {
-            parserConfig,
-            configOverrides: options
-        };
-    }
-
-    // Configuration Loading
-    async loadConfiguration() {
+      for (const event of analyzedEvents) {
         try {
-            const fm = FileManager.iCloud();
-            const scriptableDir = fm.documentsDirectory();
-            const parserNameFromQuery = this.getParserNameOverrideFromQuery();
-            let parserNameOverride = parserNameFromQuery;
-            let urlInput = null;
-            const automationOverrideFromQuery = this.getAutomationOverrideFromQuery();
-            const automationOverrideFromJson = automationOverrideFromQuery === null
-                ? this.getAutomationOverrideFromJson()
-                : null;
-            const automationOverride = automationOverrideFromQuery !== null
-                ? automationOverrideFromQuery
-                : automationOverrideFromJson;
-            const baseRuntimeContext = this.runtimeContext || this.getScriptableRuntimeContext();
-            const automationRun = typeof automationOverride === 'boolean'
-                ? automationOverride
-                : baseRuntimeContext.type === 'automated';
-            this.runtimeContext = this.applyAutomationRunContext(baseRuntimeContext, automationRun, automationOverride);
+          const city = event.city || "default";
+          const calendarName = this.getCalendarName(city);
+          const calendar = await this.getOrCreateCalendar(calendarName);
 
-            if (!parserNameOverride) {
-                urlInput = this.getUrlInputPayload();
-            }
+          switch (event._action) {
+            case "merge": {
+              const overrideUid =
+                typeof event.overrideUid === "string"
+                  ? event.overrideUid.trim()
+                  : "";
+              const overrideRecurrenceId =
+                typeof event.overrideRecurrenceId === "string"
+                  ? event.overrideRecurrenceId.trim()
+                  : "";
+              const hasOverrideUid = overrideUid.length > 0;
+              const hasOverrideRecurrenceId = overrideRecurrenceId.length > 0;
 
-            if (!parserNameOverride && !urlInput) {
-                parserNameOverride = this.getParserNameOverrideFromJson();
-            }
-
-            if (!parserNameOverride && !urlInput) {
-                urlInput = this.getJsonInputPayload();
-            }
-            
-            const loadConfigFile = (fileName, moduleName, missingMessage, emptyMessage, options = {}) => {
-                const configPath = fm.joinPath(scriptableDir, fileName);
-                
-                if (!fm.fileExists(configPath)) {
-                    if (options.optional) {
-                        return null;
-                    }
-                    console.error(`📱 Scriptable: ✗ Configuration file not found at: ${configPath}`);
-                    // List files in directory for debugging
-                    try {
-                        const files = fm.listContents(scriptableDir);
-                        console.log(`📱 Scriptable: Files in ${scriptableDir}: ${JSON.stringify(files)}`);
-                    } catch (listError) {
-                        console.log(`📱 Scriptable: ✗ Failed to list directory contents: ${listError.message}`);
-                    }
-                    throw new Error(missingMessage);
-                }
-                
-                const configText = fm.readString(configPath);
-                
-                if (!configText || configText.trim().length === 0) {
-                    throw new Error(emptyMessage);
-                }
-                
-                // Use importModule to load the JS configuration file
-                const configModule = importModule(moduleName);
-                return configModule || eval(configText);
-            };
-            
-            let config = loadConfigFile(
-                'scraper-input.js',
-                'scraper-input',
-                'Configuration file not found at iCloud Drive/Scriptable/scraper-input.js',
-                'Configuration file is empty',
-                { optional: Boolean(urlInput) && !parserNameOverride }
-            );
-
-            if (!config && urlInput) {
-                const inputSource = urlInput.source || 'input';
-                const label = inputSource === 'url-scheme' ? 'URL' : inputSource;
-                console.log(`📱 Scriptable: Using ${label} input without scraper-input.js`);
-                config = {
-                    config: {
-                        dryRun: true,
-                        daysToLookAhead: null
-                    },
-                    parsers: []
-                };
-            }
-            
-            const cities = loadConfigFile(
-                'scraper-cities.js',
-                'scraper-cities',
-                'City configuration file not found at iCloud Drive/Scriptable/scraper-cities.js',
-                'City configuration file is empty'
-            );
-            
-            config.cities = cities;
-
-            const bars = loadConfigFile(
-                'scraper-bars.js',
-                'scraper-bars',
-                'Bars configuration file not found at iCloud Drive/Scriptable/scraper-bars.js',
-                'Bars configuration file is empty',
-                { optional: true }
-            );
-
-            config.bars = bars || {};
-
-            if (parserNameOverride) {
-                const { parserConfig } = this.buildParserNameOverrideConfig(parserNameOverride, config);
-                config.parsers = [parserConfig];
-                console.log(`📱 Scriptable: Parser override detected - running "${parserConfig.name}"`);
-            } else if (urlInput) {
-                const { parserConfig, configOverrides } = this.buildUrlInputParserConfig(urlInput);
-                config.parsers = [parserConfig];
-
-                if (!config.config || typeof config.config !== 'object') {
-                    config.config = { dryRun: true, daysToLookAhead: null };
-                }
-                if (typeof configOverrides.dryRun === 'boolean') {
-                    config.config.dryRun = configOverrides.dryRun;
-                }
-                if (Number.isFinite(configOverrides.daysToLookAhead)) {
-                    config.config.daysToLookAhead = configOverrides.daysToLookAhead;
-                }
-
-                const inputSource = urlInput.source || 'input';
-                const label = inputSource === 'url-scheme' ? 'URL' : inputSource;
-                console.log(`📱 Scriptable: ${label} input detected - using scriptable input parser`);
-            }
-            
-            // Validate configuration structure
-            if (!config.parsers || !Array.isArray(config.parsers)) {
-                throw new Error('Configuration missing parsers array');
-            }
-            
-            if (!config.cities || typeof config.cities !== 'object') {
-                throw new Error('Configuration missing cities data');
-            }
-            
-            const automationFilter = automationRun && !parserNameOverride && !urlInput;
-            config.runtime = {
-                ...this.runtimeContext,
-                automationRun: automationRun === true,
-                automationOverride,
-                automationFilter
-            };
-            if (automationRun) {
-                const filterLabel = automationFilter ? 'enabled' : 'disabled';
-                console.log(`📱 Scriptable: Automation run detected (schedule ${filterLabel})`);
-            }
-
-            this.applyLogConfig(config);
-            
-            return config;
-            
-        } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to load configuration: ${error.message}`);
-            throw new Error(`Configuration loading failed: ${error.message}`);
-        }
-    }
-
-    // Get existing events for a specific event (called by shared-core)
-    async getExistingEvents(event) {
-        try {
-            // Determine calendar name from city
-            const city = event.city || 'default';
-            const calendarName = this.getCalendarName(city);
-            const calendar = await this.getOrCreateCalendar(calendarName);
-            
-            const coerceDate = (value) => {
-                if (!value) return null;
-                if (value instanceof Date) {
-                    return isNaN(value.getTime()) ? null : value;
-                }
-                const parsed = new Date(value);
-                return isNaN(parsed.getTime()) ? null : parsed;
-            };
-
-            const identifierRaw = event && (event.identifier || event.id) ? String(event.identifier || event.id).trim() : '';
-            const hasIdentifier = Boolean(identifierRaw);
-            
-            // Parse dates from formatted event
-            const startDate = coerceDate(event.startDate);
-            const endDate = coerceDate(event.endDate || event.startDate);
-            const searchStartDate = coerceDate(event.searchStartDate);
-            const searchEndDate = coerceDate(event.searchEndDate);
-            const dateCandidates = hasIdentifier
-                ? [searchStartDate, searchEndDate].filter(Boolean)
-                : [startDate, endDate].filter(Boolean);
-            
-            if (hasIdentifier && dateCandidates.length === 0) {
-                console.log('📱 Scriptable: Identifier search requires searchStartDate/searchEndDate');
-                return [];
-            }
-            
-            if (dateCandidates.length === 0) {
-                return [];
-            }
-            
-            const identifierLabel = identifierRaw || '(none)';
-            console.log(`📱 Scriptable: Existing event search (hasIdentifier=${hasIdentifier}) identifier="${identifierLabel}"`);
-            const wildcardMatchKey = typeof event.matchKey === 'string' ? event.matchKey : '';
-            const hasWildcardMatchKey = wildcardMatchKey.includes('*');
-            const relatedHint = (() => {
-                if (!hasWildcardMatchKey) return '';
-                const fromMatchKey = wildcardMatchKey.split('|')[0].replace(/\*/g, '').trim().toLowerCase();
-                if (fromMatchKey) return fromMatchKey;
-                const fromTitle = String(event.title || event.name || '').toLowerCase().trim();
-                const firstWord = fromTitle.split(/\s+/).find(Boolean) || '';
-                return firstWord;
-            })();
-
-            const configuredRangeDays = Number(event._parserConfig?.calendarSearchRangeDays || 0);
-            const rangeDays = Number.isFinite(configuredRangeDays) && configuredRangeDays > 0
-                ? configuredRangeDays
-                : 2;
-
-            const buildWindow = (date, days) => {
-                const start = new Date(date);
-                start.setHours(0, 0, 0, 0);
-                start.setDate(start.getDate() - days);
-                const end = new Date(date);
-                end.setHours(23, 59, 59, 999);
-                end.setDate(end.getDate() + days);
-                return { start, end };
-            };
-
-            const dedupeEventsByIdentifier = (events) => {
-                const list = Array.isArray(events) ? events : [];
-                if (list.length === 0) return [];
-                const seen = new Set();
-                const deduped = [];
-                list.forEach(existingEvent => {
-                    if (!existingEvent) return;
-                    const identifier = this.getEventIdentifier(existingEvent);
-                    if (identifier && seen.has(identifier)) {
-                        return;
-                    }
-                    if (identifier) {
-                        seen.add(identifier);
-                    }
-                    deduped.push(existingEvent);
-                });
-                return deduped;
-            };
-
-            const classifyEventsForMatching = (events) => {
-                const list = Array.isArray(events) ? events : [];
-                const eventMetadata = list.map(existingEvent => {
-                    if (!existingEvent) return null;
-                    const identity = this.getEventOverrideIdentity(existingEvent);
-                    const sourceUid = this.normalizeOverrideUid(identity.sourceUid || this.getEventUid(existingEvent));
-                    const startDate = existingEvent.startDate instanceof Date
-                        ? existingEvent.startDate
-                        : new Date(existingEvent.startDate || 0);
-                    const eventDateKey = this.normalizeEventDate(startDate);
-                    const overrideDateKey = identity.recurrenceDateKey || eventDateKey;
-                    return {
-                        event: existingEvent,
-                        sourceUid,
-                        eventDateKey,
-                        isOverride: Boolean(identity.overrideKey),
-                        overrideDateKey
-                    };
-                }).filter(Boolean);
-
-                const overridesByUidDate = new Set();
-                eventMetadata.forEach(item => {
-                    if (!item.isOverride || !item.sourceUid || !item.overrideDateKey) {
-                        return;
-                    }
-                    overridesByUidDate.add(`${item.sourceUid.toLowerCase()}::${item.overrideDateKey}`);
-                });
-
-                // Flatten by shadowing source events when an override exists for same uid+date.
-                // Keep all unrelated occurrences so recurring series can still match non-overridden dates.
-                const flattened = eventMetadata.filter(item => {
-                    if (item.isOverride) return true;
-                    if (!item.sourceUid || !item.eventDateKey) return true;
-                    const shadowKey = `${item.sourceUid.toLowerCase()}::${item.eventDateKey}`;
-                    return !overridesByUidDate.has(shadowKey);
-                }).map(item => item.event);
-
-                return dedupeEventsByIdentifier(flattened);
-            };
-
-            // Keep the tighter, multi-window logic scoped to identifier-based edits only.
-            // For normal scraper runs, use the original single-window approach.
-            if (!hasIdentifier) {
-                const earliestTime = Math.min(...dateCandidates.map(date => date.getTime()));
-                const latestTime = Math.max(...dateCandidates.map(date => date.getTime()));
-                const searchStart = new Date(earliestTime);
-                searchStart.setHours(0, 0, 0, 0);
-                const searchEnd = new Date(latestTime);
-                searchEnd.setHours(23, 59, 59, 999);
-                if (Number.isFinite(configuredRangeDays) && configuredRangeDays > 0) {
-                    searchStart.setDate(searchStart.getDate() - configuredRangeDays);
-                    searchEnd.setDate(searchEnd.getDate() + configuredRangeDays);
-                }
-                console.log(`📱 Scriptable: Existing event search window: ${searchStart.toISOString()} → ${searchEnd.toISOString()}`);
-                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-                console.log(`📱 Scriptable: Existing events found=${existingEvents.length}`);
-                if (relatedHint) {
-                    const relatedEvents = existingEvents.filter(existing =>
-                        String(existing.title || '').toLowerCase().includes(relatedHint)
-                    );
-                    console.log(`📱 Scriptable: Related existing titles for "${relatedHint}"=${relatedEvents.length}`);
-                    relatedEvents.slice(0, 3).forEach((existing, index) => {
-                        const startIso = existing.startDate instanceof Date && !isNaN(existing.startDate.getTime())
-                            ? existing.startDate.toISOString()
-                            : String(existing.startDate || '(no date)');
-                        console.log(`📱 Scriptable: Related[${index + 1}] "${existing.title || '(no title)'}" @ ${startIso}`);
-                    });
-                }
-                const flattenedEvents = classifyEventsForMatching(existingEvents);
-                console.log(`📱 Scriptable: Existing events flattened=${flattenedEvents.length} (raw=${existingEvents.length})`);
-                return flattenedEvents;
-            }
-
-            // Identifier edit: only use the old visible date (pre-edit).
-            const primaryDates = [searchStartDate, searchEndDate].filter(Boolean);
-
-            const windowKeys = new Set();
-            const windows = [];
-            primaryDates.forEach(date => {
-                const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-                if (windowKeys.has(key)) return;
-                windowKeys.add(key);
-                windows.push(buildWindow(date, rangeDays));
-            });
-
-            console.log(`📱 Scriptable: Existing event search windows=${windows.length} rangeDays=${rangeDays}`);
-
-            const allEvents = [];
-            for (const w of windows) {
-                console.log(`📱 Scriptable: Window ${w.start.toISOString()} → ${w.end.toISOString()}`);
-                const slice = await CalendarEvent.between(w.start, w.end, [calendar]);
-                if (Array.isArray(slice) && slice.length > 0) {
-                    allEvents.push(...slice);
-                }
-            }
-            console.log(`📱 Scriptable: Existing events found=${allEvents.length}`);
-            if (relatedHint) {
-                const relatedEvents = allEvents.filter(existing =>
-                    String(existing.title || '').toLowerCase().includes(relatedHint)
+              if (hasOverrideUid !== hasOverrideRecurrenceId) {
+                throw new Error(
+                  "Override identity requires both overrideUid and overrideRecurrenceId",
                 );
-                console.log(`📱 Scriptable: Related existing titles for "${relatedHint}"=${relatedEvents.length}`);
-                relatedEvents.slice(0, 3).forEach((existing, index) => {
-                    const startIso = existing.startDate instanceof Date && !isNaN(existing.startDate.getTime())
-                        ? existing.startDate.toISOString()
-                        : String(existing.startDate || '(no date)');
-                    console.log(`📱 Scriptable: Related[${index + 1}] "${existing.title || '(no title)'}" @ ${startIso}`);
-                });
+              }
+
+              if (hasOverrideUid && hasOverrideRecurrenceId) {
+                const targetOverrideKey = this.buildOverrideKey(
+                  overrideUid,
+                  overrideRecurrenceId,
+                );
+                const existingKey = this.normalizeOverrideUid(
+                  event._existingKey || "",
+                );
+                if (existingKey && existingKey !== targetOverrideKey) {
+                  console.log(
+                    `📱 Scriptable: Override key mismatch "${event.title}" existing=${existingKey} target=${targetOverrideKey}`,
+                  );
+                }
+              }
+
+              actionCounts.merge.push(event.title);
+              const targetEvent = event._existingEvent;
+
+              // Apply the final merged values (event object already contains final values)
+              // Note: Scriptable cannot read or write the native CalendarEvent.url field,
+              // so URL data is stored exclusively as "website:" in notes.
+              targetEvent.title = event.title;
+              targetEvent.startDate = event.startDate;
+              targetEvent.endDate = event.endDate;
+              targetEvent.location = event.location;
+              targetEvent.notes = event.notes;
+
+              await targetEvent.save();
+              processedCount++;
+              break;
             }
-            const flattenedEvents = classifyEventsForMatching(allEvents);
-            console.log(`📱 Scriptable: Existing events flattened=${flattenedEvents.length} (raw=${allEvents.length})`);
-            return flattenedEvents;
-            
+
+            case "conflict":
+              actionCounts.skip.push(event.title);
+              break;
+
+            case "new":
+              actionCounts.create.push(event.title);
+
+              await this.createCalendarEvent(event, calendar);
+              processedCount++;
+              break;
+          }
         } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to get existing events: ${error.message}`);
-            return [];
+          failedEvents.push({ title: event.title, error: error.message });
         }
-    }
+      }
 
-    isEventRecurring(event) {
-        if (!event || typeof event !== 'object') return false;
-        if (typeof event.isRecurring === 'boolean') {
-            return event.isRecurring;
-        }
-        if (typeof event.recurrenceRule === 'string' && event.recurrenceRule.trim().length > 0) {
-            return true;
-        }
-        if (Array.isArray(event.recurrenceRules) && event.recurrenceRules.length > 0) {
-            return true;
-        }
-        const notes = String(event.notes || '').toLowerCase();
-        if (notes.includes('recurrence:') || notes.includes('rrule')) {
-            return true;
-        }
-        return false;
-    }
+      // Log smart summary of actions and results
+      const totalActions = Object.values(actionCounts).reduce(
+        (sum, arr) => sum + arr.length,
+        0,
+      );
+      if (totalActions > 0) {
+        const actionSummary = [];
+        if (actionCounts.create.length > 0)
+          actionSummary.push(`${actionCounts.create.length} created`);
+        if (actionCounts.merge.length > 0)
+          actionSummary.push(`${actionCounts.merge.length} merged`);
+        if (actionCounts.skip.length > 0)
+          actionSummary.push(`${actionCounts.skip.length} skipped`);
 
-    getEventIdentifier(event) {
-        if (!event || typeof event !== 'object') return '';
-        const uid = this.getEventUid(event);
-        const startDate = event.startDate instanceof Date
-            ? event.startDate
-            : new Date(event.startDate || 0);
-        const startIso = startDate instanceof Date && !isNaN(startDate.getTime())
-            ? startDate.toISOString()
-            : '';
-        const title = String(event.title || '').trim().toLowerCase();
-        return [uid, startIso, title].join('|');
-    }
-
-    normalizeOverrideUid(value) {
-        return SharedCore.normalizeOverrideUid(value);
-    }
-
-    normalizeOverrideRecurrenceId(value) {
-        return SharedCore.normalizeOverrideRecurrenceId(value);
-    }
-
-    normalizeEventDate(dateInput) {
-        return SharedCore.normalizeEventDate(dateInput);
-    }
-
-    buildOverrideKey(overrideUid, overrideRecurrenceId) {
-        return SharedCore.buildOverrideKey(overrideUid, overrideRecurrenceId);
-    }
-
-    parseScriptableIdentifier(value) {
-        if (!value) return { uid: null, recurrenceDate: null };
-        const raw = String(value).trim();
-        if (!raw) return { uid: null, recurrenceDate: null };
-        const colonIndex = raw.indexOf(':');
-        const afterColon = colonIndex >= 0 ? raw.slice(colonIndex + 1) : raw;
-        const ridMatch = afterColon.match(/\/RID=(\d+)/i);
-        const uid = ridMatch ? afterColon.slice(0, ridMatch.index) : afterColon;
-        return {
-            uid: uid && uid.length > 0 ? uid : null,
-            recurrenceDate: null
-        };
-    }
-
-    parseNotesIntoFields(notes) {
-        return SharedEventSchema.parseNotesIntoFields(notes);
-    }
-
-    getEventUid(event) {
-        if (!event || typeof event !== 'object') return '';
-        const fields = this.parseNotesIntoFields(event.notes || '');
-        const identifierInfo = this.parseScriptableIdentifier(event.identifier || '');
-        const uid = identifierInfo.uid ||
-            this.normalizeOverrideUid(fields.uid || fields.identifier || fields.id || '');
-        return uid || '';
-    }
-
-    getEventOverrideIdentity(event) {
-        if (!event || typeof event !== 'object') {
-            return { overrideUid: '', overrideRecurrenceId: '', overrideKey: '', sourceUid: '', recurrenceDateKey: '' };
-        }
-        const fields = this.parseNotesIntoFields(event.notes || '');
-        const parsedIdentifier = this.parseScriptableIdentifier(event.identifier || '');
-        const sourceUid = this.normalizeOverrideUid(
-            fields.uid ||
-            fields.identifier ||
-            fields.id ||
-            parsedIdentifier.uid ||
-            ''
+        console.log(
+          `📱 Scriptable: ✓ Processed ${processedCount} events: ${actionSummary.join(", ")}`,
         );
-        const overrideUid = this.normalizeOverrideUid(fields.overrideUid || event.overrideUid || '');
-        const overrideRecurrenceId = this.normalizeOverrideRecurrenceId(
-            fields.overrideRecurrenceId || event.overrideRecurrenceId || ''
+      }
+
+      if (failedEvents.length > 0) {
+        console.log(
+          `📱 Scriptable: ✗ Failed to process ${failedEvents.length} events: ${failedEvents.map((f) => f.title).join(", ")}`,
         );
-        const recurrenceDate = event.startDate instanceof Date
-            ? event.startDate
-            : new Date(event.startDate || 0);
-        const recurrenceDateKey = recurrenceDate instanceof Date && !isNaN(recurrenceDate.getTime())
-            ? this.normalizeEventDate(recurrenceDate)
-            : '';
-        return {
-            overrideUid,
-            overrideRecurrenceId,
-            overrideKey: this.buildOverrideKey(overrideUid, overrideRecurrenceId),
-            sourceUid,
-            recurrenceDateKey
+        // Log first error for debugging
+        console.log(`📱 Scriptable: First error: ${failedEvents[0].error}`);
+      }
+
+      this.lastExecutionActionCounts = {
+        create: actionCounts.create.length,
+        update: actionCounts.merge.length,
+        skip: actionCounts.skip.length,
+        failed: failedEvents.length,
+        processed: processedCount,
+        analyzed: analyzedEvents.length,
+      };
+
+      return processedCount;
+    } catch (error) {
+      this.lastExecutionActionCounts = null;
+      console.log(
+        `📱 Scriptable: ✗ Calendar execution error: ${error.message}`,
+      );
+      throw new Error(`Calendar execution failed: ${error.message}`);
+    }
+  }
+
+  // Helper method to create and save a calendar event
+  async createCalendarEvent(event, calendar) {
+    const calendarEvent = new CalendarEvent();
+    calendarEvent.title = event.title;
+    calendarEvent.startDate = event.startDate;
+    calendarEvent.endDate = event.endDate;
+    calendarEvent.location = event.location;
+    calendarEvent.notes = event.notes;
+    // Note: Scriptable cannot read or write CalendarEvent.url — URL is stored as "website:" in notes.
+    calendarEvent.calendar = calendar;
+
+    const isAllDay = this.isAllDayEvent(event);
+    if (isAllDay) {
+      calendarEvent.isAllDay = true;
+    }
+
+    await calendarEvent.save();
+    const allDayNote = isAllDay ? " (all-day)" : "";
+    console.log(
+      `📱 Scriptable: Created event "${event.title}" in ${calendar.title}${allDayNote}`,
+    );
+    return calendarEvent;
+  }
+
+  async getOrCreateCalendar(calendarName) {
+    try {
+      // Try to find existing calendar
+      const calendars = await Calendar.forEvents();
+      let calendar = calendars.find((cal) => cal.title === calendarName);
+
+      if (!calendar) {
+        // NEVER create new calendars - throw error instead
+        const errorMsg = `Calendar "${calendarName}" does not exist. Please create it manually first.`;
+        console.log(`📱 Scriptable: ✗ ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+
+      return calendar;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Failed to get calendar "${calendarName}": ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  // Display/Logging Adapter Implementation
+  async logInfo(message) {
+    console.log(message);
+  }
+
+  async logSuccess(message) {
+    console.log(message);
+  }
+
+  async logWarn(message) {
+    this.warnCount += 1;
+    console.warn(message);
+  }
+
+  async logError(message) {
+    console.error(message);
+  }
+
+  shouldSkipResultsUi(results) {
+    const config = results?.config || {};
+    const runContext = results?.runContext || this.resolveRunContext(results);
+    if (results?._isDisplayingSavedRun || runContext?.type === "display") {
+      return false;
+    }
+    const automationRun =
+      Boolean(config?.runtime?.automationRun) ||
+      runContext?.type === "automated";
+    const hasAutomationParsers =
+      Array.isArray(config?.parsers) &&
+      config.parsers.some((parser) => parser?.automationEnabled === true);
+    return automationRun && hasAutomationParsers;
+  }
+
+  // Results Display - Enhanced with calendar preview and comparison
+  async displayResults(results) {
+    try {
+      // Store results for use in other methods
+      this.lastResults = results;
+
+      const resolvedRunContext = this.resolveRunContext(results);
+      results.runContext = resolvedRunContext;
+      const runContextLabel = this.formatRunContext(resolvedRunContext);
+      console.log(`📱 Scriptable: Run type: ${runContextLabel}`);
+
+      // First show the enhanced display features in console for debugging
+      await this.displayCalendarProperties(results);
+      await this.compareWithExistingCalendars(results);
+      await this.displayEnrichedEvents(results);
+
+      // Show console summary
+      console.log("\n" + "=".repeat(60));
+      console.log("🐻 BEAR EVENT SCRAPER RESULTS");
+      console.log("=".repeat(60));
+      console.log(`Run Type: ${runContextLabel}`);
+
+      console.log(
+        `📊 Total Events Found: ${results.totalEvents} (all events from all sources)`,
+      );
+      console.log(
+        `🐻 Raw Bear Events: ${results.rawBearEvents || "N/A"} (after bear filtering)`,
+      );
+      if (results.duplicatesRemoved > 0) {
+        console.log(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
+        console.log(
+          `🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`,
+        );
+      } else {
+        console.log(
+          `🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`,
+        );
+      }
+      console.log(
+        `📅 Added to Calendar: ${results.calendarEvents}${results.calendarEvents === 0 ? " (dry run/preview mode - no events written)" : ""}`,
+      );
+
+      // Show event actions summary if available
+      const allEvents = this.getAllEventsFromResults(results);
+      if (allEvents && allEvents.length > 0) {
+        const intentCounts = this.countMetricsActions(allEvents);
+        const writeCounts = this.countMetricsCalendarActions(allEvents);
+        const hasIntentCounts = Object.values(intentCounts).some(
+          (count) => count > 0,
+        );
+        const hasWriteCounts = Object.values(writeCounts).some(
+          (count) => count > 0,
+        );
+
+        if (hasIntentCounts) {
+          console.log("\n🎯 Intent Actions:");
+          if (intentCounts.new > 0)
+            console.log(`   ➕ NEW: ${intentCounts.new}`);
+          if (intentCounts.merge > 0)
+            console.log(`   🔄 MERGE: ${intentCounts.merge}`);
+          if (intentCounts.conflict > 0)
+            console.log(`   ⚠️ CONFLICT: ${intentCounts.conflict}`);
+          if (intentCounts.missing_calendar > 0)
+            console.log(
+              `   ❌ MISSING_CALENDAR: ${intentCounts.missing_calendar}`,
+            );
+          if (intentCounts.other > 0)
+            console.log(`   ❓ OTHER: ${intentCounts.other}`);
+        }
+
+        if (hasWriteCounts) {
+          console.log("\n📝 Calendar Write Plan:");
+          if (writeCounts.create > 0)
+            console.log(`   ➕ CREATE: ${writeCounts.create}`);
+          if (writeCounts.update > 0)
+            console.log(`   🔄 UPDATE: ${writeCounts.update}`);
+          if (writeCounts.skip > 0)
+            console.log(`   ⏭️ SKIP: ${writeCounts.skip}`);
+          if (writeCounts.other > 0)
+            console.log(`   ❓ OTHER: ${writeCounts.other}`);
+        }
+      }
+
+      if (results.errors.length > 0) {
+        console.log(`❌ Errors: ${results.errors.length}`);
+        results.errors.forEach((error) => console.log(`   • ${error}`));
+      }
+
+      console.log("\n📋 Parser Results:");
+      results.parserResults.forEach((result) => {
+        console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
+      });
+
+      console.log("\n" + "=".repeat(60));
+
+      const shouldSkipUi = this.shouldSkipResultsUi(results);
+      if (!shouldSkipUi) {
+        // Present rich UI display (may update results.calendarEvents if user executes)
+        await this.presentRichResults(results);
+      } else {
+        console.log("📱 Scriptable: Skipping results UI (automation run)");
+      }
+
+      // Persist this run for later display (skip when showing saved runs)
+      const hasAnalyzedEvents = Array.isArray(results?.analyzedEvents);
+      const parserConfigs = results?.config?.parsers || [];
+      const runtimeForSave =
+        results?.config?.runtime || results?.runContext || {};
+      const automationRunForSave =
+        Boolean(runtimeForSave.automationRun) ||
+        runtimeForSave.type === "automated";
+      const activeParsers = parserConfigs.filter((parser) => {
+        if (automationRunForSave) {
+          return parser?.automationEnabled === true;
+        }
+        return parser?.enabled !== false;
+      });
+      const hasActiveParsers = activeParsers.length > 0;
+      const shouldSaveRun =
+        !results?._isDisplayingSavedRun &&
+        hasAnalyzedEvents &&
+        hasActiveParsers;
+      const retentionDays = 30;
+      if (shouldSaveRun) {
+        await this.ensureRelativeStorageDirs();
+        const runId = await this.saveRun(results);
+        if (runId) {
+          results.savedRunId = runId;
+          results.savedRunPath = this.getRunFilePath(runId);
+        }
+        // Cleanup old JSON runs
+        await this.cleanupOldFiles("chunky-dad-scraper/runs", {
+          maxAgeDays: retentionDays,
+          keep: (name) => !name.endsWith(".json"),
+        });
+      } else {
+        const reason = results?._isDisplayingSavedRun
+          ? "display mode"
+          : !hasActiveParsers
+            ? automationRunForSave
+              ? "no automation-enabled parsers"
+              : "no enabled parsers"
+            : "missing analyzed events";
+        console.log(`📱 Scriptable: Skipping run save (${reason})`);
+      }
+
+      // Append a log file entry and cleanup logs (skip saved-run display)
+      if (!results?._isDisplayingSavedRun) {
+        try {
+          await this.ensureRelativeStorageDirs();
+          await this.appendLogSummary(results);
+          await this.cleanupOldFiles("chunky-dad-scraper/logs", {
+            maxAgeDays: retentionDays,
+            keep: (name) => {
+              const lower = name.toLowerCase();
+              return lower.includes("performance") || lower.endsWith(".csv");
+            },
+          });
+        } catch (logErr) {
+          console.log(
+            `📱 Scriptable: Log write/cleanup failed: ${logErr.message}`,
+          );
+        }
+      } else {
+        console.log("📱 Scriptable: Skipping log write (display mode)");
+      }
+
+      if (!results?._isDisplayingSavedRun) {
+        // Append metrics record and update summary
+        try {
+          await this.ensureRelativeStorageDirs();
+          const metricsRecord = this.buildMetricsRecord(results);
+          if (metricsRecord) {
+            await this.appendMetricsRecord(metricsRecord, retentionDays);
+            await this.updateMetricsSummary(metricsRecord);
+          } else {
+            console.log(
+              "📱 Scriptable: Skipping metrics write (missing runId)",
+            );
+          }
+        } catch (metricsErr) {
+          console.log(
+            `📱 Scriptable: Metrics write failed: ${metricsErr.message}`,
+          );
+        }
+      }
+    } catch (error) {
+      console.log(`📱 Scriptable: Error displaying results: ${error.message}`);
+    }
+  }
+
+  // Error handling with user-friendly alerts
+  async showError(title, message) {
+    try {
+      const alert = new Alert();
+      alert.title = title;
+      alert.message = message;
+      alert.addAction("OK");
+      await alert.present();
+    } catch (error) {
+      console.log(`Failed to show error alert: ${error.message}`);
+    }
+  }
+
+  // Enhanced Display Methods
+  async displayCalendarProperties(results) {
+    console.log("\n" + "=".repeat(60));
+    console.log("📅 CALENDAR SUMMARY");
+    console.log("=".repeat(60));
+
+    // Get all events from all parser results
+    const allEvents = this.getAllEventsFromResults(results);
+    if (!allEvents || !allEvents.length) {
+      console.log("❌ No event data available for preview");
+      return;
+    }
+
+    // Get available calendars for comparison
+    const availableCalendars = await Calendar.forEvents();
+
+    // Get unique calendars needed
+    const calendarsNeeded = new Map();
+    allEvents.forEach((event) => {
+      const calendarName = this.getCalendarNameForDisplay(event);
+      if (!calendarsNeeded.has(calendarName)) {
+        const exists = availableCalendars.find(
+          (cal) => cal.title === calendarName,
+        );
+        calendarsNeeded.set(calendarName, {
+          name: calendarName,
+          exists: !!exists,
+          calendar: exists,
+          eventCount: 0,
+        });
+      }
+      calendarsNeeded.get(calendarName).eventCount++;
+    });
+
+    // Show calendar summary
+    console.log(`\n📊 Events: ${allEvents.length}`);
+    console.log(`📅 Calendars needed: ${calendarsNeeded.size}`);
+    for (const [name, info] of calendarsNeeded) {
+      if (info.exists) {
+        console.log(`   ✅ ${name} (${info.eventCount} events)`);
+      } else {
+        console.log(
+          `   ❌ ${name} (${info.eventCount} events) - create manually`,
+        );
+      }
+    }
+
+    console.log("\n" + "=".repeat(60));
+  }
+
+  async compareWithExistingCalendars(results) {
+    console.log("\n" + "=".repeat(60));
+    console.log("🔍 CALENDAR COMPARISON & CONFLICT CHECK");
+    console.log("=".repeat(60));
+
+    // Get all events from all parser results
+    const allEvents = this.getAllEventsFromResults(results);
+    if (!allEvents || !allEvents.length) {
+      console.log("❌ No events to compare");
+      return;
+    }
+
+    const availableCalendars = await Calendar.forEvents();
+    const summary = { checked: 0, missing: 0, duplicates: 0, conflicts: 0 };
+    const missingCalendars = new Map();
+
+    for (const event of allEvents) {
+      summary.checked++;
+      const calendarName = this.getCalendarNameForDisplay(event);
+      const calendar = availableCalendars.find(
+        (cal) => cal.title === calendarName,
+      );
+
+      if (!calendar) {
+        summary.missing++;
+        missingCalendars.set(
+          calendarName,
+          (missingCalendars.get(calendarName) || 0) + 1,
+        );
+        // Mark event as missing calendar for display
+        event._action = "missing_calendar";
+        event._analysis = {
+          action: "missing_calendar",
+          reason: `Calendar "${calendarName}" does not exist`,
+          calendarName: calendarName,
         };
-    }
-    
-    // Execute calendar actions determined by shared-core
-    async executeCalendarActions(analyzedEvents, config) {
-        if (!analyzedEvents || analyzedEvents.length === 0) {
-            console.log('📱 Scriptable: No events to process');
-            this.lastExecutionActionCounts = {
-                create: 0,
-                update: 0,
-                skip: 0,
-                failed: 0,
-                processed: 0,
-                analyzed: 0
-            };
-            return 0;
-        }
+        continue;
+      }
 
-        try {
-            console.log(`📱 Scriptable: Executing actions for ${analyzedEvents.length} events`);
-            
-            const failedEvents = [];
-            const actionCounts = { merge: [], skip: [], create: [] };
-            let processedCount = 0;
-            
-            for (const event of analyzedEvents) {
-                try {
-                    const city = event.city || 'default';
-                    const calendarName = this.getCalendarName(city);
-                    const calendar = await this.getOrCreateCalendar(calendarName);
-                    
-                    switch (event._action) {
-                        case 'merge': {
-                            const overrideUid = typeof event.overrideUid === 'string' ? event.overrideUid.trim() : '';
-                            const overrideRecurrenceId = typeof event.overrideRecurrenceId === 'string' ? event.overrideRecurrenceId.trim() : '';
-                            const hasOverrideUid = overrideUid.length > 0;
-                            const hasOverrideRecurrenceId = overrideRecurrenceId.length > 0;
+      try {
+        // Check for existing events in the time range
+        // Ensure dates are Date objects (may be strings from saved runs)
+        const startDate =
+          typeof event.startDate === "string"
+            ? new Date(event.startDate)
+            : event.startDate;
+        const endDate =
+          typeof (event.endDate || event.startDate) === "string"
+            ? new Date(event.endDate || event.startDate)
+            : event.endDate || event.startDate;
 
-                            if (hasOverrideUid !== hasOverrideRecurrenceId) {
-                                throw new Error('Override identity requires both overrideUid and overrideRecurrenceId');
-                            }
+        const searchStart = new Date(startDate);
+        const searchEnd = new Date(endDate);
+        searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
 
-                            if (hasOverrideUid && hasOverrideRecurrenceId) {
-                                const targetOverrideKey = this.buildOverrideKey(overrideUid, overrideRecurrenceId);
-                                const existingKey = this.normalizeOverrideUid(event._existingKey || '');
-                                if (existingKey && existingKey !== targetOverrideKey) {
-                                    console.log(`📱 Scriptable: Override key mismatch "${event.title}" existing=${existingKey} target=${targetOverrideKey}`);
-                                }
-                            }
+        const existingEvents = await CalendarEvent.between(
+          searchStart,
+          searchEnd,
+          [calendar],
+        );
 
-                            actionCounts.merge.push(event.title);
-                            const targetEvent = event._existingEvent;
-                            
-                            // Apply the final merged values (event object already contains final values)
-                            // Note: Scriptable cannot read or write the native CalendarEvent.url field,
-                            // so URL data is stored exclusively as "website:" in notes.
-                            targetEvent.title = event.title;
-                            targetEvent.startDate = event.startDate;
-                            targetEvent.endDate = event.endDate;
-                            targetEvent.location = event.location;
-                            targetEvent.notes = event.notes;
-                            
-                            await targetEvent.save();
-                            processedCount++;
-                            break;
-                        }
-                            
-                        case 'conflict':
-                            actionCounts.skip.push(event.title);
-                            break;
-                            
-                        case 'new':
-                            actionCounts.create.push(event.title);
-                            
-                            await this.createCalendarEvent(event, calendar);
-                            processedCount++;
-                            break;
-                    }
-                    
-                } catch (error) {
-                    failedEvents.push({ title: event.title, error: error.message });
-                }
-            }
-            
-            // Log smart summary of actions and results
-            const totalActions = Object.values(actionCounts).reduce((sum, arr) => sum + arr.length, 0);
-            if (totalActions > 0) {
-                const actionSummary = [];
-                if (actionCounts.create.length > 0) actionSummary.push(`${actionCounts.create.length} created`);
-                if (actionCounts.merge.length > 0) actionSummary.push(`${actionCounts.merge.length} merged`);
-                if (actionCounts.skip.length > 0) actionSummary.push(`${actionCounts.skip.length} skipped`);
-                
-                console.log(`📱 Scriptable: ✓ Processed ${processedCount} events: ${actionSummary.join(', ')}`);
-            }
-            
-            if (failedEvents.length > 0) {
-                console.log(`📱 Scriptable: ✗ Failed to process ${failedEvents.length} events: ${failedEvents.map(f => f.title).join(', ')}`);
-                // Log first error for debugging
-                console.log(`📱 Scriptable: First error: ${failedEvents[0].error}`);
-            }
-
-            this.lastExecutionActionCounts = {
-                create: actionCounts.create.length,
-                update: actionCounts.merge.length,
-                skip: actionCounts.skip.length,
-                failed: failedEvents.length,
-                processed: processedCount,
-                analyzed: analyzedEvents.length
-            };
-
-            return processedCount;
-            
-        } catch (error) {
-            this.lastExecutionActionCounts = null;
-            console.log(`📱 Scriptable: ✗ Calendar execution error: ${error.message}`);
-            throw new Error(`Calendar execution failed: ${error.message}`);
-        }
-    }
-
-    // Helper method to create and save a calendar event
-    async createCalendarEvent(event, calendar) {
-        const calendarEvent = new CalendarEvent();
-        calendarEvent.title = event.title;
-        calendarEvent.startDate = event.startDate;
-        calendarEvent.endDate = event.endDate;
-        calendarEvent.location = event.location;
-        calendarEvent.notes = event.notes;
-        // Note: Scriptable cannot read or write CalendarEvent.url — URL is stored as "website:" in notes.
-        calendarEvent.calendar = calendar;
-        
-        const isAllDay = this.isAllDayEvent(event);
-        if (isAllDay) {
-            calendarEvent.isAllDay = true;
-        }
-        
-        await calendarEvent.save();
-        const allDayNote = isAllDay ? ' (all-day)' : '';
-        console.log(`📱 Scriptable: Created event "${event.title}" in ${calendar.title}${allDayNote}`);
-        return calendarEvent;
-    }
-
-    async getOrCreateCalendar(calendarName) {
-        try {
-            // Try to find existing calendar
-            const calendars = await Calendar.forEvents();
-            let calendar = calendars.find(cal => cal.title === calendarName);
-            
-            if (!calendar) {
-                // NEVER create new calendars - throw error instead
-                const errorMsg = `Calendar "${calendarName}" does not exist. Please create it manually first.`;
-                console.log(`📱 Scriptable: ✗ ${errorMsg}`);
-                throw new Error(errorMsg);
-            }
-            
-            return calendar;
-            
-        } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to get calendar "${calendarName}": ${error.message}`);
-            throw error;
-        }
-    }
-
-    // Display/Logging Adapter Implementation
-    async logInfo(message) {
-        console.log(message);
-    }
-
-    async logSuccess(message) {
-        console.log(message);
-    }
-
-    async logWarn(message) {
-        this.warnCount += 1;
-        console.warn(message);
-    }
-
-    async logError(message) {
-        console.error(message);
-    }
-
-    shouldSkipResultsUi(results) {
-        const config = results?.config || {};
-        const runContext = results?.runContext || this.resolveRunContext(results);
-        if (results?._isDisplayingSavedRun || runContext?.type === 'display') {
-            return false;
-        }
-        const automationRun = Boolean(config?.runtime?.automationRun) || runContext?.type === 'automated';
-        const hasAutomationParsers = Array.isArray(config?.parsers)
-            && config.parsers.some(parser => parser?.automationEnabled === true);
-        return automationRun && hasAutomationParsers;
-    }
-
-    // Results Display - Enhanced with calendar preview and comparison
-    async displayResults(results) {
-        try {
-            // Store results for use in other methods
-            this.lastResults = results;
-            
-            const resolvedRunContext = this.resolveRunContext(results);
-            results.runContext = resolvedRunContext;
-            const runContextLabel = this.formatRunContext(resolvedRunContext);
-            console.log(`📱 Scriptable: Run type: ${runContextLabel}`);
-            
-            // First show the enhanced display features in console for debugging
-            await this.displayCalendarProperties(results);
-            await this.compareWithExistingCalendars(results);
-            await this.displayEnrichedEvents(results);
-            
-            // Show console summary
-            console.log('\n' + '='.repeat(60));
-            console.log('🐻 BEAR EVENT SCRAPER RESULTS');
-            console.log('='.repeat(60));
-            console.log(`Run Type: ${runContextLabel}`);
-            
-            console.log(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
-            console.log(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
-            if (results.duplicatesRemoved > 0) {
-                console.log(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
-                console.log(`🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`);
-            } else {
-                console.log(`🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`);
-            }
-            console.log(`📅 Added to Calendar: ${results.calendarEvents}${results.calendarEvents === 0 ? ' (dry run/preview mode - no events written)' : ''}`);
-            
-            // Show event actions summary if available
-            const allEvents = this.getAllEventsFromResults(results);
-            if (allEvents && allEvents.length > 0) {
-                const intentCounts = this.countMetricsActions(allEvents);
-                const writeCounts = this.countMetricsCalendarActions(allEvents);
-                const hasIntentCounts = Object.values(intentCounts).some(count => count > 0);
-                const hasWriteCounts = Object.values(writeCounts).some(count => count > 0);
-
-                if (hasIntentCounts) {
-                    console.log('\n🎯 Intent Actions:');
-                    if (intentCounts.new > 0) console.log(`   ➕ NEW: ${intentCounts.new}`);
-                    if (intentCounts.merge > 0) console.log(`   🔄 MERGE: ${intentCounts.merge}`);
-                    if (intentCounts.conflict > 0) console.log(`   ⚠️ CONFLICT: ${intentCounts.conflict}`);
-                    if (intentCounts.missing_calendar > 0) console.log(`   ❌ MISSING_CALENDAR: ${intentCounts.missing_calendar}`);
-                    if (intentCounts.other > 0) console.log(`   ❓ OTHER: ${intentCounts.other}`);
-                }
-
-                if (hasWriteCounts) {
-                    console.log('\n📝 Calendar Write Plan:');
-                    if (writeCounts.create > 0) console.log(`   ➕ CREATE: ${writeCounts.create}`);
-                    if (writeCounts.update > 0) console.log(`   🔄 UPDATE: ${writeCounts.update}`);
-                    if (writeCounts.skip > 0) console.log(`   ⏭️ SKIP: ${writeCounts.skip}`);
-                    if (writeCounts.other > 0) console.log(`   ❓ OTHER: ${writeCounts.other}`);
-                }
-            }
-            
-            if (results.errors.length > 0) {
-                console.log(`❌ Errors: ${results.errors.length}`);
-                results.errors.forEach(error => console.log(`   • ${error}`));
-            }
-            
-            console.log('\n📋 Parser Results:');
-            results.parserResults.forEach(result => {
-                console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
-            });
-            
-            console.log('\n' + '='.repeat(60));
-            
-            const shouldSkipUi = this.shouldSkipResultsUi(results);
-            if (!shouldSkipUi) {
-                // Present rich UI display (may update results.calendarEvents if user executes)
-                await this.presentRichResults(results);
-            } else {
-                console.log('📱 Scriptable: Skipping results UI (automation run)');
-            }
-
-            // Persist this run for later display (skip when showing saved runs)
-            const hasAnalyzedEvents = Array.isArray(results?.analyzedEvents);
-            const parserConfigs = results?.config?.parsers || [];
-            const runtimeForSave = results?.config?.runtime || results?.runContext || {};
-            const automationRunForSave = Boolean(runtimeForSave.automationRun) || runtimeForSave.type === 'automated';
-            const activeParsers = parserConfigs.filter(parser => {
-                if (automationRunForSave) {
-                    return parser?.automationEnabled === true;
-                }
-                return parser?.enabled !== false;
-            });
-            const hasActiveParsers = activeParsers.length > 0;
-            const shouldSaveRun = !results?._isDisplayingSavedRun && hasAnalyzedEvents && hasActiveParsers;
-            const retentionDays = 30;
-            if (shouldSaveRun) {
-                await this.ensureRelativeStorageDirs();
-                const runId = await this.saveRun(results);
-                if (runId) {
-                    results.savedRunId = runId;
-                    results.savedRunPath = this.getRunFilePath(runId);
-                }
-                // Cleanup old JSON runs
-                await this.cleanupOldFiles('chunky-dad-scraper/runs', {
-                    maxAgeDays: retentionDays,
-                    keep: (name) => !name.endsWith('.json')
-                });
-            } else {
-                const reason = results?._isDisplayingSavedRun
-                    ? 'display mode'
-                    : !hasActiveParsers
-                        ? automationRunForSave ? 'no automation-enabled parsers' : 'no enabled parsers'
-                        : 'missing analyzed events';
-                console.log(`📱 Scriptable: Skipping run save (${reason})`);
-            }
-
-            // Append a log file entry and cleanup logs (skip saved-run display)
-            if (!results?._isDisplayingSavedRun) {
-                try {
-                    await this.ensureRelativeStorageDirs();
-                    await this.appendLogSummary(results);
-                    await this.cleanupOldFiles('chunky-dad-scraper/logs', {
-                        maxAgeDays: retentionDays,
-                        keep: (name) => {
-                            const lower = name.toLowerCase();
-                            return lower.includes('performance') || lower.endsWith('.csv');
-                        }
-                    });
-                } catch (logErr) {
-                    console.log(`📱 Scriptable: Log write/cleanup failed: ${logErr.message}`);
-                }
-            } else {
-                console.log('📱 Scriptable: Skipping log write (display mode)');
-            }
-
-            if (!results?._isDisplayingSavedRun) {
-                // Append metrics record and update summary
-                try {
-                    await this.ensureRelativeStorageDirs();
-                    const metricsRecord = this.buildMetricsRecord(results);
-                    if (metricsRecord) {
-                        await this.appendMetricsRecord(metricsRecord, retentionDays);
-                        await this.updateMetricsSummary(metricsRecord);
-                    } else {
-                        console.log('📱 Scriptable: Skipping metrics write (missing runId)');
-                    }
-                } catch (metricsErr) {
-                    console.log(`📱 Scriptable: Metrics write failed: ${metricsErr.message}`);
-                }
-            }
-            
-        } catch (error) {
-            console.log(`📱 Scriptable: Error displaying results: ${error.message}`);
-        }
-    }
-
-    // Error handling with user-friendly alerts
-    async showError(title, message) {
-        try {
-            const alert = new Alert();
-            alert.title = title;
-            alert.message = message;
-            alert.addAction('OK');
-            await alert.present();
-        } catch (error) {
-            console.log(`Failed to show error alert: ${error.message}`);
-        }
-    }
-
-    // Enhanced Display Methods
-    async displayCalendarProperties(results) {
-        console.log('\n' + '='.repeat(60));
-        console.log('📅 CALENDAR SUMMARY');
-        console.log('='.repeat(60));
-        
-        // Get all events from all parser results
-        const allEvents = this.getAllEventsFromResults(results);
-        if (!allEvents || !allEvents.length) {
-            console.log('❌ No event data available for preview');
-            return;
-        }
-
-        // Get available calendars for comparison
-        const availableCalendars = await Calendar.forEvents();
-        
-        // Get unique calendars needed
-        const calendarsNeeded = new Map();
-        allEvents.forEach(event => {
-            const calendarName = this.getCalendarNameForDisplay(event);
-            if (!calendarsNeeded.has(calendarName)) {
-                const exists = availableCalendars.find(cal => cal.title === calendarName);
-                calendarsNeeded.set(calendarName, {
-                    name: calendarName,
-                    exists: !!exists,
-                    calendar: exists,
-                    eventCount: 0
-                });
-            }
-            calendarsNeeded.get(calendarName).eventCount++;
+        // Check for exact duplicates
+        const duplicates = existingEvents.filter((existing) => {
+          const titleMatch = existing.title === (event.title || event.name);
+          const timeMatch =
+            Math.abs(existing.startDate.getTime() - startDate.getTime()) <
+            60000; // Within 1 minute
+          return titleMatch && timeMatch;
         });
 
-        // Show calendar summary
-        console.log(`\n📊 Events: ${allEvents.length}`);
-        console.log(`📅 Calendars needed: ${calendarsNeeded.size}`);
-        for (const [name, info] of calendarsNeeded) {
-            if (info.exists) {
-                console.log(`   ✅ ${name} (${info.eventCount} events)`);
-            } else {
-                console.log(`   ❌ ${name} (${info.eventCount} events) - create manually`);
-            }
+        if (duplicates.length > 0) {
+          summary.duplicates += duplicates.length;
+          const timezone = this.getTimezoneForCity(event.city);
+          const sampleDup = duplicates[0];
+          const dupLocalTime = sampleDup.startDate.toLocaleString("en-US", {
+            timeZone: timezone,
+          });
+          const dupUtcTime = sampleDup.startDate.toLocaleString("en-US", {
+            timeZone: "UTC",
+          });
+          console.log(
+            `⚠️  ${event.title || event.name} → ${duplicates.length} duplicate(s) in ${calendarName}`,
+          );
+          console.log(
+            `   Example: "${sampleDup.title}" at ${dupLocalTime} (UTC: ${dupUtcTime})`,
+          );
         }
-        
-        console.log('\n' + '='.repeat(60));
+
+        // Check for time conflicts (overlapping events)
+        const conflicts = existingEvents.filter((existing) => {
+          const existingStart = existing.startDate.getTime();
+          const existingEnd = existing.endDate.getTime();
+          const newStart = startDate.getTime();
+          const newEnd = endDate.getTime();
+
+          // Check for overlap
+          return newStart < existingEnd && newEnd > existingStart;
+        });
+
+        if (conflicts.length > 0) {
+          summary.conflicts += conflicts.length;
+          console.log(
+            `⏰ ${event.title || event.name} → ${conflicts.length} time conflict(s) in ${calendarName}`,
+          );
+          const timezone = this.getTimezoneForCity(event.city);
+          const shownConflicts = conflicts.slice(0, 2);
+          shownConflicts.forEach((conflict) => {
+            const conflictLocalStart = conflict.startDate.toLocaleString(
+              "en-US",
+              { timeZone: timezone },
+            );
+            const conflictLocalEnd = conflict.endDate.toLocaleString("en-US", {
+              timeZone: timezone,
+            });
+            const conflictUtcStart = conflict.startDate.toLocaleString(
+              "en-US",
+              { timeZone: "UTC" },
+            );
+            const conflictUtcEnd = conflict.endDate.toLocaleString("en-US", {
+              timeZone: "UTC",
+            });
+            const shouldMerge = this.shouldMergeTimeConflict(conflict, event);
+            const mergeNote = shouldMerge ? "merge" : "no merge";
+            console.log(
+              `   - "${conflict.title}": ${conflictLocalStart} - ${conflictLocalEnd} (UTC: ${conflictUtcStart} - ${conflictUtcEnd}) (${mergeNote})`,
+            );
+          });
+          if (conflicts.length > shownConflicts.length) {
+            console.log(
+              `   ...and ${conflicts.length - shownConflicts.length} more`,
+            );
+          }
+        }
+      } catch (error) {
+        console.error(
+          `❌ Failed to check calendar "${calendarName}": ${error}`,
+        );
+      }
     }
 
-    async compareWithExistingCalendars(results) {
-        console.log('\n' + '='.repeat(60));
-        console.log('🔍 CALENDAR COMPARISON & CONFLICT CHECK');
-        console.log('='.repeat(60));
-        
-        // Get all events from all parser results
-        const allEvents = this.getAllEventsFromResults(results);
-        if (!allEvents || !allEvents.length) {
-            console.log('❌ No events to compare');
-            return;
-        }
+    if (missingCalendars.size > 0) {
+      const missingList = Array.from(missingCalendars.entries())
+        .map(([name, count]) => `${name} (${count})`)
+        .join(", ");
+      console.log(`❌ Missing calendars: ${missingList}`);
+    }
 
-        const availableCalendars = await Calendar.forEvents();
-        const summary = { checked: 0, missing: 0, duplicates: 0, conflicts: 0 };
-        const missingCalendars = new Map();
-        
-        for (const event of allEvents) {
-            summary.checked++;
-            const calendarName = this.getCalendarNameForDisplay(event);
-            const calendar = availableCalendars.find(cal => cal.title === calendarName);
-            
-            if (!calendar) {
-                summary.missing++;
-                missingCalendars.set(calendarName, (missingCalendars.get(calendarName) || 0) + 1);
-                // Mark event as missing calendar for display
-                event._action = 'missing_calendar';
-                event._analysis = {
-                    action: 'missing_calendar',
-                    reason: `Calendar "${calendarName}" does not exist`,
-                    calendarName: calendarName
+    console.log(
+      `✅ Calendar check complete: ${summary.checked} events, ${summary.missing} missing, ${summary.duplicates} duplicates, ${summary.conflicts} conflicts`,
+    );
+    console.log("\n" + "=".repeat(60));
+  }
+
+  async displayAvailableCalendars(results) {
+    console.log("\n" + "=".repeat(60));
+    console.log("📅 CALENDAR STATUS");
+    console.log("=".repeat(60));
+
+    try {
+      const availableCalendars = await Calendar.forEvents();
+
+      if (availableCalendars.length === 0) {
+        console.log("❌ No calendars found or failed to load");
+        return;
+      }
+
+      // Get all events to see which calendars we need
+      const allEvents = this.getAllEventsFromResults(this.lastResults);
+      const neededCalendars = new Set();
+      allEvents.forEach((event) => {
+        const calendarName = this.getCalendarNameForDisplay(event);
+        neededCalendars.add(calendarName);
+      });
+
+      console.log(`📊 Calendars needed for events: ${neededCalendars.size}`);
+
+      // Show only the calendars we need and their status
+      const foundCalendars = [];
+      const missingCalendars = [];
+
+      neededCalendars.forEach((calendarName) => {
+        const exists = availableCalendars.find(
+          (cal) => cal.title === calendarName,
+        );
+        if (exists) {
+          foundCalendars.push(calendarName);
+        } else {
+          missingCalendars.push(calendarName);
+        }
+      });
+
+      if (foundCalendars.length > 0) {
+        console.log(`\n✅ Found calendars (${foundCalendars.length}):`);
+        foundCalendars.forEach((cal) => console.log(`   • ${cal}`));
+      }
+
+      if (missingCalendars.length > 0) {
+        console.log(
+          `\n❌ Missing calendars (${missingCalendars.length}) - create manually:`,
+        );
+        missingCalendars.forEach((cal) => console.log(`   • ${cal}`));
+      }
+    } catch (error) {
+      console.error(`❌ Failed to load calendars: ${error}`);
+    }
+
+    console.log("\n" + "=".repeat(60));
+  }
+
+  async displayEnrichedEvents(results) {
+    console.log("\n" + "=".repeat(60));
+    console.log("🐻 ENRICHED EVENT INFORMATION");
+    console.log("=".repeat(60));
+
+    // Get all events from all parser results
+    const allEvents = this.getAllEventsFromResults(results);
+    if (!allEvents || !allEvents.length) {
+      console.log("❌ No events to display");
+      return;
+    }
+
+    // Group events by intent action type (display intent can differ from write action)
+    const eventsByAction = {
+      new: [],
+      merge: [],
+      conflict: [],
+      missing_calendar: [],
+      other: [],
+    };
+
+    allEvents.forEach((event) => {
+      const action = this.normalizeIntentAction(event) || "other";
+      if (eventsByAction[action]) {
+        eventsByAction[action].push(event);
+      } else {
+        eventsByAction.other.push(event);
+      }
+    });
+
+    // Show summary by action type
+    console.log(`\n📊 Event Actions Summary:`);
+    console.log(`   ➕ New: ${eventsByAction.new.length} events`);
+    console.log(`   🔀 Merge: ${eventsByAction.merge.length} events`);
+    console.log(`   ⚠️  Conflict: ${eventsByAction.conflict.length} events`);
+    console.log(
+      `   ❌ Missing Calendar: ${eventsByAction.missing_calendar.length} events`,
+    );
+    if (eventsByAction.other.length > 0) {
+      console.log(`   ❓ Other: ${eventsByAction.other.length} events`);
+    }
+
+    const detailedActions = ["merge", "conflict"];
+    const actionsToShow = detailedActions.filter(
+      (action) => eventsByAction[action].length > 0,
+    );
+    if (actionsToShow.length === 0 && eventsByAction.new.length > 0) {
+      actionsToShow.push("new");
+    }
+
+    actionsToShow.forEach((action) => {
+      const events = eventsByAction[action];
+      if (!events || events.length === 0) return;
+
+      console.log(
+        `\n${action.toUpperCase()} Events (showing 1 of ${events.length}):`,
+      );
+      console.log("─".repeat(50));
+
+      const event = events[0];
+      console.log(`• ${event.title || event.name}`);
+      console.log(
+        `  📍 ${event.venue || event.bar || "TBD"} | 📱 ${this.getCalendarNameForDisplay(event)}`,
+      );
+      console.log(
+        `  🎯 Intent: ${this.formatIntentActionLabel(this.normalizeIntentAction(event))} | 📝 Write: ${this.formatWriteActionLabel(this.getWriteActionFromEvent(event))}`,
+      );
+      const eventDateForDisplay = new Date(event.startDate);
+      // Get timezone from city configuration instead of expecting it on the event
+      const timezone = this.getTimezoneForCityOrUtc(event.city);
+      const localDateTime = eventDateForDisplay.toLocaleString("en-US", {
+        timeZone: timezone,
+      });
+      const utcDateTime = eventDateForDisplay.toLocaleString("en-US", {
+        timeZone: "UTC",
+      });
+      console.log(`  📅 ${localDateTime} (UTC: ${utcDateTime})`);
+
+      if (action === "merge" && event._mergeDiff) {
+        console.log(
+          `  🔀 Merge: ${event._mergeDiff.preserved.length} preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`,
+        );
+      } else if (action === "conflict" && event._analysis?.reason) {
+        console.log(`  ⚠️  Reason: ${event._analysis.reason}`);
+      }
+    });
+
+    console.log("\n" + "=".repeat(60));
+  }
+
+  async displaySummaryAndActions(results) {
+    console.log("\n" + "=".repeat(60));
+    console.log("📊 SUMMARY & RECOMMENDED ACTIONS");
+    console.log("=".repeat(60));
+
+    // Get all events from all parser results
+    const allEvents = this.getAllEventsFromResults(results);
+    if (!allEvents || !allEvents.length) {
+      console.log("❌ No event data available for summary");
+      return;
+    }
+
+    const summary = {
+      totalEvents: allEvents.length,
+      cities: [...new Set(allEvents.map((e) => e.city).filter(Boolean))],
+      calendarsNeeded: [
+        ...new Set(allEvents.map((e) => this.getCalendarNameForDisplay(e))),
+      ],
+      timezones: [...new Set(allEvents.map((e) => e.timezone).filter(Boolean))],
+    };
+
+    console.log(`📊 Events: ${summary.totalEvents} total`);
+
+    if (summary.cities.length > 0) {
+      console.log(`\n🌍 Cities: ${summary.cities.join(", ")}`);
+    }
+
+    console.log(`📅 Calendars needed: ${summary.calendarsNeeded.length}`);
+    try {
+      const availableCalendars = await Calendar.forEvents();
+      summary.calendarsNeeded.forEach((cal) => {
+        const exists = availableCalendars.find((c) => c.title === cal);
+        console.log(`   - "${cal}" ${exists ? "(exists)" : "(will create)"}`);
+      });
+    } catch (error) {
+      summary.calendarsNeeded.forEach((cal) => {
+        console.log(`   - "${cal}" (status unknown)`);
+      });
+    }
+
+    if (summary.timezones.length > 0) {
+      console.log(`\n🕐 Timezones: ${summary.timezones.join(", ")}`);
+    }
+
+    // Show action breakdown if events have been analyzed
+    const actionsCount = {
+      new: 0,
+      merge: 0,
+      conflict: 0,
+      missing_calendar: 0,
+      other: 0,
+    };
+
+    let hasActions = false;
+    allEvents.forEach((event) => {
+      const action = this.normalizeIntentAction(event);
+      if (!action) return;
+      hasActions = true;
+      if (actionsCount.hasOwnProperty(action)) {
+        actionsCount[action]++;
+      } else {
+        actionsCount.other++;
+      }
+    });
+
+    if (hasActions) {
+      console.log(`\n🎯 Event Actions Analysis:`);
+      Object.entries(actionsCount).forEach(([action, count]) => {
+        if (count > 0) {
+          const actionIcon =
+            {
+              new: "➕",
+              merge: "🔄",
+              conflict: "⚠️",
+              missing_calendar: "❌",
+              other: "❓",
+            }[action] || "❓";
+
+          console.log(
+            `   ${actionIcon} ${action.toUpperCase()}: ${count} events`,
+          );
+        }
+      });
+    }
+
+    // Add explanation about deduplication if relevant
+    if (results.duplicatesRemoved > 0) {
+      console.log(`\n💡 About Deduplication:`);
+      console.log(
+        `   Some venues (like Bearracuda) have events listed on multiple platforms`,
+      );
+      console.log(
+        `   (e.g., both Bearracuda.com and Eventbrite). The scraper finds both`,
+      );
+      console.log(
+        `   versions but removes duplicates to avoid calendar clutter.`,
+      );
+      console.log(
+        `   This is working correctly - ${results.duplicatesRemoved} duplicates were removed.`,
+      );
+    }
+
+    console.log(`\n🎯 Recommended Actions:`);
+    console.log(`   1. Review calendar properties above`);
+    console.log(`   2. Check for conflicts in comparison section`);
+    console.log(`   3. Verify calendar permissions and settings`);
+    console.log(`   4. Set dryRun: false in config to actually add events`);
+
+    console.log("\n" + "=".repeat(60));
+  }
+
+  async displayFullEventObjects(results) {
+    console.log("\n" + "=".repeat(60));
+    console.log("🔍 FULL EVENT OBJECTS (DEBUG)");
+    console.log("=".repeat(60));
+
+    const allEvents = this.getAllEventsFromResults(results);
+    if (!allEvents || !allEvents.length) {
+      console.log("❌ No events to display");
+      return;
+    }
+
+    // Group events by action type
+    const eventsByAction = {};
+    allEvents.forEach((event) => {
+      const action = event._action || "unprocessed";
+      if (!eventsByAction[action]) {
+        eventsByAction[action] = [];
+      }
+      eventsByAction[action].push(event);
+    });
+
+    // Display events grouped by action
+    Object.entries(eventsByAction).forEach(([action, events]) => {
+      console.log(
+        `\n━━━ ${action.toUpperCase()} EVENTS (${events.length}) ━━━`,
+      );
+
+      events.forEach((event, index) => {
+        console.log(
+          `\n[${action.toUpperCase()} ${index + 1}/${events.length}] ${event.title || event.name}`,
+        );
+        console.log("─".repeat(60));
+
+        // Create a clean object for logging (remove circular references)
+        const cleanEvent = JSON.parse(
+          JSON.stringify(
+            event,
+            (key, value) => {
+              // Skip internal fields that might have circular references
+              if (key === "_parserConfig" && value) {
+                return { name: value.name, parser: value.parser };
+              }
+              if (key === "_existingEvent" && value) {
+                return {
+                  title: value.title,
+                  identifier: value.identifier,
+                  startDate: value.startDate,
+                  endDate: value.endDate,
+                  notesLength: value.notes ? value.notes.length : 0,
                 };
-                continue;
-            }
-            
-            try {
-                // Check for existing events in the time range
-                // Ensure dates are Date objects (may be strings from saved runs)
-                const startDate = typeof event.startDate === 'string' ? new Date(event.startDate) : event.startDate;
-                const endDate = typeof (event.endDate || event.startDate) === 'string' ? 
-                    new Date(event.endDate || event.startDate) : 
-                    (event.endDate || event.startDate);
-                
-                const searchStart = new Date(startDate);
-                const searchEnd = new Date(endDate);
-                searchEnd.setDate(searchEnd.getDate() + 30); // Look ahead a month
-                
-                const existingEvents = await CalendarEvent.between(searchStart, searchEnd, [calendar]);
-                
-                // Check for exact duplicates
-                const duplicates = existingEvents.filter(existing => {
-                    const titleMatch = existing.title === (event.title || event.name);
-                    const timeMatch = Math.abs(existing.startDate.getTime() - startDate.getTime()) < 60000; // Within 1 minute
-                    return titleMatch && timeMatch;
-                });
-                
-                if (duplicates.length > 0) {
-                    summary.duplicates += duplicates.length;
-                    const timezone = this.getTimezoneForCity(event.city);
-                    const sampleDup = duplicates[0];
-                    const dupLocalTime = sampleDup.startDate.toLocaleString('en-US', { timeZone: timezone });
-                    const dupUtcTime = sampleDup.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
-                    console.log(`⚠️  ${event.title || event.name} → ${duplicates.length} duplicate(s) in ${calendarName}`);
-                    console.log(`   Example: "${sampleDup.title}" at ${dupLocalTime} (UTC: ${dupUtcTime})`);
-                }
-                
-                // Check for time conflicts (overlapping events)
-                const conflicts = existingEvents.filter(existing => {
-                    const existingStart = existing.startDate.getTime();
-                    const existingEnd = existing.endDate.getTime();
-                    const newStart = startDate.getTime();
-                    const newEnd = endDate.getTime();
-                    
-                    // Check for overlap
-                    return (newStart < existingEnd && newEnd > existingStart);
-                });
-                
-                if (conflicts.length > 0) {
-                    summary.conflicts += conflicts.length;
-                    console.log(`⏰ ${event.title || event.name} → ${conflicts.length} time conflict(s) in ${calendarName}`);
-                    const timezone = this.getTimezoneForCity(event.city);
-                    const shownConflicts = conflicts.slice(0, 2);
-                    shownConflicts.forEach(conflict => {
-                        const conflictLocalStart = conflict.startDate.toLocaleString('en-US', { timeZone: timezone });
-                        const conflictLocalEnd = conflict.endDate.toLocaleString('en-US', { timeZone: timezone });
-                        const conflictUtcStart = conflict.startDate.toLocaleString('en-US', { timeZone: 'UTC' });
-                        const conflictUtcEnd = conflict.endDate.toLocaleString('en-US', { timeZone: 'UTC' });
-                        const shouldMerge = this.shouldMergeTimeConflict(conflict, event);
-                        const mergeNote = shouldMerge ? 'merge' : 'no merge';
-                        console.log(`   - "${conflict.title}": ${conflictLocalStart} - ${conflictLocalEnd} (UTC: ${conflictUtcStart} - ${conflictUtcEnd}) (${mergeNote})`);
-                    });
-                    if (conflicts.length > shownConflicts.length) {
-                        console.log(`   ...and ${conflicts.length - shownConflicts.length} more`);
-                    }
-                }
-                
-            } catch (error) {
-                console.error(`❌ Failed to check calendar "${calendarName}": ${error}`);
-            }
+              }
+              if (key === "_conflicts" && value && Array.isArray(value)) {
+                return value.map((c) => ({
+                  title: c.title,
+                  startDate: c.startDate,
+                  identifier: c.identifier,
+                }));
+              }
+              if (key === "placeId") {
+                return undefined; // Hide placeId from debug display
+              }
+              if (typeof value === "function") {
+                return "[Function]";
+              }
+              return value;
+            },
+            2,
+          ),
+        );
+
+        console.log(JSON.stringify(cleanEvent, null, 2));
+      });
+    });
+
+    console.log("\n" + "=".repeat(60));
+  }
+
+  // Rich UI presentation using WebView with HTML
+  async presentRichResults(results) {
+    try {
+      console.log("📱 Scriptable: Presenting results UI...");
+
+      // Generate HTML for rich display
+      const html = await this.generateRichHTML(results);
+
+      // Present using WebView
+      await WebView.loadHTML(html, null, null, true);
+
+      // After displaying results, prompt for calendar execution if we have analyzed events
+      // Don't prompt when displaying saved runs (they should use isDryRun override instead)
+      if (
+        results.analyzedEvents &&
+        results.analyzedEvents.length > 0 &&
+        !results.calendarEvents &&
+        !results._isDisplayingSavedRun
+      ) {
+        // Check if we have any events from non-dry-run parsers
+        const eventsFromActiveParsers = results.analyzedEvents.filter(
+          (event) => {
+            const parserConfig = results.config?.parsers?.find(
+              (p) => p.name === event._parserConfig?.name,
+            );
+            const isParserDryRun = parserConfig?.dryRun === true;
+            return !isParserDryRun;
+          },
+        );
+
+        const globalDryRun = results.config?.config?.dryRun;
+        const hasActiveEvents = eventsFromActiveParsers.length > 0;
+
+        if (!globalDryRun && hasActiveEvents) {
+          console.log(
+            `📱 Scriptable: Prompting for calendar execution (${eventsFromActiveParsers.length} events)`,
+          );
+          const executedCount = await this.promptForCalendarExecution(
+            eventsFromActiveParsers,
+            results.config,
+          );
+          results.calendarEvents = executedCount;
+        } else {
+          const reason = globalDryRun ? "global dry run" : "no active events";
+          console.log(`📱 Scriptable: Skipping execution prompt (${reason})`);
         }
-        
-        if (missingCalendars.size > 0) {
-            const missingList = Array.from(missingCalendars.entries())
-                .map(([name, count]) => `${name} (${count})`)
-                .join(', ');
-            console.log(`❌ Missing calendars: ${missingList}`);
-        }
-        
-        console.log(`✅ Calendar check complete: ${summary.checked} events, ${summary.missing} missing, ${summary.duplicates} duplicates, ${summary.conflicts} conflicts`);
-        console.log('\n' + '='.repeat(60));
+      } else {
+        console.log(
+          "📱 Scriptable: Skipping execution prompt (conditions not met)",
+        );
+      }
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`,
+      );
+    }
+  }
+
+  // Generate rich HTML for WebView display
+  async generateRichHTML(results) {
+    const allEvents = this.getAllEventsFromResults(results);
+    const availableCalendars = await Calendar.forEvents();
+
+    // Detect dark mode for better bar/low-light readability
+    const isDarkMode = Device.isUsingDarkAppearance();
+    const runContextLabel = this.formatRunContext(
+      results.runContext || this.resolveRunContext(results),
+    );
+    const runIdLabel = results.savedRunId || results.sourceRunId || null;
+    const runMetaLabel = runIdLabel
+      ? `Run: ${runContextLabel} | ID: ${runIdLabel}`
+      : `Run: ${runContextLabel}`;
+    const shouldShowLogs = results?._isDisplayingSavedRun === true;
+    const runLogInfo = shouldShowLogs
+      ? await this.loadRunLogsForDisplay(results)
+      : null;
+    const runPromptInfo = shouldShowLogs
+      ? this.loadAiPromptsForDisplay(results, runLogInfo)
+      : null;
+    const logSectionHtml = shouldShowLogs
+      ? this.buildRunLogSectionHtml(runLogInfo, runPromptInfo)
+      : "";
+    const headerLogoData = await this.loadHeaderLogoData();
+    const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
+
+    // Group events by intent actions (intent can differ from write action for overrides)
+    const newEvents = [];
+    const mergeEvents = [];
+    const conflictEvents = [];
+
+    for (const event of allEvents) {
+      switch (this.normalizeIntentAction(event)) {
+        case "new":
+          newEvents.push(event);
+          break;
+        case "merge":
+          mergeEvents.push(event);
+          break;
+        case "conflict":
+        case "missing_calendar":
+          conflictEvents.push(event);
+          break;
+        default:
+          // Fallback for events without analysis
+          newEvents.push(event);
+          break;
+      }
     }
 
-    async displayAvailableCalendars(results) {
-        console.log('\n' + '='.repeat(60));
-        console.log('📅 CALENDAR STATUS');
-        console.log('='.repeat(60));
-        
-        try {
-            const availableCalendars = await Calendar.forEvents();
-            
-            if (availableCalendars.length === 0) {
-                console.log('❌ No calendars found or failed to load');
-                return;
-            }
-            
-            // Get all events to see which calendars we need
-            const allEvents = this.getAllEventsFromResults(this.lastResults);
-            const neededCalendars = new Set();
-            allEvents.forEach(event => {
-                const calendarName = this.getCalendarNameForDisplay(event);
-                neededCalendars.add(calendarName);
-            });
-            
-            console.log(`📊 Calendars needed for events: ${neededCalendars.size}`);
-            
-            // Show only the calendars we need and their status
-            const foundCalendars = [];
-            const missingCalendars = [];
-            
-            neededCalendars.forEach(calendarName => {
-                const exists = availableCalendars.find(cal => cal.title === calendarName);
-                if (exists) {
-                    foundCalendars.push(calendarName);
-                } else {
-                    missingCalendars.push(calendarName);
-                }
-            });
-            
-            if (foundCalendars.length > 0) {
-                console.log(`\n✅ Found calendars (${foundCalendars.length}):`);
-                foundCalendars.forEach(cal => console.log(`   • ${cal}`));
-            }
-            
-            if (missingCalendars.length > 0) {
-                console.log(`\n❌ Missing calendars (${missingCalendars.length}) - create manually:`);
-                missingCalendars.forEach(cal => console.log(`   • ${cal}`));
-            }
-            
-        } catch (error) {
-            console.error(`❌ Failed to load calendars: ${error}`);
-        }
-        
-        console.log('\n' + '='.repeat(60));
-    }
-
-    async displayEnrichedEvents(results) {
-        console.log('\n' + '='.repeat(60));
-        console.log('🐻 ENRICHED EVENT INFORMATION');
-        console.log('='.repeat(60));
-        
-        // Get all events from all parser results
-        const allEvents = this.getAllEventsFromResults(results);
-        if (!allEvents || !allEvents.length) {
-            console.log('❌ No events to display');
-            return;
-        }
-        
-        // Group events by intent action type (display intent can differ from write action)
-        const eventsByAction = {
-            new: [],
-            merge: [],
-            conflict: [],
-            missing_calendar: [],
-            other: []
-        };
-        
-        allEvents.forEach(event => {
-            const action = this.normalizeIntentAction(event) || 'other';
-            if (eventsByAction[action]) {
-                eventsByAction[action].push(event);
-            } else {
-                eventsByAction.other.push(event);
-            }
-        });
-        
-        // Show summary by action type
-        console.log(`\n📊 Event Actions Summary:`);
-        console.log(`   ➕ New: ${eventsByAction.new.length} events`);
-        console.log(`   🔀 Merge: ${eventsByAction.merge.length} events`);
-        console.log(`   ⚠️  Conflict: ${eventsByAction.conflict.length} events`);
-        console.log(`   ❌ Missing Calendar: ${eventsByAction.missing_calendar.length} events`);
-        if (eventsByAction.other.length > 0) {
-            console.log(`   ❓ Other: ${eventsByAction.other.length} events`);
-        }
-        
-        const detailedActions = ['merge', 'conflict'];
-        const actionsToShow = detailedActions.filter(action => eventsByAction[action].length > 0);
-        if (actionsToShow.length === 0 && eventsByAction.new.length > 0) {
-            actionsToShow.push('new');
-        }
-        
-        actionsToShow.forEach(action => {
-            const events = eventsByAction[action];
-            if (!events || events.length === 0) return;
-            
-            console.log(`\n${action.toUpperCase()} Events (showing 1 of ${events.length}):`);
-            console.log('─'.repeat(50));
-            
-            const event = events[0];
-            console.log(`• ${event.title || event.name}`);
-            console.log(`  📍 ${event.venue || event.bar || 'TBD'} | 📱 ${this.getCalendarNameForDisplay(event)}`);
-            console.log(`  🎯 Intent: ${this.formatIntentActionLabel(this.normalizeIntentAction(event))} | 📝 Write: ${this.formatWriteActionLabel(this.getWriteActionFromEvent(event))}`);
-            const eventDateForDisplay = new Date(event.startDate);
-            // Get timezone from city configuration instead of expecting it on the event
-            const timezone = this.getTimezoneForCityOrUtc(event.city);
-            const localDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: timezone });
-            const utcDateTime = eventDateForDisplay.toLocaleString('en-US', { timeZone: 'UTC' });
-            console.log(`  📅 ${localDateTime} (UTC: ${utcDateTime})`);
-            
-            if (action === 'merge' && event._mergeDiff) {
-                console.log(`  🔀 Merge: ${event._mergeDiff.preserved.length} preserved, ${event._mergeDiff.updated.length} updated, ${event._mergeDiff.added.length} added`);
-            } else if (action === 'conflict' && event._analysis?.reason) {
-                console.log(`  ⚠️  Reason: ${event._analysis.reason}`);
-            }
-        });
-        
-        console.log('\n' + '='.repeat(60));
-    }
-
-    async displaySummaryAndActions(results) {
-        console.log('\n' + '='.repeat(60));
-        console.log('📊 SUMMARY & RECOMMENDED ACTIONS');
-        console.log('='.repeat(60));
-        
-        // Get all events from all parser results
-        const allEvents = this.getAllEventsFromResults(results);
-        if (!allEvents || !allEvents.length) {
-            console.log('❌ No event data available for summary');
-            return;
-        }
-        
-        const summary = {
-            totalEvents: allEvents.length,
-            cities: [...new Set(allEvents.map(e => e.city).filter(Boolean))],
-            calendarsNeeded: [...new Set(allEvents.map(e => this.getCalendarNameForDisplay(e)))],
-            timezones: [...new Set(allEvents.map(e => e.timezone).filter(Boolean))]
-        };
-        
-        console.log(`📊 Events: ${summary.totalEvents} total`);
-        
-        if (summary.cities.length > 0) {
-            console.log(`\n🌍 Cities: ${summary.cities.join(', ')}`);
-        }
-        
-        console.log(`📅 Calendars needed: ${summary.calendarsNeeded.length}`);
-        try {
-            const availableCalendars = await Calendar.forEvents();
-            summary.calendarsNeeded.forEach(cal => {
-                const exists = availableCalendars.find(c => c.title === cal);
-                console.log(`   - "${cal}" ${exists ? '(exists)' : '(will create)'}`);
-            });
-        } catch (error) {
-            summary.calendarsNeeded.forEach(cal => {
-                console.log(`   - "${cal}" (status unknown)`);
-            });
-        }
-        
-        if (summary.timezones.length > 0) {
-            console.log(`\n🕐 Timezones: ${summary.timezones.join(', ')}`);
-        }
-        
-        // Show action breakdown if events have been analyzed
-        const actionsCount = {
-            new: 0,
-            merge: 0,
-            conflict: 0,
-            missing_calendar: 0,
-            other: 0
-        };
-        
-        let hasActions = false;
-        allEvents.forEach(event => {
-            const action = this.normalizeIntentAction(event);
-            if (!action) return;
-            hasActions = true;
-            if (actionsCount.hasOwnProperty(action)) {
-                actionsCount[action]++;
-            } else {
-                actionsCount.other++;
-            }
-        });
-        
-        if (hasActions) {
-            console.log(`\n🎯 Event Actions Analysis:`);
-            Object.entries(actionsCount).forEach(([action, count]) => {
-                if (count > 0) {
-                    const actionIcon = {
-                        'new': '➕',
-                        'merge': '🔄',
-                        'conflict': '⚠️',
-                        'missing_calendar': '❌',
-                        'other': '❓'
-                    }[action] || '❓';
-                    
-                    console.log(`   ${actionIcon} ${action.toUpperCase()}: ${count} events`);
-                }
-            });
-        }
-
-        // Add explanation about deduplication if relevant
-        if (results.duplicatesRemoved > 0) {
-            console.log(`\n💡 About Deduplication:`);
-            console.log(`   Some venues (like Bearracuda) have events listed on multiple platforms`);
-            console.log(`   (e.g., both Bearracuda.com and Eventbrite). The scraper finds both`);
-            console.log(`   versions but removes duplicates to avoid calendar clutter.`);
-            console.log(`   This is working correctly - ${results.duplicatesRemoved} duplicates were removed.`);
-        }
-
-        console.log(`\n🎯 Recommended Actions:`);
-        console.log(`   1. Review calendar properties above`);
-        console.log(`   2. Check for conflicts in comparison section`);
-        console.log(`   3. Verify calendar permissions and settings`);
-        console.log(`   4. Set dryRun: false in config to actually add events`);
-        
-        console.log('\n' + '='.repeat(60));
-    }
-    
-    async displayFullEventObjects(results) {
-        console.log('\n' + '='.repeat(60));
-        console.log('🔍 FULL EVENT OBJECTS (DEBUG)');
-        console.log('='.repeat(60));
-        
-        const allEvents = this.getAllEventsFromResults(results);
-        if (!allEvents || !allEvents.length) {
-            console.log('❌ No events to display');
-            return;
-        }
-        
-        // Group events by action type
-        const eventsByAction = {};
-        allEvents.forEach(event => {
-            const action = event._action || 'unprocessed';
-            if (!eventsByAction[action]) {
-                eventsByAction[action] = [];
-            }
-            eventsByAction[action].push(event);
-        });
-        
-        // Display events grouped by action
-        Object.entries(eventsByAction).forEach(([action, events]) => {
-            console.log(`\n━━━ ${action.toUpperCase()} EVENTS (${events.length}) ━━━`);
-            
-            events.forEach((event, index) => {
-                console.log(`\n[${action.toUpperCase()} ${index + 1}/${events.length}] ${event.title || event.name}`);
-                console.log('─'.repeat(60));
-                
-                // Create a clean object for logging (remove circular references)
-                const cleanEvent = JSON.parse(JSON.stringify(event, (key, value) => {
-                    // Skip internal fields that might have circular references
-                    if (key === '_parserConfig' && value) {
-                        return { name: value.name, parser: value.parser };
-                    }
-                    if (key === '_existingEvent' && value) {
-                        return { 
-                            title: value.title, 
-                            identifier: value.identifier,
-                            startDate: value.startDate,
-                            endDate: value.endDate,
-                            notesLength: value.notes ? value.notes.length : 0
-                        };
-                    }
-                    if (key === '_conflicts' && value && Array.isArray(value)) {
-                        return value.map(c => ({
-                            title: c.title,
-                            startDate: c.startDate,
-                            identifier: c.identifier
-                        }));
-                    }
-                    if (key === 'placeId') {
-                        return undefined; // Hide placeId from debug display
-                    }
-                    if (typeof value === 'function') {
-                        return '[Function]';
-                    }
-                    return value;
-                }, 2));
-                
-                console.log(JSON.stringify(cleanEvent, null, 2));
-            });
-        });
-        
-        console.log('\n' + '='.repeat(60));
-    }
-
-    // Rich UI presentation using WebView with HTML
-    async presentRichResults(results) {
-        try {
-            console.log('📱 Scriptable: Presenting results UI...');
-            
-            // Generate HTML for rich display
-            const html = await this.generateRichHTML(results);
-            
-            // Present using WebView
-            await WebView.loadHTML(html, null, null, true);
-            
-            // After displaying results, prompt for calendar execution if we have analyzed events
-            // Don't prompt when displaying saved runs (they should use isDryRun override instead)
-            if (results.analyzedEvents && results.analyzedEvents.length > 0 && !results.calendarEvents && !results._isDisplayingSavedRun) {
-                // Check if we have any events from non-dry-run parsers
-                const eventsFromActiveParsers = results.analyzedEvents.filter(event => {
-                    const parserConfig = results.config?.parsers?.find(p => p.name === event._parserConfig?.name);
-                    const isParserDryRun = parserConfig?.dryRun === true;
-                    return !isParserDryRun;
-                });
-                
-                const globalDryRun = results.config?.config?.dryRun;
-                const hasActiveEvents = eventsFromActiveParsers.length > 0;
-                
-                if (!globalDryRun && hasActiveEvents) {
-                    console.log(`📱 Scriptable: Prompting for calendar execution (${eventsFromActiveParsers.length} events)`);
-                    const executedCount = await this.promptForCalendarExecution(eventsFromActiveParsers, results.config);
-                    results.calendarEvents = executedCount;
-                } else {
-                    const reason = globalDryRun ? 'global dry run' : 'no active events';
-                    console.log(`📱 Scriptable: Skipping execution prompt (${reason})`);
-                }
-            } else {
-                console.log('📱 Scriptable: Skipping execution prompt (conditions not met)');
-            }
-            
-        } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`);
-        }
-    }
-
-    // Generate rich HTML for WebView display
-    async generateRichHTML(results) {
-        const allEvents = this.getAllEventsFromResults(results);
-        const availableCalendars = await Calendar.forEvents();
-        
-        // Detect dark mode for better bar/low-light readability
-        const isDarkMode = Device.isUsingDarkAppearance();
-        const runContextLabel = this.formatRunContext(results.runContext || this.resolveRunContext(results));
-        const runIdLabel = results.savedRunId || results.sourceRunId || null;
-        const runMetaLabel = runIdLabel
-            ? `Run: ${runContextLabel} | ID: ${runIdLabel}`
-            : `Run: ${runContextLabel}`;
-        const shouldShowLogs = results?._isDisplayingSavedRun === true;
-        const runLogInfo = shouldShowLogs ? await this.loadRunLogsForDisplay(results) : null;
-        const runPromptInfo = shouldShowLogs ? this.loadAiPromptsForDisplay(results, runLogInfo) : null;
-        const logSectionHtml = shouldShowLogs ? this.buildRunLogSectionHtml(runLogInfo, runPromptInfo) : '';
-        const headerLogoData = await this.loadHeaderLogoData();
-        const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
-        
-        // Group events by intent actions (intent can differ from write action for overrides)
-        const newEvents = [];
-        const mergeEvents = [];
-        const conflictEvents = [];
-        
-        for (const event of allEvents) {
-            switch (this.normalizeIntentAction(event)) {
-                case 'new':
-                    newEvents.push(event);
-                    break;
-                case 'merge':
-                    mergeEvents.push(event);
-                    break;
-                case 'conflict':
-                case 'missing_calendar':
-                    conflictEvents.push(event);
-                    break;
-                default:
-                    // Fallback for events without analysis
-                    newEvents.push(event);
-                    break;
-            }
-        }
-        
-        const html = `
+    const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -2753,7 +3271,9 @@ async saveFailureNote(url, error, metadata = {}) {
             --card-hover-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
         }
 
-        ${isDarkMode ? `
+        ${
+          isDarkMode
+            ? `
         :root {
             /* Dark mode overrides for better bar/low-light readability */
             --primary-color: #8b9cf7;
@@ -2769,7 +3289,9 @@ async saveFailureNote(url, error, metadata = {}) {
             --card-shadow: 0 4px 15px rgba(0,0,0,0.3);
             --card-hover-shadow: 0 8px 25px rgba(139, 156, 247, 0.25);
         }
-        ` : ''}
+        `
+            : ""
+        }
         
         body {
             font-family: 'Poppins', sans-serif;
@@ -3162,23 +3684,23 @@ async saveFailureNote(url, error, metadata = {}) {
         }
         
         .conflict-info {
-            background: ${isDarkMode ? 'rgba(255, 193, 7, 0.1)' : '#fff3cd'};
-            border: 1px solid ${isDarkMode ? 'rgba(255, 193, 7, 0.3)' : '#ffeaa7'};
+            background: ${isDarkMode ? "rgba(255, 193, 7, 0.1)" : "#fff3cd"};
+            border: 1px solid ${isDarkMode ? "rgba(255, 193, 7, 0.3)" : "#ffeaa7"};
             border-radius: 8px;
             padding: 10px;
             margin-top: 10px;
             font-size: 13px;
-            color: ${isDarkMode ? '#ffc107' : '#856404'};
+            color: ${isDarkMode ? "#ffc107" : "#856404"};
         }
         
         .existing-info {
-            background: ${isDarkMode ? 'rgba(23, 162, 184, 0.1)' : '#d1ecf1'};
-            border: 1px solid ${isDarkMode ? 'rgba(23, 162, 184, 0.3)' : '#bee5eb'};
+            background: ${isDarkMode ? "rgba(23, 162, 184, 0.1)" : "#d1ecf1"};
+            border: 1px solid ${isDarkMode ? "rgba(23, 162, 184, 0.3)" : "#bee5eb"};
             border-radius: 8px;
             padding: 10px;
             margin-top: 10px;
             font-size: 13px;
-            color: ${isDarkMode ? '#17a2b8' : '#0c5460'};
+            color: ${isDarkMode ? "#17a2b8" : "#0c5460"};
         }
         
         .empty-state {
@@ -3215,7 +3737,7 @@ async saveFailureNote(url, error, metadata = {}) {
         }
         
         .notes-preview {
-            background: ${isDarkMode ? '#242424' : '#f8f8f8'};
+            background: ${isDarkMode ? "#242424" : "#f8f8f8"};
             border-left: 3px solid var(--primary-color);
             padding: 12px;
             margin-top: 10px;
@@ -3241,7 +3763,7 @@ async saveFailureNote(url, error, metadata = {}) {
         }
         
         details {
-            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.5)'};
+            background: ${isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.5)"};
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 5px;
@@ -3272,12 +3794,12 @@ async saveFailureNote(url, error, metadata = {}) {
         }
         
         details summary:hover {
-            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
+            background: ${isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)"};
             border-radius: 5px;
         }
         
         details[open] {
-            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.8)'};
+            background: ${isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(255, 255, 255, 0.8)"};
         }
         
         details[open] summary {
@@ -3287,7 +3809,7 @@ async saveFailureNote(url, error, metadata = {}) {
 
         /* Event description styling for readability */
         .event-description {
-            background: ${isDarkMode ? 'rgba(102, 126, 234, 0.12)' : '#f0f8ff'};
+            background: ${isDarkMode ? "rgba(102, 126, 234, 0.12)" : "#f0f8ff"};
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 8px;
@@ -3307,7 +3829,7 @@ async saveFailureNote(url, error, metadata = {}) {
             height: auto;
             border-radius: 12px;
             object-fit: cover;
-            box-shadow: 0 4px 12px ${isDarkMode ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.15)'};
+            box-shadow: 0 4px 12px ${isDarkMode ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.15)"};
             border: 2px solid var(--border-color);
             transition: transform 0.2s ease;
         }
@@ -3330,34 +3852,34 @@ async saveFailureNote(url, error, metadata = {}) {
         .diff-header { color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; font-weight: bold; }
         .diff-sep { border-top: 1px solid var(--border-color); margin: 8px 0 4px 0; }
         .diff-added {
-            background: ${isDarkMode ? 'rgba(52, 208, 88, 0.12)' : '#e6ffec'};
+            background: ${isDarkMode ? "rgba(52, 208, 88, 0.12)" : "#e6ffec"};
             border-left-color: #34d058;
-            color: ${isDarkMode ? '#c8facc' : '#166534'};
+            color: ${isDarkMode ? "#c8facc" : "#166534"};
         }
         .diff-removed {
-            background: ${isDarkMode ? 'rgba(215, 58, 73, 0.14)' : '#ffeef0'};
+            background: ${isDarkMode ? "rgba(215, 58, 73, 0.14)" : "#ffeef0"};
             border-left-color: #d73a49;
-            color: ${isDarkMode ? '#ffb3ba' : '#7f1d1d'};
+            color: ${isDarkMode ? "#ffb3ba" : "#7f1d1d"};
         }
         .diff-context {
-            background: ${isDarkMode ? 'rgba(255, 193, 7, 0.12)' : '#fff3cd'};
+            background: ${isDarkMode ? "rgba(255, 193, 7, 0.12)" : "#fff3cd"};
             border-left-color: #ffc107;
-            color: ${isDarkMode ? '#ffe08a' : '#7a5e00'};
+            color: ${isDarkMode ? "#ffe08a" : "#7a5e00"};
         }
         .diff-same {
-            background: ${isDarkMode ? 'rgba(3, 102, 214, 0.14)' : '#f1f8ff'};
+            background: ${isDarkMode ? "rgba(3, 102, 214, 0.14)" : "#f1f8ff"};
             border-left-color: #0366d6;
-            color: ${isDarkMode ? '#9ecbff' : '#0b3e86'};
+            color: ${isDarkMode ? "#9ecbff" : "#0b3e86"};
         }
         .diff-ignored {
-            background: ${isDarkMode ? 'rgba(219, 171, 9, 0.16)' : '#fff5b4'};
+            background: ${isDarkMode ? "rgba(219, 171, 9, 0.16)" : "#fff5b4"};
             border-left-color: #dbab09;
-            color: ${isDarkMode ? '#ffe79a' : '#7a5e00'};
+            color: ${isDarkMode ? "#ffe79a" : "#7a5e00"};
         }
         .diff-merged {
-            background: ${isDarkMode ? 'rgba(52, 208, 88, 0.14)' : '#e6ffec'};
+            background: ${isDarkMode ? "rgba(52, 208, 88, 0.14)" : "#e6ffec"};
             border-left-color: #34d058;
-            color: ${isDarkMode ? '#bbf7d0' : '#166534'};
+            color: ${isDarkMode ? "#bbf7d0" : "#166534"};
         }
         
         /* Responsive Design */
@@ -3588,7 +4110,7 @@ async saveFailureNote(url, error, metadata = {}) {
         
         .raw-display {
             display: none;
-            background: ${isDarkMode ? '#1e1e1e' : '#f8f8f8'};
+            background: ${isDarkMode ? "#1e1e1e" : "#f8f8f8"};
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 15px;
@@ -3608,7 +4130,7 @@ async saveFailureNote(url, error, metadata = {}) {
         }
 
         .log-output {
-            background: ${isDarkMode ? '#1e1e1e' : '#f8f8f8'};
+            background: ${isDarkMode ? "#1e1e1e" : "#f8f8f8"};
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 15px;
@@ -3623,7 +4145,7 @@ async saveFailureNote(url, error, metadata = {}) {
         }
 
         .discovery-output {
-            background: ${isDarkMode ? '#1e1e1e' : '#f8f8f8'};
+            background: ${isDarkMode ? "#1e1e1e" : "#f8f8f8"};
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 12px;
@@ -3663,18 +4185,18 @@ async saveFailureNote(url, error, metadata = {}) {
         }
 
         .log-line-error {
-            color: ${isDarkMode ? '#ff8a80' : '#d32f2f'};
-            background: ${isDarkMode ? 'rgba(255, 138, 128, 0.15)' : 'rgba(211, 47, 47, 0.12)'};
+            color: ${isDarkMode ? "#ff8a80" : "#d32f2f"};
+            background: ${isDarkMode ? "rgba(255, 138, 128, 0.15)" : "rgba(211, 47, 47, 0.12)"};
         }
 
         .log-line-warn {
-            color: ${isDarkMode ? '#ffcc80' : '#ef6c00'};
-            background: ${isDarkMode ? 'rgba(255, 204, 128, 0.15)' : 'rgba(239, 108, 0, 0.12)'};
+            color: ${isDarkMode ? "#ffcc80" : "#ef6c00"};
+            background: ${isDarkMode ? "rgba(255, 204, 128, 0.15)" : "rgba(239, 108, 0, 0.12)"};
         }
 
         .log-line-success {
-            color: ${isDarkMode ? '#a5d6a7' : '#2e7d32'};
-            background: ${isDarkMode ? 'rgba(165, 214, 167, 0.15)' : 'rgba(46, 125, 50, 0.12)'};
+            color: ${isDarkMode ? "#a5d6a7" : "#2e7d32"};
+            background: ${isDarkMode ? "rgba(165, 214, 167, 0.15)" : "rgba(46, 125, 50, 0.12)"};
         }
 
         .log-empty {
@@ -3731,16 +4253,16 @@ async saveFailureNote(url, error, metadata = {}) {
                 <div class="stat-label">Total Events Found</div>
             </div>
             <div class="stat">
-                <div class="stat-value">${results.rawBearEvents || 'N/A'}</div>
+                <div class="stat-value">${results.rawBearEvents || "N/A"}</div>
                 <div class="stat-label">Raw Bear Events</div>
             </div>
             <div class="stat">
                 <div class="stat-value">${results.bearEvents}</div>
-                <div class="stat-label">Final Bear Events${results.duplicatesRemoved > 0 ? ` (-${results.duplicatesRemoved} dupes)` : ''}</div>
+                <div class="stat-label">Final Bear Events${results.duplicatesRemoved > 0 ? ` (-${results.duplicatesRemoved} dupes)` : ""}</div>
             </div>
             <div class="stat">
                 <div class="stat-value">${results.calendarEvents}</div>
-                <div class="stat-label">Calendar Actions${results.calendarEvents === 0 ? ' (dry run/preview mode)' : ''}</div>
+                <div class="stat-label">Calendar Actions${results.calendarEvents === 0 ? " (dry run/preview mode)" : ""}</div>
             </div>
         </div>
     </div>
@@ -3866,60 +4388,85 @@ async saveFailureNote(url, error, metadata = {}) {
         </div>
     </div>
     
-    ${newEvents.length > 0 ? `
+    ${
+      newEvents.length > 0
+        ? `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">✨</span>
             <span class="section-title">New Events to Add</span>
             <span class="section-count">${newEvents.length}</span>
         </div>
-        ${newEvents.map(event => this.generateEventCard(event)).join('')}
+        ${newEvents.map((event) => this.generateEventCard(event)).join("")}
     </div>
-    ` : ''}
+    `
+        : ""
+    }
     
-    ${mergeEvents.length > 0 ? `
+    ${
+      mergeEvents.length > 0
+        ? `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">🔀</span>
             <span class="section-title">Events to Merge (Adding Info)</span>
             <span class="section-count">${mergeEvents.length}</span>
         </div>
-        ${mergeEvents.map(event => this.generateEventCard(event)).join('')}
+        ${mergeEvents.map((event) => this.generateEventCard(event)).join("")}
     </div>
-    ` : ''}
+    `
+        : ""
+    }
     
-    ${conflictEvents.length > 0 ? `
+    ${
+      conflictEvents.length > 0
+        ? `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">⚠️</span>
                             <span class="section-title">Events Requiring Review</span>
             <span class="section-count">${conflictEvents.length}</span>
         </div>
-        ${conflictEvents.map(event => this.generateEventCard(event)).join('')}
+        ${conflictEvents.map((event) => this.generateEventCard(event)).join("")}
     </div>
-    ` : ''}
+    `
+        : ""
+    }
     
-    ${results.errors && results.errors.length > 0 ? `
+    ${
+      results.errors && results.errors.length > 0
+        ? `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">❌</span>
             <span class="section-title">Errors</span>
             <span class="section-count">${results.errors.length}</span>
         </div>
-        ${results.errors.map(error => `
+        ${results.errors
+          .map(
+            (error) => `
             <div class="error-item">${this.escapeHtml(error)}</div>
-        `).join('')}
+        `,
+          )
+          .join("")}
     </div>
-    ` : ''}
+    `
+        : ""
+    }
     
-    ${allEvents.length === 0 && !results.parserResults?.some(r => r.discoveryOnly) ? `
+    ${
+      allEvents.length === 0 &&
+      !results.parserResults?.some((r) => r.discoveryOnly)
+        ? `
     <div class="section">
         <div class="empty-state">
             <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
             <div>No events found to process</div>
         </div>
     </div>
-    ` : ''}
+    `
+        : ""
+    }
 
     ${this.generateDiscoverySection(results)}
 
@@ -4535,27 +5082,27 @@ async saveFailureNote(url, error, metadata = {}) {
 </body>
 </html>
         `;
-        
-        return html;
-    }
 
-    buildRunLogSectionHtml(logInfo, promptInfo = null) {
-        if (!logInfo) {
-            return '';
-        }
-        const runLabel = logInfo.runId ? `run ${logInfo.runId}` : 'this run';
-        if (!logInfo.exists) {
-            let emptyMessage = `No logs available for ${runLabel}.`;
-            if (logInfo.reason === 'missing-run-id') {
-                emptyMessage = 'No run ID available for log lookup.';
-            } else if (logInfo.reason === 'missing-log-file') {
-                emptyMessage = `No log file found for ${runLabel}.`;
-            } else if (logInfo.reason === 'empty-log-file') {
-                emptyMessage = `Log file for ${runLabel} is empty.`;
-            } else if (logInfo.reason === 'read-failed') {
-                emptyMessage = `Log file for ${runLabel} could not be read.`;
-            }
-            return `
+    return html;
+  }
+
+  buildRunLogSectionHtml(logInfo, promptInfo = null) {
+    if (!logInfo) {
+      return "";
+    }
+    const runLabel = logInfo.runId ? `run ${logInfo.runId}` : "this run";
+    if (!logInfo.exists) {
+      let emptyMessage = `No logs available for ${runLabel}.`;
+      if (logInfo.reason === "missing-run-id") {
+        emptyMessage = "No run ID available for log lookup.";
+      } else if (logInfo.reason === "missing-log-file") {
+        emptyMessage = `No log file found for ${runLabel}.`;
+      } else if (logInfo.reason === "empty-log-file") {
+        emptyMessage = `Log file for ${runLabel} is empty.`;
+      } else if (logInfo.reason === "read-failed") {
+        emptyMessage = `Log file for ${runLabel} could not be read.`;
+      }
+      return `
     <div class="section log-section">
         <div class="section-header">
             <span class="section-icon">LOG</span>
@@ -4565,23 +5112,31 @@ async saveFailureNote(url, error, metadata = {}) {
         <div class="log-empty">${this.escapeHtml(emptyMessage)}</div>
     </div>
             `;
-        }
+    }
 
-        const totalLines = Number.isFinite(logInfo.totalLines) ? logInfo.totalLines : (logInfo.shownLines || 0);
-        const shownLines = Number.isFinite(logInfo.shownLines) ? logInfo.shownLines : totalLines;
-        const summaryLabel = logInfo.truncated
-            ? `Showing last ${shownLines} of ${totalLines} lines`
-            : `Showing ${totalLines} lines`;
-        const logText = logInfo.text || '';
-        const prompts = Array.isArray(promptInfo?.prompts) ? promptInfo.prompts : [];
-        const promptCount = prompts.length;
-        const promptDataJson = encodeURIComponent(JSON.stringify(prompts));
-        const promptCountBadge = promptCount > 0 ? ` • AI prompts: ${promptCount}` : '';
-        const promptButtonHtml = promptCount > 0
-            ? `<button onclick="showAiPromptPicker(this)" class="log-copy-btn" data-ai-prompts='${this.escapeHtml(promptDataJson)}'>🤖 AI Prompts</button>`
-            : '';
+    const totalLines = Number.isFinite(logInfo.totalLines)
+      ? logInfo.totalLines
+      : logInfo.shownLines || 0;
+    const shownLines = Number.isFinite(logInfo.shownLines)
+      ? logInfo.shownLines
+      : totalLines;
+    const summaryLabel = logInfo.truncated
+      ? `Showing last ${shownLines} of ${totalLines} lines`
+      : `Showing ${totalLines} lines`;
+    const logText = logInfo.text || "";
+    const prompts = Array.isArray(promptInfo?.prompts)
+      ? promptInfo.prompts
+      : [];
+    const promptCount = prompts.length;
+    const promptDataJson = encodeURIComponent(JSON.stringify(prompts));
+    const promptCountBadge =
+      promptCount > 0 ? ` • AI prompts: ${promptCount}` : "";
+    const promptButtonHtml =
+      promptCount > 0
+        ? `<button onclick="showAiPromptPicker(this)" class="log-copy-btn" data-ai-prompts='${this.escapeHtml(promptDataJson)}'>🤖 AI Prompts</button>`
+        : "";
 
-        return `
+    return `
     <div class="section log-section">
         <div class="section-header">
             <span class="section-icon">LOG</span>
@@ -4597,61 +5152,88 @@ async saveFailureNote(url, error, metadata = {}) {
         </details>
     </div>
         `;
-    }
-    
-    // Generate HTML for the segments panel in discovery section
-    generateDiscoverySegmentsPanel(safeId, segmentsByUrl) {
-        const segmentUrlEntries = Object.entries(segmentsByUrl);
-        if (segmentUrlEntries.length === 0) return { button: '', panel: '', totalSegments: 0 };
+  }
 
-        const totalSegments = segmentUrlEntries.reduce((sum, [, segs]) => sum + segs.length, 0);
-        const urlBlocks = segmentUrlEntries.map(([url, segs]) => {
-            const segmentItems = segs.map(seg => {
-                const imageHtml = (Array.isArray(seg.imageUrls) && seg.imageUrls.length > 0)
-                    ? `<div style="margin-top:8px; display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
-                        ${seg.imageUrls.map(img => `<img src="${this.escapeHtml(img)}" style="height:80px; width:auto; border-radius:6px; border:1px solid var(--border-color); background:var(--background-primary); object-fit:cover;" onerror="this.style.display='none'">`).join('')}
+  // Generate HTML for the segments panel in discovery section
+  generateDiscoverySegmentsPanel(safeId, segmentsByUrl) {
+    const segmentUrlEntries = Object.entries(segmentsByUrl);
+    if (segmentUrlEntries.length === 0)
+      return { button: "", panel: "", totalSegments: 0 };
+
+    const totalSegments = segmentUrlEntries.reduce(
+      (sum, [, segs]) => sum + segs.length,
+      0,
+    );
+    const urlBlocks = segmentUrlEntries
+      .map(([url, segs]) => {
+        const segmentItems = segs
+          .map((seg) => {
+            const imageHtml =
+              Array.isArray(seg.imageUrls) && seg.imageUrls.length > 0
+                ? `<div style="margin-top:8px; display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
+                        ${seg.imageUrls.map((img) => `<img src="${this.escapeHtml(img)}" style="height:80px; width:auto; border-radius:6px; border:1px solid var(--border-color); background:var(--background-primary); object-fit:cover;" onerror="this.style.display='none'">`).join("")}
                        </div>`
-                    : '';
-                return `<div style="padding:8px; background:var(--background-light); border-left:3px solid var(--border-color); margin-bottom:6px; font-size:11px; font-family:monospace; border-radius:0 6px 6px 0;">
+                : "";
+            return `<div style="padding:8px; background:var(--background-light); border-left:3px solid var(--border-color); margin-bottom:6px; font-size:11px; font-family:monospace; border-radius:0 6px 6px 0;">
                     <div style="margin-bottom:4px;"><span style="opacity:0.6; font-weight:bold;">Segment ${seg.index} (${seg.lineCount} lines):</span></div>
                     <div style="line-height:1.4; color:var(--text-primary);">${this.escapeHtml(seg.preview)}</div>
                     ${imageHtml}
                 </div>`;
-            }).join('');
-            return `<div style="margin-bottom:12px;">
+          })
+          .join("");
+        return `<div style="margin-bottom:12px;">
                 <div style="font-size:11px; font-family:monospace; opacity:0.7; margin-bottom:6px; word-break:break-all; border-bottom:1px solid var(--border-color); padding-bottom:2px;">${this.escapeHtml(url)} — ${segs.length} segment(s)</div>
                 ${segmentItems}
             </div>`;
-        }).join('');
+      })
+      .join("");
 
-        const button = `<button onclick="switchDiscoveryTab(this,'segments_${safeId}')" class="disc-tab-btn" data-tab="segments_${safeId}">Segments (${totalSegments})</button>`;
-        const panel = `<div id="segments_${safeId}" class="disc-tab-panel" style="display:none">${urlBlocks}</div>`;
-        return { button, panel, totalSegments };
-    }
+    const button = `<button onclick="switchDiscoveryTab(this,'segments_${safeId}')" class="disc-tab-btn" data-tab="segments_${safeId}">Segments (${totalSegments})</button>`;
+    const panel = `<div id="segments_${safeId}" class="disc-tab-panel" style="display:none">${urlBlocks}</div>`;
+    return { button, panel, totalSegments };
+  }
 
-    // Generate HTML for URL discovery section (discoveryOnly mode results)
-    generateDiscoverySection(results) {
-        const parserResults = Array.isArray(results && results.parserResults) ? results.parserResults : [];
-        const discoveryParsers = parserResults.filter(r => r && r.discoveryOnly && r.mermaidGraph);
-        if (discoveryParsers.length === 0) return '';
+  // Generate HTML for URL discovery section (discoveryOnly mode results)
+  generateDiscoverySection(results) {
+    const parserResults = Array.isArray(results && results.parserResults)
+      ? results.parserResults
+      : [];
+    const discoveryParsers = parserResults.filter(
+      (r) => r && r.discoveryOnly && r.mermaidGraph,
+    );
+    if (discoveryParsers.length === 0) return "";
 
-        const sections = discoveryParsers.map((r, index) => {
-            // Include index to guarantee unique IDs even when multiple parsers share a name
-            const safeId = `${(r.name || 'parser').replace(/[^a-zA-Z0-9]/g, '_')}_${index}`;
-            const nodeCount = (r.discoveryTree && r.discoveryTree.allNodes) ? r.discoveryTree.allNodes.length : 0;
-            const mermaidEncoded = encodeURIComponent(r.mermaidGraph || '');
-            const asciiEncoded = encodeURIComponent(r.asciiTree || '');
-            const urlListItems = (r.discoveryTree && Array.isArray(r.discoveryTree.allNodes))
-                ? r.discoveryTree.allNodes.map(u => `<li>${this.escapeHtml(u)}</li>`).join('')
-                : '';
+    const sections = discoveryParsers
+      .map((r, index) => {
+        // Include index to guarantee unique IDs even when multiple parsers share a name
+        const safeId = `${(r.name || "parser").replace(/[^a-zA-Z0-9]/g, "_")}_${index}`;
+        const nodeCount =
+          r.discoveryTree && r.discoveryTree.allNodes
+            ? r.discoveryTree.allNodes.length
+            : 0;
+        const mermaidEncoded = encodeURIComponent(r.mermaidGraph || "");
+        const asciiEncoded = encodeURIComponent(r.asciiTree || "");
+        const urlListItems =
+          r.discoveryTree && Array.isArray(r.discoveryTree.allNodes)
+            ? r.discoveryTree.allNodes
+                .map((u) => `<li>${this.escapeHtml(u)}</li>`)
+                .join("")
+            : "";
 
-            const segmentsByUrl = (r.discoveryTree && r.discoveryTree.segmentsByUrl) ? r.discoveryTree.segmentsByUrl : {};
-            const { button: segmentsTabButton, panel: segmentsPanel, totalSegments } = this.generateDiscoverySegmentsPanel(safeId, segmentsByUrl);
-            const hasSegments = totalSegments > 0;
+        const segmentsByUrl =
+          r.discoveryTree && r.discoveryTree.segmentsByUrl
+            ? r.discoveryTree.segmentsByUrl
+            : {};
+        const {
+          button: segmentsTabButton,
+          panel: segmentsPanel,
+          totalSegments,
+        } = this.generateDiscoverySegmentsPanel(safeId, segmentsByUrl);
+        const hasSegments = totalSegments > 0;
 
-            return `
+        return `
         <div class="discovery-parser" style="margin-bottom:16px;">
-            <div style="font-weight:600; margin-bottom:8px;">${this.escapeHtml(r.name || 'Parser')} <span style="font-weight:400; opacity:0.7;">— ${nodeCount} URL(s) found${hasSegments ? `, ${totalSegments} segment(s)` : ''}</span></div>
+            <div style="font-weight:600; margin-bottom:8px;">${this.escapeHtml(r.name || "Parser")} <span style="font-weight:400; opacity:0.7;">— ${nodeCount} URL(s) found${hasSegments ? `, ${totalSegments} segment(s)` : ""}</span></div>
             <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
                 <button onclick="switchDiscoveryTab(this,'mermaid_${safeId}')" class="disc-tab-btn disc-tab-active" data-tab="mermaid_${safeId}">Mermaid Graph</button>
                 <button onclick="switchDiscoveryTab(this,'ascii_${safeId}')" class="disc-tab-btn" data-tab="ascii_${safeId}">ASCII Tree</button>
@@ -4663,13 +5245,13 @@ async saveFailureNote(url, error, metadata = {}) {
                     <button onclick="copyDiscoveryText(this)" class="log-copy-btn" data-encoded="${this.escapeHtml(mermaidEncoded)}">📋 Copy Mermaid</button>
                     <a href="https://mermaid.live" target="_blank" style="padding:4px 10px; background:var(--background-light); border:1px solid var(--border-color); border-radius:6px; font-size:12px; color:var(--primary-color); text-decoration:none;">Open mermaid.live ↗</a>
                 </div>
-                <pre class="discovery-output">${this.escapeHtml(r.mermaidGraph || '')}</pre>
+                <pre class="discovery-output">${this.escapeHtml(r.mermaidGraph || "")}</pre>
             </div>
             <div id="ascii_${safeId}" class="disc-tab-panel" style="display:none">
                 <div style="margin-bottom:6px;">
                     <button onclick="copyDiscoveryText(this)" class="log-copy-btn" data-encoded="${this.escapeHtml(asciiEncoded)}">📋 Copy Tree</button>
                 </div>
-                <pre class="discovery-output">${this.escapeHtml(r.asciiTree || '')}</pre>
+                <pre class="discovery-output">${this.escapeHtml(r.asciiTree || "")}</pre>
             </div>
             <div id="urls_${safeId}" class="disc-tab-panel" style="display:none">
                 <ul style="margin:0; padding-left:18px; font-size:12px; font-family:monospace;">${urlListItems}</ul>
@@ -4677,9 +5259,10 @@ async saveFailureNote(url, error, metadata = {}) {
             ${segmentsPanel}
         </div>
             `;
-        }).join('');
+      })
+      .join("");
 
-        return `
+    return `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">🔍</span>
@@ -4690,62 +5273,69 @@ async saveFailureNote(url, error, metadata = {}) {
         ${sections}
     </div>
         `;
-    }
+  }
 
-    // Generate HTML for individual event card
-    generateEventCard(event) {
-        const intentAction = this.normalizeIntentAction(event) || 'other';
-        const writeAction = this.getWriteActionFromEvent(event);
-        const actionBadge = {
-            'new': '<span class="action-badge badge-new">NEW</span>',
-            'merge': '<span class="action-badge badge-merge">MERGE</span>',
-            'conflict': '<span class="action-badge badge-warning">CONFLICT</span>',
-            'missing_calendar': '<span class="action-badge badge-error">MISSING CALENDAR</span>'
-        }[intentAction] || '<span class="action-badge badge-warning">OTHER</span>';
-        const actionNote = `<div class="write-action-note">Intent: ${this.formatIntentActionLabel(intentAction)} • Write: ${this.formatWriteActionLabel(writeAction)}</div>`;
-        
-        const eventDate = new Date(event.startDate);
-        const endDate = event.endDate ? new Date(event.endDate) : null;
-        
-        // Get timezone from city configuration instead of expecting it on the event
-        const timezone = this.getTimezoneForCityOrUtc(event.city);
-        const timeZoneOptions = { timeZone: timezone };
-        
-        const dateStr = eventDate.toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric',
-            ...timeZoneOptions
-        });
-        const timeStr = eventDate.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit',
-            ...timeZoneOptions
-        });
-        const endTimeStr = endDate ? endDate.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit',
-            ...timeZoneOptions
-        }) : '';
-        
-        // Also show UTC time for verification
-        const utcTimeStr = eventDate.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit',
-            timeZone: 'UTC'
-        });
-        const endUtcTimeStr = endDate ? endDate.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit',
-            timeZone: 'UTC'
-        }) : '';
-        
-        // Use the final notes that will actually be saved
-        const notes = event.notes || '';
-        const calendarName = this.getCalendarNameForDisplay(event);
-        
-        let html = `
+  // Generate HTML for individual event card
+  generateEventCard(event) {
+    const intentAction = this.normalizeIntentAction(event) || "other";
+    const writeAction = this.getWriteActionFromEvent(event);
+    const actionBadge =
+      {
+        new: '<span class="action-badge badge-new">NEW</span>',
+        merge: '<span class="action-badge badge-merge">MERGE</span>',
+        conflict: '<span class="action-badge badge-warning">CONFLICT</span>',
+        missing_calendar:
+          '<span class="action-badge badge-error">MISSING CALENDAR</span>',
+      }[intentAction] ||
+      '<span class="action-badge badge-warning">OTHER</span>';
+    const actionNote = `<div class="write-action-note">Intent: ${this.formatIntentActionLabel(intentAction)} • Write: ${this.formatWriteActionLabel(writeAction)}</div>`;
+
+    const eventDate = new Date(event.startDate);
+    const endDate = event.endDate ? new Date(event.endDate) : null;
+
+    // Get timezone from city configuration instead of expecting it on the event
+    const timezone = this.getTimezoneForCityOrUtc(event.city);
+    const timeZoneOptions = { timeZone: timezone };
+
+    const dateStr = eventDate.toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      ...timeZoneOptions,
+    });
+    const timeStr = eventDate.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      ...timeZoneOptions,
+    });
+    const endTimeStr = endDate
+      ? endDate.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          ...timeZoneOptions,
+        })
+      : "";
+
+    // Also show UTC time for verification
+    const utcTimeStr = eventDate.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "UTC",
+    });
+    const endUtcTimeStr = endDate
+      ? endDate.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone: "UTC",
+        })
+      : "";
+
+    // Use the final notes that will actually be saved
+    const notes = event.notes || "";
+    const calendarName = this.getCalendarNameForDisplay(event);
+
+    let html = `
         <div class="event-card">
             ${actionBadge}
             ${actionNote}
@@ -4753,159 +5343,227 @@ async saveFailureNote(url, error, metadata = {}) {
             
             <!-- Main Event Info -->
             <div class="event-details">
-                ${event.venue || event.bar ? `
+                ${
+                  event.venue || event.bar
+                    ? `
                     <div class="event-detail">
                         <span>📍</span>
                         <span>${this.escapeHtml(event.venue || event.bar)}</span>
                     </div>
-                ` : ''}
-                ${event.address ? `
+                `
+                    : ""
+                }
+                ${
+                  event.address
+                    ? `
                     <div class="event-detail">
                         <span>🏠</span>
                         <span>${this.escapeHtml(event.address)}</span>
                     </div>
-                ` : ''}
-                ${event.location ? `
+                `
+                    : ""
+                }
+                ${
+                  event.location
+                    ? `
                     <div class="event-detail coordinates">
                         <span>🌐</span>
                         <span>Coordinates: ${this.escapeHtml(event.location)}</span>
                     </div>
-                ` : ''}
+                `
+                    : ""
+                }
                 <div class="event-detail">
                     <span>📅</span>
-                    <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ''}</span>
+                    <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ""}</span>
                 </div>
                 <div class="event-detail" style="font-size: 12px; color: #666; margin-left: 20px;">
                     <span>🌍</span>
-                    <span>UTC: ${utcTimeStr}${endUtcTimeStr ? ` - ${endUtcTimeStr}` : ''}</span>
+                    <span>UTC: ${utcTimeStr}${endUtcTimeStr ? ` - ${endUtcTimeStr}` : ""}</span>
                 </div>
                 <div class="event-detail">
                     <span>📱</span>
                     <span>${this.escapeHtml(calendarName)}</span>
                 </div>
-                ${event.description ? `
+                ${
+                  event.description
+                    ? `
                     <div class=\"event-detail event-description\">
                         <span>📝</span>
                         <span>${this.escapeHtml(event.description)}</span>
                     </div>
-                ` : ''}
-                ${event.tea ? `
+                `
+                    : ""
+                }
+                ${
+                  event.tea
+                    ? `
                     <div class="event-detail" style="background: #e8f5e9; padding: 8px; border-radius: 5px; margin-top: 8px;">
                         <span>☕</span>
                         <span style="font-style: italic;">${this.escapeHtml(event.tea)}</span>
                     </div>
-                ` : ''}
-                ${event.image ? `
+                `
+                    : ""
+                }
+                ${
+                  event.image
+                    ? `
                     <div class=\"event-image\">
                         <a href=\"${this.escapeHtml(event.image)}\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--primary-color); font-weight: 500;\">View Full Image</a>
                         <div class=\"image-container\" style=\"margin-top: 8px; display: block;\">
                             <img src=\"${this.escapeHtml(event.image)}\" alt=\"Event Image\" onerror=\"this.style.display='none'\">
                         </div>
                     </div>
-                ` : ''}
-                ${event.instagram ? `
+                `
+                    : ""
+                }
+                ${
+                  event.instagram
+                    ? `
                     <div class="event-detail">
                         <span>📸</span>
                         <span><a href="${this.escapeHtml(event.instagram)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Instagram</a></span>
                     </div>
-                ` : ''}
-                ${event.facebook ? `
+                `
+                    : ""
+                }
+                ${
+                  event.facebook
+                    ? `
                     <div class="event-detail">
                         <span>👥</span>
                         <span><a href="${this.escapeHtml(event.facebook)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Facebook</a></span>
                     </div>
-                ` : ''}
-                ${event.ticketUrl ? `
+                `
+                    : ""
+                }
+                ${
+                  event.ticketUrl
+                    ? `
                     <div class="event-detail">
                         <span>🎟️</span>
                         <span><a href="${this.escapeHtml(event.ticketUrl)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Tickets</a></span>
                     </div>
-                ` : ''}
-                ${event.url || event.website ? `
+                `
+                    : ""
+                }
+                ${
+                  event.url || event.website
+                    ? `
                     <div class="event-detail">
                         <span>🌐</span>
                         <span><a href="${this.escapeHtml(event.url || event.website)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Website</a></span>
                     </div>
-                ` : ''}
-                ${event.googleMapsLink ? `
+                `
+                    : ""
+                }
+                ${
+                  event.googleMapsLink
+                    ? `
                     <div class="event-detail">
                         <span>🗺️</span>
                         <span><a href="${this.escapeHtml(event.googleMapsLink)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Google Maps</a></span>
                     </div>
-                ` : ''}
-                ${event.price ? `
+                `
+                    : ""
+                }
+                ${
+                  event.price
+                    ? `
                     <div class="event-detail">
                         <span>💵</span>
                         <span>${this.escapeHtml(event.price)}</span>
                     </div>
-                ` : ''}
+                `
+                    : ""
+                }
                 
                 <!-- Calendar Notes Preview -->
-                ${notes ? `
+                ${
+                  notes
+                    ? `
                     <details style="margin-top: 10px;">
                         <summary style="cursor: pointer; font-size: 13px; color: #007aff; padding: 5px;">📝 Calendar Notes Preview</summary>
                         <div class="notes-preview">
                             ${(() => {
-                                // Parse and format notes for better readability
-                                const lines = notes.split('\n');
-                                let formattedHtml = '';
-                                
-                                lines.forEach(line => {
-                                    const trimmed = line.trim();
-                                    if (trimmed === '') {
-                                        formattedHtml += '<br>';
-                                        return;
-                                    }
-                                    
-                                    const colonIndex = line.indexOf(':');
-                                    if (colonIndex > 0) {
-                                        // Key-value metadata line
-                                        const key = line.substring(0, colonIndex).trim();
-                                        const value = line.substring(colonIndex + 1).trim();
-                                        formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
-                                    } else {
-                                        // Freeform description line
-                                        formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
-                                    }
-                                });
-                                
-                                return formattedHtml || '<em>No notes</em>';
+                              // Parse and format notes for better readability
+                              const lines = notes.split("\n");
+                              let formattedHtml = "";
+
+                              lines.forEach((line) => {
+                                const trimmed = line.trim();
+                                if (trimmed === "") {
+                                  formattedHtml += "<br>";
+                                  return;
+                                }
+
+                                const colonIndex = line.indexOf(":");
+                                if (colonIndex > 0) {
+                                  // Key-value metadata line
+                                  const key = line
+                                    .substring(0, colonIndex)
+                                    .trim();
+                                  const value = line
+                                    .substring(colonIndex + 1)
+                                    .trim();
+                                  formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
+                                } else {
+                                  // Freeform description line
+                                  formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
+                                }
+                              });
+
+                              return formattedHtml || "<em>No notes</em>";
                             })()}
                         </div>
                     </details>
-                ` : ''}
+                `
+                    : ""
+                }
             </div>
             
             <!-- Show comparison for all non-new events with original data -->
-            ${event._original && this.normalizeIntentAction(event) !== 'new' ? (() => {
-                const hasDifferences = this.hasEventDifferences(event);
-                const eventId = event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
-                // Decode HTML entities before creating safe ID
-                const decodedEventId = eventId.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-                const safeEventId = decodedEventId.replace(/[^a-zA-Z0-9\-_]/g, '_'); // Create safe ID for DOM elements
-                const isExpanded = false; // Start collapsed; expand on click
-                
-                return `
+            ${
+              event._original && this.normalizeIntentAction(event) !== "new"
+                ? (() => {
+                    const hasDifferences = this.hasEventDifferences(event);
+                    const eventId =
+                      event.key ||
+                      `event-${Math.random().toString(36).substr(2, 9)}`;
+                    // Decode HTML entities before creating safe ID
+                    const decodedEventId = eventId
+                      .replace(/&amp;/g, "&")
+                      .replace(/&lt;/g, "<")
+                      .replace(/&gt;/g, ">")
+                      .replace(/&quot;/g, '"')
+                      .replace(/&#39;/g, "'");
+                    const safeEventId = decodedEventId.replace(
+                      /[^a-zA-Z0-9\-_]/g,
+                      "_",
+                    ); // Create safe ID for DOM elements
+                    const isExpanded = false; // Start collapsed; expand on click
+
+                    return `
                 <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <div style="display: flex; align-items: center; cursor: pointer; flex: 1;"
                              onclick="toggleComparisonSection('${safeEventId}')">
                             <h4 style="margin: 0; font-size: 14px;">
                                 <span id="expand-icon-${safeEventId}" style="display: inline-block; width: 20px; transition: transform 0.2s;">
-                                    ${isExpanded ? '▼' : '▶'}
+                                    ${isExpanded ? "▼" : "▶"}
                                 </span>
-                                📊 ${event._action === 'conflict' ? 'Conflict Resolution' : 'Merge Comparison'}
-                                ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ''}
+                                📊 ${event._action === "conflict" ? "Conflict Resolution" : "Merge Comparison"}
+                                ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ""}
                             </h4>
                         </div>
                         <button onclick="toggleDiffView(this, '${safeEventId}');" 
-                                style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); ${!isExpanded ? 'display: none;' : ''}"
+                                style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); ${!isExpanded ? "display: none;" : ""}"
                                 id="diff-toggle-${safeEventId}">
                             Switch to Line View
                         </button>
                     </div>
                     
-                    <div id="comparison-content-${safeEventId}" style="${!isExpanded ? 'display: none;' : ''}">
+                    <div id="comparison-content-${safeEventId}" style="${!isExpanded ? "display: none;" : ""}">
                     <!-- Simple three-object comparison -->
                     <div style="margin-bottom: 10px;">
                         <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
@@ -4926,28 +5584,50 @@ async saveFailureNote(url, error, metadata = {}) {
                             </div>
                             <button onclick="copyEventJSON(this)" 
                                     style="padding: 4px 8px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
-                                    data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
-                                        if (key === '_parserConfig' && value) {
-                                            return { name: value.name, parser: value.parser };
-                                        }
-                                        if (key === '_existingEvent' && value) {
-                                            return { title: value.title, identifier: value.identifier };
-                                        }
-                                        if (key === '_conflicts' && value && Array.isArray(value)) {
-                                            return value.map(c => ({
-                                                title: c.title,
-                                                startDate: c.startDate,
-                                                identifier: c.identifier
+                                    data-event-json='${this.escapeHtml(
+                                      JSON.stringify(
+                                        event,
+                                        (key, value) => {
+                                          if (
+                                            key === "_parserConfig" &&
+                                            value
+                                          ) {
+                                            return {
+                                              name: value.name,
+                                              parser: value.parser,
+                                            };
+                                          }
+                                          if (
+                                            key === "_existingEvent" &&
+                                            value
+                                          ) {
+                                            return {
+                                              title: value.title,
+                                              identifier: value.identifier,
+                                            };
+                                          }
+                                          if (
+                                            key === "_conflicts" &&
+                                            value &&
+                                            Array.isArray(value)
+                                          ) {
+                                            return value.map((c) => ({
+                                              title: c.title,
+                                              startDate: c.startDate,
+                                              identifier: c.identifier,
                                             }));
-                                        }
-                                        if (key === 'placeId') {
+                                          }
+                                          if (key === "placeId") {
                                             return undefined; // Hide placeId from debug display
-                                        }
-                                        if (typeof value === 'function') {
-                                            return '[Function]';
-                                        }
-                                        return value;
-                                    }, 2))}'>
+                                          }
+                                          if (typeof value === "function") {
+                                            return "[Function]";
+                                          }
+                                          return value;
+                                        },
+                                        2,
+                                      ),
+                                    )}'>
                                 📋 Copy JSON
                             </button>
                         </div>
@@ -4976,789 +5656,956 @@ async saveFailureNote(url, error, metadata = {}) {
                     </div>
                 </div>
                 `;
-            })() : ''}
+                  })()
+                : ""
+            }
             
             <!-- Simplified metadata -->
-            ${event._action === 'conflict' && event._conflicts ? `
+            ${
+              event._action === "conflict" && event._conflicts
+                ? `
                 <div class="conflict-info">
                     <strong>⚠️ Overlapping Events:</strong> ${event._conflicts.length} event(s) at same time
                     <div style="margin-top: 10px;">
-                    ${event._conflicts.map(conflict => {
-                        const shouldMerge = event._conflictAnalysis?.find(a => a.event === conflict)?.shouldMerge;
+                    ${event._conflicts
+                      .map((conflict) => {
+                        const shouldMerge = event._conflictAnalysis?.find(
+                          (a) => a.event === conflict,
+                        )?.shouldMerge;
                         return `
-                        <div style="background: ${shouldMerge ? '#d4edda' : '#f8d7da'}; padding: 8px; border-radius: 5px; margin-bottom: 5px;">
+                        <div style="background: ${shouldMerge ? "#d4edda" : "#f8d7da"}; padding: 8px; border-radius: 5px; margin-bottom: 5px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <strong>"${this.escapeHtml(conflict.title)}"</strong>
                                     <div style="font-size: 12px; color: #666; margin-top: 2px;">
                                         ${(() => {
-                                            // Get timezone from city configuration instead of expecting it on the conflict
-                                            const timezone = this.getTimezoneForCityOrUtc(event.city);
-                                            return new Date(conflict.startDate).toLocaleString('en-US', { timeZone: timezone });
+                                          // Get timezone from city configuration instead of expecting it on the conflict
+                                          const timezone =
+                                            this.getTimezoneForCityOrUtc(
+                                              event.city,
+                                            );
+                                          return new Date(
+                                            conflict.startDate,
+                                          ).toLocaleString("en-US", {
+                                            timeZone: timezone,
+                                          });
                                         })()}
                                     </div>
                                 </div>
-                                <div style="font-size: 12px; font-weight: 600; color: ${shouldMerge ? '#155724' : '#721c24'};">
-                                    ${shouldMerge ? '✓ Will Merge' : '✗ Different Event'}
+                                <div style="font-size: 12px; font-weight: 600; color: ${shouldMerge ? "#155724" : "#721c24"};">
+                                    ${shouldMerge ? "✓ Will Merge" : "✗ Different Event"}
                                 </div>
                             </div>
                         </div>
                         `;
-                    }).join('')}
+                      })
+                      .join("")}
                     </div>
                 </div>
-            ` : ''}
+            `
+                : ""
+            }
             
-            ${event._action === 'missing_calendar' ? `
+            ${
+              event._action === "missing_calendar"
+                ? `
                 <div class="conflict-info">
                     <strong>Calendar "${this.escapeHtml(calendarName)}" not found!</strong>
                     <br>Please create this calendar manually before running the scraper.
                 </div>
-                        ` : ''}
+                        `
+                : ""
+            }
             
             <div class="raw-display">
-                <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;">${this.escapeHtml(JSON.stringify(event, (key, value) => {
-                    // Keep full object for debugging, only filter out circular references and functions
-                    if (key === '_parserConfig' && value) {
+                <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;">${this.escapeHtml(
+                  JSON.stringify(
+                    event,
+                    (key, value) => {
+                      // Keep full object for debugging, only filter out circular references and functions
+                      if (key === "_parserConfig" && value) {
                         return { name: value.name, parser: value.parser };
-                    }
-                    if (key === '_existingEvent' && value) {
-                        return { title: value.title, identifier: value.identifier };
-                    }
-                    if (key === '_conflicts' && value && Array.isArray(value)) {
-                        return value.map(c => ({
-                            title: c.title,
-                            startDate: c.startDate,
-                            identifier: c.identifier
+                      }
+                      if (key === "_existingEvent" && value) {
+                        return {
+                          title: value.title,
+                          identifier: value.identifier,
+                        };
+                      }
+                      if (
+                        key === "_conflicts" &&
+                        value &&
+                        Array.isArray(value)
+                      ) {
+                        return value.map((c) => ({
+                          title: c.title,
+                          startDate: c.startDate,
+                          identifier: c.identifier,
                         }));
-                    }
-                    if (key === 'placeId') {
+                      }
+                      if (key === "placeId") {
                         return undefined; // Hide placeId from debug display
-                    }
-                    if (typeof value === 'function') {
-                        return '[Function]'; // Show functions exist but don't break JSON
-                    }
-                    return value;
-                }, 2))}</pre>
+                      }
+                      if (typeof value === "function") {
+                        return "[Function]"; // Show functions exist but don't break JSON
+                      }
+                      return value;
+                    },
+                    2,
+                  ),
+                )}</pre>
                 <div style="margin-top: 8px; text-align: right;">
                     <button onclick="copyEventJSON(this)" 
                             style="padding: 4px 8px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
-                            data-event-json='${this.escapeHtml(JSON.stringify(event, (key, value) => {
-                                if (key === '_parserConfig' && value) {
-                                    return { name: value.name, parser: value.parser };
-                                }
-                                if (key === '_existingEvent' && value) {
-                                    return { title: value.title, identifier: value.identifier };
-                                }
-                                if (key === '_conflicts' && value && Array.isArray(value)) {
-                                    return value.map(c => ({
-                                        title: c.title,
-                                        startDate: c.startDate,
-                                        identifier: c.identifier
+                            data-event-json='${this.escapeHtml(
+                              JSON.stringify(
+                                event,
+                                (key, value) => {
+                                  if (key === "_parserConfig" && value) {
+                                    return {
+                                      name: value.name,
+                                      parser: value.parser,
+                                    };
+                                  }
+                                  if (key === "_existingEvent" && value) {
+                                    return {
+                                      title: value.title,
+                                      identifier: value.identifier,
+                                    };
+                                  }
+                                  if (
+                                    key === "_conflicts" &&
+                                    value &&
+                                    Array.isArray(value)
+                                  ) {
+                                    return value.map((c) => ({
+                                      title: c.title,
+                                      startDate: c.startDate,
+                                      identifier: c.identifier,
                                     }));
-                                }
-                                if (key === 'placeId') {
+                                  }
+                                  if (key === "placeId") {
                                     return undefined; // Hide placeId from debug display
-                                }
-                                if (typeof value === 'function') {
-                                    return '[Function]';
-                                }
-                                return value;
-                            }, 2))}'>
+                                  }
+                                  if (typeof value === "function") {
+                                    return "[Function]";
+                                  }
+                                  return value;
+                                },
+                                2,
+                              ),
+                            )}'>
                         📋 Copy JSON
                     </button>
                 </div>
             </div>
         </div>
         `;
-        
-        return html;
-    }
-    
-    // Helper to escape HTML
-    escapeHtml(text) {
-        if (!text) return '';
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.toString().replace(/[&<>"']/g, m => map[m]);
-    }
 
-    // Fallback to UITable if WebView fails
-    async presentUITableFallback(results) {
-        try {
-            const table = new UITable();
-        table.showSeparators = true;
-            
-            // Header row
-            const headerRow = new UITableRow();
-            headerRow.isHeader = true;
-            headerRow.height = 50;
-            
-            const headerCell = headerRow.addText('🐻 Bear Event Scraper Results');
-            headerCell.titleFont = Font.boldSystemFont(18);
-            headerCell.titleColor = Color.white();
-            headerCell.backgroundColor = Color.brown();
-            
-            table.addRow(headerRow);
-            
-            // Summary section
-            const summaryRow = new UITableRow();
-            summaryRow.height = 80;
-            
-            const runContextLabel = this.formatRunContext(results.runContext || this.resolveRunContext(results));
-            const deduplicationInfo = results.duplicatesRemoved > 0 ? 
-                `\n🔄 Duplicates removed: ${results.duplicatesRemoved}` : '';
-            const summaryText = `Run Type: ${runContextLabel}
+    return html;
+  }
+
+  // Helper to escape HTML
+  escapeHtml(text) {
+    if (!text) return "";
+    const map = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    };
+    return text.toString().replace(/[&<>"']/g, (m) => map[m]);
+  }
+
+  // Fallback to UITable if WebView fails
+  async presentUITableFallback(results) {
+    try {
+      const table = new UITable();
+      table.showSeparators = true;
+
+      // Header row
+      const headerRow = new UITableRow();
+      headerRow.isHeader = true;
+      headerRow.height = 50;
+
+      const headerCell = headerRow.addText("🐻 Bear Event Scraper Results");
+      headerCell.titleFont = Font.boldSystemFont(18);
+      headerCell.titleColor = Color.white();
+      headerCell.backgroundColor = Color.brown();
+
+      table.addRow(headerRow);
+
+      // Summary section
+      const summaryRow = new UITableRow();
+      summaryRow.height = 80;
+
+      const runContextLabel = this.formatRunContext(
+        results.runContext || this.resolveRunContext(results),
+      );
+      const deduplicationInfo =
+        results.duplicatesRemoved > 0
+          ? `\n🔄 Duplicates removed: ${results.duplicatesRemoved}`
+          : "";
+      const summaryText = `Run Type: ${runContextLabel}
 📊 Total Events: ${results.totalEvents}${deduplicationInfo}
 🐻 Bear Events: ${results.bearEvents}
 📅 Added to Calendar: ${results.calendarEvents}
-${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No errors'}`;
-            
-            const summaryCell = summaryRow.addText(summaryText);
-            summaryCell.titleFont = Font.systemFont(14);
-            summaryCell.subtitleColor = Color.gray();
-            
-            table.addRow(summaryRow);
-            
-            // Parser results section
-            if (results.parserResults && results.parserResults.length > 0) {
-                const parserHeaderRow = new UITableRow();
-                parserHeaderRow.height = 40;
-                
-                const parserHeaderCell = parserHeaderRow.addText('📋 Parser Results');
-                parserHeaderCell.titleFont = Font.boldSystemFont(16);
-                parserHeaderCell.titleColor = Color.blue();
-                
-                table.addRow(parserHeaderRow);
-                
-                results.parserResults.forEach(result => {
-                    const parserRow = new UITableRow();
-                    parserRow.height = 50;
-                    
-                    const parserCell = parserRow.addText(`${result.name}`);
-                    parserCell.titleFont = Font.systemFont(14);
-                    parserCell.subtitleText = `${result.bearEvents} bear events found`;
-                    parserCell.subtitleColor = Color.gray();
-                    
-                    table.addRow(parserRow);
-                });
-            }
-            
-            // Events section
-            const allEvents = this.getAllEventsFromResults(results);
-            if (allEvents && allEvents.length > 0) {
-                const eventsHeaderRow = new UITableRow();
-                eventsHeaderRow.height = 40;
-                
-                const eventsHeaderCell = eventsHeaderRow.addText('🎉 Found Events');
-                eventsHeaderCell.titleFont = Font.boldSystemFont(16);
-                eventsHeaderCell.titleColor = Color.green();
-                
-                table.addRow(eventsHeaderRow);
-                
-                allEvents.slice(0, 10).forEach((event, i) => { // Show first 10 events
-                    const eventRow = new UITableRow();
-                    eventRow.height = 60;
-                    
-                    const eventCell = eventRow.addText(event.title || event.name || `Event ${i + 1}`);
-                    eventCell.titleFont = Font.systemFont(14);
-                    
-                    const subtitle = [];
-                    if (event.venue || event.bar) {
-                        subtitle.push(`📍 ${event.venue || event.bar}`);
-                    }
-                    if (event.day || event.time) {
-                        subtitle.push(`📅 ${event.day || ''} ${event.time || ''}`.trim());
-                    }
-                    const calendarName = this.getCalendarNameForDisplay(event);
-                    if (calendarName) {
-                        subtitle.push(`📱 ${calendarName}`);
-                    }
-                    
-                    eventCell.subtitleText = subtitle.join(' • ') || 'Event details';
-                    eventCell.subtitleColor = Color.gray();
-                    
-                    table.addRow(eventRow);
-                });
-                
-                if (allEvents.length > 10) {
-                    const moreRow = new UITableRow();
-                    moreRow.height = 40;
-                    
-                    const moreCell = moreRow.addText(`... and ${allEvents.length - 10} more events`);
-                    moreCell.titleFont = Font.italicSystemFont(12);
-                    moreCell.titleColor = Color.gray();
-                    
-                    table.addRow(moreRow);
-                }
-            }
-            
-            // Errors section
-            if (results.errors && results.errors.length > 0) {
-                const errorsHeaderRow = new UITableRow();
-                errorsHeaderRow.height = 40;
-                
-                const errorsHeaderCell = errorsHeaderRow.addText('❌ Errors');
-                errorsHeaderCell.titleFont = Font.boldSystemFont(16);
-                errorsHeaderCell.titleColor = Color.red();
-                
-                table.addRow(errorsHeaderRow);
-                
-                results.errors.slice(0, 5).forEach(error => { // Show first 5 errors
-                    const errorRow = new UITableRow();
-                    errorRow.height = 50;
-                    
-                    const errorCell = errorRow.addText(error);
-                    errorCell.titleFont = Font.systemFont(12);
-                    errorCell.titleColor = Color.red();
-                    
-                    table.addRow(errorRow);
-                });
-            }
-            
-            // Actions section
-            const actionsRow = new UITableRow();
-            actionsRow.height = 80;
-            
-            const actionsText = `🎯 Next Steps:
+${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No errors"}`;
+
+      const summaryCell = summaryRow.addText(summaryText);
+      summaryCell.titleFont = Font.systemFont(14);
+      summaryCell.subtitleColor = Color.gray();
+
+      table.addRow(summaryRow);
+
+      // Parser results section
+      if (results.parserResults && results.parserResults.length > 0) {
+        const parserHeaderRow = new UITableRow();
+        parserHeaderRow.height = 40;
+
+        const parserHeaderCell = parserHeaderRow.addText("📋 Parser Results");
+        parserHeaderCell.titleFont = Font.boldSystemFont(16);
+        parserHeaderCell.titleColor = Color.blue();
+
+        table.addRow(parserHeaderRow);
+
+        results.parserResults.forEach((result) => {
+          const parserRow = new UITableRow();
+          parserRow.height = 50;
+
+          const parserCell = parserRow.addText(`${result.name}`);
+          parserCell.titleFont = Font.systemFont(14);
+          parserCell.subtitleText = `${result.bearEvents} bear events found`;
+          parserCell.subtitleColor = Color.gray();
+
+          table.addRow(parserRow);
+        });
+      }
+
+      // Events section
+      const allEvents = this.getAllEventsFromResults(results);
+      if (allEvents && allEvents.length > 0) {
+        const eventsHeaderRow = new UITableRow();
+        eventsHeaderRow.height = 40;
+
+        const eventsHeaderCell = eventsHeaderRow.addText("🎉 Found Events");
+        eventsHeaderCell.titleFont = Font.boldSystemFont(16);
+        eventsHeaderCell.titleColor = Color.green();
+
+        table.addRow(eventsHeaderRow);
+
+        allEvents.slice(0, 10).forEach((event, i) => {
+          // Show first 10 events
+          const eventRow = new UITableRow();
+          eventRow.height = 60;
+
+          const eventCell = eventRow.addText(
+            event.title || event.name || `Event ${i + 1}`,
+          );
+          eventCell.titleFont = Font.systemFont(14);
+
+          const subtitle = [];
+          if (event.venue || event.bar) {
+            subtitle.push(`📍 ${event.venue || event.bar}`);
+          }
+          if (event.day || event.time) {
+            subtitle.push(`📅 ${event.day || ""} ${event.time || ""}`.trim());
+          }
+          const calendarName = this.getCalendarNameForDisplay(event);
+          if (calendarName) {
+            subtitle.push(`📱 ${calendarName}`);
+          }
+
+          eventCell.subtitleText = subtitle.join(" • ") || "Event details";
+          eventCell.subtitleColor = Color.gray();
+
+          table.addRow(eventRow);
+        });
+
+        if (allEvents.length > 10) {
+          const moreRow = new UITableRow();
+          moreRow.height = 40;
+
+          const moreCell = moreRow.addText(
+            `... and ${allEvents.length - 10} more events`,
+          );
+          moreCell.titleFont = Font.italicSystemFont(12);
+          moreCell.titleColor = Color.gray();
+
+          table.addRow(moreRow);
+        }
+      }
+
+      // Errors section
+      if (results.errors && results.errors.length > 0) {
+        const errorsHeaderRow = new UITableRow();
+        errorsHeaderRow.height = 40;
+
+        const errorsHeaderCell = errorsHeaderRow.addText("❌ Errors");
+        errorsHeaderCell.titleFont = Font.boldSystemFont(16);
+        errorsHeaderCell.titleColor = Color.red();
+
+        table.addRow(errorsHeaderRow);
+
+        results.errors.slice(0, 5).forEach((error) => {
+          // Show first 5 errors
+          const errorRow = new UITableRow();
+          errorRow.height = 50;
+
+          const errorCell = errorRow.addText(error);
+          errorCell.titleFont = Font.systemFont(12);
+          errorCell.titleColor = Color.red();
+
+          table.addRow(errorRow);
+        });
+      }
+
+      // Actions section
+      const actionsRow = new UITableRow();
+      actionsRow.height = 80;
+
+      const actionsText = `🎯 Next Steps:
 • Review calendar conflicts above
 • Check calendar permissions
 • Set dryRun: false to add events
 • Verify timezone settings`;
-            
-            const actionsCell = actionsRow.addText(actionsText);
-            actionsCell.titleFont = Font.systemFont(12);
-            actionsCell.titleColor = Color.blue();
-            
-            table.addRow(actionsRow);
-            
-            await table.present(false); // Present in normal mode (not fullscreen)
-            
-        } catch (error) {
-            console.log(`📱 Scriptable: ✗ Failed to present UITable: ${error.message}`);
-            throw error;
-        }
+
+      const actionsCell = actionsRow.addText(actionsText);
+      actionsCell.titleFont = Font.systemFont(12);
+      actionsCell.titleColor = Color.blue();
+
+      table.addRow(actionsRow);
+
+      await table.present(false); // Present in normal mode (not fullscreen)
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Failed to present UITable: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  // Helper method to create a text summary for QuickLook
+  createResultsSummary(results) {
+    const lines = [];
+    const runContextLabel = this.formatRunContext(
+      results.runContext || this.resolveRunContext(results),
+    );
+    lines.push("🐻 BEAR EVENT SCRAPER RESULTS");
+    lines.push("=".repeat(40));
+    lines.push("");
+    lines.push(`Run Type: ${runContextLabel}`);
+    lines.push("");
+    lines.push(
+      `📊 Total Events Found: ${results.totalEvents} (all events from all sources)`,
+    );
+    lines.push(
+      `🐻 Raw Bear Events: ${results.rawBearEvents || "N/A"} (after bear filtering)`,
+    );
+    if (results.duplicatesRemoved > 0) {
+      lines.push(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
+      lines.push(
+        `🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`,
+      );
+    } else {
+      lines.push(
+        `🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`,
+      );
+    }
+    lines.push(
+      `📅 Added to Calendar: ${results.calendarEvents}${results.calendarEvents === 0 ? " (dry run/preview mode - no events written)" : ""}`,
+    );
+
+    if (results.errors && results.errors.length > 0) {
+      lines.push(`❌ Errors: ${results.errors.length}`);
     }
 
-    // Helper method to create a text summary for QuickLook
-    createResultsSummary(results) {
-        const lines = [];
-        const runContextLabel = this.formatRunContext(results.runContext || this.resolveRunContext(results));
-        lines.push('🐻 BEAR EVENT SCRAPER RESULTS');
-        lines.push('='.repeat(40));
-        lines.push('');
-        lines.push(`Run Type: ${runContextLabel}`);
-        lines.push('');
-        lines.push(`📊 Total Events Found: ${results.totalEvents} (all events from all sources)`);
-        lines.push(`🐻 Raw Bear Events: ${results.rawBearEvents || 'N/A'} (after bear filtering)`);
-        if (results.duplicatesRemoved > 0) {
-            lines.push(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
-            lines.push(`🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`);
+    lines.push("");
+    lines.push("📋 Parser Results:");
+    if (results.parserResults) {
+      results.parserResults.forEach((result) => {
+        lines.push(`  • ${result.name}: ${result.bearEvents} bear events`);
+      });
+    }
+
+    const allEvents = this.getAllEventsFromResults(results);
+    if (allEvents && allEvents.length > 0) {
+      lines.push("");
+      lines.push("🎉 Found Events:");
+      allEvents.slice(0, 5).forEach((event, i) => {
+        const title = event.title || event.name || `Event ${i + 1}`;
+        const venue = event.venue || event.bar || "";
+        const calendarName = this.getCalendarNameForDisplay(event);
+        lines.push(`  • ${title}`);
+        if (venue) lines.push(`    📍 ${venue}`);
+        if (calendarName) lines.push(`    📱 ${calendarName}`);
+      });
+
+      if (allEvents.length > 5) {
+        lines.push(`  ... and ${allEvents.length - 5} more events`);
+      }
+    }
+
+    if (results.errors && results.errors.length > 0) {
+      lines.push("");
+      lines.push("❌ Errors:");
+      results.errors.slice(0, 3).forEach((error) => {
+        lines.push(`  • ${error}`);
+      });
+    }
+
+    lines.push("");
+    lines.push("🎯 Next Steps:");
+    lines.push("  • Review calendar conflicts");
+    lines.push("  • Check calendar permissions");
+    lines.push("  • Set dryRun: false to add events");
+
+    return lines.join("\n");
+  }
+
+  // Helper method to extract all events from parser results
+  getAllEventsFromResults(results) {
+    // Events must be analyzed to have action types - no fallback to raw parser results
+    if (
+      !results ||
+      !results.analyzedEvents ||
+      !Array.isArray(results.analyzedEvents)
+    ) {
+      throw new Error(
+        "No analyzed events available - event analysis must succeed for the system to function",
+      );
+    }
+
+    let events = results.analyzedEvents;
+
+    // If this is from a saved run, convert date strings to Date objects
+    if (results && results._isDisplayingSavedRun && events.length > 0) {
+      events = events.map((event) => {
+        const convertedEvent = { ...event };
+        if (typeof convertedEvent.startDate === "string") {
+          convertedEvent.startDate = new Date(convertedEvent.startDate);
+        }
+        if (typeof convertedEvent.endDate === "string") {
+          convertedEvent.endDate = new Date(convertedEvent.endDate);
+        }
+        return convertedEvent;
+      });
+    }
+
+    return events;
+  }
+
+  // Helper method to determine if time conflicts should be merged
+  shouldMergeTimeConflict(existingEvent, newEvent) {
+    // Check if both events are similar enough to be the same event
+    const existingTitle = (existingEvent.title || existingEvent.name || "")
+      .toLowerCase()
+      .trim();
+
+    // For new events, check both the current title and original title (if title was overridden)
+    const newTitle = (newEvent.title || newEvent.name || "")
+      .toLowerCase()
+      .trim();
+    const newOriginalTitle = (newEvent.originalTitle || "")
+      .toLowerCase()
+      .trim();
+
+    // Check shortNames as well
+    const existingShortName = (existingEvent.shortName || "")
+      .toLowerCase()
+      .trim();
+    const newShortName = (newEvent.shortName || "").toLowerCase().trim();
+
+    console.log(`📱 Scriptable: Checking merge eligibility:`);
+    console.log(`   Existing: "${existingTitle}"`);
+    console.log(`   New: "${newTitle}"`);
+    if (newOriginalTitle) {
+      console.log(`   New (original): "${newOriginalTitle}"`);
+    }
+    if (existingShortName || newShortName) {
+      console.log(
+        `   ShortNames - Existing: "${existingShortName}", New: "${newShortName}"`,
+      );
+    }
+
+    // Exact shortName match
+    if (
+      existingShortName &&
+      newShortName &&
+      existingShortName === newShortName
+    ) {
+      console.log(
+        `📱 Scriptable: Exact shortName match - should merge: "${existingEvent.shortName}"`,
+      );
+      return true;
+    }
+
+    // Generic pattern detection for events with complex text formatting
+    // This helps merge events that have variations like "A>B>C", "A-B-C", "A B C"
+    const hasComplexPattern = (text) => {
+      // Check if text has letters separated by special characters
+      return /[a-z][\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+[a-z]/i.test(
+        text,
+      );
+    };
+
+    const normalizeComplexText = (text) => {
+      return (
+        text
+          // Replace sequences of special chars between letters with a single hyphen
+          .replace(
+            /([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi,
+            "$1-$2",
+          )
+          // Remove trailing special characters after words
+          .replace(
+            /([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi,
+            "$1",
+          )
+          // Collapse multiple spaces/hyphens into single hyphen
+          .replace(/[\s\-]+/g, "-")
+          // Remove leading/trailing hyphens
+          .replace(/^-+|-+$/g, "")
+      );
+    };
+
+    // Check if both titles have complex patterns that normalize to the same value
+    if (
+      hasComplexPattern(existingTitle) ||
+      hasComplexPattern(newTitle) ||
+      hasComplexPattern(newOriginalTitle)
+    ) {
+      const normalizedExisting = normalizeComplexText(existingTitle);
+      const normalizedNew = normalizeComplexText(newTitle);
+      const normalizedNewOriginal = normalizeComplexText(newOriginalTitle);
+
+      if (
+        normalizedExisting === normalizedNew ||
+        normalizedExisting === normalizedNewOriginal
+      ) {
+        console.log(
+          `📱 Scriptable: Complex pattern match detected - should merge:`,
+        );
+        console.log(`   Normalized existing: "${normalizedExisting}"`);
+        console.log(`   Normalized new: "${normalizedNew}"`);
+        return true;
+      }
+    }
+
+    // Check for exact title matches (case insensitive) - check both titles
+    if (
+      existingTitle === newTitle ||
+      (newOriginalTitle && existingTitle === newOriginalTitle)
+    ) {
+      console.log(
+        `📱 Scriptable: Exact title match - should merge: "${existingEvent.title || existingEvent.name}" vs "${newTitle}"`,
+      );
+      return true;
+    }
+
+    console.log(`📱 Scriptable: No merge criteria met`);
+    return false;
+  }
+
+  // Helper method to calculate title similarity
+  calculateTitleSimilarity(title1, title2) {
+    // Simple Jaccard similarity based on words
+    const words1 = new Set(title1.split(/\s+/));
+    const words2 = new Set(title2.split(/\s+/));
+
+    const intersection = new Set([...words1].filter((x) => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+
+    return intersection.size / union.size;
+  }
+
+  // Helper to get calendar name for display purposes only
+  getCalendarNameForDisplay(event) {
+    const city = event.city || "default";
+    return this.getCalendarName(city);
+  }
+
+  // Check if event has actual differences to show
+  hasEventDifferences(event) {
+    if (!event._original) return false;
+
+    // Get all fields used for comparison display (includes core fields beyond notes)
+    const fieldsToCheck = this.getFieldsForComparison(event);
+
+    for (const field of fieldsToCheck) {
+      // Skip notes field as it's a computed field that combines other fields
+      if (field === "notes") continue;
+
+      let newValue = event._original.scraper[field] || "";
+      let existingValue = event._original.calendar?.[field] || "";
+
+      // Skip empty fields
+      if (!newValue && !existingValue) continue;
+
+      const isDateField = field.toLowerCase().includes("date");
+
+      // Check for differences (date-aware to avoid timezone noise)
+      if (isDateField) {
+        if (!this.datesEqualForDisplay(existingValue, newValue)) {
+          return true;
+        }
+      } else if (newValue !== existingValue) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Get all fields that should be compared/displayed - check ALL fields except underscore fields and functions
+  getFieldsForComparison(event) {
+    // Get all fields from both new and existing events
+    const allFields = new Set();
+
+    // Exclude only internal/Scriptable/search helper fields from comparison.
+    // Keep core calendar fields (title/startDate/endDate/location) and coordinates
+    // even though they are not stored in notes.
+    const excludeFields = new Set([
+      "notes",
+      "isBearEvent",
+      "source",
+      "city",
+      "setDescription",
+      "_analysis",
+      "_action",
+      "_existingEvent",
+      "_existingKey",
+      "_conflicts",
+      "_parserConfig",
+      "_fieldPriorities",
+      "_original",
+      "_mergeInfo",
+      "_changes",
+      "_mergeDiff",
+      "originalTitle",
+      "name", // These are usually duplicates of title
+      // Scriptable-specific properties that shouldn't be in comparison
+      "identifier",
+      "availability",
+      "timeZone",
+      "calendar",
+      "addRecurrenceRule",
+      "removeAllRecurrenceRules",
+      "save",
+      "remove",
+      "presentEdit",
+      "_staticFields",
+      // Recurrence metadata used for matching, not for notes storage
+      "recurrenceId",
+      "recurrenceIdTimezone",
+      "sequence",
+      // Search helper fields used only for identifier matching
+      "searchStartDate",
+      "searchEndDate",
+      // Location-specific fields that are internal to geocoding
+      "placeId",
+      // Coordinate helpers that should not show in comparisons
+      "lat",
+      "lng",
+    ]);
+
+    // Helper function to check if a field should be included
+    const shouldIncludeField = (obj, field) => {
+      if (field.startsWith("_")) return false;
+      if (typeof obj[field] === "function") return false;
+      if (excludeFields.has(field)) return false;
+      return true;
+    };
+
+    // Add fields from scraper event
+    if (event._original?.scraper) {
+      Object.keys(event._original.scraper).forEach((field) => {
+        if (shouldIncludeField(event._original.scraper, field)) {
+          allFields.add(field);
+        }
+      });
+    }
+
+    // Add fields from calendar event
+    if (event._original?.calendar) {
+      Object.keys(event._original.calendar).forEach((field) => {
+        if (shouldIncludeField(event._original.calendar, field)) {
+          allFields.add(field);
+        }
+      });
+    }
+
+    // Add fields from merged event
+    if (event._original?.merged) {
+      Object.keys(event._original.merged).forEach((field) => {
+        if (shouldIncludeField(event._original.merged, field)) {
+          allFields.add(field);
+        }
+      });
+    }
+
+    // Add fields from final event
+    Object.keys(event).forEach((field) => {
+      if (shouldIncludeField(event, field)) {
+        allFields.add(field);
+      }
+    });
+
+    // Convert to array and sort with logical grouping
+    const fieldArray = Array.from(allFields);
+
+    // Define field priority order - group related fields together
+    // Prefer canonical keys
+    const fieldPriority = {
+      // Core event info - keep name fields together
+      title: 1,
+      shortName: 2,
+
+      description: 5,
+      tea: 6, // alias for description (kept if description missing)
+      info: 7, // alias for description (kept if description missing)
+
+      // Date/Time fields - keep start/end times together
+      startDate: 10,
+      endDate: 11,
+      date: 12,
+      day: 13,
+      time: 14,
+      startTime: 15,
+      endTime: 16,
+
+      // Location fields
+      venue: 20,
+      bar: 20, // alias for venue
+      location: 20, // alias for venue
+      host: 20, // alias for venue
+      address: 21,
+      coordinates: 22,
+      lat: 23,
+      lng: 24,
+      // Note: city is now excluded as it shouldn't be saved to calendar
+
+      // Contact/Social fields
+      website: 30,
+      url: 38, // native iOS calendar URL field (same concept as website)
+      facebook: 31,
+      instagram: 32,
+      twitter: 33,
+      phone: 34,
+      email: 35,
+      googleMapsLink: 36, // canonical Google Maps
+      gmaps: 36, // alias fallback
+      ticketUrl: 37, // ticket purchase links
+
+      // Event details
+      price: 40,
+      cover: 40, // alias for price
+      cost: 40, // alias for price
+      category: 41,
+      type: 42,
+      eventtype: 42, // alias for type
+      tags: 43,
+
+      // Calendar specific - move notes to end since it's computed
+      calendar: 50,
+      calendarId: 51,
+      identifier: 52,
+
+      // Debug fields
+      debugcity: 60,
+      debugsource: 61,
+      debugtimezone: 62,
+      debugimage: 63,
+
+      // Computed fields should be last - notes is combination of other fields
+      notes: 99,
+
+      // Other fields get default priority
+    };
+
+    return fieldArray.sort((a, b) => {
+      const priorityA = fieldPriority[a] || 100;
+      const priorityB = fieldPriority[b] || 100;
+
+      // If same priority, sort alphabetically
+      if (priorityA === priorityB) {
+        return a.localeCompare(b);
+      }
+
+      return priorityA - priorityB;
+    });
+  }
+
+  // Generate comparison rows for conflict display
+  generateComparisonRows(event) {
+    if (!event._original) return "";
+
+    // Use the same field logic as comparison (includes core fields not in notes)
+    const fieldsToCompare = this.getFieldsForComparison(event);
+    const rows = [];
+
+    fieldsToCompare.forEach((field) => {
+      // Skip notes field as it's a computed field that combines other fields
+      // This makes the comparison confusing and it's often broken
+      if (field === "notes") return;
+
+      // Get the actual scraped value - don't default to empty string yet
+      let newValue = event._original?.scraper?.[field];
+      let existingValue = event._original?.calendar?.[field];
+      let finalValue = event[field];
+
+      // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
+      const strategy =
+        event._fieldPriorities?.[field]?.merge ||
+        event._fieldMergeStrategies?.[field] ||
+        "preserve";
+
+      // Determine what was used by comparing final value with source values
+      let wasUsed = "unknown";
+      if (finalValue === newValue && finalValue !== existingValue) {
+        wasUsed = "new";
+      } else if (finalValue === existingValue && finalValue !== newValue) {
+        wasUsed = "existing";
+      } else if (finalValue === existingValue && finalValue === newValue) {
+        wasUsed = "same";
+      }
+
+      // For preserve fields, we want to show BOTH the scraped value AND the existing value
+      // This matches the old behavior: "show both and then say 'choosing original because preserve'"
+
+      // Skip if both are empty and no final value, unless it's a field with explicit strategy
+      // For preserve/clobber fields, always show them to demonstrate the strategy in action
+      if (!newValue && !existingValue && !finalValue && !strategy) return;
+
+      // For preserve fields, always show them if they have a strategy configured
+      // This ensures we show "scraped X, existing undefined, choosing undefined because preserve"
+      // Don't skip preserve fields even if they appear empty - user needs to see what was preserved
+      if (strategy === "preserve") {
+        // Always show preserve fields to demonstrate the strategy, even if all values are empty
+        // This is important for showing "scraped value X, existing undefined, preserved undefined"
+      }
+
+      // Format values for display - show exactly what the merge logic saw
+      const formatValue = (val, maxLength = 30) => {
+        if (val === null) return '<em style="color: #999;">null</em>';
+        if (val === undefined) return '<em style="color: #999;">undefined</em>';
+        if (val === "") return '<em style="color: #999;">empty string</em>';
+        if (!val) return '<em style="color: #999;">falsy</em>';
+
+        if (field.includes("Date") && val) {
+          // For date fields in event debugging, get timezone from city configuration
+          if (field === "startDate" || field === "endDate") {
+            const timezone = this.getTimezoneForCityOrUtc(event?.city);
+            var eventForField = { timeZone: timezone };
+          } else {
+            var eventForField = {};
+          }
+          return new Date(val).toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            ...eventForField,
+          });
+        }
+        let stringValue = "";
+        if (typeof val === "object") {
+          try {
+            stringValue = JSON.stringify(val);
+          } catch (e) {
+            stringValue = String(val);
+          }
         } else {
-            lines.push(`🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`);
+          stringValue = val.toString();
         }
-        lines.push(`📅 Added to Calendar: ${results.calendarEvents}${results.calendarEvents === 0 ? ' (dry run/preview mode - no events written)' : ''}`);
-        
-        if (results.errors && results.errors.length > 0) {
-            lines.push(`❌ Errors: ${results.errors.length}`);
+        const str = stringValue;
+        if (str.length > maxLength) {
+          return `<span title="${this.escapeHtml(str)}">${this.escapeHtml(str.substring(0, maxLength))}...</span>`;
         }
-        
-        lines.push('');
-        lines.push('📋 Parser Results:');
-        if (results.parserResults) {
-            results.parserResults.forEach(result => {
-                lines.push(`  • ${result.name}: ${result.bearEvents} bear events`);
-            });
-        }
-        
-        const allEvents = this.getAllEventsFromResults(results);
-        if (allEvents && allEvents.length > 0) {
-            lines.push('');
-            lines.push('🎉 Found Events:');
-            allEvents.slice(0, 5).forEach((event, i) => {
-                const title = event.title || event.name || `Event ${i + 1}`;
-                const venue = event.venue || event.bar || '';
-                const calendarName = this.getCalendarNameForDisplay(event);
-                lines.push(`  • ${title}`);
-                if (venue) lines.push(`    📍 ${venue}`);
-                if (calendarName) lines.push(`    📱 ${calendarName}`);
-            });
-            
-            if (allEvents.length > 5) {
-                lines.push(`  ... and ${allEvents.length - 5} more events`);
-            }
-        }
-        
-        if (results.errors && results.errors.length > 0) {
-            lines.push('');
-            lines.push('❌ Errors:');
-            results.errors.slice(0, 3).forEach(error => {
-                lines.push(`  • ${error}`);
-            });
-        }
-        
-        lines.push('');
-        lines.push('🎯 Next Steps:');
-        lines.push('  • Review calendar conflicts');
-        lines.push('  • Check calendar permissions');
-        lines.push('  • Set dryRun: false to add events');
-        
-        return lines.join('\n');
-    }
+        return this.escapeHtml(str);
+      };
 
-    // Helper method to extract all events from parser results
-    getAllEventsFromResults(results) {
-        // Events must be analyzed to have action types - no fallback to raw parser results
-        if (!results || !results.analyzedEvents || !Array.isArray(results.analyzedEvents)) {
-            throw new Error('No analyzed events available - event analysis must succeed for the system to function');
-        }
-        
-        let events = results.analyzedEvents;
-        
-        // If this is from a saved run, convert date strings to Date objects
-        if (results && results._isDisplayingSavedRun && events.length > 0) {
-            events = events.map(event => {
-                const convertedEvent = { ...event };
-                if (typeof convertedEvent.startDate === 'string') {
-                    convertedEvent.startDate = new Date(convertedEvent.startDate);
-                }
-                if (typeof convertedEvent.endDate === 'string') {
-                    convertedEvent.endDate = new Date(convertedEvent.endDate);
-                }
-                return convertedEvent;
-            });
-        }
-        
-        return events;
-    }
+      // Determine flow direction and result
+      let flowIcon = "";
+      let resultText = "";
 
-    // Helper method to determine if time conflicts should be merged
-    shouldMergeTimeConflict(existingEvent, newEvent) {
-        // Check if both events are similar enough to be the same event
-        const existingTitle = existingEvent.title.toLowerCase().trim();
-        
-        // For new events, check both the current title and original title (if title was overridden)
-        const newTitle = (newEvent.title || newEvent.name || '').toLowerCase().trim();
-        const newOriginalTitle = (newEvent.originalTitle || '').toLowerCase().trim();
-        
-        console.log(`📱 Scriptable: Checking merge eligibility:`);
-        console.log(`   Existing: "${existingTitle}"`);
-        console.log(`   New: "${newTitle}"`);
-        if (newOriginalTitle) {
-            console.log(`   New (original): "${newOriginalTitle}"`);
+      if (!existingValue && newValue) {
+        // New field being added
+        flowIcon = "→";
+        resultText = '<span style="color: #34c759;">ADDED</span>';
+      } else if (existingValue && newValue && existingValue === newValue) {
+        // Both values are identical - no change needed
+        flowIcon = "—";
+        resultText = '<span style="color: #999;">SAME VALUE</span>';
+      } else if (strategy === "clobber") {
+        // Clobber strategy - should always use new value (even if empty)
+        // For clobber, we should trust that the merge logic worked correctly
+        // The finalValue should match newValue, but there might be edge cases with processing
+        if (newValue !== undefined && finalValue === newValue) {
+          flowIcon = "→";
+          resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
+        } else if (!newValue && !finalValue) {
+          // Clobber with empty new value - clears the field
+          flowIcon = "→";
+          resultText = '<span style="color: #ff9500;">CLEARED</span>';
+        } else if (newValue !== undefined) {
+          // For clobber, if we have a new value, assume it worked
+          // The display might show differences due to processing, but trust the merge logic
+          flowIcon = "→";
+          resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
+        } else {
+          // Only show failure if we truly can't determine what happened
+          flowIcon = "⚠️";
+          resultText = '<span style="color: #ff3b30;">CLOBBER UNCLEAR</span>';
         }
-        
-        // Generic pattern detection for events with complex text formatting
-        // This helps merge events that have variations like "A>B>C", "A-B-C", "A B C"
-        const hasComplexPattern = (text) => {
-            // Check if text has letters separated by special characters
-            return /[a-z][\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+[a-z]/i.test(text);
-        };
-        
-        const normalizeComplexText = (text) => {
-            return text
-                // Replace sequences of special chars between letters with a single hyphen
-                .replace(/([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi, '$1-$2')
-                // Remove trailing special characters after words
-                .replace(/([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi, '$1')
-                // Collapse multiple spaces/hyphens into single hyphen
-                .replace(/[\s\-]+/g, '-')
-                // Remove leading/trailing hyphens
-                .replace(/^-+|-+$/g, '');
-        };
-        
-        // Check if both titles have complex patterns that normalize to the same value
-        if (hasComplexPattern(existingTitle) || hasComplexPattern(newTitle) || hasComplexPattern(newOriginalTitle)) {
-            const normalizedExisting = normalizeComplexText(existingTitle);
-            const normalizedNew = normalizeComplexText(newTitle);
-            const normalizedNewOriginal = normalizeComplexText(newOriginalTitle);
-            
-            if (normalizedExisting === normalizedNew || normalizedExisting === normalizedNewOriginal) {
-                console.log(`📱 Scriptable: Complex pattern match detected - should merge:`);
-                console.log(`   Normalized existing: "${normalizedExisting}"`);
-                console.log(`   Normalized new: "${normalizedNew}"`);
-                return true;
-            }
-        }
-        
-        // Check for exact title matches (case insensitive) - check both titles
-        if (existingTitle === newTitle || (newOriginalTitle && existingTitle === newOriginalTitle)) {
-            console.log(`📱 Scriptable: Exact title match - should merge: "${existingEvent.title}" vs "${newTitle}"`);
-            return true;
-        }
-        
-        console.log(`📱 Scriptable: No merge criteria met`);
-        return false;
-    }
+      } else if (strategy === "preserve") {
+        // Preserve strategy - ALWAYS keep existing value (even if null/empty)
+        // For preserve, if existing is undefined, final should also be undefined
+        const preserveWorked =
+          (existingValue === undefined && finalValue === undefined) ||
+          (existingValue !== undefined && finalValue === existingValue);
 
-    // Helper method to calculate title similarity
-    calculateTitleSimilarity(title1, title2) {
-        // Simple Jaccard similarity based on words
-        const words1 = new Set(title1.split(/\s+/));
-        const words2 = new Set(title2.split(/\s+/));
-        
-        const intersection = new Set([...words1].filter(x => words2.has(x)));
-        const union = new Set([...words1, ...words2]);
-        
-        return intersection.size / union.size;
-    }
+        if (preserveWorked) {
+          flowIcon = "←";
+          if (existingValue !== undefined) {
+            resultText =
+              '<span style="color: #007aff;">PRESERVED EXISTING</span>';
+          } else {
+            resultText =
+              '<span style="color: #007aff;">PRESERVED UNDEFINED (ignored scraped)</span>';
+          }
+        } else {
+          // Preserve didn't work as expected - should always keep existing
+          flowIcon = "⚠️";
+          resultText = `<span style="color: #ff3b30;">PRESERVE FAILED (expected: ${existingValue === undefined ? "undefined" : existingValue}, got: ${finalValue === undefined ? "undefined" : finalValue})</span>`;
+        }
+      } else if (wasUsed === "existing") {
+        // Merge strategy explicitly chose existing value
+        flowIcon = "←";
+        resultText = '<span style="color: #007aff;">EXISTING</span>';
+      } else if (finalValue === newValue) {
+        // Replaced with new value
+        flowIcon = "→";
+        resultText = '<span style="color: #ff9500;">NEW</span>';
+      } else if (finalValue === existingValue && existingValue !== newValue) {
+        // Preserved existing value when values differ
+        flowIcon = "←";
+        resultText = '<span style="color: #007aff;">EXISTING</span>';
+      } else if (
+        finalValue &&
+        finalValue !== existingValue &&
+        finalValue !== newValue
+      ) {
+        // Merged/combined value
+        flowIcon = "↔";
+        resultText = '<span style="color: #32d74b;">MERGED</span>';
+      } else {
+        flowIcon = "—";
+        resultText = '<span style="color: #999;">NO CHANGE</span>';
+      }
 
-    // Helper to get calendar name for display purposes only
-    getCalendarNameForDisplay(event) {
-        const city = event.city || 'default';
-        return this.getCalendarName(city);
-    }
-    
-    // Check if event has actual differences to show
-    hasEventDifferences(event) {
-        if (!event._original) return false;
-        
-        // Get all fields used for comparison display (includes core fields beyond notes)
-        const fieldsToCheck = this.getFieldsForComparison(event);
-        
-        for (const field of fieldsToCheck) {
-            // Skip notes field as it's a computed field that combines other fields
-            if (field === 'notes') continue;
-            
-            let newValue = event._original.scraper[field] || '';
-            let existingValue = event._original.calendar?.[field] || '';
-            
-            // Skip empty fields
-            if (!newValue && !existingValue) continue;
-            
-            const isDateField = field.toLowerCase().includes('date');
-            
-            // Check for differences (date-aware to avoid timezone noise)
-            if (isDateField) {
-                if (!this.datesEqualForDisplay(existingValue, newValue)) {
-                    return true;
-                }
-            } else if (newValue !== existingValue) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    // Get all fields that should be compared/displayed - check ALL fields except underscore fields and functions
-    getFieldsForComparison(event) {
-        // Get all fields from both new and existing events
-        const allFields = new Set();
-        
-        // Exclude only internal/Scriptable/search helper fields from comparison.
-        // Keep core calendar fields (title/startDate/endDate/location) and coordinates
-        // even though they are not stored in notes.
-        const excludeFields = new Set([
-            'notes',
-            'isBearEvent', 'source', 'city', 'setDescription', '_analysis', '_action', 
-            '_existingEvent', '_existingKey', '_conflicts', '_parserConfig', '_fieldPriorities',
-            '_original', '_mergeInfo', '_changes', '_mergeDiff',
-            'originalTitle', 'name', // These are usually duplicates of title
-            // Scriptable-specific properties that shouldn't be in comparison
-            'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
-            'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
-            // Recurrence metadata used for matching, not for notes storage
-            'recurrenceId', 'recurrenceIdTimezone', 'sequence',
-            // Search helper fields used only for identifier matching
-            'searchStartDate', 'searchEndDate',
-            // Location-specific fields that are internal to geocoding
-            'placeId',
-            // Coordinate helpers that should not show in comparisons
-            'lat', 'lng'
-        ]);
-        
-        // Helper function to check if a field should be included
-        const shouldIncludeField = (obj, field) => {
-            if (field.startsWith('_')) return false;
-            if (typeof obj[field] === 'function') return false;
-            if (excludeFields.has(field)) return false;
-            return true;
-        };
-        
-        // Add fields from scraper event
-        if (event._original?.scraper) {
-            Object.keys(event._original.scraper).forEach(field => {
-                if (shouldIncludeField(event._original.scraper, field)) {
-                    allFields.add(field);
-                }
-            });
-        }
-        
-        // Add fields from calendar event
-        if (event._original?.calendar) {
-            Object.keys(event._original.calendar).forEach(field => {
-                if (shouldIncludeField(event._original.calendar, field)) {
-                    allFields.add(field);
-                }
-            });
-        }
-        
-        // Add fields from merged event
-        if (event._original?.merged) {
-            Object.keys(event._original.merged).forEach(field => {
-                if (shouldIncludeField(event._original.merged, field)) {
-                    allFields.add(field);
-                }
-            });
-        }
-        
-        // Add fields from final event
-        Object.keys(event).forEach(field => {
-            if (shouldIncludeField(event, field)) {
-                allFields.add(field);
-            }
-        });
-        
-        // Convert to array and sort with logical grouping
-        const fieldArray = Array.from(allFields);
-        
-        // Define field priority order - group related fields together
-        // Prefer canonical keys
-        const fieldPriority = {
-            // Core event info - keep name fields together
-            'title': 1,
-            'shortName': 2,
-            
-            'description': 5,
-            'tea': 6,              // alias for description (kept if description missing)
-            'info': 7,             // alias for description (kept if description missing)
-            
-            // Date/Time fields - keep start/end times together
-            'startDate': 10,
-            'endDate': 11,
-            'date': 12,
-            'day': 13,
-            'time': 14,
-            'startTime': 15,
-            'endTime': 16,
-            
-            // Location fields
-            'venue': 20,
-            'bar': 20,          // alias for venue
-            'location': 20,     // alias for venue
-            'host': 20,         // alias for venue
-            'address': 21,
-            'coordinates': 22,
-            'lat': 23,
-            'lng': 24,
-            // Note: city is now excluded as it shouldn't be saved to calendar
-            
-            // Contact/Social fields
-            'website': 30,
-            'url': 38,             // native iOS calendar URL field (same concept as website)
-            'facebook': 31,
-            'instagram': 32,
-            'twitter': 33,
-            'phone': 34,
-            'email': 35,
-            'googleMapsLink': 36,  // canonical Google Maps
-            'gmaps': 36,           // alias fallback
-            'ticketUrl': 37,       // ticket purchase links
-            
-            // Event details
-            'price': 40,
-            'cover': 40,        // alias for price
-            'cost': 40,         // alias for price
-            'category': 41,
-            'type': 42,
-            'eventtype': 42,    // alias for type
-            'tags': 43,
-            
-            // Calendar specific - move notes to end since it's computed
-            'calendar': 50,
-            'calendarId': 51,
-            'identifier': 52,
-            
-            // Debug fields
-            'debugcity': 60,
-            'debugsource': 61,
-            'debugtimezone': 62,
-            'debugimage': 63,
-            
-            // Computed fields should be last - notes is combination of other fields
-            'notes': 99,
-            
-            // Other fields get default priority
-        };
-        
-        return fieldArray.sort((a, b) => {
-            const priorityA = fieldPriority[a] || 100;
-            const priorityB = fieldPriority[b] || 100;
-            
-            // If same priority, sort alphabetically
-            if (priorityA === priorityB) {
-                return a.localeCompare(b);
-            }
-            
-            return priorityA - priorityB;
-        });
-    }
-    
-    // Generate comparison rows for conflict display
-    generateComparisonRows(event) {
-        if (!event._original) return '';
-        
-        // Use the same field logic as comparison (includes core fields not in notes)
-        const fieldsToCompare = this.getFieldsForComparison(event);
-        const rows = [];
-        
-        fieldsToCompare.forEach(field => {
-            // Skip notes field as it's a computed field that combines other fields
-            // This makes the comparison confusing and it's often broken
-            if (field === 'notes') return;
-            
-            // Get the actual scraped value - don't default to empty string yet
-            let newValue = event._original?.scraper?.[field];
-            let existingValue = event._original?.calendar?.[field];
-            let finalValue = event[field];
-            
-            // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
-            const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
-            
-            // Determine what was used by comparing final value with source values
-            let wasUsed = 'unknown';
-            if (finalValue === newValue && finalValue !== existingValue) {
-                wasUsed = 'new';
-            } else if (finalValue === existingValue && finalValue !== newValue) {
-                wasUsed = 'existing';
-            } else if (finalValue === existingValue && finalValue === newValue) {
-                wasUsed = 'same';
-            }
-            
-            // For preserve fields, we want to show BOTH the scraped value AND the existing value
-            // This matches the old behavior: "show both and then say 'choosing original because preserve'"
-            
-            // Skip if both are empty and no final value, unless it's a field with explicit strategy
-            // For preserve/clobber fields, always show them to demonstrate the strategy in action
-            if (!newValue && !existingValue && !finalValue && !strategy) return;
-            
-            // For preserve fields, always show them if they have a strategy configured
-            // This ensures we show "scraped X, existing undefined, choosing undefined because preserve"
-            // Don't skip preserve fields even if they appear empty - user needs to see what was preserved
-            if (strategy === 'preserve') {
-                // Always show preserve fields to demonstrate the strategy, even if all values are empty
-                // This is important for showing "scraped value X, existing undefined, preserved undefined"
-            }
-            
-            // Format values for display - show exactly what the merge logic saw
-            const formatValue = (val, maxLength = 30) => {
-                if (val === null) return '<em style="color: #999;">null</em>';
-                if (val === undefined) return '<em style="color: #999;">undefined</em>';
-                if (val === '') return '<em style="color: #999;">empty string</em>';
-                if (!val) return '<em style="color: #999;">falsy</em>';
-                
-                if (field.includes('Date') && val) {
-                    // For date fields in event debugging, get timezone from city configuration
-                    if (field === 'startDate' || field === 'endDate') {
-                        const timezone = this.getTimezoneForCityOrUtc(event?.city);
-                        var eventForField = { timeZone: timezone };
-                    } else {
-                        var eventForField = {};
-                    }
-                    return new Date(val).toLocaleString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        ...eventForField
-                    });
-                }
-                let stringValue = '';
-                if (typeof val === 'object') {
-                    try {
-                        stringValue = JSON.stringify(val);
-                    } catch (e) {
-                        stringValue = String(val);
-                    }
-                } else {
-                    stringValue = val.toString();
-                }
-                const str = stringValue;
-                if (str.length > maxLength) {
-                    return `<span title="${this.escapeHtml(str)}">${this.escapeHtml(str.substring(0, maxLength))}...</span>`;
-                }
-                return this.escapeHtml(str);
-            };
-            
-            // Determine flow direction and result
-            let flowIcon = '';
-            let resultText = '';
-            
-            if (!existingValue && newValue) {
-                // New field being added
-                flowIcon = '→';
-                resultText = '<span style="color: #34c759;">ADDED</span>';
-            } else if (existingValue && newValue && existingValue === newValue) {
-                // Both values are identical - no change needed
-                flowIcon = '—';
-                resultText = '<span style="color: #999;">SAME VALUE</span>';
-            } else if (strategy === 'clobber') {
-                // Clobber strategy - should always use new value (even if empty)
-                // For clobber, we should trust that the merge logic worked correctly
-                // The finalValue should match newValue, but there might be edge cases with processing
-                if (newValue !== undefined && finalValue === newValue) {
-                    flowIcon = '→';
-                    resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
-                } else if (!newValue && !finalValue) {
-                    // Clobber with empty new value - clears the field
-                    flowIcon = '→';
-                    resultText = '<span style="color: #ff9500;">CLEARED</span>';
-                } else if (newValue !== undefined) {
-                    // For clobber, if we have a new value, assume it worked
-                    // The display might show differences due to processing, but trust the merge logic
-                    flowIcon = '→';
-                    resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
-                } else {
-                    // Only show failure if we truly can't determine what happened
-                    flowIcon = '⚠️';
-                    resultText = '<span style="color: #ff3b30;">CLOBBER UNCLEAR</span>';
-                }
-            } else if (strategy === 'preserve') {
-                // Preserve strategy - ALWAYS keep existing value (even if null/empty)
-                // For preserve, if existing is undefined, final should also be undefined
-                const preserveWorked = (existingValue === undefined && finalValue === undefined) || 
-                                     (existingValue !== undefined && finalValue === existingValue);
-                
-                if (preserveWorked) {
-                    flowIcon = '←';
-                    if (existingValue !== undefined) {
-                        resultText = '<span style="color: #007aff;">PRESERVED EXISTING</span>';
-                    } else {
-                        resultText = '<span style="color: #007aff;">PRESERVED UNDEFINED (ignored scraped)</span>';
-                    }
-                } else {
-                    // Preserve didn't work as expected - should always keep existing
-                    flowIcon = '⚠️';
-                    resultText = `<span style="color: #ff3b30;">PRESERVE FAILED (expected: ${existingValue === undefined ? 'undefined' : existingValue}, got: ${finalValue === undefined ? 'undefined' : finalValue})</span>`;
-                }
-            } else if (wasUsed === 'existing') {
-                // Merge strategy explicitly chose existing value
-                flowIcon = '←';
-                resultText = '<span style="color: #007aff;">EXISTING</span>';
-            } else if (finalValue === newValue) {
-                // Replaced with new value
-                flowIcon = '→';
-                resultText = '<span style="color: #ff9500;">NEW</span>';
-            } else if (finalValue === existingValue && existingValue !== newValue) {
-                // Preserved existing value when values differ
-                flowIcon = '←';
-                resultText = '<span style="color: #007aff;">EXISTING</span>';
-            } else if (finalValue && finalValue !== existingValue && finalValue !== newValue) {
-                // Merged/combined value
-                flowIcon = '↔';
-                resultText = '<span style="color: #32d74b;">MERGED</span>';
-            } else {
-                flowIcon = '—';
-                resultText = '<span style="color: #999;">NO CHANGE</span>';
-            }
-            
-            rows.push(`
+      rows.push(`
                 <tr>
                     <td style="padding: 5px; border-bottom: 1px solid var(--border-color); vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">
                         <strong>${field}</strong>
@@ -5778,1227 +6625,1426 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : '✅ No e
                     </td>
                 </tr>
             `);
-        });
-        
-        return rows.join('');
-    }
-    
-    // Generate line-by-line diff view
-    generateLineDiffView(event) {
-        if (!event._original) return '<p>No comparison data available</p>';
-        
-        // Use the same field logic as comparison (includes core fields not in notes)
-        const fieldsToCompare = this.getFieldsForComparison(event);
-        let html = '<div style="font-family: \'SF Mono\', Monaco, \'Courier New\', monospace; font-size: 12px; background: var(--background-primary); padding: 12px; border-radius: 8px; line-height: 1.6; color: var(--text-primary);">';
-        
-        fieldsToCompare.forEach((field, index) => {
-            // Skip notes field as it's a computed field that combines other fields
-            // This makes the comparison confusing and it's often broken
-            if (field === 'notes') return;
-            
-            let newValue = event._original.scraper[field] || '';
-            let existingValue = event._original.calendar?.[field] || '';
-            let finalValue = event[field] || '';
-            // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
-            const strategy = event._fieldPriorities?.[field]?.merge || event._fieldMergeStrategies?.[field] || 'preserve';
-            
-            // Skip if both are empty and no final value
-            if (!newValue && !existingValue && !finalValue) return;
-            
-            // Format dates
-            const formatValue = (val) => {
-                if (!val) return '';
-                if (field.includes('Date') && val) {
-                    // Get timezone from city configuration instead of expecting it on the event
-                    const timezone = this.getTimezoneForCityOrUtc(event.city);
-                    return new Date(val).toLocaleString('en-US', { timeZone: timezone });
-                }
-                if (typeof val === 'object') {
-                    try {
-                        return JSON.stringify(val);
-                    } catch (e) {
-                        return String(val);
-                    }
-                }
-                return val.toString();
-            };
-            
-            // Determine what happened with this field by comparing values
-            let wasUsed = 'unknown';
-            if (finalValue === newValue && finalValue !== existingValue) {
-                wasUsed = 'new';
-            } else if (finalValue === existingValue && finalValue !== newValue) {
-                wasUsed = 'existing';
-            } else if (finalValue === existingValue && finalValue === newValue) {
-                wasUsed = 'same';
-            }
-            const isNew = !existingValue && newValue;
-            const isUnchanged = existingValue && !newValue;
-            
-            const isDateField = field.toLowerCase().includes('date');
-            const equalForDisplay = isDateField ? this.datesEqualForDisplay(existingValue, newValue) : (existingValue === newValue);
-            const isSame = existingValue && newValue && equalForDisplay;
-            
-            const isReplaced = existingValue && newValue && (finalValue === newValue) && !equalForDisplay;
-            const isKept = existingValue && newValue && (finalValue === existingValue) && !equalForDisplay;
-            const isMerged = existingValue && newValue && finalValue && (finalValue !== existingValue) && (finalValue !== newValue) && !equalForDisplay;
-            
-            // Add field separator for readability (except for first field)
-            if (index > 0) {
-                html += `<div class=\"diff-sep\"></div>`;
-            }
-            
-            // Add field header
-            html += `<div class=\"diff-header\">
+    });
+
+    return rows.join("");
+  }
+
+  // Generate line-by-line diff view
+  generateLineDiffView(event) {
+    if (!event._original) return "<p>No comparison data available</p>";
+
+    // Use the same field logic as comparison (includes core fields not in notes)
+    const fieldsToCompare = this.getFieldsForComparison(event);
+    let html =
+      "<div style=\"font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 12px; background: var(--background-primary); padding: 12px; border-radius: 8px; line-height: 1.6; color: var(--text-primary);\">";
+
+    fieldsToCompare.forEach((field, index) => {
+      // Skip notes field as it's a computed field that combines other fields
+      // This makes the comparison confusing and it's often broken
+      if (field === "notes") return;
+
+      let newValue = event._original.scraper[field] || "";
+      let existingValue = event._original.calendar?.[field] || "";
+      let finalValue = event[field] || "";
+      // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
+      const strategy =
+        event._fieldPriorities?.[field]?.merge ||
+        event._fieldMergeStrategies?.[field] ||
+        "preserve";
+
+      // Skip if both are empty and no final value
+      if (!newValue && !existingValue && !finalValue) return;
+
+      // Format dates
+      const formatValue = (val) => {
+        if (!val) return "";
+        if (field.includes("Date") && val) {
+          // Get timezone from city configuration instead of expecting it on the event
+          const timezone = this.getTimezoneForCityOrUtc(event.city);
+          return new Date(val).toLocaleString("en-US", { timeZone: timezone });
+        }
+        if (typeof val === "object") {
+          try {
+            return JSON.stringify(val);
+          } catch (e) {
+            return String(val);
+          }
+        }
+        return val.toString();
+      };
+
+      // Determine what happened with this field by comparing values
+      let wasUsed = "unknown";
+      if (finalValue === newValue && finalValue !== existingValue) {
+        wasUsed = "new";
+      } else if (finalValue === existingValue && finalValue !== newValue) {
+        wasUsed = "existing";
+      } else if (finalValue === existingValue && finalValue === newValue) {
+        wasUsed = "same";
+      }
+      const isNew = !existingValue && newValue;
+      const isUnchanged = existingValue && !newValue;
+
+      const isDateField = field.toLowerCase().includes("date");
+      const equalForDisplay = isDateField
+        ? this.datesEqualForDisplay(existingValue, newValue)
+        : existingValue === newValue;
+      const isSame = existingValue && newValue && equalForDisplay;
+
+      const isReplaced =
+        existingValue &&
+        newValue &&
+        finalValue === newValue &&
+        !equalForDisplay;
+      const isKept =
+        existingValue &&
+        newValue &&
+        finalValue === existingValue &&
+        !equalForDisplay;
+      const isMerged =
+        existingValue &&
+        newValue &&
+        finalValue &&
+        finalValue !== existingValue &&
+        finalValue !== newValue &&
+        !equalForDisplay;
+
+      // Add field separator for readability (except for first field)
+      if (index > 0) {
+        html += `<div class=\"diff-sep\"></div>`;
+      }
+
+      // Add field header
+      html += `<div class=\"diff-header\">
                         ${field}
                      </div>`;
-            
-            // Show git-style diff
-            if (isNew) {
-                // Only new value exists - show as addition
-                html += `<div class=\"diff-line diff-added\">`;
-                html += `<span>+</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(new field)</em>`;
-                html += `</div>`;
-            } else if (isUnchanged) {
-                // Only existing value exists - show as context (orange)
-                html += `<div class=\"diff-line diff-context\">`;
-                html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(existing, unchanged)</em>`;
-                html += `</div>`;
-            } else if (isSame) {
-                // Existing and new are the same for display - avoid +/- noise
-                html += `<div class=\"diff-line diff-same\">`;
-                html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(same in both)</em>`;
-                html += `</div>`;
-            } else if (isReplaced) {
-                // Value was replaced - show old as deletion, new as addition
-                html += `<div class=\"diff-line diff-removed\">`;
-                html += `<span>-</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(removed)</em>`;
-                html += `</div>`;
-                html += `<div class=\"diff-line diff-added\">`;
-                html += `<span>+</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(added)</em>`;
-                html += `</div>`;
-            } else if (isKept) {
-                // New value exists but existing was kept - show both with context
-                html += `<div class=\"diff-line diff-same\">`;
-                html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(kept existing)</em>`;
-                html += `</div>`;
-                html += `<div class=\"diff-line diff-ignored\" style=\"opacity:0.85;\">`;
-                html += `<span>~</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(ignored new value)</em>`;
-                html += `</div>`;
-            } else if (isMerged) {
-                // Values were merged - show all three
-                html += `<div class=\"diff-line diff-removed\">`;
-                html += `<span>-</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(original)</em>`;
-                html += `</div>`;
-                html += `<div class=\"diff-line diff-ignored\">`;
-                html += `<span>~</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(proposed)</em>`;
-                html += `</div>`;
-                html += `<div class=\"diff-line diff-merged\">`;
-                html += `<span>+</span> ${this.escapeHtml(formatValue(finalValue))} <em class=\"diff-meta\">(merged result)</em>`;
-                html += `</div>`;
-            }
-            
-            // Add spacing after each field (except last one)
-            if (index < fieldsToCompare.length - 1) {
-                html += `<div style="margin-bottom: 12px;"></div>`;
-            }
-        });
-        
-        html += '</div>';
-        return html;
+
+      // Show git-style diff
+      if (isNew) {
+        // Only new value exists - show as addition
+        html += `<div class=\"diff-line diff-added\">`;
+        html += `<span>+</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(new field)</em>`;
+        html += `</div>`;
+      } else if (isUnchanged) {
+        // Only existing value exists - show as context (orange)
+        html += `<div class=\"diff-line diff-context\">`;
+        html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(existing, unchanged)</em>`;
+        html += `</div>`;
+      } else if (isSame) {
+        // Existing and new are the same for display - avoid +/- noise
+        html += `<div class=\"diff-line diff-same\">`;
+        html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(same in both)</em>`;
+        html += `</div>`;
+      } else if (isReplaced) {
+        // Value was replaced - show old as deletion, new as addition
+        html += `<div class=\"diff-line diff-removed\">`;
+        html += `<span>-</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(removed)</em>`;
+        html += `</div>`;
+        html += `<div class=\"diff-line diff-added\">`;
+        html += `<span>+</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(added)</em>`;
+        html += `</div>`;
+      } else if (isKept) {
+        // New value exists but existing was kept - show both with context
+        html += `<div class=\"diff-line diff-same\">`;
+        html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(kept existing)</em>`;
+        html += `</div>`;
+        html += `<div class=\"diff-line diff-ignored\" style=\"opacity:0.85;\">`;
+        html += `<span>~</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(ignored new value)</em>`;
+        html += `</div>`;
+      } else if (isMerged) {
+        // Values were merged - show all three
+        html += `<div class=\"diff-line diff-removed\">`;
+        html += `<span>-</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(original)</em>`;
+        html += `</div>`;
+        html += `<div class=\"diff-line diff-ignored\">`;
+        html += `<span>~</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(proposed)</em>`;
+        html += `</div>`;
+        html += `<div class=\"diff-line diff-merged\">`;
+        html += `<span>+</span> ${this.escapeHtml(formatValue(finalValue))} <em class=\"diff-meta\">(merged result)</em>`;
+        html += `</div>`;
+      }
+
+      // Add spacing after each field (except last one)
+      if (index < fieldsToCompare.length - 1) {
+        html += `<div style="margin-bottom: 12px;"></div>`;
+      }
+    });
+
+    html += "</div>";
+    return html;
+  }
+
+  // Compare two date inputs for display equality, avoiding timezone-related false diffs
+  datesEqualForDisplay(a, b) {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    const da = new Date(a);
+    const db = new Date(b);
+    if (isNaN(da.getTime()) || isNaN(db.getTime())) {
+      return String(a) === String(b);
+    }
+    if (da.getTime() === db.getTime()) return true;
+    try {
+      return da.toLocaleString() === db.toLocaleString();
+    } catch (e) {
+      return da.toString() === db.toString();
+    }
+  }
+
+  // Prompt user for calendar execution after displaying results
+  async promptForCalendarExecution(analyzedEvents, config) {
+    if (!analyzedEvents || analyzedEvents.length === 0) {
+      return false;
     }
 
-    // Compare two date inputs for display equality, avoiding timezone-related false diffs
-    datesEqualForDisplay(a, b) {
-        if (a === b) return true;
-        if (!a || !b) return false;
-        const da = new Date(a);
-        const db = new Date(b);
-        if (isNaN(da.getTime()) || isNaN(db.getTime())) {
-            return String(a) === String(b);
-        }
-        if (da.getTime() === db.getTime()) return true;
-        try {
-            return da.toLocaleString() === db.toLocaleString();
-        } catch (e) {
-            return da.toString() === db.toString();
-        }
-    }
+    const alert = new Alert();
+    alert.title = "Execute Calendar Actions?";
 
-    // Prompt user for calendar execution after displaying results
-    async promptForCalendarExecution(analyzedEvents, config) {
-        if (!analyzedEvents || analyzedEvents.length === 0) {
-            return false;
-        }
-        
-        const alert = new Alert();
-        alert.title = "Execute Calendar Actions?";
-        
-        // Count actions by type (intent and write)
-        const intentCounts = this.countMetricsActions(analyzedEvents);
-        const writeCounts = this.countMetricsCalendarActions(analyzedEvents);
-        
-        let message = "Ready to execute the following calendar actions:\n\n";
-        if (intentCounts.new) message += `🎯 Intent NEW: ${intentCounts.new} events\n`;
-        if (intentCounts.merge) message += `🎯 Intent MERGE: ${intentCounts.merge} events\n`;
-        if (intentCounts.conflict) message += `🎯 Intent CONFLICT: ${intentCounts.conflict} events\n`;
-        if (intentCounts.new || intentCounts.merge || intentCounts.conflict) message += `\n`;
-        if (writeCounts.create) message += `➕ Create ${writeCounts.create} events\n`;
-        if (writeCounts.update) message += `🔄 Update ${writeCounts.update} events\n`;
-        if (writeCounts.skip) message += `⚠️ Skip ${writeCounts.skip} events\n`;
-        if (writeCounts.other) message += `❓ Other write actions: ${writeCounts.other}\n`;
-        
-        alert.message = message;
-        alert.addAction("Execute");
-        alert.addCancelAction("Cancel");
-        
-        const response = await alert.presentAlert();
-        
-        if (response === 0) {
-            // Before executing writes, attempt to persist capability by writing a temp file. If this fails, abort.
-            await this.ensureRelativeStorageDirs();
-            const testFilePath = this.fm.joinPath(this.runsDir, '.write-test.json');
-            try {
-                // Write test file directly using our FileManager
-                this.fm.writeString(testFilePath, JSON.stringify({ ts: new Date().toISOString() }));
-                // remove temp file
-                const fm = this.fm || FileManager.iCloud();
-                if (fm.fileExists(testFilePath)) fm.remove(testFilePath);
-            } catch (e) {
-                const errorAlert = new Alert();
-                errorAlert.title = "Cannot Proceed";
-                errorAlert.message = "Failed to write to runs directory. Calendar changes will not be executed.";
-                errorAlert.addAction("OK");
-                await errorAlert.presentAlert();
-                return 0;
-            }
+    // Count actions by type (intent and write)
+    const intentCounts = this.countMetricsActions(analyzedEvents);
+    const writeCounts = this.countMetricsCalendarActions(analyzedEvents);
 
-            // User selected Execute and write preflight works — proceed to execute
-            const processedCount = await this.executeCalendarActions(analyzedEvents, config);
+    let message = "Ready to execute the following calendar actions:\n\n";
+    if (intentCounts.new)
+      message += `🎯 Intent NEW: ${intentCounts.new} events\n`;
+    if (intentCounts.merge)
+      message += `🎯 Intent MERGE: ${intentCounts.merge} events\n`;
+    if (intentCounts.conflict)
+      message += `🎯 Intent CONFLICT: ${intentCounts.conflict} events\n`;
+    if (intentCounts.new || intentCounts.merge || intentCounts.conflict)
+      message += `\n`;
+    if (writeCounts.create)
+      message += `➕ Create ${writeCounts.create} events\n`;
+    if (writeCounts.update)
+      message += `🔄 Update ${writeCounts.update} events\n`;
+    if (writeCounts.skip) message += `⚠️ Skip ${writeCounts.skip} events\n`;
+    if (writeCounts.other)
+      message += `❓ Other write actions: ${writeCounts.other}\n`;
 
-            const successAlert = new Alert();
-            successAlert.title = "Calendar Updated";
-            successAlert.message = `Successfully processed ${processedCount} events.`;
-            successAlert.addAction("OK");
-            await successAlert.presentAlert();
-            
-            return processedCount;
-        }
-        
-        return 0;
-    }
+    alert.message = message;
+    alert.addAction("Execute");
+    alert.addCancelAction("Cancel");
 
-    // (Directory creation handled by ensureRelativeStorageDirs using embedded JSONFileManager path base)
+    const response = await alert.presentAlert();
 
-    async ensureRelativeStorageDirs() {
-        try {
-            const fm = this.fm || FileManager.iCloud();
-            
-            console.log(`📱 Scriptable: Ensuring directories in: ${this.baseDir}`);
-            if (!fm.fileExists(this.baseDir)) fm.createDirectory(this.baseDir, true);
-            if (!fm.fileExists(this.runsDir)) fm.createDirectory(this.runsDir, true);
-            if (!fm.fileExists(this.logsDir)) fm.createDirectory(this.logsDir, true);
-            if (!fm.fileExists(this.metricsDir)) fm.createDirectory(this.metricsDir, true);
-            if (!fm.fileExists(this.cacheDir)) fm.createDirectory(this.cacheDir, true);
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`);
-        }
-    }
-
-    getRunId(timestamp = new Date()) {
-        // Use a filesystem-friendly timestamp
-        const pad = n => String(n).padStart(2, '0');
-        const y = timestamp.getFullYear();
-        const m = pad(timestamp.getMonth() + 1);
-        const d = pad(timestamp.getDate());
-        const hh = pad(timestamp.getHours());
-        const mm = pad(timestamp.getMinutes());
-        const ss = pad(timestamp.getSeconds());
-        return `${y}${m}${d}-${hh}${mm}${ss}`;
-    }
-
-    getRunFilePath(runId) {
-        return this.fm.joinPath(this.runsDir, `${runId}.json`);
-    }
-
-    async saveRun(results) {
-        if (!this.fm) return;
-        try {
-            // Ensure directories exist first
-            await this.ensureRelativeStorageDirs();
-            
-            const ts = new Date();
-            const runId = this.getRunId(ts);
-            const runFilePath = this.getRunFilePath(runId);
-            const runContext = results.runContext || null;
-            const analyzedEvents = this.sanitizeEventsForRunSave(results.analyzedEvents || []);
-            
-            const summary = {
-                runId,
-                timestamp: ts.toISOString(),
-                runContext,
-                totals: {
-                    totalEvents: results.totalEvents || 0,
-                    bearEvents: results.bearEvents || 0,
-                    calendarEvents: results.calendarEvents || 0,
-                    errors: (results.errors || []).length
-                },
-                parserSummaries: (results.parserResults || []).map(r => ({ name: r.name, bearEvents: r.bearEvents, totalEvents: r.totalEvents }))
-            };
-            
-            const payload = {
-                version: 2,
-                summary,
-                runContext,
-                config: results.config || null,
-                analyzedEvents,
-                parserResults: results.parserResults || [],
-                errors: results.errors || []
-            };
-
-            // Ensure directory exists before writing (same pattern as FileLogger)
-            if (!this.fm.fileExists(this.runsDir)) {
-                try {
-                    this.fm.createDirectory(this.runsDir, true);
-                    console.log(`📱 Scriptable: Created runs directory: ${this.runsDir}`);
-                } catch (dirErr) {
-                    console.log(`📱 Scriptable: Directory creation failed: ${dirErr.message}`);
-                    throw dirErr;
-                }
-            }
-            
-            // Check if path is a directory
-            if (this.fm.fileExists(runFilePath) && this.fm.isDirectory(runFilePath)) {
-                throw new Error("Run file path is a directory, please delete!");
-            }
-            
-            // Save run using absolute path
-            this.fm.writeString(runFilePath, JSON.stringify(payload));
-            console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${runFilePath}`);
-            return runId;
-        } catch (e) {
-            console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
-        }
-    }
-
-    listSavedRuns() {
-        // Read directory contents directly - no index needed
-        try {
-            const fm = this.fm || FileManager.iCloud();
-            const runsPath = this.runsDir;
-            
-            console.log(`📱 Scriptable: Looking for runs in: ${runsPath}`);
-            if (!fm.fileExists(runsPath)) {
-                console.log(`📱 Scriptable: Runs directory does not exist: ${runsPath}`);
-                return [];
-            }
-            
-            // Ensure iCloud files are downloaded before listing
-            try {
-                fm.downloadFileFromiCloud(runsPath);
-            } catch (downloadError) {
-                console.log(`📱 Scriptable: Note - iCloud download attempt: ${downloadError.message}`);
-            }
-            
-            const files = fm.listContents(runsPath) || [];
-            console.log(`📱 Scriptable: Found ${files.length} files: ${JSON.stringify(files)}`);
-            
-            // Filter out directories and only keep JSON files
-            const jsonFiles = files.filter(name => {
-                const filePath = fm.joinPath(runsPath, name);
-                try {
-                    // Ensure each file is downloaded from iCloud
-                    fm.downloadFileFromiCloud(filePath);
-                    return name.endsWith('.json') && !fm.isDirectory(filePath);
-                } catch (error) {
-                    console.log(`📱 Scriptable: Error checking file ${name}: ${error.message}`);
-                    return false;
-                }
-            });
-            
-            console.log(`📱 Scriptable: Filtered to ${jsonFiles.length} JSON files: ${JSON.stringify(jsonFiles)}`);
-            
-            return jsonFiles
-                .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
-                .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to read runs directory: ${e.message}`);
-            return [];
-        }
-    }
-
-    loadSavedRun(runId) {
-        try {
-            const fm = this.fm || FileManager.iCloud();
-            const runFilePath = this.getRunFilePath(runId);
-            
-            console.log(`📱 Scriptable: Loading run from: ${runFilePath}`);
-            if (!fm.fileExists(runFilePath)) {
-                console.log(`📱 Scriptable: Run file does not exist: ${runFilePath}`);
-                return null;
-            }
-            
-            // Ensure file is downloaded from iCloud before reading
-            try {
-                fm.downloadFileFromiCloud(runFilePath);
-            } catch (downloadError) {
-                console.log(`📱 Scriptable: Note - iCloud download attempt: ${downloadError.message}`);
-            }
-            
-            const content = fm.readString(runFilePath);
-            console.log(`📱 Scriptable: Raw content type: ${typeof content}, content: ${content === null ? 'null' : content === undefined ? 'undefined' : 'valid'}`);
-            
-            if (content === null || content === undefined) {
-                console.log(`📱 Scriptable: File content is null or undefined`);
-                return null;
-            }
-            
-            if (content.trim().length === 0) {
-                console.log(`📱 Scriptable: File content is empty`);
-                return null;
-            }
-            
-            console.log(`📱 Scriptable: Successfully read file, content length: ${content.length}`);
-            return JSON.parse(content);
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);
-            return null;
-        }
-    }
-
-    async displaySavedRun(options = {}) {
-        try {
-            let runToShow = null;
-            const runs = this.listSavedRuns();
-            if (!runs || runs.length === 0) {
-                await this.showError('No saved runs', 'No saved runs were found to display.');
-                return;
-            }
-
-            if (options.runId) {
-                runToShow = options.runId;
-            } else if (options.last) {
-                runToShow = runs[0].runId || runs[0];
-            } else if (options.presentHistory) {
-                // Simple selection UI using Alert
-                const alert = new Alert();
-                alert.title = 'Select Saved Run';
-                alert.message = 'Choose a run to display';
-                runs.slice(0, 25).forEach((r, idx) => {
-                    const label = r.timestamp ? `${idx + 1}. ${r.timestamp}` : `${idx + 1}. ${r.runId}`;
-                    alert.addAction(label);
-                });
-                alert.addCancelAction('Cancel');
-                const idx = await alert.present();
-                if (idx < 0 || idx >= runs.length) return;
-                runToShow = runs[idx].runId || runs[idx];
-            }
-
-            if (!runToShow) {
-                runToShow = runs[0].runId || runs[0];
-            }
-
-            const saved = this.loadSavedRun(runToShow);
-            if (!saved) {
-                await this.showError('Load failed', `Could not load saved run: ${runToShow}`);
-                return;
-            }
-
-            // Normalize to the same shape expected by display/present methods
-            // Set calendarEvents to 0 to prevent saving a new run when viewing saved runs
-            const savedRunContext = saved?.runContext || saved?.summary?.runContext || null;
-            const resultsLike = {
-                totalEvents: saved?.summary?.totals?.totalEvents || 0,
-                bearEvents: saved?.summary?.totals?.bearEvents || 0,
-                calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
-                errors: saved?.errors || [],
-                parserResults: saved?.parserResults || [],
-                analyzedEvents: Array.isArray(saved?.analyzedEvents) ? saved.analyzedEvents : [],
-                config: saved?.config || null,
-                sourceRunId: saved?.summary?.runId || null,
-                runContext: {
-                    type: 'display',
-                    environment: 'scriptable',
-                    trigger: 'saved-run',
-                    original: savedRunContext
-                },
-                _savedRunContext: savedRunContext,
-                _isDisplayingSavedRun: true // Flag to indicate this is a saved run display
-            };
-
-            await this.displayResults(resultsLike);
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to display saved run: ${e.message}`);
-        }
-    }
-
-    async cleanupOldFiles(relDirPath, { maxAgeDays = 30, keep = () => false, afterCleanup = null } = {}) {
-        // Use documents directory as base, not script directory
-        const documentsDir = this.fm.documentsDirectory();
-        const dirPath = this.fm.joinPath(documentsDir, relDirPath);
-        const fm = this.fm || FileManager.iCloud();
-        if (!fm.fileExists(dirPath)) return;
-        const now = Date.now();
-        const cutoff = now - (maxAgeDays * 24 * 60 * 60 * 1000);
-        const files = fm.listContents(dirPath) || [];
-        files.forEach(name => {
-            if (keep(name)) return;
-            const path = fm.joinPath(dirPath, name);
-            let mtime = null;
-            try { mtime = fm.modificationDate(path); } catch (_) {}
-            const ms = mtime ? mtime.getTime() : null;
-            if (ms && ms < cutoff) {
-                try { fm.remove(path); } catch (_) {}
-            }
-        });
-        if (typeof afterCleanup === 'function') {
-            await afterCleanup();
-        }
-    }
-
-    // Metrics helpers
-    getMetricsFilePath() {
-        return this.fm.joinPath(this.metricsDir, 'metrics.ndjson');
-    }
-
-    getMetricsSummaryPath() {
-        return this.fm.joinPath(this.metricsDir, 'metrics-summary.json');
-    }
-
-    createMetricsActionCounts() {
-        return {
-            new: 0,
-            merge: 0,
-            conflict: 0,
-            missing_calendar: 0,
-            other: 0
-        };
-    }
-
-    createMetricsCalendarActionCounts() {
-        return {
-            create: 0,
-            update: 0,
-            skip: 0,
-            failed: 0,
-            other: 0
-        };
-    }
-
-    normalizeWriteAction(event) {
-        const action = String(event?._action || '').toLowerCase();
-        if (!action) return null;
-        if (action === 'key_conflict' || action === 'time_conflict') return 'conflict';
-        return action;
-    }
-
-    getWriteActionFromEvent(event) {
-        const action = this.normalizeWriteAction(event);
-        if (!action) return null;
-        if (action === 'new') return 'create';
-        if (action === 'merge') return 'update';
-        if (action === 'conflict' || action === 'missing_calendar') return 'skip';
-        return 'other';
-    }
-
-    formatIntentActionLabel(action) {
-        const normalized = String(action || '').toLowerCase();
-        if (normalized === 'merge') return 'MERGE';
-        if (normalized === 'new') return 'NEW';
-        if (normalized === 'conflict') return 'CONFLICT';
-        if (normalized === 'missing_calendar') return 'MISSING_CALENDAR';
-        return 'OTHER';
-    }
-
-    formatWriteActionLabel(action) {
-        const normalized = String(action || '').toLowerCase();
-        if (normalized === 'create') return 'CREATE';
-        if (normalized === 'update') return 'UPDATE';
-        if (normalized === 'skip') return 'SKIP';
-        return 'OTHER';
-    }
-
-    normalizeIntentAction(event) {
-        const action = this.normalizeWriteAction(event);
-        if (!action) return null;
-        if (action !== 'new') return action;
-
-        const overrideUid = typeof event?.overrideUid === 'string' ? event.overrideUid.trim() : '';
-        const overrideRecurrenceId = typeof event?.overrideRecurrenceId === 'string' ? event.overrideRecurrenceId.trim() : '';
-        const hasOverrideIdentity = Boolean(overrideUid && overrideRecurrenceId);
-        const hasSourceEvent = Boolean(event?._analysis?.sourceEvent);
-        const reason = String(event?._analysis?.reason || '').toLowerCase();
-        const reasonSuggestsOverride = reason.includes('override');
-
-        if (hasOverrideIdentity || hasSourceEvent || reasonSuggestsOverride) {
-            // Override creates are merge intent, even though calendar operation is "create".
-            return 'merge';
-        }
-        return 'new';
-    }
-
-    normalizeMetricsIntentAction(event) {
-        return this.normalizeIntentAction(event);
-    }
-
-    countMetricsActions(events) {
-        const counts = this.createMetricsActionCounts();
-        if (!Array.isArray(events)) return counts;
-        events.forEach(event => {
-            const action = this.normalizeMetricsIntentAction(event);
-            if (!action) return;
-            if (Object.prototype.hasOwnProperty.call(counts, action)) {
-                counts[action] += 1;
-            } else {
-                counts.other += 1;
-            }
-        });
-        return counts;
-    }
-
-    countMetricsActionsByParser(events) {
-        const countsByParser = {};
-        if (!Array.isArray(events)) return countsByParser;
-        events.forEach(event => {
-            const parserName = event?._parserConfig?.name || null;
-            if (!parserName) return;
-            if (!countsByParser[parserName]) {
-                countsByParser[parserName] = this.createMetricsActionCounts();
-            }
-            const action = this.normalizeMetricsIntentAction(event);
-            if (!action) return;
-            if (Object.prototype.hasOwnProperty.call(countsByParser[parserName], action)) {
-                countsByParser[parserName][action] += 1;
-            } else {
-                countsByParser[parserName].other += 1;
-            }
-        });
-        return countsByParser;
-    }
-
-    countMetricsCalendarActions(events) {
-        const counts = this.createMetricsCalendarActionCounts();
-        if (!Array.isArray(events)) return counts;
-        events.forEach(event => {
-            const action = this.normalizeWriteAction(event);
-            if (!action) return;
-            if (action === 'new') {
-                counts.create += 1;
-            } else if (action === 'merge') {
-                counts.update += 1;
-            } else if (action === 'conflict' || action === 'missing_calendar') {
-                counts.skip += 1;
-            } else {
-                counts.other += 1;
-            }
-        });
-        return counts;
-    }
-
-    countMetricsCalendarActionsByParser(events) {
-        const countsByParser = {};
-        if (!Array.isArray(events)) return countsByParser;
-        events.forEach(event => {
-            const parserName = event?._parserConfig?.name || null;
-            if (!parserName) return;
-            if (!countsByParser[parserName]) {
-                countsByParser[parserName] = this.createMetricsCalendarActionCounts();
-            }
-            const counts = countsByParser[parserName];
-            const action = this.normalizeWriteAction(event);
-            if (!action) return;
-            if (action === 'new') {
-                counts.create += 1;
-            } else if (action === 'merge') {
-                counts.update += 1;
-            } else if (action === 'conflict' || action === 'missing_calendar') {
-                counts.skip += 1;
-            } else {
-                counts.other += 1;
-            }
-        });
-        return countsByParser;
-    }
-
-    getMetricsStatus(results, errorsCount, warningsCount) {
-        const errorTotal = Number.isFinite(errorsCount) ? errorsCount : 0;
-        const warningTotal = Number.isFinite(warningsCount) ? warningsCount : 0;
-        if (errorTotal > 0) {
-            return 'failed';
-        }
-        if (warningTotal > 0) {
-            return 'partial';
-        }
-        return 'success';
-    }
-
-    buildMetricsRecord(results) {
-        const runId = results?.savedRunId || results?.sourceRunId || results?.runId || results?.summary?.runId || null;
-        if (!runId) {
-            return null;
-        }
-
-        const finishedAt = new Date();
-        const startedAt = this.runStartedAt instanceof Date ? this.runStartedAt : null;
-        const durationMs = startedAt ? finishedAt.getTime() - startedAt.getTime() : null;
-        const errorsCount = (results?.errors || []).length;
-        const analyzedEvents = Array.isArray(results?.analyzedEvents) ? results.analyzedEvents : [];
-        const parserResults = Array.isArray(results?.parserResults) ? results.parserResults : [];
-        const runContext = results?.runContext || null;
-        const triggerType = (runContext?.type === 'manual' || runContext?.type === 'automated') ? runContext.type : 'unknown';
-        const actions = this.countMetricsActions(analyzedEvents);
-        const actionsByParser = this.countMetricsActionsByParser(analyzedEvents);
-        const plannedCalendarActions = this.countMetricsCalendarActions(analyzedEvents);
-        const plannedCalendarActionsByParser = this.countMetricsCalendarActionsByParser(analyzedEvents);
-        const allowExecutedCalendarActions = results?.config?.config?.dryRun === false;
-        const rawExecutionCounts = allowExecutedCalendarActions ? this.lastExecutionActionCounts : null;
-        const hasExecutionCounts = Boolean(
-            rawExecutionCounts &&
-            Number.isFinite(rawExecutionCounts.analyzed) &&
-            rawExecutionCounts.analyzed === analyzedEvents.length
+    if (response === 0) {
+      // Before executing writes, attempt to persist capability by writing a temp file. If this fails, abort.
+      await this.ensureRelativeStorageDirs();
+      const testFilePath = this.fm.joinPath(this.runsDir, ".write-test.json");
+      try {
+        // Write test file directly using our FileManager
+        this.fm.writeString(
+          testFilePath,
+          JSON.stringify({ ts: new Date().toISOString() }),
         );
-        const calendarActions = hasExecutionCounts
-            ? {
-                create: rawExecutionCounts.create || 0,
-                update: rawExecutionCounts.update || 0,
-                skip: rawExecutionCounts.skip || 0,
-                failed: rawExecutionCounts.failed || 0,
-                other: 0
-            }
-            : plannedCalendarActions;
-        const calendarActionsMode = hasExecutionCounts ? 'executed' : 'planned';
-        const warningActionsCount = (actions.conflict || 0) + (actions.missing_calendar || 0) + (actions.other || 0);
-        const warningsCount = (this.warnCount || 0) + warningActionsCount;
+        // remove temp file
+        const fm = this.fm || FileManager.iCloud();
+        if (fm.fileExists(testFilePath)) fm.remove(testFilePath);
+      } catch (e) {
+        const errorAlert = new Alert();
+        errorAlert.title = "Cannot Proceed";
+        errorAlert.message =
+          "Failed to write to runs directory. Calendar changes will not be executed.";
+        errorAlert.addAction("OK");
+        await errorAlert.presentAlert();
+        return 0;
+      }
 
-        const mergeDiffFieldsUpdated = analyzedEvents.reduce((sum, event) => {
-            const updatedCount = event?._mergeDiff?.updated?.length || 0;
-            return sum + updatedCount;
-        }, 0);
+      // User selected Execute and write preflight works — proceed to execute
+      const processedCount = await this.executeCalendarActions(
+        analyzedEvents,
+        config,
+      );
 
-        const totals = {
-            total_events: results?.totalEvents || 0,
-            raw_bear_events: results?.rawBearEvents || 0,
-            final_bear_events: results?.bearEvents || 0,
-            duplicates_removed: results?.duplicatesRemoved || 0,
-            deduplicated_events: results?.deduplicatedEvents || 0,
-            calendar_events: results?.calendarEvents || 0
-        };
+      const successAlert = new Alert();
+      successAlert.title = "Calendar Updated";
+      successAlert.message = `Successfully processed ${processedCount} events.`;
+      successAlert.addAction("OK");
+      await successAlert.presentAlert();
 
-        const parsers = parserResults.map(result => {
-            const parserName = result?.name || null;
-            const parserType = result?.parserType || result?.config?.parser || null;
-            const parserActions = parserName && actionsByParser[parserName]
-                ? actionsByParser[parserName]
-                : this.createMetricsActionCounts();
-            const parserCalendarActions = parserName && plannedCalendarActionsByParser[parserName]
-                ? plannedCalendarActionsByParser[parserName]
-                : this.createMetricsCalendarActionCounts();
-            return {
-                parser_name: parserName,
-                parser_type: parserType,
-                url_count: Number.isFinite(result?.urlCount) ? result.urlCount : 0,
-                total_events: result?.totalEvents || 0,
-                raw_bear_events: result?.rawBearEvents || 0,
-                final_bear_events: result?.bearEvents || 0,
-                duplicates_removed: result?.duplicatesRemoved || 0,
-                duration_ms: Number.isFinite(result?.durationMs) ? result.durationMs : null,
-                actions: parserActions,
-                calendar_actions: parserCalendarActions
-            };
-        });
-
-        return {
-            schema_version: 2,
-            run_id: runId,
-            started_at: startedAt ? startedAt.toISOString() : null,
-            finished_at: finishedAt.toISOString(),
-            duration_ms: durationMs,
-            trigger_type: triggerType,
-            status: this.getMetricsStatus(results, errorsCount, warningsCount),
-            environment: runContext?.environment || this.runtimeContext?.environment || 'unknown',
-            run_context: runContext,
-            config_files: ['scraper-input.js', 'scraper-cities.js'],
-            run_file_path: this.getRunFilePath(runId),
-            log_file_path: this.getLogFilePath(runId),
-            metrics_file_path: this.getMetricsFilePath(),
-            summary_file_path: this.getMetricsSummaryPath(),
-            errors_count: errorsCount,
-            warnings_count: warningsCount,
-            totals,
-            actions,
-            calendar_actions: calendarActions,
-            calendar_actions_mode: calendarActionsMode,
-            merge_diff_fields_updated: mergeDiffFieldsUpdated,
-            parsers
-        };
+      return processedCount;
     }
 
-    async appendMetricsRecord(record, retentionDays) {
-        const fm = this.fm || FileManager.iCloud();
-        const path = this.getMetricsFilePath();
-        let existing = '';
+    return 0;
+  }
 
-        if (fm.fileExists(path)) {
-            fm.downloadFileFromiCloud(path);
-            existing = fm.readString(path) || '';
+  // (Directory creation handled by ensureRelativeStorageDirs using embedded JSONFileManager path base)
+
+  async ensureRelativeStorageDirs() {
+    try {
+      const fm = this.fm || FileManager.iCloud();
+
+      console.log(`📱 Scriptable: Ensuring directories in: ${this.baseDir}`);
+      if (!fm.fileExists(this.baseDir)) fm.createDirectory(this.baseDir, true);
+      if (!fm.fileExists(this.runsDir)) fm.createDirectory(this.runsDir, true);
+      if (!fm.fileExists(this.logsDir)) fm.createDirectory(this.logsDir, true);
+      if (!fm.fileExists(this.metricsDir))
+        fm.createDirectory(this.metricsDir, true);
+      if (!fm.fileExists(this.cacheDir))
+        fm.createDirectory(this.cacheDir, true);
+    } catch (e) {
+      console.log(
+        `📱 Scriptable: Failed to ensure relative storage dirs: ${e.message}`,
+      );
+    }
+  }
+
+  getRunId(timestamp = new Date()) {
+    // Use a filesystem-friendly timestamp
+    const pad = (n) => String(n).padStart(2, "0");
+    const y = timestamp.getFullYear();
+    const m = pad(timestamp.getMonth() + 1);
+    const d = pad(timestamp.getDate());
+    const hh = pad(timestamp.getHours());
+    const mm = pad(timestamp.getMinutes());
+    const ss = pad(timestamp.getSeconds());
+    return `${y}${m}${d}-${hh}${mm}${ss}`;
+  }
+
+  getRunFilePath(runId) {
+    return this.fm.joinPath(this.runsDir, `${runId}.json`);
+  }
+
+  async saveRun(results) {
+    if (!this.fm) return;
+    try {
+      // Ensure directories exist first
+      await this.ensureRelativeStorageDirs();
+
+      const ts = new Date();
+      const runId = this.getRunId(ts);
+      const runFilePath = this.getRunFilePath(runId);
+      const runContext = results.runContext || null;
+      const analyzedEvents = this.sanitizeEventsForRunSave(
+        results.analyzedEvents || [],
+      );
+
+      const summary = {
+        runId,
+        timestamp: ts.toISOString(),
+        runContext,
+        totals: {
+          totalEvents: results.totalEvents || 0,
+          bearEvents: results.bearEvents || 0,
+          calendarEvents: results.calendarEvents || 0,
+          errors: (results.errors || []).length,
+        },
+        parserSummaries: (results.parserResults || []).map((r) => ({
+          name: r.name,
+          bearEvents: r.bearEvents,
+          totalEvents: r.totalEvents,
+        })),
+      };
+
+      const payload = {
+        version: 2,
+        summary,
+        runContext,
+        config: results.config || null,
+        analyzedEvents,
+        parserResults: results.parserResults || [],
+        errors: results.errors || [],
+      };
+
+      // Ensure directory exists before writing (same pattern as FileLogger)
+      if (!this.fm.fileExists(this.runsDir)) {
+        try {
+          this.fm.createDirectory(this.runsDir, true);
+          console.log(`📱 Scriptable: Created runs directory: ${this.runsDir}`);
+        } catch (dirErr) {
+          console.log(
+            `📱 Scriptable: Directory creation failed: ${dirErr.message}`,
+          );
+          throw dirErr;
         }
+      }
 
-        const retentionMs = (retentionDays || 0) * 24 * 60 * 60 * 1000;
-        const cutoffMs = retentionMs > 0 ? Date.now() - retentionMs : null;
-        const lines = existing.split('\n').filter(line => line.trim().length > 0);
-        const keptLines = [];
+      // Check if path is a directory
+      if (this.fm.fileExists(runFilePath) && this.fm.isDirectory(runFilePath)) {
+        throw new Error("Run file path is a directory, please delete!");
+      }
 
-        lines.forEach(line => {
-            const parsed = JSON.parse(line);
-            const finishedAtMs = parsed?.finished_at ? new Date(parsed.finished_at).getTime() : null;
-            if (!finishedAtMs || !Number.isFinite(finishedAtMs)) return;
-            if (!cutoffMs || finishedAtMs >= cutoffMs) {
-                keptLines.push(line);
-            }
+      // Save run using absolute path
+      this.fm.writeString(runFilePath, JSON.stringify(payload));
+      console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${runFilePath}`);
+      return runId;
+    } catch (e) {
+      console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
+    }
+  }
+
+  listSavedRuns() {
+    // Read directory contents directly - no index needed
+    try {
+      const fm = this.fm || FileManager.iCloud();
+      const runsPath = this.runsDir;
+
+      console.log(`📱 Scriptable: Looking for runs in: ${runsPath}`);
+      if (!fm.fileExists(runsPath)) {
+        console.log(
+          `📱 Scriptable: Runs directory does not exist: ${runsPath}`,
+        );
+        return [];
+      }
+
+      // Ensure iCloud files are downloaded before listing
+      try {
+        fm.downloadFileFromiCloud(runsPath);
+      } catch (downloadError) {
+        console.log(
+          `📱 Scriptable: Note - iCloud download attempt: ${downloadError.message}`,
+        );
+      }
+
+      const files = fm.listContents(runsPath) || [];
+      console.log(
+        `📱 Scriptable: Found ${files.length} files: ${JSON.stringify(files)}`,
+      );
+
+      // Filter out directories and only keep JSON files
+      const jsonFiles = files.filter((name) => {
+        const filePath = fm.joinPath(runsPath, name);
+        try {
+          // Ensure each file is downloaded from iCloud
+          fm.downloadFileFromiCloud(filePath);
+          return name.endsWith(".json") && !fm.isDirectory(filePath);
+        } catch (error) {
+          console.log(
+            `📱 Scriptable: Error checking file ${name}: ${error.message}`,
+          );
+          return false;
+        }
+      });
+
+      console.log(
+        `📱 Scriptable: Filtered to ${jsonFiles.length} JSON files: ${JSON.stringify(jsonFiles)}`,
+      );
+
+      return jsonFiles
+        .map((name) => ({ runId: name.replace(".json", ""), timestamp: null }))
+        .sort((a, b) => (b.runId || "").localeCompare(a.runId || ""));
+    } catch (e) {
+      console.log(`📱 Scriptable: Failed to read runs directory: ${e.message}`);
+      return [];
+    }
+  }
+
+  loadSavedRun(runId) {
+    try {
+      const fm = this.fm || FileManager.iCloud();
+      const runFilePath = this.getRunFilePath(runId);
+
+      console.log(`📱 Scriptable: Loading run from: ${runFilePath}`);
+      if (!fm.fileExists(runFilePath)) {
+        console.log(`📱 Scriptable: Run file does not exist: ${runFilePath}`);
+        return null;
+      }
+
+      // Ensure file is downloaded from iCloud before reading
+      try {
+        fm.downloadFileFromiCloud(runFilePath);
+      } catch (downloadError) {
+        console.log(
+          `📱 Scriptable: Note - iCloud download attempt: ${downloadError.message}`,
+        );
+      }
+
+      const content = fm.readString(runFilePath);
+      console.log(
+        `📱 Scriptable: Raw content type: ${typeof content}, content: ${content === null ? "null" : content === undefined ? "undefined" : "valid"}`,
+      );
+
+      if (content === null || content === undefined) {
+        console.log(`📱 Scriptable: File content is null or undefined`);
+        return null;
+      }
+
+      if (content.trim().length === 0) {
+        console.log(`📱 Scriptable: File content is empty`);
+        return null;
+      }
+
+      console.log(
+        `📱 Scriptable: Successfully read file, content length: ${content.length}`,
+      );
+      return JSON.parse(content);
+    } catch (e) {
+      console.log(`📱 Scriptable: Failed to load run ${runId}: ${e.message}`);
+      return null;
+    }
+  }
+
+  async displaySavedRun(options = {}) {
+    try {
+      let runToShow = null;
+      const runs = this.listSavedRuns();
+      if (!runs || runs.length === 0) {
+        await this.showError(
+          "No saved runs",
+          "No saved runs were found to display.",
+        );
+        return;
+      }
+
+      if (options.runId) {
+        runToShow = options.runId;
+      } else if (options.last) {
+        runToShow = runs[0].runId || runs[0];
+      } else if (options.presentHistory) {
+        // Simple selection UI using Alert
+        const alert = new Alert();
+        alert.title = "Select Saved Run";
+        alert.message = "Choose a run to display";
+        runs.slice(0, 25).forEach((r, idx) => {
+          const label = r.timestamp
+            ? `${idx + 1}. ${r.timestamp}`
+            : `${idx + 1}. ${r.runId}`;
+          alert.addAction(label);
         });
+        alert.addCancelAction("Cancel");
+        const idx = await alert.present();
+        if (idx < 0 || idx >= runs.length) return;
+        runToShow = runs[idx].runId || runs[idx];
+      }
 
-        const line = JSON.stringify(record);
+      if (!runToShow) {
+        runToShow = runs[0].runId || runs[0];
+      }
+
+      const saved = this.loadSavedRun(runToShow);
+      if (!saved) {
+        await this.showError(
+          "Load failed",
+          `Could not load saved run: ${runToShow}`,
+        );
+        return;
+      }
+
+      // Normalize to the same shape expected by display/present methods
+      // Set calendarEvents to 0 to prevent saving a new run when viewing saved runs
+      const savedRunContext =
+        saved?.runContext || saved?.summary?.runContext || null;
+      const resultsLike = {
+        totalEvents: saved?.summary?.totals?.totalEvents || 0,
+        bearEvents: saved?.summary?.totals?.bearEvents || 0,
+        calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
+        errors: saved?.errors || [],
+        parserResults: saved?.parserResults || [],
+        analyzedEvents: Array.isArray(saved?.analyzedEvents)
+          ? saved.analyzedEvents
+          : [],
+        config: saved?.config || null,
+        sourceRunId: saved?.summary?.runId || null,
+        runContext: {
+          type: "display",
+          environment: "scriptable",
+          trigger: "saved-run",
+          original: savedRunContext,
+        },
+        _savedRunContext: savedRunContext,
+        _isDisplayingSavedRun: true, // Flag to indicate this is a saved run display
+      };
+
+      await this.displayResults(resultsLike);
+    } catch (e) {
+      console.log(`📱 Scriptable: Failed to display saved run: ${e.message}`);
+    }
+  }
+
+  async cleanupOldFiles(
+    relDirPath,
+    { maxAgeDays = 30, keep = () => false, afterCleanup = null } = {},
+  ) {
+    // Use documents directory as base, not script directory
+    const documentsDir = this.fm.documentsDirectory();
+    const dirPath = this.fm.joinPath(documentsDir, relDirPath);
+    const fm = this.fm || FileManager.iCloud();
+    if (!fm.fileExists(dirPath)) return;
+    const now = Date.now();
+    const cutoff = now - maxAgeDays * 24 * 60 * 60 * 1000;
+    const files = fm.listContents(dirPath) || [];
+    files.forEach((name) => {
+      if (keep(name)) return;
+      const path = fm.joinPath(dirPath, name);
+      let mtime = null;
+      try {
+        mtime = fm.modificationDate(path);
+      } catch (_) {}
+      const ms = mtime ? mtime.getTime() : null;
+      if (ms && ms < cutoff) {
+        try {
+          fm.remove(path);
+        } catch (_) {}
+      }
+    });
+    if (typeof afterCleanup === "function") {
+      await afterCleanup();
+    }
+  }
+
+  // Metrics helpers
+  getMetricsFilePath() {
+    return this.fm.joinPath(this.metricsDir, "metrics.ndjson");
+  }
+
+  getMetricsSummaryPath() {
+    return this.fm.joinPath(this.metricsDir, "metrics-summary.json");
+  }
+
+  createMetricsActionCounts() {
+    return {
+      new: 0,
+      merge: 0,
+      conflict: 0,
+      missing_calendar: 0,
+      other: 0,
+    };
+  }
+
+  createMetricsCalendarActionCounts() {
+    return {
+      create: 0,
+      update: 0,
+      skip: 0,
+      failed: 0,
+      other: 0,
+    };
+  }
+
+  normalizeWriteAction(event) {
+    const action = String(event?._action || "").toLowerCase();
+    if (!action) return null;
+    if (action === "key_conflict" || action === "time_conflict")
+      return "conflict";
+    return action;
+  }
+
+  getWriteActionFromEvent(event) {
+    const action = this.normalizeWriteAction(event);
+    if (!action) return null;
+    if (action === "new") return "create";
+    if (action === "merge") return "update";
+    if (action === "conflict" || action === "missing_calendar") return "skip";
+    return "other";
+  }
+
+  formatIntentActionLabel(action) {
+    const normalized = String(action || "").toLowerCase();
+    if (normalized === "merge") return "MERGE";
+    if (normalized === "new") return "NEW";
+    if (normalized === "conflict") return "CONFLICT";
+    if (normalized === "missing_calendar") return "MISSING_CALENDAR";
+    return "OTHER";
+  }
+
+  formatWriteActionLabel(action) {
+    const normalized = String(action || "").toLowerCase();
+    if (normalized === "create") return "CREATE";
+    if (normalized === "update") return "UPDATE";
+    if (normalized === "skip") return "SKIP";
+    return "OTHER";
+  }
+
+  normalizeIntentAction(event) {
+    const action = this.normalizeWriteAction(event);
+    if (!action) return null;
+    if (action !== "new") return action;
+
+    const overrideUid =
+      typeof event?.overrideUid === "string" ? event.overrideUid.trim() : "";
+    const overrideRecurrenceId =
+      typeof event?.overrideRecurrenceId === "string"
+        ? event.overrideRecurrenceId.trim()
+        : "";
+    const hasOverrideIdentity = Boolean(overrideUid && overrideRecurrenceId);
+    const hasSourceEvent = Boolean(event?._analysis?.sourceEvent);
+    const reason = String(event?._analysis?.reason || "").toLowerCase();
+    const reasonSuggestsOverride = reason.includes("override");
+
+    if (hasOverrideIdentity || hasSourceEvent || reasonSuggestsOverride) {
+      // Override creates are merge intent, even though calendar operation is "create".
+      return "merge";
+    }
+    return "new";
+  }
+
+  normalizeMetricsIntentAction(event) {
+    return this.normalizeIntentAction(event);
+  }
+
+  countMetricsActions(events) {
+    const counts = this.createMetricsActionCounts();
+    if (!Array.isArray(events)) return counts;
+    events.forEach((event) => {
+      const action = this.normalizeMetricsIntentAction(event);
+      if (!action) return;
+      if (Object.prototype.hasOwnProperty.call(counts, action)) {
+        counts[action] += 1;
+      } else {
+        counts.other += 1;
+      }
+    });
+    return counts;
+  }
+
+  countMetricsActionsByParser(events) {
+    const countsByParser = {};
+    if (!Array.isArray(events)) return countsByParser;
+    events.forEach((event) => {
+      const parserName = event?._parserConfig?.name || null;
+      if (!parserName) return;
+      if (!countsByParser[parserName]) {
+        countsByParser[parserName] = this.createMetricsActionCounts();
+      }
+      const action = this.normalizeMetricsIntentAction(event);
+      if (!action) return;
+      if (
+        Object.prototype.hasOwnProperty.call(countsByParser[parserName], action)
+      ) {
+        countsByParser[parserName][action] += 1;
+      } else {
+        countsByParser[parserName].other += 1;
+      }
+    });
+    return countsByParser;
+  }
+
+  countMetricsCalendarActions(events) {
+    const counts = this.createMetricsCalendarActionCounts();
+    if (!Array.isArray(events)) return counts;
+    events.forEach((event) => {
+      const action = this.normalizeWriteAction(event);
+      if (!action) return;
+      if (action === "new") {
+        counts.create += 1;
+      } else if (action === "merge") {
+        counts.update += 1;
+      } else if (action === "conflict" || action === "missing_calendar") {
+        counts.skip += 1;
+      } else {
+        counts.other += 1;
+      }
+    });
+    return counts;
+  }
+
+  countMetricsCalendarActionsByParser(events) {
+    const countsByParser = {};
+    if (!Array.isArray(events)) return countsByParser;
+    events.forEach((event) => {
+      const parserName = event?._parserConfig?.name || null;
+      if (!parserName) return;
+      if (!countsByParser[parserName]) {
+        countsByParser[parserName] = this.createMetricsCalendarActionCounts();
+      }
+      const counts = countsByParser[parserName];
+      const action = this.normalizeWriteAction(event);
+      if (!action) return;
+      if (action === "new") {
+        counts.create += 1;
+      } else if (action === "merge") {
+        counts.update += 1;
+      } else if (action === "conflict" || action === "missing_calendar") {
+        counts.skip += 1;
+      } else {
+        counts.other += 1;
+      }
+    });
+    return countsByParser;
+  }
+
+  getMetricsStatus(results, errorsCount, warningsCount) {
+    const errorTotal = Number.isFinite(errorsCount) ? errorsCount : 0;
+    const warningTotal = Number.isFinite(warningsCount) ? warningsCount : 0;
+    if (errorTotal > 0) {
+      return "failed";
+    }
+    if (warningTotal > 0) {
+      return "partial";
+    }
+    return "success";
+  }
+
+  buildMetricsRecord(results) {
+    const runId =
+      results?.savedRunId ||
+      results?.sourceRunId ||
+      results?.runId ||
+      results?.summary?.runId ||
+      null;
+    if (!runId) {
+      return null;
+    }
+
+    const finishedAt = new Date();
+    const startedAt =
+      this.runStartedAt instanceof Date ? this.runStartedAt : null;
+    const durationMs = startedAt
+      ? finishedAt.getTime() - startedAt.getTime()
+      : null;
+    const errorsCount = (results?.errors || []).length;
+    const analyzedEvents = Array.isArray(results?.analyzedEvents)
+      ? results.analyzedEvents
+      : [];
+    const parserResults = Array.isArray(results?.parserResults)
+      ? results.parserResults
+      : [];
+    const runContext = results?.runContext || null;
+    const triggerType =
+      runContext?.type === "manual" || runContext?.type === "automated"
+        ? runContext.type
+        : "unknown";
+    const actions = this.countMetricsActions(analyzedEvents);
+    const actionsByParser = this.countMetricsActionsByParser(analyzedEvents);
+    const plannedCalendarActions =
+      this.countMetricsCalendarActions(analyzedEvents);
+    const plannedCalendarActionsByParser =
+      this.countMetricsCalendarActionsByParser(analyzedEvents);
+    const allowExecutedCalendarActions =
+      results?.config?.config?.dryRun === false;
+    const rawExecutionCounts = allowExecutedCalendarActions
+      ? this.lastExecutionActionCounts
+      : null;
+    const hasExecutionCounts = Boolean(
+      rawExecutionCounts &&
+      Number.isFinite(rawExecutionCounts.analyzed) &&
+      rawExecutionCounts.analyzed === analyzedEvents.length,
+    );
+    const calendarActions = hasExecutionCounts
+      ? {
+          create: rawExecutionCounts.create || 0,
+          update: rawExecutionCounts.update || 0,
+          skip: rawExecutionCounts.skip || 0,
+          failed: rawExecutionCounts.failed || 0,
+          other: 0,
+        }
+      : plannedCalendarActions;
+    const calendarActionsMode = hasExecutionCounts ? "executed" : "planned";
+    const warningActionsCount =
+      (actions.conflict || 0) +
+      (actions.missing_calendar || 0) +
+      (actions.other || 0);
+    const warningsCount = (this.warnCount || 0) + warningActionsCount;
+
+    const mergeDiffFieldsUpdated = analyzedEvents.reduce((sum, event) => {
+      const updatedCount = event?._mergeDiff?.updated?.length || 0;
+      return sum + updatedCount;
+    }, 0);
+
+    const totals = {
+      total_events: results?.totalEvents || 0,
+      raw_bear_events: results?.rawBearEvents || 0,
+      final_bear_events: results?.bearEvents || 0,
+      duplicates_removed: results?.duplicatesRemoved || 0,
+      deduplicated_events: results?.deduplicatedEvents || 0,
+      calendar_events: results?.calendarEvents || 0,
+    };
+
+    const parsers = parserResults.map((result) => {
+      const parserName = result?.name || null;
+      const parserType = result?.parserType || result?.config?.parser || null;
+      const parserActions =
+        parserName && actionsByParser[parserName]
+          ? actionsByParser[parserName]
+          : this.createMetricsActionCounts();
+      const parserCalendarActions =
+        parserName && plannedCalendarActionsByParser[parserName]
+          ? plannedCalendarActionsByParser[parserName]
+          : this.createMetricsCalendarActionCounts();
+      return {
+        parser_name: parserName,
+        parser_type: parserType,
+        url_count: Number.isFinite(result?.urlCount) ? result.urlCount : 0,
+        total_events: result?.totalEvents || 0,
+        raw_bear_events: result?.rawBearEvents || 0,
+        final_bear_events: result?.bearEvents || 0,
+        duplicates_removed: result?.duplicatesRemoved || 0,
+        duration_ms: Number.isFinite(result?.durationMs)
+          ? result.durationMs
+          : null,
+        actions: parserActions,
+        calendar_actions: parserCalendarActions,
+      };
+    });
+
+    return {
+      schema_version: 2,
+      run_id: runId,
+      started_at: startedAt ? startedAt.toISOString() : null,
+      finished_at: finishedAt.toISOString(),
+      duration_ms: durationMs,
+      trigger_type: triggerType,
+      status: this.getMetricsStatus(results, errorsCount, warningsCount),
+      environment:
+        runContext?.environment ||
+        this.runtimeContext?.environment ||
+        "unknown",
+      run_context: runContext,
+      config_files: ["scraper-input.js", "scraper-cities.js"],
+      run_file_path: this.getRunFilePath(runId),
+      log_file_path: this.getLogFilePath(runId),
+      metrics_file_path: this.getMetricsFilePath(),
+      summary_file_path: this.getMetricsSummaryPath(),
+      errors_count: errorsCount,
+      warnings_count: warningsCount,
+      totals,
+      actions,
+      calendar_actions: calendarActions,
+      calendar_actions_mode: calendarActionsMode,
+      merge_diff_fields_updated: mergeDiffFieldsUpdated,
+      parsers,
+    };
+  }
+
+  async appendMetricsRecord(record, retentionDays) {
+    const fm = this.fm || FileManager.iCloud();
+    const path = this.getMetricsFilePath();
+    let existing = "";
+
+    if (fm.fileExists(path)) {
+      fm.downloadFileFromiCloud(path);
+      existing = fm.readString(path) || "";
+    }
+
+    const retentionMs = (retentionDays || 0) * 24 * 60 * 60 * 1000;
+    const cutoffMs = retentionMs > 0 ? Date.now() - retentionMs : null;
+    const lines = existing.split("\n").filter((line) => line.trim().length > 0);
+    const keptLines = [];
+
+    lines.forEach((line) => {
+      const parsed = JSON.parse(line);
+      const finishedAtMs = parsed?.finished_at
+        ? new Date(parsed.finished_at).getTime()
+        : null;
+      if (!finishedAtMs || !Number.isFinite(finishedAtMs)) return;
+      if (!cutoffMs || finishedAtMs >= cutoffMs) {
         keptLines.push(line);
-        const newContent = `${keptLines.join('\n')}\n`;
+      }
+    });
 
-        fm.writeString(path, newContent);
-        console.log(`📱 Scriptable: ✓ Appended metrics to ${path}`);
+    const line = JSON.stringify(record);
+    keptLines.push(line);
+    const newContent = `${keptLines.join("\n")}\n`;
+
+    fm.writeString(path, newContent);
+    console.log(`📱 Scriptable: ✓ Appended metrics to ${path}`);
+  }
+
+  createMetricsSummaryBucket() {
+    return {
+      runs: 0,
+      statuses: { success: 0, partial: 0, failed: 0 },
+      errors_count: 0,
+      warnings_count: 0,
+      duration_ms_total: 0,
+      totals: {
+        total_events: 0,
+        raw_bear_events: 0,
+        final_bear_events: 0,
+        duplicates_removed: 0,
+        deduplicated_events: 0,
+        calendar_events: 0,
+      },
+      actions: this.createMetricsActionCounts(),
+      calendar_actions: this.createMetricsCalendarActionCounts(),
+      merge_diff_fields_updated: 0,
+    };
+  }
+
+  createParserSummaryBucket() {
+    return {
+      runs: 0,
+      duration_ms_total: 0,
+      statuses: { success: 0, partial: 0, failed: 0 },
+      totals: {
+        total_events: 0,
+        raw_bear_events: 0,
+        final_bear_events: 0,
+        duplicates_removed: 0,
+      },
+      actions: this.createMetricsActionCounts(),
+      calendar_actions: this.createMetricsCalendarActionCounts(),
+    };
+  }
+
+  createParserSummaryGroup() {
+    return {
+      totals: this.createParserSummaryBucket(),
+      by_day: {},
+      by_month: {},
+    };
+  }
+
+  applyMetricsRecordToBucket(bucket, record) {
+    bucket.runs += 1;
+    if (bucket.statuses && record.status) {
+      bucket.statuses[record.status] =
+        (bucket.statuses[record.status] || 0) + 1;
+    }
+    bucket.errors_count += record.errors_count || 0;
+    bucket.warnings_count += record.warnings_count || 0;
+    bucket.duration_ms_total += record.duration_ms || 0;
+
+    Object.keys(bucket.totals).forEach((key) => {
+      bucket.totals[key] += record.totals?.[key] || 0;
+    });
+
+    Object.keys(bucket.actions).forEach((key) => {
+      bucket.actions[key] += record.actions?.[key] || 0;
+    });
+    if (!bucket.calendar_actions) {
+      bucket.calendar_actions = this.createMetricsCalendarActionCounts();
+    }
+    Object.keys(bucket.calendar_actions).forEach((key) => {
+      bucket.calendar_actions[key] += record.calendar_actions?.[key] || 0;
+    });
+
+    bucket.merge_diff_fields_updated += record.merge_diff_fields_updated || 0;
+  }
+
+  applyParserRecordToBucket(bucket, parserRecord, runStatus) {
+    bucket.runs += 1;
+    bucket.duration_ms_total += parserRecord.duration_ms || 0;
+    if (!bucket.statuses) {
+      bucket.statuses = { success: 0, partial: 0, failed: 0 };
+    }
+    const normalizedStatus = String(runStatus || "").toLowerCase();
+    if (
+      Object.prototype.hasOwnProperty.call(bucket.statuses, normalizedStatus)
+    ) {
+      bucket.statuses[normalizedStatus] += 1;
     }
 
-    createMetricsSummaryBucket() {
-        return {
-            runs: 0,
-            statuses: { success: 0, partial: 0, failed: 0 },
-            errors_count: 0,
-            warnings_count: 0,
-            duration_ms_total: 0,
-            totals: {
-                total_events: 0,
-                raw_bear_events: 0,
-                final_bear_events: 0,
-                duplicates_removed: 0,
-                deduplicated_events: 0,
-                calendar_events: 0
-            },
-            actions: this.createMetricsActionCounts(),
-            calendar_actions: this.createMetricsCalendarActionCounts(),
-            merge_diff_fields_updated: 0
-        };
+    Object.keys(bucket.totals).forEach((key) => {
+      bucket.totals[key] += parserRecord?.[key] || 0;
+    });
+
+    Object.keys(bucket.actions).forEach((key) => {
+      bucket.actions[key] += parserRecord.actions?.[key] || 0;
+    });
+    if (!bucket.calendar_actions) {
+      bucket.calendar_actions = this.createMetricsCalendarActionCounts();
+    }
+    Object.keys(bucket.calendar_actions).forEach((key) => {
+      bucket.calendar_actions[key] += parserRecord.calendar_actions?.[key] || 0;
+    });
+  }
+
+  async updateMetricsSummary(record) {
+    const fm = this.fm || FileManager.iCloud();
+    const summaryPath = this.getMetricsSummaryPath();
+    let summary = null;
+
+    if (fm.fileExists(summaryPath)) {
+      fm.downloadFileFromiCloud(summaryPath);
+      const summaryText = fm.readString(summaryPath);
+      summary = JSON.parse(summaryText);
+      if (!summary || typeof summary !== "object") {
+        throw new Error("Metrics summary is invalid");
+      }
+    } else {
+      summary = {
+        version: 2,
+        updated_at: null,
+        totals: this.createMetricsSummaryBucket(),
+        by_day: {},
+        by_month: {},
+        by_parser_name: {},
+        by_parser_type: {},
+      };
     }
 
-    createParserSummaryBucket() {
-        return {
-            runs: 0,
-            duration_ms_total: 0,
-            statuses: { success: 0, partial: 0, failed: 0 },
-            totals: {
-                total_events: 0,
-                raw_bear_events: 0,
-                final_bear_events: 0,
-                duplicates_removed: 0
-            },
-            actions: this.createMetricsActionCounts(),
-            calendar_actions: this.createMetricsCalendarActionCounts()
-        };
+    const dayKey = record.finished_at.slice(0, 10);
+    const monthKey = record.finished_at.slice(0, 7);
+
+    summary.updated_at = new Date().toISOString();
+    if (!summary.totals) summary.totals = this.createMetricsSummaryBucket();
+    this.applyMetricsRecordToBucket(summary.totals, record);
+
+    summary.by_day = summary.by_day || {};
+    if (!summary.by_day[dayKey])
+      summary.by_day[dayKey] = this.createMetricsSummaryBucket();
+    this.applyMetricsRecordToBucket(summary.by_day[dayKey], record);
+
+    summary.by_month = summary.by_month || {};
+    if (!summary.by_month[monthKey])
+      summary.by_month[monthKey] = this.createMetricsSummaryBucket();
+    this.applyMetricsRecordToBucket(summary.by_month[monthKey], record);
+
+    summary.by_parser_name = summary.by_parser_name || {};
+    summary.by_parser_type = summary.by_parser_type || {};
+
+    record.parsers.forEach((parserRecord) => {
+      if (parserRecord.parser_name) {
+        if (!summary.by_parser_name[parserRecord.parser_name]) {
+          summary.by_parser_name[parserRecord.parser_name] =
+            this.createParserSummaryGroup();
+        }
+        const parserGroup = summary.by_parser_name[parserRecord.parser_name];
+        this.applyParserRecordToBucket(
+          parserGroup.totals,
+          parserRecord,
+          record.status,
+        );
+        if (!parserGroup.by_day[dayKey])
+          parserGroup.by_day[dayKey] = this.createParserSummaryBucket();
+        this.applyParserRecordToBucket(
+          parserGroup.by_day[dayKey],
+          parserRecord,
+          record.status,
+        );
+        if (!parserGroup.by_month[monthKey])
+          parserGroup.by_month[monthKey] = this.createParserSummaryBucket();
+        this.applyParserRecordToBucket(
+          parserGroup.by_month[monthKey],
+          parserRecord,
+          record.status,
+        );
+      }
+
+      if (parserRecord.parser_type) {
+        if (!summary.by_parser_type[parserRecord.parser_type]) {
+          summary.by_parser_type[parserRecord.parser_type] =
+            this.createParserSummaryGroup();
+        }
+        const parserTypeGroup =
+          summary.by_parser_type[parserRecord.parser_type];
+        this.applyParserRecordToBucket(
+          parserTypeGroup.totals,
+          parserRecord,
+          record.status,
+        );
+        if (!parserTypeGroup.by_day[dayKey])
+          parserTypeGroup.by_day[dayKey] = this.createParserSummaryBucket();
+        this.applyParserRecordToBucket(
+          parserTypeGroup.by_day[dayKey],
+          parserRecord,
+          record.status,
+        );
+        if (!parserTypeGroup.by_month[monthKey])
+          parserTypeGroup.by_month[monthKey] = this.createParserSummaryBucket();
+        this.applyParserRecordToBucket(
+          parserTypeGroup.by_month[monthKey],
+          parserRecord,
+          record.status,
+        );
+      }
+    });
+
+    fm.writeString(summaryPath, JSON.stringify(summary));
+    console.log(`📱 Scriptable: ✓ Updated metrics summary at ${summaryPath}`);
+  }
+
+  // Log helpers (prefer user's file logger)
+  resolveLogConfig(config) {
+    const configRoot = config?.config || {};
+    const logging = config?.logging || configRoot.logging || {};
+    const mode = String(
+      logging.mode || configRoot.logMode || "tail",
+    ).toLowerCase();
+    const maxLines = Number.isFinite(logging.maxLines)
+      ? logging.maxLines
+      : Number.isFinite(configRoot.logMaxLines)
+        ? configRoot.logMaxLines
+        : DEFAULT_CAPTURE_LOG_MAX_LINES;
+    const maxBytes = Number.isFinite(logging.maxBytes)
+      ? logging.maxBytes
+      : Number.isFinite(configRoot.logMaxBytes)
+        ? configRoot.logMaxBytes
+        : DEFAULT_CAPTURE_LOG_MAX_BYTES;
+    const displayMaxLines = Number.isFinite(logging.displayMaxLines)
+      ? logging.displayMaxLines
+      : Number.isFinite(configRoot.logDisplayMaxLines)
+        ? configRoot.logDisplayMaxLines
+        : DEFAULT_DISPLAY_LOG_MAX_LINES;
+    return { mode, maxLines, maxBytes, displayMaxLines };
+  }
+
+  applyLogConfig(config) {
+    const logConfig = this.resolveLogConfig(config);
+    let captureMode = "all";
+    if (["summary", "off", "none"].includes(logConfig.mode)) {
+      captureMode = "none";
+    } else if (["errors", "error"].includes(logConfig.mode)) {
+      captureMode = "errors";
+    }
+    logger.configure({
+      maxLines: logConfig.maxLines,
+      maxBytes: logConfig.maxBytes,
+      captureMode,
+    });
+  }
+
+  resolveLogOutputMode(logConfig, results) {
+    const mode = String(logConfig.mode || "tail").toLowerCase();
+    if (["summary", "off", "none"].includes(mode)) {
+      return "summary";
+    }
+    if (["errors", "error", "errors-only"].includes(mode)) {
+      return "errors";
+    }
+    if (
+      ["failures", "failure", "failures-only", "failure-only"].includes(mode)
+    ) {
+      const hasErrors = (results?.errors || []).length > 0;
+      return hasErrors ? "full" : "summary";
+    }
+    return "full";
+  }
+
+  getRunIdForLogs(results) {
+    return (
+      results?.sourceRunId ||
+      results?.savedRunId ||
+      results?.runId ||
+      results?.summary?.runId ||
+      null
+    );
+  }
+
+  normalizeAiPromptEntry(entry, fallbackPass = "extraction") {
+    if (!entry || typeof entry !== "object") return null;
+    const prompt = typeof entry.prompt === "string" ? entry.prompt : "";
+    if (!prompt) return null;
+    const pass =
+      String(entry.pass || fallbackPass || "extraction").trim() || "extraction";
+    const model = String(entry.model || "").trim();
+    const endpoint = String(entry.endpoint || "").trim();
+    const chars = Number.isFinite(Number(entry.chars))
+      ? Number(entry.chars)
+      : prompt.length;
+    return { pass, model, endpoint, chars, prompt };
+  }
+
+  dedupeAiPromptEntries(entries) {
+    if (!Array.isArray(entries)) return [];
+    const seen = new Set();
+    const deduped = [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object") continue;
+      const promptText = String(entry.prompt || "");
+      const promptFingerprint = `${promptText.length}:${promptText.slice(0, 120)}:${promptText.slice(-120)}`;
+      const key = `${entry.pass || ""}::${entry.model || ""}::${promptFingerprint}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(entry);
+    }
+    return deduped;
+  }
+
+  extractAiPromptsFromLogText(logText) {
+    const text = typeof logText === "string" ? logText : "";
+    if (!text) return [];
+    const lines = text.split(/\r?\n/);
+    const promptHeaderRegex =
+      /🤖 AI Web: Full prompt(?: \(([^)]+)\))?(?: \((\d+) chars\))?/;
+    const nextLogEntryRegex =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z \[[A-Z]+\] /;
+    const prompts = [];
+
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      const headerMatch = line.match(promptHeaderRegex);
+      if (!headerMatch) continue;
+
+      const pass =
+        String(headerMatch[1] || "extraction").trim() || "extraction";
+      const chars = Number.isFinite(Number(headerMatch[2]))
+        ? Number(headerMatch[2])
+        : null;
+      const promptLines = [];
+      let cursor = i + 1;
+      while (cursor < lines.length) {
+        const candidate = lines[cursor];
+        if (
+          candidate.match(nextLogEntryRegex) ||
+          candidate.includes("🤖 AI Web: Full prompt")
+        ) {
+          break;
+        }
+        promptLines.push(candidate);
+        cursor += 1;
+      }
+      i = cursor - 1;
+      const prompt = promptLines.join("\n").trim();
+      if (!prompt) continue;
+      prompts.push({
+        pass,
+        model: "",
+        endpoint: "",
+        chars: chars || prompt.length,
+        prompt,
+      });
     }
 
-    createParserSummaryGroup() {
-        return {
-            totals: this.createParserSummaryBucket(),
-            by_day: {},
-            by_month: {}
-        };
+    return prompts;
+  }
+
+  loadAiPromptsForDisplay(results, logInfo = null) {
+    const collected = [];
+    const events = Array.isArray(results?.analyzedEvents)
+      ? results.analyzedEvents
+      : [];
+    events.forEach((event) => {
+      const eventPrompts = Array.isArray(event?._aiPrompts)
+        ? event._aiPrompts
+        : [];
+      eventPrompts.forEach((entry) => {
+        const normalized = this.normalizeAiPromptEntry(entry);
+        if (normalized) {
+          collected.push(normalized);
+        }
+      });
+    });
+
+    if (
+      collected.length === 0 &&
+      logInfo?.exists &&
+      typeof logInfo.text === "string"
+    ) {
+      this.extractAiPromptsFromLogText(logInfo.text).forEach((entry) => {
+        const normalized = this.normalizeAiPromptEntry(entry);
+        if (normalized) {
+          collected.push(normalized);
+        }
+      });
     }
 
-    applyMetricsRecordToBucket(bucket, record) {
-        bucket.runs += 1;
-        if (bucket.statuses && record.status) {
-            bucket.statuses[record.status] = (bucket.statuses[record.status] || 0) + 1;
-        }
-        bucket.errors_count += record.errors_count || 0;
-        bucket.warnings_count += record.warnings_count || 0;
-        bucket.duration_ms_total += record.duration_ms || 0;
+    const prompts = this.dedupeAiPromptEntries(collected);
+    return {
+      count: prompts.length,
+      prompts,
+    };
+  }
 
-        Object.keys(bucket.totals).forEach(key => {
-            bucket.totals[key] += record.totals?.[key] || 0;
-        });
-
-        Object.keys(bucket.actions).forEach(key => {
-            bucket.actions[key] += record.actions?.[key] || 0;
-        });
-        if (!bucket.calendar_actions) {
-            bucket.calendar_actions = this.createMetricsCalendarActionCounts();
-        }
-        Object.keys(bucket.calendar_actions).forEach(key => {
-            bucket.calendar_actions[key] += record.calendar_actions?.[key] || 0;
-        });
-
-        bucket.merge_diff_fields_updated += record.merge_diff_fields_updated || 0;
+  async loadRunLogsForDisplay(results) {
+    const runId = this.getRunIdForLogs(results);
+    if (!runId) {
+      return { runId: null, exists: false, reason: "missing-run-id" };
+    }
+    const logPath = this.getLogFilePath(runId);
+    if (!logPath) {
+      return { runId, exists: false, reason: "missing-log-path" };
+    }
+    const fm = this.fm || FileManager.iCloud();
+    if (!fm.fileExists(logPath)) {
+      return { runId, exists: false, reason: "missing-log-file" };
     }
 
-    applyParserRecordToBucket(bucket, parserRecord, runStatus) {
-        bucket.runs += 1;
-        bucket.duration_ms_total += parserRecord.duration_ms || 0;
-        if (!bucket.statuses) {
-            bucket.statuses = { success: 0, partial: 0, failed: 0 };
-        }
-        const normalizedStatus = String(runStatus || '').toLowerCase();
-        if (Object.prototype.hasOwnProperty.call(bucket.statuses, normalizedStatus)) {
-            bucket.statuses[normalizedStatus] += 1;
-        }
-
-        Object.keys(bucket.totals).forEach(key => {
-            bucket.totals[key] += parserRecord?.[key] || 0;
-        });
-
-        Object.keys(bucket.actions).forEach(key => {
-            bucket.actions[key] += parserRecord.actions?.[key] || 0;
-        });
-        if (!bucket.calendar_actions) {
-            bucket.calendar_actions = this.createMetricsCalendarActionCounts();
-        }
-        Object.keys(bucket.calendar_actions).forEach(key => {
-            bucket.calendar_actions[key] += parserRecord.calendar_actions?.[key] || 0;
-        });
+    try {
+      try {
+        await fm.downloadFileFromiCloud(logPath);
+      } catch (downloadError) {
+        console.log(
+          `📱 Scriptable: Log iCloud download failed: ${downloadError.message}`,
+        );
+      }
+      const content = fm.readString(logPath);
+      if (!content || !content.trim()) {
+        return { runId, exists: false, reason: "empty-log-file" };
+      }
+      let lines = content.split(/\r?\n/);
+      if (lines.length > 0 && lines[lines.length - 1] === "") {
+        lines = lines.slice(0, -1);
+      }
+      const totalLines = lines.length;
+      const logConfig = this.resolveLogConfig(results?.config || {});
+      const maxLines =
+        Number.isFinite(logConfig.displayMaxLines) &&
+        logConfig.displayMaxLines > 0
+          ? logConfig.displayMaxLines
+          : DEFAULT_DISPLAY_LOG_MAX_LINES;
+      let displayLines = lines;
+      let truncated = false;
+      if (lines.length > maxLines) {
+        displayLines = lines.slice(lines.length - maxLines);
+        truncated = true;
+      }
+      const text = displayLines.join("\n");
+      return {
+        runId,
+        exists: true,
+        text,
+        totalLines,
+        shownLines: displayLines.length,
+        truncated,
+      };
+    } catch (e) {
+      console.log(`📱 Scriptable: Failed to read log file: ${e.message}`);
+      return { runId, exists: false, reason: "read-failed" };
     }
+  }
 
-    async updateMetricsSummary(record) {
-        const fm = this.fm || FileManager.iCloud();
-        const summaryPath = this.getMetricsSummaryPath();
-        let summary = null;
-
-        if (fm.fileExists(summaryPath)) {
-            fm.downloadFileFromiCloud(summaryPath);
-            const summaryText = fm.readString(summaryPath);
-            summary = JSON.parse(summaryText);
-            if (!summary || typeof summary !== 'object') {
-                throw new Error('Metrics summary is invalid');
-            }
-        } else {
-            summary = {
-                version: 2,
-                updated_at: null,
-                totals: this.createMetricsSummaryBucket(),
-                by_day: {},
-                by_month: {},
-                by_parser_name: {},
-                by_parser_type: {}
-            };
-        }
-
-        const dayKey = record.finished_at.slice(0, 10);
-        const monthKey = record.finished_at.slice(0, 7);
-
-        summary.updated_at = new Date().toISOString();
-        if (!summary.totals) summary.totals = this.createMetricsSummaryBucket();
-        this.applyMetricsRecordToBucket(summary.totals, record);
-
-        summary.by_day = summary.by_day || {};
-        if (!summary.by_day[dayKey]) summary.by_day[dayKey] = this.createMetricsSummaryBucket();
-        this.applyMetricsRecordToBucket(summary.by_day[dayKey], record);
-
-        summary.by_month = summary.by_month || {};
-        if (!summary.by_month[monthKey]) summary.by_month[monthKey] = this.createMetricsSummaryBucket();
-        this.applyMetricsRecordToBucket(summary.by_month[monthKey], record);
-
-        summary.by_parser_name = summary.by_parser_name || {};
-        summary.by_parser_type = summary.by_parser_type || {};
-
-        record.parsers.forEach(parserRecord => {
-            if (parserRecord.parser_name) {
-                if (!summary.by_parser_name[parserRecord.parser_name]) {
-                    summary.by_parser_name[parserRecord.parser_name] = this.createParserSummaryGroup();
-                }
-                const parserGroup = summary.by_parser_name[parserRecord.parser_name];
-                this.applyParserRecordToBucket(parserGroup.totals, parserRecord, record.status);
-                if (!parserGroup.by_day[dayKey]) parserGroup.by_day[dayKey] = this.createParserSummaryBucket();
-                this.applyParserRecordToBucket(parserGroup.by_day[dayKey], parserRecord, record.status);
-                if (!parserGroup.by_month[monthKey]) parserGroup.by_month[monthKey] = this.createParserSummaryBucket();
-                this.applyParserRecordToBucket(parserGroup.by_month[monthKey], parserRecord, record.status);
-            }
-
-            if (parserRecord.parser_type) {
-                if (!summary.by_parser_type[parserRecord.parser_type]) {
-                    summary.by_parser_type[parserRecord.parser_type] = this.createParserSummaryGroup();
-                }
-                const parserTypeGroup = summary.by_parser_type[parserRecord.parser_type];
-                this.applyParserRecordToBucket(parserTypeGroup.totals, parserRecord, record.status);
-                if (!parserTypeGroup.by_day[dayKey]) parserTypeGroup.by_day[dayKey] = this.createParserSummaryBucket();
-                this.applyParserRecordToBucket(parserTypeGroup.by_day[dayKey], parserRecord, record.status);
-                if (!parserTypeGroup.by_month[monthKey]) parserTypeGroup.by_month[monthKey] = this.createParserSummaryBucket();
-                this.applyParserRecordToBucket(parserTypeGroup.by_month[monthKey], parserRecord, record.status);
-            }
-        });
-
-        fm.writeString(summaryPath, JSON.stringify(summary));
-        console.log(`📱 Scriptable: ✓ Updated metrics summary at ${summaryPath}`);
+  getLogFilePath(runId) {
+    if (!runId) {
+      return null;
     }
+    return this.fm.joinPath(this.logsDir, `${runId}.log`);
+  }
 
-    // Log helpers (prefer user's file logger)
-    resolveLogConfig(config) {
-        const configRoot = config?.config || {};
-        const logging = config?.logging || configRoot.logging || {};
-        const mode = String(logging.mode || configRoot.logMode || 'tail').toLowerCase();
-        const maxLines = Number.isFinite(logging.maxLines)
-            ? logging.maxLines
-            : Number.isFinite(configRoot.logMaxLines)
-                ? configRoot.logMaxLines
-                : DEFAULT_CAPTURE_LOG_MAX_LINES;
-        const maxBytes = Number.isFinite(logging.maxBytes)
-            ? logging.maxBytes
-            : Number.isFinite(configRoot.logMaxBytes)
-                ? configRoot.logMaxBytes
-                : DEFAULT_CAPTURE_LOG_MAX_BYTES;
-        const displayMaxLines = Number.isFinite(logging.displayMaxLines)
-            ? logging.displayMaxLines
-            : Number.isFinite(configRoot.logDisplayMaxLines)
-                ? configRoot.logDisplayMaxLines
-                : DEFAULT_DISPLAY_LOG_MAX_LINES;
-        return { mode, maxLines, maxBytes, displayMaxLines };
+  async appendLogSummary(results) {
+    try {
+      const runId =
+        results?.savedRunId ||
+        results?.sourceRunId ||
+        results?.runId ||
+        results?.summary?.runId ||
+        null;
+      const runContext = results?.runContext || null;
+      const logPath = this.getLogFilePath(runId);
+      if (!logPath) {
+        console.log("📱 Scriptable: Skipping log write (missing runId)");
+        return;
+      }
+      const summary = {
+        timestamp: new Date().toISOString(),
+        runId,
+        runContext,
+        totals: {
+          totalEvents: results.totalEvents || 0,
+          bearEvents: results.bearEvents || 0,
+          calendarEvents: results.calendarEvents || 0,
+          errors: (results.errors || []).length,
+        },
+      };
+      const summaryLine = `${new Date().toISOString()} - ${JSON.stringify(summary)}`;
+      const logConfig = this.resolveLogConfig(results?.config || {});
+      const outputMode = this.resolveLogOutputMode(logConfig, results);
+      const logText = logger.getLogText({ mode: outputMode });
+      const content = logText
+        ? `${summaryLine}\n${logText}`
+        : `${summaryLine}\n`;
+
+      const fm = this.fm || FileManager.iCloud();
+      if (!fm.fileExists(this.logsDir)) {
+        fm.createDirectory(this.logsDir, true);
+      }
+
+      fm.writeString(logPath, content);
+      console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
+    } catch (e) {
+      console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
     }
-    
-    applyLogConfig(config) {
-        const logConfig = this.resolveLogConfig(config);
-        let captureMode = 'all';
-        if (['summary', 'off', 'none'].includes(logConfig.mode)) {
-            captureMode = 'none';
-        } else if (['errors', 'error'].includes(logConfig.mode)) {
-            captureMode = 'errors';
-        }
-        logger.configure({
-            maxLines: logConfig.maxLines,
-            maxBytes: logConfig.maxBytes,
-            captureMode
-        });
-    }
-    
-    resolveLogOutputMode(logConfig, results) {
-        const mode = String(logConfig.mode || 'tail').toLowerCase();
-        if (['summary', 'off', 'none'].includes(mode)) {
-            return 'summary';
-        }
-        if (['errors', 'error', 'errors-only'].includes(mode)) {
-            return 'errors';
-        }
-        if (['failures', 'failure', 'failures-only', 'failure-only'].includes(mode)) {
-            const hasErrors = (results?.errors || []).length > 0;
-            return hasErrors ? 'full' : 'summary';
-        }
-        return 'full';
-    }
-    
-    getRunIdForLogs(results) {
-        return results?.sourceRunId
-            || results?.savedRunId
-            || results?.runId
-            || results?.summary?.runId
-            || null;
-    }
-
-    normalizeAiPromptEntry(entry, fallbackPass = 'extraction') {
-        if (!entry || typeof entry !== 'object') return null;
-        const prompt = typeof entry.prompt === 'string' ? entry.prompt : '';
-        if (!prompt) return null;
-        const pass = String(entry.pass || fallbackPass || 'extraction').trim() || 'extraction';
-        const model = String(entry.model || '').trim();
-        const endpoint = String(entry.endpoint || '').trim();
-        const chars = Number.isFinite(Number(entry.chars)) ? Number(entry.chars) : prompt.length;
-        return { pass, model, endpoint, chars, prompt };
-    }
-
-    dedupeAiPromptEntries(entries) {
-        if (!Array.isArray(entries)) return [];
-        const seen = new Set();
-        const deduped = [];
-        for (const entry of entries) {
-            if (!entry || typeof entry !== 'object') continue;
-            const promptText = String(entry.prompt || '');
-            const promptFingerprint = `${promptText.length}:${promptText.slice(0, 120)}:${promptText.slice(-120)}`;
-            const key = `${entry.pass || ''}::${entry.model || ''}::${promptFingerprint}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            deduped.push(entry);
-        }
-        return deduped;
-    }
-
-    extractAiPromptsFromLogText(logText) {
-        const text = typeof logText === 'string' ? logText : '';
-        if (!text) return [];
-        const lines = text.split(/\r?\n/);
-        const promptHeaderRegex = /🤖 AI Web: Full prompt(?: \(([^)]+)\))?(?: \((\d+) chars\))?/;
-        const nextLogEntryRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z \[[A-Z]+\] /;
-        const prompts = [];
-
-        for (let i = 0; i < lines.length; i += 1) {
-            const line = lines[i];
-            const headerMatch = line.match(promptHeaderRegex);
-            if (!headerMatch) continue;
-
-            const pass = String(headerMatch[1] || 'extraction').trim() || 'extraction';
-            const chars = Number.isFinite(Number(headerMatch[2])) ? Number(headerMatch[2]) : null;
-            const promptLines = [];
-            let cursor = i + 1;
-            while (cursor < lines.length) {
-                const candidate = lines[cursor];
-                if (candidate.match(nextLogEntryRegex) || candidate.includes('🤖 AI Web: Full prompt')) {
-                    break;
-                }
-                promptLines.push(candidate);
-                cursor += 1;
-            }
-            i = cursor - 1;
-            const prompt = promptLines.join('\n').trim();
-            if (!prompt) continue;
-            prompts.push({
-                pass,
-                model: '',
-                endpoint: '',
-                chars: chars || prompt.length,
-                prompt
-            });
-        }
-
-        return prompts;
-    }
-
-    loadAiPromptsForDisplay(results, logInfo = null) {
-        const collected = [];
-        const events = Array.isArray(results?.analyzedEvents) ? results.analyzedEvents : [];
-        events.forEach(event => {
-            const eventPrompts = Array.isArray(event?._aiPrompts) ? event._aiPrompts : [];
-            eventPrompts.forEach(entry => {
-                const normalized = this.normalizeAiPromptEntry(entry);
-                if (normalized) {
-                    collected.push(normalized);
-                }
-            });
-        });
-
-        if (collected.length === 0 && logInfo?.exists && typeof logInfo.text === 'string') {
-            this.extractAiPromptsFromLogText(logInfo.text).forEach(entry => {
-                const normalized = this.normalizeAiPromptEntry(entry);
-                if (normalized) {
-                    collected.push(normalized);
-                }
-            });
-        }
-
-        const prompts = this.dedupeAiPromptEntries(collected);
-        return {
-            count: prompts.length,
-            prompts
-        };
-    }
-
-    async loadRunLogsForDisplay(results) {
-        const runId = this.getRunIdForLogs(results);
-        if (!runId) {
-            return { runId: null, exists: false, reason: 'missing-run-id' };
-        }
-        const logPath = this.getLogFilePath(runId);
-        if (!logPath) {
-            return { runId, exists: false, reason: 'missing-log-path' };
-        }
-        const fm = this.fm || FileManager.iCloud();
-        if (!fm.fileExists(logPath)) {
-            return { runId, exists: false, reason: 'missing-log-file' };
-        }
-
-        try {
-            try {
-                await fm.downloadFileFromiCloud(logPath);
-            } catch (downloadError) {
-                console.log(`📱 Scriptable: Log iCloud download failed: ${downloadError.message}`);
-            }
-            const content = fm.readString(logPath);
-            if (!content || !content.trim()) {
-                return { runId, exists: false, reason: 'empty-log-file' };
-            }
-            let lines = content.split(/\r?\n/);
-            if (lines.length > 0 && lines[lines.length - 1] === '') {
-                lines = lines.slice(0, -1);
-            }
-            const totalLines = lines.length;
-            const logConfig = this.resolveLogConfig(results?.config || {});
-            const maxLines = Number.isFinite(logConfig.displayMaxLines) && logConfig.displayMaxLines > 0
-                ? logConfig.displayMaxLines
-                : DEFAULT_DISPLAY_LOG_MAX_LINES;
-            let displayLines = lines;
-            let truncated = false;
-            if (lines.length > maxLines) {
-                displayLines = lines.slice(lines.length - maxLines);
-                truncated = true;
-            }
-            const text = displayLines.join('\n');
-            return {
-                runId,
-                exists: true,
-                text,
-                totalLines,
-                shownLines: displayLines.length,
-                truncated
-            };
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to read log file: ${e.message}`);
-            return { runId, exists: false, reason: 'read-failed' };
-        }
-    }
-
-    getLogFilePath(runId) {
-        if (!runId) {
-            return null;
-        }
-        return this.fm.joinPath(this.logsDir, `${runId}.log`);
-    }
-
-    async appendLogSummary(results) {
-        try {
-            const runId = results?.savedRunId || results?.sourceRunId || results?.runId || results?.summary?.runId || null;
-            const runContext = results?.runContext || null;
-            const logPath = this.getLogFilePath(runId);
-            if (!logPath) {
-                console.log('📱 Scriptable: Skipping log write (missing runId)');
-                return;
-            }
-            const summary = {
-                timestamp: new Date().toISOString(),
-                runId,
-                runContext,
-                totals: {
-                    totalEvents: results.totalEvents || 0,
-                    bearEvents: results.bearEvents || 0,
-                    calendarEvents: results.calendarEvents || 0,
-                    errors: (results.errors || []).length
-                }
-            };
-            const summaryLine = `${new Date().toISOString()} - ${JSON.stringify(summary)}`;
-            const logConfig = this.resolveLogConfig(results?.config || {});
-            const outputMode = this.resolveLogOutputMode(logConfig, results);
-            const logText = logger.getLogText({ mode: outputMode });
-            const content = logText ? `${summaryLine}\n${logText}` : `${summaryLine}\n`;
-            
-            const fm = this.fm || FileManager.iCloud();
-            if (!fm.fileExists(this.logsDir)) {
-                fm.createDirectory(this.logsDir, true);
-            }
-            
-            fm.writeString(logPath, content);
-            console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
-        } catch (e) {
-            console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
-        }
-    }
-
+  }
 }
 
 // Scriptable-specific CalendarEvent fields that must not be written to notes.
 // Passed to SharedCore via options.additionalExcludedFields so that shared-core.js
 // stays free of iOS-only API knowledge.
 ScriptableAdapter.NOTES_EXCLUDED_FIELDS = new Set([
-    'identifier', 'availability', 'timeZone', 'calendar', 'addRecurrenceRule',
-    'removeAllRecurrenceRules', 'save', 'remove', 'presentEdit', '_staticFields',
-    'searchStartDate', 'searchEndDate'
+  "identifier",
+  "availability",
+  "timeZone",
+  "calendar",
+  "addRecurrenceRule",
+  "removeAllRecurrenceRules",
+  "save",
+  "remove",
+  "presentEdit",
+  "_staticFields",
+  "searchStartDate",
+  "searchEndDate",
 ]);
 
 // Export for Scriptable environment
