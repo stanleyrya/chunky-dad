@@ -6106,6 +6106,9 @@ body.loaded {
         grid-template-columns: 1fr;
         gap: 40px;
     }
+    .about-image-wrapper {
+        margin-right: 15px;
+    }
     .about-image-backdrop {
         left: 15px;
         top: 15px;
