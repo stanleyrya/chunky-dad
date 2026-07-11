@@ -355,6 +355,76 @@
     .l-glass .card-glass .brand-mark { position: absolute; top: 42px; left: 70px; opacity: 0.95; }
     .l-glass .og-title { text-shadow: 0 4px 30px rgba(0,0,0,0.3); }
 
+    /* ===== Classics — the six layouts from the previous version, recolored by palette ===== */
+    .section-divider {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 14px;
+      margin-top: 10px;
+      color: var(--text-dim); font-size: 12px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+    }
+    .section-divider::before, .section-divider::after { content: ''; height: 1px; background: var(--line-strong); flex: 1; }
+
+    /* Classic: Split Screen */
+    .l-c-split { background: #000; }
+    .l-c-split .left-side { position: absolute; left: 0; top: 0; bottom: 0; width: 55%; clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%); z-index: 1; }
+    .l-c-split .left-side .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.3; }
+    .l-c-split .left-content { position: absolute; left: 60px; top: 60px; bottom: 60px; width: 420px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+    .l-c-split .brand { font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; opacity: 0.9; }
+    .l-c-split .event-title { font-size: 64px; line-height: 0.95; font-weight: 800; margin-bottom: 20px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .l-c-split .event-date { font-size: 24px; opacity: 0.9; margin-bottom: 10px; }
+    .l-c-split .venue { font-size: 20px; opacity: 0.8; }
+    .l-c-split .right-side { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; display: flex; align-items: center; justify-content: center; z-index: 0; }
+    .l-c-split .event-image { width: 400px; height: 500px; background-size: cover; background-position: center; box-shadow: -20px 0 60px rgba(0,0,0,0.5); }
+
+    /* Classic: Glass Card */
+    .l-c-glass .cover { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.6); }
+    .l-c-glass .glass { position: absolute; inset: 80px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 24px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .l-c-glass .glass .inner { position: absolute; inset: 0; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
+    .l-c-glass .event-title { font-size: 72px; font-weight: 800; line-height: 0.95; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
+    .l-c-glass .event-date { margin-top: 16px; font-size: 26px; opacity: 0.95; }
+    .l-c-glass .venue { margin-top: 8px; font-size: 22px; opacity: 0.85; }
+
+    /* Classic: Bold & Centered */
+    .l-c-bold { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px; }
+    .l-c-bold .event-title { font-size: 84px; font-weight: 800; line-height: 0.9; text-shadow: 0 8px 40px rgba(0,0,0,0.4); margin-bottom: 30px; }
+    .l-c-bold .event-details { font-size: 32px; opacity: 0.95; line-height: 1.4; margin-bottom: 20px; }
+    .l-c-bold .event-venue { font-size: 28px; opacity: 0.85; }
+    .l-c-bold .logo-stamp { position: absolute; bottom: 60px; right: 60px; width: 80px; height: 80px; object-fit: contain; opacity: 0.8; }
+
+    /* Classic: Side by Side */
+    .l-c-side { display: flex; }
+    .l-c-side .left-panel { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); }
+    .l-c-side .right-panel { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; }
+    .l-c-side .event-title { font-size: 56px; font-weight: 800; line-height: 1; margin-bottom: 24px; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .l-c-side .event-date { font-size: 28px; opacity: 0.95; margin-bottom: 12px; }
+    .l-c-side .event-venue { font-size: 24px; opacity: 0.9; margin-bottom: 24px; }
+    .l-c-side .description { font-size: 20px; opacity: 0.85; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .l-c-side .chunky-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 30px; }
+
+    /* Classic: Banner */
+    .l-c-banner .banner-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.4) blur(2px); }
+    .l-c-banner .banner-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 80px; }
+    .l-c-banner .brand-logo { width: 100px; height: 100px; object-fit: contain; margin-bottom: 40px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
+    .l-c-banner .event-title { font-size: 72px; font-weight: 800; line-height: 0.95; margin-bottom: 30px; text-shadow: 0 6px 30px rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: -1px; }
+    .l-c-banner .event-info { font-size: 32px; opacity: 0.95; margin-bottom: 12px; font-weight: 600; }
+    .l-c-banner .event-cta { background: #fff; color: #111; padding: 16px 40px; border-radius: 50px; font-size: 24px; font-weight: 700; margin-top: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+
+    /* Classic: CSS Pattern */
+    .l-c-pattern { background: #000; }
+    .l-c-pattern .pattern-bg { position: absolute; inset: 0; z-index: 0; background-color: #06060a; }
+    .l-c-pattern .pattern-vignette { position: absolute; inset: 0; z-index: 1; background: radial-gradient(circle at 50% 45%, rgba(0,0,0,0) 0 45%, rgba(0,0,0,0.35) 100%); pointer-events: none; }
+    .l-c-pattern .content-box {
+      position: absolute; inset: 55px; z-index: 2;
+      background: rgba(0,0,0,1); border-radius: 18px;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 60px 72px;
+    }
+    .l-c-pattern .brand { font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 18px; }
+    .l-c-pattern .event-title { font-size: 66px; line-height: 0.95; font-weight: 800; margin-bottom: 20px; }
+    .l-c-pattern .event-date { font-size: 26px; opacity: 0.9; margin-bottom: 8px; }
+    .l-c-pattern .event-venue { font-size: 22px; opacity: 0.8; }
+
     /* pause all artboard animation when toggled off */
     body.anims-off .artboard * { animation-play-state: paused !important; }
 
@@ -430,6 +500,10 @@
         <label for="coverInput">Image URL override (blank = event image)</label>
         <input id="coverInput" type="url" placeholder="https://example.com/promo.jpg">
       </div>
+      <div class="field">
+        <label for="cssPatternSelect">Classic pattern bg</label>
+        <select id="cssPatternSelect"><option>Loading…</option></select>
+      </div>
       <div class="toggle-field">
         <input id="animsOn" type="checkbox" checked>
         <label for="animsOn">Animate gradients</label>
@@ -462,6 +536,7 @@
       const overrideB = document.getElementById('overrideB');
       const overrideOn = document.getElementById('overrideOn');
       const animsOn = document.getElementById('animsOn');
+      const cssPatternSelect = document.getElementById('cssPatternSelect');
       const paletteStrip = document.getElementById('paletteStrip');
       const paletteSource = document.getElementById('paletteSource');
       const grid = document.getElementById('grid');
@@ -553,6 +628,8 @@
           this.eventColorsMap = new Map();
           this.barColorsMap = new Map();
           this.anims = [];
+          this.cssPatterns = [];
+          this.currentCssPattern = null;
         }
 
         getInitialCityFromUrl() {
@@ -572,6 +649,7 @@
           } catch (e) {}
           this.populateCities();
           this.attachHandlers();
+          await this.loadCssPatterns();
           await this.loadCity(this.currentCity);
           logger.componentLoad(COMPONENT, 'OG Image Studio ready');
         }
@@ -654,6 +732,82 @@
           }
         }
 
+        // ---------- downloaded css-pattern.com backgrounds (classic layout) ----------
+        async loadCssPatterns() {
+          try {
+            const response = await fetch('../data/css-patterns.json');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            this.cssPatterns = Array.isArray(data.patterns)
+              ? data.patterns.filter(pattern => this.isSafeCssPattern(pattern))
+              : [];
+            this.currentCssPattern = this.cssPatterns[0] || null;
+            if (this.cssPatterns.length) {
+              cssPatternSelect.innerHTML = this.cssPatterns
+                .map(pattern => `<option value="${pattern.id}">${escapeHtml(pattern.name)}</option>`)
+                .join('');
+              cssPatternSelect.value = this.currentCssPattern.id;
+            } else {
+              cssPatternSelect.innerHTML = '<option>No patterns loaded</option>';
+              cssPatternSelect.disabled = true;
+            }
+            logger.componentLoad(COMPONENT, 'Loaded CSS Pattern backgrounds', { count: this.cssPatterns.length });
+          } catch (e) {
+            this.cssPatterns = [];
+            this.currentCssPattern = null;
+            cssPatternSelect.innerHTML = '<option>No patterns loaded</option>';
+            cssPatternSelect.disabled = true;
+            logger.componentError(COMPONENT, 'Failed to load CSS Pattern backgrounds', e);
+          }
+        }
+
+        isSafeCssPattern(pattern) {
+          return pattern
+            && typeof pattern.id === 'string'
+            && typeof pattern.name === 'string'
+            && typeof pattern.declarations === 'string'
+            && !/url\s*\(|@|<|>|expression\s*\(|javascript\s*:/i.test(pattern.declarations)
+            && this.parseCssDeclarations(pattern.declarations).length > 0;
+        }
+
+        parseCssDeclarations(declarations) {
+          return declarations
+            .split(';')
+            .map(part => part.trim())
+            .filter(Boolean)
+            .map(part => {
+              const separator = part.indexOf(':');
+              if (separator === -1) return null;
+              return {
+                property: part.slice(0, separator).trim(),
+                value: part.slice(separator + 1).trim()
+              };
+            })
+            .filter(item => item && (
+              item.property === 'background'
+              || item.property === 'background-color'
+              || item.property === 'background-image'
+              || item.property === 'background-position'
+              || item.property === 'background-size'
+              || item.property === 'background-repeat'
+              || /^--[a-zA-Z0-9_-]+$/.test(item.property)
+            ));
+        }
+
+        applyCssPattern(element, p) {
+          if (!element || !this.currentCssPattern) return;
+          element.removeAttribute('style');
+          this.parseCssDeclarations(this.currentCssPattern.declarations).forEach(({ property, value }) => {
+            element.style.setProperty(property, value);
+          });
+          const palette = [p.bg, p.fg, p.deep, '#f8f8ff'];
+          Object.keys(this.currentCssPattern.colors || {}).forEach((key, index) => {
+            const color = palette[index] || this.currentCssPattern.colors[key];
+            element.style.setProperty(`--css-pattern-color-${index + 1}`, color);
+          });
+          element.style.setProperty('--css-pattern-size', `${this.currentCssPattern.size || 90}px`);
+        }
+
         lookupFaviconColors(ev) {
           if (!ev) return null;
           if (ev.slug && this.eventColorsMap.has(ev.slug)) return this.eventColorsMap.get(ev.slug);
@@ -712,6 +866,7 @@
             date: ev.day || 'Date TBA',
             time: ev.time || '',
             city: getCityConfig(this.currentCity)?.name || 'City',
+            description: ev.tea || 'Join us for an amazing bear community event!',
             cover: (coverInput.value || '').trim() || (ev.image || '').trim()
           };
         }
@@ -884,6 +1039,119 @@
           ];
         }
 
+        // The six layouts from the previous version of this page, recolored by the palette
+        classics(data, p) {
+          const hasImage = !!data.cover;
+          const img = cssUrl(data.cover);
+          const grad = `linear-gradient(135deg, ${p.c1} 0%, ${p.c4} 100%)`;
+          const when = `${escapeHtml(data.date)}${data.time ? ' · ' + escapeHtml(data.time) : ''}`;
+
+          return [
+            {
+              key: 'c-pattern',
+              name: '🧩 CSS Pattern (classic)',
+              desc: 'Downloaded css-pattern.com background with rim-lit content box',
+              chips: ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-pattern">
+                  <div class="pattern-bg css-pattern-bg"></div>
+                  <div class="pattern-vignette"></div>
+                  <div class="content-box">
+                    <div class="brand" style="color:${p.bg}">chunky.dad</div>
+                    <div class="event-title">${escapeHtml(data.title)}</div>
+                    <div class="event-date">${when}</div>
+                    <div class="event-venue">@ ${escapeHtml(data.venue)}</div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'c-bold',
+              name: '⚡ Bold & Centered (classic)',
+              desc: 'Big typography, centered text on a palette gradient',
+              chips: ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-bold" style="background:${grad}">
+                  <div class="event-title">${escapeHtml(data.title)}</div>
+                  <div class="event-details">${when}</div>
+                  <div class="event-venue">@ ${escapeHtml(data.venue)}</div>
+                  <img class="logo-stamp" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                </div>`
+            },
+            {
+              key: 'c-side',
+              name: '📐 Side by Side (classic)',
+              desc: 'Simple two-column layout',
+              chips: ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-side" style="background:${grad}">
+                  <div class="left-panel">
+                    <img class="chunky-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                    <div class="event-title">${escapeHtml(data.title)}</div>
+                  </div>
+                  <div class="right-panel">
+                    <div class="event-date">${escapeHtml(data.date)}</div>
+                    <div class="event-venue">@ ${escapeHtml(data.venue)}${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
+                    <div class="description">${escapeHtml(data.description)}</div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'c-banner',
+              name: '🎯 Banner (classic)',
+              desc: 'Billboard/hero banner style with CTA',
+              chips: hasImage ? ['classic', 'event image'] : ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-banner" style="background:${grad}">
+                  ${hasImage ? `<div class="banner-bg" style="background-image:url('${img}')"></div>` : ''}
+                  <div class="banner-content">
+                    <img class="brand-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                    <div class="event-title">${escapeHtml(data.title)}</div>
+                    <div class="event-info">${when} · ${escapeHtml(data.venue)}</div>
+                    <div class="event-cta">Get Tickets</div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'c-split',
+              name: 'Split Screen (classic)',
+              desc: 'Dynamic diagonal composition',
+              chips: hasImage ? ['classic', 'event image'] : ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-split">
+                  <div class="left-side" style="background:${grad}">
+                    ${hasImage ? `<div class="cover" style="background-image:url('${img}')"></div>` : ''}
+                  </div>
+                  <div class="left-content">
+                    <div class="brand">chunky.dad</div>
+                    <div class="event-title">${escapeHtml(data.title)}</div>
+                    <div class="event-date">${when}</div>
+                    <div class="venue">@ ${escapeHtml(data.venue)}</div>
+                  </div>
+                  <div class="right-side">
+                    <div class="event-image" style="background-image:${hasImage ? `url('${img}'), ` : ''}linear-gradient(160deg, ${p.c2}, ${p.c4})"></div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'c-glass',
+              name: 'Glass Card (classic)',
+              desc: 'Frosted glass backdrop over the full event image',
+              chips: hasImage ? ['classic', 'event image'] : ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-glass" style="background:${grad}">
+                  ${hasImage ? `<div class="cover" style="background-image:url('${img}')"></div>` : ''}
+                  <div class="glass">
+                    <div class="inner">
+                      <div class="event-title">${escapeHtml(data.title)}</div>
+                      <div class="event-date">${when}</div>
+                      <div class="venue">@ ${escapeHtml(data.venue)}</div>
+                    </div>
+                  </div>
+                </div>`
+            }
+          ];
+        }
+
         render() {
           this.stopAnims();
           const p = this.getPalette();
@@ -895,7 +1163,7 @@
             return;
           }
 
-          grid.innerHTML = this.variants(data, p).map(v => `
+          const cardHtml = v => `
             <div class="card" data-variant="${v.key}">
               <div class="card-head">
                 <div>
@@ -905,11 +1173,15 @@
                 <div class="chips">${v.chips.map(c => `<span class="chip${c.includes('favicon') || c.includes('image') ? ' on' : ''}">${c}</span>`).join('')}</div>
               </div>
               <div class="preview">${v.html}</div>
-            </div>
-          `).join('');
+            </div>`;
+
+          grid.innerHTML = this.variants(data, p).map(cardHtml).join('')
+            + '<div class="section-divider">Classics — layouts from the previous version</div>'
+            + this.classics(data, p).map(cardHtml).join('');
 
           this.fitArtboards();
           grid.querySelectorAll('.silk-canvas').forEach(canvas => this.initSilk(canvas, p));
+          grid.querySelectorAll('.css-pattern-bg').forEach(el => this.applyCssPattern(el, p));
         }
 
         fitArtboards() {
@@ -1079,6 +1351,10 @@
           });
 
           coverInput.addEventListener('change', () => this.render());
+          cssPatternSelect.addEventListener('change', () => {
+            this.currentCssPattern = this.cssPatterns.find(pattern => pattern.id === cssPatternSelect.value) || this.cssPatterns[0] || null;
+            this.render();
+          });
           overrideOn.addEventListener('change', () => this.render());
           [overrideA, overrideB].forEach(el => el.addEventListener('input', () => {
             if (overrideOn.checked) this.render();
