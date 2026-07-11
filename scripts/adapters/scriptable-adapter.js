@@ -6096,152 +6096,41 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return events;
   }
 
-  // Helper method to determine if time conflicts should be merged
+  // Helper method to determine if time conflicts should be merged.
+  // Delegates to SharedCore's same-event identity detection so this report always
+  // agrees with the merge decision made in analyzeEventAction.
   shouldMergeTimeConflict(existingEvent, newEvent) {
-    // Extract parsed fields from notes because existingEvent is a CalendarEvent
-    const parsedExistingNotes = this.parseNotesIntoFields(
-      existingEvent.notes || "",
+    const core = this.getIdentityCore();
+    if (!core) {
+      console.log(
+        "📱 Scriptable: Merge eligibility unavailable (identity core failed to initialize)",
+      );
+      return false;
+    }
+    const signal = core.getSameEventIdentitySignal(newEvent, existingEvent);
+    const existingLabel = existingEvent.title || existingEvent.name || "";
+    const newLabel = newEvent.title || newEvent.name || "";
+    console.log(
+      `📱 Scriptable: Merge eligibility ${signal ? `match (${signal})` : "no match"} — "${existingLabel}" vs "${newLabel}"`,
     );
+    return Boolean(signal);
+  }
 
-    // Check if both events are similar enough to be the same event
-    const existingTitle = (existingEvent.title || existingEvent.name || "")
-      .toLowerCase()
-      .trim();
-
-    // For new events, check both the current title and original title (if title was overridden)
-    const newTitle = (newEvent.title || newEvent.name || "")
-      .toLowerCase()
-      .trim();
-    const newOriginalTitle = (newEvent.originalTitle || "")
-      .toLowerCase()
-      .trim();
-
-    // Check shortNames as well
-    const existingShortName = (
-      existingEvent.shortName ||
-      parsedExistingNotes.shortName ||
-      ""
-    )
-      .toLowerCase()
-      .trim();
-    const newShortName = (newEvent.shortName || "").toLowerCase().trim();
-
-    console.log(`📱 Scriptable: Checking merge eligibility:`);
-    console.log(`   Existing: "${existingTitle}"`);
-    console.log(`   New: "${newTitle}"`);
-    if (newOriginalTitle) {
-      console.log(`   New (original): "${newOriginalTitle}"`);
-    }
-    if (existingShortName || newShortName) {
-      console.log(
-        `   ShortNames - Existing: "${existingShortName}", New: "${newShortName}"`,
-      );
-    }
-
-    // Exact shortName match
-    if (
-      existingShortName &&
-      newShortName &&
-      existingShortName === newShortName
-    ) {
-      console.log(
-        `📱 Scriptable: Exact shortName match - should merge: "${existingShortName}"`,
-      );
-      return true;
-    }
-
-    // Exact address and coordinates match
-    const existingAddress = existingEvent.address || parsedExistingNotes.address;
-    const addressMatch =
-      existingAddress &&
-      newEvent.address &&
-      existingAddress.toLowerCase().trim() ===
-        newEvent.address.toLowerCase().trim();
-    const coordMatch =
-      existingEvent.coordinates &&
-      newEvent.coordinates &&
-      existingEvent.coordinates.lat === newEvent.coordinates.lat &&
-      existingEvent.coordinates.lng === newEvent.coordinates.lng;
-
-    // Check times using getTime() because we're in Scriptable realm
-    const timeMatch =
-      existingEvent.startDate &&
-      newEvent.startDate &&
-      new Date(existingEvent.startDate).getTime() ===
-        new Date(newEvent.startDate).getTime();
-
-    if (timeMatch && (addressMatch || coordMatch)) {
-      console.log(
-        `📱 Scriptable: Location and time match - should merge: "${existingEvent.title || existingEvent.name}" vs "${newTitle}"`,
-      );
-      return true;
-    }
-
-    // Generic pattern detection for events with complex text formatting
-    // This helps merge events that have variations like "A>B>C", "A-B-C", "A B C"
-    const hasComplexPattern = (text) => {
-      // Check if text has letters separated by special characters
-      return /[a-z][\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+[a-z]/i.test(
-        text,
-      );
-    };
-
-    const normalizeComplexText = (text) => {
-      return (
-        text
-          // Replace sequences of special chars between letters with a single hyphen
-          .replace(
-            /([a-z])[\s\>\<\-\.\,\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\/]+([a-z])/gi,
-            "$1-$2",
-          )
-          // Remove trailing special characters after words
-          .replace(
-            /([a-z])[\!\@\#\$\%\^\&\*\(\)\_\+\=\{\}\[\]\|\\\:\;\"\'\?\,\.]+(?=\s|$)/gi,
-            "$1",
-          )
-          // Collapse multiple spaces/hyphens into single hyphen
-          .replace(/[\s\-]+/g, "-")
-          // Remove leading/trailing hyphens
-          .replace(/^-+|-+$/g, "")
-      );
-    };
-
-    // Check if both titles have complex patterns that normalize to the same value
-    if (
-      hasComplexPattern(existingTitle) ||
-      hasComplexPattern(newTitle) ||
-      hasComplexPattern(newOriginalTitle)
-    ) {
-      const normalizedExisting = normalizeComplexText(existingTitle);
-      const normalizedNew = normalizeComplexText(newTitle);
-      const normalizedNewOriginal = normalizeComplexText(newOriginalTitle);
-
-      if (
-        normalizedExisting === normalizedNew ||
-        normalizedExisting === normalizedNewOriginal
-      ) {
-        console.log(
-          `📱 Scriptable: Complex pattern match detected - should merge:`,
+  // Lazily build a SharedCore instance for identity checks
+  getIdentityCore() {
+    if (this._identityCore === undefined) {
+      try {
+        this._identityCore = new SharedCore(this.cities || {}, {
+          eventSchema: SharedEventSchema,
+        });
+      } catch (error) {
+        console.warn(
+          `📱 Scriptable: Could not initialize identity core: ${error}`,
         );
-        console.log(`   Normalized existing: "${normalizedExisting}"`);
-        console.log(`   Normalized new: "${normalizedNew}"`);
-        return true;
+        this._identityCore = null;
       }
     }
-
-    // Check for exact title matches (case insensitive) - check both titles
-    if (
-      existingTitle === newTitle ||
-      (newOriginalTitle && existingTitle === newOriginalTitle)
-    ) {
-      console.log(
-        `📱 Scriptable: Exact title match - should merge: "${existingEvent.title || existingEvent.name}" vs "${newTitle}"`,
-      );
-      return true;
-    }
-
-    console.log(`📱 Scriptable: No merge criteria met`);
-    return false;
+    return this._identityCore;
   }
 
   // Helper method to calculate title similarity

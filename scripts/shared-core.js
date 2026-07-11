@@ -2917,11 +2917,11 @@ class SharedCore {
         }
         
         // Check for exact or similar duplicates
-        const exactMatch = existingEventsData.find(existing => 
-            this.areTitlesSimilar(existing.title, event.title) &&
+        const exactMatch = existingEventsData.find(existing =>
+            this.areTitlesSimilar(existing.title || existing.name, event.title) &&
             this.areDatesEqual(existing.startDate, event.startDate, 1)
         );
-        
+
         if (exactMatch) {
             const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, exactMatch);
             if (recurringMergeDecision) {
@@ -2933,7 +2933,24 @@ class SharedCore {
                 existingEvent: exactMatch
             });
         }
-        
+
+        // Identity-based match: catches renamed events ("FURBALL" vs "DALLAS FREEDOM TEA")
+        // and zero-duration or hour-shifted records that the interval-overlap check below
+        // misses (a start==end range can never satisfy doDatesOverlap).
+        for (const existing of existingEventsData) {
+            const identitySignal = this.getSameEventIdentitySignal(event, existing);
+            if (!identitySignal) continue;
+            const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existing);
+            if (recurringMergeDecision) {
+                return finalize(recurringMergeDecision);
+            }
+            return finalize({
+                action: 'merge',
+                reason: `Same event identity (${identitySignal})`,
+                existingEvent: existing
+            });
+        }
+
         // Check for overlapping events - only merge when time and title/venue are similar
         const timeConflicts = existingEventsData.filter(existing => 
             this.doDatesOverlap(existing.startDate, existing.endDate, 
@@ -2956,7 +2973,7 @@ class SharedCore {
             
             const mergeableConflict = timeConflicts.find(existing =>
                 timeSimilar(existing) &&
-                (this.areTitlesSimilar(existing.title, event.title) || venuesSimilar(existing))
+                (this.areTitlesSimilar(existing.title || existing.name, event.title) || venuesSimilar(existing))
             );
             
             if (mergeableConflict) {
@@ -3412,10 +3429,155 @@ class SharedCore {
         
         const eventName1 = extractEventName(title1);
         const eventName2 = extractEventName(title2);
-        
+
         return eventName1 === eventName2;
     }
-    
+
+    // === Same-event identity detection ===
+    // Decides whether a newly scraped event and an existing record describe the same
+    // underlying event even when their titles differ (e.g. "DALLAS FREEDOM TEA" vs
+    // "FURBALL"). Used by analyzeEventAction and the scriptable adapter so the merge
+    // decision and the calendar-check report can never disagree.
+
+    normalizeIdentityText(value) {
+        return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    normalizeTicketUrlForIdentity(url) {
+        const text = String(url || '').trim().toLowerCase();
+        if (!text) return '';
+        const withoutProtocol = text.replace(/^https?:\/\//, '').replace(/^www\./, '');
+        const withoutHash = withoutProtocol.split('#')[0];
+        const [path, query] = withoutHash.split('?');
+        const cleanPath = path.replace(/\/+$/, '');
+        if (!query) return cleanPath;
+        const keptParams = query.split('&').filter(param => {
+            const key = param.split('=')[0];
+            return key && !this.trackingParamPattern.test(key);
+        });
+        return keptParams.length > 0 ? `${cleanPath}?${keptParams.sort().join('&')}` : cleanPath;
+    }
+
+    parseCoordinatesForIdentity(event, fields) {
+        const fromObject = event && event.coordinates;
+        if (fromObject && Number.isFinite(fromObject.lat) && Number.isFinite(fromObject.lng)) {
+            return { lat: fromObject.lat, lng: fromObject.lng };
+        }
+        const candidates = [event && event.location, fields && fields.location];
+        for (const candidate of candidates) {
+            const text = String(candidate || '').trim();
+            const match = text.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+            if (match) {
+                return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+            }
+        }
+        return null;
+    }
+
+    // Normalize scraped events and calendar events (which carry `name` instead of `title`
+    // and stash extra fields in notes) into one comparable shape.
+    buildIdentityComparisonShape(event) {
+        const fields = this.parseNotesIntoFields((event && (event.notes || event.unprocessedDescription)) || '');
+        const names = [event.title, event.name, event.originalTitle, event.shortName, fields.shortName]
+            .map(value => String(value || '').trim())
+            .filter(Boolean);
+        return {
+            startDate: event.startDate instanceof Date ? event.startDate : this.parseDate(event.startDate),
+            timezone: event.timezone
+                || fields.timezone
+                || event.calendarTimezone
+                || (event.city && this.cities[event.city]?.timezone)
+                || null,
+            ticketUrl: this.normalizeTicketUrlForIdentity(event.ticketUrl || fields.ticketUrl),
+            names: [...new Set(names)],
+            bar: String(event.bar || fields.bar || '').trim(),
+            address: String(event.address || fields.address || '').trim(),
+            locationText: typeof event.location === 'string' ? event.location : '',
+            coordinates: this.parseCoordinatesForIdentity(event, fields)
+        };
+    }
+
+    areIdentityDatesOnSameLocalDay(shapeA, shapeB) {
+        if (!shapeA.startDate || !shapeB.startDate) return false;
+        const timezone = shapeA.timezone || shapeB.timezone || null;
+        const dayA = this.normalizeEventDateLocal(shapeA.startDate, timezone);
+        const dayB = this.normalizeEventDateLocal(shapeB.startDate, timezone);
+        return Boolean(dayA) && dayA === dayB;
+    }
+
+    areIdentityNamesSimilar(shapeA, shapeB) {
+        for (const nameA of shapeA.names) {
+            for (const nameB of shapeB.names) {
+                if (this.areTitlesSimilar(nameA, nameB)) return true;
+            }
+        }
+        return false;
+    }
+
+    areIdentityPlacesSimilar(shapeA, shapeB) {
+        const barA = this.normalizeIdentityText(shapeA.bar);
+        const barB = this.normalizeIdentityText(shapeB.bar);
+        if (barA && barB) {
+            if (barA === barB) return true;
+            if (barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA))) return true;
+        }
+
+        // Calendar events often carry the venue inside a free-form location string
+        // ("STATION 4\n3911 Cedar Springs Rd...") rather than a bar field.
+        const locationA = this.normalizeIdentityText(shapeA.locationText);
+        const locationB = this.normalizeIdentityText(shapeB.locationText);
+        if (barA && barA.length >= 4 && locationB.includes(barA)) return true;
+        if (barB && barB.length >= 4 && locationA.includes(barB)) return true;
+
+        const addressA = this.normalizeIdentityText(shapeA.address);
+        const addressB = this.normalizeIdentityText(shapeB.address);
+        if (addressA.length >= 10 && addressB.length >= 10 &&
+            (addressA === addressB || addressA.includes(addressB) || addressB.includes(addressA))) {
+            return true;
+        }
+
+        if (shapeA.coordinates && shapeB.coordinates &&
+            Math.abs(shapeA.coordinates.lat - shapeB.coordinates.lat) <= 0.002 &&
+            Math.abs(shapeA.coordinates.lng - shapeB.coordinates.lng) <= 0.002) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // Returns the name of the matched identity signal for logging, or null when the
+    // events look distinct. Signals are ordered strongest-first.
+    getSameEventIdentitySignal(newEvent, existingEvent) {
+        if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') {
+            return null;
+        }
+        const incoming = this.buildIdentityComparisonShape(newEvent);
+        const existing = this.buildIdentityComparisonShape(existingEvent);
+
+        // Every signal requires the same local calendar day — even a shared ticket URL
+        // could otherwise refer to a different night of the same run.
+        if (!this.areIdentityDatesOnSameLocalDay(incoming, existing)) return null;
+
+        // A shared ticket URL is a near-unique event identifier.
+        if (incoming.ticketUrl && existing.ticketUrl && incoming.ticketUrl === existing.ticketUrl) {
+            return 'ticket-url';
+        }
+
+        // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
+        // and any pair of name-ish fields (title/name/shortName) similar.
+        if (this.areDatesEqual(incoming.startDate, existing.startDate, 120) &&
+            this.areIdentityPlacesSimilar(incoming, existing) &&
+            this.areIdentityNamesSimilar(incoming, existing)) {
+            return 'place-time-name';
+        }
+
+        return null;
+    }
+
+    areEventsSameIdentity(newEvent, existingEvent) {
+        return Boolean(this.getSameEventIdentitySignal(newEvent, existingEvent));
+    }
+
     // Process event with conflicts - extract and merge based on strategies
     processEventWithConflicts(event) {
         if (!event._conflicts || event._conflicts.length === 0) {
