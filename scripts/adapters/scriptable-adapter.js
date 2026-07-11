@@ -6116,40 +6116,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       .toLowerCase()
       .trim();
 
-    // Check shortNames as well
-    const existingShortName = (
-      existingEvent.shortName ||
-      parsedExistingNotes.shortName ||
-      ""
-    )
-      .toLowerCase()
-      .trim();
-    const newShortName = (newEvent.shortName || "").toLowerCase().trim();
-
-    console.log(`📱 Scriptable: Checking merge eligibility:`);
-    console.log(`   Existing: "${existingTitle}"`);
-    console.log(`   New: "${newTitle}"`);
-    if (newOriginalTitle) {
-      console.log(`   New (original): "${newOriginalTitle}"`);
-    }
-    if (existingShortName || newShortName) {
-      console.log(
-        `   ShortNames - Existing: "${existingShortName}", New: "${newShortName}"`,
-      );
-    }
-
-    // Exact shortName match
-    if (
-      existingShortName &&
-      newShortName &&
-      existingShortName === newShortName
-    ) {
-      console.log(
-        `📱 Scriptable: Exact shortName match - should merge: "${existingShortName}"`,
-      );
-      return true;
-    }
-
     // Exact address and coordinates match
     const existingAddress = existingEvent.address || parsedExistingNotes.address;
     const addressMatch =
@@ -6157,6 +6123,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       newEvent.address &&
       existingAddress.toLowerCase().trim() ===
         newEvent.address.toLowerCase().trim();
+
+    const normalizeVenue = (value) => {
+        if (!value) return '';
+        return String(value).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+    };
+
+    const existingBar = existingEvent.location || parsedExistingNotes.bar || parsedExistingNotes.venue;
+    const newBar = newEvent.bar || newEvent.venue || newEvent.location;
+    const barMatch = existingBar && newBar && normalizeVenue(existingBar) === normalizeVenue(newBar);
+
     const coordMatch =
       existingEvent.coordinates &&
       newEvent.coordinates &&
@@ -6164,13 +6140,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       existingEvent.coordinates.lng === newEvent.coordinates.lng;
 
     // Check times using getTime() because we're in Scriptable realm
+    // Allow up to 6 hours difference for time overlap matching
     const timeMatch =
       existingEvent.startDate &&
       newEvent.startDate &&
-      new Date(existingEvent.startDate).getTime() ===
-        new Date(newEvent.startDate).getTime();
+      Math.abs(new Date(existingEvent.startDate).getTime() - new Date(newEvent.startDate).getTime()) <= (6 * 60 * 60 * 1000);
 
-    if (timeMatch && (addressMatch || coordMatch)) {
+    if (timeMatch && (addressMatch || coordMatch || barMatch)) {
       console.log(
         `📱 Scriptable: Location and time match - should merge: "${existingEvent.title || existingEvent.name}" vs "${newTitle}"`,
       );

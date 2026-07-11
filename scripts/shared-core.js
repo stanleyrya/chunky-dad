@@ -2877,7 +2877,7 @@ class SharedCore {
         // Check for exact or similar duplicates
         const exactMatch = existingEventsData.find(existing => 
             this.areTitlesSimilar(existing.title, event.title) &&
-            this.areDatesEqual(existing.startDate, event.startDate, 1)
+            this.areDatesEqual(existing.startDate, event.startDate, 60)
         );
         
         if (exactMatch) {
@@ -2894,8 +2894,9 @@ class SharedCore {
         
         // Check for overlapping events - only merge when time and title/venue are similar
         const timeConflicts = existingEventsData.filter(existing => 
-            this.doDatesOverlap(existing.startDate, existing.endDate, 
-                               event.startDate, event.endDate || event.startDate)
+            this.doDatesOverlap(existing.startDate, existing.endDate || existing.startDate,
+                               event.startDate, event.endDate || event.startDate) ||
+            this.areDatesEqual(existing.startDate, event.startDate, 6 * 60) // within 6 hours
         );
         
         if (timeConflicts.length > 0) {
@@ -2910,11 +2911,10 @@ class SharedCore {
                 return existingVenue && existingVenue === newVenue;
             };
             
-            const timeSimilar = (existing) => this.areDatesEqual(existing.startDate, event.startDate, 60);
+            const timeSimilar = (existing) => this.areDatesEqual(existing.startDate, event.startDate, 6 * 60);
             
             const mergeableConflict = timeConflicts.find(existing =>
-                timeSimilar(existing) &&
-                (this.areTitlesSimilar(existing.title, event.title) || venuesSimilar(existing))
+                timeSimilar(existing) && venuesSimilar(existing)
             );
             
             if (mergeableConflict) {
@@ -3337,7 +3337,7 @@ class SharedCore {
     
     // Check if two date ranges overlap (pure logic)
     doDatesOverlap(start1, end1, start2, end2) {
-        return start1 < end2 && end1 > start2;
+        return start1 <= end2 && end1 >= start2;
     }
     
     // Fuzzy title matching to handle variations
