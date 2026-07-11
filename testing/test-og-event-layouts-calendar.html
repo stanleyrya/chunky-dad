@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="toolbox-icon" content="📅">
-  <meta name="toolbox-description" content="Old School Blueprint - Classic event layouts, tried and true">
+  <meta name="toolbox-icon" content="🎨">
+  <meta name="toolbox-description" content="OG Image Studio - Clean OpenGraph samples with mesh + shader gradients">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YKQBFFQR5E"></script>
   <script>
@@ -14,381 +14,505 @@
 
     gtag('config', 'G-YKQBFFQR5E');
   </script>
-  <title>📅 chunky.dad's Toolbox - Old School Blueprint</title>
-  <link rel="stylesheet" href="../styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@300;400;500;600&family=Poppins:wght@300;400;600;700;900&family=Bebas+Neue&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+  <title>🎨 chunky.dad's Toolbox - OG Image Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Poppins', sans-serif; background: var(--background-primary); color: var(--text-primary); }
-    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-
-    header { position: sticky; top: 0; background: var(--gradient-primary); z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    nav .nav-container { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; max-width: 1400px; margin: 0 auto; }
-    .logo h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; }
-    .logo a { color: var(--text-inverse); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
-    .logo-img { width: 28px; height: 28px; }
-
-    main { padding: 24px 0 40px; }
-    .page-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-    .page-title h2 { font-size: 32px; font-weight: 700; margin: 0; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .subtitle { color: var(--text-secondary); font-size: 15px; line-height: 1.5; }
-
-    .controls-panel { background: var(--white); border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 24px; border: 2px solid var(--border-lighter); }
-    .controls-section { margin-bottom: 20px; }
-    .controls-section:last-child { margin-bottom: 0; }
-    .controls-section h3 { font-size: 14px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0; }
-    .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-    .control-field { display: flex; flex-direction: column; gap: 6px; }
-    .control-field label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
-    .control-field input, .control-field select { padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border-lighter); background: var(--white); color: var(--text-primary); font-family: inherit; transition: all 0.2s; }
-    .control-field input:focus, .control-field select:focus { outline: none; border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); }
-    .control-field.full { grid-column: 1 / -1; }
-    .button-group { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn { padding: 10px 18px; border-radius: 8px; border: 1.5px solid var(--border-lighter); background: var(--white); cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; font-family: inherit; }
-    .btn:hover { background: var(--background-light); transform: translateY(-1px); }
-    .btn.primary { background: var(--gradient-primary); color: var(--text-inverse); border: 0; }
-    .btn.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3); }
-
-    .theme-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-    .theme-option { aspect-ratio: 2/1; border-radius: 10px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; position: relative; overflow: hidden; }
-    .theme-option:hover { transform: scale(1.05); border-color: rgba(255, 107, 53, 0.3); }
-    .theme-option.active { border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2); transform: scale(1.05); }
-    .theme-option .theme-name { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; font-size: 11px; font-weight: 600; text-align: center; }
-
-    /* Theme backgrounds */
-    .theme-classic-night { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); }
-    .theme-cool-neon { background: linear-gradient(135deg, #00d4ff 0%, #090979 100%); }
-    .theme-hot-red { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); }
-    .theme-midnight { background: linear-gradient(135deg, #2c3e50 0%, #000000 100%); }
-    .theme-spotlight { background: radial-gradient(1000px 400px at 0% 0%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 60%), linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-    .theme-sunset { background: linear-gradient(135deg, #ff512f 0%, #dd2476 100%); }
-    .theme-ocean { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); }
-    .theme-forest { background: linear-gradient(135deg, #134e5e 0%, #71b280 100%); }
-    .theme-fire { background: linear-gradient(135deg, #f12711 0%, #f5af19 100%); }
-    .theme-blurple { background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%); }
-    .theme-pastel { background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); }
-    .theme-blue-bolt { background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%); }
-    .theme-green-glow { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); }
-    .theme-rainbow { background: conic-gradient(from 180deg at 50% 50%, #ff6a00, #ee0979, #8e2de2, #4a00e0, #00c6ff, #00b09b, #ff6a00); }
-    .theme-emerald { background: linear-gradient(135deg, #1f4037 0%, #99f2c8 100%); }
-    .theme-purple-haze { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .theme-rose-gold { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
-    .theme-teal-sea { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-    .theme-dark-purple { background: linear-gradient(135deg, #2c003e 0%, #512b58 100%); }
-    .theme-custom { background: linear-gradient(135deg, var(--custom-color-1, #8e2de2), var(--custom-color-2, #4a00e0)); }
-    .theme-favicon { background: linear-gradient(135deg, var(--favicon-color-1, #667eea) 0%, var(--favicon-color-2, #764ba2) 100%); }
-
-    .custom-colors { display: flex; gap: 12px; align-items: end; }
-    .color-picker-field { flex: 1; }
-    .color-input-wrapper { position: relative; }
-    .color-input-wrapper input[type="color"] { width: 100%; height: 44px; border-radius: 8px; border: 1.5px solid var(--border-lighter); cursor: pointer; }
-
-    .variants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
-    .variant-card { background: var(--white); border: 2px solid var(--border-lighter); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); transition: all 0.3s; }
-    .variant-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateY(-2px); }
-    .variant-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 2px solid var(--border-lighter); background: var(--background-light); }
-    .variant-title { font-weight: 700; font-size: 14px; color: var(--text-primary); }
-    .variant-description { font-size: 12px; color: var(--text-secondary); }
-    .variant-preview { aspect-ratio: 1200 / 630; width: 100%; background: #0a0a0a; display: grid; place-items: center; overflow: hidden; position: relative; }
-    .artboard { width: 1200px; height: 630px; position: relative; overflow: hidden; transform-origin: top left; font-family: 'Poppins', sans-serif; }
-
-    /* Cover image support */
-    .artboard .cover { position: absolute; inset: 0; background-position: center; background-size: cover; background-repeat: no-repeat; z-index: 0; }
-
-    /* LAYOUT: Split Screen */
-    .layout-split-screen { background: #000; position: relative; }
-    .layout-split-screen .left-side { position: absolute; left: 0; top: 0; bottom: 0; width: 55%; clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%); z-index: 1; }
-    .layout-split-screen .left-side .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.3; }
-    .layout-split-screen .left-content { position: absolute; left: 60px; top: 60px; bottom: 60px; width: 420px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
-    .layout-split-screen .brand { font-size: 20px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; opacity: 0.9; }
-    .layout-split-screen .event-title { font-size: 64px; line-height: 0.95; font-weight: 900; color: #fff; margin-bottom: 20px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    .layout-split-screen .event-date { font-size: 24px; color: #fff; opacity: 0.9; margin-bottom: 10px; }
-    .layout-split-screen .venue { font-size: 20px; color: #fff; opacity: 0.8; }
-    .layout-split-screen .right-side { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; display: flex; align-items: center; justify-content: center; z-index: 0; }
-    .layout-split-screen .event-image { width: 400px; height: 500px; background-size: cover; background-position: center; z-index: 1; box-shadow: -20px 0 60px rgba(0,0,0,0.5); }
-
-    /* LAYOUT: Glass Card */
-    .layout-glass { position: relative; backdrop-filter: blur(0px); }
-    .layout-glass .cover { filter: brightness(0.6); }
-    .layout-glass .glass { position: absolute; inset: 80px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 24px; backdrop-filter: blur(12px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-    .layout-glass .glass .inner { position: absolute; inset: 0; padding: 40px; color: #fff; }
-    .layout-glass .event-title { font-size: 72px; font-weight: 900; line-height: 0.95; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
-    .layout-glass .event-date { margin-top: 16px; font-size: 26px; opacity: 0.95; }
-    .layout-glass .venue { margin-top: 8px; font-size: 22px; opacity: 0.85; }
-
-    /* Bold & Centered - Big typography */
-    .layout-bold-centered { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px; }
-    .layout-bold-centered .event-title { font-size: 84px; font-weight: 900; line-height: 0.9; color: #fff; text-shadow: 0 8px 40px rgba(0,0,0,0.4); margin-bottom: 30px; }
-    .layout-bold-centered .event-details { font-size: 32px; color: #fff; opacity: 0.95; line-height: 1.4; margin-bottom: 20px; }
-    .layout-bold-centered .event-venue { font-size: 28px; color: #fff; opacity: 0.85; }
-    .layout-bold-centered .logo-stamp { position: absolute; bottom: 60px; right: 60px; width: 80px; height: 80px; object-fit: contain; opacity: 0.8; }
-
-    /* Side by Side - Two columns */
-    .layout-side-by-side { position: relative; display: flex; }
-    .layout-side-by-side .left-panel { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); }
-    .layout-side-by-side .right-panel { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; }
-    .layout-side-by-side .event-title { font-size: 56px; font-weight: 900; color: #fff; line-height: 1; margin-bottom: 24px; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-    .layout-side-by-side .event-date { font-size: 28px; color: #fff; opacity: 0.95; margin-bottom: 12px; }
-    .layout-side-by-side .event-venue { font-size: 24px; color: #fff; opacity: 0.9; margin-bottom: 24px; }
-    .layout-side-by-side .description { font-size: 20px; color: #fff; opacity: 0.85; line-height: 1.5; }
-    .layout-side-by-side .chunky-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 30px; }
-
-    /* Banner - Billboard style */
-    .layout-banner { position: relative; }
-    .layout-banner .banner-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.4) blur(2px); }
-    .layout-banner .banner-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 80px; }
-    .layout-banner .brand-logo { width: 100px; height: 100px; object-fit: contain; margin-bottom: 40px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
-    .layout-banner .event-title { font-size: 72px; font-weight: 900; color: #fff; line-height: 0.95; margin-bottom: 30px; text-shadow: 0 6px 30px rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: -1px; }
-    .layout-banner .event-info { font-size: 32px; color: #fff; opacity: 0.95; margin-bottom: 12px; font-weight: 600; }
-    .layout-banner .event-cta { background: #fff; color: #111; padding: 16px 40px; border-radius: 50px; font-size: 24px; font-weight: 700; margin-top: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-
-    /* === Pattern Layouts with Rim Effect === */
-    .artboard.layout-css-pattern,
-    .artboard.layout-pattern-dots,
-    .artboard.layout-pattern-stripes,
-    .artboard.layout-pattern-grid,
-    .artboard.layout-pattern-zigzag { background: #000; position: relative; overflow: hidden; }
-
-    .layout-css-pattern .css-pattern-bg {
-      position: absolute; inset: 0; z-index: 0;
-      background-color: #06060a;
+    :root {
+      --bg: #0b0b10;
+      --bg-raised: #14141c;
+      --bg-input: #1b1b26;
+      --line: rgba(255,255,255,0.08);
+      --line-strong: rgba(255,255,255,0.14);
+      --text: #f2f2f7;
+      --text-dim: #9a9aad;
+      --brand: #ff6b35;
+      --brand-2: #f7931e;
+      --radius: 14px;
+      --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     }
-    .layout-css-pattern .pattern-vignette {
-      position: absolute; inset: 0; z-index: 1;
-      background: radial-gradient(circle at 50% 45%, rgba(0,0,0,0) 0 45%, rgba(0,0,0,0.35) 100%);
-      pointer-events: none;
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
     }
-    .layout-pattern-dots .pattern-bg {
-      position: absolute; inset: 0; z-index: 0;
-      background-color: #06060a;
-      background-image: radial-gradient(circle, var(--pattern-color, rgba(255,255,255,0.22)) 1.5px, transparent 1.5px);
-      background-size: 24px 24px;
+
+    /* ===== Chrome ===== */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 28px;
+      background: rgba(11,11,16,0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
     }
-    .layout-pattern-stripes .pattern-bg {
-      position: absolute; inset: 0; z-index: 0;
-      background-color: #06060a;
-      background-image: repeating-linear-gradient(-45deg, var(--pattern-color, rgba(255,255,255,0.18)) 0px, var(--pattern-color, rgba(255,255,255,0.18)) 1.5px, transparent 1.5px, transparent 12px);
+    .topbar .home {
+      display: inline-flex; align-items: center; gap: 10px;
+      color: var(--text); text-decoration: none; font-weight: 700; font-size: 16px;
     }
-    .layout-pattern-grid .pattern-bg {
-      position: absolute; inset: 0; z-index: 0;
-      background-color: #06060a;
-      background-image: linear-gradient(var(--pattern-color, rgba(255,255,255,0.14)) 1px, transparent 1px), linear-gradient(90deg, var(--pattern-color, rgba(255,255,255,0.14)) 1px, transparent 1px);
-      background-size: 30px 30px;
+    .topbar .home img { width: 26px; height: 26px; border-radius: 7px; }
+    .topbar .sep { width: 1px; height: 22px; background: var(--line-strong); }
+    .topbar .page-name { font-size: 14px; color: var(--text-dim); letter-spacing: 0.4px; }
+    .topbar .page-name strong { color: var(--text); font-weight: 600; }
+
+    .shell { max-width: 1560px; margin: 0 auto; padding: 28px 28px 80px; }
+
+    .hero { margin: 6px 0 22px; }
+    .hero h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(26px, 3.4vw, 40px);
+      font-weight: 800; letter-spacing: -0.5px; line-height: 1.05;
+      margin: 0 0 8px;
+      background: linear-gradient(100deg, #fff 20%, #ffb08a 60%, var(--brand) 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .layout-pattern-zigzag .pattern-bg {
-      position: absolute; inset: 0; z-index: 0;
-      background-color: #06060a;
-      background-image: linear-gradient(135deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%) -10px 0, linear-gradient(225deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%) -10px 0, linear-gradient(315deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%), linear-gradient(45deg, var(--pattern-color, rgba(255,255,255,0.18)) 25%, transparent 25%);
-      background-size: 20px 20px;
+    .hero p { margin: 0; color: var(--text-dim); font-size: 15px; max-width: 760px; line-height: 1.55; }
+
+    /* ===== Controls ===== */
+    .controls {
+      display: grid;
+      grid-template-columns: 200px minmax(280px, 1.6fr) minmax(180px, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+      background: var(--bg-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
     }
-    .layout-css-pattern .content-box,
-    .layout-pattern-dots .content-box,
-    .layout-pattern-stripes .content-box,
-    .layout-pattern-grid .content-box,
-    .layout-pattern-zigzag .content-box {
-      position: absolute; inset: 55px; z-index: 1;
-      background: rgba(0,0,0,1);
-      border-radius: 18px;
-      display: flex; flex-direction: column; justify-content: center;
-      padding: 60px 72px;
+    .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .field label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+    .field select, .field input[type="text"], .field input[type="url"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      padding: 11px 13px;
+      background: var(--bg-input);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit; font-size: 14px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field select { background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+    .field select:focus, .field input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(255,107,53,0.18); }
+    .btn-row { display: flex; gap: 8px; }
+    .btn {
+      padding: 11px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--line-strong);
+      background: var(--bg-input);
+      color: var(--text);
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: transform .12s, background .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #232331; transform: translateY(-1px); border-color: rgba(255,255,255,0.24); }
+    .btn.primary { background: linear-gradient(120deg, var(--brand), var(--brand-2)); border: none; color: #16090a; }
+    .btn.primary:hover { box-shadow: 0 6px 18px rgba(255,107,53,0.35); }
+
+    .controls-secondary {
+      display: flex; flex-wrap: wrap; gap: 20px; align-items: end;
+      background: var(--bg-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 26px;
+    }
+    .controls-secondary .field.grow { flex: 1 1 320px; }
+
+    /* Palette strip */
+    .palette-block { display: flex; flex-direction: column; gap: 6px; }
+    .palette-label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+    .palette-strip { display: flex; align-items: center; gap: 10px; padding-bottom: 16px; }
+    .swatch {
+      width: 38px; height: 38px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.18);
+      position: relative; flex-shrink: 0;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+    }
+    .swatch::after {
+      content: attr(data-hex);
+      position: absolute; top: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+      font-size: 9px; color: var(--text-dim); letter-spacing: 0.3px; white-space: nowrap;
+    }
+    .palette-source { font-size: 12px; color: var(--text-dim); }
+    .palette-source b { color: var(--text); font-weight: 600; }
+
+    .toggle-field { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; }
+    .toggle-field input { accent-color: var(--brand); width: 16px; height: 16px; }
+    .toggle-field label { font-size: 13px; color: var(--text-dim); cursor: pointer; user-select: none; }
+    .color-mini { display: flex; gap: 8px; align-items: center; }
+    .color-mini input[type="color"] {
+      width: 42px; height: 38px; padding: 2px;
+      background: var(--bg-input); border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
+    }
+
+    /* ===== Sample grid ===== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+      gap: 26px;
+    }
+    .card {
+      background: var(--bg-raised);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+    }
+    .card:hover { border-color: var(--line-strong); transform: translateY(-2px); box-shadow: 0 18px 40px rgba(0,0,0,0.45); }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; }
+    .card-head .name { font-weight: 700; font-size: 14.5px; letter-spacing: 0.1px; }
+    .card-head .desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .chips { display: flex; gap: 6px; flex-shrink: 0; }
+    .chip {
+      font-size: 10.5px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase;
+      padding: 4px 9px; border-radius: 100px;
+      border: 1px solid var(--line-strong); color: var(--text-dim);
+    }
+    .chip.on { border-color: rgba(255,107,53,0.5); color: #ffa77f; }
+    .preview {
+      aspect-ratio: 1200 / 630; width: 100%;
+      position: relative; overflow: hidden;
+      background: #000;
+      border-top: 1px solid var(--line);
+    }
+
+    /* ===== Artboards (the 1200x630 OG canvases) ===== */
+    .artboard {
+      width: 1200px; height: 630px;
+      position: absolute; top: 0; left: 0;
+      transform-origin: top left;
+      overflow: hidden;
+      font-family: 'Sora', sans-serif;
       color: #fff;
     }
-    .layout-css-pattern .content-box { z-index: 2; }
-    .layout-css-pattern .brand,
-    .layout-pattern-dots .brand,
-    .layout-pattern-stripes .brand,
-    .layout-pattern-grid .brand,
-    .layout-pattern-zigzag .brand {
-      font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
-      color: var(--rim-color, #667eea); margin-bottom: 18px;
+    .artboard .grain {
+      position: absolute; inset: 0; z-index: 5; pointer-events: none;
+      background-image: var(--grain);
+      opacity: 0.07; mix-blend-mode: overlay;
     }
-    .layout-css-pattern .event-title,
-    .layout-pattern-dots .event-title,
-    .layout-pattern-stripes .event-title,
-    .layout-pattern-grid .event-title,
-    .layout-pattern-zigzag .event-title { font-size: 66px; line-height: 0.95; font-weight: 900; margin-bottom: 20px; }
-    .layout-css-pattern .event-date,
-    .layout-pattern-dots .event-date,
-    .layout-pattern-stripes .event-date,
-    .layout-pattern-grid .event-date,
-    .layout-pattern-zigzag .event-date { font-size: 26px; opacity: 0.9; margin-bottom: 8px; }
-    .layout-css-pattern .event-venue,
-    .layout-pattern-dots .event-venue,
-    .layout-pattern-stripes .event-venue,
-    .layout-pattern-grid .event-venue,
-    .layout-pattern-zigzag .event-venue { font-size: 22px; opacity: 0.8; }
+    .brand-mark { display: inline-flex; align-items: center; gap: 12px; }
+    .brand-mark img { width: 44px; height: 44px; border-radius: 12px; }
+    .brand-mark span { font-size: 22px; font-weight: 700; letter-spacing: 0.2px; }
 
-    /* Favicon colors indicator */
-    .favicon-colors-info { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 14px; background: var(--background-light); border-radius: 10px; font-size: 13px; color: var(--text-secondary); }
-    .favicon-color-swatch { width: 28px; height: 28px; border-radius: 6px; border: 2px solid var(--border-lighter); flex-shrink: 0; }
-    .favicon-colors-info .no-colors { opacity: 0.65; }
-    .pattern-source-note { margin-top: 10px; color: var(--text-secondary); font-size: 13px; line-height: 1.4; }
+    .meta-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .meta-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 21px; font-weight: 600; letter-spacing: 0.3px;
+      padding: 10px 20px; border-radius: 100px;
+      background: rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,0.22);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      white-space: nowrap;
+    }
+    .meta-plain { font-family: 'Space Grotesk', sans-serif; font-size: 23px; font-weight: 500; opacity: 0.92; }
 
-    @media (max-width: 768px) {
-      .controls-grid { grid-template-columns: 1fr; }
-      .variants-grid { grid-template-columns: 1fr; }
-      .page-title { flex-direction: column; align-items: start; }
+    .og-title { font-weight: 800; letter-spacing: -1.5px; line-height: 1.02; margin: 0; text-wrap: balance; }
+    .og-title.t-lg { font-size: 92px; }
+    .og-title.t-md { font-size: 72px; }
+    .og-title.t-sm { font-size: 54px; letter-spacing: -1px; }
+
+    /* --- 1. Aurora Mesh (neat.firecms style) --- */
+    .l-aurora { background: var(--p-deep, #0a0a12); }
+    .l-aurora .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.85; }
+    .l-aurora .b1 { width: 900px; height: 900px; top: -420px; right: -260px; animation: drift1 16s ease-in-out infinite alternate; }
+    .l-aurora .b2 { width: 700px; height: 700px; bottom: -380px; left: -180px; animation: drift2 19s ease-in-out infinite alternate; }
+    .l-aurora .b3 { width: 560px; height: 560px; top: 30%; left: 34%; opacity: 0.6; animation: drift3 14s ease-in-out infinite alternate; }
+    .l-aurora .b4 { width: 460px; height: 460px; bottom: -200px; right: 16%; opacity: 0.55; animation: drift2 22s ease-in-out infinite alternate-reverse; }
+    @keyframes drift1 { from { transform: translate(0,0) scale(1); } to { transform: translate(-140px, 90px) scale(1.15); } }
+    @keyframes drift2 { from { transform: translate(0,0) scale(1); } to { transform: translate(120px, -70px) scale(1.1); } }
+    @keyframes drift3 { from { transform: translate(0,0) scale(1); } to { transform: translate(-90px, -110px) scale(1.25); } }
+    .l-aurora .content {
+      position: absolute; inset: 70px 80px; z-index: 6;
+      display: flex; flex-direction: column; justify-content: flex-end; gap: 28px;
+    }
+    .l-aurora .brand-mark { position: absolute; top: 0; left: 0; }
+    .l-aurora .og-title { text-shadow: 0 6px 40px rgba(0,0,0,0.35); max-width: 950px; }
+
+    /* --- 2. Silk Flow (WebGL shader) --- */
+    .l-silk { background: var(--p-deep, #0a0a12); }
+    .l-silk canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .l-silk .scrim { position: absolute; inset: 0; z-index: 2; background: radial-gradient(90% 90% at 50% 55%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.38) 100%); }
+    .l-silk .content {
+      position: absolute; inset: 70px 90px; z-index: 6;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 30px;
+    }
+    .l-silk .kicker {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 19px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; opacity: 0.9;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .l-silk .kicker img { width: 40px; height: 40px; border-radius: 11px; }
+    .l-silk .og-title { text-shadow: 0 8px 50px rgba(0,0,0,0.45); }
+
+    /* --- 3. Photo Split --- */
+    .l-split { background: var(--p-deep, #0a0a12); display: flex; }
+    .l-split .text-side {
+      width: 56%; position: relative; z-index: 2;
+      padding: 70px 60px 70px 80px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .l-split .text-side .glow {
+      position: absolute; width: 700px; height: 700px; border-radius: 50%;
+      filter: blur(110px); opacity: 0.32; bottom: -350px; left: -260px; pointer-events: none;
+    }
+    .l-split .og-title { max-width: 560px; }
+    .l-split .bottom { display: flex; flex-direction: column; gap: 26px; }
+    .l-split .photo-side { width: 44%; position: relative; }
+    .l-split .photo {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%);
+    }
+    .l-split .photo::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(105deg, var(--p-deep-a, rgba(10,10,18,0.9)) 0%, transparent 45%);
+    }
+    .l-split .edge {
+      position: absolute; left: -3px; top: 0; bottom: 0; width: 96px; z-index: 3;
+      clip-path: polygon(12% 0, 20% 0, 8% 100%, 0 100%);
+    }
+
+    /* --- 4. Poster Wash --- */
+    .l-poster { background: var(--p-deep, #0a0a12); }
+    .l-poster .photo { position: absolute; inset: 0; background-size: cover; background-position: center 30%; }
+    .l-poster .wash { position: absolute; inset: 0; z-index: 2; }
+    .l-poster .content {
+      position: absolute; inset: 64px 80px; z-index: 6;
+      display: flex; flex-direction: column; justify-content: flex-end; gap: 26px;
+    }
+    .l-poster .top-row { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; }
+    .l-poster .date-tag {
+      font-family: 'Space Grotesk', sans-serif;
+      display: inline-flex; flex-direction: column; align-items: center; line-height: 1;
+      background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 16px 22px; border-radius: 18px;
+    }
+    .l-poster .date-tag .d1 { font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; opacity: 0.85; margin-bottom: 7px; }
+    .l-poster .date-tag .d2 { font-size: 30px; font-weight: 700; }
+    .l-poster .og-title { max-width: 900px; text-shadow: 0 6px 36px rgba(0,0,0,0.5); }
+
+    /* --- 5. Editorial Minimal --- */
+    .l-editorial { background: #f7f5f2; color: #131217; }
+    .l-editorial .content {
+      position: absolute; inset: 64px 80px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .l-editorial .head { display: flex; justify-content: space-between; align-items: center; }
+    .l-editorial .brand-mark span { color: #131217; }
+    .l-editorial .city-tag {
+      font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase; color: #6d6a75;
+    }
+    .l-editorial .og-title { color: #131217; letter-spacing: -2.5px; }
+    .l-editorial .accent-bar { height: 12px; width: 220px; border-radius: 100px; margin-bottom: 34px; }
+    .l-editorial .meta-plain { color: #3c3a44; }
+    .l-editorial .meta-row { gap: 26px; }
+    .l-editorial .orb {
+      position: absolute; width: 520px; height: 520px; border-radius: 50%;
+      right: -160px; bottom: -220px; filter: blur(70px); opacity: 0.5; pointer-events: none;
+      animation: drift3 18s ease-in-out infinite alternate;
+    }
+    .l-editorial .photo-chip {
+      position: absolute; right: 80px; top: 150px;
+      width: 300px; height: 300px; border-radius: 28px;
+      background-size: cover; background-position: center;
+      box-shadow: 0 30px 60px rgba(19,18,23,0.25);
+      transform: rotate(3deg);
+      border: 6px solid #fff;
+    }
+
+    /* --- 6. Glass Badge --- */
+    .l-glass { background: var(--p-deep, #0a0a12); }
+    .l-glass .bg-photo { position: absolute; inset: -40px; background-size: cover; background-position: center; filter: blur(26px) brightness(0.62) saturate(1.15); transform: scale(1.1); }
+    .l-glass .bg-tint { position: absolute; inset: 0; z-index: 1; opacity: 0.3; }
+    .l-glass .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.7; }
+    .l-glass .b1 { width: 700px; height: 700px; top: -300px; left: -200px; animation: drift2 17s ease-in-out infinite alternate; }
+    .l-glass .b2 { width: 600px; height: 600px; bottom: -280px; right: -160px; animation: drift1 20s ease-in-out infinite alternate; }
+    .l-glass .card-glass {
+      position: absolute; inset: 74px 130px; z-index: 6;
+      border-radius: 34px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.28);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+      display: flex; flex-direction: column; justify-content: center; gap: 28px;
+      padding: 56px 70px;
+    }
+    .l-glass .card-glass .brand-mark { position: absolute; top: 42px; left: 70px; opacity: 0.95; }
+    .l-glass .og-title { text-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+
+    /* ===== Classics — the six layouts from the previous version, recolored by palette ===== */
+    .section-divider {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 14px;
+      margin-top: 10px;
+      color: var(--text-dim); font-size: 12px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+    }
+    .section-divider::before, .section-divider::after { content: ''; height: 1px; background: var(--line-strong); flex: 1; }
+
+    /* Classic: Split Screen */
+    .l-c-split { background: #000; }
+    .l-c-split .left-side { position: absolute; left: 0; top: 0; bottom: 0; width: 55%; clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%); z-index: 1; }
+    .l-c-split .left-side .cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.3; }
+    .l-c-split .left-content { position: absolute; left: 60px; top: 60px; bottom: 60px; width: 420px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+    .l-c-split .brand { font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; opacity: 0.9; }
+    .l-c-split .event-title { font-size: 64px; line-height: 0.95; font-weight: 800; margin-bottom: 20px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .l-c-split .event-date { font-size: 24px; opacity: 0.9; margin-bottom: 10px; }
+    .l-c-split .venue { font-size: 20px; opacity: 0.8; }
+    .l-c-split .right-side { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; display: flex; align-items: center; justify-content: center; z-index: 0; }
+    .l-c-split .event-image { width: 400px; height: 500px; background-size: cover; background-position: center; box-shadow: -20px 0 60px rgba(0,0,0,0.5); }
+
+    /* Classic: Glass Card */
+    .l-c-glass .cover { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.6); }
+    .l-c-glass .glass { position: absolute; inset: 80px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 24px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .l-c-glass .glass .inner { position: absolute; inset: 0; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
+    .l-c-glass .event-title { font-size: 72px; font-weight: 800; line-height: 0.95; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
+    .l-c-glass .event-date { margin-top: 16px; font-size: 26px; opacity: 0.95; }
+    .l-c-glass .venue { margin-top: 8px; font-size: 22px; opacity: 0.85; }
+
+    /* Classic: Bold & Centered */
+    .l-c-bold { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px; }
+    .l-c-bold .event-title { font-size: 84px; font-weight: 800; line-height: 0.9; text-shadow: 0 8px 40px rgba(0,0,0,0.4); margin-bottom: 30px; }
+    .l-c-bold .event-details { font-size: 32px; opacity: 0.95; line-height: 1.4; margin-bottom: 20px; }
+    .l-c-bold .event-venue { font-size: 28px; opacity: 0.85; }
+    .l-c-bold .logo-stamp { position: absolute; bottom: 60px; right: 60px; width: 80px; height: 80px; object-fit: contain; opacity: 0.8; }
+
+    /* Classic: Side by Side */
+    .l-c-side { display: flex; }
+    .l-c-side .left-panel { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); }
+    .l-c-side .right-panel { flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: center; }
+    .l-c-side .event-title { font-size: 56px; font-weight: 800; line-height: 1; margin-bottom: 24px; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .l-c-side .event-date { font-size: 28px; opacity: 0.95; margin-bottom: 12px; }
+    .l-c-side .event-venue { font-size: 24px; opacity: 0.9; margin-bottom: 24px; }
+    .l-c-side .description { font-size: 20px; opacity: 0.85; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .l-c-side .chunky-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 30px; }
+
+    /* Classic: Banner */
+    .l-c-banner .banner-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(0.4) blur(2px); }
+    .l-c-banner .banner-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 80px; }
+    .l-c-banner .brand-logo { width: 100px; height: 100px; object-fit: contain; margin-bottom: 40px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
+    .l-c-banner .event-title { font-size: 72px; font-weight: 800; line-height: 0.95; margin-bottom: 30px; text-shadow: 0 6px 30px rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: -1px; }
+    .l-c-banner .event-info { font-size: 32px; opacity: 0.95; margin-bottom: 12px; font-weight: 600; }
+    .l-c-banner .event-cta { background: #fff; color: #111; padding: 16px 40px; border-radius: 50px; font-size: 24px; font-weight: 700; margin-top: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+
+    /* Classic: CSS Pattern */
+    .l-c-pattern { background: #000; }
+    .l-c-pattern .pattern-bg { position: absolute; inset: 0; z-index: 0; background-color: #06060a; }
+    .l-c-pattern .pattern-vignette { position: absolute; inset: 0; z-index: 1; background: radial-gradient(circle at 50% 45%, rgba(0,0,0,0) 0 45%, rgba(0,0,0,0.35) 100%); pointer-events: none; }
+    .l-c-pattern .content-box {
+      position: absolute; inset: 55px; z-index: 2;
+      background: rgba(0,0,0,1); border-radius: 18px;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 60px 72px;
+    }
+    .l-c-pattern .brand { font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 18px; }
+    .l-c-pattern .event-title { font-size: 66px; line-height: 0.95; font-weight: 800; margin-bottom: 20px; }
+    .l-c-pattern .event-date { font-size: 26px; opacity: 0.9; margin-bottom: 8px; }
+    .l-c-pattern .event-venue { font-size: 22px; opacity: 0.8; }
+
+    /* pause all artboard animation when toggled off */
+    body.anims-off .artboard * { animation-play-state: paused !important; }
+
+    .empty-note {
+      padding: 60px 20px; text-align: center; color: var(--text-dim);
+      border: 1px dashed var(--line-strong); border-radius: 16px; font-size: 15px;
+    }
+
+    footer.page-foot { margin-top: 40px; text-align: center; color: var(--text-dim); font-size: 13px; }
+
+    @media (max-width: 1400px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 1100px) {
+      .controls { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .shell { padding: 18px 14px 60px; }
+      .controls { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <nav>
-      <div class="nav-container">
-        <div class="logo">
-          <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad</a></h1>
-        </div>
-      </div>
-    </nav>
+  <header class="topbar">
+    <a class="home" href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo"> chunky.dad</a>
+    <div class="sep"></div>
+    <div class="page-name"><strong>OG Image Studio</strong> · testing toolbox</div>
   </header>
 
-  <main>
-    <div class="container">
-      <div class="page-title">
-        <div>
-          <h2>🎨 OpenGraph Image Studio</h2>
-          <div class="subtitle">Create stunning social media preview images for your events • downloaded CSS Pattern backgrounds included</div>
-        </div>
-      </div>
-
-      <div class="controls-panel">
-        <div class="controls-section">
-          <h3>📍 Event Selection</h3>
-          <div class="controls-grid">
-            <div class="control-field">
-              <label for="citySelect">City</label>
-              <select id="citySelect"></select>
-            </div>
-            <div class="control-field" style="grid-column: span 2;">
-              <label for="eventSelect">Event</label>
-              <select id="eventSelect"></select>
-            </div>
-            <div class="control-field">
-              <label for="eventSearch">Search Events</label>
-              <input id="eventSearch" type="text" placeholder="Type to filter...">
-            </div>
-          </div>
-          <div class="button-group" style="margin-top: 12px;">
-            <button id="reloadBtn" class="btn">🔄 Reload Events</button>
-            <button id="randomBtn" class="btn">🎲 Random Event</button>
-          </div>
-        </div>
-
-        <div class="controls-section">
-          <h3>🎨 Color Theme</h3>
-          <div class="theme-picker">
-            <div class="theme-option theme-classic-night" data-theme="classic-night">
-              <div class="theme-name">Classic Night</div>
-            </div>
-            <div class="theme-option theme-cool-neon" data-theme="cool-neon">
-              <div class="theme-name">Cool Neon</div>
-            </div>
-            <div class="theme-option theme-hot-red" data-theme="hot-red">
-              <div class="theme-name">Hot Red</div>
-            </div>
-            <div class="theme-option theme-midnight" data-theme="midnight">
-              <div class="theme-name">Midnight</div>
-            </div>
-            <div class="theme-option theme-spotlight" data-theme="spotlight">
-              <div class="theme-name">Spotlight</div>
-            </div>
-            <div class="theme-option theme-sunset" data-theme="sunset">
-              <div class="theme-name">Sunset</div>
-            </div>
-            <div class="theme-option theme-ocean" data-theme="ocean">
-              <div class="theme-name">Ocean</div>
-            </div>
-            <div class="theme-option theme-forest" data-theme="forest">
-              <div class="theme-name">Forest</div>
-            </div>
-            <div class="theme-option theme-fire" data-theme="fire">
-              <div class="theme-name">Fire</div>
-            </div>
-            <div class="theme-option theme-blurple" data-theme="blurple">
-              <div class="theme-name">Blurple</div>
-            </div>
-            <div class="theme-option theme-pastel" data-theme="pastel">
-              <div class="theme-name">Pastel</div>
-            </div>
-            <div class="theme-option theme-blue-bolt" data-theme="blue-bolt">
-              <div class="theme-name">Blue Bolt</div>
-            </div>
-            <div class="theme-option theme-green-glow" data-theme="green-glow">
-              <div class="theme-name">Green Glow</div>
-            </div>
-            <div class="theme-option theme-rainbow" data-theme="rainbow">
-              <div class="theme-name">Rainbow</div>
-            </div>
-            <div class="theme-option theme-emerald" data-theme="emerald">
-              <div class="theme-name">Emerald</div>
-            </div>
-            <div class="theme-option theme-purple-haze" data-theme="purple-haze">
-              <div class="theme-name">Purple Haze</div>
-            </div>
-            <div class="theme-option theme-rose-gold" data-theme="rose-gold">
-              <div class="theme-name">Rose Gold</div>
-            </div>
-            <div class="theme-option theme-teal-sea" data-theme="teal-sea">
-              <div class="theme-name">Teal Sea</div>
-            </div>
-            <div class="theme-option theme-dark-purple" data-theme="dark-purple">
-              <div class="theme-name">Dark Purple</div>
-            </div>
-            <div class="theme-option theme-custom" data-theme="custom">
-              <div class="theme-name">Custom ✨</div>
-            </div>
-            <div class="theme-option theme-favicon" data-theme="favicon">
-              <div class="theme-name">Favicon 🎨</div>
-            </div>
-          </div>
-          <div class="custom-colors" style="margin-top: 16px;">
-            <div class="color-picker-field control-field">
-              <label for="customA">Custom Color 1</label>
-              <div class="color-input-wrapper">
-                <input id="customA" type="color" value="#8e2de2">
-              </div>
-            </div>
-            <div class="color-picker-field control-field">
-              <label for="customB">Custom Color 2</label>
-              <div class="color-input-wrapper">
-                <input id="customB" type="color" value="#4a00e0">
-              </div>
-            </div>
-          </div>
-          <div class="favicon-colors-info" id="faviconColorsInfo">
-            <div class="favicon-color-swatch" id="faviconSwatchBg" style="display:none;"></div>
-            <div class="favicon-color-swatch" id="faviconSwatchFg" style="display:none;"></div>
-            <span id="faviconColorsText"><span class="no-colors">Select an event to detect its favicon colors</span></span>
-          </div>
-        </div>
-
-        <div class="controls-section">
-          <h3>🧩 CSS Pattern Background</h3>
-          <div class="controls-grid">
-            <div class="control-field" style="grid-column: span 2;">
-              <label for="cssPatternSelect">Downloaded pattern</label>
-              <select id="cssPatternSelect">
-                <option>Loading CSS patterns...</option>
-              </select>
-            </div>
-            <div class="control-field">
-              <label for="cssPatternSize">Pattern size</label>
-              <input id="cssPatternSize" type="range" min="20" max="260" value="90">
-            </div>
-          </div>
-          <div class="pattern-source-note" id="cssPatternMeta">Patterns load from the local downloaded CSS Pattern data file.</div>
-        </div>
-
-        <div class="controls-section">
-          <h3>🖼️ Cover Image</h3>
-          <div class="control-field full">
-            <label for="coverInput">Image URL (optional - uses event image if available)</label>
-            <input id="coverInput" type="url" placeholder="https://example.com/image.jpg">
-          </div>
-        </div>
-      </div>
-
-      <section class="variants-grid" id="variantsGrid"></section>
+  <main class="shell">
+    <div class="hero">
+      <h1>OpenGraph Image Studio</h1>
+      <p>Six candidate designs for event share images (1200×630). Each sample pulls the selected event's promo image when one exists, and builds its palette from the favicon colors we scrape for the event or its venue.</p>
     </div>
+
+    <div class="controls">
+      <div class="field">
+        <label for="citySelect">City</label>
+        <select id="citySelect"></select>
+      </div>
+      <div class="field">
+        <label for="eventSelect">Event</label>
+        <select id="eventSelect"></select>
+      </div>
+      <div class="field">
+        <label for="eventSearch">Filter</label>
+        <input id="eventSearch" type="text" placeholder="Type to filter events…">
+      </div>
+      <div class="btn-row">
+        <button id="randomBtn" class="btn primary">🎲 Random</button>
+        <button id="reloadBtn" class="btn" title="Reload events">↻</button>
+      </div>
+    </div>
+
+    <div class="controls-secondary">
+      <div class="palette-block">
+        <div class="palette-label">Palette</div>
+        <div class="palette-strip" id="paletteStrip"></div>
+        <div class="palette-source" id="paletteSource"></div>
+      </div>
+      <div class="field">
+        <label>Override colors</label>
+        <div class="color-mini">
+          <input id="overrideA" type="color" value="#ff6b35" title="Primary override">
+          <input id="overrideB" type="color" value="#f7931e" title="Secondary override">
+          <div class="toggle-field" style="padding-bottom:0;">
+            <input id="overrideOn" type="checkbox">
+            <label for="overrideOn">Use overrides</label>
+          </div>
+        </div>
+      </div>
+      <div class="field grow">
+        <label for="coverInput">Image URL override (blank = event image)</label>
+        <input id="coverInput" type="url" placeholder="https://example.com/promo.jpg">
+      </div>
+      <div class="field">
+        <label for="cssPatternSelect">Classic pattern bg</label>
+        <select id="cssPatternSelect"><option>Loading…</option></select>
+      </div>
+      <div class="toggle-field">
+        <input id="animsOn" type="checkbox" checked>
+        <label for="animsOn">Animate gradients</label>
+      </div>
+    </div>
+
+    <section class="grid" id="grid"></section>
+
+    <footer class="page-foot">Artboards are true 1200×630 compositions scaled to fit — what you see is what the OG crop gets.</footer>
   </main>
 
   <script src="../js/logger.js"></script>
@@ -400,25 +524,102 @@
   <script>
     (function(){
       const COMPONENT = 'EVENT';
-      logger.componentInit(COMPONENT, 'OpenGraph Image Studio initialized');
+      logger.componentInit(COMPONENT, 'OG Image Studio initialized');
 
       const citySelect = document.getElementById('citySelect');
       const eventSelect = document.getElementById('eventSelect');
       const eventSearch = document.getElementById('eventSearch');
       const reloadBtn = document.getElementById('reloadBtn');
       const randomBtn = document.getElementById('randomBtn');
-      const customA = document.getElementById('customA');
-      const customB = document.getElementById('customB');
-      const cssPatternSelect = document.getElementById('cssPatternSelect');
-      const cssPatternSize = document.getElementById('cssPatternSize');
-      const cssPatternMeta = document.getElementById('cssPatternMeta');
       const coverInput = document.getElementById('coverInput');
-      const grid = document.getElementById('variantsGrid');
-      const themeOptions = document.querySelectorAll('.theme-option');
+      const overrideA = document.getElementById('overrideA');
+      const overrideB = document.getElementById('overrideB');
+      const overrideOn = document.getElementById('overrideOn');
+      const animsOn = document.getElementById('animsOn');
+      const cssPatternSelect = document.getElementById('cssPatternSelect');
+      const paletteStrip = document.getElementById('paletteStrip');
+      const paletteSource = document.getElementById('paletteSource');
+      const grid = document.getElementById('grid');
 
-      let currentTheme = 'classic-night';
+      // ---------- color utilities ----------
+      function hexToRgb(hex) {
+        const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+        if (!m) return null;
+        const n = parseInt(m[1], 16);
+        return [n >> 16 & 255, n >> 8 & 255, n & 255];
+      }
+      function rgbToHex(r, g, b) {
+        const c = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+        return `#${c(r)}${c(g)}${c(b)}`;
+      }
+      function rgbToHsl(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0;
+        const l = (max + min) / 2;
+        if (max !== min) {
+          const d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)); break;
+            case g: h = (b - r) / d + 2; break;
+            default: h = (r - g) / d + 4;
+          }
+          h *= 60;
+        }
+        return [h, s, l];
+      }
+      function hslToHex(h, s, l) {
+        h = ((h % 360) + 360) % 360;
+        s = Math.max(0, Math.min(1, s));
+        l = Math.max(0, Math.min(1, l));
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        const m = l - c / 2;
+        let rgb;
+        if (h < 60) rgb = [c, x, 0];
+        else if (h < 120) rgb = [x, c, 0];
+        else if (h < 180) rgb = [0, c, x];
+        else if (h < 240) rgb = [0, x, c];
+        else if (h < 300) rgb = [x, 0, c];
+        else rgb = [c, 0, x];
+        return rgbToHex((rgb[0] + m) * 255, (rgb[1] + m) * 255, (rgb[2] + m) * 255);
+      }
+      function adjust(hex, opts) {
+        const rgb = hexToRgb(hex);
+        if (!rgb) return hex;
+        const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+        return hslToHex(
+          hsl[0] + (opts.h || 0),
+          opts.s !== undefined ? opts.s : hsl[1],
+          opts.l !== undefined ? opts.l : hsl[2]
+        );
+      }
+      function hexToRgba(hex, alpha) {
+        const rgb = hexToRgb(hex);
+        if (!rgb) return `rgba(255,255,255,${alpha})`;
+        return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+      }
+      function hexToVec3(hex) {
+        const rgb = hexToRgb(hex) || [255, 107, 53];
+        return rgb.map(v => v / 255);
+      }
+      function hueDistance(a, b) {
+        const ha = rgbToHsl.apply(null, hexToRgb(a) || [0, 0, 0])[0];
+        const hb = rgbToHsl.apply(null, hexToRgb(b) || [0, 0, 0])[0];
+        const d = Math.abs(ha - hb) % 360;
+        return Math.min(d, 360 - d);
+      }
+      function escapeHtml(str) {
+        return String(str || '').replace(/[&<>"']/g, ch => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[ch]);
+      }
+      function cssUrl(url) {
+        return String(url || '').replace(/[\\"'()\s]/g, m => encodeURIComponent(m));
+      }
 
-      class CreativeCalendarPreview extends DynamicCalendarLoader {
+      class OgImageStudio extends DynamicCalendarLoader {
         constructor() {
           super();
           this.currentCity = this.getInitialCityFromUrl();
@@ -426,6 +627,7 @@
           this.selectedEvent = null;
           this.eventColorsMap = new Map();
           this.barColorsMap = new Map();
+          this.anims = [];
           this.cssPatterns = [];
           this.currentCssPattern = null;
         }
@@ -441,13 +643,15 @@
         }
 
         async init() {
+          try {
+            const imgParam = new URLSearchParams(window.location.search).get('img');
+            if (imgParam) coverInput.value = imgParam;
+          } catch (e) {}
           this.populateCities();
+          this.attachHandlers();
           await this.loadCssPatterns();
           await this.loadCity(this.currentCity);
-          this.attachHandlers();
-          this.updateThemeVars();
-          this.render();
-          logger.componentLoad(COMPONENT, 'OpenGraph studio ready');
+          logger.componentLoad(COMPONENT, 'OG Image Studio ready');
         }
 
         populateCities() {
@@ -456,54 +660,8 @@
           citySelect.value = this.currentCity;
         }
 
-        async loadCssPatterns() {
-          try {
-            const response = await fetch('../data/css-patterns.json');
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-            const data = await response.json();
-            this.cssPatterns = Array.isArray(data.patterns)
-              ? data.patterns.filter(pattern => this.isSafeCssPattern(pattern))
-              : [];
-            this.currentCssPattern = this.cssPatterns[0] || null;
-            this.populateCssPatternSelect();
-            logger.componentLoad(COMPONENT, 'Loaded CSS Pattern backgrounds', { count: this.cssPatterns.length });
-          } catch (e) {
-            this.cssPatterns = [];
-            this.currentCssPattern = null;
-            cssPatternSelect.innerHTML = '<option>No CSS patterns loaded</option>';
-            cssPatternSelect.disabled = true;
-            cssPatternMeta.textContent = 'Could not load downloaded CSS Pattern data.';
-            logger.componentError(COMPONENT, 'Failed to load CSS Pattern backgrounds', e);
-          }
-        }
-
-        populateCssPatternSelect() {
-          if (!this.cssPatterns.length) {
-            cssPatternSelect.innerHTML = '<option>No CSS patterns loaded</option>';
-            cssPatternSelect.disabled = true;
-            return;
-          }
-
-          cssPatternSelect.disabled = false;
-          cssPatternSelect.innerHTML = this.cssPatterns
-            .map(pattern => `<option value="${pattern.id}">${pattern.name}</option>`)
-            .join('');
-          cssPatternSelect.value = this.currentCssPattern.id;
-          this.syncCssPatternControls();
-        }
-
-        syncCssPatternControls() {
-          if (!this.currentCssPattern) return;
-
-          if (this.currentCssPattern.size) {
-            cssPatternSize.value = Math.max(20, Math.min(260, this.currentCssPattern.size));
-          }
-          cssPatternMeta.textContent = `${this.cssPatterns.length} downloaded patterns available. Current source: ${this.currentCssPattern.source}`;
-        }
-
         async loadCity(cityKey) {
-          logger.apiCall('CALENDAR', 'Loading calendar for OpenGraph studio', { cityKey });
+          logger.apiCall('CALENDAR', 'Loading calendar for OG studio', { cityKey });
           this.currentCity = cityKey;
           const data = await this.loadCalendarData(cityKey);
           await this.loadFaviconColors(cityKey);
@@ -523,12 +681,11 @@
         }
 
         populateEventSelect() {
-          const options = this.filteredEvents.map((ev, idx) => {
+          eventSelect.innerHTML = this.filteredEvents.map((ev, idx) => {
             const venue = ev.bar ? ` @ ${ev.bar}` : '';
-            const time = ev.time ? ` · ${ev.time}` : '';
-            return `<option value="${idx}">${(ev.name || 'Unnamed Event')}${venue}${time}</option>`;
+            const marks = [ev.image ? '🖼' : null, this.lookupFaviconColors(ev) ? '🎨' : null].filter(Boolean).join('');
+            return `<option value="${idx}">${escapeHtml(ev.name || 'Unnamed Event')}${escapeHtml(venue)}${marks ? ' ' + marks : ''}</option>`;
           }).join('');
-          eventSelect.innerHTML = options;
           eventSelect.selectedIndex = 0;
         }
 
@@ -545,20 +702,6 @@
           this.render();
         }
 
-        getPreviewData() {
-          const ev = this.selectedEvent || {};
-          return {
-            event: ev.name || 'Bear Event',
-            venue: ev.bar || 'Venue',
-            date: ev.day || 'Date TBA',
-            time: ev.time || 'Time TBA',
-            city: getCityConfig(this.currentCity)?.name || 'City',
-            description: ev.tea || 'Join us for an amazing bear community event!',
-            cover: (coverInput.value || '').trim() || (ev.image || '').trim(),
-            faviconColors: this.getFaviconColors()
-          };
-        }
-
         async loadFaviconColors(cityKey) {
           this.eventColorsMap = new Map();
           this.barColorsMap = new Map();
@@ -571,7 +714,7 @@
               const entries = await evRes.value.json();
               for (const entry of entries) {
                 if (entry.slug && entry.faviconBg) {
-                  this.eventColorsMap.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff' });
+                  this.eventColorsMap.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff', source: 'event favicon' });
                 }
               }
             }
@@ -579,7 +722,7 @@
               const bars = await barRes.value.json();
               for (const bar of bars) {
                 if (bar.name && bar.faviconBg) {
-                  this.barColorsMap.set(bar.name.toLowerCase(), { bg: bar.faviconBg, fg: bar.faviconFg || '#ffffff' });
+                  this.barColorsMap.set(bar.name.toLowerCase(), { bg: bar.faviconBg, fg: bar.faviconFg || '#ffffff', source: 'venue favicon' });
                 }
               }
             }
@@ -589,41 +732,33 @@
           }
         }
 
-        getFaviconColors() {
-          const ev = this.selectedEvent || {};
-          if (ev.slug && this.eventColorsMap.has(ev.slug)) {
-            return this.eventColorsMap.get(ev.slug);
+        // ---------- downloaded css-pattern.com backgrounds (classic layout) ----------
+        async loadCssPatterns() {
+          try {
+            const response = await fetch('../data/css-patterns.json');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            this.cssPatterns = Array.isArray(data.patterns)
+              ? data.patterns.filter(pattern => this.isSafeCssPattern(pattern))
+              : [];
+            this.currentCssPattern = this.cssPatterns[0] || null;
+            if (this.cssPatterns.length) {
+              cssPatternSelect.innerHTML = this.cssPatterns
+                .map(pattern => `<option value="${pattern.id}">${escapeHtml(pattern.name)}</option>`)
+                .join('');
+              cssPatternSelect.value = this.currentCssPattern.id;
+            } else {
+              cssPatternSelect.innerHTML = '<option>No patterns loaded</option>';
+              cssPatternSelect.disabled = true;
+            }
+            logger.componentLoad(COMPONENT, 'Loaded CSS Pattern backgrounds', { count: this.cssPatterns.length });
+          } catch (e) {
+            this.cssPatterns = [];
+            this.currentCssPattern = null;
+            cssPatternSelect.innerHTML = '<option>No patterns loaded</option>';
+            cssPatternSelect.disabled = true;
+            logger.componentError(COMPONENT, 'Failed to load CSS Pattern backgrounds', e);
           }
-          if (ev.bar && this.barColorsMap.has(ev.bar.toLowerCase())) {
-            return this.barColorsMap.get(ev.bar.toLowerCase());
-          }
-          return null;
-        }
-
-        hexToRgba(hex, alpha) {
-          if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return `rgba(255,255,255,${alpha})`;
-          const r = parseInt(hex.slice(1,3), 16);
-          const g = parseInt(hex.slice(3,5), 16);
-          const b = parseInt(hex.slice(5,7), 16);
-          return `rgba(${r},${g},${b},${alpha})`;
-        }
-
-        getRimColorForTheme() {
-          const THEME_COLORS = {
-            'classic-night': '#ff6b35', 'cool-neon': '#00d4ff', 'hot-red': '#ff416c',
-            'midnight': '#667eea', 'spotlight': '#f093fb', 'sunset': '#ff512f',
-            'ocean': '#6dd5ed', 'forest': '#71b280', 'fire': '#f5af19',
-            'blurple': '#8e2de2', 'pastel': '#ff9a9e', 'blue-bolt': '#00c6ff',
-            'green-glow': '#96c93d', 'rainbow': '#ee0979', 'emerald': '#99f2c8',
-            'purple-haze': '#764ba2', 'rose-gold': '#f45c43', 'teal-sea': '#38ef7d',
-            'dark-purple': '#8e6db4'
-          };
-          if (currentTheme === 'custom') return customA.value || '#8e2de2';
-          if (currentTheme === 'favicon') {
-            const fc = this.getFaviconColors();
-            return fc ? fc.bg : '#667eea';
-          }
-          return THEME_COLORS[currentTheme] || '#667eea';
         }
 
         isSafeCssPattern(pattern) {
@@ -659,29 +794,533 @@
             ));
         }
 
-        getCssPatternPalette(pattern) {
-          const fc = this.getFaviconColors();
-          const defaults = Object.values(pattern?.colors || {}).filter(color => /^#[0-9a-fA-F]{6}$/.test(color));
-          const themed = currentTheme === 'favicon' && fc
-            ? [fc.bg, fc.fg || '#ffffff', '#06060a']
-            : [this.getRimColorForTheme(), customB.value || '#06060a', '#06060a', '#f8f8ff'];
-          return [...themed, ...defaults];
-        }
-
-        applyCssPattern(element) {
+        applyCssPattern(element, p) {
           if (!element || !this.currentCssPattern) return;
-
           element.removeAttribute('style');
           this.parseCssDeclarations(this.currentCssPattern.declarations).forEach(({ property, value }) => {
             element.style.setProperty(property, value);
           });
-
-          const palette = this.getCssPatternPalette(this.currentCssPattern);
+          const palette = [p.bg, p.fg, p.deep, '#f8f8ff'];
           Object.keys(this.currentCssPattern.colors || {}).forEach((key, index) => {
             const color = palette[index] || this.currentCssPattern.colors[key];
             element.style.setProperty(`--css-pattern-color-${index + 1}`, color);
           });
-          element.style.setProperty('--css-pattern-size', `${cssPatternSize.value}px`);
+          element.style.setProperty('--css-pattern-size', `${this.currentCssPattern.size || 90}px`);
+        }
+
+        lookupFaviconColors(ev) {
+          if (!ev) return null;
+          if (ev.slug && this.eventColorsMap.has(ev.slug)) return this.eventColorsMap.get(ev.slug);
+          if (ev.bar && this.barColorsMap.has(ev.bar.toLowerCase())) return this.barColorsMap.get(ev.bar.toLowerCase());
+          return null;
+        }
+
+        // Build a full palette from scraped favicon colors (or overrides / brand fallback)
+        getPalette() {
+          let bg, fg, source;
+          if (overrideOn.checked) {
+            bg = overrideA.value; fg = overrideB.value; source = 'manual override';
+          } else {
+            const fc = this.lookupFaviconColors(this.selectedEvent);
+            if (fc) { bg = fc.bg; fg = fc.fg; source = fc.source; }
+            else { bg = '#ff6b35'; fg = '#f7931e'; source = 'chunky.dad fallback (no favicon colors)'; }
+          }
+          // Near-white/black/grey favicons have no meaningful hue — rotating them
+          // invents random colors, so prefer the fg or fall back to brand
+          const isNeutral = hex => {
+            const rgb = hexToRgb(hex);
+            if (!rgb) return true;
+            const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+            return hsl[1] < 0.12 || hsl[2] > 0.92 || hsl[2] < 0.08;
+          };
+          if (source !== 'manual override' && isNeutral(bg)) {
+            if (!isNeutral(fg)) {
+              bg = fg;
+              source += ' (fg color — bg too neutral)';
+            } else {
+              bg = '#ff6b35'; fg = '#f7931e';
+              source += ' — neutral, using brand fallback';
+            }
+          }
+          // Favicon bg/fg are often near-identical; synthesize a companion hue when they are
+          if (!hexToRgb(fg) || hueDistance(bg, fg) < 18) {
+            fg = adjust(bg, { h: 42, l: 0.62, s: 0.85 });
+          }
+          const bgHsl = rgbToHsl.apply(null, hexToRgb(bg) || [255, 107, 53]);
+          const c1 = adjust(bg, { s: Math.min(1, bgHsl[1] + 0.15), l: 0.55 });
+          const c2 = adjust(fg, { l: 0.62 });
+          const c3 = adjust(bg, { h: 55, l: 0.6, s: 0.8 });
+          const c4 = adjust(bg, { h: -60, l: 0.45, s: 0.75 });
+          const deep = adjust(bg, { l: 0.07, s: 0.45 });
+          const deepAlt = adjust(bg, { h: -30, l: 0.11, s: 0.5 });
+          return { bg, fg, c1, c2, c3, c4, deep, deepAlt, source };
+        }
+
+        getPreviewData() {
+          const ev = this.selectedEvent || {};
+          const title = (ev.shortName || ev.name || 'Bear Event').trim();
+          return {
+            title,
+            titleClass: title.length > 30 ? 't-sm' : (title.length > 16 ? 't-md' : 't-lg'),
+            venue: ev.bar || 'Venue TBA',
+            date: ev.day || 'Date TBA',
+            time: ev.time || '',
+            city: getCityConfig(this.currentCity)?.name || 'City',
+            description: ev.tea || 'Join us for an amazing bear community event!',
+            cover: (coverInput.value || '').trim() || (ev.image || '').trim()
+          };
+        }
+
+        // ---------- rendering ----------
+        stopAnims() {
+          this.anims.forEach(a => {
+            if (a.raf) cancelAnimationFrame(a.raf);
+            if (a.gl) {
+              const ext = a.gl.getExtension('WEBGL_lose_context');
+              if (ext) ext.loseContext();
+            }
+          });
+          this.anims = [];
+        }
+
+        renderPaletteStrip(p) {
+          paletteStrip.innerHTML = [p.bg, p.fg, p.c3, p.c4, p.deep]
+            .map(hex => `<div class="swatch" data-hex="${hex}" style="background:${hex}"></div>`)
+            .join('');
+          paletteSource.innerHTML = `Source: <b>${escapeHtml(p.source)}</b>`;
+        }
+
+        variants(data, p) {
+          const hasImage = !!data.cover;
+          const img = cssUrl(data.cover);
+          const brand = `
+            <div class="brand-mark">
+              <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad">
+              <span>chunky.dad</span>
+            </div>`;
+          const metaPills = `
+            <div class="meta-row">
+              <div class="meta-pill">📅 ${escapeHtml(data.date)}${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
+              <div class="meta-pill">📍 ${escapeHtml(data.venue)}</div>
+            </div>`;
+
+          return [
+            {
+              key: 'aurora',
+              name: 'Aurora Mesh',
+              desc: 'Drifting mesh gradient built from the scraped palette (neat.firecms vibe)',
+              chips: ['favicon colors', 'animated'],
+              html: `
+                <div class="artboard l-aurora" style="--p-deep:${p.deep}">
+                  <div class="blob b1" style="background:radial-gradient(circle at 40% 40%, ${p.c1}, transparent 70%)"></div>
+                  <div class="blob b2" style="background:radial-gradient(circle at 60% 40%, ${p.c4}, transparent 70%)"></div>
+                  <div class="blob b3" style="background:radial-gradient(circle at 50% 50%, ${p.c2}, transparent 70%)"></div>
+                  <div class="blob b4" style="background:radial-gradient(circle at 50% 50%, ${p.c3}, transparent 70%)"></div>
+                  <div class="grain"></div>
+                  <div class="content">
+                    ${brand}
+                    <h2 class="og-title ${data.titleClass}">${escapeHtml(data.title)}</h2>
+                    ${metaPills}
+                  </div>
+                </div>`
+            },
+            {
+              key: 'silk',
+              name: 'Silk Flow',
+              desc: 'WebGL flow-noise shader in event colors (ksenia-k codepen vibe)',
+              chips: ['favicon colors', 'shader'],
+              html: `
+                <div class="artboard l-silk" style="--p-deep:${p.deep}">
+                  <canvas class="silk-canvas" width="600" height="315"></canvas>
+                  <div class="scrim"></div>
+                  <div class="grain"></div>
+                  <div class="content">
+                    <div class="kicker"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt=""> chunky.dad · ${escapeHtml(data.city)}</div>
+                    <h2 class="og-title ${data.titleClass}">${escapeHtml(data.title)}</h2>
+                    ${metaPills}
+                  </div>
+                </div>`
+            },
+            {
+              key: 'split',
+              name: 'Photo Split',
+              desc: hasImage ? 'Event photo beside a palette-lit text panel' : 'No event image — panel gets a gradient stand-in',
+              chips: hasImage ? ['event image', 'favicon colors'] : ['gradient fallback'],
+              html: `
+                <div class="artboard l-split" style="--p-deep:${p.deep};--p-deep-a:${hexToRgba(p.deep, 0.85)}">
+                  <div class="text-side">
+                    <div class="glow" style="background:radial-gradient(circle, ${p.c1}, transparent 70%)"></div>
+                    ${brand}
+                    <div class="bottom">
+                      <h2 class="og-title ${data.titleClass}">${escapeHtml(data.title)}</h2>
+                      <div class="meta-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+                        <div class="meta-plain">📅 ${escapeHtml(data.date)}${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
+                        <div class="meta-plain">📍 ${escapeHtml(data.venue)} · ${escapeHtml(data.city)}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="photo-side">
+                    <div class="photo" style="background-image:${hasImage ? `url('${img}'), ` : ''}linear-gradient(160deg, ${p.c1} 0%, ${p.c4} 55%, ${p.deep} 100%)"></div>
+                    <div class="edge" style="background:linear-gradient(180deg, ${p.c2}, ${p.c1})"></div>
+                  </div>
+                  <div class="grain"></div>
+                </div>`
+            },
+            {
+              key: 'poster',
+              name: 'Poster Wash',
+              desc: hasImage ? 'Full-bleed photo with a palette scrim and date tag' : 'No event image — gradient poster instead',
+              chips: hasImage ? ['event image', 'favicon colors'] : ['gradient fallback'],
+              html: `
+                <div class="artboard l-poster" style="--p-deep:${p.deep}">
+                  <div class="photo" style="background-image:${hasImage ? `url('${img}'), ` : ''}linear-gradient(135deg, ${p.deepAlt} 0%, ${p.c4} 50%, ${p.c1} 100%)"></div>
+                  <div class="wash" style="background:linear-gradient(180deg, ${hexToRgba(p.deep, 0.15)} 0%, ${hexToRgba(p.deep, 0.05)} 35%, ${hexToRgba(p.deep, 0.9)} 100%)"></div>
+                  <div class="grain"></div>
+                  <div class="content">
+                    <div class="top-row">
+                      <div class="date-tag">
+                        <div class="d1" style="color:${p.c2}">${escapeHtml(data.date)}</div>
+                        <div class="d2">${escapeHtml(data.time || '—')}</div>
+                      </div>
+                      ${brand}
+                    </div>
+                    <h2 class="og-title ${data.titleClass}">${escapeHtml(data.title)}</h2>
+                    <div class="meta-row">
+                      <div class="meta-pill" style="border-color:${hexToRgba(p.c2, 0.6)}">📍 ${escapeHtml(data.venue)} · ${escapeHtml(data.city)}</div>
+                    </div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'editorial',
+              name: 'Editorial Minimal',
+              desc: 'Light, type-first layout with a single palette accent',
+              chips: hasImage ? ['favicon colors', 'event image'] : ['favicon colors'],
+              html: `
+                <div class="artboard l-editorial">
+                  <div class="orb" style="background:radial-gradient(circle, ${p.c1}, transparent 70%)"></div>
+                  ${hasImage ? `<div class="photo-chip" style="background-image:url('${img}'), linear-gradient(145deg, ${p.c1}, ${p.c4})"></div>` : ''}
+                  <div class="content">
+                    <div class="head">
+                      ${brand}
+                      <div class="city-tag">${escapeHtml(data.city)}</div>
+                    </div>
+                    <div>
+                      <div class="accent-bar" style="background:linear-gradient(90deg, ${p.bg}, ${p.c3})"></div>
+                      <h2 class="og-title ${data.titleClass}" style="max-width:${hasImage ? '760px' : '1000px'};">${escapeHtml(data.title)}</h2>
+                    </div>
+                    <div class="meta-row">
+                      <div class="meta-plain"><b>${escapeHtml(data.date)}</b>${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
+                      <div class="meta-plain">${escapeHtml(data.venue)}</div>
+                    </div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'glass',
+              name: 'Glass Badge',
+              desc: hasImage ? 'Frosted card floating over the blurred event photo' : 'Frosted card over a palette mesh',
+              chips: hasImage ? ['event image', 'favicon colors'] : ['favicon colors', 'animated'],
+              html: `
+                <div class="artboard l-glass" style="--p-deep:${p.deep}">
+                  ${hasImage
+                    ? `<div class="bg-photo" style="background-image:url('${img}'), linear-gradient(135deg, ${p.c1}, ${p.c4})"></div>
+                       <div class="bg-tint" style="background:linear-gradient(135deg, ${p.c1}, ${p.c4})"></div>`
+                    : `<div class="blob b1" style="background:radial-gradient(circle, ${p.c1}, transparent 70%)"></div>
+                       <div class="blob b2" style="background:radial-gradient(circle, ${p.c4}, transparent 70%)"></div>`}
+                  <div class="grain"></div>
+                  <div class="card-glass">
+                    ${brand}
+                    <h2 class="og-title ${data.titleClass}" style="margin-top:40px;">${escapeHtml(data.title)}</h2>
+                    ${metaPills}
+                  </div>
+                </div>`
+            }
+          ];
+        }
+
+        // The six layouts from the previous version of this page, recolored by the palette
+        classics(data, p) {
+          const hasImage = !!data.cover;
+          const img = cssUrl(data.cover);
+          const grad = `linear-gradient(135deg, ${p.c1} 0%, ${p.c4} 100%)`;
+          const when = `${escapeHtml(data.date)}${data.time ? ' · ' + escapeHtml(data.time) : ''}`;
+
+          return [
+            {
+              key: 'c-pattern',
+              name: '🧩 CSS Pattern (classic)',
+              desc: 'Downloaded css-pattern.com background with rim-lit content box',
+              chips: ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-pattern">
+                  <div class="pattern-bg css-pattern-bg"></div>
+                  <div class="pattern-vignette"></div>
+                  <div class="content-box">
+                    <div class="brand" style="color:${p.bg}">chunky.dad</div>
+                    <div class="event-title">${escapeHtml(data.title)}</div>
+                    <div class="event-date">${when}</div>
+                    <div class="event-venue">@ ${escapeHtml(data.venue)}</div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'c-bold',
+              name: '⚡ Bold & Centered (classic)',
+              desc: 'Big typography, centered text on a palette gradient',
+              chips: ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-bold" style="background:${grad}">
+                  <div class="event-title">${escapeHtml(data.title)}</div>
+                  <div class="event-details">${when}</div>
+                  <div class="event-venue">@ ${escapeHtml(data.venue)}</div>
+                  <img class="logo-stamp" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                </div>`
+            },
+            {
+              key: 'c-side',
+              name: '📐 Side by Side (classic)',
+              desc: 'Simple two-column layout',
+              chips: ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-side" style="background:${grad}">
+                  <div class="left-panel">
+                    <img class="chunky-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                    <div class="event-title">${escapeHtml(data.title)}</div>
+                  </div>
+                  <div class="right-panel">
+                    <div class="event-date">${escapeHtml(data.date)}</div>
+                    <div class="event-venue">@ ${escapeHtml(data.venue)}${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
+                    <div class="description">${escapeHtml(data.description)}</div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'c-banner',
+              name: '🎯 Banner (classic)',
+              desc: 'Billboard/hero banner style with CTA',
+              chips: hasImage ? ['classic', 'event image'] : ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-banner" style="background:${grad}">
+                  ${hasImage ? `<div class="banner-bg" style="background-image:url('${img}')"></div>` : ''}
+                  <div class="banner-content">
+                    <img class="brand-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
+                    <div class="event-title">${escapeHtml(data.title)}</div>
+                    <div class="event-info">${when} · ${escapeHtml(data.venue)}</div>
+                    <div class="event-cta">Get Tickets</div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'c-split',
+              name: 'Split Screen (classic)',
+              desc: 'Dynamic diagonal composition',
+              chips: hasImage ? ['classic', 'event image'] : ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-split">
+                  <div class="left-side" style="background:${grad}">
+                    ${hasImage ? `<div class="cover" style="background-image:url('${img}')"></div>` : ''}
+                  </div>
+                  <div class="left-content">
+                    <div class="brand">chunky.dad</div>
+                    <div class="event-title">${escapeHtml(data.title)}</div>
+                    <div class="event-date">${when}</div>
+                    <div class="venue">@ ${escapeHtml(data.venue)}</div>
+                  </div>
+                  <div class="right-side">
+                    <div class="event-image" style="background-image:${hasImage ? `url('${img}'), ` : ''}linear-gradient(160deg, ${p.c2}, ${p.c4})"></div>
+                  </div>
+                </div>`
+            },
+            {
+              key: 'c-glass',
+              name: 'Glass Card (classic)',
+              desc: 'Frosted glass backdrop over the full event image',
+              chips: hasImage ? ['classic', 'event image'] : ['classic', 'favicon colors'],
+              html: `
+                <div class="artboard l-c-glass" style="background:${grad}">
+                  ${hasImage ? `<div class="cover" style="background-image:url('${img}')"></div>` : ''}
+                  <div class="glass">
+                    <div class="inner">
+                      <div class="event-title">${escapeHtml(data.title)}</div>
+                      <div class="event-date">${when}</div>
+                      <div class="venue">@ ${escapeHtml(data.venue)}</div>
+                    </div>
+                  </div>
+                </div>`
+            }
+          ];
+        }
+
+        render() {
+          this.stopAnims();
+          const p = this.getPalette();
+          const data = this.getPreviewData();
+          this.renderPaletteStrip(p);
+
+          if (!this.selectedEvent) {
+            grid.innerHTML = '<div class="empty-note">No events match — pick another city or clear the filter.</div>';
+            return;
+          }
+
+          const cardHtml = v => `
+            <div class="card" data-variant="${v.key}">
+              <div class="card-head">
+                <div>
+                  <div class="name">${v.name}</div>
+                  <div class="desc">${v.desc}</div>
+                </div>
+                <div class="chips">${v.chips.map(c => `<span class="chip${c.includes('favicon') || c.includes('image') ? ' on' : ''}">${c}</span>`).join('')}</div>
+              </div>
+              <div class="preview">${v.html}</div>
+            </div>`;
+
+          grid.innerHTML = this.variants(data, p).map(cardHtml).join('')
+            + '<div class="section-divider">Classics — layouts from the previous version</div>'
+            + this.classics(data, p).map(cardHtml).join('');
+
+          this.fitArtboards();
+          grid.querySelectorAll('.silk-canvas').forEach(canvas => this.initSilk(canvas, p));
+          grid.querySelectorAll('.css-pattern-bg').forEach(el => this.applyCssPattern(el, p));
+        }
+
+        fitArtboards() {
+          requestAnimationFrame(() => {
+            grid.querySelectorAll('.preview').forEach(preview => {
+              const art = preview.querySelector('.artboard');
+              if (!art) return;
+              const scale = Math.min(preview.clientWidth / 1200, preview.clientHeight / 630);
+              art.style.transform = `scale(${scale})`;
+            });
+          });
+        }
+
+        // ---------- WebGL flow-noise gradient (Silk Flow) ----------
+        initSilk(canvas, palette) {
+          const gl = canvas.getContext('webgl', { antialias: false, preserveDrawingBuffer: false });
+          if (!gl) {
+            canvas.style.background = `linear-gradient(130deg, ${palette.c1}, ${palette.c4})`;
+            logger.warn(COMPONENT, 'WebGL unavailable, using CSS gradient fallback for Silk Flow');
+            return;
+          }
+          const vsSource = `
+            attribute vec2 a_pos;
+            varying vec2 vUv;
+            void main() {
+              vUv = a_pos * 0.5 + 0.5;
+              gl_Position = vec4(a_pos, 0.0, 1.0);
+            }`;
+          const fsSource = `
+            precision mediump float;
+            varying vec2 vUv;
+            uniform float u_time;
+            uniform float u_ratio;
+            uniform vec3 u_c1;
+            uniform vec3 u_c2;
+            uniform vec3 u_c3;
+            uniform vec3 u_c4;
+
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec3 permute(vec3 x) { return mod289(((x * 34.0) + 1.0) * x); }
+
+            float snoise(vec2 v) {
+              const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+              vec2 i = floor(v + dot(v, C.yy));
+              vec2 x0 = v - i + dot(i, C.xx);
+              vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+              vec4 x12 = x0.xyxy + C.xxzz;
+              x12.xy -= i1;
+              i = mod289(i);
+              vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+              vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+              m = m * m;
+              m = m * m;
+              vec3 x = 2.0 * fract(p * C.www) - 1.0;
+              vec3 h = abs(x) - 0.5;
+              vec3 ox = floor(x + 0.5);
+              vec3 a0 = x - ox;
+              m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+              vec3 g;
+              g.x = a0.x * x0.x + h.x * x0.y;
+              g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+              return 130.0 * dot(m, g);
+            }
+
+            float fbm(vec2 p) {
+              float v = 0.0;
+              float a = 0.6;
+              for (int i = 0; i < 3; i++) {
+                v += a * snoise(p);
+                p = p * 1.9 + 13.7;
+                a *= 0.45;
+              }
+              return v;
+            }
+
+            void main() {
+              vec2 uv = vUv * 0.75;
+              uv.x *= u_ratio;
+              float t = u_time * 0.05;
+              vec2 q = vec2(fbm(uv + t), fbm(uv + vec2(5.2, 1.3) - t));
+              vec2 r = vec2(
+                fbm(uv + 1.6 * q + vec2(1.7, 9.2) + t * 0.7),
+                fbm(uv + 1.6 * q + vec2(8.3, 2.8) - t * 0.5)
+              );
+              float n = fbm(uv + 1.4 * r);
+              vec3 col = mix(u_c1, u_c2, smoothstep(-0.55, 0.55, n));
+              col = mix(col, u_c3, smoothstep(0.05, 0.85, r.x) * 0.75);
+              col = mix(col, u_c4, smoothstep(0.1, 0.9, q.y) * 0.55);
+              col *= 0.9 + 0.25 * smoothstep(0.9, 0.2, distance(vUv, vec2(0.5, 0.55)));
+              gl_FragColor = vec4(col, 1.0);
+            }`;
+
+          const compile = (type, source) => {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+              logger.componentError(COMPONENT, 'Shader compile failed', gl.getShaderInfoLog(shader));
+              return null;
+            }
+            return shader;
+          };
+          const vs = compile(gl.VERTEX_SHADER, vsSource);
+          const fs = compile(gl.FRAGMENT_SHADER, fsSource);
+          if (!vs || !fs) {
+            canvas.style.background = `linear-gradient(130deg, ${palette.c1}, ${palette.c4})`;
+            return;
+          }
+          const prog = gl.createProgram();
+          gl.attachShader(prog, vs);
+          gl.attachShader(prog, fs);
+          gl.linkProgram(prog);
+          gl.useProgram(prog);
+
+          const buf = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+          const loc = gl.getAttribLocation(prog, 'a_pos');
+          gl.enableVertexAttribArray(loc);
+          gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+          gl.uniform1f(gl.getUniformLocation(prog, 'u_ratio'), canvas.width / canvas.height);
+          gl.uniform3fv(gl.getUniformLocation(prog, 'u_c1'), hexToVec3(palette.c1));
+          gl.uniform3fv(gl.getUniformLocation(prog, 'u_c2'), hexToVec3(palette.c2));
+          gl.uniform3fv(gl.getUniformLocation(prog, 'u_c3'), hexToVec3(palette.c3));
+          gl.uniform3fv(gl.getUniformLocation(prog, 'u_c4'), hexToVec3(palette.c4));
+          const timeLoc = gl.getUniformLocation(prog, 'u_time');
+          gl.viewport(0, 0, canvas.width, canvas.height);
+
+          const anim = { raf: null, gl };
+          this.anims.push(anim);
+          const start = performance.now();
+          const draw = () => {
+            gl.uniform1f(timeLoc, (performance.now() - start) / 1000 + 12);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            if (animsOn.checked) anim.raf = requestAnimationFrame(draw);
+          };
+          draw();
         }
 
         attachHandlers() {
@@ -697,9 +1336,7 @@
             this.render();
           });
 
-          eventSearch.addEventListener('input', () => {
-            this.filterEvents(eventSearch.value);
-          });
+          eventSearch.addEventListener('input', () => this.filterEvents(eventSearch.value));
 
           reloadBtn.addEventListener('click', async () => {
             await this.loadCity(this.currentCity);
@@ -713,258 +1350,25 @@
             this.render();
           });
 
-          coverInput.addEventListener('input', () => this.render());
+          coverInput.addEventListener('change', () => this.render());
           cssPatternSelect.addEventListener('change', () => {
             this.currentCssPattern = this.cssPatterns.find(pattern => pattern.id === cssPatternSelect.value) || this.cssPatterns[0] || null;
-            this.syncCssPatternControls();
             this.render();
           });
-          cssPatternSize.addEventListener('input', () => this.render());
+          overrideOn.addEventListener('change', () => this.render());
+          [overrideA, overrideB].forEach(el => el.addEventListener('input', () => {
+            if (overrideOn.checked) this.render();
+          }));
 
-          // Theme selection
-          themeOptions.forEach(option => {
-            option.addEventListener('click', () => {
-              themeOptions.forEach(opt => opt.classList.remove('active'));
-              option.classList.add('active');
-              currentTheme = option.dataset.theme;
-              this.updateThemeVars();
-              this.render();
-            });
+          animsOn.addEventListener('change', () => {
+            document.body.classList.toggle('anims-off', !animsOn.checked);
+            this.render();
           });
 
-          // Set initial theme
-          themeOptions[0].classList.add('active');
-
-          // Custom color inputs
-          [customA, customB].forEach(el => {
-            el.addEventListener('input', () => {
-              this.updateThemeVars();
-              if (currentTheme === 'custom') {
-                this.render();
-              }
-            });
-          });
-        }
-
-        updateThemeVars() {
-          document.documentElement.style.setProperty('--custom-color-1', customA.value);
-          document.documentElement.style.setProperty('--custom-color-2', customB.value);
-          const fc = this.getFaviconColors();
-          document.documentElement.style.setProperty('--favicon-color-1', fc ? fc.bg : '#667eea');
-          document.documentElement.style.setProperty('--favicon-color-2', fc ? fc.fg : '#764ba2');
-          const rimColor = this.getRimColorForTheme();
-          document.documentElement.style.setProperty('--rim-color', rimColor);
-          document.documentElement.style.setProperty('--rim-glow', this.hexToRgba(rimColor, 0.35));
-          document.documentElement.style.setProperty('--pattern-color', this.hexToRgba(rimColor, 0.22));
-          logger.debug(COMPONENT, 'Updated theme', { theme: currentTheme, rimColor, customColors: [customA.value, customB.value] });
-        }
-
-        updateVariant(card, variant, data) {
-          const artboard = card.querySelector('.artboard');
-          switch(variant.key) {
-            case 'split': {
-              const t = artboard.querySelector('.event-title');
-              const d = artboard.querySelector('.event-date');
-              const v = artboard.querySelector('.venue');
-              const img = artboard.querySelector('.event-image');
-              const leftSide = artboard.querySelector('.left-side');
-              if (t) t.textContent = data.event;
-              if (d) d.textContent = `${data.date} · ${data.time}`;
-              if (v) v.textContent = `@ ${data.venue}`;
-              if (img && data.cover) { img.style.backgroundImage = `url('${data.cover}')`; img.style.display = 'block'; }
-              if (leftSide) {
-                const cover = leftSide.querySelector('.cover');
-                if (cover && data.cover) cover.style.backgroundImage = `url('${data.cover}')`;
-              }
-              break;
-            }
-            case 'glass': {
-              const t = artboard.querySelector('.event-title');
-              const d = artboard.querySelector('.event-date');
-              const v = artboard.querySelector('.venue');
-              const cov = artboard.querySelector('.cover');
-              if (t) t.textContent = data.event;
-              if (d) d.textContent = `${data.date} · ${data.time}`;
-              if (v) v.textContent = `@ ${data.venue}`;
-              if (cov && data.cover) cov.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            }
-            case 'bold-centered': {
-              const title = artboard.querySelector('.event-title');
-              const details = artboard.querySelector('.event-details');
-              const venue = artboard.querySelector('.event-venue');
-              if (title) title.textContent = data.event;
-              if (details) details.textContent = `${data.date} · ${data.time}`;
-              if (venue) venue.textContent = `@ ${data.venue}`;
-              break;
-            }
-            case 'side-by-side': {
-              const title = artboard.querySelector('.event-title');
-              const date = artboard.querySelector('.event-date');
-              const venue = artboard.querySelector('.event-venue');
-              if (title) title.textContent = data.event;
-              if (date) date.textContent = data.date;
-              if (venue) venue.textContent = `@ ${data.venue} · ${data.time}`;
-              break;
-            }
-            case 'banner': {
-              const title = artboard.querySelector('.event-title');
-              const info = artboard.querySelector('.event-info');
-              const cta = artboard.querySelector('.event-cta');
-              const bg = artboard.querySelector('.banner-bg');
-              if (title) title.textContent = data.event;
-              if (info) info.textContent = `${data.date} · ${data.time} · ${data.venue}`;
-              if (cta) cta.textContent = 'Get Tickets';
-              if (bg && data.cover) bg.style.backgroundImage = `url('${data.cover}')`;
-              break;
-            }
-            case 'css-pattern': {
-              const t = artboard.querySelector('.event-title');
-              const d = artboard.querySelector('.event-date');
-              const v = artboard.querySelector('.event-venue');
-              const cssBg = artboard.querySelector('.css-pattern-bg');
-              if (t) t.textContent = data.event;
-              if (d) d.textContent = `${data.date} · ${data.time}`;
-              if (v) v.textContent = `@ ${data.venue}`;
-              if (cssBg) this.applyCssPattern(cssBg);
-              break;
-            }
-          }
-        }
-
-        buildVariantCard(variant, data) {
-          const card = document.createElement('div');
-          card.className = 'variant-card';
-          
-          card.innerHTML = `
-            <div class="variant-header">
-              <div>
-                <div class="variant-title">${variant.name}</div>
-                <div class="variant-description">${variant.description}</div>
-              </div>
-            </div>
-            <div class="variant-preview">
-              <div class="artboard ${variant.class} theme-${currentTheme}">
-                ${this.createVariantHTML(variant)}
-              </div>
-            </div>
-          `;
-          return card;
-        }
-
-        createVariantHTML(variant) {
-          const layouts = {
-            'split': `
-              <div class="left-side">
-                <div class="cover"></div>
-              </div>
-              <div class="left-content">
-                <div class="brand">chunky.dad</div>
-                <div class="event-title"></div>
-                <div class="event-date"></div>
-                <div class="venue"></div>
-              </div>
-              <div class="right-side">
-                <div class="event-image"></div>
-              </div>
-              <div class="description"></div>
-            `,
-            'glass': `
-              <div class="cover"></div>
-              <div class="glass">
-                <div class="inner">
-                  <div class="event-title"></div>
-                  <div class="event-date"></div>
-                  <div class="venue"></div>
-                  <div class="description"></div>
-                </div>
-              </div>
-            `,
-            'bold-centered': `
-              <div class="event-title"></div>
-              <div class="event-details"></div>
-              <div class="event-venue"></div>
-              <img class="logo-stamp" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
-            `,
-            'side-by-side': `
-              <div class="left-panel">
-                <img class="chunky-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
-                <div class="event-title"></div>
-              </div>
-              <div class="right-panel">
-                <div class="event-date"></div>
-                <div class="event-venue"></div>
-                <div class="description"></div>
-              </div>
-            `,
-            'banner': `
-              <div class="banner-bg"></div>
-              <div class="banner-content">
-                <img class="brand-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
-                <div class="event-title"></div>
-                <div class="event-info"></div>
-                <div class="event-cta">Get Tickets</div>
-              </div>
-            `,
-            'css-pattern': `
-              <div class="css-pattern-bg"></div>
-              <div class="pattern-vignette"></div>
-              <div class="content-box">
-                <div class="brand">chunky.dad</div>
-                <div class="event-title"></div>
-                <div class="event-date"></div>
-                <div class="event-venue"></div>
-              </div>
-            `,
-          };
-          return layouts[variant.key] || '';
-        }
-
-        render() {
-          this.updateThemeVars();
-          const data = this.getPreviewData();
-          // Update favicon colors indicator
-          const fc = data.faviconColors;
-          const swatchBg = document.getElementById('faviconSwatchBg');
-          const swatchFg = document.getElementById('faviconSwatchFg');
-          const textEl = document.getElementById('faviconColorsText');
-          if (fc) {
-            if (swatchBg) { swatchBg.style.background = fc.bg; swatchBg.style.display = 'block'; }
-            if (swatchFg) { swatchFg.style.background = fc.fg || '#ffffff'; swatchFg.style.display = 'block'; }
-            if (textEl) textEl.textContent = `${fc.bg} / ${fc.fg || '#ffffff'} — select "Favicon 🎨" theme or see colored pattern rims`;
-          } else {
-            if (swatchBg) swatchBg.style.display = 'none';
-            if (swatchFg) swatchFg.style.display = 'none';
-            if (textEl) textEl.innerHTML = '<span class="no-colors">No favicon colors detected for this event</span>';
-          }
-          const VARIANTS = [
-            { key: 'css-pattern', name: '🧩 CSS Pattern.com', class: 'layout-css-pattern', description: 'Downloaded gradient pattern background' },
-            { key: 'bold-centered', name: '⚡ Bold & Centered', class: 'layout-bold-centered', description: 'Big typography, centered text' },
-            { key: 'side-by-side', name: '📐 Side by Side', class: 'layout-side-by-side', description: 'Simple two-column layout' },
-            { key: 'banner', name: '🎯 Banner', class: 'layout-banner', description: 'Billboard/hero banner style' },
-            { key: 'split', name: 'Split Screen', class: 'layout-split-screen', description: 'Dynamic diagonal composition' },
-            { key: 'glass', name: 'Glass Card', class: 'layout-glass', description: 'Frosted glass backdrop' },
-          ];
-
-          grid.innerHTML = '';
-          const artboards = [];
-          VARIANTS.forEach(variant => {
-            const card = this.buildVariantCard(variant, data);
-            this.updateVariant(card, variant, data);
-            grid.appendChild(card);
-            const art = card.querySelector('.artboard');
-            artboards.push({ art, card });
-          });
-
-          requestAnimationFrame(() => {
-            artboards.forEach(({ art }) => {
-              const preview = art.closest('.variant-preview');
-              if (!preview) return;
-              const pw = preview.clientWidth;
-              const ph = preview.clientHeight;
-              const scale = Math.min(pw / 1200, ph / 630);
-              art.style.transform = `scale(${scale})`;
-            });
+          let resizeTimer = null;
+          window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => this.fitArtboards(), 120);
           });
         }
 
@@ -978,9 +1382,9 @@
       }
 
       document.addEventListener('DOMContentLoaded', async () => {
-        const app = new CreativeCalendarPreview();
+        const app = new OgImageStudio();
         await app.init();
-        window._creativePreviewApp = app;
+        window._ogStudioApp = app;
       });
     })();
   </script>
