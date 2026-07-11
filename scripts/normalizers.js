@@ -307,6 +307,9 @@ class LocationNormalizer extends BaseNormalizer {
             );
         }
 
+        // Re-anchor wall-clock dates now that the city (and thus timezone) may be resolved
+        this.resolveWallClockDates(event);
+
         // Check if venue name indicates TBA/placeholder
         const isTBAVenue = event.bar && (
                           event.bar.toLowerCase().includes('tba') ||
@@ -610,6 +613,42 @@ class LocationNormalizer extends BaseNormalizer {
     }
 
     // Extract city from event data or URL
+    // The ai-web parser stores extracted local times as wall-clock components labeled UTC when
+    // it cannot resolve a timezone at parse time (flagged via event._timezoneUnresolved).
+    // Once the city is known here, convert those wall-clock values to real UTC instants.
+    resolveWallClockDates(event) {
+        if (!event || !event._timezoneUnresolved) return event;
+
+        const timezone = event.timezone
+            || (event.city && this.core && this.core.cities && this.core.cities[event.city]?.timezone)
+            || '';
+        if (!timezone || typeof this.core?.convertWallClockDateToUtc !== 'function') {
+            const title = event.title || 'unknown';
+            this.core?.warnOnce?.(
+                `wallclock:${title}`,
+                `🚨 LocationNormalizer: Could not resolve timezone for "${title}" (city: "${event.city || 'unknown'}") — dates remain wall-clock UTC and may be wrong`
+            );
+            return event;
+        }
+
+        const reanchor = (value) => {
+            if (!value) return value;
+            const converted = this.core.convertWallClockDateToUtc(value, timezone);
+            if (!converted || isNaN(converted.getTime())) return value;
+            return value instanceof Date ? converted : converted.toISOString();
+        };
+
+        const originalStart = event.startDate;
+        event.startDate = reanchor(event.startDate);
+        event.endDate = reanchor(event.endDate);
+        event.timezone = timezone;
+        delete event._timezoneUnresolved;
+
+        const format = (value) => value instanceof Date ? value.toISOString() : String(value);
+        console.log(`🗺️ LocationNormalizer: Re-anchored wall-clock dates to ${timezone} — start ${format(originalStart)} → ${format(event.startDate)}`);
+        return event;
+    }
+
     extractCityFromEvent(event) {
         if (event.city) {
             const normalizedCity = this.normalizeCityName(String(event.city));

@@ -237,3 +237,66 @@ test('buildAiPayload and extractAiResponse support both Ollama and OpenAI', () =
   const openaiResponse = { choices: [{ message: { content: '{"title": "OpenAI Event"}' } }] };
   assert.equal(parser.core.extractAiResponse(openaiConfig, openaiResponse), '{"title": "OpenAI Event"}');
 });
+
+test('city survives evidence validation when the page only uses a configured alias', () => {
+  const parser = createParser();
+  const cityConfig = {
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'brooklyn'] },
+    chicago: { timezone: 'America/Chicago', patterns: ['chicago'] }
+  };
+  const evidenceContext = parser.buildAiEvidenceContextFromText('FURBALL PRESENTS UNDERBEAR ROCKBAR NYC 125 CHRISTOPHER ST NYC');
+  const validationContext = { imageEvidenceUrls: new Set(), cityConfig };
+
+  const result = parser.validateAiEventEvidence(
+    { city: 'new york' },
+    { html: 'irrelevant' },
+    {},
+    null,
+    { evidenceContext, validationContext }
+  );
+  assert.equal(result.event.city, 'new york', 'canonical city should be kept via its "nyc" alias evidence');
+
+  const mismatch = parser.validateAiEventEvidence(
+    { city: 'chicago' },
+    { html: 'irrelevant' },
+    {},
+    null,
+    { evidenceContext, validationContext }
+  );
+  assert.equal(mismatch.event.city, undefined, 'city with no alias in evidence should still be dropped');
+});
+
+test('normalizeAiEvent falls back to the address to resolve the timezone', () => {
+  const parser = createParser();
+  const cityConfig = {
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] }
+  };
+  const aiEvent = {
+    title: 'UNDERBEAR',
+    startDate: '2026-07-17',
+    startTime: '22:00',
+    address: '125 Christopher St, New York, NY 10014'
+  };
+
+  const event = parser.normalizeAiEvent(aiEvent, {}, null, cityConfig, null);
+  assert.ok(event, 'event should normalize');
+  // 10pm EDT (UTC-4) on July 17 is 2am UTC on July 18
+  assert.equal(event.startDate.toISOString(), '2026-07-18T02:00:00.000Z');
+  assert.equal(event.timezone, 'America/New_York');
+  assert.equal(event._timezoneUnresolved, undefined);
+});
+
+test('normalizeAiEvent flags wall-clock dates when no timezone can be resolved', () => {
+  const parser = createParser();
+  const aiEvent = {
+    title: 'UNDERBEAR',
+    startDate: '2026-07-17',
+    startTime: '22:00'
+  };
+
+  const event = parser.normalizeAiEvent(aiEvent, {}, null, null, null);
+  assert.ok(event, 'event should normalize');
+  // Wall-clock fallback: local 10pm stored as 10pm UTC, flagged for downstream re-anchoring
+  assert.equal(event.startDate.toISOString(), '2026-07-17T22:00:00.000Z');
+  assert.equal(event._timezoneUnresolved, true);
+});

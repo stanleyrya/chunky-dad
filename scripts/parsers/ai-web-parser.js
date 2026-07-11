@@ -466,7 +466,8 @@ class AiWebParser {
             trustedFields: aiEvent && Array.isArray(aiEvent.__preValidatedFields) ? aiEvent.__preValidatedFields : [],
             evidenceContext: evidenceContext,
             validationContext: {
-                imageEvidenceUrls: imageEvidenceUrls
+                imageEvidenceUrls: imageEvidenceUrls,
+                cityConfig: cityConfig
             }
         });
         const event = this.normalizeAiEvent(validationResult.event, parserConfig, promptHtmlData, cityConfig, promptFields);
@@ -4132,7 +4133,7 @@ class AiWebParser {
             // Validate extracted fields
             const validatedPartial = this.validateAiEventEvidence(partial, htmlData, parserConfig, remainingFields, {
                 evidenceContext: snippetEvidenceContext,
-                validationContext: { imageEvidenceUrls: snippetImageEvidence }
+                validationContext: { imageEvidenceUrls: snippetImageEvidence, cityConfig: cityConfig }
             }).event || {};
 
             // Track field sources for traceability
@@ -5044,6 +5045,7 @@ TEXT:
             else if (normalizedField === 'location') mode = 'coords';
             else if (normalizedField === 'cover') mode = 'cover';
             else if (normalizedField === 'description') mode = validationConfig.fuzzyDescription ? 'fuzzy' : 'exact';
+            else if (normalizedField === 'city') mode = 'city';
             else if (normalizedField === 'image') mode = 'image';
             else if (normalizedField === 'url' || normalizedField === 'website' || normalizedField === 'ticketurl' || normalizedField === 'instagram' || normalizedField === 'facebook' || normalizedField === 'gmaps') mode = 'url';
             else mode = 'exact';
@@ -5558,6 +5560,8 @@ TEXT:
                 return this.hasCoverEvidence(evidenceContext, valueText);
             case 'fuzzy':
                 return this.hasFuzzyEvidence(evidenceContext, valueText);
+            case 'city':
+                return this.hasCityEvidence(evidenceContext, valueText, validationContext);
             case 'url':
                 return this.hasUrlEvidence(evidenceContext, valueText);
             case 'image':
@@ -5769,6 +5773,9 @@ TEXT:
             this.getResolvedParserMetadataFieldValue(parserConfig, ['timezone'], aiEvent),
             this.getTimezoneForCity(city, cityConfig),
             this.getTimezoneForCity(parserConfig && parserConfig.city, cityConfig),
+            // Fallback: the address often names the city even when the city field was
+            // dropped by evidence validation (e.g. flyer only says "NYC").
+            this.getTimezoneForCity(this.findCityKeyInText(address, cityConfig), cityConfig),
             ''
         );
         const url = this.firstNonEmpty(
@@ -5884,6 +5891,17 @@ TEXT:
             combinedEndDate = new Date(combinedStartDate);
         }
 
+        // Without a timezone, combineDateAndTime stored the extracted local time as wall-clock
+        // components labeled UTC (a wrong instant). Flag the event so LocationNormalizer can
+        // re-anchor it once the city/timezone resolve downstream. Full datetime strings
+        // (startProvided/endProvided) are excluded because Date parsing already anchored them.
+        const usedWallClockFallback = !timezone && !startProvided && !endProvided && Boolean(startDateRaw || endDateRaw);
+        if (usedWallClockFallback) {
+            console.warn(`🚨 AI Web: No timezone resolved for "${title}" — storing local time as wall-clock UTC and flagging for downstream re-anchoring (startTime=${startTimeRaw || 'none'})`);
+        } else if (!timezone && (startProvided || endProvided)) {
+            console.warn(`🚨 AI Web: No timezone resolved for "${title}" — full datetime was parsed in the host timezone and may be wrong`);
+        }
+
         console.log(`🤖 AI Web: Combined dates — combinedStartDate=${combinedStartDate instanceof Date ? combinedStartDate.toISOString() : combinedStartDate}, combinedEndDate=${combinedEndDate instanceof Date ? combinedEndDate.toISOString() : combinedEndDate}`);
 
         // For single-day events, if startDate is missing but endDate exists, use endDate as start
@@ -5937,6 +5955,9 @@ TEXT:
             source: this.config.source,
             isBearEvent: false
         };
+        if (usedWallClockFallback) {
+            event._timezoneUnresolved = true;
+        }
 
         if (aiPrompts.length > 0) {
             event._aiPrompts = aiPrompts;
@@ -6069,6 +6090,73 @@ TEXT:
         const matched = map[matchedKey];
         if (!matched || typeof matched !== 'object' || typeof matched.timezone !== 'string') return '';
         return matched.timezone.trim();
+    }
+
+    // All names that refer to a configured city: its key, display name, patterns, and aliases.
+    getCityAliasList(cityKey, cityData) {
+        const aliases = new Set();
+        const add = value => {
+            const text = String(value || '').trim().toLowerCase();
+            if (text) aliases.add(text);
+        };
+        add(cityKey);
+        if (cityData && typeof cityData === 'object') {
+            add(cityData.name);
+            if (Array.isArray(cityData.patterns)) cityData.patterns.forEach(add);
+            if (Array.isArray(cityData.aliases)) cityData.aliases.forEach(add);
+        }
+        return Array.from(aliases);
+    }
+
+    findCityConfigEntry(cityValue, cityConfig) {
+        const map = this.getCityConfigMap(cityConfig);
+        if (!map || typeof map !== 'object') return null;
+        const normalizedCity = String(cityValue || '').trim().toLowerCase();
+        if (!normalizedCity) return null;
+        for (const [key, cityData] of Object.entries(map)) {
+            const aliases = this.getCityAliasList(key, cityData);
+            if (aliases.includes(normalizedCity)) {
+                return { key, aliases };
+            }
+        }
+        return null;
+    }
+
+    textContainsCityAlias(normalizedText, alias) {
+        const normalizedAlias = this.normalizeEvidenceText(alias);
+        if (!normalizedAlias) return false;
+        const escaped = normalizedAlias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`);
+        return pattern.test(normalizedText);
+    }
+
+    // The AI canonicalizes city names (e.g. "NYC" -> "new york"), so verbatim evidence
+    // matching fails whenever the page only uses an alias. Accept evidence for any
+    // configured alias of the same city. Aliases under 3 chars are skipped to avoid
+    // substring-style false positives from short codes.
+    hasCityEvidence(evidenceContext, value, validationContext = null) {
+        if (this.hasExactEvidence(evidenceContext, value)) return true;
+        const cityConfig = validationContext && validationContext.cityConfig ? validationContext.cityConfig : null;
+        const entry = this.findCityConfigEntry(value, cityConfig);
+        if (!entry) return false;
+        return entry.aliases.some(alias =>
+            alias.length >= 3 && this.textContainsCityAlias(evidenceContext.normalized, alias)
+        );
+    }
+
+    // Find a configured city referenced inside free text (e.g. a street address).
+    findCityKeyInText(text, cityConfig) {
+        const map = this.getCityConfigMap(cityConfig);
+        if (!map || typeof map !== 'object') return '';
+        const normalizedText = this.normalizeEvidenceText(text);
+        if (!normalizedText) return '';
+        for (const [key, cityData] of Object.entries(map)) {
+            const matched = this.getCityAliasList(key, cityData).some(alias =>
+                alias.length >= 3 && this.textContainsCityAlias(normalizedText, alias)
+            );
+            if (matched) return key;
+        }
+        return '';
     }
 
     hasExplicitTimezoneInfo(dateValue) {
