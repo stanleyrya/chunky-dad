@@ -1759,6 +1759,48 @@ class SharedCore {
     normalizeEventDate(dateInput) {
         return SharedCore.normalizeEventDate(dateInput);
     }
+
+    // Offset (in minutes) of `timezone` from UTC at the given instant
+    getTimezoneOffsetMinutes(date, timezone) {
+        if (!date || !timezone) return null;
+        try {
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            });
+            const parts = formatter.formatToParts(date);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            const offsetText = offsetPart && typeof offsetPart.value === 'string' ? offsetPart.value : '';
+            const offsetMatch = offsetText.match(/GMT([+-])(\d{2}):(\d{2})/);
+            if (!offsetMatch) return null;
+            const sign = offsetMatch[1] === '+' ? 1 : -1;
+            const hours = parseInt(offsetMatch[2], 10);
+            const minutes = parseInt(offsetMatch[3], 10);
+            return sign * ((hours * 60) + minutes);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // Reinterpret a date whose UTC components actually hold local wall-clock time in `timezone`
+    // (the ai-web parser's timezone-less fallback stores dates that way, flagged via
+    // event._timezoneUnresolved) as the real UTC instant. Iterates because the offset guess
+    // can be wrong near DST transitions.
+    convertWallClockDateToUtc(dateInput, timezone) {
+        if (!dateInput || !timezone) return null;
+        const date = new Date(dateInput);
+        if (isNaN(date.getTime())) return null;
+        const baseUtcMillis = date.getTime();
+        let utcMillis = baseUtcMillis;
+        for (let i = 0; i < 4; i++) {
+            const offsetMinutes = this.getTimezoneOffsetMinutes(new Date(utcMillis), timezone);
+            if (!Number.isFinite(offsetMinutes)) return null;
+            const nextUtcMillis = baseUtcMillis - (offsetMinutes * 60 * 1000);
+            if (nextUtcMillis === utcMillis) break;
+            utcMillis = nextUtcMillis;
+        }
+        return new Date(utcMillis);
+    }
     
     // Normalize event date using local or specified timezone
     normalizeEventDateLocal(dateInput, timezone = null) {
