@@ -300,3 +300,104 @@ test('normalizeAiEvent flags wall-clock dates when no timezone can be resolved',
   assert.equal(event.startDate.toISOString(), '2026-07-17T22:00:00.000Z');
   assert.equal(event._timezoneUnresolved, true);
 });
+
+test('mergeAiEventFields canonicalizes lowercase response keys to schema keys', () => {
+  const parser = createParser();
+  const merged = parser.mergeAiEventFields({}, {
+    startdate: '2026-07-17',
+    starttime: '22:00',
+    endtime: '02:00',
+    bar: 'ROCKBAR',
+    __internal: 'keep-raw'
+  });
+
+  assert.equal(merged.startDate, '2026-07-17');
+  assert.equal(merged.startTime, '22:00');
+  assert.equal(merged.endTime, '02:00');
+  assert.equal(merged.bar, 'ROCKBAR');
+  assert.equal(merged.__internal, 'keep-raw');
+  assert.equal(merged.startdate, undefined, 'lowercase key should not survive the merge');
+});
+
+test('mergeAiEventFields still prefers already-resolved fields over retry values', () => {
+  const parser = createParser();
+  const merged = parser.mergeAiEventFields(
+    { startDate: '2026-07-17' },
+    { startdate: '2026-01-01' }
+  );
+  assert.equal(merged.startDate, '2026-07-17', 'primary-pass value should win');
+});
+
+test('retry-only extraction (lowercase keys) survives date normalization', () => {
+  // Reproduces the segment-3 failure: primary pass timed out, retry pass returned
+  // perfect data under lowercase keys, and the event was dropped with startDate=null.
+  const parser = createParser();
+  const retryResponse = {
+    title: 'FURBALL',
+    startdate: '2026-07-17',
+    starttime: '22:00'
+  };
+  const merged = parser.mergeAiEventFields({}, retryResponse);
+  const event = parser.normalizeAiEvent(merged, {}, null, null, null);
+
+  assert.ok(event, 'event should survive normalization');
+  assert.ok(event.startDate instanceof Date && !isNaN(event.startDate.getTime()));
+  assert.equal(event.startDate.toISOString().slice(0, 10), '2026-07-17');
+});
+
+test('ensureSegmentOcrCoverage OCRs only segments the page-level pass missed', async () => {
+  const parser = createParser();
+  const coveredUrl = 'https://img.example/media/aaa~mv2.jpg/v1/fill/w_296,h_526/aaa~mv2.jpg';
+  const missedUrl = 'https://img.example/media/bbb~mv2.png/v1/fill/w_296,h_296/bbb~mv2.png';
+
+  const segments = [
+    { lines: [], html: '', imageHintUrls: [coveredUrl] },
+    { lines: [], html: '', imageHintUrls: [missedUrl] }
+  ];
+  const ocrResults = [
+    { url: coveredUrl, text: 'FLYER ONE TEXT', imageClassification: 'event-flyer' }
+  ];
+
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url) => {
+    ocrCalls.push(url);
+    return { url, text: 'FURBALL AUSTIN @ 9PM', imageClassification: 'event-flyer' };
+  };
+
+  await parser.ensureSegmentOcrCoverage(segments, ocrResults, {}, 'https://img.example/', null);
+
+  assert.deepEqual(ocrCalls, [missedUrl], 'only the uncovered segment image should be OCRd');
+  assert.equal(ocrResults.length, 2);
+  assert.equal(ocrResults[1].url, missedUrl);
+  assert.equal(ocrResults[1].text, 'FURBALL AUSTIN @ 9PM');
+
+  // The topped-up result must now match the previously uncovered segment
+  const matched = parser.filterOcrResultsForSegment(ocrResults, segments[1], 'https://img.example/');
+  assert.equal(matched.length, 1);
+  assert.equal(matched[0].url, missedUrl);
+});
+
+test('ensureSegmentOcrCoverage is a no-op when OCR is disabled or coverage is complete', async () => {
+  const parser = createParser();
+  const url = 'https://img.example/media/ccc~mv2.jpg/v1/fill/w_296,h_526/ccc~mv2.jpg';
+  const segments = [{ lines: [], html: '', imageHintUrls: [url] }];
+
+  let called = false;
+  parser.getOcrTextForImage = async () => {
+    called = true;
+    return null;
+  };
+
+  // Coverage complete (same image at a different size counts via stripped-URL match)
+  const resizedUrl = 'https://img.example/media/ccc~mv2.jpg/v1/fill/w_592,h_1052/ccc~mv2.jpg';
+  const covered = [{ url: resizedUrl, text: 'TEXT', imageClassification: 'event-flyer' }];
+  await parser.ensureSegmentOcrCoverage(segments, covered, {}, 'https://img.example/', null);
+  assert.equal(called, false, 'covered segment should not trigger OCR');
+  assert.equal(covered.length, 1);
+
+  // OCR disabled
+  const empty = [];
+  await parser.ensureSegmentOcrCoverage(segments, empty, { ai: { ocr: { enabled: false } } }, 'https://img.example/', null);
+  assert.equal(called, false, 'disabled OCR should not trigger requests');
+  assert.equal(empty.length, 0);
+});

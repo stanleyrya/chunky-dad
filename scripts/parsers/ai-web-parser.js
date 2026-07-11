@@ -399,6 +399,9 @@ class AiWebParser {
         }
         console.log(`🤖 AI Web: multi-event-page split into ${segments.length} candidate segment${segments.length === 1 ? '' : 's'}`);
 
+        // OCR any segment images the capped page-level pass missed
+        await this.ensureSegmentOcrCoverage(segments, ocrResults, parserConfig, sourceUrl, httpAdapter);
+
         // Segments are unstructured data (page content + OCR), so always use split fields
         const segmentDataFlags = { ocr: true, segment: true };
         const segmentPromptFields = this.getAiPromptFields(parserConfig, segmentDataFlags);
@@ -2286,7 +2289,11 @@ class AiWebParser {
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
 
         // Extract all image URLs from HTML
-        const allImageUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, 10);
+        const maxOcrImages = 10;
+        const allImageUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, maxOcrImages);
+        if (allImageUrls.length >= maxOcrImages) {
+            console.log(`🤖 AI Web: OCR page-level image cap (${maxOcrImages}) reached — images beyond the cap rely on segment top-up`);
+        }
 
         // Pre-filter out uninteresting images before OCR
         const imageUrls = allImageUrls.filter(url => !this.isLikelyUninterestingImageUrl(url));
@@ -2381,6 +2388,61 @@ class AiWebParser {
             reason,
             cacheHit: rawResult.cached || false
         };
+    }
+
+    // The page-level OCR pass caps how many images it reads, so flyers for later segments on
+    // long multi-event pages can miss OCR entirely. Top up: OCR the first usable image of any
+    // segment that has no OCR coverage yet, so every segment can contribute image text.
+    // Mutates ocrResults in place so callers holding the array see the new entries.
+    async ensureSegmentOcrCoverage(segments, ocrResults, parserConfig, sourceUrl = '', httpAdapter = null) {
+        if (!Array.isArray(segments) || segments.length === 0 || !Array.isArray(ocrResults)) {
+            return ocrResults;
+        }
+        const ocrConfig = this.getOcrConfig(parserConfig);
+        if (!ocrConfig.enabled) return ocrResults;
+
+        const coveredStrippedUrls = new Set(
+            ocrResults
+                .map(ocr => this.stripSizeParams(this.normalizeHttpUrlValue(ocr && ocr.url)))
+                .filter(Boolean)
+        );
+
+        const targets = [];
+        const targetStrippedUrls = new Set();
+        for (const segment of segments) {
+            const segmentImageUrls = [
+                ...this.extractOrderedImageUrlsFromHtml(
+                    segment && typeof segment.html === 'string' ? segment.html : '',
+                    sourceUrl,
+                    2
+                ),
+                ...(Array.isArray(segment && segment.imageHintUrls) ? segment.imageHintUrls : [])
+            ];
+            const normalizedUrls = segmentImageUrls
+                .map(url => this.normalizeHttpUrlValue(url))
+                .filter(Boolean);
+            const hasCoverage = normalizedUrls.some(url => coveredStrippedUrls.has(this.stripSizeParams(url)));
+            if (hasCoverage) continue;
+
+            const candidate = normalizedUrls.find(url => !this.isLikelyUninterestingImageUrl(url));
+            if (!candidate) continue;
+            const strippedCandidate = this.stripSizeParams(candidate);
+            if (targetStrippedUrls.has(strippedCandidate)) continue;
+            targetStrippedUrls.add(strippedCandidate);
+            targets.push(candidate);
+        }
+        if (targets.length === 0) return ocrResults;
+
+        console.log(`🤖 AI Web: OCR top-up for ${targets.length} segment image(s) missed by the page-level cap`);
+        const rawResults = await Promise.all(targets.map(url =>
+            this.getOcrTextForImage(url, ocrConfig, 'ocr-segment', httpAdapter).catch(() => null)
+        ));
+        for (const rawResult of rawResults) {
+            const normalized = this.normalizeOcrResult(rawResult);
+            if (!normalized || !normalized.text || normalized.text.trim().length === 0) continue;
+            ocrResults.push(normalized);
+        }
+        return ocrResults;
     }
 
     filterOcrResultsForSegment(ocrResults, segment, sourceUrl = '') {
@@ -4034,12 +4096,24 @@ class AiWebParser {
     mergeAiEventFields(currentEvent, nextEvent) {
         const merged = currentEvent && typeof currentEvent === 'object' ? { ...currentEvent } : {};
         if (!nextEvent || typeof nextEvent !== 'object') return merged;
+        const schema = this.getEventSchema();
         Object.keys(nextEvent).forEach(key => {
             const value = nextEvent[key];
             if (!this.isUsableAiFieldValue(value)) return;
             const normalizedName = this.normalizePromptFieldName(key);
             if (this.hasResolvedFieldValue(merged, normalizedName)) return;
-            merged[key] = value;
+            // Retry passes prompt with lowercased field names ("startdate") and the model echoes
+            // them back; store under the canonical schema key so downstream readers that expect
+            // camelCase (normalizeAiEvent) still find the value when the primary pass failed.
+            let targetKey = key;
+            if (!key.startsWith('__') && schema && typeof schema.canonicalizeEventKey === 'function') {
+                const lowered = String(key).trim().toLowerCase();
+                const canonical = schema.canonicalizeEventKey(lowered);
+                if (canonical && canonical !== lowered) {
+                    targetKey = canonical;
+                }
+            }
+            merged[targetKey] = value;
         });
         return merged;
     }
