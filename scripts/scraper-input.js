@@ -354,9 +354,11 @@ const scraperConfig = {
           // --- Option B: rapid-mlx (OpenAI-compatible, Apple Silicon) on rybook ---
           // rapid-mlx must be serving a VISION (VLM) model — text models reject image
           // input with "Model ... does not support image, video, or audio inputs."
-          // Check what's served: http://rybook.taila7523c.ts.net:8000/v1/models
+          // A rapid-mlx instance serves ONE model, so the vision server runs on its
+          // own port (e.g. 8001) alongside the text/extraction server on 8000.
+          // Check what's served: http://rybook.taila7523c.ts.net:8001/v1/models
           // provider: "openai",
-          // endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+          // endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
           // model: "mlx-community/Qwen3-VL-4B-Instruct-4bit",
           timeoutSeconds: 120,
           numCtx: 8192,

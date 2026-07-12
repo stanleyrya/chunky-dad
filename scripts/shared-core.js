@@ -3840,7 +3840,7 @@ class SharedCore {
         }
     }
 
-    async callAiGenerate(aiConfig, prompt, passLabel, httpAdapter, promptHistoryRecorder = null, base64Image = null) {
+    async callAiGenerate(aiConfig, prompt, passLabel, httpAdapter, promptHistoryRecorder = null, base64Image = null, diagnostics = null) {
         if (!prompt) return null;
         const payload = this.buildAiPayload(aiConfig, prompt, base64Image);
         const label = passLabel ? ` (${passLabel} pass)` : '';
@@ -3892,6 +3892,18 @@ class SharedCore {
             }
 
             const doneReason = responseJson && typeof responseJson.done_reason === 'string' ? responseJson.done_reason : 'n/a';
+            // OpenAI-compatible servers (rapid-mlx) report finish_reason "length" with zero
+            // tokens generated when the prompt+image alone overflow the model context —
+            // a deterministic failure that will recur on every retry with the same image.
+            const choice = responseJson && Array.isArray(responseJson.choices) ? responseJson.choices[0] : null;
+            const finishReason = choice && typeof choice.finish_reason === 'string' ? choice.finish_reason : null;
+            const completionTokens = responseJson && responseJson.usage ? Number(responseJson.usage.completion_tokens) : NaN;
+            if (base64Image && finishReason === 'length' && !(completionTokens > 0)) {
+                if (diagnostics && typeof diagnostics === 'object') {
+                    diagnostics.failureKind = 'context-overflow';
+                }
+                console.warn(`🚨 AI Web: AI request${label} generated 0 tokens with finish_reason "length" — the image (${base64Image.length} base64 chars) likely exceeds the model's context window. Downscale the image or raise the server's context limit.`);
+            }
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
             if (response.text) {
                 console.log(`🤖 AI Web: Raw response payload${label}\n${response.text}`);
