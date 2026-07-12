@@ -108,3 +108,10 @@ test('analyzeEventAction keeps genuinely different same-venue events separate', 
   const analysis = core.analyzeEventAction(scraped, [buildCalendarEvent()]);
   assert.equal(analysis.action, 'new');
 });
+
+test('parseAiEventResponse rejects array responses', () => {
+  const core = createCore();
+  assert.equal(core.parseAiEventResponse('[0]'), null, 'bare arrays are not event objects');
+  assert.equal(core.parseAiEventResponse('[{"title": "x"}]'), null);
+  assert.deepEqual(core.parseAiEventResponse('{"title": "x"}'), { title: 'x' });
+});
