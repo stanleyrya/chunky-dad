@@ -290,7 +290,7 @@ class AiWebParser {
             // (sickening.events, tryst.events, Eventbrite) hand us complete structured
             // data — when it covers title + start + venue, OCR and AI extraction add
             // cost without adding trust, so use the structured data directly.
-            const jsonLdEvents = this.extractEventsFromJsonLd(html, sourceUrl);
+            const jsonLdEvents = this.extractEventsFromJsonLd(html, sourceUrl, cityConfig);
             const completeJsonLdEvents = jsonLdEvents.filter(event => event.bar || event.address);
             const useJsonLdEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
@@ -2056,20 +2056,28 @@ class AiWebParser {
     }
 
     getOcrCacheRuntime() {
+        return this.getCacheRuntime('ocr', this.config.ocrCacheDir);
+    }
+
+    getAiClassificationCacheRuntime() {
+        return this.getCacheRuntime('classification', this.config.classificationCacheDir);
+    }
+
+    getCacheRuntime(subdir, overrideDir = null) {
         if (typeof FileManager !== 'undefined') {
             try {
                 const fm = FileManager.iCloud();
                 const documentsDir = fm.documentsDirectory();
-                const baseDir = this.config.ocrCacheDir
-                    ? String(this.config.ocrCacheDir)
-                    : fm.joinPath(fm.joinPath(fm.joinPath(documentsDir, 'chunky-dad-scraper'), 'storage'), 'ocr');
+                const baseDir = overrideDir
+                    ? String(overrideDir)
+                    : fm.joinPath(fm.joinPath(fm.joinPath(documentsDir, 'chunky-dad-scraper'), 'storage'), subdir);
                 return {
                     type: 'scriptable',
                     fm,
                     baseDir
                 };
             } catch (error) {
-                console.log(`🤖 AI Web: OCR cache setup unavailable in Scriptable: ${error.message}`);
+                console.log(`🤖 AI Web: ${subdir} cache setup unavailable in Scriptable: ${error.message}`);
                 return null;
             }
         }
@@ -2078,9 +2086,9 @@ class AiWebParser {
                 const fs = require('fs');
                 const path = require('path');
                 const os = require('os');
-                const baseDir = this.config.ocrCacheDir
-                    ? String(this.config.ocrCacheDir)
-                    : path.join(os.homedir(), '.chunky-dad-scraper', 'storage', 'ocr');
+                const baseDir = overrideDir
+                    ? String(overrideDir)
+                    : path.join(os.homedir(), '.chunky-dad-scraper', 'storage', subdir);
                 return {
                     type: 'node',
                     fs,
@@ -2088,7 +2096,7 @@ class AiWebParser {
                     baseDir
                 };
             } catch (error) {
-                console.log(`🤖 AI Web: OCR cache setup unavailable in Node: ${error.message}`);
+                console.log(`🤖 AI Web: ${subdir} cache setup unavailable in Node: ${error.message}`);
                 return null;
             }
         }
@@ -2158,6 +2166,104 @@ class AiWebParser {
             fileName: `${this.hashCacheValue(`${normalizedUrl}|${signatureHash}`)}.json`,
             signatureHash
         };
+    }
+
+    // Persistent cache for AI page-classification outcomes. SharedCore stays free of
+    // filesystem access (see its header rules), so parsePageForCrawl injects this
+    // provider the same way it borrows getAiConfig. Keyed by URL + a signature of the
+    // page summary and model, so content or model changes invalidate naturally.
+    getAiClassificationCache() {
+        return {
+            read: (url, signature) => this.readCachedAiClassification(url, signature),
+            write: (url, signature, outcome) => this.writeCachedAiClassification(url, signature, outcome)
+        };
+    }
+
+    getAiClassificationCachePathParts(url, signature) {
+        const signatureHash = this.hashCacheValue(JSON.stringify(signature || {}));
+        const normalizedUrl = this.normalizeHttpUrlValue(url) || String(url || '');
+        const parsed = this.parseUrlComponents(normalizedUrl);
+        if (parsed) {
+            const hostDir = this.sanitizeCacheSegment(parsed.hostname || 'unknown-host');
+            const pathSegments = String(parsed.pathname || '/')
+                .split('/')
+                .filter(Boolean)
+                .map(segment => this.sanitizeCacheSegment(segment))
+                .filter(Boolean);
+            let fileBase = pathSegments.length > 0 ? pathSegments.join('__') : 'index';
+            if (parsed.search) {
+                fileBase += `--q-${this.hashCacheValue(parsed.search)}`;
+            }
+            fileBase += `--cls-${signatureHash}`;
+            if (fileBase.length > 140) {
+                fileBase = `${fileBase.slice(0, 96)}--${this.hashCacheValue(fileBase)}`;
+            }
+            return { normalizedUrl, hostDir, fileName: `${fileBase}.json` };
+        }
+        return {
+            normalizedUrl,
+            hostDir: 'unknown-host',
+            fileName: `${this.hashCacheValue(`${normalizedUrl}|${signatureHash}`)}.json`
+        };
+    }
+
+    async readCachedAiClassification(url, signature) {
+        const runtime = this.getAiClassificationCacheRuntime();
+        if (!runtime) return null;
+        const { hostDir, fileName } = this.getAiClassificationCachePathParts(url, signature);
+        try {
+            let rawPayload = null;
+            if (runtime.type === 'scriptable') {
+                const cachePath = runtime.fm.joinPath(runtime.fm.joinPath(runtime.baseDir, hostDir), fileName);
+                if (!runtime.fm.fileExists(cachePath)) return null;
+                try {
+                    await runtime.fm.downloadFileFromiCloud(cachePath);
+                } catch (_) {}
+                rawPayload = runtime.fm.readString(cachePath);
+            } else {
+                const cachePath = runtime.path.join(runtime.baseDir, hostDir, fileName);
+                rawPayload = await runtime.fs.promises.readFile(cachePath, 'utf8');
+            }
+            const cached = JSON.parse(rawPayload);
+            return cached && cached.outcome && typeof cached.outcome === 'object' ? cached.outcome : null;
+        } catch (error) {
+            const missingFile = error && (error.code === 'ENOENT' || /does not exist/i.test(String(error.message || '')));
+            if (!missingFile) {
+                console.log(`🤖 AI Web: classification cache read failed for ${url}: ${error.message}`);
+            }
+            return null;
+        }
+    }
+
+    async writeCachedAiClassification(url, signature, outcome) {
+        if (!outcome || typeof outcome !== 'object') return null;
+        const runtime = this.getAiClassificationCacheRuntime();
+        if (!runtime) return null;
+        const { normalizedUrl, hostDir, fileName } = this.getAiClassificationCachePathParts(url, signature);
+        const payload = {
+            url: normalizedUrl,
+            cachedAt: new Date().toISOString(),
+            signature: signature || {},
+            outcome
+        };
+        try {
+            if (runtime.type === 'scriptable') {
+                const hostDirPath = runtime.fm.joinPath(runtime.baseDir, hostDir);
+                if (!runtime.fm.fileExists(runtime.baseDir)) runtime.fm.createDirectory(runtime.baseDir, true);
+                if (!runtime.fm.fileExists(hostDirPath)) runtime.fm.createDirectory(hostDirPath, true);
+                const cachePath = runtime.fm.joinPath(hostDirPath, fileName);
+                runtime.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+                return cachePath;
+            }
+            const hostDirPath = runtime.path.join(runtime.baseDir, hostDir);
+            await runtime.fs.promises.mkdir(hostDirPath, { recursive: true });
+            const cachePath = runtime.path.join(hostDirPath, fileName);
+            await runtime.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+            return cachePath;
+        } catch (error) {
+            console.log(`🤖 AI Web: classification cache write failed for ${url}: ${error.message}`);
+            return null;
+        }
     }
 
     async readCachedOcrResult(imageUrl, ocrConfig = {}) {
@@ -2319,7 +2425,7 @@ class AiWebParser {
     // Build parser events from schema.org Event JSON-LD nodes. Ticketing pages
     // describe their event completely in structured data; using it directly is
     // exact (ISO dates carry timezone offsets) and costs no AI/OCR requests.
-    extractEventsFromJsonLd(html, sourceUrl) {
+    extractEventsFromJsonLd(html, sourceUrl, cityConfig = null) {
         if (!this.core || typeof this.core.extractJsonLdEventNodes !== 'function') return [];
         let nodes = [];
         try {
@@ -2331,7 +2437,7 @@ class AiWebParser {
         const events = [];
         const seen = new Set();
         for (const node of nodes) {
-            const event = this.buildEventFromJsonLdNode(node, sourceUrl);
+            const event = this.buildEventFromJsonLdNode(node, sourceUrl, cityConfig);
             if (!event) continue;
             const key = `${event.title.toLowerCase()}|${event.startDate.toISOString()}`;
             if (seen.has(key)) continue;
@@ -2341,7 +2447,7 @@ class AiWebParser {
         return events;
     }
 
-    buildEventFromJsonLdNode(node, sourceUrl) {
+    buildEventFromJsonLdNode(node, sourceUrl, cityConfig = null) {
         if (!node || typeof node !== 'object') return null;
         const clean = (value) => this.normalizeWhitespace(
             this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&')
@@ -2371,6 +2477,17 @@ class AiWebParser {
             image: this.pickJsonLdImage(node.image),
             source: this.config.source
         };
+        // The JSON-LD address carries the locality (e.g. "Portland, OR") — resolve city
+        // and timezone from it directly so nothing downstream has to guess. Address only:
+        // bar names produce false city matches ("Brooklyn Bowl" in Vegas).
+        if (address && cityConfig) {
+            const cityKey = this.findCityKeyInText(address, cityConfig);
+            if (cityKey) {
+                event.city = cityKey;
+                const timezone = this.getTimezoneForCity(cityKey, cityConfig);
+                if (timezone) event.timezone = timezone;
+            }
+        }
         // Dates without an explicit offset are wall-clock times anchored as UTC;
         // LocationNormalizer re-anchors them once the city/timezone is known.
         if (start.timezoneUnresolved || (end.date && end.timezoneUnresolved)) {
