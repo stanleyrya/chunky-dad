@@ -168,11 +168,18 @@ class SharedCore {
      * @returns {'event-page'|'link-aggregator'|'multi-event-page'|'ad'|'unknown'}
      */
     classifyPage(url, html) {
+        return this.classifyPageWithSignal(url, html).classification;
+    }
+
+    // Like classifyPage, but also reports WHICH tier decided ('url-rule', 'json-ld',
+    // 'heuristic', 'none') so callers can treat text-heuristic results as weak and
+    // optionally re-check them with AI.
+    classifyPageWithSignal(url, html) {
         // 1. URL pattern rules (deterministic, no HTML needed)
         if (url) {
             for (const rule of this.pageClassificationRules) {
                 if (this.pageClassificationRuleMatchesUrl(rule, url)) {
-                    return rule.classification;
+                    return { classification: rule.classification, signal: 'url-rule' };
                 }
             }
 
@@ -184,8 +191,8 @@ class SharedCore {
         //    landing in the segment-discovery path that finds nothing.
         if (html) {
             const jsonLdEventCount = this.extractJsonLdEventNodes(html).length;
-            if (jsonLdEventCount === 1) return 'event-page';
-            if (jsonLdEventCount >= 2) return 'multi-event-page';
+            if (jsonLdEventCount === 1) return { classification: 'event-page', signal: 'json-ld' };
+            if (jsonLdEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-ld' };
         }
 
         // 3. HTML heuristics for unknown URLs
@@ -199,12 +206,89 @@ class SharedCore {
             const numericDateMatches = html.match(this.pageClassificationNumericDatePattern) || [];
 
             if (monthMatches.length >= this.pageClassificationMultiEventThreshold ||
-                numericDateMatches.length >= this.pageClassificationMultiEventThreshold) return 'multi-event-page';
+                numericDateMatches.length >= this.pageClassificationMultiEventThreshold) {
+                return { classification: 'multi-event-page', signal: 'heuristic' };
+            }
             if (monthMatches.length >= this.pageClassificationEventPageThreshold ||
-                numericDateMatches.length >= this.pageClassificationEventPageThreshold) return 'event-page';
+                numericDateMatches.length >= this.pageClassificationEventPageThreshold) {
+                return { classification: 'event-page', signal: 'heuristic' };
+            }
         }
 
-        return 'unknown';
+        return { classification: 'unknown', signal: 'none' };
+    }
+
+    // Compact text summary of a page for the AI classification prompt: title, meta
+    // description, and the first chunk of visible body text.
+    summarizePageForClassification(html, maxTextChars = 2500) {
+        const source = String(html || '');
+        const titleMatch = source.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        const metaMatch = source.match(/<meta[^>]+name\s*=\s*["']description["'][^>]*content\s*=\s*["']([^"']*)["']/i)
+            || source.match(/<meta[^>]+content\s*=\s*["']([^"']*)["'][^>]*name\s*=\s*["']description["']/i);
+        const bodyMatch = source.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+        const cleanText = (value) => String(value || '')
+            .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return {
+            title: cleanText(titleMatch ? titleMatch[1] : ''),
+            metaDescription: cleanText(metaMatch ? metaMatch[1] : ''),
+            bodyText: cleanText(bodyMatch ? bodyMatch[1] : source).slice(0, maxTextChars)
+        };
+    }
+
+    // Ask the text model to classify a page. Used only when the deterministic tiers
+    // (URL rules, JSON-LD) had no answer and the month-count heuristic is all we have.
+    // Returns { classification, confidence, reason } or null when the response is
+    // unusable — callers should keep their heuristic answer in that case.
+    async classifyPageWithAi(url, html, aiConfig, httpAdapter) {
+        if (!aiConfig || aiConfig.enabled === false || !httpAdapter) return null;
+        const validLabels = ['event-page', 'multi-event-page', 'link-aggregator', 'ad', 'unknown'];
+        const summary = this.summarizePageForClassification(html);
+        if (!summary.bodyText && !summary.title) return null;
+
+        const prompt = [
+            'You are classifying a web page for an event scraper.',
+            '',
+            `URL: ${url || 'unknown'}`,
+            `PAGE_TITLE: ${summary.title || 'none'}`,
+            `META_DESCRIPTION: ${summary.metaDescription || 'none'}`,
+            `PAGE_TEXT (truncated): ${summary.bodyText || 'none'}`,
+            '',
+            'Classify the page into exactly ONE category:',
+            '- event-page: describes ONE event (one date or continuous range, one venue, one ticket flow)',
+            '- multi-event-page: lists TWO OR MORE distinct events with different dates or tickets',
+            '- link-aggregator: a hub of links (linktree-style, venue/city hub) without event details of its own',
+            '- ad: advertisement or promo page with no concrete event details',
+            '- unknown: cannot tell from the text',
+            '',
+            'Return JSON only: {"classification": "<category>", "confidence": 0-100, "reason": "<one sentence>"}'
+        ].join('\n');
+
+        // Classification needs a short answer — cap generation regardless of the
+        // extraction config's budget.
+        const classifyConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 300, 300) };
+        const rawResponse = await this.callAiGenerate(classifyConfig, prompt, 'classify-page', httpAdapter);
+        if (!rawResponse) return null;
+
+        let parsed = null;
+        try {
+            parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse);
+        } catch (_) {
+            return null;
+        }
+        if (!parsed || typeof parsed !== 'object') return null;
+        const classification = String(parsed.classification || '').trim().toLowerCase();
+        if (!validLabels.includes(classification) || classification === 'unknown') return null;
+        const confidence = Number(parsed.confidence);
+        if (Number.isFinite(confidence) && confidence < 60) return null;
+        return {
+            classification,
+            confidence: Number.isFinite(confidence) ? confidence : null,
+            reason: typeof parsed.reason === 'string' ? parsed.reason : ''
+        };
     }
 
     // Schema.org Event and its subtypes (MusicEvent, DanceEvent, Festival, ...).
@@ -910,7 +994,33 @@ class SharedCore {
         logParserSwitch = true,
         httpAdapter
     }) {
-        const pageClassification = this.classifyPage(url, htmlData.html);
+        let { classification: pageClassification, signal: classificationSignal } = this.classifyPageWithSignal(url, htmlData.html);
+
+        // AI second opinion (default on; disable with parserConfig.ai.classifyPages: false)
+        // — only when the deterministic tiers (URL rules, JSON-LD) had no answer and we
+        // are relying on the crude month-count heuristic. Costs one small text-model
+        // request per weak-signal page.
+        const aiClassifyEnabled = !(parserConfig && parserConfig.ai && parserConfig.ai.classifyPages === false);
+        const weakSignal = classificationSignal === 'heuristic' || classificationSignal === 'none';
+        if (aiClassifyEnabled && weakSignal) {
+            const aiParser = parsers && parsers['ai-web'];
+            const aiConfig = aiParser && typeof aiParser.getAiConfig === 'function'
+                ? aiParser.getAiConfig(parserConfig)
+                : null;
+            try {
+                const aiResult = await this.classifyPageWithAi(url, htmlData.html, aiConfig, httpAdapter);
+                if (aiResult && aiResult.classification && aiResult.classification !== pageClassification) {
+                    await displayAdapter.logInfo(`SYSTEM: AI reclassified ${url} → ${aiResult.classification} (was ${pageClassification} via ${classificationSignal}, confidence ${aiResult.confidence === null ? 'n/a' : aiResult.confidence}: ${aiResult.reason})`);
+                    pageClassification = aiResult.classification;
+                    classificationSignal = 'ai';
+                } else if (aiResult && aiResult.classification) {
+                    classificationSignal = 'ai-confirmed';
+                }
+            } catch (error) {
+                console.warn(`⚠️ SharedCore: AI page classification failed for ${url}: ${error.message}`);
+            }
+        }
+
         if (logClassification) {
             await displayAdapter.logInfo(`SYSTEM: Classified ${url} → ${pageClassification}`);
         }
