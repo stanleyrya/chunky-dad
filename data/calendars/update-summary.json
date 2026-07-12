@@ -21,8 +21,8 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 13565,
-      "eventCount": 12
+      "dataLength": 15104,
+      "eventCount": 13
     },
     "dallas": {
       "name": "Dallas",
@@ -63,8 +63,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 10992,
-      "eventCount": 12
+      "dataLength": 12124,
+      "eventCount": 13
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -93,7 +93,7 @@
     "ptown": {
       "name": "Provincetown",
       "status": "success",
-      "dataLength": 2443,
+      "dataLength": 2710,
       "eventCount": 2
     },
     "san-diego": {
