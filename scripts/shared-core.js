@@ -178,7 +178,17 @@ class SharedCore {
 
         }
 
-        // 2. HTML heuristics for unknown URLs
+        // 2. Schema.org Event JSON-LD (deterministic). Ticketing pages (sickening.events,
+        //    tryst.events) describe exactly one event in structured data but trip the
+        //    month-count heuristic below with related-event footers and calendars,
+        //    landing in the segment-discovery path that finds nothing.
+        if (html) {
+            const jsonLdEventCount = this.extractJsonLdEventNodes(html).length;
+            if (jsonLdEventCount === 1) return 'event-page';
+            if (jsonLdEventCount >= 2) return 'multi-event-page';
+        }
+
+        // 3. HTML heuristics for unknown URLs
         if (html) {
             // Reset lastIndex since the patterns are reused across calls (global flag)
             this.pageClassificationMonthPattern.lastIndex = 0;
@@ -195,6 +205,55 @@ class SharedCore {
         }
 
         return 'unknown';
+    }
+
+    // Schema.org Event and its subtypes (MusicEvent, DanceEvent, Festival, ...).
+    // EventSeries is excluded: a series node describes many dates, not one event.
+    isJsonLdEventType(typeValue) {
+        const types = Array.isArray(typeValue) ? typeValue : [typeValue];
+        return types.some(value => {
+            const name = String(value || '').replace(/^https?:\/\/schema\.org\//i, '').trim();
+            if (!name || /^EventSeries$/i.test(name)) return false;
+            return /Event$/i.test(name) || /^Festival$/i.test(name);
+        });
+    }
+
+    // Collect JSON-LD nodes that describe a concrete event: an Event-typed node
+    // with both a name and a startDate. Walks @graph/list containers so wrapped
+    // and nested markup (WordPress @graph, ItemList, festival subEvents) is found.
+    extractJsonLdEventNodes(html) {
+        const nodes = [];
+        const source = String(html || '');
+        if (!source.includes('ld+json')) return nodes;
+        const scriptPattern = /<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptPattern.exec(source)) !== null) {
+            let parsed;
+            try {
+                parsed = JSON.parse(match[1].trim());
+            } catch (_) {
+                continue;
+            }
+            this.collectJsonLdEventNodes(parsed, nodes, 0);
+        }
+        return nodes;
+    }
+
+    collectJsonLdEventNodes(node, results, depth) {
+        if (!node || depth > 6) return;
+        if (Array.isArray(node)) {
+            for (const child of node) this.collectJsonLdEventNodes(child, results, depth + 1);
+            return;
+        }
+        if (typeof node !== 'object') return;
+        const hasName = typeof node.name === 'string' && node.name.trim().length > 0;
+        const hasStartDate = typeof node.startDate === 'string' && node.startDate.trim().length > 0;
+        if (this.isJsonLdEventType(node['@type']) && hasName && hasStartDate) {
+            results.push(node);
+        }
+        for (const key of ['@graph', 'mainEntity', 'subEvent', 'itemListElement', 'item', 'events']) {
+            if (node[key]) this.collectJsonLdEventNodes(node[key], results, depth + 1);
+        }
     }
 
     normalizePageClassificationRules(rules) {

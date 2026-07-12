@@ -286,6 +286,30 @@ class AiWebParser {
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
 
+            // Deterministic extraction from schema.org Event JSON-LD. Ticketing pages
+            // (sickening.events, tryst.events, Eventbrite) hand us complete structured
+            // data — when it covers title + start + venue, OCR and AI extraction add
+            // cost without adding trust, so use the structured data directly.
+            const jsonLdEvents = this.extractEventsFromJsonLd(html, sourceUrl);
+            const completeJsonLdEvents = jsonLdEvents.filter(event => event.bar || event.address);
+            const useJsonLdEvents = parserConfig.discoveryOnly !== true
+                && pageClassification !== 'link-aggregator'
+                && completeJsonLdEvents.length > 0
+                // A multi-event page with a single JSON-LD node likely marks up only its
+                // featured event — fall through to segment extraction for full coverage.
+                && (pageClassification !== 'multi-event-page' || completeJsonLdEvents.length >= 2);
+            if (useJsonLdEvents) {
+                console.log(`🤖 AI Web: Extracted ${completeJsonLdEvents.length} event(s) from JSON-LD structured data — skipping OCR and AI extraction`);
+                return {
+                    events: completeJsonLdEvents,
+                    additionalLinks: additionalLinks,
+                    discoveredSegments: null,
+                    ocrResults: [],
+                    source: this.config.source,
+                    url: sourceUrl
+                };
+            }
+
             // Extract OCR from ALL images FIRST - we need it for consistent segment-to-image
             // mapping. Multi-event pages always need OCR (segment pairing runs even in
             // discoveryOnly mode); pages whose extraction will be skipped (link-aggregators,
@@ -336,6 +360,12 @@ class AiWebParser {
 
             // Skip AI extraction in discoveryOnly mode or for link-aggregator pages
             if (parserConfig.discoveryOnly === true || pageClassification === 'link-aggregator') {
+                // Discovery drops events, but JSON-LD event data still tells the user
+                // what the page is about — surface it as segments in the discovery tree.
+                if (!discoveredSegments && jsonLdEvents.length > 0) {
+                    discoveredSegments = this.describeJsonLdEventsAsSegments(jsonLdEvents);
+                    console.log(`🤖 AI Web: JSON-LD provided ${discoveredSegments.length} event segment(s) for discovery`);
+                }
                 console.log(`🤖 AI Web: Link-finding mode (${parserConfig.discoveryOnly ? 'discoveryOnly' : 'link-aggregator'}) found ${additionalLinks.length} additional links`);
                 return {
                     events: [],
@@ -2280,6 +2310,158 @@ class AiWebParser {
             confidence: confidenceMatch ? Number(confidenceMatch[1]) : null,
             reason: 'salvaged-from-truncated-response'
         };
+    }
+
+    // ============================================================================
+    // JSON-LD DETERMINISTIC EVENT EXTRACTION
+    // ============================================================================
+
+    // Build parser events from schema.org Event JSON-LD nodes. Ticketing pages
+    // describe their event completely in structured data; using it directly is
+    // exact (ISO dates carry timezone offsets) and costs no AI/OCR requests.
+    extractEventsFromJsonLd(html, sourceUrl) {
+        if (!this.core || typeof this.core.extractJsonLdEventNodes !== 'function') return [];
+        let nodes = [];
+        try {
+            nodes = this.core.extractJsonLdEventNodes(html);
+        } catch (error) {
+            console.warn(`🤖 AI Web: JSON-LD event extraction failed: ${error.message}`);
+            return [];
+        }
+        const events = [];
+        const seen = new Set();
+        for (const node of nodes) {
+            const event = this.buildEventFromJsonLdNode(node, sourceUrl);
+            if (!event) continue;
+            const key = `${event.title.toLowerCase()}|${event.startDate.toISOString()}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            events.push(event);
+        }
+        return events;
+    }
+
+    buildEventFromJsonLdNode(node, sourceUrl) {
+        if (!node || typeof node !== 'object') return null;
+        const clean = (value) => this.normalizeWhitespace(
+            this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&')
+        );
+        const title = clean(node.name);
+        const start = this.parseJsonLdDateValue(node.startDate);
+        if (!title || !start.date) return null;
+        const end = this.parseJsonLdDateValue(node.endDate);
+
+        const place = this.pickJsonLdPlace(node.location);
+        const bar = place ? clean(place.name) : '';
+        const address = place ? this.formatJsonLdAddress(place.address, clean) : '';
+
+        const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
+        const offerUrl = offer && typeof offer === 'object' ? this.normalizeHttpUrlValue(offer.url) : '';
+        const ticketUrl = offerUrl || this.normalizeHttpUrlValue(node.url) || '';
+
+        const event = {
+            title,
+            description: clean(node.description),
+            startDate: start.date,
+            endDate: end.date || null,
+            bar,
+            address,
+            url: sourceUrl,
+            ticketUrl,
+            image: this.pickJsonLdImage(node.image),
+            source: this.config.source
+        };
+        // Dates without an explicit offset are wall-clock times anchored as UTC;
+        // LocationNormalizer re-anchors them once the city/timezone is known.
+        if (start.timezoneUnresolved || (end.date && end.timezoneUnresolved)) {
+            event._timezoneUnresolved = true;
+        }
+        return event;
+    }
+
+    parseJsonLdDateValue(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return { date: null, timezoneUnresolved: false };
+        // Explicit offset or UTC marker → exact instant
+        if (/(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw)) {
+            const date = new Date(raw);
+            return Number.isNaN(date.getTime())
+                ? { date: null, timezoneUnresolved: false }
+                : { date, timezoneUnresolved: false };
+        }
+        // No offset → wall-clock local time. Anchor as UTC (never the device timezone,
+        // which JS would otherwise silently use) and flag for normalizer re-anchoring.
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (!match) return { date: null, timezoneUnresolved: false };
+        const date = new Date(Date.UTC(
+            Number(match[1]), Number(match[2]) - 1, Number(match[3]),
+            Number(match[4] || 0), Number(match[5] || 0), Number(match[6] || 0)
+        ));
+        return Number.isNaN(date.getTime())
+            ? { date: null, timezoneUnresolved: false }
+            : { date, timezoneUnresolved: true };
+    }
+
+    pickJsonLdPlace(location) {
+        const candidates = Array.isArray(location) ? location : [location];
+        for (const candidate of candidates) {
+            if (candidate && typeof candidate === 'object') {
+                if (/virtual/i.test(String(candidate['@type'] || ''))) continue;
+                return candidate;
+            }
+            if (typeof candidate === 'string' && candidate.trim()) {
+                return { name: candidate };
+            }
+        }
+        return null;
+    }
+
+    formatJsonLdAddress(address, clean) {
+        if (!address) return '';
+        if (typeof address === 'string') return clean(address);
+        if (Array.isArray(address)) return this.formatJsonLdAddress(address[0], clean);
+        if (typeof address === 'object') {
+            return [address.streetAddress, address.addressLocality, address.addressRegion, address.postalCode]
+                .map(part => clean(part))
+                .filter(Boolean)
+                .join(', ');
+        }
+        return '';
+    }
+
+    pickJsonLdImage(image) {
+        const candidates = Array.isArray(image) ? image : [image];
+        for (const candidate of candidates) {
+            if (typeof candidate === 'string' && candidate.trim()) {
+                return this.normalizeHttpUrlValue(candidate) || '';
+            }
+            if (candidate && typeof candidate === 'object' && typeof candidate.url === 'string') {
+                return this.normalizeHttpUrlValue(candidate.url) || '';
+            }
+        }
+        return '';
+    }
+
+    // Discovery mode drops events, but the discovery tree should still show what a
+    // page is about — surface JSON-LD events in the same shape as discovered segments.
+    describeJsonLdEventsAsSegments(jsonLdEvents) {
+        const events = Array.isArray(jsonLdEvents) ? jsonLdEvents : [];
+        return events.map((event, i) => {
+            const lines = [
+                event.title,
+                event.startDate ? event.startDate.toISOString() : '',
+                event.bar,
+                event.address,
+                event.ticketUrl ? `TICKET_URL: ${event.ticketUrl}` : ''
+            ].filter(Boolean);
+            return {
+                index: i + 1,
+                lineCount: lines.length,
+                preview: lines.slice(0, 3).join(' | '),
+                imageUrls: event.image ? [event.image] : [],
+                resourceLines: event.image ? [`SEGMENT_IMAGE_URL: ${event.image}`] : []
+            };
+        });
     }
 
     // OCR is only worth paying for when something consumes it: segment pairing on

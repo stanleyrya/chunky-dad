@@ -617,3 +617,124 @@ test('getUrlDedupeKey treats www and bare-host variants as the same URL', () => 
     parser.getUrlDedupeKey('https://tryst.events/e/bearracuda/tickets')
   );
 });
+
+const SICKENING_JSONLD_HTML = `
+  <html><head>
+    <script type="application/ld+json">
+      {"@context":"http://schema.org","@type":"MusicEvent",
+       "name":"Bearracuda Portland:PRIDE FRIDAY",
+       "url":"https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets",
+       "startDate":"2026-07-17T21:00:00-07:00",
+       "endDate":"2026-07-18T03:00:00-07:00",
+       "eventStatus":"https://schema.org/EventScheduled",
+       "description":"<p>Harnesses, Jockstraps &amp; Fetish Gear encouraged.</p>",
+       "image":["https://res.cloudinary.example/cover.webp"],
+       "organizer":{"@type":"Organization","name":"Crown &amp; Anchor"},
+       "location":{"@type":"Place","name":"Nova PDX",
+         "address":{"@type":"PostalAddress","streetAddress":"722 East Burnside Street","addressLocality":"Portland","addressRegion":"OR","postalCode":"97214"}},
+       "offers":{"@type":"Offer","url":"https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets","availability":"https://schema.org/InStock"}}
+    </script>
+  </head><body>January February March April May June July August related events footer</body></html>`;
+
+test('extractEventsFromJsonLd builds a complete event from ticketing-page structured data', () => {
+  const parser = createParser();
+  const events = parser.extractEventsFromJsonLd(SICKENING_JSONLD_HTML, 'https://sickening.events/e/bearracuda-portland-pridefriday');
+
+  assert.equal(events.length, 1);
+  const event = events[0];
+  assert.equal(event.title, 'Bearracuda Portland:PRIDE FRIDAY');
+  // Offset-carrying ISO dates are exact instants — no timezone ambiguity
+  assert.equal(event.startDate.toISOString(), '2026-07-18T04:00:00.000Z');
+  assert.equal(event.endDate.toISOString(), '2026-07-18T10:00:00.000Z');
+  assert.equal(event._timezoneUnresolved, undefined);
+  assert.equal(event.bar, 'Nova PDX');
+  assert.equal(event.address, '722 East Burnside Street, Portland, OR, 97214');
+  assert.equal(event.ticketUrl, 'https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets');
+  assert.equal(event.image, 'https://res.cloudinary.example/cover.webp');
+  assert.match(event.description, /Harnesses, Jockstraps & Fetish Gear/);
+  assert.ok(!/<p>/.test(event.description), 'HTML tags should be stripped');
+  assert.equal(event.url, 'https://sickening.events/e/bearracuda-portland-pridefriday');
+});
+
+test('parseJsonLdDateValue anchors offset-less dates as wall-clock UTC and flags them', () => {
+  const parser = createParser();
+
+  const exact = parser.parseJsonLdDateValue('2026-07-17T21:00:00-07:00');
+  assert.equal(exact.timezoneUnresolved, false);
+  assert.equal(exact.date.toISOString(), '2026-07-18T04:00:00.000Z');
+
+  // No offset: must NOT be parsed in the device timezone — anchored as UTC + flagged
+  const wallClock = parser.parseJsonLdDateValue('2026-07-17T21:00:00');
+  assert.equal(wallClock.timezoneUnresolved, true);
+  assert.equal(wallClock.date.toISOString(), '2026-07-17T21:00:00.000Z');
+
+  const dateOnly = parser.parseJsonLdDateValue('2026-07-17');
+  assert.equal(dateOnly.timezoneUnresolved, true);
+  assert.equal(dateOnly.date.toISOString(), '2026-07-17T00:00:00.000Z');
+
+  assert.equal(parser.parseJsonLdDateValue('not a date').date, null);
+  assert.equal(parser.parseJsonLdDateValue('').date, null);
+});
+
+test('parseEvents returns JSON-LD events directly and skips OCR and AI extraction', async () => {
+  const parser = createParser();
+  parser.extractOcrFromAllImages = async () => {
+    throw new Error('OCR should not run when JSON-LD covers the event');
+  };
+  parser.core.callAiGenerate = async () => {
+    throw new Error('AI should not be called when JSON-LD covers the event');
+  };
+
+  const result = await parser.parseEvents(
+    { url: 'https://sickening.events/e/bearracuda-portland-pridefriday', html: SICKENING_JSONLD_HTML },
+    {},
+    null,
+    'event-page',
+    null
+  );
+
+  assert.equal(result.events.length, 1);
+  assert.equal(result.events[0].title, 'Bearracuda Portland:PRIDE FRIDAY');
+  assert.equal(result.events[0].bar, 'Nova PDX');
+});
+
+test('parseEvents surfaces JSON-LD events as segments in discovery mode', async () => {
+  const parser = createParser();
+  const result = await parser.parseEvents(
+    { url: 'https://sickening.events/e/bearracuda-portland-pridefriday', html: SICKENING_JSONLD_HTML },
+    { discoveryOnly: true },
+    null,
+    'event-page',
+    null
+  );
+
+  assert.equal(result.events.length, 0, 'discovery mode never returns events');
+  assert.ok(Array.isArray(result.discoveredSegments));
+  assert.equal(result.discoveredSegments.length, 1);
+  assert.match(result.discoveredSegments[0].preview, /Bearracuda Portland:PRIDE FRIDAY/);
+  assert.deepEqual(result.discoveredSegments[0].imageUrls, ['https://res.cloudinary.example/cover.webp']);
+});
+
+test('parseEvents falls through to AI extraction when JSON-LD is incomplete for the page type', async () => {
+  const parser = createParser();
+  // Multi-event page with only ONE JSON-LD event: likely just the featured event is
+  // marked up, so the segment path must still run for full coverage.
+  let ocrRan = false;
+  parser.extractOcrFromAllImages = async () => {
+    ocrRan = true;
+    return [];
+  };
+  parser.extractEventsFromMultiEventPage = async () => [];
+  parser.getDataFlagsForHtml = parser.getDataFlagsForHtml || (() => ({}));
+
+  const result = await parser.parseEvents(
+    { url: 'https://x.example/calendar', html: SICKENING_JSONLD_HTML },
+    {},
+    null,
+    'multi-event-page',
+    null
+  );
+
+  assert.equal(ocrRan, true, 'OCR should still run on the segment path');
+  assert.equal(result.events.length, 0);
+});
