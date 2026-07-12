@@ -227,3 +227,144 @@ test('classifyPage prefers JSON-LD Event count over the month-name heuristic', (
   ]);
   assert.equal(ruledCore.classifyPage('https://sickening.example/e/bearracuda', singleEventHtml), 'multi-event-page');
 });
+
+test('classifyPageWithSignal reports which tier decided', () => {
+  const core = createCore();
+
+  const jsonLdHtml = '<script type="application/ld+json">{"@type":"MusicEvent","name":"X","startDate":"2026-07-17T21:00:00-07:00"}</script>';
+  assert.deepEqual(core.classifyPageWithSignal('https://x.example/e/x', jsonLdHtml), { classification: 'event-page', signal: 'json-ld' });
+
+  assert.deepEqual(
+    core.classifyPageWithSignal('https://x.example/party', '<body>July 17 party</body>'),
+    { classification: 'event-page', signal: 'heuristic' }
+  );
+  assert.deepEqual(core.classifyPageWithSignal('https://x.example/', '<body>no dates here</body>'), { classification: 'unknown', signal: 'none' });
+
+  const ruledCore = createCore();
+  ruledCore.pageClassificationRules = ruledCore.normalizePageClassificationRules([
+    { pattern: 'x\\.example/hub', classification: 'link-aggregator' }
+  ]);
+  assert.deepEqual(ruledCore.classifyPageWithSignal('https://x.example/hub', jsonLdHtml), { classification: 'link-aggregator', signal: 'url-rule' });
+});
+
+test('classifyPageWithAi accepts confident valid labels and rejects everything else', async () => {
+  const core = createCore();
+  const aiConfig = {
+    provider: 'openai',
+    endpoint: 'http://rybook.example:8000/v1/chat/completions',
+    model: 'test-model',
+    temperature: 0,
+    numPredict: 2000,
+    timeoutSeconds: 120,
+    openai: {}
+  };
+  const html = '<html><head><title>Big Party</title></head><body>One night only at The Eagle, July 17.</body></html>';
+  const adapterReturning = (content) => ({
+    postJson: async () => ({
+      ok: true,
+      status: 200,
+      text: JSON.stringify({ choices: [{ message: { role: 'assistant', content }, finish_reason: 'stop' }] })
+    })
+  });
+
+  const good = await core.classifyPageWithAi('https://x.example/party', html, aiConfig,
+    adapterReturning('{"classification": "event-page", "confidence": 92, "reason": "single event"}'));
+  assert.equal(good.classification, 'event-page');
+  assert.equal(good.confidence, 92);
+
+  // The numPredict cap should apply to the classification request
+  let sentPayload = null;
+  const capturingAdapter = {
+    postJson: async (endpoint, payload) => {
+      sentPayload = payload;
+      return { ok: true, status: 200, text: JSON.stringify({ choices: [{ message: { content: '{"classification": "ad", "confidence": 99}' } }] }) };
+    }
+  };
+  await core.classifyPageWithAi('https://x.example/party', html, aiConfig, capturingAdapter);
+  assert.equal(sentPayload.max_tokens, 300);
+
+  // Low confidence → keep the heuristic answer
+  const lowConfidence = await core.classifyPageWithAi('https://x.example/party', html, aiConfig,
+    adapterReturning('{"classification": "multi-event-page", "confidence": 30, "reason": "unsure"}'));
+  assert.equal(lowConfidence, null);
+
+  // Invalid or unknown labels → null
+  assert.equal(await core.classifyPageWithAi('https://x.example/party', html, aiConfig,
+    adapterReturning('{"classification": "unknown", "confidence": 95}')), null);
+  assert.equal(await core.classifyPageWithAi('https://x.example/party', html, aiConfig,
+    adapterReturning('{"classification": "banana", "confidence": 95}')), null);
+  assert.equal(await core.classifyPageWithAi('https://x.example/party', html, aiConfig,
+    adapterReturning('not json')), null);
+
+  // Missing config/adapter → null without throwing
+  assert.equal(await core.classifyPageWithAi('https://x.example/party', html, null, adapterReturning('{}')), null);
+  assert.equal(await core.classifyPageWithAi('https://x.example/party', html, aiConfig, null), null);
+});
+
+test('parsePageForCrawl uses the AI second opinion only for weak signals when enabled', async () => {
+  const core = createCore();
+  const displayAdapter = { logInfo: async () => {} };
+  const monthNoise = '<body>January February March April May June July August</body>';
+  const receivedClassifications = [];
+  const parsers = {
+    'ai-web': {
+      getAiConfig: () => ({
+        provider: 'openai',
+        endpoint: 'http://rybook.example:8000/v1/chat/completions',
+        model: 'test-model',
+        temperature: 0,
+        numPredict: 2000,
+        timeoutSeconds: 120,
+        openai: {}
+      }),
+      parseEvents: async (htmlData, parserConfig, cities, classification) => {
+        receivedClassifications.push(classification);
+        return { events: [], additionalLinks: [] };
+      }
+    }
+  };
+  const aiAdapter = {
+    postJson: async () => ({
+      ok: true,
+      status: 200,
+      text: JSON.stringify({ choices: [{ message: { content: '{"classification": "event-page", "confidence": 90, "reason": "one event"}' } }] })
+    })
+  };
+
+  // Heuristic says multi-event-page (8 month names); AI overrides to event-page
+  await core.parsePageForCrawl({
+    url: 'https://x.example/party',
+    htmlData: { url: 'https://x.example/party', html: monthNoise },
+    parsers,
+    parserConfig: { ai: { classifyPages: true } },
+    displayAdapter,
+    httpAdapter: aiAdapter
+  });
+  assert.deepEqual(receivedClassifications, ['event-page']);
+
+  // Flag off → heuristic result stands, no AI request
+  receivedClassifications.length = 0;
+  const explodingAdapter = { postJson: async () => { throw new Error('AI must not be called when classifyPages is off'); } };
+  await core.parsePageForCrawl({
+    url: 'https://x.example/party',
+    htmlData: { url: 'https://x.example/party', html: monthNoise },
+    parsers,
+    parserConfig: {},
+    displayAdapter,
+    httpAdapter: explodingAdapter
+  });
+  assert.deepEqual(receivedClassifications, ['multi-event-page']);
+
+  // Strong signal (JSON-LD) → no AI request even when enabled
+  receivedClassifications.length = 0;
+  const jsonLdHtml = '<script type="application/ld+json">{"@type":"MusicEvent","name":"X","startDate":"2026-07-17T21:00:00-07:00"}</script>';
+  await core.parsePageForCrawl({
+    url: 'https://x.example/e/x',
+    htmlData: { url: 'https://x.example/e/x', html: jsonLdHtml },
+    parsers,
+    parserConfig: { ai: { classifyPages: true } },
+    displayAdapter,
+    httpAdapter: explodingAdapter
+  });
+  assert.deepEqual(receivedClassifications, ['event-page']);
+});
