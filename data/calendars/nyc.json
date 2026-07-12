@@ -22,26 +22,156 @@
   },
   "events": [
     {
-      "name": "Fat dad",
-      "day": "Saturday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-06-20T00:00:00",
-      "endDate": "2026-06-21T00:00:00",
-      "unprocessedDescription": null,
-      "startTimezone": null,
-      "endTimezone": null,
+      "name": "Rockstrap",
+      "day": "Friday",
+      "time": "10PM-4AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "coordinates": {
+        "lat": 40.7326824,
+        "lng": -74.0097099
+      },
+      "startDate": "2025-07-04T22:00:00",
+      "endDate": "2025-07-05T04:00:00",
+      "unprocessedDescription": "Tea: Jockstraps encouraged, clothes check available!\nCover: $\r10 entry, $1 clothes check\nInstagram: https://www.instagram.com/rockbarny\nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nNickname: Rock-strap\nBar: Rockbar\nShorter: RBR",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
       "calendarTimezone": "America/New_York",
       "wasUTC": false,
-      "sourceUid": "t9c4ekcr125qg5chcflc59is5c@google.com",
-      "uid": "t9c4ekcr125qg5chcflc59is5c@google.com",
+      "sourceUid": "bdstnukmpv6keg7pon3fram2qg@google.com",
+      "uid": "bdstnukmpv6keg7pon3fram2qg@google.com",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
+      "bar": "Rockbar",
+      "cover": "$10 entry, $1 clothes check",
+      "tea": "Jockstraps encouraged, clothes check available!",
+      "address": null,
       "website": null,
-      "slug": "fat-dad-54af58a5"
+      "instagram": "https://www.instagram.com/rockbarny",
+      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+      "shortName": "Rock-strap",
+      "shorterName": "RBR",
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/rockbarny",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "rockstrap-42266312"
+    },
+    {
+      "name": "GOLDILOXX MDW",
+      "day": "Saturday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "recurrence": null,
+      "coordinates": {
+        "lat": 40.75775322645565,
+        "lng": -73.99257438113817
+      },
+      "startDate": "2026-05-23T21:00:00",
+      "endDate": "2026-05-24T04:00:00",
+      "unprocessedDescription": "description: GOLDILOXX is an NYC based monthly bear party for b\rears and their admirers. When you arrive you get to select a color coded cup for whatever your mood is. Follow us on instagram for more updates ! @goldiloxx__ 🩵Blue Cup=DTF 🩷Pink Cup=Kiss 🧡Orange Cup=Side 💚Green Cup=Watch The party has two floors with two different vibes. Upstairs is flirty/dance/mingle Downstairs is ;););) Sexy Beefy Gogos all night **CLOTHING CHECK AVAILABLE**\nbar: Red Eye NY\naddress: 355 West 41st Street, New York NY 10036\nimage: https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/landscape_cover/8d628768-dd07-417e-8a43-b8e0669a624e/561602dc-734a-4e1a-aed8-f8baaee3c52d/a99044f121e5cedc1ec9a411/gl_5_23_26_scruff_eb75.jpg?v=a99044f121e5cedc1ec9a411397e16db9727cb379509afa5bcdb83516ffa7031\nticketUrl: https://redeyetickets.com/events/goldiloxx-mdw\ncover: $15 - $30 (as of 5/20)\nshortName: GOLDI-LOXX\nshorterName: GLX\ninstagram: https://www.instagram.com/goldiloxx__\ngmaps: https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036\nkey: goldiloxx-mdw|2026-05-24|red eye ny\noverrideUid: 88ctfpug1icbk4iofj0kgj4u78@google.com\noverrideRecurrenceId: 20260531T010000Z",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B44747B4-59F4-4410-A7CB-A7DDA263B4B6",
+      "uid": "88ctfpug1icbk4iofj0kgj4u78@google.com",
+      "recurrenceId": "2026-05-30T21:00:00",
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": "custom",
+      "bar": "Red Eye NY",
+      "cover": "$15 - $30 (as of 5/20)",
+      "image": "https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/landscape_cover/8d628768-dd07-417e-8a43-b8e0669a624e/561602dc-734a-4e1a-aed8-f8baaee3c52d/a99044f121e5cedc1ec9a411/gl_5_23_26_scruff_eb75.jpg?v=a99044f121e5cedc1ec9a411397e16db9727cb379509afa5bcdb83516ffa7031",
+      "tea": "GOLDILOXX is an NYC based monthly bear party for bears and their admirers. When you arrive you get to select a color coded cup for whatever your mood is. Follow us on instagram for more updates ! @goldiloxx__ 🩵Blue Cup=DTF 🩷Pink Cup=Kiss 🧡Orange Cup=Side 💚Green Cup=Watch The party has two floors with two different vibes. Upstairs is flirty/dance/mingle Downstairs is ;););) Sexy Beefy Gogos all night **CLOTHING CHECK AVAILABLE**",
+      "address": "355 West 41st Street, New York NY 10036",
+      "website": null,
+      "instagram": "https://www.instagram.com/goldiloxx__",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036",
+      "ticketUrl": "https://redeyetickets.com/events/goldiloxx-mdw",
+      "shortName": "GOLDI-LOXX",
+      "shorterName": "GLX",
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/goldiloxx__",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://redeyetickets.com/events/goldiloxx-mdw",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "goldiloxx-mdw-43e392ec"
+    },
+    {
+      "name": "Bears Are Animals",
+      "day": "Thursday",
+      "time": "7PM-10PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "coordinates": {
+        "lat": 40.71739735291992,
+        "lng": -73.94930680925715
+      },
+      "startDate": "2025-07-10T19:00:00",
+      "endDate": "2025-07-10T22:00:00",
+      "unprocessedDescription": "Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww\rw.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/XvrwkXqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
+      "uid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Animal",
+      "tea": "Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
+      "address": null,
+      "website": "https://animal.nyc",
+      "instagram": "https://www.instagram.com/bearsareanimals",
+      "gmaps": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
+      "shortName": "Animal",
+      "shorterName": "BAA",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://animal.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearsareanimals",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-are-animals-4cf796ee"
     },
     {
       "name": "FUZZY",
@@ -101,51 +231,6 @@
       "slug": "fuzzy-0380f9f1"
     },
     {
-      "name": "Beer Blast",
-      "day": "Sunday",
-      "time": "5PM-4AM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "coordinates": {
-        "lat": 40.75168692425323,
-        "lng": -74.00431317114098
-      },
-      "startDate": "2025-07-06T17:00:00",
-      "endDate": "2025-07-07T04:00:00",
-      "unprocessedDescription": "Name: Beer Blast\nBar: Eagle NYC \nCover: No cover till 9PM, $\r20 cover at 9PM\nWebsite: https://eagle-ny.com\nGoogle Maps: https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA\nNickname: Eagle\nShorter: EGL",
-      "startTimezone": "America/New_York",
-      "endTimezone": "America/New_York",
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "96d0b400rgfpagk14sc2bd1aks@google.com",
-      "uid": "96d0b400rgfpagk14sc2bd1aks@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle NYC",
-      "cover": "No cover till 9PM, $20 cover at 9PM",
-      "address": null,
-      "website": "https://eagle-ny.com",
-      "gmaps": "https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA",
-      "shortName": "Eagle",
-      "shorterName": "EGL",
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eagle-ny.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "beer-blast-15963ca2"
-    },
-    {
       "name": "Bear Happy Hour",
       "day": "Thursday",
       "time": "5PM-9PM",
@@ -184,6 +269,85 @@
         }
       ],
       "slug": "bear-happy-hour-66e240de"
+    },
+    {
+      "name": "MEGAWOOF & BEARMILK present MEGAMILK",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.6943165,
+        "lng": -73.9021664
+      },
+      "startDate": "2026-07-25T22:00:00",
+      "endDate": "2026-07-26T04:00:00",
+      "unprocessedDescription": "description: MEGAWOOF & BEARMILK present MEGAMILK\nbar: HOLO\na\rddress: 10-90 Wyckoff Avenue, Queens, NY 11385\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186449026%2F185013722403%2F1%2Foriginal.20260608-222505?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=421b275e05f8a8650bc8da81075e6572\ncover: $16.84-$22.10\nshortName: MEGA-WOOF\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385\nkey: megawoof-bearmilk-present-megamilk|2026-07-26|holo",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C84C83A2-01B1-49FD-8DED-6C204FC30897",
+      "uid": "C84C83A2-01B1-49FD-8DED-6C204FC30897",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "HOLO",
+      "cover": "$16.84-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186449026%2F185013722403%2F1%2Foriginal.20260608-222505?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=421b275e05f8a8650bc8da81075e6572",
+      "tea": "MEGAWOOF & BEARMILK present MEGAMILK",
+      "address": "10-90 Wyckoff Avenue, Queens, NY 11385",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239",
+      "shortName": "MEGA-WOOF",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-bearmilk-present-megamilk-42f507f5"
+    },
+    {
+      "name": "Pride",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-06-26T00:00:00",
+      "endDate": "2026-06-29T00:00:00",
+      "unprocessedDescription": null,
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
+      "uid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "website": null,
+      "slug": "pride-059058a4"
     },
     {
       "name": "CHUNK BROOKLYN - The Return!",
@@ -243,156 +407,54 @@
       "slug": "chunk-brooklyn-the-return-5dd73bae"
     },
     {
-      "name": "GOLDILOXX MDW",
-      "day": "Saturday",
-      "time": "9PM-4AM",
+      "name": "UNDERBEAR Leather + Kink",
+      "day": "Friday",
+      "time": "10PM",
       "eventType": "routine",
       "recurring": false,
-      "recurrence": null,
       "coordinates": {
-        "lat": 40.75775322645565,
-        "lng": -73.99257438113817
+        "lat": 40.7326534,
+        "lng": -74.0096996
       },
-      "startDate": "2026-05-23T21:00:00",
-      "endDate": "2026-05-24T04:00:00",
-      "unprocessedDescription": "description: GOLDILOXX is an NYC based monthly bear party for b\rears and their admirers. When you arrive you get to select a color coded cup for whatever your mood is. Follow us on instagram for more updates ! @goldiloxx__ 🩵Blue Cup=DTF 🩷Pink Cup=Kiss 🧡Orange Cup=Side 💚Green Cup=Watch The party has two floors with two different vibes. Upstairs is flirty/dance/mingle Downstairs is ;););) Sexy Beefy Gogos all night **CLOTHING CHECK AVAILABLE**\nbar: Red Eye NY\naddress: 355 West 41st Street, New York NY 10036\nimage: https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/landscape_cover/8d628768-dd07-417e-8a43-b8e0669a624e/561602dc-734a-4e1a-aed8-f8baaee3c52d/a99044f121e5cedc1ec9a411/gl_5_23_26_scruff_eb75.jpg?v=a99044f121e5cedc1ec9a411397e16db9727cb379509afa5bcdb83516ffa7031\nticketUrl: https://redeyetickets.com/events/goldiloxx-mdw\ncover: $15 - $30 (as of 5/20)\nshortName: GOLDI-LOXX\nshorterName: GLX\ninstagram: https://www.instagram.com/goldiloxx__\ngmaps: https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036\nkey: goldiloxx-mdw|2026-05-24|red eye ny\noverrideUid: 88ctfpug1icbk4iofj0kgj4u78@google.com\noverrideRecurrenceId: 20260531T010000Z",
+      "startDate": "2026-07-17T22:00:00",
+      "unprocessedDescription": "description: UNDERWEAR • JÖCKS • GEAR\n(ENCOURAGED, NOT REQUIR\rED. CLOTHES CHECK AVAILABLE)\nDARK ROOM AT MIDNIGHT\nbar: ROCKBAR\naddress: 185 Christopher St, New York, NY 10014\ntimezone: America/New_York\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296,h_526,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC\nkey: underbear-leather-kink|2026-07-18|rockbar",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "B44747B4-59F4-4410-A7CB-A7DDA263B4B6",
-      "uid": "88ctfpug1icbk4iofj0kgj4u78@google.com",
-      "recurrenceId": "2026-05-30T21:00:00",
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": "custom",
-      "bar": "Red Eye NY",
-      "cover": "$15 - $30 (as of 5/20)",
-      "image": "https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/landscape_cover/8d628768-dd07-417e-8a43-b8e0669a624e/561602dc-734a-4e1a-aed8-f8baaee3c52d/a99044f121e5cedc1ec9a411/gl_5_23_26_scruff_eb75.jpg?v=a99044f121e5cedc1ec9a411397e16db9727cb379509afa5bcdb83516ffa7031",
-      "tea": "GOLDILOXX is an NYC based monthly bear party for bears and their admirers. When you arrive you get to select a color coded cup for whatever your mood is. Follow us on instagram for more updates ! @goldiloxx__ 🩵Blue Cup=DTF 🩷Pink Cup=Kiss 🧡Orange Cup=Side 💚Green Cup=Watch The party has two floors with two different vibes. Upstairs is flirty/dance/mingle Downstairs is ;););) Sexy Beefy Gogos all night **CLOTHING CHECK AVAILABLE**",
-      "address": "355 West 41st Street, New York NY 10036",
-      "website": null,
-      "instagram": "https://www.instagram.com/goldiloxx__",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036",
-      "ticketUrl": "https://redeyetickets.com/events/goldiloxx-mdw",
-      "shortName": "GOLDI-LOXX",
-      "shorterName": "GLX",
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/goldiloxx__",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Red%20Eye%20NY%2C%20355%20West%2041st%20Street%2C%20New%20York%20NY%2010036",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://redeyetickets.com/events/goldiloxx-mdw",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "goldiloxx-mdw-43e392ec"
-    },
-    {
-      "name": "Rockstrap",
-      "day": "Friday",
-      "time": "10PM-4AM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
-      "coordinates": {
-        "lat": 40.7326824,
-        "lng": -74.0097099
-      },
-      "startDate": "2025-07-04T22:00:00",
-      "endDate": "2025-07-05T04:00:00",
-      "unprocessedDescription": "Tea: Jockstraps encouraged, clothes check available!\nCover: $\r10 entry, $1 clothes check\nInstagram: https://www.instagram.com/rockbarny\nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nNickname: Rock-strap\nBar: Rockbar\nShorter: RBR",
-      "startTimezone": "America/New_York",
-      "endTimezone": "America/New_York",
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "bdstnukmpv6keg7pon3fram2qg@google.com",
-      "uid": "bdstnukmpv6keg7pon3fram2qg@google.com",
+      "sourceUid": "7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E",
+      "uid": "7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Rockbar",
-      "cover": "$10 entry, $1 clothes check",
-      "tea": "Jockstraps encouraged, clothes check available!",
-      "address": null,
-      "website": null,
-      "instagram": "https://www.instagram.com/rockbarny",
-      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
-      "shortName": "Rock-strap",
-      "shorterName": "RBR",
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/rockbarny",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "rockstrap-42266312"
-    },
-    {
-      "name": "Bears Night Out",
-      "day": "Saturday",
-      "time": "10PM-4AM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
-      "coordinates": {
-        "lat": 40.7326824,
-        "lng": -74.0097099
-      },
-      "startDate": "2025-07-05T22:00:00",
-      "endDate": "2025-07-06T04:00:00",
-      "unprocessedDescription": "Tea: Go-Go Bears, Cubs and LOTS of other fun things to grab on\rto!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https://www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nBar: Rockbar\nShorter: BNO",
-      "startTimezone": "America/New_York",
-      "endTimezone": "America/New_York",
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "suljenhlak65mplsbrft5rgcd0@google.com",
-      "uid": "suljenhlak65mplsbrft5rgcd0@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "Rockbar",
-      "cover": "$10",
-      "tea": "Go-Go Bears, Cubs and LOTS of other fun things to grab onto!",
-      "address": null,
-      "website": "https://www.theurbanbear.com/",
-      "instagram": "https://www.instagram.com/urbanbearnyc",
-      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
-      "shorterName": "BNO",
+      "bar": "ROCKBAR",
+      "image": "https://static.wixstatic.com/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296,h_526,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "UNDERWEAR • JÖCKS • GEAR",
+      "address": "185 Christopher St, New York, NY 10014",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC",
+      "shortName": "FUR-BALL",
       "links": [
         {
           "type": "website",
-          "url": "https://www.theurbanbear.com/",
+          "url": "https://www.furball.nyc",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/urbanbearnyc",
+          "url": "https://instagram.com/furballnyc/",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+          "url": "https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "bears-night-out-3d00f897"
+      "slug": "underbear-leather-kink-3fe96ee0"
     },
     {
       "name": "CHUNK Brooklyn 7/4",
@@ -452,129 +514,6 @@
       "slug": "chunk-brooklyn-74-31b4fb03"
     },
     {
-      "name": "Bears Are Animals",
-      "day": "Thursday",
-      "time": "7PM-10PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "coordinates": {
-        "lat": 40.71739735291992,
-        "lng": -73.94930680925715
-      },
-      "startDate": "2025-07-10T19:00:00",
-      "endDate": "2025-07-10T22:00:00",
-      "unprocessedDescription": "Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww\rw.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/XvrwkXqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
-      "startTimezone": "America/New_York",
-      "endTimezone": "America/New_York",
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
-      "uid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Animal",
-      "tea": "Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
-      "address": null,
-      "website": "https://animal.nyc",
-      "instagram": "https://www.instagram.com/bearsareanimals",
-      "gmaps": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
-      "shortName": "Animal",
-      "shorterName": "BAA",
-      "links": [
-        {
-          "type": "website",
-          "url": "https://animal.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearsareanimals",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bears-are-animals-4cf796ee"
-    },
-    {
-      "name": "UNDERBEAR Leather + Kink",
-      "day": "Friday",
-      "time": "10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.7326534,
-        "lng": -74.0096996
-      },
-      "startDate": "2026-07-17T22:00:00",
-      "unprocessedDescription": "description: UNDERWEAR • JÖCKS • GEAR\n(ENCOURAGED, NOT REQUIR\rED. CLOTHES CHECK AVAILABLE)\nDARK ROOM AT MIDNIGHT\nbar: ROCKBAR\naddress: 185 Christopher St, New York, NY 10014\ntimezone: America/New_York\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296,h_526,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC\nkey: underbear-leather-kink|2026-07-18|rockbar",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E",
-      "uid": "7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "ROCKBAR",
-      "image": "https://static.wixstatic.com/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296,h_526,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "UNDERWEAR • JÖCKS • GEAR",
-      "address": "185 Christopher St, New York, NY 10014",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC",
-      "shortName": "FUR-BALL",
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "underbear-leather-kink-3fe96ee0"
-    },
-    {
-      "name": "Pride",
-      "day": "Friday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-06-26T00:00:00",
-      "endDate": "2026-06-29T00:00:00",
-      "unprocessedDescription": null,
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
-      "uid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "website": null,
-      "slug": "pride-059058a4"
-    },
-    {
       "name": "CHUNK Brooklyn - 5/9",
       "day": "Saturday",
       "time": "10PM-4AM",
@@ -625,6 +564,124 @@
         }
       ],
       "slug": "chunk-brooklyn-59-7ffcc74a"
+    },
+    {
+      "name": "Bears Night Out",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "coordinates": {
+        "lat": 40.7326824,
+        "lng": -74.0097099
+      },
+      "startDate": "2025-07-05T22:00:00",
+      "endDate": "2025-07-06T04:00:00",
+      "unprocessedDescription": "Tea: Go-Go Bears, Cubs and LOTS of other fun things to grab on\rto!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https://www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nBar: Rockbar\nShorter: BNO",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "suljenhlak65mplsbrft5rgcd0@google.com",
+      "uid": "suljenhlak65mplsbrft5rgcd0@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "Rockbar",
+      "cover": "$10",
+      "tea": "Go-Go Bears, Cubs and LOTS of other fun things to grab onto!",
+      "address": null,
+      "website": "https://www.theurbanbear.com/",
+      "instagram": "https://www.instagram.com/urbanbearnyc",
+      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+      "shorterName": "BNO",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.theurbanbear.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/urbanbearnyc",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-night-out-3d00f897"
+    },
+    {
+      "name": "Fat dad",
+      "day": "Saturday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-06-20T00:00:00",
+      "endDate": "2026-06-21T00:00:00",
+      "unprocessedDescription": null,
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "t9c4ekcr125qg5chcflc59is5c@google.com",
+      "uid": "t9c4ekcr125qg5chcflc59is5c@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "website": null,
+      "slug": "fat-dad-54af58a5"
+    },
+    {
+      "name": "Beer Blast",
+      "day": "Sunday",
+      "time": "5PM-4AM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "coordinates": {
+        "lat": 40.75168692425323,
+        "lng": -74.00431317114098
+      },
+      "startDate": "2025-07-06T17:00:00",
+      "endDate": "2025-07-07T04:00:00",
+      "unprocessedDescription": "Name: Beer Blast\nBar: Eagle NYC \nCover: No cover till 9PM, $\r20 cover at 9PM\nWebsite: https://eagle-ny.com\nGoogle Maps: https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA\nNickname: Eagle\nShorter: EGL",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "96d0b400rgfpagk14sc2bd1aks@google.com",
+      "uid": "96d0b400rgfpagk14sc2bd1aks@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle NYC",
+      "cover": "No cover till 9PM, $20 cover at 9PM",
+      "address": null,
+      "website": "https://eagle-ny.com",
+      "gmaps": "https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA",
+      "shortName": "Eagle",
+      "shorterName": "EGL",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eagle-ny.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/8N8zpGGAYwXJjgsGA",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beer-blast-15963ca2"
     }
   ]
 }

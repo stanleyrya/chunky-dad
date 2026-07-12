@@ -21,8 +21,8 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 15104,
-      "eventCount": 13
+      "dataLength": 16441,
+      "eventCount": 14
     },
     "dallas": {
       "name": "Dallas",
@@ -45,8 +45,8 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 8423,
-      "eventCount": 7
+      "dataLength": 9635,
+      "eventCount": 8
     },
     "london": {
       "name": "London",
@@ -63,8 +63,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 12124,
-      "eventCount": 13
+      "dataLength": 13389,
+      "eventCount": 14
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -81,8 +81,8 @@
     "phoenix": {
       "name": "Phoenix",
       "status": "success",
-      "dataLength": 2874,
-      "eventCount": 2
+      "dataLength": 4205,
+      "eventCount": 3
     },
     "portland": {
       "name": "Portland",
