@@ -3493,9 +3493,11 @@ class AiWebParser {
         const parserAiConfig = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object'
             ? parserConfig.ai
             : {};
+        // Canonical location is parserConfig.ai.ocr; accept a top-level parserConfig.ocr
+        // as fallback so a mis-nested block configures OCR instead of being silently ignored.
         const rawOcr = parserAiConfig.ocr && typeof parserAiConfig.ocr === 'object'
             ? parserAiConfig.ocr
-            : {};
+            : (parserConfig && parserConfig.ocr && typeof parserConfig.ocr === 'object' ? parserConfig.ocr : {});
         const maxImages = Number.isFinite(Number(rawOcr.maxImages))
             ? Math.max(1, Math.min(4, Math.floor(Number(rawOcr.maxImages))))
             : 2;
@@ -3527,8 +3529,11 @@ class AiWebParser {
                 : 'http://desktop.taila7523c.ts.net:11434/api/generate';
         }
 
+        // OCR requires a VISION model. OpenAI-compatible servers (rapid-mlx) reject image
+        // content on text models ("Model ... does not support image, video, or audio inputs"),
+        // so never default to the text/coder model used for extraction.
         const defaultModel = provider === 'openai'
-            ? 'lmstudio-community/Qwen3-Coder-Next-MLX-6bit'
+            ? 'mlx-community/Qwen3-VL-4B-Instruct-4bit'
             : this.defaultOcrModel;
 
         return {
