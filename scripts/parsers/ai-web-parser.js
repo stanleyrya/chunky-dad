@@ -286,14 +286,20 @@ class AiWebParser {
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
 
-            // Extract OCR from ALL images FIRST - we need it for consistent segment-to-image mapping
-            // regardless of whether discoveryOnly mode is enabled
+            // Extract OCR from ALL images FIRST - we need it for consistent segment-to-image
+            // mapping. Multi-event pages always need OCR (segment pairing runs even in
+            // discoveryOnly mode); pages whose extraction will be skipped (link-aggregators,
+            // or any page in discoveryOnly mode) have no OCR consumer, so skip the expense.
             const ocrConfig = this.getOcrConfig(parserConfig);
+            const runOcr = ocrConfig.enabled && this.shouldRunOcrForPage(parserConfig, pageClassification);
+            if (ocrConfig.enabled && !runOcr) {
+                console.log(`🤖 AI Web: Skipping OCR for ${pageClassification || 'unclassified'} page — no extraction will run (link-finding mode)`);
+            }
             // Multi-event pages need broad coverage (one flyer per segment, with the
             // segment top-up as backstop); single-event pages only need the main flyer,
             // so respect the configured per-page image budget there.
             const ocrImageCap = pageClassification === 'multi-event-page' ? 10 : ocrConfig.maxImages;
-            ocrResults = ocrConfig.enabled
+            ocrResults = runOcr
                 ? await this.extractOcrFromAllImages(htmlData, ocrConfig, httpAdapter, ocrImageCap)
                 : [];
             if (ocrResults.length > 0) {
@@ -1872,6 +1878,8 @@ class AiWebParser {
         try {
             const parsed = new URL(url);
             parsed.hash = '';
+            // www and bare-host variants of the same page are the same page
+            parsed.hostname = String(parsed.hostname || '').replace(/^www\./i, '');
             // Strip tracking/affiliate params so the same event with different tracking
             // suffixes (e.g. ?aff=ebdsoporgprofile, ?utm_source=…) deduplicates correctly.
             for (const key of [...parsed.searchParams.keys()]) {
@@ -2150,6 +2158,14 @@ class AiWebParser {
             if (responseText === undefined || responseText === null) return null;
 
             const parsed = JSON.parse(responseText);
+            if (parsed && typeof parsed === 'object' && parsed.failureKind) {
+                return {
+                    imageUrl: cached.url || normalizedUrl,
+                    failureKind: String(parsed.failureKind),
+                    cachePath,
+                    cached: true
+                };
+            }
             const normalized = this.normalizeOcrResult(parsed);
 
             return {
@@ -2224,7 +2240,7 @@ class AiWebParser {
 
     parseOcrResponseWithClassification(rawText) {
         const parsed = this.core.parseAiEventResponse(rawText);
-        if (!parsed) return null;
+        if (!parsed) return this.salvageTruncatedOcrResponse(rawText);
 
         return {
             text: parsed.text,
@@ -2233,6 +2249,46 @@ class AiWebParser {
             confidence: parsed.confidence,
             reason: parsed.reason
         };
+    }
+
+    // Vision models sometimes emit valid OCR text and then degenerate (e.g. endless
+    // newlines) until the token limit cuts the JSON off mid-string. The braces never
+    // balance so JSON.parse fails, but the "text" field is complete — pull it out
+    // rather than discarding a successful OCR pass.
+    salvageTruncatedOcrResponse(rawText) {
+        const source = String(rawText || '');
+        if (!source.includes('"text"')) return null;
+        const textMatch = source.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)/);
+        if (!textMatch || !textMatch[1]) return null;
+        let text;
+        try {
+            text = JSON.parse(`"${textMatch[1].replace(/\r?\n/g, '\\n')}"`);
+        } catch (_) {
+            text = textMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+        }
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+        if (!text) return null;
+
+        const classificationMatch = source.match(/"imageClassification"\s*:\s*"([^"\\]*)"/);
+        const summaryMatch = source.match(/"eventSummary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        const confidenceMatch = source.match(/"confidence"\s*:\s*(\d+)/);
+        console.warn(`🤖 AI Web: Salvaged OCR text (${text.length} chars) from a truncated/malformed JSON response`);
+        return {
+            text,
+            imageClassification: classificationMatch ? classificationMatch[1] : '',
+            eventSummary: summaryMatch ? summaryMatch[1] : null,
+            confidence: confidenceMatch ? Number(confidenceMatch[1]) : null,
+            reason: 'salvaged-from-truncated-response'
+        };
+    }
+
+    // OCR is only worth paying for when something consumes it: segment pairing on
+    // multi-event pages (which runs even in discoveryOnly mode), or AI extraction.
+    // Link-aggregators never extract, and discoveryOnly skips extraction everywhere.
+    shouldRunOcrForPage(parserConfig = {}, pageClassification = null) {
+        if (pageClassification === 'multi-event-page') return true;
+        if (pageClassification === 'link-aggregator') return false;
+        return parserConfig.discoveryOnly !== true;
     }
 
     isLikelyEmptyOcrText(text) {
@@ -2756,6 +2812,10 @@ class AiWebParser {
     async getOcrTextForImage(imageUrl, ocrConfig = {}, passLabel = 'ocr', httpAdapter = null) {
         const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
         if (cached) {
+            if (cached.failureKind) {
+                console.log(`🤖 AI Web: OCR negative cache hit (${cached.failureKind}) for ${cached.imageUrl || imageUrl} — skipping known-bad image`);
+                return null;
+            }
             console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
             return cached;
         }
@@ -2765,10 +2825,29 @@ class AiWebParser {
         if (!normalizedUrl) {
             throw new Error('Missing image URL');
         }
-        const base64Image = await httpAdapter.fetchImageAsBase64(normalizedUrl, ocrConfig.timeoutSeconds);
-        console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars)`);
-        const rawResponse = await this.core.callAiGenerate(ocrConfig, ocrConfig.prompt, passLabel, httpAdapter, this.recordAiPrompt.bind(this), base64Image);
-        if (!rawResponse) return null;
+        const downloadStart = Date.now();
+        let base64Image;
+        try {
+            base64Image = await httpAdapter.fetchImageAsBase64(normalizedUrl, ocrConfig.timeoutSeconds);
+        } catch (error) {
+            console.warn(`🚨 AI Web: OCR image download failed for ${normalizedUrl} after ${Date.now() - downloadStart}ms: ${error.message}`);
+            throw error;
+        }
+        console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars) for ${normalizedUrl} (downloaded in ${Date.now() - downloadStart}ms)`);
+        const diagnostics = {};
+        const rawResponse = await this.core.callAiGenerate(ocrConfig, ocrConfig.prompt, passLabel, httpAdapter, this.recordAiPrompt.bind(this), base64Image, diagnostics);
+        if (!rawResponse) {
+            // Context overflow is deterministic for a given image+model — cache the
+            // failure so the same image is not re-downloaded and re-sent on every
+            // page (and every run) that references it.
+            if (diagnostics.failureKind === 'context-overflow') {
+                const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify({ failureKind: diagnostics.failureKind }));
+                if (cachePath) {
+                    console.warn(`🤖 AI Web: Cached OCR failure (${diagnostics.failureKind}) for ${normalizedUrl} so it is not retried`);
+                }
+            }
+            return null;
+        }
         const parsed = this.parseOcrResponseWithClassification(rawResponse);
         if (!parsed) {
             console.warn(`🤖 AI Web: OCR response for ${imageUrl} did not include text`);
@@ -2927,6 +3006,10 @@ class AiWebParser {
             'kqzyfj.com',
             'sjv.io',
             'pxf.io',
+            // Bot-walled ticketing sites — always return HTTP 401/403 to non-browser
+            // clients, so crawling them only produces failure-cache entries
+            'ticketmaster.com',
+            'livenation.com',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
             'heymistr.com',

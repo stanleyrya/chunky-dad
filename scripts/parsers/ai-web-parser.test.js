@@ -500,3 +500,120 @@ test('getOcrConfig defaults the openai provider to a vision model and accepts to
   const both = parser.getOcrConfig({ ai: { ocr: { maxImages: 4 } }, ocr: { maxImages: 3 } });
   assert.equal(both.maxImages, 4);
 });
+
+test('parseOcrResponseWithClassification salvages OCR text from truncated/degenerate JSON', () => {
+  const parser = createParser();
+
+  // Provincetown-style failure: valid text, then the model degenerates into endless
+  // newlines and the JSON never closes.
+  const truncated = '{\n  "text": "BEAR WEEK KICK OFF\\nBEARRACUDA\\nPROVINCETOWN\\n\\nBEATS BY\\nKELLY' +
+    '\n'.repeat(400);
+  const salvaged = parser.parseOcrResponseWithClassification(truncated);
+  assert.ok(salvaged, 'truncated response should be salvaged, not discarded');
+  assert.match(salvaged.text, /BEAR WEEK KICK OFF/);
+  assert.match(salvaged.text, /BEATS BY\nKELLY/);
+  assert.ok(!/\n{3,}/.test(salvaged.text), 'degenerate newline runs should be collapsed');
+  assert.equal(salvaged.reason, 'salvaged-from-truncated-response');
+
+  // Truncation after a complete text field still picks up classification/confidence
+  const cutLater = '{"text": "FURBALL NYC\\nSATURDAY 10PM", "imageClassification": "event-flyer", "confidence": 95, "eventSummary": "Furball';
+  const later = parser.parseOcrResponseWithClassification(cutLater);
+  assert.equal(later.text, 'FURBALL NYC\nSATURDAY 10PM');
+  assert.equal(later.imageClassification, 'event-flyer');
+  assert.equal(later.confidence, 95);
+
+  // Well-formed responses keep going through the normal parse path untouched
+  const complete = parser.parseOcrResponseWithClassification(
+    '{"text": "HOT TAKE", "imageClassification": "event-flyer", "eventSummary": "s", "confidence": 90, "reason": "r"}'
+  );
+  assert.equal(complete.text, 'HOT TAKE');
+  assert.equal(complete.reason, 'r');
+
+  // Garbage with no text field stays rejected
+  assert.equal(parser.parseOcrResponseWithClassification('not json at all'), null);
+  assert.equal(parser.parseOcrResponseWithClassification('{"foo": "bar"'), null);
+});
+
+test('shouldRunOcrForPage skips OCR when no extraction or segment pairing will consume it', () => {
+  const parser = createParser();
+
+  // Multi-event pages always OCR — segment pairing runs even in discoveryOnly mode
+  assert.equal(parser.shouldRunOcrForPage({ discoveryOnly: true }, 'multi-event-page'), true);
+  assert.equal(parser.shouldRunOcrForPage({}, 'multi-event-page'), true);
+
+  // Link-aggregators never extract events, so OCR has no consumer
+  assert.equal(parser.shouldRunOcrForPage({}, 'link-aggregator'), false);
+
+  // Event pages OCR only when extraction will actually run
+  assert.equal(parser.shouldRunOcrForPage({}, 'event-page'), true);
+  assert.equal(parser.shouldRunOcrForPage({ discoveryOnly: true }, 'event-page'), false);
+  assert.equal(parser.shouldRunOcrForPage({ discoveryOnly: true }, null), false);
+});
+
+test('getOcrTextForImage negative-caches context-overflow failures and skips them next time', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-cache-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+
+  const imageUrl = 'https://cdn.example/huge-masthead.webp';
+  const ocrConfig = {
+    cacheEnabled: true,
+    model: 'mlx-community/Qwen3-VL-4B-Instruct-4bit',
+    prompt: 'ocr prompt',
+    timeoutSeconds: 120
+  };
+  const httpAdapter = { fetchImageAsBase64: async () => 'base64imagedata' };
+
+  // First call: the AI reports a context overflow via diagnostics
+  let aiCalls = 0;
+  parser.core.callAiGenerate = async (config, prompt, label, adapter, recorder, image, diagnostics) => {
+    aiCalls++;
+    if (diagnostics) diagnostics.failureKind = 'context-overflow';
+    return null;
+  };
+  const first = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', httpAdapter);
+  assert.equal(first, null);
+  assert.equal(aiCalls, 1);
+
+  // Second call: the cached failure short-circuits before download or AI request
+  parser.core.callAiGenerate = async () => {
+    throw new Error('AI should not be called for a negative-cached image');
+  };
+  const failingAdapter = {
+    fetchImageAsBase64: async () => {
+      throw new Error('image should not be re-downloaded for a negative-cached image');
+    }
+  };
+  const second = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', failingAdapter);
+  assert.equal(second, null);
+
+  // Transient failures (no failureKind) must NOT be cached
+  const otherUrl = 'https://cdn.example/other-flyer.jpg';
+  parser.core.callAiGenerate = async () => null;
+  await parser.getOcrTextForImage(otherUrl, ocrConfig, 'ocr-all', httpAdapter);
+  let retried = 0;
+  parser.core.callAiGenerate = async () => {
+    retried++;
+    return null;
+  };
+  await parser.getOcrTextForImage(otherUrl, ocrConfig, 'ocr-all', httpAdapter);
+  assert.equal(retried, 1, 'a transient empty response should be retried on the next call');
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('getUrlDedupeKey treats www and bare-host variants as the same URL', () => {
+  const parser = createParser();
+  assert.equal(
+    parser.getUrlDedupeKey('https://www.tryst.events/e/bearracuda/tickets'),
+    parser.getUrlDedupeKey('https://tryst.events/e/bearracuda/tickets')
+  );
+  assert.notEqual(
+    parser.getUrlDedupeKey('https://tryst.events/e/bearracuda'),
+    parser.getUrlDedupeKey('https://tryst.events/e/bearracuda/tickets')
+  );
+});

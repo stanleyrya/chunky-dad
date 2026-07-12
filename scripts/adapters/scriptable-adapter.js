@@ -1060,11 +1060,31 @@ class ScriptableAdapter {
     return Number.isFinite(statusCode) ? statusCode : null;
   }
 
-  async fetchImageAsBase64(url, timeoutSeconds = 30) {
+  async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1568) {
     try {
       const request = new Request(url);
       request.timeoutInterval = timeoutSeconds;
-      const image = await request.loadImage();
+      let image = await request.loadImage();
+      // Vision-model image tokens scale with pixel count, not file size. Oversized
+      // images overflow the model context and come back as empty responses with
+      // finish_reason "length", so cap the longest side before encoding.
+      const width = image.size ? image.size.width : 0;
+      const height = image.size ? image.size.height : 0;
+      const longestSide = Math.max(width, height);
+      if (maxDimension > 0 && longestSide > maxDimension) {
+        const scale = maxDimension / longestSide;
+        const newWidth = Math.max(1, Math.round(width * scale));
+        const newHeight = Math.max(1, Math.round(height * scale));
+        const context = new DrawContext();
+        context.size = new Size(newWidth, newHeight);
+        context.opaque = true;
+        context.respectScreenScale = false;
+        context.drawImageInRect(image, new Rect(0, 0, newWidth, newHeight));
+        image = context.getImage();
+        console.log(
+          `📱 Scriptable: Downscaled image ${Math.round(width)}x${Math.round(height)} → ${newWidth}x${newHeight} for OCR: ${url}`,
+        );
+      }
       const jpegData = Data.fromJPEG(image);
       return jpegData.toBase64String();
     } catch (error) {

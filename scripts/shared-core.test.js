@@ -115,3 +115,46 @@ test('parseAiEventResponse rejects array responses', () => {
   assert.equal(core.parseAiEventResponse('[{"title": "x"}]'), null);
   assert.deepEqual(core.parseAiEventResponse('{"title": "x"}'), { title: 'x' });
 });
+
+test('callAiGenerate flags zero-token finish_reason=length image requests as context overflow', async () => {
+  const core = createCore();
+  const overflowPayload = JSON.stringify({
+    id: 'chatcmpl-test',
+    object: 'chat.completion',
+    model: 'mlx-community/Qwen3-VL-4B-Instruct-4bit',
+    choices: [{ index: 0, message: { role: 'assistant' }, finish_reason: 'length' }],
+    usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+  });
+  const aiConfig = {
+    provider: 'openai',
+    endpoint: 'http://rybook.example:8001/v1/chat/completions',
+    model: 'mlx-community/Qwen3-VL-4B-Instruct-4bit',
+    temperature: 0,
+    numPredict: 2000,
+    timeoutSeconds: 120,
+    openai: {}
+  };
+
+  // Overflow signature: image attached, finish_reason "length", zero tokens generated
+  const overflowAdapter = { postJson: async () => ({ ok: true, status: 200, text: overflowPayload }) };
+  const diagnostics = {};
+  const result = await core.callAiGenerate(aiConfig, 'ocr prompt', 'ocr-all', overflowAdapter, null, 'base64image', diagnostics);
+  assert.equal(result, null);
+  assert.equal(diagnostics.failureKind, 'context-overflow');
+
+  // A truncated-but-nonempty response (tokens were generated) is NOT an overflow
+  const truncatedPayload = JSON.stringify({
+    choices: [{ index: 0, message: { role: 'assistant', content: '{"text": "PARTIAL' }, finish_reason: 'length' }],
+    usage: { prompt_tokens: 500, completion_tokens: 2000, total_tokens: 2500 }
+  });
+  const truncatedAdapter = { postJson: async () => ({ ok: true, status: 200, text: truncatedPayload }) };
+  const truncatedDiag = {};
+  const truncatedResult = await core.callAiGenerate(aiConfig, 'ocr prompt', 'ocr-all', truncatedAdapter, null, 'base64image', truncatedDiag);
+  assert.equal(truncatedResult, '{"text": "PARTIAL');
+  assert.equal(truncatedDiag.failureKind, undefined);
+
+  // Text-only requests (no image) never get the overflow flag
+  const textDiag = {};
+  await core.callAiGenerate(aiConfig, 'text prompt', 'extract', overflowAdapter, null, null, textDiag);
+  assert.equal(textDiag.failureKind, undefined);
+});
