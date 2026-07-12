@@ -331,38 +331,57 @@ test('parsePageForCrawl uses the AI second opinion only for weak signals when en
     })
   };
 
-  // Heuristic says multi-event-page (8 month names); AI overrides to event-page
-  await core.parsePageForCrawl({
-    url: 'https://x.example/party',
-    htmlData: { url: 'https://x.example/party', html: monthNoise },
-    parsers,
-    parserConfig: { ai: { classifyPages: true } },
-    displayAdapter,
-    httpAdapter: aiAdapter
-  });
-  assert.deepEqual(receivedClassifications, ['event-page']);
-
-  // Flag off → heuristic result stands, no AI request
-  receivedClassifications.length = 0;
-  const explodingAdapter = { postJson: async () => { throw new Error('AI must not be called when classifyPages is off'); } };
+  // Default (no config): heuristic says multi-event-page (8 month names);
+  // AI overrides to event-page
   await core.parsePageForCrawl({
     url: 'https://x.example/party',
     htmlData: { url: 'https://x.example/party', html: monthNoise },
     parsers,
     parserConfig: {},
     displayAdapter,
+    httpAdapter: aiAdapter
+  });
+  assert.deepEqual(receivedClassifications, ['event-page']);
+
+  // Explicitly disabled → heuristic result stands, no AI request
+  receivedClassifications.length = 0;
+  const explodingAdapter = { postJson: async () => { throw new Error('AI must not be called when classifyPages is off'); } };
+  await core.parsePageForCrawl({
+    url: 'https://x.example/party',
+    htmlData: { url: 'https://x.example/party', html: monthNoise },
+    parsers,
+    parserConfig: { ai: { classifyPages: false } },
+    displayAdapter,
     httpAdapter: explodingAdapter
   });
   assert.deepEqual(receivedClassifications, ['multi-event-page']);
 
-  // Strong signal (JSON-LD) → no AI request even when enabled
+  // ai.enabled: false (AI extraction disabled) → no classification request either
+  receivedClassifications.length = 0;
+  const disabledAiParsers = {
+    'ai-web': {
+      getAiConfig: () => ({ enabled: false }),
+      parseEvents: parsers['ai-web'].parseEvents
+    }
+  };
+  await core.parsePageForCrawl({
+    url: 'https://x.example/party',
+    htmlData: { url: 'https://x.example/party', html: monthNoise },
+    parsers: disabledAiParsers,
+    parserConfig: {},
+    displayAdapter,
+    httpAdapter: explodingAdapter
+  });
+  assert.deepEqual(receivedClassifications, ['multi-event-page']);
+
+  // Strong signal (JSON-LD) → no AI request even though classification is enabled
   receivedClassifications.length = 0;
   const jsonLdHtml = '<script type="application/ld+json">{"@type":"MusicEvent","name":"X","startDate":"2026-07-17T21:00:00-07:00"}</script>';
   await core.parsePageForCrawl({
     url: 'https://x.example/e/x',
     htmlData: { url: 'https://x.example/e/x', html: jsonLdHtml },
     parsers,
-    parserConfig: { ai: { classifyPages: true } },
+    parserConfig: {},
     displayAdapter,
     httpAdapter: explodingAdapter
   });

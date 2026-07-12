@@ -244,7 +244,7 @@ class SharedCore {
     // Returns { classification, confidence, reason } or null when the response is
     // unusable — callers should keep their heuristic answer in that case.
     async classifyPageWithAi(url, html, aiConfig, httpAdapter) {
-        if (!aiConfig || !httpAdapter) return null;
+        if (!aiConfig || aiConfig.enabled === false || !httpAdapter) return null;
         const validLabels = ['event-page', 'multi-event-page', 'link-aggregator', 'ad', 'unknown'];
         const summary = this.summarizePageForClassification(html);
         if (!summary.bodyText && !summary.title) return null;
@@ -996,10 +996,11 @@ class SharedCore {
     }) {
         let { classification: pageClassification, signal: classificationSignal } = this.classifyPageWithSignal(url, htmlData.html);
 
-        // Optional AI second opinion (parserConfig.ai.classifyPages) — only when the
-        // deterministic tiers (URL rules, JSON-LD) had no answer and we are relying on
-        // the crude month-count heuristic. Costs one small text-model request per page.
-        const aiClassifyEnabled = Boolean(parserConfig && parserConfig.ai && parserConfig.ai.classifyPages === true);
+        // AI second opinion (default on; disable with parserConfig.ai.classifyPages: false)
+        // — only when the deterministic tiers (URL rules, JSON-LD) had no answer and we
+        // are relying on the crude month-count heuristic. Costs one small text-model
+        // request per weak-signal page.
+        const aiClassifyEnabled = !(parserConfig && parserConfig.ai && parserConfig.ai.classifyPages === false);
         const weakSignal = classificationSignal === 'heuristic' || classificationSignal === 'none';
         if (aiClassifyEnabled && weakSignal) {
             const aiParser = parsers && parsers['ai-web'];
