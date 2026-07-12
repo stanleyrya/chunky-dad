@@ -387,3 +387,59 @@ test('parsePageForCrawl uses the AI second opinion only for weak signals when en
   });
   assert.deepEqual(receivedClassifications, ['event-page']);
 });
+
+test('classifyPageWithAi persists outcomes through an injected cache provider', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const { AiWebParser } = require('./parsers/ai-web-parser');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cls-cache-test-'));
+
+  const core = createCore();
+  const parser = new AiWebParser({
+    normalizeUrl: (u) => u,
+    classificationCacheDir: cacheDir
+  });
+  const cache = parser.getAiClassificationCache();
+  const aiConfig = {
+    provider: 'openai',
+    endpoint: 'http://rybook.example:8000/v1/chat/completions',
+    model: 'test-model',
+    temperature: 0,
+    numPredict: 2000,
+    timeoutSeconds: 120,
+    openai: {}
+  };
+  const html = '<html><head><title>Big Party</title></head><body>One night only, July 17.</body></html>';
+  const adapterReturning = (content) => ({
+    postJson: async () => ({
+      ok: true,
+      status: 200,
+      text: JSON.stringify({ choices: [{ message: { content } }] })
+    })
+  });
+  const explodingAdapter = { postJson: async () => { throw new Error('cached pages must not hit the AI'); } };
+
+  // Accepted outcome: first call hits the AI, second is served from cache
+  const first = await core.classifyPageWithAi('https://x.example/party', html, aiConfig,
+    adapterReturning('{"classification": "event-page", "confidence": 92, "reason": "one event"}'), cache);
+  assert.equal(first.classification, 'event-page');
+  const second = await core.classifyPageWithAi('https://x.example/party', html, aiConfig, explodingAdapter, cache);
+  assert.equal(second.classification, 'event-page');
+  assert.equal(second.confidence, 92);
+
+  // Rejected outcome (low confidence) is cached too — no repeat request, still null
+  const lowFirst = await core.classifyPageWithAi('https://x.example/other', html, aiConfig,
+    adapterReturning('{"classification": "multi-event-page", "confidence": 30}'), cache);
+  assert.equal(lowFirst, null);
+  const lowSecond = await core.classifyPageWithAi('https://x.example/other', html, aiConfig, explodingAdapter, cache);
+  assert.equal(lowSecond, null);
+
+  // Changed page content → different signature → cache miss, AI consulted again
+  const changedHtml = '<html><head><title>Big Party</title></head><body>Totally new lineup, August 20.</body></html>';
+  const changed = await core.classifyPageWithAi('https://x.example/party', changedHtml, aiConfig,
+    adapterReturning('{"classification": "multi-event-page", "confidence": 90, "reason": "many"}'), cache);
+  assert.equal(changed.classification, 'multi-event-page');
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});

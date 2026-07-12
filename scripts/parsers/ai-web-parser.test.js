@@ -738,3 +738,34 @@ test('parseEvents falls through to AI extraction when JSON-LD is incomplete for 
   assert.equal(ocrRan, true, 'OCR should still run on the segment path');
   assert.equal(result.events.length, 0);
 });
+
+test('buildEventFromJsonLdNode resolves city and timezone from the address', () => {
+  const parser = createParser();
+  const cityConfig = {
+    portland: { timezone: 'America/Los_Angeles', patterns: ['portland', 'pdx'] },
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'brooklyn'] }
+  };
+
+  const events = parser.extractEventsFromJsonLd(SICKENING_JSONLD_HTML, 'https://sickening.events/e/x', cityConfig);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].city, 'portland');
+  assert.equal(events[0].timezone, 'America/Los_Angeles');
+
+  // Bar names must NOT drive city resolution — address only
+  const brooklynBowlVegas = parser.buildEventFromJsonLdNode({
+    '@type': 'MusicEvent',
+    name: 'Bear Night',
+    startDate: '2026-08-01T21:00:00-07:00',
+    location: {
+      '@type': 'Place',
+      name: 'Brooklyn Bowl',
+      address: { '@type': 'PostalAddress', streetAddress: '3545 S Las Vegas Blvd' }
+    }
+  }, 'https://x.example/e/bearnight', cityConfig);
+  assert.equal(brooklynBowlVegas.city, undefined);
+  assert.equal(brooklynBowlVegas.bar, 'Brooklyn Bowl');
+
+  // No cityConfig → no city fields, no crash
+  const bare = parser.extractEventsFromJsonLd(SICKENING_JSONLD_HTML, 'https://sickening.events/e/x');
+  assert.equal(bare[0].city, undefined);
+});
