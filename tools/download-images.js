@@ -79,8 +79,8 @@ const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
 
-// Cache duration: 14 days (2 weeks) in milliseconds
-const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
+// Cache duration: 180 days (6 months) in milliseconds
+const CACHE_DURATION = 180 * 24 * 60 * 60 * 1000;
 
 // Randomization factor: ±2 days to prevent all favicons from expiring simultaneously
 const CACHE_RANDOMIZATION = 2 * 24 * 60 * 60 * 1000;
