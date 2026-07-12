@@ -247,7 +247,9 @@ class AiWebParser {
         this.defaultOcrModel = 'qwen3-vl:4b-instruct';
         this.defaultOcrPrompt = "You are performing OCR on an event flyer.\n\nSTEP 1: OCR\nExtract ALL visible text from the image.\n\nRules:\n- Copy text exactly as shown.\n- Preserve line breaks when possible.\n- Do not summarize.\n- Do not interpret.\n- Do not correct spelling.\n- Do not infer missing words.\n\nSTEP 2: Classification\n\nClassify the image into ONE category:\n\nad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\nevent-flyer: Single event poster/flyer - ONE primary event with ONE title, ONE venue, and ONE date or continuous date range. May contain schedules, activities, DJs, performers, or sub-events that are clearly part of the same event. Examples: Bear Week, Bear Weekend, Pride Festival, Camp Weekend, Resort Weekend Package.\nmulti-event-flyer: Two or more independent events with different titles, different dates/times, and separate ticketing. Often appears as a calendar, event listing, or monthly schedule.\nlogo: Brand or organization logo (minimal text, just brand name)\nthumbnail: Small preview image (low detail)\nhero-banner: Large header/banner image (prominent on page)\n\nDecision rule: If there is ONE overarching event name and the listed activities appear to belong to that event, classify as event-flyer. Only classify as multi-event-flyer when multiple independent events are advertised that require separate tickets.\n\nIMPORTANT CONTEXT: This is for a gay bear community travel guide. Events may be part of:\n- \"Bear Week\" or \"Bear Weekend\" themed events\n- Annual bear gatherings (e.g., \"Puerto Vallarta Bear Week\", \"Sitges Bear Week\")\n- Regular bear-themed parties or meetups\n- Events at bear-owned businesses or bear-friendly venues\n\nSTEP 3: Event Analysis\n\nDetermine:\n- eventName: The primary event title\n- venue: The venue or venue group name\n- startDate: Start date/time if visible\n- endDate: End date/time if visible\n\nUse only information visible in the image.\n\nSTEP 4: Summary\n\nCreate a concise summary describing:\n- event name\n- venue\n- date/time\n- why it may be relevant to the bear community\n\nReturn JSON only with these fields:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"eventSummary\": \"a concise 1-2 sentence summary of the event including: event name, venue, date/time, and any bear-week context if applicable. Focus on what makes this event notable for the bear community.\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
         this.defaultOcrRequestConfig = {
-            timeoutSeconds: 300,
+            // With requests serialized (maxConcurrentRequests), anything slower than
+            // 2 minutes on the local vision model is stuck, not slow.
+            timeoutSeconds: 120,
             keepAlive: '5m',
             numCtx: 8192,
             numPredict: 2000,
@@ -287,8 +289,12 @@ class AiWebParser {
             // Extract OCR from ALL images FIRST - we need it for consistent segment-to-image mapping
             // regardless of whether discoveryOnly mode is enabled
             const ocrConfig = this.getOcrConfig(parserConfig);
+            // Multi-event pages need broad coverage (one flyer per segment, with the
+            // segment top-up as backstop); single-event pages only need the main flyer,
+            // so respect the configured per-page image budget there.
+            const ocrImageCap = pageClassification === 'multi-event-page' ? 10 : ocrConfig.maxImages;
             ocrResults = ocrConfig.enabled
-                ? await this.extractOcrFromAllImages(htmlData, ocrConfig, httpAdapter)
+                ? await this.extractOcrFromAllImages(htmlData, ocrConfig, httpAdapter, ocrImageCap)
                 : [];
             if (ocrResults.length > 0) {
                 console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
@@ -1899,10 +1905,25 @@ class AiWebParser {
      * Removes width/height parameters like w=1920, h=1080, w_296,h_370, etc.
      * to identify the same image at different resolutions.
      */
-    stripSizeParams(url) {
+    stripSizeParams(url, unwrapDepth = 0) {
         if (!url) return url;
         try {
             const parsed = new URL(url);
+
+            // Image proxies like img.evbuc.com wrap the source URL inside the path
+            // (img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2F...) with per-variant crop
+            // and signature query params, so no amount of param stripping makes two
+            // variants equal. Dedup on the decoded inner URL instead.
+            if (unwrapDepth < this.maxUrlUnwrapDepth) {
+                const encodedPathMatch = parsed.pathname.match(/^\/(https?%3a%2f%2f.+)$/i);
+                if (encodedPathMatch) {
+                    try {
+                        const innerUrl = decodeURIComponent(encodedPathMatch[1]);
+                        return this.stripSizeParams(innerUrl, unwrapDepth + 1);
+                    } catch (_) {}
+                }
+            }
+
             let pathname = parsed.pathname;
 
             // Remove size patterns from pathname (e.g., /w_296,h_370/ or /1920x1080/)
@@ -2277,6 +2298,7 @@ class AiWebParser {
             'cache-',         // Cached images
             'thumb',          // Thumbnails (already handled by classification)
             'thumbnail',      // Thumbnails
+            '/_next/static/', // Next.js build assets (map placeholders, UI chrome)
         ];
         for (const pattern of uninterestingPatterns) {
             if (lowerUrl.includes(pattern)) return true;
@@ -2284,29 +2306,47 @@ class AiWebParser {
         return false;
     }
 
-    async extractOcrFromAllImages(htmlData, ocrConfig = {}, httpAdapter = null) {
+    // Run an async task over items with at most `limit` in flight. Local vision models
+    // serve one request well; parallel requests just push each other into timeouts.
+    async mapWithConcurrencyLimit(items, limit, task) {
+        const list = Array.isArray(items) ? items : [];
+        const results = new Array(list.length);
+        let nextIndex = 0;
+        const workerCount = Math.max(1, Math.min(Math.floor(Number(limit) || 1), list.length || 1));
+        const workers = Array.from({ length: workerCount }, async () => {
+            while (nextIndex < list.length) {
+                const index = nextIndex++;
+                results[index] = await task(list[index], index);
+            }
+        });
+        await Promise.all(workers);
+        return results;
+    }
+
+    async extractOcrFromAllImages(htmlData, ocrConfig = {}, httpAdapter = null, maxImages = 10) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
 
-        // Extract all image URLs from HTML
-        const maxOcrImages = 10;
-        const allImageUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, maxOcrImages);
-        if (allImageUrls.length >= maxOcrImages) {
-            console.log(`🤖 AI Web: OCR page-level image cap (${maxOcrImages}) reached — images beyond the cap rely on segment top-up`);
-        }
+        // Gather more candidates than we intend to OCR so uninteresting images
+        // (logos, icons, static assets) don't consume slots meant for real flyers.
+        const maxCandidates = Math.max(10, maxImages);
+        const candidateUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, maxCandidates);
 
         // Pre-filter out uninteresting images before OCR
-        const imageUrls = allImageUrls.filter(url => !this.isLikelyUninterestingImageUrl(url));
-
-        if (imageUrls.length < allImageUrls.length) {
-            console.log(`🤖 AI Web: OCR skipped ${allImageUrls.length - imageUrls.length} uninteresting images`);
+        const interestingUrls = candidateUrls.filter(url => !this.isLikelyUninterestingImageUrl(url));
+        if (interestingUrls.length < candidateUrls.length) {
+            console.log(`🤖 AI Web: OCR skipped ${candidateUrls.length - interestingUrls.length} uninteresting images`);
         }
 
-        // Batch OCR requests using Promise.all
-        const ocrPromises = imageUrls.map(url =>
+        const imageUrls = interestingUrls.slice(0, maxImages);
+        if (imageUrls.length < interestingUrls.length || candidateUrls.length >= maxCandidates) {
+            console.log(`🤖 AI Web: OCR image cap (${maxImages}) applied — images beyond the cap rely on segment top-up`);
+        }
+
+        // Batch OCR requests with limited concurrency
+        const results = await this.mapWithConcurrencyLimit(imageUrls, ocrConfig.maxConcurrentRequests || 1, url =>
             this.getOcrTextForImage(url, ocrConfig, 'ocr-all', httpAdapter).catch(err => null)
         );
-        const results = await Promise.all(ocrPromises);
 
         const ocrResults = results
             .filter(r => r !== undefined)
@@ -2434,9 +2474,9 @@ class AiWebParser {
         if (targets.length === 0) return ocrResults;
 
         console.log(`🤖 AI Web: OCR top-up for ${targets.length} segment image(s) missed by the page-level cap`);
-        const rawResults = await Promise.all(targets.map(url =>
+        const rawResults = await this.mapWithConcurrencyLimit(targets, ocrConfig.maxConcurrentRequests || 1, url =>
             this.getOcrTextForImage(url, ocrConfig, 'ocr-segment', httpAdapter).catch(() => null)
-        ));
+        );
         for (const rawResult of rawResults) {
             const normalized = this.normalizeOcrResult(rawResult);
             if (!normalized || !normalized.text || normalized.text.trim().length === 0) continue;
@@ -3462,6 +3502,11 @@ class AiWebParser {
         const maxTextChars = Number.isFinite(Number(rawOcr.maxTextChars))
             ? Math.max(250, Math.floor(Number(rawOcr.maxTextChars)))
             : 4000;
+        // Concurrent vision requests contend for the same local GPU and push each other
+        // into timeouts, so requests are serialized by default.
+        const maxConcurrentRequests = Number.isFinite(Number(rawOcr.concurrency))
+            ? Math.max(1, Math.min(4, Math.floor(Number(rawOcr.concurrency))))
+            : 1;
         const ocrConfigTemplate = {
             timeoutSeconds: this.defaultOcrRequestConfig.timeoutSeconds,
             keepAlive: this.defaultOcrRequestConfig.keepAlive,
@@ -3500,6 +3545,7 @@ class AiWebParser {
             ),
             maxImages,
             maxTextChars,
+            maxConcurrentRequests,
             cacheEnabled: rawOcr.cache !== false,
             requireMissingFields: rawOcr.requireMissingFields !== false,
             ollama: rawOcr.ollama && typeof rawOcr.ollama === 'object' ? rawOcr.ollama : (baseAiConfig.ollama || {}),

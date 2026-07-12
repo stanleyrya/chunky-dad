@@ -3810,16 +3810,19 @@ class SharedCore {
     }
 
     parseAiEventResponse(rawText) {
+        // Arrays are rejected: a garbage response like "[0]" would otherwise be
+        // processed as an event object with numeric field keys.
+        const isUsableEventObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
         if (!rawText) return null;
         try {
             const parsed = JSON.parse(rawText);
-            return parsed && typeof parsed === 'object' ? parsed : null;
+            return isUsableEventObject(parsed) ? parsed : null;
         } catch (parseError) {
             const jsonObject = this.extractFirstJsonObject(rawText);
             if (!jsonObject) return null;
             try {
                 const parsed = JSON.parse(jsonObject);
-                return parsed && typeof parsed === 'object' ? parsed : null;
+                return isUsableEventObject(parsed) ? parsed : null;
             } catch (jsonError) {
                 return null;
             }

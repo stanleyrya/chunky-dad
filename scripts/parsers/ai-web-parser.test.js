@@ -401,3 +401,76 @@ test('ensureSegmentOcrCoverage is a no-op when OCR is disabled or coverage is co
   assert.equal(called, false, 'disabled OCR should not trigger requests');
   assert.equal(empty.length, 0);
 });
+
+test('stripSizeParams collapses path-wrapped image proxy variants (img.evbuc.com)', () => {
+  const parser = createParser();
+  const inner = 'https://cdn.evbuc.com/images/1184410354/185013722403/1/original.20260512-160408';
+  const encoded = encodeURIComponent(inner);
+  const variantA = `https://img.evbuc.com/${encoded}?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&s=79b82ef9b2961bb09d52102535747556`;
+  const variantB = `https://img.evbuc.com/${encoded}?crop=focalpoint&fit=crop&w=1880&auto=format%2Ccompress&q=75&s=deadbeefdeadbeefdeadbeefdeadbeef`;
+
+  const strippedA = parser.stripSizeParams(variantA);
+  const strippedB = parser.stripSizeParams(variantB);
+  const strippedInner = parser.stripSizeParams(inner);
+
+  assert.equal(strippedA, strippedB, 'differently-sized/signed variants should collapse');
+  assert.equal(strippedA, strippedInner, 'wrapped variants should collapse to the inner URL');
+
+  const html = `
+    <img src="${variantA}">
+    <img src="${variantB}">
+  `;
+  const records = parser.extractOrderedImageRecordsFromHtml(html, 'https://www.eventbrite.com/e/test');
+  assert.equal(records.length, 1, 'proxy variants of the same image should dedupe to one record');
+  assert.equal(records[0].url, variantA, 'first (smaller) variant should win');
+});
+
+test('mapWithConcurrencyLimit bounds in-flight tasks and preserves order', async () => {
+  const parser = createParser();
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const items = [1, 2, 3, 4, 5];
+  const results = await parser.mapWithConcurrencyLimit(items, 2, async (item) => {
+    inFlight++;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    await new Promise(resolve => setTimeout(resolve, 5));
+    inFlight--;
+    return item * 10;
+  });
+  assert.deepEqual(results, [10, 20, 30, 40, 50]);
+  assert.equal(maxInFlight, 2, 'no more than `limit` tasks should run at once');
+});
+
+test('extractOcrFromAllImages respects maxImages without letting uninteresting images consume slots', async () => {
+  const parser = createParser();
+  const html = `
+    <img src="https://x.example/logo-header.png">
+    <img src="https://x.example/images/flyer-one.jpg">
+    <img src="https://x.example/images/flyer-two.jpg">
+    <img src="https://x.example/images/flyer-three.jpg">
+  `;
+
+  const ocrCalls = [];
+  let inFlight = 0;
+  let maxInFlight = 0;
+  parser.getOcrTextForImage = async (url) => {
+    inFlight++;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    await new Promise(resolve => setTimeout(resolve, 2));
+    inFlight--;
+    ocrCalls.push(url);
+    return { url, text: `TEXT FROM ${url}`, imageClassification: 'event-flyer' };
+  };
+
+  const results = await parser.extractOcrFromAllImages(
+    { url: 'https://x.example/', html },
+    { maxConcurrentRequests: 1 },
+    null,
+    2
+  );
+
+  assert.equal(ocrCalls.length, 2, 'only maxImages should be OCRd');
+  assert.ok(ocrCalls.every(url => url.includes('flyer')), 'the uninteresting logo should not consume a slot');
+  assert.equal(maxInFlight, 1, 'requests should be serialized');
+  assert.equal(results.length, 2);
+});
