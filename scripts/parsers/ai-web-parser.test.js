@@ -222,13 +222,20 @@ test('buildAiPayload and extractAiResponse support both Ollama and OpenAI', () =
   assert.equal(openaiPayloadText.max_tokens, 1024);
   assert.deepEqual(openaiPayloadText.response_format, { type: 'json_object' });
 
-  // OpenAI Payload (Vision)
+  // OpenAI Payload (Vision) — unknown magic bytes fall back to png
   const openaiPayloadVision = parser.core.buildAiPayload(openaiConfig, prompt, base64Image);
   assert.ok(Array.isArray(openaiPayloadVision.messages[0].content));
   assert.equal(openaiPayloadVision.messages[0].content[0].type, 'text');
   assert.equal(openaiPayloadVision.messages[0].content[0].text, prompt);
   assert.equal(openaiPayloadVision.messages[0].content[1].type, 'image_url');
   assert.equal(openaiPayloadVision.messages[0].content[1].image_url.url, `data:image/png;base64,${base64Image}`);
+
+  // OpenAI Payload (Vision) — mime detected from base64 magic bytes
+  const jpegBase64 = '/9j/4AAQSkZJRgABAQAAAQ';
+  const openaiPayloadJpeg = parser.core.buildAiPayload(openaiConfig, prompt, jpegBase64);
+  assert.equal(openaiPayloadJpeg.messages[0].content[1].image_url.url, `data:image/jpeg;base64,${jpegBase64}`);
+  assert.equal(parser.core.detectBase64ImageMimeType('iVBORw0KGgoAAAANSUhEUg'), 'image/png');
+  assert.equal(parser.core.detectBase64ImageMimeType('UklGRh4AAABXRUJQVlA4'), 'image/webp');
 
   // Response Extraction
   const ollamaResponse = { response: '{"title": "Ollama Event"}' };
@@ -473,4 +480,23 @@ test('extractOcrFromAllImages respects maxImages without letting uninteresting i
   assert.ok(ocrCalls.every(url => url.includes('flyer')), 'the uninteresting logo should not consume a slot');
   assert.equal(maxInFlight, 1, 'requests should be serialized');
   assert.equal(results.length, 2);
+});
+
+test('getOcrConfig defaults the openai provider to a vision model and accepts top-level ocr blocks', () => {
+  const parser = createParser();
+
+  // openai provider must never default to the text/coder extraction model
+  const openaiOcr = parser.getOcrConfig({ ai: { ocr: { provider: 'openai' } } });
+  assert.equal(openaiOcr.provider, 'openai');
+  assert.match(openaiOcr.model, /VL/i, 'openai OCR default must be a vision model');
+  assert.equal(openaiOcr.endpoint, 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions');
+
+  // A mis-nested top-level ocr block should still configure OCR (fallback)...
+  const topLevel = parser.getOcrConfig({ ocr: { maxImages: 3, concurrency: 2 } });
+  assert.equal(topLevel.maxImages, 3);
+  assert.equal(topLevel.maxConcurrentRequests, 2);
+
+  // ...but the canonical ai.ocr block wins when both exist
+  const both = parser.getOcrConfig({ ai: { ocr: { maxImages: 4 } }, ocr: { maxImages: 3 } });
+  assert.equal(both.maxImages, 4);
 });

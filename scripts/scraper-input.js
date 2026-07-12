@@ -343,21 +343,33 @@ const scraperConfig = {
         think: false,
         timeoutSeconds: 120,
         keepAlive: "5m",
-      },
-      ocr: {
-        enabled: true,
-        endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-        model: "qwen3-vl:4b-instruct", // OCR model - defaults to qwen3-vl:4b-instruct
-        timeoutSeconds: 300,
-        numCtx: 8192,
-        numPredict: 2000,
-        temperature: 0,
-        think: false,
-        keepAlive: "5m",
-        maxImages: 2,
-        maxTextChars: 4000,
-        cacheEnabled: true,
-        requireMissingFields: true,
+        // OCR settings live inside `ai` (getOcrConfig reads parserConfig.ai.ocr; a
+        // top-level `ocr` block is accepted as fallback, but this is the canonical spot).
+        ocr: {
+          enabled: true,
+          // --- Option A (default): Ollama vision model on desktop ---
+          provider: "ollama",
+          endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
+          model: "qwen3-vl:4b-instruct", // OCR requires a VISION model
+          // --- Option B: rapid-mlx (OpenAI-compatible, Apple Silicon) on rybook ---
+          // rapid-mlx must be serving a VISION (VLM) model — text models reject image
+          // input with "Model ... does not support image, video, or audio inputs."
+          // Check what's served: http://rybook.taila7523c.ts.net:8000/v1/models
+          // provider: "openai",
+          // endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+          // model: "mlx-community/Qwen3-VL-4B-Instruct-4bit",
+          timeoutSeconds: 120,
+          numCtx: 8192,
+          numPredict: 2000,
+          temperature: 0,
+          think: false,
+          keepAlive: "5m",
+          maxImages: 2, // Per-page OCR budget on single-event pages (multi-event pages use 10 + segment top-up)
+          concurrency: 1, // Concurrent OCR requests; keep 1 for a single local GPU
+          maxTextChars: 4000,
+          cache: true, // OCR result cache (key is `cache`, not `cacheEnabled`)
+          requireMissingFields: true,
+        },
       },
       // Comprehensive example of fieldPriorities for merging data from different sources
       fieldPriorities: {

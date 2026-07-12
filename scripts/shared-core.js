@@ -3703,6 +3703,17 @@ class SharedCore {
     // AI ORCHESTRATION HELPERS
     // ============================================================================
 
+    // Detect the image mime type from base64 magic bytes so OpenAI-compatible servers
+    // that trust the data-URL label (instead of sniffing bytes) decode correctly.
+    detectBase64ImageMimeType(base64Image) {
+        const text = String(base64Image || '');
+        if (text.startsWith('/9j/')) return 'image/jpeg';
+        if (text.startsWith('iVBOR')) return 'image/png';
+        if (text.startsWith('R0lGO')) return 'image/gif';
+        if (text.startsWith('UklGR')) return 'image/webp';
+        return 'image/png';
+    }
+
     buildAiPayload(aiConfig, prompt, base64Image = null) {
         if (aiConfig.provider === 'ollama') {
             const payload = {
@@ -3732,7 +3743,7 @@ class SharedCore {
                     {
                         type: "image_url",
                         image_url: {
-                            url: `data:image/png;base64,${base64Image}`
+                            url: `data:${this.detectBase64ImageMimeType(base64Image)};base64,${base64Image}`
                         }
                     }
                 ];
