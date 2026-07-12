@@ -343,11 +343,12 @@ const scraperConfig = {
         think: false,
         timeoutSeconds: 120,
         keepAlive: "5m",
-        // AI page classification second opinion. When the deterministic classifiers
-        // (URL rules, JSON-LD Event markup) have no answer, the crude month-count
-        // heuristic decides — enabling this asks the text model instead (one small
-        // request per crawled page). URL rules and JSON-LD always take precedence.
-        classifyPages: false,
+        // AI page classification second opinion (default: true). When the deterministic
+        // classifiers (URL rules, JSON-LD Event markup) have no answer, the text model
+        // classifies the page instead of the crude month-count heuristic (one small
+        // request per weak-signal page). URL rules and JSON-LD always take precedence.
+        // Set to false to fall back to the month-count heuristic only.
+        classifyPages: true,
         // OCR settings live inside `ai` (getOcrConfig reads parserConfig.ai.ocr; a
         // top-level `ocr` block is accepted as fallback, but this is the canonical spot).
         ocr: {
