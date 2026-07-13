@@ -176,6 +176,14 @@
     }
     .meta-plain { font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 500; opacity: 0.92; }
 
+    /* Downloaded venue/event favicon shown beside the venue name in every layout */
+    .artboard .fav-ico {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: #fff; object-fit: contain; padding: 2px;
+      vertical-align: -10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
     .og-title { font-weight: 800; letter-spacing: -1.5px; line-height: 1.02; margin: 0; text-wrap: balance; }
     .og-title.t-lg { font-size: 110px; }
     .og-title.t-md { font-size: 88px; }
@@ -798,7 +806,8 @@
             time: ev.time || '',
             city: getCityConfig(this.currentCity)?.name || 'City',
             description: ev.tea || 'Join us for an amazing bear community event!',
-            cover: (coverInput.value || '').trim() || (ev.image || '').trim()
+            cover: (coverInput.value || '').trim() || (ev.image || '').trim(),
+            favicon: (this.getFaviconInfo(ev) || {}).path || ''
           };
         }
 
@@ -864,10 +873,14 @@
               <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad">
               <span>chunky.dad</span>
             </div>`;
+          // The downloaded favicon stands in for the 📍 pin wherever the venue is named
+          const venueIco = data.favicon
+            ? `<img class="fav-ico" src="${escapeHtml(data.favicon)}" alt="" onerror="this.remove()">`
+            : '📍';
           const metaPills = `
             <div class="meta-row">
               <div class="meta-pill">📅 ${escapeHtml(data.date)}${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
-              <div class="meta-pill">📍 ${escapeHtml(data.venue)}</div>
+              <div class="meta-pill">${venueIco} ${escapeHtml(data.venue)}</div>
             </div>`;
 
           return [
@@ -943,7 +956,7 @@
                       <h2 class="og-title ${data.titleClass}">${escapeHtml(data.title)}</h2>
                       <div class="meta-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
                         <div class="meta-plain">📅 ${escapeHtml(data.date)}${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
-                        <div class="meta-plain">📍 ${escapeHtml(data.venue)} · ${escapeHtml(data.city)}</div>
+                        <div class="meta-plain">${venueIco} ${escapeHtml(data.venue)} · ${escapeHtml(data.city)}</div>
                       </div>
                     </div>
                   </div>
@@ -974,7 +987,7 @@
                     </div>
                     <h2 class="og-title ${data.titleClass}">${escapeHtml(data.title)}</h2>
                     <div class="meta-row">
-                      <div class="meta-pill" style="border-color:${hexToRgba(p.c2, 0.6)}">📍 ${escapeHtml(data.venue)} · ${escapeHtml(data.city)}</div>
+                      <div class="meta-pill" style="border-color:${hexToRgba(p.c2, 0.6)}">${venueIco} ${escapeHtml(data.venue)} · ${escapeHtml(data.city)}</div>
                     </div>
                   </div>
                 </div>`
@@ -999,7 +1012,7 @@
                     </div>
                     <div class="meta-row">
                       <div class="meta-plain"><b>${escapeHtml(data.date)}</b>${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
-                      <div class="meta-plain">${escapeHtml(data.venue)}</div>
+                      <div class="meta-plain">${data.favicon ? venueIco + ' ' : ''}${escapeHtml(data.venue)}</div>
                     </div>
                   </div>
                 </div>`
@@ -1033,6 +1046,9 @@
           const img = cssUrl(data.cover);
           const grad = `linear-gradient(135deg, ${p.c1} 0%, ${p.c4} 100%)`;
           const when = `${escapeHtml(data.date)}${data.time ? ' · ' + escapeHtml(data.time) : ''}`;
+          const venueIco = data.favicon
+            ? `<img class="fav-ico" src="${escapeHtml(data.favicon)}" alt="" onerror="this.remove()"> `
+            : '';
 
           return [
             {
@@ -1048,7 +1064,7 @@
                     <div class="brand" style="color:${p.bg}">chunky.dad</div>
                     <div class="event-title">${escapeHtml(data.title)}</div>
                     <div class="event-date">${when}</div>
-                    <div class="event-venue">@ ${escapeHtml(data.venue)}</div>
+                    <div class="event-venue">${venueIco}@ ${escapeHtml(data.venue)}</div>
                   </div>
                 </div>`
             },
@@ -1061,7 +1077,7 @@
                 <div class="artboard l-c-bold" style="background:${grad}">
                   <div class="event-title">${escapeHtml(data.title)}</div>
                   <div class="event-details">${when}</div>
-                  <div class="event-venue">@ ${escapeHtml(data.venue)}</div>
+                  <div class="event-venue">${venueIco}@ ${escapeHtml(data.venue)}</div>
                   <img class="logo-stamp" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
                 </div>`
             },
@@ -1078,7 +1094,7 @@
                   </div>
                   <div class="right-panel">
                     <div class="event-date">${escapeHtml(data.date)}</div>
-                    <div class="event-venue">@ ${escapeHtml(data.venue)}${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
+                    <div class="event-venue">${venueIco}@ ${escapeHtml(data.venue)}${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
                     <div class="description">${escapeHtml(data.description)}</div>
                   </div>
                 </div>`
@@ -1094,7 +1110,7 @@
                   <div class="banner-content">
                     <img class="brand-logo" src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad" />
                     <div class="event-title">${escapeHtml(data.title)}</div>
-                    <div class="event-info">${when} · ${escapeHtml(data.venue)}</div>
+                    <div class="event-info">${when} · ${venueIco}${escapeHtml(data.venue)}</div>
                     <div class="event-cta">Get Tickets</div>
                   </div>
                 </div>`
@@ -1113,7 +1129,7 @@
                     <div class="brand">chunky.dad</div>
                     <div class="event-title">${escapeHtml(data.title)}</div>
                     <div class="event-date">${when}</div>
-                    <div class="venue">@ ${escapeHtml(data.venue)}</div>
+                    <div class="venue">${venueIco}@ ${escapeHtml(data.venue)}</div>
                   </div>
                   <div class="right-side">
                     <div class="event-image" style="background-image:${hasImage ? `url('${img}'), ` : ''}linear-gradient(160deg, ${p.c2}, ${p.c4})"></div>
@@ -1132,7 +1148,7 @@
                     <div class="inner">
                       <div class="event-title">${escapeHtml(data.title)}</div>
                       <div class="event-date">${when}</div>
-                      <div class="venue">@ ${escapeHtml(data.venue)}</div>
+                      <div class="venue">${venueIco}@ ${escapeHtml(data.venue)}</div>
                     </div>
                   </div>
                 </div>`
