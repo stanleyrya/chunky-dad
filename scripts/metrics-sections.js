@@ -50,7 +50,8 @@ const GUARD_LABELS = [
     { key: 'degenerateEndCaught', label: 'Degenerate end date caught' },
     { key: 'coordsPreserved', label: 'Calendar coordinates preserved' },
     { key: 'barPreserved', label: 'Calendar venue preserved' },
-    { key: 'locationPreserved', label: 'Calendar location preserved' }
+    { key: 'locationPreserved', label: 'Calendar location preserved' },
+    { key: 'arbitrationDeterministic', label: 'Merge conflicts resolved deterministically' }
 ];
 
 const SIGNALS_PASS_ORDER = ['extraction', 'context-prep', 'repair', 'merge-arbitration', 'ocr'];
