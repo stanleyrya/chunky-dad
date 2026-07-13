@@ -1091,6 +1091,202 @@ test('normalizeAiEvent stamps the derived organizer as internal _organizer metad
   assert.equal(plain._organizer, undefined, 'no page brand → no organizer stamp');
 });
 
+// ---------------------------------------------------------------------------
+// Wasted-AI-call cuts (2026-07-13 run findings): Event-less JSON-LD passes,
+// duplicate context-prep round-trips, and repair passes for evidence-only
+// JSON breakage.
+// ---------------------------------------------------------------------------
+
+const NO_EVENT_JSONLD_HTML = `
+  <html>
+    <head>
+      <title>Atlanta | BEARRACUDA</title>
+      <meta property="og:title" content="Atlanta | BEARRACUDA" />
+      <meta property="og:description" content="Bearracuda returns to Atlanta for one night only" />
+      <script type="application/ld+json">
+        {"@context":"https://schema.org","@graph":[
+          {"@type":"WebPage","name":"Atlanta | BEARRACUDA","url":"https://bearracuda.com/events/atlanta"},
+          {"@type":"ImageObject","url":"https://bearracuda.com/images/atlanta.jpg"},
+          {"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Events"}]},
+          {"@type":"WebSite","name":"BEARRACUDA"},
+          {"@type":"Organization","name":"Bearracuda, Inc."}
+        ]}
+      </script>
+    </head>
+    <body>
+      <h1>Bearracuda Atlanta</h1>
+      <p>Saturday August 15 at Future Atlanta, 9pm until late.</p>
+      <p>DJs all night long with the best bears in the South.</p>
+    </body>
+  </html>
+`;
+
+test('skips the jsonld extraction pass when the page has no Event-typed JSON-LD', async () => {
+  const parser = createParser();
+  const calls = [];
+  parser.core.callAiGenerate = async (config, prompt, label) => {
+    calls.push({ label, prompt });
+    return '{}';
+  };
+
+  const htmlData = { url: 'https://bearracuda.com/events/atlanta', html: NO_EVENT_JSONLD_HTML };
+  const aiConfig = parser.getAiConfig({});
+  await parser.extractEventWithAiStrategy(htmlData, aiConfig, null, {}, ['title', 'bar'], null);
+
+  assert.equal(htmlData.hasEventTypedJsonLd, false, 'the determination must be cached on htmlData');
+  assert.ok(calls.length > 0, 'meta/content passes must still run');
+  assert.ok(
+    !calls.some(call => call.prompt.includes('JSON_LD_PRIMARY')),
+    'no request may carry the Event-less JSON_LD_PRIMARY payload'
+  );
+  assert.ok(
+    calls.some(call => call.prompt.includes('META_PRIMARY')),
+    'the meta pass must be unchanged'
+  );
+  assert.ok(
+    calls.some(call => call.prompt.includes('CONTENT')),
+    'the content pass must be unchanged'
+  );
+});
+
+test('keeps the jsonld extraction pass when the page has an Event-typed JSON-LD node', async () => {
+  const parser = createParser();
+  const calls = [];
+  parser.core.callAiGenerate = async (config, prompt, label) => {
+    calls.push({ label, prompt });
+    return '{}';
+  };
+
+  const htmlData = { url: 'https://sickening.events/e/bearracuda-portland-pridefriday', html: SICKENING_JSONLD_HTML };
+  await parser.extractEventWithAiStrategy(htmlData, parser.getAiConfig({}), null, {}, ['title', 'bar'], null);
+
+  assert.equal(parser.pageHasEventTypedJsonLd(htmlData), true);
+  assert.ok(
+    calls.some(call => call.prompt.includes('JSON_LD_PRIMARY')),
+    'a MusicEvent node must keep the jsonld pass running as today'
+  );
+});
+
+test('context-prep responses are cached per identical prompt within a parser instance', async () => {
+  const parser = createParser();
+  let contextPrepCalls = 0;
+  const extractionPrompts = [];
+  parser.core.callAiGenerate = async (config, prompt, label) => {
+    if (label === 'context-prep') {
+      contextPrepCalls++;
+      return 'CORRECTIONS:\n- Cleaned Times: 9:00 PM\n- Core Event Date: August 15, 2026\n- Parent Festival Dates: None';
+    }
+    extractionPrompts.push(prompt);
+    return '{}';
+  };
+
+  const htmlData = { url: 'https://x.example/party', html: '<p>party</p>' };
+  const aiConfig = parser.getAiConfig({});
+  const options = { dataFlags: { content: true } };
+  const snippet = 'CONTENT\nSAT AUG 15 / 9PM - LATE at Future Atlanta';
+
+  await parser.extractEventWithTwoPassAi(htmlData, aiConfig, null, {}, ['title'], snippet, 'first', options, null);
+  await parser.extractEventWithTwoPassAi(htmlData, aiConfig, null, {}, ['title'], snippet, 'retry', options, null);
+
+  assert.equal(contextPrepCalls, 1, 'the identical context-prep prompt must be paid for exactly once');
+  assert.equal(extractionPrompts.length, 2);
+  assert.ok(
+    extractionPrompts.every(prompt => prompt.includes('PRE-PARSED HELPER DATA')),
+    'the cached context result must feed both extraction passes'
+  );
+
+  // Different content → a genuinely new context-prep request
+  await parser.extractEventWithTwoPassAi(htmlData, aiConfig, null, {}, ['title'], 'CONTENT\nA totally different page', 'other', options, null);
+  assert.equal(contextPrepCalls, 2, 'different content must not hit the cache');
+});
+
+// The exact breakage shapes from the 2026-07-13 Scriptable run logs: raw quotes
+// inside `evidence` strings are the only reason JSON.parse fails.
+const TREASUREPDX_BROKEN_RESPONSE = '{"title": {"value": "Treasure Trail Portland PRIDE", "evidence": "name":"Treasure Trail Portland PRIDE | BEARRACUDA", "confidence": 95}, "website": {"value": "https://treasurepdx.com", "evidence": "url":"https://treasurepdx.com/", "confidence": 90}}';
+const SEATTLE_BROKEN_RESPONSE = '{"startDate": {"value": "2026-08-15", "evidence": "📅 August 15, 2026" and "SAT, AUG 15 / 9PM - LATE", "confidence": 92}, "startTime": {"value": "21:00", "evidence": "9PM - LATE", "confidence": 88}}';
+
+test('salvages evidence-mangled extraction responses instead of running the repair pass', async () => {
+  const parser = createParser();
+  const labels = [];
+  parser.core.callAiGenerate = async (config, prompt, label) => {
+    labels.push(label);
+    return TREASUREPDX_BROKEN_RESPONSE;
+  };
+
+  const event = await parser.extractEventWithTwoPassAi(
+    { url: 'https://treasurepdx.com/', html: '<p>x</p>' },
+    parser.getAiConfig({}), null, {}, ['title', 'website'], 'SNIPPET', '', {}, null);
+
+  assert.deepEqual(labels, ['extraction'], 'no repair round-trip may be paid for');
+  assert.ok(event, 'the salvaged event must be returned');
+  assert.equal(event.title, 'Treasure Trail Portland PRIDE');
+  assert.equal(event.website, 'https://treasurepdx.com');
+});
+
+test('salvage recovers values, confidences and best-effort evidence from the Seattle payload', () => {
+  const parser = createParser();
+  assert.equal(parser.core.parseAiEventResponse(SEATTLE_BROKEN_RESPONSE), null, 'the payload must really be unparseable');
+
+  const salvaged = parser.salvageUnparseableAiResponse(SEATTLE_BROKEN_RESPONSE, ['startDate', 'startTime']);
+  assert.ok(salvaged);
+  assert.equal(salvaged.startDate.value, '2026-08-15');
+  assert.equal(salvaged.startDate.confidence, 92);
+  assert.match(salvaged.startDate.evidence, /August 15, 2026/, 'mangled evidence text is preserved best-effort');
+  assert.equal(salvaged.startTime.value, '21:00');
+  assert.equal(salvaged.startTime.confidence, 88);
+  assert.equal(salvaged.startTime.evidence, '9PM - LATE');
+
+  // Unknown field names never salvage
+  assert.equal(parser.salvageUnparseableAiResponse(SEATTLE_BROKEN_RESPONSE, ['title']), null);
+  // A value containing raw quotes is a truncation hazard, not a salvage
+  assert.equal(
+    parser.salvageUnparseableAiResponse('{"title": {"value": "The "Bear" Party", "evidence": "x", "confidence": 90}}', ['title']),
+    null
+  );
+});
+
+test('truly garbage responses still fall through to the AI repair pass', async () => {
+  const parser = createParser();
+  const labels = [];
+  parser.core.callAiGenerate = async (config, prompt, label) => {
+    labels.push(label);
+    if (label === 'repair') {
+      return '{"title": {"value": "Repaired Party", "evidence": "Repaired Party", "confidence": 90}}';
+    }
+    return 'not json at all &&&';
+  };
+
+  const event = await parser.extractEventWithTwoPassAi(
+    { url: 'https://x.example/', html: '<p>x</p>' },
+    parser.getAiConfig({}), null, {}, ['title'], 'SNIPPET', '', {}, null);
+
+  assert.deepEqual(labels, ['extraction', 'repair'], 'garbage must reach the repair pass exactly as today');
+  assert.equal(event.title, 'Repaired Party');
+});
+
+test('valid extraction responses never invoke salvage', async () => {
+  const parser = createParser();
+  let salvageCalls = 0;
+  const originalSalvage = parser.salvageUnparseableAiResponse.bind(parser);
+  parser.salvageUnparseableAiResponse = (...args) => {
+    salvageCalls++;
+    return originalSalvage(...args);
+  };
+  const labels = [];
+  parser.core.callAiGenerate = async (config, prompt, label) => {
+    labels.push(label);
+    return '{"title": {"value": "Clean Party", "evidence": "Clean Party", "confidence": 90}}';
+  };
+
+  const event = await parser.extractEventWithTwoPassAi(
+    { url: 'https://x.example/', html: '<p>x</p>' },
+    parser.getAiConfig({}), null, {}, ['title'], 'SNIPPET', '', {}, null);
+
+  assert.equal(event.title, 'Clean Party');
+  assert.equal(salvageCalls, 0, 'the happy path must not change');
+  assert.deepEqual(labels, ['extraction']);
+});
+
 test('getPageBrandNames caches the brand extraction on htmlData', () => {
   const parser = createParser();
   const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };

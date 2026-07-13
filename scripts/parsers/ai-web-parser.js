@@ -244,6 +244,10 @@ class AiWebParser {
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
         this.aiPromptHistory = [];
+        // Context-prep responses keyed by prompt hash: confidence retries rebuild a
+        // byte-identical context-prep prompt, so the HTTP round-trip can be reused.
+        // In-memory only, scoped to this parser instance (one run).
+        this.contextPrepResponseCache = new Map();
         this.defaultOcrModel = 'qwen3-vl:4b-instruct';
         this.defaultOcrPrompt = "You are performing OCR on an event flyer.\n\nSTEP 1: OCR\nExtract ALL visible text from the image.\n\nRules:\n- Copy text exactly as shown.\n- Preserve line breaks when possible.\n- Do not summarize.\n- Do not interpret.\n- Do not correct spelling.\n- Do not infer missing words.\n\nSTEP 2: Classification\n\nClassify the image into ONE category:\n\nad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\nevent-flyer: Single event poster/flyer - ONE primary event with ONE title, ONE venue, and ONE date or continuous date range. May contain schedules, activities, DJs, performers, or sub-events that are clearly part of the same event. Examples: Bear Week, Bear Weekend, Pride Festival, Camp Weekend, Resort Weekend Package.\nmulti-event-flyer: Two or more independent events with different titles, different dates/times, and separate ticketing. Often appears as a calendar, event listing, or monthly schedule.\nlogo: Brand or organization logo (minimal text, just brand name)\nthumbnail: Small preview image (low detail)\nhero-banner: Large header/banner image (prominent on page)\n\nDecision rule: If there is ONE overarching event name and the listed activities appear to belong to that event, classify as event-flyer. Only classify as multi-event-flyer when multiple independent events are advertised that require separate tickets.\n\nIMPORTANT CONTEXT: This is for a gay bear community travel guide. Events may be part of:\n- \"Bear Week\" or \"Bear Weekend\" themed events\n- Annual bear gatherings (e.g., \"Puerto Vallarta Bear Week\", \"Sitges Bear Week\")\n- Regular bear-themed parties or meetups\n- Events at bear-owned businesses or bear-friendly venues\n\nSTEP 3: Event Analysis\n\nDetermine:\n- eventName: The primary event title\n- venue: The venue or venue group name\n- startDate: Start date/time if visible\n- endDate: End date/time if visible\n\nUse only information visible in the image.\n\nSTEP 4: Summary\n\nCreate a concise summary describing:\n- event name\n- venue\n- date/time\n- why it may be relevant to the bear community\n\nReturn JSON only with these fields:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"eventSummary\": \"a concise 1-2 sentence summary of the event including: event name, venue, date/time, and any bear-week context if applicable. Focus on what makes this event notable for the bear community.\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
         // When an image overflows the vision model's context, retry once at this
@@ -4642,6 +4646,26 @@ class AiWebParser {
         return guarded;
     }
 
+    // A jsonld extraction pass on a page whose JSON-LD carries no Event-typed node
+    // (WebPage/ImageObject/BreadcrumbList/Organization boilerplate) is a wasted AI
+    // request — the model has nothing to extract and returns {}. Detect Event-typed
+    // nodes (any @type containing "Event", schema.org URL prefixes included) over the
+    // same extractJsonLdParts output the jsonld pass would send, and cache the
+    // determination on htmlData (like getPageBrandNames) so re-parses are free.
+    // Pages WITH Event nodes keep today's behavior exactly: the deterministic
+    // JSON-LD path may not have fully extracted them, so the AI pass still runs.
+    pageHasEventTypedJsonLd(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return false;
+        if (typeof htmlData.hasEventTypedJsonLd === 'boolean') return htmlData.hasEventTypedJsonLd;
+        const html = typeof htmlData.html === 'string' ? htmlData.html : '';
+        const result = this.extractJsonLdParts(String(html).slice(0, 500000))
+            .some(part => this.containsEventType(part));
+        if (Object.isExtensible(htmlData)) {
+            htmlData.hasEventTypedJsonLd = result;
+        }
+        return result;
+    }
+
     getBestModePromptGroups(sectionBundle) {
         const jsonGroup = sectionBundle && sectionBundle.jsonLd
             ? { label: 'jsonld', sections: [sectionBundle.jsonLd] }
@@ -4776,6 +4800,13 @@ class AiWebParser {
         let merged = {};
 
         const runPartitionExtraction = async (fieldsToExtract, partition, passLabel, extractionOptions = {}) => {
+            // Skip the jsonld pass entirely when the page's JSON-LD has no Event-typed
+            // node: the payload is WebPage/Organization boilerplate the model can only
+            // answer with {} (observed on every bearracuda.com event page).
+            if (partition === 'jsonld' && sectionBundle.jsonLd && !this.pageHasEventTypedJsonLd(htmlData)) {
+                console.log('🤖 AI Web: Skipping jsonld extraction pass — no Event-typed JSON-LD on page');
+                return {};
+            }
             const sections = this.getSectionsForPartition(sectionBundle, partition);
             const snippets = this.buildPromptSnippets([], sections, maxHtmlChars);
             // Determine data flags based on partition and snippet content
@@ -5558,7 +5589,21 @@ TEXT:
         if (hasUnstructuredData && !hasStructuredData) {
             console.log(`🤖 AI Web: Running context pre-extraction pass${passSuffix}`);
             const contextPrompt = this.buildContextPrePrompt(snippet);
-            const contextResponse = await this.core.callAiGenerate(aiConfig, contextPrompt, 'context-prep', httpAdapter, this.recordAiPrompt.bind(this));
+            // Confidence retries re-run this pass with a byte-identical prompt (~1.2s
+            // each): reuse the previous successful response instead of paying twice.
+            const contextPromptHash = this.core && typeof this.core.hashString === 'function'
+                ? this.core.hashString(contextPrompt)
+                : null;
+            let contextResponse;
+            if (contextPromptHash !== null && this.contextPrepResponseCache.has(contextPromptHash)) {
+                contextResponse = this.contextPrepResponseCache.get(contextPromptHash);
+                console.log(`🤖 AI Web: context-prep cache hit (hash ${contextPromptHash}) — reusing previous result`);
+            } else {
+                contextResponse = await this.core.callAiGenerate(aiConfig, contextPrompt, 'context-prep', httpAdapter, this.recordAiPrompt.bind(this));
+                if (contextPromptHash !== null && contextResponse) {
+                    this.contextPrepResponseCache.set(contextPromptHash, contextResponse);
+                }
+            }
             if (contextResponse) {
                 const strippedContext = contextResponse.replace(/[^a-z0-9]/gi, '').trim();
                 if (strippedContext.length >= 5) {
@@ -5593,6 +5638,17 @@ TEXT:
             }
         }
 
+        // PASS 2.5: Deterministic salvage before paying for an AI repair round-trip.
+        // Most unparseable responses fail JSON.parse only because the model put raw
+        // quotes inside `evidence` strings — the values themselves are fine.
+        const salvagedEvent = this.salvageUnparseableAiResponse(rawResponse, fields);
+        if (salvagedEvent) {
+            const salvagedFieldCount = Object.keys(salvagedEvent).length;
+            console.log(`🤖 AI Web: Salvaged ${salvagedFieldCount} field(s) from unparseable response — skipping repair pass`);
+            event = parseAndFilterConfidence(JSON.stringify(salvagedEvent));
+            if (event) return event;
+        }
+
         // PASS 3: Try repair if extraction returned unparseable JSON
         console.warn(`🤖 AI Web: Extraction pass${passSuffix} returned unparseable JSON; attempting repair`);
         const repairPrompt = this.buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags, htmlData);
@@ -5606,6 +5662,103 @@ TEXT:
 
         console.warn(`🤖 AI Web: Extraction pass${passSuffix} failed (both standard and repair)`);
         return null;
+    }
+
+    // === Deterministic salvage of unparseable extraction responses ===
+    //
+    // Extraction responses frequently fail JSON.parse only because the model copies
+    // raw quotes into `evidence` strings, e.g.
+    //   "evidence": "name":"Treasure Trail Portland PRIDE | BEARRACUDA",
+    //   "evidence": "📅 August 15, 2026" and "SAT, AUG 15 / 9PM - LATE",
+    // The `value`/`confidence` entries are well-formed; only evidence is mangled.
+    // Recover per-field {value, evidence?, confidence} objects with a tolerant
+    // scanner instead of a full AI repair round-trip. Conservative by design:
+    // - only field keys among the requested prompt fields are accepted;
+    // - the value must be a strict JSON scalar terminated by an "evidence"/
+    //   "confidence" boundary (a value containing raw quotes is NOT trusted);
+    // - a numeric confidence must be present;
+    // - everything between "evidence": and the confidence entry is kept as
+    //   opaque best-effort evidence text.
+    // Returns null (fall through to the AI repair pass) unless at least one field
+    // salvages cleanly.
+    salvageUnparseableAiResponse(rawResponse, promptFields) {
+        const source = String(rawResponse || '');
+        if (!source) return null;
+        const knownFields = new Set(
+            (Array.isArray(promptFields) ? promptFields : [])
+                .map(field => this.normalizePromptFieldName(field))
+                .filter(Boolean)
+        );
+        if (knownFields.size === 0) return null;
+
+        // Field entries look like `"key": {"value": ...` — requiring the "value"
+        // key right after the brace keeps evidence garbage (e.g. quoted JSON-LD
+        // fragments) from being mistaken for a field boundary.
+        const anchorRegex = /"([A-Za-z][A-Za-z0-9_]*)"\s*:\s*\{\s*"value"\s*:/g;
+        const anchors = [];
+        let match;
+        while ((match = anchorRegex.exec(source)) !== null) {
+            anchors.push({ key: match[1], start: match.index, valueStart: anchorRegex.lastIndex });
+        }
+        if (anchors.length === 0) return null;
+
+        const salvaged = {};
+        const seenFields = new Set();
+        for (let i = 0; i < anchors.length; i++) {
+            const anchor = anchors[i];
+            const normalizedKey = this.normalizePromptFieldName(anchor.key);
+            if (!knownFields.has(normalizedKey) || seenFields.has(normalizedKey)) continue;
+            const chunkEnd = i + 1 < anchors.length ? anchors[i + 1].start : source.length;
+            const fieldData = this.salvageAiFieldChunk(source.slice(anchor.valueStart, chunkEnd));
+            if (!fieldData) continue;
+            seenFields.add(normalizedKey);
+            salvaged[anchor.key] = fieldData;
+        }
+        return seenFields.size >= 1 ? salvaged : null;
+    }
+
+    // Parse one field body starting right after `"value":`. Returns
+    // {value, evidence?, confidence} or null when the chunk is not trustworthy.
+    salvageAiFieldChunk(chunk) {
+        const scalarMatch = chunk.match(/^\s*("(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|true|false|null)/);
+        if (!scalarMatch) return null;
+        let value;
+        try {
+            value = JSON.parse(scalarMatch[1]);
+        } catch (_) {
+            return null;
+        }
+        if (value === null) return null;
+
+        // The scalar must terminate at a proper field boundary — otherwise the
+        // value itself may contain raw quotes and the capture is a truncation.
+        const afterValue = chunk.slice(scalarMatch[0].length);
+        const boundaryMatch = afterValue.match(/^\s*,\s*"(evidence|confidence)"\s*:/);
+        if (!boundaryMatch) return null;
+
+        const confidenceMatches = Array.from(chunk.matchAll(/"confidence"\s*:\s*(-?\d+(?:\.\d+)?)/g));
+        if (confidenceMatches.length === 0) return null;
+        const lastConfidence = confidenceMatches[confidenceMatches.length - 1];
+        const confidence = Number(lastConfidence[1]);
+        if (!Number.isFinite(confidence)) return null;
+
+        const fieldData = { value, confidence };
+        const evidenceMatch = afterValue.match(/^\s*,\s*"evidence"\s*:/);
+        if (evidenceMatch) {
+            // Best-effort: keep the mangled evidence text (minus wrapping quotes and
+            // the trailing comma) rather than discarding it.
+            const evidenceStart = scalarMatch[0].length + evidenceMatch[0].length;
+            const evidenceEnd = lastConfidence.index;
+            if (evidenceEnd > evidenceStart) {
+                const evidenceText = chunk.slice(evidenceStart, evidenceEnd)
+                    .trim()
+                    .replace(/[\s,]+$/, '')
+                    .replace(/^"|"$/g, '')
+                    .trim();
+                if (evidenceText) fieldData.evidence = evidenceText;
+            }
+        }
+        return fieldData;
     }
 
 
