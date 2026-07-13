@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/Chicago",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "FURBALL",
+      "day": "Sunday",
+      "time": "5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.810535,
+        "lng": -96.8110709
+      },
+      "startDate": "2026-07-05T17:00:00",
+      "unprocessedDescription": "bar: STATION 4\naddress: 3911 Cedar Springs Rd, Dallas, TX 75\r219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
+      "uid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "STATION 4",
+      "image": "https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg",
+      "address": "3911 Cedar Springs Rd, Dallas, TX 75219",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
+      "shortName": "FUR-BALL",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-442f8415"
+    }
+  ]
+}

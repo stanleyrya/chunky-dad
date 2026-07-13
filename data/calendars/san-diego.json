@@ -1,0 +1,179 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/Los_Angeles",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "MEGAWOOF",
+      "day": "Friday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7468303,
+        "lng": -117.1607394
+      },
+      "startDate": "2025-10-31T21:00:00",
+      "endDate": "2025-11-01T04:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTE\rRNATIONAL HALLOWOOF\nbar: The Rail\naddress: 3796 Fifth Avenue, San Diego, CA 92103\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/megawoof-america-10-year-san-diego-debut-international-hallowoof-tickets-1692702351299\ncover: $16.84 - $22.10 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1123525053%2F185013722403%2F1%2Foriginal.20250914-145257?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=5e-17&fp-y=5e-17&s=74a16cfb724650fcf4bf026281197f19\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJwdJrt9pU2YARYuac9G61qQE\nkey: megawoof|2025-11-01|the rail|eventbrite",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "192064B4-BCA8-491B-97A9-36BDF7A5A725",
+      "uid": "192064B4-BCA8-491B-97A9-36BDF7A5A725",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Rail",
+      "cover": "$16.84 - $22.10 (as of 10/1)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1123525053%2F185013722403%2F1%2Foriginal.20250914-145257?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=5e-17&fp-y=5e-17&s=74a16cfb724650fcf4bf026281197f19",
+      "tea": "MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTERNATIONAL HALLOWOOF",
+      "address": "3796 Fifth Avenue, San Diego, CA 92103",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJwdJrt9pU2YARYuac9G61qQE",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-10-year-san-diego-debut-international-hallowoof-tickets-1692702351299",
+      "shortName": "MEGA-WOOF",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJwdJrt9pU2YARYuac9G61qQE",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-10-year-san-diego-debut-international-hallowoof-tickets-1692702351299",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-7025d33f"
+    },
+    {
+      "name": "MEGAWOOF AMERICA - SAN DIEGO",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7468303,
+        "lng": -117.1607394
+      },
+      "startDate": "2026-05-15T21:00:00",
+      "endDate": "2026-05-16T02:00:00",
+      "unprocessedDescription": "description: SAN DIEGO Here we go again… MEGAWOOF is BACK and r\ready to keep you sweaty, sexy, and beefy.\nbar: The Brass Rail\naddress: 3796 Fifth Avenue, San Diego, CA 92103\nticketUrl: https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181921091%2F185013722403%2F1%2Foriginal.20260411-040157?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3319257efa3598b3e12a398447de4622\ncover: $16.84-$22.10\nshortName: MEGA-WOOF\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103\nkey: megawoof-america-san-diego|2026-05-16|the brass rail",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "5B8DF162-E146-4A77-87D2-D03C226F55B4",
+      "uid": "5B8DF162-E146-4A77-87D2-D03C226F55B4",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Brass Rail",
+      "cover": "$16.84-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181921091%2F185013722403%2F1%2Foriginal.20260411-040157?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3319257efa3598b3e12a398447de4622",
+      "tea": "SAN DIEGO Here we go again… MEGAWOOF is BACK and ready to keep you sweaty, sexy, and beefy.",
+      "address": "3796 Fifth Avenue, San Diego, CA 92103",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061",
+      "shortName": "MEGA-WOOF",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-san-diego-7cd96d30"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7468303,
+        "lng": -117.1607394
+      },
+      "startDate": "2026-02-06T21:00:00",
+      "endDate": "2026-02-07T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF SAN DIEGO - Feb 6th\nbar: The Rail\naddre\rss: 3796 Fifth Avenue, San Diego, CA 92103\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/megawoof-san-diego-feb-6th-tickets-1979742608435\ncover: $11.58 - $16.84 (as of 2/2)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1174012983%2F185013722403%2F1%2Foriginal.20260105-163247?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=ac5e775082450ea31daa858d20720acc\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJwdJrt9pU2YARYuac9G61qQE\nkey: megawoof|2026-02-07|the rail",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "72BA7733-05A0-4516-93E3-FCFD336AB92E",
+      "uid": "72BA7733-05A0-4516-93E3-FCFD336AB92E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Rail",
+      "cover": "$11.58 - $16.84 (as of 2/2)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1174012983%2F185013722403%2F1%2Foriginal.20260105-163247?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=ac5e775082450ea31daa858d20720acc",
+      "tea": "MEGAWOOF SAN DIEGO - Feb 6th",
+      "address": "3796 Fifth Avenue, San Diego, CA 92103",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJwdJrt9pU2YARYuac9G61qQE",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-san-diego-feb-6th-tickets-1979742608435",
+      "shortName": "MEGA-WOOF",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJwdJrt9pU2YARYuac9G61qQE",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-san-diego-feb-6th-tickets-1979742608435",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-4faca4f4"
+    }
+  ]
+}
