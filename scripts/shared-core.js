@@ -329,6 +329,134 @@ class SharedCore {
         return outcome.rejected ? null : outcome;
     }
 
+    // ============================================================================
+    // AI MERGE ARBITRATION
+    // ============================================================================
+    // When two records of the same event both have a value for a field and the
+    // values differ, the AI picks the better one. The pick is only trusted when
+    // the returned value is a VERBATIM copy of one of the candidates — anything
+    // else falls back to the deterministic strategy, so a hallucinating (or dead)
+    // model can never make a merge worse than today.
+
+    isArbitrationEligibleField(fieldName) {
+        const name = String(fieldName || '');
+        if (!name || name.startsWith('_')) return false;
+        return name !== 'key' && name !== 'notes' && name !== 'source';
+    }
+
+    isEmptyArbitrationValue(value) {
+        return value === null || value === undefined || String(value).trim() === '';
+    }
+
+    serializeArbitrationValue(fieldName, value) {
+        if (value instanceof Date) return value.toISOString();
+        if ((fieldName === 'startDate' || fieldName === 'endDate') && value) {
+            const date = new Date(value);
+            if (!Number.isNaN(date.getTime())) return date.toISOString();
+        }
+        return String(value === null || value === undefined ? '' : value).trim();
+    }
+
+    // A genuine conflict: both sides non-empty primitives whose serialized forms
+    // differ. Same-instant Date vs ISO string is NOT a conflict.
+    isGenuineFieldConflict(fieldName, valueA, valueB) {
+        if (this.isEmptyArbitrationValue(valueA) || this.isEmptyArbitrationValue(valueB)) return false;
+        const isPrimitive = (v) => v instanceof Date || typeof v !== 'object';
+        if (!isPrimitive(valueA) || !isPrimitive(valueB)) return false;
+        return this.serializeArbitrationValue(fieldName, valueA) !== this.serializeArbitrationValue(fieldName, valueB);
+    }
+
+    arbitrationValuesEqual(fieldName, answerText, candidateText) {
+        if (answerText === candidateText) return true;
+        if (fieldName === 'startDate' || fieldName === 'endDate') {
+            const answerDate = new Date(answerText);
+            const candidateDate = new Date(candidateText);
+            return !Number.isNaN(answerDate.getTime()) && !Number.isNaN(candidateDate.getTime())
+                && answerDate.getTime() === candidateDate.getTime();
+        }
+        return false;
+    }
+
+    // One batched request per merged event. conflicts: [{ field, values: { <labelA>:
+    // raw, <labelB>: raw } }]. Returns { [field]: { pick, reason } } containing only
+    // fields whose answer survived the verbatim gate, or null when no usable response
+    // was obtained at all (caller falls back for everything).
+    async arbitrateMergeConflicts({ conflicts, labels, aiConfig, httpAdapter, eventContext = '' }) {
+        const list = Array.isArray(conflicts) ? conflicts.filter(Boolean) : [];
+        if (list.length === 0) return null;
+        if (!aiConfig || aiConfig.enabled === false || aiConfig.arbitrateMerges === false) return null;
+        if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return null;
+        const [labelA, labelB] = labels;
+
+        const serializedByField = {};
+        const conflictLines = [];
+        for (const conflict of list) {
+            const serializedA = this.serializeArbitrationValue(conflict.field, conflict.values[labelA]);
+            const serializedB = this.serializeArbitrationValue(conflict.field, conflict.values[labelB]);
+            serializedByField[conflict.field] = { [labelA]: serializedA, [labelB]: serializedB };
+            conflictLines.push(`- field: ${conflict.field}\n  ${labelA}: ${JSON.stringify(serializedA)}\n  ${labelB}: ${JSON.stringify(serializedB)}`);
+        }
+
+        const prompt = [
+            'You are resolving merge conflicts between two records of the SAME event.',
+            eventContext ? `EVENT: ${eventContext}` : '',
+            `Record "${labelA}" and record "${labelB}" each provide a value for the fields below.`,
+            '',
+            'For each field, pick the value that is more correct, complete, and canonical',
+            '(official names, full addresses, complete URLs, correctly formatted values).',
+            '',
+            'CONFLICTS:',
+            ...conflictLines,
+            '',
+            'Rules:',
+            '- You MUST copy one of the two provided values EXACTLY. Never invent, edit, merge, or reformat a value.',
+            `- "pick" must be "${labelA}" or "${labelB}".`,
+            'Return JSON only:',
+            `{"choices": {"<field>": {"pick": "${labelA}" or "${labelB}", "value": "<exact copy of the chosen value>", "reason": "<one short sentence>"}}}`
+        ].filter(line => line !== '').join('\n');
+
+        const arbitrationConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 800, 800) };
+        const rawResponse = await this.callAiGenerate(arbitrationConfig, prompt, 'merge-arbitration', httpAdapter);
+        if (!rawResponse) return null;
+
+        let parsed = null;
+        try {
+            parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse);
+        } catch (_) {
+            return null;
+        }
+        if (!parsed || typeof parsed !== 'object') return null;
+        const choices = parsed.choices && typeof parsed.choices === 'object' ? parsed.choices : parsed;
+
+        const results = {};
+        for (const conflict of list) {
+            const field = conflict.field;
+            const entry = choices[field];
+            const serialized = serializedByField[field];
+            if (!entry || typeof entry !== 'object') {
+                console.warn(`🤝 AI MERGE: no answer for field "${field}" — falling back`);
+                continue;
+            }
+            const answer = String(entry.value === null || entry.value === undefined ? '' : entry.value).trim();
+            const pick = String(entry.pick || '').trim();
+            const reason = typeof entry.reason === 'string' ? entry.reason : '';
+            const matchesA = this.arbitrationValuesEqual(field, answer, serialized[labelA]);
+            const matchesB = this.arbitrationValuesEqual(field, answer, serialized[labelB]);
+
+            if (labels.includes(pick) && this.arbitrationValuesEqual(field, answer, serialized[pick])) {
+                results[field] = { pick, reason };
+            } else if (matchesA !== matchesB) {
+                // Wrong/missing pick label but the value is provably one of the options
+                const recoveredPick = matchesA ? labelA : labelB;
+                console.warn(`🤝 AI MERGE: pick/value mismatch for "${field}" — trusting the verbatim value (${recoveredPick})`);
+                results[field] = { pick: recoveredPick, reason };
+            } else {
+                console.warn(`🤝 AI MERGE: rejected answer for "${field}" — not a verbatim copy of either option ("${answer.slice(0, 80)}") — falling back`);
+            }
+        }
+        return results;
+    }
+
     // Schema.org Event and its subtypes (MusicEvent, DanceEvent, Festival, ...).
     // EventSeries is excluded: a series node describes many dates, not one event.
     isJsonLdEventType(typeValue) {
@@ -634,7 +762,7 @@ class SharedCore {
         // Filter and process events
         const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
         const bearEvents = this.filterBearEvents(futureEvents, effectiveParserConfig);
-        const deduplicatedEvents = await this.deduplicateEvents(bearEvents, httpAdapter);
+        const deduplicatedEvents = await this.deduplicateEvents(bearEvents, httpAdapter, mainConfig?.config || mainConfig || null);
         
         // Calculate deduplication stats
         const duplicatesRemoved = bearEvents.length - deduplicatedEvents.length;
@@ -1301,7 +1429,7 @@ class SharedCore {
         return this.bearKeywords.some(keyword => searchText.includes(keyword));
     }
 
-    async deduplicateEvents(events, httpAdapter) {
+    async deduplicateEvents(events, httpAdapter, globalConfig = null) {
         const seen = new Map();
         const deduplicated = [];
         
@@ -1320,7 +1448,7 @@ class SharedCore {
             } else {
                 // Merge with existing event if needed
                 const existing = seen.get(key);
-                const merged = this.mergeParsedEvents(existing, event);
+                const merged = await this.mergeParsedEvents(existing, event, { httpAdapter, globalConfig });
                 merged.key = key; // Ensure merged event has the key
                 seen.set(key, merged);
                 
@@ -1420,48 +1548,64 @@ class SharedCore {
     }
 
     // Merge two parsed events based on field priorities (for deduplication)
-    mergeParsedEvents(existingEvent, newEvent) {
+    async mergeParsedEvents(existingEvent, newEvent, options = {}) {
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
-        
+
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
-        
+
         // Helper function to check if a value is empty/null/undefined
         const isEmpty = (value) => {
-            return value === null || value === undefined || value === '' || 
+            return value === null || value === undefined || value === '' ||
                    (typeof value === 'string' && value.trim() === '');
         };
-        
+
         // Get all field names from both events
         const allFields = new Set([
             ...Object.keys(existingEvent),
             ...Object.keys(newEvent)
         ]);
-        
+
         // Track merge decisions for important fields
         const mergeDecisions = [];
-        
+        // Conflicts where the priority arrays are non-decisive — deferred to AI.
+        // Each carries the deterministic fallback so a failed arbitration reproduces
+        // today's behavior exactly.
+        const pendingAiConflicts = [];
+
         // Apply field priorities for each field
         allFields.forEach(fieldName => {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
-            
+
             const priorityConfig = fieldPriorities[fieldName];
             const existingValue = existingEvent[fieldName];
             const newValue = newEvent[fieldName];
             const existingSource = existingEvent.source;
             const newSource = newEvent.source;
-            
+            const canArbitrate = this.isArbitrationEligibleField(fieldName)
+                && this.isGenuineFieldConflict(fieldName, existingValue, newValue);
+
             if (!priorityConfig || !priorityConfig.priority) {
-                return; // No priority config, keep newEvent value
+                // No priority config: keep newEvent value — unless it's a genuine
+                // conflict, in which case the AI gets to pick.
+                if (canArbitrate) {
+                    pendingAiConflicts.push({
+                        field: fieldName,
+                        values: { existing: existingValue, incoming: newValue },
+                        fallbackPick: 'incoming',
+                        fallbackReason: 'no priority config - keeping incoming'
+                    });
+                }
+                return;
             }
-            
+
             // Find which source has higher priority
             const existingIndex = priorityConfig.priority.indexOf(existingSource);
             const newIndex = priorityConfig.priority.indexOf(newSource);
-            
+
             let chosenValue = newValue; // Default
             let reason = 'default';
-            
+
             // If both sources are in the priority list, use the one with lower index (higher priority)
             if (existingIndex !== -1 && newIndex !== -1) {
                 if (existingIndex < newIndex) {
@@ -1485,7 +1629,17 @@ class SharedCore {
                         reason = `${newSource} has higher priority (index ${newIndex} vs ${existingIndex})`;
                     }
                 } else {
-                    // Same priority - preserve existing value to avoid overriding previous merges
+                    // Same priority — the priority array cannot decide. Defer genuine
+                    // conflicts to AI; otherwise preserve existing (today's behavior).
+                    if (canArbitrate) {
+                        pendingAiConflicts.push({
+                            field: fieldName,
+                            values: { existing: existingValue, incoming: newValue },
+                            fallbackPick: 'existing',
+                            fallbackReason: `same priority (index ${existingIndex} vs ${newIndex}) - preserving existing`
+                        });
+                        return;
+                    }
                     chosenValue = existingValue;
                     reason = `same priority (index ${existingIndex} vs ${newIndex}) - preserving existing`;
                 }
@@ -1497,10 +1651,19 @@ class SharedCore {
                 // Only new source is in priority list
                 chosenValue = newValue;
                 reason = `only ${newSource} in priority list`;
+            } else if (canArbitrate) {
+                // Neither source in the priority list — non-decisive, defer to AI
+                pendingAiConflicts.push({
+                    field: fieldName,
+                    values: { existing: existingValue, incoming: newValue },
+                    fallbackPick: 'incoming',
+                    fallbackReason: 'neither source in priority list - keeping incoming'
+                });
+                return;
             }
-            
+
             mergedEvent[fieldName] = chosenValue;
-            
+
             // Log decisions when values differ
             if (existingValue !== newValue) {
                 mergeDecisions.push({
@@ -1512,7 +1675,41 @@ class SharedCore {
                 });
             }
         });
-        
+
+        // AI arbitration for the non-decisive conflicts — one batched request
+        if (pendingAiConflicts.length > 0) {
+            const eventTitle = newEvent.title || existingEvent.title || 'event';
+            const aiConfig = this.getMergeArbitrationConfig(newEvent, options.globalConfig);
+            let arbitration = null;
+            try {
+                arbitration = await this.arbitrateMergeConflicts({
+                    conflicts: pendingAiConflicts,
+                    labels: ['existing', 'incoming'],
+                    aiConfig,
+                    httpAdapter: options.httpAdapter,
+                    eventContext: `"${eventTitle}" starting ${this.serializeArbitrationValue('startDate', newEvent.startDate || existingEvent.startDate) || 'unknown'} (record "existing" from ${existingEvent.source || 'unknown'}, record "incoming" from ${newEvent.source || 'unknown'})`
+                });
+            } catch (error) {
+                console.warn(`🤝 AI MERGE: arbitration failed for "${eventTitle}": ${error.message}`);
+            }
+            for (const conflict of pendingAiConflicts) {
+                const decision = arbitration ? arbitration[conflict.field] : null;
+                const pick = decision ? decision.pick : conflict.fallbackPick;
+                const chosenValue = conflict.values[pick];
+                mergedEvent[conflict.field] = chosenValue;
+                if (decision) {
+                    console.log(`🤝 AI MERGE: "${eventTitle}" field=${conflict.field} chose ${pick}${decision.reason ? ` — ${decision.reason}` : ''}`);
+                }
+                mergeDecisions.push({
+                    field: conflict.field,
+                    existingValue: conflict.values.existing,
+                    newValue: conflict.values.incoming,
+                    chosenValue: chosenValue,
+                    reason: decision ? `ai: ${decision.reason || `chose ${pick}`}` : conflict.fallbackReason
+                });
+            }
+        }
+
         if (mergeDecisions.length > 0) {
             const changedFields = Array.from(new Set(mergeDecisions.map(decision => decision.field)));
             const previewFields = changedFields.slice(0, 6);
@@ -1680,10 +1877,10 @@ class SharedCore {
 
     // Create complete merged event object that represents exactly what will be saved
     // Following the 6-step process: 1) scraper object, 2) calendar object, 3) simple merge, 4) gmaps, 5) notes, 6) display
-    createFinalEventObject(existingEvent, newEvent) {
+    async createFinalEventObject(existingEvent, newEvent, options = {}) {
         // STEP 1: Build scraper object using priority list (already done - newEvent)
         const scraperObject = { ...newEvent };
-        
+
         // STEP 2: Build calendar object using calendar data
         const calendarObject = {
             // Parse existing notes first so native fields below take precedence
@@ -1696,31 +1893,49 @@ class SharedCore {
             notes: existingEvent.notes,
             url: existingEvent.url,
         };
-        
+
         // STEP 3: Simple merge - respect merge logic, grab from correct object
         const fieldPriorities = newEvent._fieldPriorities || {};
         const mergedObject = {};
-        
+
         // Get all possible field names from both objects
         const allFields = new Set([
             ...Object.keys(scraperObject),
             ...Object.keys(calendarObject)
         ]);
-        
+
         // Track clobbered fields for summary logging
         const clobberedFields = [];
-        
+        // Genuine conflicts deferred to AI arbitration (strategy "ai")
+        const pendingAiConflicts = [];
+
         // Apply merge logic for each field
-        allFields.forEach(fieldName => {
+        for (const fieldName of allFields) {
             // Skip internal fields
-            if (fieldName.startsWith('_') || fieldName === 'notes') return;
-            
+            if (fieldName.startsWith('_') || fieldName === 'notes') continue;
+
             const priorityConfig = fieldPriorities[fieldName];
             const mergeStrategy = priorityConfig?.merge || 'upsert';
             const scraperValue = scraperObject[fieldName];
             const calendarValue = calendarObject[fieldName];
-            
+
             switch (mergeStrategy) {
+                case 'ai':
+                    if (this.isArbitrationEligibleField(fieldName)
+                        && this.isGenuineFieldConflict(fieldName, calendarValue, scraperValue)) {
+                        pendingAiConflicts.push({
+                            field: fieldName,
+                            values: { calendar: calendarValue, scraped: scraperValue }
+                        });
+                        break;
+                    }
+                    // No genuine conflict → clobber semantics (today's default),
+                    // including clear-on-empty-scrape
+                    mergedObject[fieldName] = scraperValue;
+                    if (scraperValue !== calendarValue) {
+                        clobberedFields.push(fieldName);
+                    }
+                    break;
                 case 'clobber':
                     mergedObject[fieldName] = scraperValue;
                     // Track when clobber actually changes a value
@@ -1736,8 +1951,67 @@ class SharedCore {
                     mergedObject[fieldName] = calendarValue;
                     break;
             }
-        });
-        
+        }
+
+        // STEP 3b: AI arbitration for genuine conflicts — one batched request.
+        // Any field the AI can't decide (or a dead/hallucinating model) falls back
+        // to clobber, i.e. exactly the pre-arbitration behavior.
+        const aiDecisionRecords = [];
+        if (pendingAiConflicts.length > 0) {
+            const eventTitle = scraperObject.title || calendarObject.title || 'event';
+            const aiConfig = this.getMergeArbitrationConfig(newEvent, options.globalConfig);
+            const eventContext = `"${eventTitle}" starting ${this.serializeArbitrationValue('startDate', scraperObject.startDate || calendarObject.startDate) || 'unknown'}`;
+            let arbitration = null;
+            try {
+                arbitration = await this.arbitrateMergeConflicts({
+                    conflicts: pendingAiConflicts,
+                    labels: ['calendar', 'scraped'],
+                    aiConfig,
+                    httpAdapter: options.httpAdapter,
+                    eventContext
+                });
+            } catch (error) {
+                console.warn(`🤝 AI MERGE: arbitration failed for "${eventTitle}": ${error.message}`);
+            }
+            if (!arbitration) {
+                console.warn(`🤝 AI MERGE: no arbitration result for "${eventTitle}" — falling back to scraped values for ${pendingAiConflicts.length} conflicted field(s)`);
+            }
+            const preview = (value) => {
+                const text = this.serializeArbitrationValue('', value);
+                return text.length > 60 ? `${text.slice(0, 57)}...` : text;
+            };
+            for (const conflict of pendingAiConflicts) {
+                const decision = arbitration ? arbitration[conflict.field] : null;
+                if (decision) {
+                    const otherPick = decision.pick === 'calendar' ? 'scraped' : 'calendar';
+                    mergedObject[conflict.field] = conflict.values[decision.pick];
+                    if (decision.pick === 'scraped' && conflict.values.scraped !== conflict.values.calendar) {
+                        clobberedFields.push(conflict.field);
+                    }
+                    console.log(`🤝 AI MERGE: "${eventTitle}" field=${conflict.field} chose ${decision.pick} ("${preview(conflict.values[decision.pick])}") over ${otherPick} ("${preview(conflict.values[otherPick])}")${decision.reason ? ` — ${decision.reason}` : ''}`);
+                    aiDecisionRecords.push({
+                        field: conflict.field,
+                        existingValue: conflict.values.calendar,
+                        newValue: conflict.values.scraped,
+                        chosenValue: conflict.values[decision.pick],
+                        reason: decision.reason || `ai chose ${decision.pick}`,
+                        source: 'ai'
+                    });
+                } else {
+                    mergedObject[conflict.field] = conflict.values.scraped;
+                    clobberedFields.push(conflict.field);
+                    aiDecisionRecords.push({
+                        field: conflict.field,
+                        existingValue: conflict.values.calendar,
+                        newValue: conflict.values.scraped,
+                        chosenValue: conflict.values.scraped,
+                        reason: 'ai unavailable/rejected — clobber fallback',
+                        source: 'fallback'
+                    });
+                }
+            }
+        }
+
         // Log summary of clobbered fields
         if (clobberedFields.length > 0) {
             const previewFields = clobberedFields.slice(0, 6);
@@ -1789,6 +2063,15 @@ class SharedCore {
             calendar: calendarObject,  // What was in the calendar
             merged: mergedObject       // What the merge logic produced
         };
+
+        // Expose AI arbitration outcomes for display/metrics
+        if (aiDecisionRecords.length > 0) {
+            finalEvent._mergeDecisions = aiDecisionRecords;
+            finalEvent._original.aiArbitration = {
+                arbitrated: aiDecisionRecords.filter(record => record.source === 'ai').map(record => record.field),
+                fallbacks: aiDecisionRecords.filter(record => record.source === 'fallback').map(record => record.field)
+            };
+        }
         
         // Simple change detection for display
         const changes = [];
@@ -2698,22 +2981,25 @@ class SharedCore {
             });
         }
 
+        // "ai" = AI-arbitrated on genuine conflicts, clobber semantics otherwise.
+        // Explicit fieldPriorities entries in the parser config override these —
+        // hardcoded config is the override, automation is the default.
         const defaultPriorities = {
-            title: { priority: ["ai-web"], merge: "clobber" },
-            instagram: { priority: ["ai-web"], merge: "clobber" },
-            facebook: { priority: ["ai-web"], merge: "clobber" },
-            website: { priority: ["ai-web"], merge: "clobber" },
-            description: { priority: ["ai-web"], merge: "clobber" },
-            bar: { priority: ["ai-web"], merge: "clobber" },
-            address: { priority: ["ai-web"], merge: "clobber" },
-            startDate: { priority: ["ai-web"], merge: "clobber" },
-            endDate: { priority: ["ai-web"], merge: "clobber" },
-            url: { priority: ["ai-web"], merge: "clobber" },
-            location: { priority: ["ai-web"], merge: "clobber" },
-            gmaps: { priority: ["ai-web"], merge: "clobber" },
-            image: { priority: ["ai-web"], merge: "clobber" },
-            cover: { priority: ["ai-web"], merge: "clobber" },
-            ticketUrl: { priority: ["ai-web"], merge: "clobber" }
+            title: { priority: ["ai-web"], merge: "ai" },
+            instagram: { priority: ["ai-web"], merge: "ai" },
+            facebook: { priority: ["ai-web"], merge: "ai" },
+            website: { priority: ["ai-web"], merge: "ai" },
+            description: { priority: ["ai-web"], merge: "ai" },
+            bar: { priority: ["ai-web"], merge: "ai" },
+            address: { priority: ["ai-web"], merge: "ai" },
+            startDate: { priority: ["ai-web"], merge: "ai" },
+            endDate: { priority: ["ai-web"], merge: "ai" },
+            url: { priority: ["ai-web"], merge: "ai" },
+            location: { priority: ["ai-web"], merge: "ai" },
+            gmaps: { priority: ["ai-web"], merge: "ai" },
+            image: { priority: ["ai-web"], merge: "ai" },
+            cover: { priority: ["ai-web"], merge: "ai" },
+            ticketUrl: { priority: ["ai-web"], merge: "ai" }
         };
         return { ...defaultPriorities, ...inferredPriorities, ...explicitPriorities };
     }
@@ -2840,7 +3126,7 @@ class SharedCore {
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
                 // Create final merged event that represents exactly what will be saved
-                analyzedEvent = this.createFinalEventObject(analysis.existingEvent, event);
+                analyzedEvent = await this.createFinalEventObject(analysis.existingEvent, event, { httpAdapter: calendarAdapter, globalConfig: config });
                 
                 // Calculate merge diff for display purposes
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
@@ -2902,7 +3188,7 @@ class SharedCore {
                 const sourceMergeEvent = analysis.overrideIdentity
                     ? { ...event, ...analysis.overrideIdentity }
                     : event;
-                analyzedEvent = this.createFinalEventObject(analysis.sourceEvent, sourceMergeEvent);
+                analyzedEvent = await this.createFinalEventObject(analysis.sourceEvent, sourceMergeEvent, { httpAdapter: calendarAdapter, globalConfig: config });
                 delete analyzedEvent._existingEvent;
                 analyzedEvent._action = 'new';
 
@@ -3912,6 +4198,53 @@ class SharedCore {
     // ============================================================================
     // AI ORCHESTRATION HELPERS
     // ============================================================================
+
+    normalizePayloadMode(mode) {
+        const normalized = String(mode || '').trim().toLowerCase();
+        if (normalized === 'exhaustive' || normalized === 'jsonld' || normalized === 'meta') return normalized;
+        return 'best';
+    }
+
+    // Canonical AI config resolution (single source of truth — AiWebParser.getAiConfig
+    // delegates here). Takes the raw `ai` block from a parser or global config and
+    // returns the normalized shape callAiGenerate expects.
+    resolveAiConfig(rawAiConfig = {}) {
+        const aiConfig = rawAiConfig && typeof rawAiConfig === 'object' ? rawAiConfig : {};
+        const provider = String(aiConfig.provider || 'openai');
+        const defaultEndpoint = provider === 'openai'
+            ? 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions'
+            : 'http://desktop.taila7523c.ts.net:11434/api/generate';
+        const defaultModel = provider === 'openai'
+            ? 'lmstudio-community/Qwen3-Coder-Next-MLX-6bit'
+            : 'qwen3.5:4b';
+
+        return {
+            enabled: aiConfig.enabled !== false,
+            provider: provider,
+            endpoint: String(aiConfig.endpoint || defaultEndpoint),
+            model: String(aiConfig.model || defaultModel),
+            payloadMode: this.normalizePayloadMode(aiConfig.payloadMode),
+            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 6000,
+            numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 8192,
+            numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 2000,
+            temperature: Number.isFinite(Number(aiConfig.temperature)) ? Number(aiConfig.temperature) : 0,
+            think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
+            timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
+            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
+            arbitrateMerges: aiConfig.arbitrateMerges !== false,
+            ollama: aiConfig.ollama && typeof aiConfig.ollama === 'object' ? aiConfig.ollama : {},
+            openai: aiConfig.openai && typeof aiConfig.openai === 'object' ? aiConfig.openai : {}
+        };
+    }
+
+    // AI config for merge arbitration: the event's own parser config wins, the global
+    // config.ai block covers events from non-AI parsers (bearracuda etc.).
+    getMergeArbitrationConfig(event, globalConfig = null) {
+        const rawAi = (event && event._parserConfig && event._parserConfig.ai && typeof event._parserConfig.ai === 'object' && event._parserConfig.ai)
+            || (globalConfig && globalConfig.ai && typeof globalConfig.ai === 'object' && globalConfig.ai)
+            || {};
+        return this.resolveAiConfig(rawAi);
+    }
 
     // Detect the image mime type from base64 magic bytes so OpenAI-compatible servers
     // that trust the data-URL label (instead of sniffing bytes) decode correctly.

@@ -47,6 +47,13 @@ const scraperConfig = {
       think: false,
       timeoutSeconds: 120,
       keepAlive: "5m",
+      // AI merge arbitration (default: true). When two records of the same event
+      // genuinely conflict on a field (both non-empty, different), the AI picks the
+      // better value — accepted only when its answer is a VERBATIM copy of one of
+      // the candidates; anything else falls back to the deterministic strategy
+      // (scraped clobbers). This global block also serves events from non-AI
+      // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
+      arbitrateMerges: true,
     },
     ocr: {
       enabled: true,

@@ -6483,6 +6483,31 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         // Both values are identical - no change needed
         flowIcon = "—";
         resultText = '<span style="color: #999;">SAME VALUE</span>';
+      } else if (strategy === "ai") {
+        // AI-arbitrated strategy — show which side the AI picked (or that it fell back)
+        const arbitration = event._original?.aiArbitration;
+        if (arbitration?.fallbacks?.includes(field)) {
+          flowIcon = "→";
+          resultText = '<span style="color: #ff9500;">AI FALLBACK (CLOBBERED)</span>';
+        } else if (arbitration?.arbitrated?.includes(field)) {
+          if (finalValue === existingValue && existingValue !== newValue) {
+            flowIcon = "←";
+            resultText = '<span style="color: #007aff;">🤝 AI CHOSE EXISTING</span>';
+          } else {
+            flowIcon = "→";
+            resultText = '<span style="color: #34c759;">🤝 AI CHOSE NEW</span>';
+          }
+        } else if (newValue !== undefined && finalValue === newValue) {
+          // No genuine conflict → clobber semantics applied
+          flowIcon = "→";
+          resultText = '<span style="color: #ff9500;">CLOBBERED</span>';
+        } else if (!newValue && !finalValue) {
+          flowIcon = "→";
+          resultText = '<span style="color: #ff9500;">CLEARED</span>';
+        } else {
+          flowIcon = "—";
+          resultText = '<span style="color: #999;">NO CHANGE</span>';
+        }
       } else if (strategy === "clobber") {
         // Clobber strategy - should always use new value (even if empty)
         // For clobber, we should trust that the merge logic worked correctly
