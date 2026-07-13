@@ -6534,7 +6534,16 @@ TEXT:
                 combinedEndDate = combinedStartDate ? new Date(combinedStartDate) : endDateRaw;
             }
         } else if (endTimeRaw) {
-            combinedEndDate = this.parseDateValue(endTimeRaw, timezone);
+            // End time with no end date ("Party Goes Until 2:00 am!" — the next-day
+            // endDate is never verbatim on the page, so the evidence gate drops it):
+            // anchor the end time to the START's date. The past-midnight rollover
+            // below moves it to the next day when it lands before the start.
+            if (startDateRaw) {
+                combinedEndDate = this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + endTimeRaw, timezone) || combineDateAndTime(startDateRaw, endTimeRaw) || null;
+            }
+            if (!combinedEndDate) {
+                combinedEndDate = this.parseDateValue(endTimeRaw, timezone);
+            }
         }
 
         // If we only have a start date and no end date info at all, match the end exactly to the start

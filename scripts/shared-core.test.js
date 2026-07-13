@@ -676,6 +676,200 @@ test('resolveAiConfig defaults and the arbitrateMerges flag', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Degenerate ends, date arbitration routing, and the location=coordinates rule
+// ---------------------------------------------------------------------------
+
+const TEST_AI_PARSER_CONFIG = { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } };
+
+test('a degenerate scraped endDate (== startDate) never clobbers a positive-duration calendar end', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'New Orleans',
+    startDate: new Date('2026-09-05T02:00:00.000Z'),
+    endDate: new Date('2026-09-05T02:00:00.000Z'), // zero duration — a normalization artifact, not data
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = {
+    title: 'New Orleans',
+    startDate: new Date('2026-09-05T02:00:00.000Z'),
+    endDate: new Date('2026-09-05T07:00:00.000Z'), // "party until 2am" — 5h duration
+    notes: ''
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'a degenerate end must never even become an arbitration conflict');
+  assert.equal(finalEvent.endDate.toISOString(), '2026-09-05T07:00:00.000Z', 'the calendar end must survive');
+});
+
+test('genuinely differing dates reach arbitration even under an explicit merge:"clobber" config', async () => {
+  const core = createCore();
+  // Bearracuda-style per-parser override: merge "clobber" for dates. This exact
+  // config made date conflicts bypass isGenuineFieldConflict entirely and
+  // silently overwrite calendar dates.
+  const clobberPriorities = core.getResolvedFieldPriorities({
+    fieldPriorities: {
+      startDate: { priority: ['ai-web', 'bearracuda'], merge: 'clobber' },
+      endDate: { priority: ['ai-web', 'bearracuda'], merge: 'clobber' }
+    }
+  });
+
+  // Calendar endDate as a Date instance AND as an ISO string — both must route.
+  for (const calendarEnd of [new Date('2026-09-05T07:00:00.000Z'), '2026-09-05T07:00:00.000Z']) {
+    const scraped = {
+      title: 'New Orleans',
+      startDate: new Date('2026-09-05T01:00:00.000Z'),
+      endDate: new Date('2026-09-05T06:00:00.000Z'), // valid positive duration, but differs from calendar
+      source: 'ai-web',
+      _fieldPriorities: clobberPriorities,
+      _parserConfig: TEST_AI_PARSER_CONFIG
+    };
+    const existing = {
+      title: 'New Orleans',
+      startDate: new Date('2026-09-05T01:00:00.000Z'),
+      endDate: calendarEnd,
+      notes: ''
+    };
+    const adapter = buildArbitrationAdapter({
+      endDate: { pick: 'calendar', value: '2026-09-05T07:00:00.000Z', reason: 'calendar end matches the flyer' }
+    });
+
+    const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+    assert.equal(adapter.calls.length, 1, 'the endDate conflict must reach the arbitration prompt despite merge:"clobber"');
+    assert.match(adapter.calls[0].prompt, /endDate/);
+    assert.match(adapter.calls[0].prompt, /2026-09-05T07:00:00\.000Z/, 'the calendar candidate is serialized as ISO in the prompt');
+    assert.match(adapter.calls[0].prompt, /2026-09-05T06:00:00\.000Z/, 'the scraped candidate is serialized as ISO in the prompt');
+    // The verbatim ISO answer is accepted and the picked side's ORIGINAL value is applied
+    assert.equal(finalEvent.endDate, calendarEnd, 'the calendar side keeps its original value (Date or ISO string)');
+  }
+});
+
+test('clobber fallback still applies when date arbitration is unavailable', async () => {
+  const core = createCore();
+  const clobberPriorities = core.getResolvedFieldPriorities({
+    fieldPriorities: { endDate: { priority: ['ai-web'], merge: 'clobber' } }
+  });
+  const scraped = {
+    title: 'New Orleans',
+    startDate: new Date('2026-09-05T01:00:00.000Z'),
+    endDate: new Date('2026-09-05T06:00:00.000Z'),
+    source: 'ai-web',
+    _fieldPriorities: clobberPriorities,
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = {
+    title: 'New Orleans',
+    startDate: new Date('2026-09-05T01:00:00.000Z'),
+    endDate: new Date('2026-09-05T07:00:00.000Z'),
+    notes: ''
+  };
+  const adapter = buildArbitrationAdapter({}, { fail: true });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(finalEvent.endDate.toISOString(), '2026-09-05T06:00:00.000Z', 'failed arbitration degrades to exactly the clobber behavior');
+});
+
+test('isCoordinatePair recognizes lat/lng strings only', () => {
+  const core = createCore();
+  assert.equal(core.isCoordinatePair('45.52, -122.65'), true);
+  assert.equal(core.isCoordinatePair('45.52,-122.65'), true);
+  assert.equal(core.isCoordinatePair('722 East Burnside Street'), false);
+  assert.equal(core.isCoordinatePair('portland'), false);
+  assert.equal(core.isCoordinatePair(''), false);
+  assert.equal(core.isCoordinatePair('91, 10'), false, 'latitude out of range');
+  assert.equal(core.isCoordinatePair('45, 181'), false, 'longitude out of range');
+  assert.equal(core.isCoordinatePair(null), false);
+  assert.equal(core.isCoordinatePair(undefined), false);
+});
+
+test('location merge is deterministic: coordinates always beat text/empty and never reach the AI', async () => {
+  const core = createCore();
+  const buildScraped = (location) => ({
+    title: 'FURBALL',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    location,
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const buildExisting = (location) => ({
+    title: 'FURBALL',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    location,
+    notes: ''
+  });
+
+  // (a) calendar has address text, scraped has coordinates → coordinates win, no AI call
+  const adapterA = buildArbitrationAdapter({});
+  const a = await core.createFinalEventObject(
+    buildExisting('722 East Burnside Street, Portland'),
+    buildScraped('45.52, -122.65'),
+    { httpAdapter: adapterA }
+  );
+  assert.equal(a.location, '45.52, -122.65');
+  assert.equal(adapterA.calls.length, 0, 'location must never be AI-arbitrated');
+
+  // (b) calendar coordinates are preserved against an empty scrape and a text scrape
+  const adapterB = buildArbitrationAdapter({});
+  const bEmpty = await core.createFinalEventObject(
+    buildExisting('45.52,-122.65'),
+    buildScraped(''),
+    { httpAdapter: adapterB }
+  );
+  assert.equal(bEmpty.location, '45.52,-122.65', 'an empty scrape must not wipe calendar coordinates');
+  const bText = await core.createFinalEventObject(
+    buildExisting('45.52,-122.65'),
+    buildScraped('portland'),
+    { httpAdapter: adapterB }
+  );
+  assert.equal(bText.location, '45.52,-122.65', 'scraped text must not displace calendar coordinates');
+
+  // (c) both sides are coordinates but differ → the scraped (fresher) fix wins
+  const cResult = await core.createFinalEventObject(
+    buildExisting('40.7128, -74.0060'),
+    buildScraped('45.52, -122.65'),
+    { httpAdapter: adapterB }
+  );
+  assert.equal(cResult.location, '45.52, -122.65', 'scraped coordinates win over differing calendar coordinates');
+  assert.equal(adapterB.calls.length, 0, 'no location scenario may consult the AI');
+});
+
+test('mergeParsedEvents: coordinates beat text and degenerate ends lose, without AI', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+
+  const existing = {
+    title: 'FURBALL',
+    location: '45.52, -122.65',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-05T22:00:00.000Z'), // degenerate: end == start
+    source: 'ai-web',
+    _fieldPriorities: priorities
+  };
+  const incoming = {
+    title: 'FURBALL',
+    location: '722 East Burnside Street',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    _fieldPriorities: priorities
+  };
+
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+  assert.equal(merged.location, '45.52, -122.65', 'coordinates beat text regardless of which side has them');
+  assert.equal(merged.endDate.toISOString(), '2026-07-06T02:00:00.000Z', 'the positive-duration end wins');
+  assert.equal(adapter.calls.length, 0, 'both rules resolve deterministically without AI');
+});
+
+// ---------------------------------------------------------------------------
 // Identity-verified cross-parser dedup (2026-07-12 run findings)
 // ---------------------------------------------------------------------------
 
