@@ -540,6 +540,28 @@ class SharedCore {
                 }
             }
         }
+        // Case-only variants are not a real conflict: production runs burned
+        // 1.5–7s AI arbitrations on bar="NOVA PDX" vs "Nova PDX" and
+        // title="TREASURE TRAIL Portland PRIDE" vs "Treasure Trail Portland
+        // PRIDE" — and the model picked inconsistently between runs. When the
+        // two strings are identical after trimming, collapsing whitespace, and
+        // case-folding, keep the LESS-uppercased (less shouty) variant; on an
+        // uppercase-count tie keep valueA (the existing/calendar side, for
+        // stability). MUST run after the more specific rules above (URL depth,
+        // emoji-twin, city-only title, image logo) so those keep priority.
+        // Genuinely different text still arbitrates.
+        if (typeof valueA === 'string' && typeof valueB === 'string') {
+            const collapseWhitespace = value => value.replace(/\s+/g, ' ').trim();
+            const collapsedA = collapseWhitespace(valueA);
+            const collapsedB = collapseWhitespace(valueB);
+            if (collapsedA && collapsedB && collapsedA.toLowerCase() === collapsedB.toLowerCase()) {
+                const countUppercase = value => (value.match(/\p{Lu}/gu) || []).length;
+                return {
+                    winner: countUppercase(collapsedB) < countUppercase(collapsedA) ? 'b' : 'a',
+                    reason: 'case-only variants — kept less-uppercased form'
+                };
+            }
+        }
         return null;
     }
 

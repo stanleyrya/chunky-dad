@@ -1594,3 +1594,65 @@ test('the description guard is inert on pages with no WebSite.description', asyn
     {}, htmlData, null, null);
   assert.equal(event.description, SITE_TAGLINE, 'final guard is inert without a page tagline');
 });
+
+// ---------------------------------------------------------------------------
+// Confidence retry: location (coordinates) is never re-requested (2026-07-12
+// run: the retry pass fabricated coordinates from the street address on nearly
+// every page, and the evidence gate dropped them every time)
+// ---------------------------------------------------------------------------
+
+test('the confidence-retry field list never contains location; main-pass selection still does', () => {
+  // Earlier tests install mock EventSchema globals; pin the real schema so
+  // the coords→location canonicalization is exercised for real.
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  const lowWithCandidates = (partitions) => ({
+    level: 'low',
+    reason: 'expected-strong-signal-missing-validated-value',
+    sourcePartition: null,
+    retryCandidates: partitions
+  });
+
+  // location and bar are both low-confidence retry candidates → only bar is planned
+  const diagnostics = {
+    fieldConfidence: {
+      title: { level: 'high', reason: 'expected-source-produced-validated-value', sourcePartition: 'jsonld' },
+      bar: lowWithCandidates(['content']),
+      location: lowWithCandidates(['jsonld', 'content'])
+    },
+    expectedSignals: {
+      title: { expected: ['jsonld'], strong: ['jsonld'] },
+      bar: { expected: ['content'], strong: ['content'] },
+      location: { expected: ['jsonld', 'content'], strong: ['jsonld'] }
+    }
+  };
+  const plan = parser.planConfidenceRetries(diagnostics, ['title', 'bar', 'location']);
+  const plannedFields = plan.flatMap(entry => entry.fields);
+  assert.ok(!plannedFields.includes('location'), `location must never appear in a retry plan, got: ${JSON.stringify(plan)}`);
+  assert.deepEqual(plan, [{ partition: 'content', fields: ['bar'] }], 'other low-confidence fields still retry');
+
+  // location as the ONLY low-confidence field → empty plan → the retry pass is skipped entirely
+  const locationOnly = {
+    fieldConfidence: { location: lowWithCandidates(['jsonld']) },
+    expectedSignals: { location: { expected: ['jsonld'], strong: ['jsonld'] } }
+  };
+  assert.deepEqual(parser.planConfidenceRetries(locationOnly, ['location']), [],
+    'a location-only retry plan must be empty (no zero-field request)');
+
+  // The no-candidates OCR-content fallback path must not re-add location either
+  const contentFallback = {
+    fieldConfidence: { location: { level: 'low', reason: 'no-validated-value', sourcePartition: null } },
+    expectedSignals: { location: { expected: ['content'], strong: [] } }
+  };
+  assert.deepEqual(parser.planConfidenceRetries(contentFallback, ['location']), [],
+    'the content-expected fallback must not resurrect location');
+
+  // Main-pass field selection is untouched: location is a schema prompt field
+  // and stays requested while missing (a page could legitimately embed coords)
+  const schemaFields = parser.getEventSchemaPromptFields().map(field => field.normalizedName);
+  assert.ok(schemaFields.includes('location'), 'the coords prompt field must still normalize to location');
+  assert.deepEqual(
+    parser.getRemainingPromptFields(['title', 'location'], { title: 'Treasure Trail Portland PRIDE' }),
+    ['location'],
+    'a missing location is still requested by the main extraction passes');
+});
