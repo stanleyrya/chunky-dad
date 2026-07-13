@@ -659,6 +659,191 @@ test('mergeParsedEvents: decisive priority skips AI, non-decisive conflicts cons
   assert.equal(mergedFallback.bar, 'STATION 4', 'same-priority fallback preserves existing');
 });
 
+// ---------------------------------------------------------------------------
+// Deterministic pre-arbitration guardrails (🔒)
+// ---------------------------------------------------------------------------
+
+// Arbitration pair with title/bar/startDate aligned so each guardrail test can
+// introduce exactly the conflicts it needs.
+function buildAlignedArbitrationPair() {
+  const { scraped, existing } = buildArbitrationPair();
+  existing.title = scraped.title;
+  existing.startDate = new Date(scraped.startDate.getTime());
+  existing.notes = existing.notes.replace('bar: STATION 4', 'bar: S4');
+  return { scraped, existing };
+}
+
+test('guardrail: same-host root URL never beats the deeper path — zero AI calls', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  // Observed production shape: the model picked the domain root over the event page
+  scraped.website = 'https://bearracuda.com/';
+  existing.notes += '\nwebsite: https://www.bearracuda.com/events/portland-pridefriday/';
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'the only conflict resolved deterministically — no AI request at all');
+  assert.equal(finalEvent.website, 'https://www.bearracuda.com/events/portland-pridefriday/',
+    'the winner keeps its original untouched value (www + trailing slash preserved)');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['website']);
+  assert.deepEqual(finalEvent._original.aiArbitration.fallbacks, [], 'resolved, not a fallback');
+  const record = finalEvent._mergeDecisions.find(decision => decision.field === 'website');
+  assert.equal(record.source, 'deterministic');
+  assert.equal(record.reason, 'same-host deeper URL beats domain root');
+  assert.ok(logLines.includes(
+    '🔒 MERGE: "FURBALL DALLAS" field=website resolved deterministically — same-host deeper URL beats domain root'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+});
+
+test('guardrail: deterministic field is excluded from the AI batch; genuine conflicts still arbitrate', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair(); // title/bar/startDate conflicts remain
+  scraped.website = 'https://bearracuda.com/events/portland-pridefriday/';
+  existing.notes += '\nwebsite: https://bearracuda.com/';
+  const adapter = buildArbitrationAdapter({
+    title: { pick: 'scraped', value: 'FURBALL DALLAS' },
+    bar: { pick: 'calendar', value: 'STATION 4' },
+    startDate: { pick: 'scraped', value: '2026-07-05T22:00:00.000Z' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'the genuine conflicts still batch into one AI request');
+  assert.match(adapter.calls[0].prompt, /field: title/);
+  assert.ok(!adapter.calls[0].prompt.includes('website'), 'deterministically resolved fields must not reach the prompt');
+  assert.ok(!adapter.calls[0].prompt.includes('portland-pridefriday'));
+  assert.equal(finalEvent.website, 'https://bearracuda.com/events/portland-pridefriday/', 'scraped deep URL wins over the calendar root');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['website']);
+  assert.deepEqual(finalEvent._original.aiArbitration.arbitrated.sort(), ['bar', 'startDate', 'title']);
+});
+
+test('guardrail: cross-host root-vs-deep URLs still go to the AI', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.website = 'https://ticketmaster.com/';
+  existing.notes += '\nwebsite: https://bearracuda.com/events/portland-pridefriday/';
+  const adapter = buildArbitrationAdapter({
+    website: { pick: 'calendar', value: 'https://bearracuda.com/events/portland-pridefriday/' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'different hosts are a genuine question for the AI');
+  assert.match(adapter.calls[0].prompt, /field: website/);
+  assert.equal(finalEvent.website, 'https://bearracuda.com/events/portland-pridefriday/');
+});
+
+test('guardrail: same-host deep-vs-deep and root-vs-root URLs still go to the AI', () => {
+  const core = createCore();
+  assert.equal(
+    core.resolveConflictDeterministically('ticketUrl',
+      'https://bearracuda.com/events/portland/', 'https://bearracuda.com/tickets/portland/'),
+    null, 'both deep → arbitrate');
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://bearracuda.com/', 'http://www.bearracuda.com'),
+    null, 'both root → arbitrate');
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://bearracuda.com/', 'https://bearracuda.com/?p=1'),
+    null, 'a query-only URL is not a deeper path');
+});
+
+test('guardrail: "New Orleans" vs "New Orleans⚜️" keeps the emoji title without AI', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.title = 'New Orleans';
+  existing.title = 'New Orleans⚜️';
+  const adapter = buildArbitrationAdapter({});
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'an emoji-stripped twin is not a conflict');
+  assert.equal(finalEvent.title, 'New Orleans⚜️', 'calendar emoji titles are canonical');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['title']);
+});
+
+test('guardrail: emoji twin detection covers ⚜️, ⚓ and ⛓️ in both directions', () => {
+  const core = createCore();
+  const twins = [
+    ['New Orleans⚜️', 'New Orleans'],
+    ['Anchor Bear Night ⚓', 'Anchor Bear Night'],
+    ['CHAINED⛓️', 'CHAINED']
+  ];
+  for (const [emojiTitle, plainTitle] of twins) {
+    assert.deepEqual(
+      core.resolveConflictDeterministically('title', emojiTitle, plainTitle),
+      { winner: 'a', reason: 'emoji title variant beats its emoji-stripped twin' });
+    assert.deepEqual(
+      core.resolveConflictDeterministically('title', plainTitle, emojiTitle),
+      { winner: 'b', reason: 'emoji title variant beats its emoji-stripped twin' });
+  }
+  // Real text differences (and case differences) still arbitrate; ASCII is never stripped
+  assert.equal(core.resolveConflictDeterministically('title', 'FURBALL', 'FURBALL DALLAS'), null);
+  assert.equal(core.resolveConflictDeterministically('title', 'New Orleans⚜️', 'NEW ORLEANS'), null, 'case-sensitive otherwise');
+  assert.equal(core.resolveConflictDeterministically('title', 'Bear-Night!', 'BearNight!'), null, 'ASCII punctuation is real text');
+  assert.equal(core.resolveConflictDeterministically('title', '🐻', '⚓'), null, 'pure-emoji titles are not twins');
+});
+
+test('guardrail: logo-path image loses to event artwork in both directions; both-logo goes to AI', async () => {
+  const core = createCore();
+  const logo = 'https://res.cloudinary.com/eventservice/image/upload/w_600/saas/logos/image_abc.webp';
+  const poster = 'https://bearracuda.com/wp-content/uploads/2026/05/45-3.png';
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', logo, poster),
+    { winner: 'b', reason: 'event artwork beats logo-path image' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', poster, logo),
+    { winner: 'a', reason: 'event artwork beats logo-path image' });
+  const otherLogo = 'https://cdn.tickets.example/assets/logo/brand.png';
+  assert.equal(core.resolveConflictDeterministically('image', logo, otherLogo), null, 'both logo-ish → arbitrate');
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', 'https://a.example/logo-banners/x.png', poster),
+    { winner: 'b', reason: 'event artwork beats logo-path image' },
+    'a path component merely containing "logo" counts');
+  // "logo" in the hostname or query must NOT count
+  assert.equal(
+    core.resolveConflictDeterministically('image', 'https://logo.example/poster.png', 'https://bearracuda.com/poster2.png'),
+    null, 'hostname is never matched');
+  assert.equal(
+    core.resolveConflictDeterministically('image', 'https://a.example/img.png?from=logos', 'https://b.example/img2.png'),
+    null, 'querystring is never matched');
+
+  // End-to-end: a scraped ticketing-service logo never beats the calendar poster
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.image = logo;
+  existing.notes += `\nimage: ${poster}`;
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0);
+  assert.equal(finalEvent.image, poster);
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['image']);
+});
+
+test('mergeParsedEvents: same-host root-vs-deep website resolves deterministically too', async () => {
+  const core = createCore();
+  const priorities = { website: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  // Same source → same priority index → normally a non-decisive AI conflict
+  const existing = { title: 'FURBALL', website: 'https://bearracuda.com/events/portland-pridefriday/', source: 'ai-web', _fieldPriorities: priorities };
+  const incoming = { title: 'FURBALL', website: 'https://bearracuda.com/', source: 'ai-web', _parserConfig: aiParserConfig, _fieldPriorities: priorities };
+  const adapter = buildArbitrationAdapter({});
+
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'deterministic resolution must skip AI in the parser-merge path too');
+  assert.equal(merged.website, 'https://bearracuda.com/events/portland-pridefriday/');
+});
+
 test('resolveAiConfig defaults and the arbitrateMerges flag', () => {
   const core = createCore();
   const defaults = core.resolveAiConfig({});

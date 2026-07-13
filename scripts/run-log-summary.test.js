@@ -225,6 +225,10 @@ const SIGNALS_FIXTURE = [
   '2026-07-13T09:00:22.000Z [INFO] 🤝 AI MERGE: "BEARRACUDA: Portland" field=bar chose calendar ("Sanctuary") over scraped ("BEARRACUDA") — venue, not the organizer',
   '2026-07-13T09:00:23.000Z [INFO] 🤝 AI MERGE: "BEARRACUDA: Portland" field=description chose scraped ("Doors at 9") over calendar ("TBD") — fresher source',
   '2026-07-13T09:00:24.000Z [WARN] 🤝 AI MERGE: no arbitration result for "Other Event" — falling back to scraped values for 2 conflicted field(s)',
+  // Deterministic pre-arbitration resolutions (🔒): counted as a guard, never
+  // as AI arbitration conflicts/picks
+  '2026-07-13T09:00:24.300Z [INFO] 🔒 MERGE: "BEARRACUDA: Portland" field=website resolved deterministically — same-host deeper URL beats domain root',
+  '2026-07-13T09:00:24.600Z [INFO] 🔒 MERGE: "New Orleans⚜️" field=title resolved deterministically — emoji title variant beats its emoji-stripped twin',
   // Dedup funnel
   '2026-07-13T09:00:25.000Z [INFO] SYSTEM: Event filtering complete: 18 → 16 future → 16 bear → 9 final',
   '2026-07-13T09:00:26.000Z [INFO] 🔄 SharedCore: Deduplicated 16 → 9 (removed 7)'
@@ -243,8 +247,13 @@ test('buildSummary counts each guard line type', () => {
     degenerateEndCaught: 1,
     coordsPreserved: 1,
     barPreserved: 1,
-    locationPreserved: 2      // "kept from calendar" + "kept from existing"
+    locationPreserved: 2,     // "kept from calendar" + "kept from existing"
+    arbitrationDeterministic: 2 // 🔒 website root-vs-deep + 🔒 emoji-twin title
   });
+
+  // 🔒 lines are merge decisions too: they must show up in the merges list
+  // (for --merges analysis) while only counting toward the guard above.
+  assert.equal(summary.merges.filter(line => line.includes('🔒 MERGE')).length, 2);
 });
 
 test('buildSummary tracks failed AI requests per pass', () => {
@@ -293,6 +302,9 @@ test('buildRunSignals aggregates ai, guards, arbitration, funnel and quality', (
   });
   assert.equal(signals.guards.brandBarRejected, 2);
   assert.equal(signals.guards.geocodeRejected, 2);
+  assert.equal(signals.guards.arbitrationDeterministic, 2);
+  // The two 🔒 lines count ONLY toward the guard above — the AI arbitration
+  // conflict/pick/fallback counters must not move.
   assert.deepEqual(signals.arbitration, {
     conflicts: 4,       // 2 decided picks + 2 fields in the bulk fallback
     calendarPicks: 1,

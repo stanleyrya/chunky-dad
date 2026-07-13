@@ -411,6 +411,91 @@ class SharedCore {
         return false;
     }
 
+    // ------------------------------------------------------------------
+    // Deterministic pre-arbitration rules. Production runs showed the
+    // arbitration model systematically misjudging three conflict shapes (with
+    // confabulated reasons); these generic signals — URL shape and string
+    // identity, never per-site rules — resolve them BEFORE the AI sees them:
+    // fewer AI calls and no model dependency. Everything else still arbitrates.
+    // ------------------------------------------------------------------
+
+    // Lowercased host without "www." plus path segments (trailing slashes
+    // ignored) for an http(s) URL string, or null when the value isn't one.
+    // Built on parseUrl (Scriptable-safe regex parsing — no URL global).
+    getUrlRuleParts(value) {
+        if (typeof value !== 'string') return null;
+        const parsed = this.parseUrl(value.trim());
+        if (!parsed || !parsed.host) return null;
+        const host = String(parsed.hostname || parsed.host).toLowerCase().replace(/^www\./, '');
+        if (!host) return null;
+        const segments = String(parsed.pathname || '/').split('/').filter(Boolean);
+        const hasQuery = String(parsed.search || '').length > 1;
+        return { host, segments, hasQuery };
+    }
+
+    // Emoji/pictograph-stripped view of a title: pictograph blocks, variation
+    // selectors, the keycap combiner and ZWJ removed, whitespace collapsed.
+    // Conservative on purpose: ASCII and real punctuation are never stripped.
+    stripEmojiForTitleTwin(value) {
+        return String(value)
+            .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0E}\u{FE0F}\u{20E3}\u{200D}]/gu, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    // Deterministic conflict resolution consulted by BOTH merge paths
+    // (createFinalEventObject and mergeParsedEvents) before a field is queued
+    // for AI arbitration. Returns { winner: 'a'|'b', reason } or null (→
+    // arbitrate as usual). Callers map a/b onto their own labels.
+    resolveConflictDeterministically(fieldName, valueA, valueB) {
+        const urlA = this.getUrlRuleParts(valueA);
+        const urlB = this.getUrlRuleParts(valueB);
+        if (urlA && urlB) {
+            // Same-host root URL never beats a deeper path: the deeper URL is
+            // the event-specific one (observed: the model picked
+            // "https://bearracuda.com/" over ".../events/portland-pridefriday/").
+            // Different hosts, both deep, or both root still arbitrate.
+            if (urlA.host === urlB.host) {
+                const rootA = urlA.segments.length === 0 && !urlA.hasQuery;
+                const rootB = urlB.segments.length === 0 && !urlB.hasQuery;
+                if (rootA && !rootB && urlB.segments.length > 0) {
+                    return { winner: 'b', reason: 'same-host deeper URL beats domain root' };
+                }
+                if (rootB && !rootA && urlA.segments.length > 0) {
+                    return { winner: 'a', reason: 'same-host deeper URL beats domain root' };
+                }
+            }
+            // A logo-path image never beats a non-logo image: ticketing
+            // services attach their own ".../saas/logos/..." asset, which the
+            // model picked over the actual event poster. Matches path
+            // components only (never hostname or query); both-or-neither
+            // logo-ish still arbitrates (with a prompt rule as backstop).
+            if (fieldName === 'image') {
+                const hasLogoSegment = (parts) => parts.segments.some(segment => /logo/i.test(segment));
+                const logoA = hasLogoSegment(urlA);
+                const logoB = hasLogoSegment(urlB);
+                if (logoA !== logoB) {
+                    return { winner: logoA ? 'b' : 'a', reason: 'event artwork beats logo-path image' };
+                }
+            }
+        }
+        // Emoji-stripped title twins are not a conflict: calendar titles
+        // deliberately carry emoji (canonical per the calendar contract), so
+        // when both titles are identical after stripping emoji (case-sensitive
+        // otherwise) the variant WITH the emoji — the longer one — wins.
+        // Titles differing in real text still arbitrate.
+        if (fieldName === 'title' && typeof valueA === 'string' && typeof valueB === 'string') {
+            const strippedA = this.stripEmojiForTitleTwin(valueA);
+            if (strippedA && strippedA === this.stripEmojiForTitleTwin(valueB) && valueA.length !== valueB.length) {
+                return {
+                    winner: valueA.length > valueB.length ? 'a' : 'b',
+                    reason: 'emoji title variant beats its emoji-stripped twin'
+                };
+            }
+        }
+        return null;
+    }
+
     // One batched request per merged event. conflicts: [{ field, values: { <labelA>:
     // raw, <labelB>: raw } }]. Returns { [field]: { pick, reason } } containing only
     // fields whose answer survived the verbatim gate, or null when no usable response
@@ -447,6 +532,7 @@ class SharedCore {
             '- "bar" must be the physical venue where the event takes place — never the promoter, organizer, or brand whose name appears in page titles.',
             organizer ? `- KNOWN ORGANIZER: ${JSON.stringify(String(organizer))} — never pick a bar value equal to the organizer.` : '',
             '- For "title", prefer the actual event name — do not prefer a variant just because it appends status text (e.g. sold-out notices) or site branding.',
+            '- For "image", prefer event-specific promotional artwork over site or ticketing-service logos.',
             `- "pick" must be "${labelA}" or "${labelB}".`,
             'Return JSON only:',
             `{"choices": {"<field>": {"pick": "${labelA}" or "${labelB}", "value": "<exact copy of the chosen value>", "reason": "<one short sentence>"}}}`
@@ -1702,6 +1788,33 @@ class SharedCore {
         // today's behavior exactly.
         const pendingAiConflicts = [];
 
+        // Deterministic pre-arbitration rules (URL shape / emoji-twin titles)
+        // run before a conflict is queued for AI — both merge paths consult
+        // resolveConflictDeterministically so behavior is identical.
+        const mergeEventTitle = newEvent.title || existingEvent.title || 'event';
+        const queueArbitrationConflict = (fieldName, existingValue, newValue, fallbackPick, fallbackReason) => {
+            const resolved = this.resolveConflictDeterministically(fieldName, existingValue, newValue);
+            if (!resolved) {
+                pendingAiConflicts.push({
+                    field: fieldName,
+                    values: { existing: existingValue, incoming: newValue },
+                    fallbackPick,
+                    fallbackReason
+                });
+                return;
+            }
+            const chosenValue = resolved.winner === 'a' ? existingValue : newValue;
+            mergedEvent[fieldName] = chosenValue;
+            console.log(`🔒 MERGE: "${mergeEventTitle}" field=${fieldName} resolved deterministically — ${resolved.reason}`);
+            mergeDecisions.push({
+                field: fieldName,
+                existingValue: existingValue,
+                newValue: newValue,
+                chosenValue: chosenValue,
+                reason: `deterministic: ${resolved.reason}`
+            });
+        };
+
         // Apply field priorities for each field
         allFields.forEach(fieldName => {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
@@ -1812,12 +1925,8 @@ class SharedCore {
                 // No priority config: keep newEvent value — unless it's a genuine
                 // conflict, in which case the AI gets to pick.
                 if (canArbitrate) {
-                    pendingAiConflicts.push({
-                        field: fieldName,
-                        values: { existing: existingValue, incoming: newValue },
-                        fallbackPick: 'incoming',
-                        fallbackReason: 'no priority config - keeping incoming'
-                    });
+                    queueArbitrationConflict(fieldName, existingValue, newValue,
+                        'incoming', 'no priority config - keeping incoming');
                 }
                 return;
             }
@@ -1855,12 +1964,8 @@ class SharedCore {
                     // Same priority — the priority array cannot decide. Defer genuine
                     // conflicts to AI; otherwise preserve existing (today's behavior).
                     if (canArbitrate) {
-                        pendingAiConflicts.push({
-                            field: fieldName,
-                            values: { existing: existingValue, incoming: newValue },
-                            fallbackPick: 'existing',
-                            fallbackReason: `same priority (index ${existingIndex} vs ${newIndex}) - preserving existing`
-                        });
+                        queueArbitrationConflict(fieldName, existingValue, newValue,
+                            'existing', `same priority (index ${existingIndex} vs ${newIndex}) - preserving existing`);
                         return;
                     }
                     chosenValue = existingValue;
@@ -1876,12 +1981,8 @@ class SharedCore {
                 reason = `only ${newSource} in priority list`;
             } else if (canArbitrate) {
                 // Neither source in the priority list — non-decisive, defer to AI
-                pendingAiConflicts.push({
-                    field: fieldName,
-                    values: { existing: existingValue, incoming: newValue },
-                    fallbackPick: 'incoming',
-                    fallbackReason: 'neither source in priority list - keeping incoming'
-                });
+                queueArbitrationConflict(fieldName, existingValue, newValue,
+                    'incoming', 'neither source in priority list - keeping incoming');
                 return;
             }
 
@@ -1982,8 +2083,38 @@ class SharedCore {
         const clobberedFields = [];
         // Genuine conflicts deferred to AI arbitration (strategy "ai")
         const pendingAiConflicts = [];
+        // Arbitration outcomes (deterministic, ai, fallback) for display/metrics
+        const aiDecisionRecords = [];
 
         const mergeTitle = scraperObject.title || calendarObject.title || 'event';
+
+        // Deterministic pre-arbitration rules (URL shape / emoji-twin titles)
+        // run before a conflict is queued for AI — both merge paths consult
+        // resolveConflictDeterministically so behavior is identical.
+        const queueArbitrationConflict = (fieldName, calendarValue, scraperValue) => {
+            const resolved = this.resolveConflictDeterministically(fieldName, calendarValue, scraperValue);
+            if (!resolved) {
+                pendingAiConflicts.push({
+                    field: fieldName,
+                    values: { calendar: calendarValue, scraped: scraperValue }
+                });
+                return;
+            }
+            const chosenValue = resolved.winner === 'a' ? calendarValue : scraperValue;
+            mergedObject[fieldName] = chosenValue;
+            if (resolved.winner === 'b' && scraperValue !== calendarValue) {
+                clobberedFields.push(fieldName);
+            }
+            console.log(`🔒 MERGE: "${mergeTitle}" field=${fieldName} resolved deterministically — ${resolved.reason}`);
+            aiDecisionRecords.push({
+                field: fieldName,
+                existingValue: calendarValue,
+                newValue: scraperValue,
+                chosenValue: chosenValue,
+                reason: resolved.reason,
+                source: 'deterministic'
+            });
+        };
 
         // A scraped endDate that is <= the scraped startDate (zero/negative duration)
         // is a normalization artifact, not data — it must never replace a calendar
@@ -2068,10 +2199,7 @@ class SharedCore {
                 && this.isArbitrationEligibleField(fieldName)
                 && this.isGenuineFieldConflict(fieldName, calendarValue, scraperValue);
             if (routeDateConflictToAi) {
-                pendingAiConflicts.push({
-                    field: fieldName,
-                    values: { calendar: calendarValue, scraped: scraperValue }
-                });
+                queueArbitrationConflict(fieldName, calendarValue, scraperValue);
                 continue;
             }
 
@@ -2079,10 +2207,7 @@ class SharedCore {
                 case 'ai':
                     if (this.isArbitrationEligibleField(fieldName)
                         && this.isGenuineFieldConflict(fieldName, calendarValue, scraperValue)) {
-                        pendingAiConflicts.push({
-                            field: fieldName,
-                            values: { calendar: calendarValue, scraped: scraperValue }
-                        });
+                        queueArbitrationConflict(fieldName, calendarValue, scraperValue);
                         break;
                     }
                     // No genuine conflict → clobber semantics (today's default),
@@ -2112,7 +2237,6 @@ class SharedCore {
         // STEP 3b: AI arbitration for genuine conflicts — one batched request.
         // Any field the AI can't decide (or a dead/hallucinating model) falls back
         // to clobber, i.e. exactly the pre-arbitration behavior.
-        const aiDecisionRecords = [];
         if (pendingAiConflicts.length > 0) {
             const eventTitle = scraperObject.title || calendarObject.title || 'event';
             const aiConfig = this.getMergeArbitrationConfig(newEvent, options.globalConfig);
@@ -2226,7 +2350,8 @@ class SharedCore {
             finalEvent._mergeDecisions = aiDecisionRecords;
             finalEvent._original.aiArbitration = {
                 arbitrated: aiDecisionRecords.filter(record => record.source === 'ai').map(record => record.field),
-                fallbacks: aiDecisionRecords.filter(record => record.source === 'fallback').map(record => record.field)
+                fallbacks: aiDecisionRecords.filter(record => record.source === 'fallback').map(record => record.field),
+                deterministic: aiDecisionRecords.filter(record => record.source === 'deterministic').map(record => record.field)
             };
         }
         

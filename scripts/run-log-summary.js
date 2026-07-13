@@ -273,6 +273,8 @@ function countCrawlNodes(sources) {
 //       "📍 MERGE: "T" bar kept from calendar (scrape found no venue)"
 //       "📍 MERGE: "T" location kept from calendar (scrape found none)"
 //       "📍 MERGE: "T" location kept from existing (incoming scrape found none)"
+//   - shared-core deterministic pre-arbitration rules (URL shape / emoji-twin titles):
+//       "🔒 MERGE: "T" field=website resolved deterministically — same-host deeper URL beats domain root"
 const GUARD_LINE_RES = {
     brandBarRejected: /🤖 AI Web: (?:Dropping|Rejecting) bar ".*?" (?:—|from .*? pass —) matches (?:the )?page/,
     brandTitleStripped: /🤖 AI Web: (?:Stripping page brand from title ".*?"|Rejecting title ".*?" from .*? pass)/,
@@ -283,7 +285,8 @@ const GUARD_LINE_RES = {
     degenerateEndCaught: /⚠️ MERGE: ".*?" \S+ endDate <= startDate/,
     coordsPreserved: /📍 MERGE: ".*?" location kept calendar coordinates/,
     barPreserved: /📍 MERGE: ".*?" bar kept from calendar/,
-    locationPreserved: /📍 MERGE: ".*?" location kept from (?:calendar|existing)/
+    locationPreserved: /📍 MERGE: ".*?" location kept from (?:calendar|existing)/,
+    arbitrationDeterministic: /🔒 MERGE: ".*?" field=\S+ resolved deterministically/
 };
 
 function createGuardCounts() {
@@ -377,7 +380,10 @@ function buildSummary(entries) {
             pageFor(entry.url);
             continue;
         }
-        if (/🤝 AI MERGE|🔄 PARSER MERGE|🔄 MERGE/.test(firstLine)) {
+        // 🔒 deterministic resolutions are merge decisions too (already counted
+        // as a guard above; they match none of the 🤝 AI MERGE signal regexes,
+        // so they never inflate the AI conflict/pick counters).
+        if (/🤝 AI MERGE|🔄 PARSER MERGE|🔄 MERGE|🔒 MERGE/.test(firstLine)) {
             merges.push(firstLine);
             continue;
         }
