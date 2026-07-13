@@ -769,3 +769,14 @@ test('buildEventFromJsonLdNode resolves city and timezone from the address', () 
   const bare = parser.extractEventsFromJsonLd(SICKENING_JSONLD_HTML, 'https://sickening.events/e/x');
   assert.equal(bare[0].city, undefined);
 });
+
+test('getAiConfig delegates to SharedCore.resolveAiConfig', () => {
+  const parser = createParser();
+  const viaParser = parser.getAiConfig({ ai: { provider: 'ollama', numPredict: 1234 } });
+  const viaCore = parser.core.resolveAiConfig({ provider: 'ollama', numPredict: 1234 });
+  assert.deepEqual(viaParser, viaCore);
+  assert.equal(viaParser.numPredict, 1234);
+  assert.equal(viaParser.arbitrateMerges, true);
+  assert.equal(parser.normalizePayloadMode('jsonld'), 'jsonld');
+  assert.equal(parser.normalizePayloadMode('bogus'), 'best');
+});

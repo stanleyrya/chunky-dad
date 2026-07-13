@@ -443,3 +443,234 @@ test('classifyPageWithAi persists outcomes through an injected cache provider', 
 
   fs.rmSync(cacheDir, { recursive: true, force: true });
 });
+
+// ---------------------------------------------------------------------------
+// AI merge arbitration
+// ---------------------------------------------------------------------------
+
+function buildArbitrationPair() {
+  const core = createCore();
+  const scraped = {
+    title: 'FURBALL DALLAS',
+    description: 'FURBALL PRESENTS',
+    bar: 'S4',
+    address: '3911 Cedar Springs Rd, Dallas, TX 75219',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    ticketUrl: 'https://tickets.example/furball',
+    city: 'dallas',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } }
+  };
+  const existing = {
+    title: 'FURBALL',
+    startDate: new Date('2026-07-05T21:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    location: 'STATION 4, Dallas',
+    url: '',
+    notes: [
+      'bar: STATION 4',
+      'address: 3911 Cedar Springs Rd, Dallas, TX 75219',
+      'ticketUrl: https://tickets.example/furball'
+    ].join('\n')
+  };
+  // Genuine conflicts: title, bar, startDate. Equal fields (address, ticketUrl,
+  // endDate) and one-sided fields must never reach the AI.
+  return { scraped, existing };
+}
+
+function buildArbitrationAdapter(choices, options = {}) {
+  const calls = [];
+  return {
+    calls,
+    postJson: async (endpoint, payload) => {
+      calls.push(payload);
+      if (options.fail) throw new Error('AI endpoint down');
+      return {
+        ok: true,
+        status: 200,
+        text: JSON.stringify({ response: JSON.stringify({ choices }) })
+      };
+    }
+  };
+}
+
+test('field priority defaults are ai-arbitrated; explicit config and metadata stay deterministic', () => {
+  const core = createCore();
+  const resolved = core.getResolvedFieldPriorities({
+    fieldPriorities: { bar: { priority: ['static'], merge: 'preserve' } },
+    metadata: { shortName: { value: 'FUR-BALL' } }
+  });
+  assert.equal(resolved.title.merge, 'ai');
+  assert.equal(resolved.startDate.merge, 'ai');
+  assert.equal(resolved.ticketUrl.merge, 'ai');
+  assert.equal(resolved.bar.merge, 'preserve', 'explicit fieldPriorities override the ai default');
+  assert.equal(resolved.shortName.merge, 'clobber', 'metadata-inferred fields stay clobber');
+});
+
+test('createFinalEventObject applies verbatim-validated AI picks in ONE batched request', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair();
+  const adapter = buildArbitrationAdapter({
+    title: { pick: 'scraped', value: 'FURBALL DALLAS', reason: 'more specific' },
+    bar: { pick: 'calendar', value: 'STATION 4', reason: 'official venue name' },
+    startDate: { pick: 'scraped', value: '2026-07-05T22:00:00.000Z', reason: 'flyer time' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'all conflicts must batch into one AI request');
+  assert.match(adapter.calls[0].prompt, /2026-07-05T22:00:00\.000Z/, 'dates are serialized as ISO in the prompt');
+  assert.equal(finalEvent.title, 'FURBALL DALLAS');
+  assert.equal(finalEvent.bar, 'STATION 4', 'AI picked the calendar value');
+  assert.ok(finalEvent.startDate instanceof Date, 'winner keeps its original Date type');
+  assert.equal(finalEvent.startDate.toISOString(), '2026-07-05T22:00:00.000Z');
+  // Notes round-trip: the arbitrated bar survives formatEventNotes/parseNotesIntoFields
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).bar, 'STATION 4');
+  assert.deepEqual(finalEvent._original.aiArbitration.arbitrated.sort(), ['bar', 'startDate', 'title']);
+  assert.deepEqual(finalEvent._original.aiArbitration.fallbacks, []);
+});
+
+test('hallucinated or missing AI answers fall back to the scraped value (clobber)', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair();
+  // bar: value matches NEITHER candidate → reject; title/startDate absent → fallback
+  const adapter = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'STATION FOUR', reason: 'made up' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(finalEvent.bar, 'S4', 'hallucinated answer falls back to scraped');
+  assert.equal(finalEvent.title, 'FURBALL DALLAS');
+  assert.equal(finalEvent.startDate.toISOString(), '2026-07-05T22:00:00.000Z');
+  assert.deepEqual(finalEvent._original.aiArbitration.arbitrated, []);
+  assert.deepEqual(finalEvent._original.aiArbitration.fallbacks.sort(), ['bar', 'startDate', 'title']);
+});
+
+test('a verbatim value with a wrong pick label is trusted via the value', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair();
+  // pick says scraped but the value verbatim-equals the CALENDAR candidate
+  const adapter = buildArbitrationAdapter({
+    title: { pick: 'scraped', value: 'FURBALL DALLAS' },
+    bar: { pick: 'scraped', value: 'STATION 4' },
+    startDate: { pick: 'scraped', value: '2026-07-05T22:00:00.000Z' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(finalEvent.bar, 'STATION 4', 'the verbatim-matched candidate wins despite the mislabeled pick');
+});
+
+test('AI failure degrades to exactly the clobber behavior', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair();
+  const adapter = buildArbitrationAdapter({}, { fail: true });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(finalEvent.title, 'FURBALL DALLAS');
+  assert.equal(finalEvent.bar, 'S4');
+  assert.equal(finalEvent.startDate.toISOString(), '2026-07-05T22:00:00.000Z');
+  assert.equal(finalEvent._original.aiArbitration.fallbacks.length, 3);
+});
+
+test('no adapter or arbitrateMerges:false means zero AI requests', async () => {
+  const core = createCore();
+
+  const noAdapter = buildArbitrationPair();
+  const finalNoAdapter = await core.createFinalEventObject(noAdapter.existing, noAdapter.scraped, {});
+  assert.equal(finalNoAdapter.bar, 'S4', 'falls back to scraped without an adapter');
+
+  const optedOut = buildArbitrationPair();
+  optedOut.scraped._parserConfig.ai.arbitrateMerges = false;
+  const adapter = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'STATION 4' }
+  });
+  const finalOptedOut = await core.createFinalEventObject(optedOut.existing, optedOut.scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'opt-out must not send AI requests');
+  assert.equal(finalOptedOut.bar, 'S4');
+});
+
+test('non-conflicts never reach the AI and keep clobber semantics', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair();
+  // Remove all genuine conflicts: align title/bar/startDate, add a scraped-only field
+  existing.title = scraped.title;
+  existing.startDate = new Date(scraped.startDate.getTime());
+  existing.notes = existing.notes.replace('bar: STATION 4', 'bar: S4');
+  scraped.cover = '$10';
+  const adapter = buildArbitrationAdapter({});
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'no conflicts → no AI request');
+  assert.equal(finalEvent.cover, '$10', 'one-sided fields are added via clobber semantics');
+});
+
+test('same-instant Date vs ISO string is not a conflict; differing instants are', () => {
+  const core = createCore();
+  assert.equal(
+    core.isGenuineFieldConflict('startDate', new Date('2026-07-05T21:00:00.000Z'), '2026-07-05T21:00:00.000Z'),
+    false
+  );
+  assert.equal(
+    core.isGenuineFieldConflict('startDate', new Date('2026-07-05T21:00:00.000Z'), new Date('2026-07-05T22:00:00.000Z')),
+    true
+  );
+  assert.equal(core.isGenuineFieldConflict('bar', 'S4', ''), false, 'empty side is never a conflict');
+  assert.equal(core.isGenuineFieldConflict('coordinates', { lat: 1 }, { lat: 2 }), false, 'non-primitives are ineligible');
+});
+
+test('mergeParsedEvents: decisive priority skips AI, non-decisive conflicts consult it', async () => {
+  const core = createCore();
+  const priorities = {
+    bar: { priority: ['static', 'ai-web'], merge: 'ai' },
+    title: { priority: ['ai-web'], merge: 'ai' }
+  };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+
+  // Different sources: the priority arrays decide everything — zero AI requests
+  const staticExisting = { title: 'FURBALL', bar: 'STATION 4', source: 'static', _fieldPriorities: priorities };
+  const aiIncoming = { title: 'FURBALL DALLAS', bar: 'S4', source: 'ai-web', _parserConfig: aiParserConfig, _fieldPriorities: priorities };
+  const decisiveAdapter = buildArbitrationAdapter({});
+  const decisiveMerge = await core.mergeParsedEvents(staticExisting, aiIncoming, { httpAdapter: decisiveAdapter });
+  assert.equal(decisiveAdapter.calls.length, 0, 'decisive priority fields must not be arbitrated');
+  assert.equal(decisiveMerge.bar, 'STATION 4', 'static outranks ai-web for bar');
+  assert.equal(decisiveMerge.title, 'FURBALL DALLAS', 'only-listed source wins for title');
+
+  // Same source (duplicate from the same parser): same priority index → AI decides
+  const existing = { title: 'FURBALL', bar: 'STATION 4', source: 'ai-web', _fieldPriorities: priorities };
+  const incoming = { title: 'FURBALL DALLAS', bar: 'S4', source: 'ai-web', _parserConfig: aiParserConfig, _fieldPriorities: priorities };
+  const adapter = buildArbitrationAdapter({
+    title: { pick: 'existing', value: 'FURBALL', reason: 'canonical name' },
+    bar: { pick: 'incoming', value: 'S4', reason: 'newer listing' }
+  });
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 1, 'all same-priority conflicts batch into one request');
+  assert.equal(merged.title, 'FURBALL', 'AI decided the same-priority conflict');
+  assert.equal(merged.bar, 'S4');
+
+  // AI failure on a same-priority conflict → preserves existing (today's behavior)
+  const failingAdapter = buildArbitrationAdapter({}, { fail: true });
+  const mergedFallback = await core.mergeParsedEvents(existing, incoming, { httpAdapter: failingAdapter });
+  assert.equal(mergedFallback.title, 'FURBALL', 'same-priority fallback preserves existing');
+  assert.equal(mergedFallback.bar, 'STATION 4', 'same-priority fallback preserves existing');
+});
+
+test('resolveAiConfig defaults and the arbitrateMerges flag', () => {
+  const core = createCore();
+  const defaults = core.resolveAiConfig({});
+  assert.equal(defaults.enabled, true);
+  assert.equal(defaults.arbitrateMerges, true);
+  assert.equal(defaults.provider, 'openai');
+  assert.equal(defaults.endpoint, 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions');
+  assert.equal(core.resolveAiConfig({ arbitrateMerges: false }).arbitrateMerges, false);
+
+  // getMergeArbitrationConfig: parser ai wins, global ai is the fallback
+  const fromParser = core.getMergeArbitrationConfig({ _parserConfig: { ai: { model: 'parser-model' } } }, { ai: { model: 'global-model' } });
+  assert.equal(fromParser.model, 'parser-model');
+  const fromGlobal = core.getMergeArbitrationConfig({ source: 'bearracuda' }, { ai: { model: 'global-model' } });
+  assert.equal(fromGlobal.model, 'global-model');
+});

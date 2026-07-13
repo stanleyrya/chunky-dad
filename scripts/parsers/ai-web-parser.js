@@ -3842,32 +3842,11 @@ class AiWebParser {
         return prompts;
     }
 
+    // AI config resolution lives in SharedCore (resolveAiConfig) so the merge
+    // arbitration path can build the same config without reaching into the parser.
     getAiConfig(parserConfig = {}) {
-        const aiConfig = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
-        const provider = String(aiConfig.provider || 'openai');
-        const defaultEndpoint = provider === 'openai'
-            ? 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions'
-            : 'http://desktop.taila7523c.ts.net:11434/api/generate';
-        const defaultModel = provider === 'openai'
-            ? 'lmstudio-community/Qwen3-Coder-Next-MLX-6bit'
-            : 'qwen3.5:4b';
-
-        return {
-            enabled: aiConfig.enabled !== false,
-            provider: provider,
-            endpoint: String(aiConfig.endpoint || defaultEndpoint),
-            model: String(aiConfig.model || defaultModel),
-            payloadMode: this.normalizePayloadMode(aiConfig.payloadMode),
-            maxHtmlChars: Number.isFinite(Number(aiConfig.maxHtmlChars)) ? Number(aiConfig.maxHtmlChars) : 6000,
-            numCtx: Number.isFinite(Number(aiConfig.numCtx)) ? Number(aiConfig.numCtx) : 8192,
-            numPredict: Number.isFinite(Number(aiConfig.numPredict)) ? Number(aiConfig.numPredict) : 2000,
-            temperature: Number.isFinite(Number(aiConfig.temperature)) ? Number(aiConfig.temperature) : 0,
-            think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
-            timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
-            keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
-            ollama: aiConfig.ollama && typeof aiConfig.ollama === 'object' ? aiConfig.ollama : {},
-            openai: aiConfig.openai && typeof aiConfig.openai === 'object' ? aiConfig.openai : {}
-        };
+        const rawAi = parserConfig && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        return this.core.resolveAiConfig(rawAi);
     }
 
     getOcrConfig(parserConfig = {}, aiConfig = null) {
@@ -3941,9 +3920,7 @@ class AiWebParser {
     }
 
     normalizePayloadMode(mode) {
-        const normalized = String(mode || '').trim().toLowerCase();
-        if (normalized === 'exhaustive' || normalized === 'jsonld' || normalized === 'meta') return normalized;
-        return 'best';
+        return this.core.normalizePayloadMode(mode);
     }
 
     createPromptSection(label, parts) {
