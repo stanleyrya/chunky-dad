@@ -94,79 +94,6 @@ const performanceDebugger = new PerformanceDebugger();
  * Author: Ryan Stanley (stanleyrya@gmail.com)
  * Tips: https://www.paypal.me/stanleyrya
  *
- * Class that can read and write JSON objects using the file system.
- *
- * This is a minified version but it can be replaced with the full version here!
- * https://github.com/stanleyrya/scriptable-playground/tree/main/json-file-manager
- *
- * Usage:
- *  * write(relativePath, jsonObject): Writes JSON object to a relative path.
- *  * read(relativePath): Reads JSON object from a relative path.
- */
-class JSONFileManager {
-  write(relativePath, jsonObject) {
-    const fm = this.getFileManager();
-    const fullPath = this.getCurrentDir() + relativePath;
-    const pathParts = relativePath.split("/");
-
-    // Create directory if needed
-    if (pathParts.length > 1) {
-      const fileName = pathParts[pathParts.length - 1];
-      const dirPath = fullPath.replace("/" + fileName, "");
-      fm.createDirectory(dirPath, true);
-    }
-
-    // Check if path is a directory
-    if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
-      throw new Error("JSON file is a directory, please delete!");
-    }
-
-    fm.writeString(fullPath, JSON.stringify(jsonObject));
-  }
-
-  read(relativePath) {
-    const fm = this.getFileManager();
-    const fullPath = this.getCurrentDir() + relativePath;
-
-    if (!fm.fileExists(fullPath)) {
-      throw new Error("JSON file does not exist! Could not load: " + fullPath);
-    }
-
-    if (fm.isDirectory(fullPath)) {
-      throw new Error("JSON file is a directory! Could not load: " + fullPath);
-    }
-
-    fm.downloadFileFromiCloud(fullPath);
-    const content = fm.readString(fullPath);
-    const parsed = JSON.parse(content);
-
-    if (parsed !== null) {
-      return parsed;
-    }
-
-    throw new Error("Could not read file as JSON! Could not load: " + fullPath);
-  }
-
-  getFileManager() {
-    try {
-      return FileManager.iCloud();
-    } catch (e) {
-      return FileManager.local();
-    }
-  }
-
-  getCurrentDir() {
-    const fm = this.getFileManager();
-    const filename = module.filename;
-    return filename.replace(fm.fileName(filename, true), "");
-  }
-}
-const jsonFileManager = new JSONFileManager();
-
-/**
- * Author: Ryan Stanley (stanleyrya@gmail.com)
- * Tips: https://www.paypal.me/stanleyrya
- *
  * Class that can write logs to the file system.
  *
  * This is a minified version but it can be replaced with the full version here!
@@ -6848,7 +6775,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return 0;
   }
 
-  // (Directory creation handled by ensureRelativeStorageDirs using embedded JSONFileManager path base)
 
   async ensureRelativeStorageDirs() {
     try {

@@ -4369,18 +4369,6 @@ class MetricsDisplay {
     return option ? option.label : 'Parser Health';
   }
 
-  getParserSortOptions() {
-    return [
-      { key: 'status', label: 'Status', defaultDirection: 'desc' },
-      { key: 'last-run', label: 'Last run', defaultDirection: 'desc' },
-      { key: 'duration', label: 'Duration', defaultDirection: 'desc' },
-      { key: 'new', label: 'Adds', defaultDirection: 'desc' },
-      { key: 'merge', label: 'Merges', defaultDirection: 'desc' },
-      { key: 'conflict', label: 'Conflicts', defaultDirection: 'desc' },
-      { key: 'name', label: 'Parser', defaultDirection: 'asc' }
-    ];
-  }
-
   getRunSortOptions() {
     return [
       { key: 'finished', label: 'Last run', defaultDirection: 'desc' },
