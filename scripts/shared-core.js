@@ -1747,6 +1747,14 @@ class SharedCore {
         // a strong same-event signal: index by normalized URL and merge those
         // pairs even when city/venue/date disagree, with a 7-day date sanity
         // window so recurring events that reuse their event page don't collapse.
+        // A URL shared by 3+ records in one run is a listing/hub page (an events
+        // calendar, a linktree with a path), not an event page — never merge on it.
+        // Event-detail URLs are one-per-event; only a listing produces that fan-in.
+        const urlKeyCounts = new Map();
+        for (const event of deduplicated) {
+            const urlKey = this.getEventUrlIdentityKey(event && event.url);
+            if (urlKey) urlKeyCounts.set(urlKey, (urlKeyCounts.get(urlKey) || 0) + 1);
+        }
         const eventsByUrl = new Map();
         const urlDeduplicated = [];
         for (const event of deduplicated) {
@@ -1755,8 +1763,17 @@ class SharedCore {
                 urlDeduplicated.push(event);
                 continue;
             }
+            if ((urlKeyCounts.get(urlKey) || 0) >= 3) {
+                if (!eventsByUrl.has(urlKey)) {
+                    console.log(`🔄 SharedCore: URL shared by ${urlKeyCounts.get(urlKey)} events — treating as listing page, skipping same-URL merge: ${urlKey}`);
+                    eventsByUrl.set(urlKey, event);
+                }
+                urlDeduplicated.push(event);
+                continue;
+            }
             const holder = eventsByUrl.get(urlKey);
-            if (holder && this.areStartDatesWithinDays(holder, event, 7)) {
+            if (holder && this.areStartDatesWithinDays(holder, event, 7)
+                && this.areTitlesCompatibleForUrlMerge(holder.title, event.title)) {
                 console.log(`🔄 SharedCore: Same event URL — merging "${holder.title || 'event'}" and "${event.title || 'event'}" despite city/venue mismatch`);
                 // Identity fields (key/city/timezone) must come from the richer
                 // record — corrupted identity fields are exactly why these records
@@ -4498,6 +4515,23 @@ class SharedCore {
         const path = String(parsed.pathname || '').replace(/\/+$/, '');
         if (!path) return null; // domain root — no meaningful path segment
         return `${parsed.protocol.toLowerCase()}//${parsed.host.toLowerCase()}${path}${parsed.search || ''}`;
+    }
+
+    // Same-URL merges additionally require compatible titles: two records of one
+    // event title it the same way or one is a prefixed/suffixed variant of the
+    // other ("SPRING THAW" vs "CHUNK CHICAGO presents SPRING THAW!"), while two
+    // DIFFERENT parties that happen to share a listing-page URL name themselves
+    // differently. Empty titles stay conservative (no merge).
+    areTitlesCompatibleForUrlMerge(titleA, titleB) {
+        const normalize = (value) => this.stripEmojiForTitleTwin(String(value || ''))
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}]+/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const a = normalize(titleA);
+        const b = normalize(titleB);
+        if (!a || !b) return false;
+        return a === b || a.includes(b) || b.includes(a);
     }
 
     // Sanity window for same-URL dedup: recurring events reuse their event page,

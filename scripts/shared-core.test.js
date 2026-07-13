@@ -2129,3 +2129,81 @@ test('deduplicateEvents does not merge same-URL records with start dates far apa
   const result = await core.deduplicateEvents([july, august], null);
   assert.equal(result.length, 2, 'same URL but 30 days apart must stay separate events');
 });
+
+test('deduplicateEvents treats a URL shared by 3+ events as a listing page (no same-URL merge)', async () => {
+  const core = createCore();
+  // A multi-event listing page without per-segment links stamps its OWN path'd URL
+  // on every extracted event — fan-in of 3+ proves it's a hub, not an event page.
+  const makeEvent = (title, bar, day) => ({
+    title,
+    bar,
+    city: 'chicago',
+    timezone: 'America/Chicago',
+    startDate: new Date(`2026-07-${day}T21:00:00.000Z`),
+    url: 'https://venue-site.com/events',
+    source: 'ai-web'
+  });
+  const events = [
+    makeEvent('BEAR NIGHT', 'Cell Block', '24'),
+    makeEvent('UNDERWEAR PARTY', 'Cell Block', '25'),
+    makeEvent('SUNDAY BEER BUST', 'Cell Block', '26')
+  ];
+
+  const result = await core.deduplicateEvents(events, null);
+  assert.equal(result.length, 3, 'a URL shared by 3+ events must never trigger the same-URL merge');
+});
+
+test('deduplicateEvents does not merge same-URL records with incompatible titles', async () => {
+  const core = createCore();
+  // Two DIFFERENT parties whose records both point at a shared path'd listing URL
+  // (e.g. a weekend calendar) on close dates: titles disagree, so no merge.
+  const friday = {
+    title: 'BEAR NIGHT',
+    bar: 'Cell Block',
+    city: 'chicago',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-07-24T21:00:00.000Z'),
+    url: 'https://venue-site.com/weekend-lineup',
+    source: 'ai-web'
+  };
+  const saturday = {
+    title: 'UNDERWEAR PARTY',
+    bar: 'Cell Block',
+    city: 'chicago',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    url: 'https://venue-site.com/weekend-lineup',
+    source: 'ai-web'
+  };
+
+  const result = await core.deduplicateEvents([friday, saturday], null);
+  assert.equal(result.length, 2, 'same URL with unrelated titles must stay separate events');
+});
+
+test('deduplicateEvents merges same-URL records whose titles are prefixed variants', async () => {
+  const core = createCore();
+  // Segment vs detail-page records often title the same event with and without the
+  // organizer prefix — containment after emoji/punctuation stripping must merge them.
+  const segment = {
+    title: 'SPRING THAW',
+    bar: 'Cell Block',
+    city: 'chicago',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-03-21T21:00:00.000Z'),
+    url: 'https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw',
+    source: 'ai-web'
+  };
+  const detail = {
+    title: 'CHUNK CHICAGO presents SPRING THAW!',
+    bar: 'Cell Block Chicago',
+    address: '3702 N Halsted, Chicago, IL',
+    city: 'chicago',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-03-22T02:00:00.000Z'),
+    url: 'https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw',
+    source: 'ai-web'
+  };
+
+  const result = await core.deduplicateEvents([segment, detail], null);
+  assert.equal(result.length, 1, 'variant titles at the same event URL must merge');
+});
