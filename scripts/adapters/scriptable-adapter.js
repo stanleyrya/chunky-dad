@@ -378,6 +378,7 @@ const HEADER_LOGO_CACHE_FILE = "logo-hero.png";
 const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const { EventSchema: SharedEventSchema } = importModule("event-schema");
 const { SharedCore } = importModule("shared-core");
+const { RunLogSummary } = importModule("run-log-summary");
 
 if (
   !SharedEventSchema ||
@@ -3187,6 +3188,11 @@ class ScriptableAdapter {
     const logSectionHtml = shouldShowLogs
       ? this.buildRunLogSectionHtml(runLogInfo, runPromptInfo)
       : "";
+    const runInsights = this.loadRunInsightsForDisplay(results, runLogInfo);
+    const insightSectionsHtml = this.buildRunInsightSectionsHtml(
+      runInsights,
+      results,
+    );
     const headerLogoData = await this.loadHeaderLogoData();
     const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
 
@@ -4171,6 +4177,29 @@ class ScriptableAdapter {
             color: var(--text-secondary);
             font-size: 14px;
         }
+
+        .insight-subtitle {
+            font-weight: 600;
+            font-size: 13px;
+            margin: 12px 0 4px;
+            color: var(--text-primary);
+        }
+
+        .insight-list {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 12px;
+            font-family: monospace;
+            line-height: 1.5;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .insight-note {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin: 4px 0;
+        }
         
         .event-card.raw-mode .event-details,
         .event-card.raw-mode .event-metadata,
@@ -4437,6 +4466,8 @@ class ScriptableAdapter {
     }
 
     ${this.generateDiscoverySection(results)}
+
+    ${insightSectionsHtml}
 
     ${logSectionHtml}
     
@@ -5120,6 +5151,194 @@ class ScriptableAdapter {
         </details>
     </div>
         `;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Run-insight sections ("What Happened" crawl tree / "What We Did" decisions)
+  // ---------------------------------------------------------------------------
+
+  // Parse a run log into the structured insight summary (business logic lives
+  // in the shared run-log-summary module; this is just the environment glue).
+  buildRunInsightsFromLogText(text) {
+    try {
+      const trimmed = typeof text === "string" ? text : "";
+      if (!trimmed.trim()) {
+        return {
+          available: false,
+          reason: "No log lines captured for this run.",
+          summary: null,
+        };
+      }
+      return {
+        available: true,
+        reason: null,
+        summary: RunLogSummary.summarizeLogText(trimmed),
+      };
+    } catch (error) {
+      return {
+        available: false,
+        reason: `Log summary failed: ${error.message}`,
+        summary: null,
+      };
+    }
+  }
+
+  // Choose the insight data source: the saved run's log file when re-displaying
+  // a saved run, otherwise the FileLogger's in-memory entries for the live run.
+  loadRunInsightsForDisplay(results, logInfo = null) {
+    try {
+      if (results?._isDisplayingSavedRun) {
+        if (logInfo?.exists) {
+          return this.buildRunInsightsFromLogText(
+            logInfo.fullText || logInfo.text || "",
+          );
+        }
+        const runLabel = logInfo?.runId ? `run ${logInfo.runId}` : "this run";
+        return {
+          available: false,
+          reason: `Log not found for ${runLabel} — crawl and decision details from the log are unavailable.`,
+          summary: null,
+        };
+      }
+      return this.buildRunInsightsFromLogText(
+        logger.getLogText({ mode: "full" }),
+      );
+    } catch (error) {
+      return {
+        available: false,
+        reason: `Log summary failed: ${error.message}`,
+        summary: null,
+      };
+    }
+  }
+
+  // Structured per-event decisions from the analyzed results (preferred over
+  // log-derived data where both exist).
+  collectEventDecisionLines(results) {
+    const events = Array.isArray(results?.analyzedEvents)
+      ? results.analyzedEvents
+      : [];
+    return events.map((event) => {
+      const intent = this.normalizeIntentAction(event) || "other";
+      const write = this.getWriteActionFromEvent(event);
+      const title = event?.title || event?.name || "(untitled)";
+      const reason =
+        typeof event?._analysis?.reason === "string" &&
+        event._analysis.reason.trim()
+          ? ` — ${event._analysis.reason.trim()}`
+          : "";
+      return `${this.formatIntentActionLabel(intent)} → ${this.formatWriteActionLabel(write)}: "${title}"${reason}`;
+    });
+  }
+
+  // Capped, escaped <ul> for insight line lists (keeps total HTML size bounded).
+  buildInsightListHtml(lines, maxItems = 50) {
+    const allLines = Array.isArray(lines) ? lines : [];
+    if (allLines.length === 0) {
+      return `<div class="insight-note">(none)</div>`;
+    }
+    const shown = allLines.slice(0, maxItems);
+    const items = shown
+      .map((line) => `<li>${this.escapeHtml(line)}</li>`)
+      .join("");
+    const moreNote =
+      allLines.length > shown.length
+        ? `<div class="insight-note">… +${allLines.length - shown.length} more</div>`
+        : "";
+    return `<ul class="insight-list">${items}</ul>${moreNote}`;
+  }
+
+  // Two collapsed sections appended to the results display. Only summary lines
+  // are embedded — debug payload bodies (full AI prompts/responses) never are.
+  buildRunInsightSectionsHtml(insights, results) {
+    const summary = insights?.available ? insights.summary : null;
+    const unavailableNote = `<div class="insight-note">${this.escapeHtml(
+      insights?.reason || "Run log unavailable.",
+    )}</div>`;
+
+    // --- Section 1: What Happened (crawl/discovery tree) ---
+    const crawlSources = summary && Array.isArray(summary.crawl) ? summary.crawl : [];
+    const pageCount = RunLogSummary.countCrawlNodes(crawlSources);
+    let happenedBody;
+    if (!summary) {
+      happenedBody = unavailableNote;
+    } else {
+      const treeText =
+        crawlSources.length > 0
+          ? RunLogSummary.formatCrawlTreeText(crawlSources, { maxNodes: 50 })
+          : "";
+      const treeHtml = treeText
+        ? `<pre class="discovery-output">${this.escapeHtml(treeText)}</pre>`
+        : `<div class="insight-note">No crawl activity found in this run's log.</div>`;
+      const aiLines = (summary.aiRequestsByPass || []).map(
+        (stats) =>
+          `${stats.pass}: ${stats.sent} sent, ${stats.succeeded} succeeded, total ${stats.totalMs}ms, avg ${stats.avgMs}ms`,
+      );
+      const aiHtml =
+        aiLines.length > 0
+          ? `<div class="insight-subtitle">AI requests by pass</div>${this.buildInsightListHtml(aiLines)}`
+          : "";
+      const ocrHtml =
+        Array.isArray(summary.ocr) && summary.ocr.length > 0
+          ? `<div class="insight-subtitle">OCR activity</div>${this.buildInsightListHtml(summary.ocr)}`
+          : "";
+      happenedBody = `${treeHtml}${aiHtml}${ocrHtml}`;
+    }
+    const happenedSection = `
+    <div class="section insight-section">
+        <div class="section-header">
+            <span class="section-icon">🌳</span>
+            <span class="section-title">What Happened</span>
+            <span class="section-count">${pageCount}</span>
+        </div>
+        <details class="log-details">
+            <summary>Crawl &amp; extraction tree — tap to expand</summary>
+            ${happenedBody}
+        </details>
+    </div>
+        `;
+
+    // --- Section 2: What We Did (decisions) ---
+    const eventDecisions = this.collectEventDecisionLines(results);
+    const merges = summary ? summary.merges || [] : [];
+    const droppedFields = summary ? summary.droppedFields || [] : [];
+    const dedupeAndFilter = summary
+      ? [...(summary.dedupe || []), ...(summary.filtered || [])]
+      : [];
+    const problems = summary
+      ? (summary.problems || []).map(
+          (problem) => `[${problem.level.toUpperCase()}] ${problem.line}`,
+        )
+      : [];
+    const decisionCount = eventDecisions.length + merges.length;
+    const logOnlyParts = summary
+      ? `
+            <div class="insight-subtitle">AI merge decisions (${merges.length})</div>
+            ${this.buildInsightListHtml(merges)}
+            <div class="insight-subtitle">Dropped fields (${droppedFields.length})</div>
+            ${this.buildInsightListHtml(droppedFields)}
+            <div class="insight-subtitle">Dedup / filter</div>
+            ${this.buildInsightListHtml(dedupeAndFilter)}
+            <div class="insight-subtitle">Warnings &amp; errors (${problems.length})</div>
+            ${this.buildInsightListHtml(problems)}`
+      : unavailableNote;
+    const didSection = `
+    <div class="section insight-section">
+        <div class="section-header">
+            <span class="section-icon">🧭</span>
+            <span class="section-title">What We Did</span>
+            <span class="section-count">${decisionCount}</span>
+        </div>
+        <details class="log-details">
+            <summary>Decisions — actions, merges, drops — tap to expand</summary>
+            <div class="insight-subtitle">Event actions (${eventDecisions.length})</div>
+            ${this.buildInsightListHtml(eventDecisions)}
+            ${logOnlyParts}
+        </details>
+    </div>
+        `;
+
+    return `${happenedSection}${didSection}`;
   }
 
   // Generate HTML for the segments panel in discovery section
@@ -7724,6 +7943,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         runId,
         exists: true,
         text,
+        // Untruncated log content for the run-insight summary (parsed, never
+        // embedded in the HTML — only summary lines end up in the display).
+        fullText: content,
         totalLines,
         shownLines: displayLines.length,
         truncated,
