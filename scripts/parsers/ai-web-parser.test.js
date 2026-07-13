@@ -780,3 +780,105 @@ test('getAiConfig delegates to SharedCore.resolveAiConfig', () => {
   assert.equal(parser.normalizePayloadMode('jsonld'), 'jsonld');
   assert.equal(parser.normalizePayloadMode('bogus'), 'best');
 });
+
+test('hasUrlEvidence accepts bare-domain values found verbatim in the source', () => {
+  const parser = createParser();
+  const html = '<html><body>ADVANCED TIX AT WWW.MASSIVE.CLUB and TICKETS AT BEARRACUDA.COM</body></html>';
+  const ctx = parser.buildAiEvidenceContext({ html, url: 'https://x.example/' }, {});
+
+  assert.equal(parser.hasUrlEvidence(ctx, 'WWW.MASSIVE.CLUB'), true);
+  assert.equal(parser.hasUrlEvidence(ctx, 'bearracuda.com'), true);
+  assert.equal(parser.hasUrlEvidence(ctx, 'https://www.massive.club'), true);
+  assert.equal(parser.hasUrlEvidence(ctx, 'https://unrelated.example/tickets'), false);
+});
+
+test('embedded Google Maps URLs are uninteresting images', () => {
+  const parser = createParser();
+  assert.equal(
+    parser.isLikelyUninterestingImageUrl('https://maps.google.com/maps?q=722%20E%20Burnside&t=m&z=10&output=embed'),
+    true
+  );
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/images/flyer.jpg'), false);
+});
+
+test('normalizeAiEvent rolls past-midnight end times to the next day', () => {
+  const parser = createParser();
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+
+  // "Doors 9pm, party until 1am" — endDate arrives as the START's date because the
+  // next-day date is never verbatim in the source.
+  const lateNight = parser.normalizeAiEvent({
+    title: 'BEAR WEEK KICK OFF',
+    startDate: '2026-07-11',
+    startTime: '21:00',
+    endDate: '2026-07-11',
+    endTime: '01:00',
+    address: '247 Commercial St, New York, NY'
+  }, {}, null, cityConfig, null);
+  assert.ok(lateNight);
+  assert.equal(lateNight.startDate.toISOString(), '2026-07-12T01:00:00.000Z');
+  assert.equal(lateNight.endDate.toISOString(), '2026-07-12T05:00:00.000Z', 'end must roll to 1am the NEXT day');
+  assert.ok(lateNight.endDate > lateNight.startDate, 'event must not collapse to zero duration');
+
+  // Same-day ends stay untouched
+  const sameDay = parser.normalizeAiEvent({
+    title: 'TEA DANCE',
+    startDate: '2026-07-11',
+    startTime: '16:00',
+    endDate: '2026-07-11',
+    endTime: '20:00',
+    address: '247 Commercial St, New York, NY'
+  }, {}, null, cityConfig, null);
+  assert.equal(sameDay.endDate.toISOString(), '2026-07-12T00:00:00.000Z'); // 8pm EDT
+});
+
+test('getAiPromptFields default branch still requests split time fields', () => {
+  const parser = createParser();
+  // No OCR, no JSON-LD, no meta — the branch that previously dropped startTime/endTime
+  // and produced midnight-start events.
+  const fields = parser.getAiPromptFields({}, {});
+  const normalized = fields.map(f => parser.normalizePromptFieldName(f));
+  assert.ok(normalized.includes('startdate'), 'startDate expected');
+  assert.ok(normalized.includes('starttime'), 'startTime must accompany startDate');
+  assert.ok(normalized.includes('endtime'), 'endTime must accompany endDate');
+  assert.ok(!normalized.includes('start'), 'full datetime fields removed in split mode');
+});
+
+test('getOcrTextForImage retries overflowed images at reduced resolution before caching failure', async () => {
+  const parser = createParser();
+  const cacheWrites = [];
+  parser.writeCachedOcrResult = async (url, cfg, text) => {
+    cacheWrites.push(text);
+    return '/tmp/cache-path';
+  };
+  const ocrConfig = { cacheEnabled: false, prompt: 'ocr prompt', timeoutSeconds: 5 };
+  const adapter = {
+    fetchImageAsBase64: async (url, timeout, maxDimension) =>
+      maxDimension ? 'smallimg' : 'X'.repeat(500)
+  };
+
+  // First attempt overflows, reduced-resolution retry succeeds
+  let aiCalls = 0;
+  parser.core.callAiGenerate = async (cfg, prompt, label, http, rec, image, diagnostics) => {
+    aiCalls++;
+    if (image.length > 100) {
+      if (diagnostics) diagnostics.failureKind = 'context-overflow';
+      return null;
+    }
+    return JSON.stringify({ text: 'FLYER TEXT', imageClassification: 'event-flyer', eventSummary: 's', confidence: 90, reason: 'r' });
+  };
+  const result = await parser.getOcrTextForImage('https://x.example/big.png', ocrConfig, 'ocr-all', adapter);
+  assert.equal(aiCalls, 2, 'exactly one retry');
+  assert.equal(result.text, 'FLYER TEXT');
+  assert.ok(!cacheWrites.some(text => text.includes('failureKind')), 'no failure cached when the retry succeeds');
+
+  // Both attempts overflow → negative cache
+  cacheWrites.length = 0;
+  parser.core.callAiGenerate = async (cfg, prompt, label, http, rec, image, diagnostics) => {
+    if (diagnostics) diagnostics.failureKind = 'context-overflow';
+    return null;
+  };
+  const failed = await parser.getOcrTextForImage('https://x.example/huge.png', ocrConfig, 'ocr-all', adapter);
+  assert.equal(failed, null);
+  assert.ok(cacheWrites.some(text => text.includes('context-overflow')), 'persistent overflow is negative-cached');
+});

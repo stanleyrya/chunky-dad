@@ -1438,26 +1438,54 @@ class SharedCore {
 
         for (const event of events) {
             const key = this.createEventKey(event);
-            
+
             // Set the key on the event for later use
             event.key = key;
-            
-            if (!seen.has(key)) {
-                seen.set(key, event);
-                deduplicated.push(event);
-            } else {
-                // Merge with existing event if needed
-                const existing = seen.get(key);
+
+            const mergeIntoExisting = async (existing) => {
                 const merged = await this.mergeParsedEvents(existing, event, { httpAdapter, globalConfig });
-                merged.key = key; // Ensure merged event has the key
-                seen.set(key, merged);
-                
-                // Update in deduplicated array
-                const index = deduplicated.findIndex(e => e.key === key);
+                merged.key = existing.key;
+                seen.set(existing.key, merged);
+                const index = deduplicated.indexOf(existing);
                 if (index !== -1) {
                     deduplicated[index] = merged;
                 }
+            };
+
+            const keyMatch = seen.get(key);
+            if (keyMatch) {
+                // A key collision is a hint, not proof — loose key templates (e.g.
+                // "bearracuda-${date}-${city}") collide for two DIFFERENT events by the
+                // same promoter on the same night. Veto the merge when both records
+                // carry place info and the places don't match; merge otherwise
+                // (identity match or inconclusive = previous behavior).
+                if (this.areEventsDistinctByPlace(event, keyMatch)) {
+                    console.warn(`🔄 SharedCore: Key collision but different venues — keeping "${keyMatch.title || 'event'}" and "${event.title || 'event'}" as separate events`);
+                    let uniqueKey = key;
+                    let suffix = 2;
+                    while (seen.has(uniqueKey)) uniqueKey = `${key}--${suffix++}`;
+                    event.key = uniqueKey;
+                    seen.set(uniqueKey, event);
+                    deduplicated.push(event);
+                } else {
+                    await mergeIntoExisting(keyMatch);
+                }
+                continue;
             }
+
+            // No key match — degraded fields (e.g. a missing start time defaulting to
+            // midnight) make keys brittle, so scan for a same-event identity match
+            // before accepting the event as new.
+            const identityMatch = deduplicated.find(existing =>
+                this.getSameEventIdentitySignal(event, existing, { requireCloseStartTimes: false }));
+            if (identityMatch) {
+                console.log(`🔄 SharedCore: Identity match without key match — merging "${event.title || 'event'}" into "${identityMatch.title || 'event'}"`);
+                await mergeIntoExisting(identityMatch);
+                continue;
+            }
+
+            seen.set(key, event);
+            deduplicated.push(event);
         }
         
         // Log results for large batches
@@ -3946,12 +3974,17 @@ class SharedCore {
         const withoutHash = withoutProtocol.split('#')[0];
         const [path, query] = withoutHash.split('?');
         const cleanPath = path.replace(/\/+$/, '');
-        if (!query) return cleanPath;
+        // A bare-domain "ticket URL" (promoter homepage like bearracuda.com) carries no
+        // event-specific identity — two DIFFERENT events by the same promoter share it,
+        // so treating it as an identity signal causes false merges.
+        const hasEventSpecificPath = cleanPath.includes('/');
+        if (!query) return hasEventSpecificPath ? cleanPath : '';
         const keptParams = query.split('&').filter(param => {
             const key = param.split('=')[0];
             return key && !this.trackingParamPattern.test(key);
         });
-        return keptParams.length > 0 ? `${cleanPath}?${keptParams.sort().join('&')}` : cleanPath;
+        if (keptParams.length > 0) return `${cleanPath}?${keptParams.sort().join('&')}`;
+        return hasEventSpecificPath ? cleanPath : '';
     }
 
     parseCoordinatesForIdentity(event, fields) {
@@ -4043,10 +4076,15 @@ class SharedCore {
 
     // Returns the name of the matched identity signal for logging, or null when the
     // events look distinct. Signals are ordered strongest-first.
-    getSameEventIdentitySignal(newEvent, existingEvent) {
+    // options.requireCloseStartTimes (default true): the place-time-name signal demands
+    // start times within 2 hours. Cross-parser dedup relaxes this to same-local-day,
+    // because a degraded scrape (missing start time → midnight default) must still
+    // match its properly-timed twin from another source.
+    getSameEventIdentitySignal(newEvent, existingEvent, options = {}) {
         if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') {
             return null;
         }
+        const requireCloseStartTimes = options.requireCloseStartTimes !== false;
         const incoming = this.buildIdentityComparisonShape(newEvent);
         const existing = this.buildIdentityComparisonShape(existingEvent);
 
@@ -4061,13 +4099,24 @@ class SharedCore {
 
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
         // and any pair of name-ish fields (title/name/shortName) similar.
-        if (this.areDatesEqual(incoming.startDate, existing.startDate, 120) &&
+        if ((!requireCloseStartTimes || this.areDatesEqual(incoming.startDate, existing.startDate, 120)) &&
             this.areIdentityPlacesSimilar(incoming, existing) &&
             this.areIdentityNamesSimilar(incoming, existing)) {
-            return 'place-time-name';
+            return requireCloseStartTimes ? 'place-time-name' : 'place-day-name';
         }
 
         return null;
+    }
+
+    // Positive evidence that two records describe DIFFERENT events: both carry place
+    // information and the places do not match. Used to veto key-collision merges —
+    // a missing venue on either side stays inconclusive (returns false).
+    areEventsDistinctByPlace(eventA, eventB) {
+        const shapeA = this.buildIdentityComparisonShape(eventA);
+        const shapeB = this.buildIdentityComparisonShape(eventB);
+        const hasPlace = (shape) => Boolean(shape.bar || shape.address || shape.coordinates || shape.locationText);
+        if (!hasPlace(shapeA) || !hasPlace(shapeB)) return false;
+        return !this.areIdentityPlacesSimilar(shapeA, shapeB);
     }
 
     areEventsSameIdentity(newEvent, existingEvent) {

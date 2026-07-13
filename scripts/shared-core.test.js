@@ -674,3 +674,103 @@ test('resolveAiConfig defaults and the arbitrateMerges flag', () => {
   const fromGlobal = core.getMergeArbitrationConfig({ source: 'bearracuda' }, { ai: { model: 'global-model' } });
   assert.equal(fromGlobal.model, 'global-model');
 });
+
+// ---------------------------------------------------------------------------
+// Identity-verified cross-parser dedup (2026-07-12 run findings)
+// ---------------------------------------------------------------------------
+
+test('normalizeTicketUrlForIdentity ignores bare-domain promoter homepages', () => {
+  const core = createCore();
+  // Two DIFFERENT events by the same promoter both list "bearracuda.com" — a bare
+  // domain must not act as an identity signal.
+  assert.equal(core.normalizeTicketUrlForIdentity('https://bearracuda.com'), '');
+  assert.equal(core.normalizeTicketUrlForIdentity('https://www.bearracuda.com/'), '');
+  assert.equal(
+    core.normalizeTicketUrlForIdentity('https://www.sickening.events/e/treasurechi/tickets'),
+    'sickening.events/e/treasurechi/tickets'
+  );
+  assert.equal(core.normalizeTicketUrlForIdentity('https://site.example?eventid=5'), 'site.example?eventid=5');
+});
+
+test('deduplicateEvents keeps different-venue events separate despite a key collision', async () => {
+  const core = createCore();
+  // Real scenario: Bearracuda ran TWO events in Portland on the same night, and the
+  // configured keyTemplate collapses to promoter+date+city for both.
+  const parserConfig = { keyTemplate: 'bearracuda-${date}-${city}' };
+  const treasureTrail = {
+    title: 'TREASURE TRAIL Portland PRIDE',
+    bar: 'Sanctuary',
+    address: '33 Northwest 9th Avenue, Portland, OR, 97209',
+    city: 'portland',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-18T03:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: parserConfig
+  };
+  const prideFriday = {
+    title: 'Portland PRIDE FRIDAY | BEARRACUDA',
+    bar: 'NOVA PDX',
+    address: '722 East Burnside Street, Portland, OR, 97214',
+    city: 'portland',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-18T04:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: parserConfig
+  };
+
+  const result = await core.deduplicateEvents([treasureTrail, prideFriday], null);
+  assert.equal(result.length, 2, 'different venues on the same night are different events');
+  assert.notEqual(result[0].key, result[1].key, 'the collision must be disambiguated');
+});
+
+test('deduplicateEvents merges the same event across parsers when keys diverge', async () => {
+  const core = createCore();
+  // Real scenario: the bearracuda.com scrape lost its start time (midnight default,
+  // UTC date July 25) while the sickening.events version had 9pm (UTC date July 26)
+  // — different keys, same event.
+  const degraded = {
+    title: 'Treasure Trail Chicago',
+    bar: 'Cell Block',
+    address: '3702 N Halsted',
+    city: 'chicago',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-07-25T05:00:00.000Z'), // midnight CDT
+    source: 'ai-web'
+  };
+  const complete = {
+    title: 'Treasure Trail Chicago LAUNCH PARTY',
+    bar: 'Cell Block',
+    address: '3702 North Halsted Street, Chicago, IL, 60613',
+    city: 'chicago',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-07-26T02:00:00.000Z'), // 9pm CDT, same local day
+    source: 'ai-web'
+  };
+
+  assert.notEqual(core.createEventKey(degraded), core.createEventKey(complete), 'precondition: keys diverge');
+  const result = await core.deduplicateEvents([degraded, complete], null);
+  assert.equal(result.length, 1, 'same venue + same local day + similar names must merge');
+});
+
+test('deduplicateEvents still merges plain key-collision duplicates', async () => {
+  const core = createCore();
+  const first = {
+    title: 'FURBALL DALLAS',
+    bar: 'STATION 4',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    source: 'ai-web'
+  };
+  const second = { ...first, description: 'second copy' };
+  const result = await core.deduplicateEvents([first, second], null);
+  assert.equal(result.length, 1);
+});
+
+test('relaxed identity signal matches same-local-day despite degraded start times', () => {
+  const core = createCore();
+  const a = { title: 'Treasure Trail Chicago', bar: 'Cell Block', timezone: 'America/Chicago', startDate: new Date('2026-07-25T05:00:00.000Z') };
+  const b = { title: 'Treasure Trail Chicago LAUNCH PARTY', bar: 'Cell Block', timezone: 'America/Chicago', startDate: new Date('2026-07-26T02:00:00.000Z') };
+  assert.equal(core.getSameEventIdentitySignal(a, b), null, 'strict signal requires close start times');
+  assert.equal(core.getSameEventIdentitySignal(a, b, { requireCloseStartTimes: false }), 'place-day-name');
+});
