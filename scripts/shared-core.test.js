@@ -787,3 +787,271 @@ test('filterEventsForExecution tolerates non-array input', () => {
   assert.deepEqual(SharedCore.filterEventsForExecution(null), []);
   assert.deepEqual(SharedCore.filterEventsForExecution(undefined), []);
 });
+
+// ---------------------------------------------------------------------------
+// Automation filtering (resolveAutomationContext / evaluateAutomationForParser)
+// ---------------------------------------------------------------------------
+
+test('resolveAutomationContext detects automation runs from runtime flags', () => {
+  const core = createCore();
+  assert.deepEqual(
+    core.resolveAutomationContext({ runtime: { automationRun: true } }),
+    { automationRun: true, filterParsers: true }
+  );
+  assert.deepEqual(
+    core.resolveAutomationContext({ runtime: { type: 'automated' } }),
+    { automationRun: true, filterParsers: true }
+  );
+  // Legacy fallback: runContext is consulted when runtime is absent
+  assert.deepEqual(
+    core.resolveAutomationContext({ runContext: { automationRun: true } }),
+    { automationRun: true, filterParsers: true }
+  );
+});
+
+test('resolveAutomationContext: automationFilter false disables parser filtering', () => {
+  const core = createCore();
+  assert.deepEqual(
+    core.resolveAutomationContext({ runtime: { automationRun: true, automationFilter: false } }),
+    { automationRun: true, filterParsers: false }
+  );
+});
+
+test('resolveAutomationContext treats manual and empty configs as non-automation', () => {
+  const core = createCore();
+  assert.deepEqual(core.resolveAutomationContext({}), { automationRun: false, filterParsers: false });
+  assert.deepEqual(core.resolveAutomationContext(null), { automationRun: false, filterParsers: false });
+  assert.deepEqual(
+    core.resolveAutomationContext({ runtime: { automationRun: false } }),
+    { automationRun: false, filterParsers: false }
+  );
+});
+
+test('evaluateAutomationForParser requires an explicit automationEnabled: true under filtering', () => {
+  const core = createCore();
+  const filtering = { automationRun: true, filterParsers: true };
+  assert.deepEqual(
+    core.evaluateAutomationForParser({ automationEnabled: true }, filtering),
+    { shouldRun: true, reason: null }
+  );
+  assert.deepEqual(
+    core.evaluateAutomationForParser({ automationEnabled: false }, filtering),
+    { shouldRun: false, reason: 'automation-disabled' }
+  );
+  assert.deepEqual(
+    core.evaluateAutomationForParser({ name: 'No Flag' }, filtering),
+    { shouldRun: false, reason: 'automation-disabled' }
+  );
+  assert.deepEqual(
+    core.evaluateAutomationForParser(null, filtering),
+    { shouldRun: false, reason: 'automation-disabled' }
+  );
+});
+
+test('evaluateAutomationForParser lets everything run when filtering is off', () => {
+  const core = createCore();
+  const noFiltering = { automationRun: false, filterParsers: false };
+  assert.deepEqual(core.evaluateAutomationForParser({ automationEnabled: false }, noFiltering), { shouldRun: true, reason: null });
+  assert.deepEqual(core.evaluateAutomationForParser({}, noFiltering), { shouldRun: true, reason: null });
+  assert.deepEqual(core.evaluateAutomationForParser({}, null), { shouldRun: true, reason: null });
+});
+
+// ---------------------------------------------------------------------------
+// processEvents automation behavior
+// ---------------------------------------------------------------------------
+
+function createDisplayAdapterStub() {
+  const logs = [];
+  const log = async (message) => { logs.push(message); };
+  return { logs, logInfo: log, logWarn: log, logError: log, logSuccess: log };
+}
+
+// Parser configs with no URLs exercise the real processParser without HTTP:
+// the crawl loop is a no-op, so only the enable/skip branching is under test.
+// The 'ai-web' entry exists because parser-less configs fall back to it.
+const STUB_PARSERS = { 'ai-web': {} };
+
+test('processEvents: enabled:false + automationEnabled:true RUNS in automation mode (intentional rule)', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const config = {
+    runtime: { automationRun: true },
+    parsers: [
+      { name: 'Disabled But Automated', enabled: false, automationEnabled: true, urls: [] },
+      { name: 'No Automation Flag', enabled: true, urls: [] }
+    ]
+  };
+
+  const results = await core.processEvents(config, {}, display, STUB_PARSERS);
+
+  assert.deepEqual(results.parserResults.map(r => r.name), ['Disabled But Automated'],
+    '"enabled" is a manual-run switch; automation only honors automationEnabled');
+  assert.deepEqual(results.automationSkippedParsers,
+    [{ name: 'No Automation Flag', reason: 'automation-disabled' }]);
+});
+
+test('processEvents: manual runs honor enabled and ignore automationEnabled', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const config = {
+    parsers: [
+      { name: 'Disabled But Automated', enabled: false, automationEnabled: true, urls: [] },
+      { name: 'Plain Manual Parser', urls: [] }
+    ]
+  };
+
+  const results = await core.processEvents(config, {}, display, STUB_PARSERS);
+
+  assert.deepEqual(results.parserResults.map(r => r.name), ['Plain Manual Parser']);
+  assert.equal(results.automationSkippedParsers, undefined, 'no automation bookkeeping on manual runs');
+});
+
+test('processEvents: automationFilter false runs every parser except manually-disabled ones', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const config = {
+    runtime: { automationRun: true, automationFilter: false },
+    parsers: [
+      { name: 'No Automation Flag', urls: [] },
+      { name: 'Manually Disabled', enabled: false, urls: [] }
+    ]
+  };
+
+  const results = await core.processEvents(config, {}, display, STUB_PARSERS);
+  assert.deepEqual(results.parserResults.map(r => r.name), ['No Automation Flag'],
+    'with filtering off, enabled:false applies again and automationEnabled is not required');
+});
+
+test('processEvents returns empty results when no parsers are configured', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const results = await core.processEvents({ parsers: [] }, {}, display, STUB_PARSERS);
+  assert.equal(results.totalEvents, 0);
+  assert.deepEqual(results.allProcessedEvents, []);
+  assert.deepEqual(results.parserResults, []);
+});
+
+// ---------------------------------------------------------------------------
+// createEventKey / keyTemplate
+// ---------------------------------------------------------------------------
+
+test('createEventKey substitutes ${date}, ${city}, ${venue}, and ${normalizedTitle}', () => {
+  const core = createCore();
+  const event = {
+    title: 'MEGA WOOF! / Dallas',
+    bar: ' The Eagle ',
+    city: 'dallas',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    _parserConfig: { keyTemplate: 'promo-${date}-${city}-${venue}' }
+  };
+  assert.equal(core.createEventKey(event), 'promo-2026-08-01-dallas-the eagle');
+
+  const normalized = core.createEventKey(event, '${normalizedTitle}');
+  assert.equal(normalized, 'mega-woof-dallas', 'specials between words collapse to hyphens');
+});
+
+test('createEventKey falls back to normalizedTitle|date|venue without a keyTemplate', () => {
+  const core = createCore();
+  const event = {
+    title: 'Bear Night',
+    bar: 'The Eagle',
+    city: 'dallas',
+    startDate: new Date('2026-08-01T21:00:00.000Z')
+  };
+  assert.equal(core.createEventKey(event), 'bear-night|2026-08-01|the eagle');
+});
+
+test('createEventKey title normalization strips trailing punctuation and collapses runs', () => {
+  const core = createCore();
+  const key = (title) => core.createEventKey({ title, startDate: new Date('2026-08-01T00:00:00.000Z') }, '${normalizedTitle}');
+  assert.equal(key('Party!!!'), 'party');
+  assert.equal(key('BEARRACUDA:  Invasion'), 'bearracuda-invasion');
+  assert.equal(key('  spaced   out  '), 'spaced-out');
+  assert.equal(key('a...b'), 'a-b');
+});
+
+test('createEventKey uses originalTitle over title and the UTC date of startDate', () => {
+  const core = createCore();
+  const event = {
+    title: 'Renamed Event',
+    originalTitle: 'Original Name',
+    bar: 'Somewhere',
+    startDate: '2026-08-02T01:00:00.000Z' // string input; late-night UTC date is kept as-is
+  };
+  assert.equal(core.createEventKey(event), 'original-name|2026-08-02|somewhere');
+});
+
+// ---------------------------------------------------------------------------
+// filterFutureEvents
+// ---------------------------------------------------------------------------
+
+test('filterFutureEvents drops past events unless allowPastEvents is set', () => {
+  const core = createCore();
+  const past = { title: 'Yesterday', startDate: new Date(Date.now() - 24 * 60 * 60 * 1000) };
+  const future = { title: 'Tomorrow', startDate: new Date(Date.now() + 24 * 60 * 60 * 1000) };
+
+  assert.deepEqual(core.filterFutureEvents([past, future]).map(e => e.title), ['Tomorrow']);
+  assert.deepEqual(
+    core.filterFutureEvents([past, future], null, true).map(e => e.title),
+    ['Yesterday', 'Tomorrow'],
+    'allowPastEvents keeps past events'
+  );
+});
+
+test('filterFutureEvents enforces the daysToLookAhead cutoff', () => {
+  const core = createCore();
+  const inWindow = { title: 'Soon', startDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) };
+  const beyond = { title: 'Too Far', startDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) };
+
+  assert.deepEqual(core.filterFutureEvents([inWindow, beyond], 5).map(e => e.title), ['Soon']);
+  assert.deepEqual(core.filterFutureEvents([inWindow, beyond]).map(e => e.title), ['Soon', 'Too Far'],
+    'no cutoff without daysToLookAhead');
+});
+
+test('filterFutureEvents drops events with missing or invalid startDate', () => {
+  const core = createCore();
+  const events = [
+    { title: 'No Date' },
+    { title: 'Bad Date', startDate: 'not-a-date' },
+    { title: 'Good', startDate: new Date(Date.now() + 60 * 60 * 1000) }
+  ];
+  assert.deepEqual(core.filterFutureEvents(events).map(e => e.title), ['Good']);
+});
+
+// ---------------------------------------------------------------------------
+// filterBearEvents
+// ---------------------------------------------------------------------------
+
+test('filterBearEvents: alwaysBear keeps everything and stamps isBearEvent', () => {
+  const core = createCore();
+  const events = [
+    { title: 'Techno Tuesday' },
+    { title: 'Wine Tasting' }
+  ];
+  const result = core.filterBearEvents(events, { alwaysBear: true });
+  assert.equal(result.length, 2);
+  assert.ok(result.every(e => e.isBearEvent === true));
+});
+
+test('filterBearEvents matches bear keywords in title, description, or bar', () => {
+  const core = createCore();
+  const events = [
+    { title: 'Bear Night' },
+    { title: 'Saturday Social', description: 'hosted by your favorite cub DJ' },
+    { title: 'Happy Hour', bar: 'Woof Lounge' },
+    { title: 'Techno Tuesday', description: 'four to the floor' }
+  ];
+  const result = core.filterBearEvents(events, {});
+  assert.deepEqual(result.map(e => e.title), ['Bear Night', 'Saturday Social', 'Happy Hour']);
+});
+
+test('filterBearEvents: requireKeywords + allowlist gates keyword matching', () => {
+  const core = createCore();
+  const events = [
+    { title: 'Bear Night at the Eagle' },
+    { title: 'FURBALL Bear Bash' }
+  ];
+  // Both match bear keywords, but only the allowlisted one passes the gate
+  const result = core.filterBearEvents(events, { allowlist: ['furball'], requireKeywords: true });
+  assert.deepEqual(result.map(e => e.title), ['FURBALL Bear Bash']);
+});
