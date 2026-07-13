@@ -246,6 +246,9 @@ class AiWebParser {
         this.aiPromptHistory = [];
         this.defaultOcrModel = 'qwen3-vl:4b-instruct';
         this.defaultOcrPrompt = "You are performing OCR on an event flyer.\n\nSTEP 1: OCR\nExtract ALL visible text from the image.\n\nRules:\n- Copy text exactly as shown.\n- Preserve line breaks when possible.\n- Do not summarize.\n- Do not interpret.\n- Do not correct spelling.\n- Do not infer missing words.\n\nSTEP 2: Classification\n\nClassify the image into ONE category:\n\nad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\nevent-flyer: Single event poster/flyer - ONE primary event with ONE title, ONE venue, and ONE date or continuous date range. May contain schedules, activities, DJs, performers, or sub-events that are clearly part of the same event. Examples: Bear Week, Bear Weekend, Pride Festival, Camp Weekend, Resort Weekend Package.\nmulti-event-flyer: Two or more independent events with different titles, different dates/times, and separate ticketing. Often appears as a calendar, event listing, or monthly schedule.\nlogo: Brand or organization logo (minimal text, just brand name)\nthumbnail: Small preview image (low detail)\nhero-banner: Large header/banner image (prominent on page)\n\nDecision rule: If there is ONE overarching event name and the listed activities appear to belong to that event, classify as event-flyer. Only classify as multi-event-flyer when multiple independent events are advertised that require separate tickets.\n\nIMPORTANT CONTEXT: This is for a gay bear community travel guide. Events may be part of:\n- \"Bear Week\" or \"Bear Weekend\" themed events\n- Annual bear gatherings (e.g., \"Puerto Vallarta Bear Week\", \"Sitges Bear Week\")\n- Regular bear-themed parties or meetups\n- Events at bear-owned businesses or bear-friendly venues\n\nSTEP 3: Event Analysis\n\nDetermine:\n- eventName: The primary event title\n- venue: The venue or venue group name\n- startDate: Start date/time if visible\n- endDate: End date/time if visible\n\nUse only information visible in the image.\n\nSTEP 4: Summary\n\nCreate a concise summary describing:\n- event name\n- venue\n- date/time\n- why it may be relevant to the bear community\n\nReturn JSON only with these fields:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"eventSummary\": \"a concise 1-2 sentence summary of the event including: event name, venue, date/time, and any bear-week context if applicable. Focus on what makes this event notable for the bear community.\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
+        // When an image overflows the vision model's context, retry once at this
+        // longest-side cap (the adapter's default first-pass cap is 1568px).
+        this.ocrOverflowRetryMaxDimension = 1024;
         this.defaultOcrRequestConfig = {
             // With requests serialized (maxConcurrentRequests), anything slower than
             // 2 minutes on the local vision model is stuck, not slow.
@@ -2654,6 +2657,8 @@ class AiWebParser {
             'thumb',          // Thumbnails (already handled by classification)
             'thumbnail',      // Thumbnails
             '/_next/static/', // Next.js build assets (map placeholders, UI chrome)
+            'maps.google.com', // Embedded map iframes picked up as image candidates
+            'output=embed',   // Google Maps embed URLs — not images, always fail download
         ];
         for (const pattern of uninterestingPatterns) {
             if (lowerUrl.includes(pattern)) return true;
@@ -3134,7 +3139,28 @@ class AiWebParser {
         }
         console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars) for ${normalizedUrl} (downloaded in ${Date.now() - downloadStart}ms)`);
         const diagnostics = {};
-        const rawResponse = await this.core.callAiGenerate(ocrConfig, ocrConfig.prompt, passLabel, httpAdapter, this.recordAiPrompt.bind(this), base64Image, diagnostics);
+        let rawResponse = await this.core.callAiGenerate(ocrConfig, ocrConfig.prompt, passLabel, httpAdapter, this.recordAiPrompt.bind(this), base64Image, diagnostics);
+        if (!rawResponse && diagnostics.failureKind === 'context-overflow') {
+            // Vision tokens scale with pixels — retry once at a harder downscale before
+            // writing the image off (adapters without resize support return the same
+            // bytes, in which case we skip the pointless retry).
+            let retrySucceeded = false;
+            try {
+                const retryImage = await httpAdapter.fetchImageAsBase64(normalizedUrl, ocrConfig.timeoutSeconds, this.ocrOverflowRetryMaxDimension);
+                if (retryImage && retryImage.length < base64Image.length) {
+                    console.log(`🤖 AI Web: Retrying OCR at reduced resolution (${retryImage.length} chars, was ${base64Image.length}) for ${normalizedUrl}`);
+                    const retryDiagnostics = {};
+                    rawResponse = await this.core.callAiGenerate(ocrConfig, ocrConfig.prompt, passLabel, httpAdapter, this.recordAiPrompt.bind(this), retryImage, retryDiagnostics);
+                    retrySucceeded = Boolean(rawResponse);
+                    diagnostics.failureKind = retryDiagnostics.failureKind || (rawResponse ? null : diagnostics.failureKind);
+                }
+            } catch (error) {
+                console.warn(`🤖 AI Web: Reduced-resolution OCR retry failed for ${normalizedUrl}: ${error.message}`);
+            }
+            if (retrySucceeded) {
+                console.log(`🤖 AI Web: Reduced-resolution OCR retry succeeded for ${normalizedUrl}`);
+            }
+        }
         if (!rawResponse) {
             // Context overflow is deterministic for a given image+model — cache the
             // failure so the same image is not re-downloaded and re-sent on every
@@ -5078,7 +5104,33 @@ class AiWebParser {
             console.log('🤖 AI Web: Defaulting to split fields (no structured data or OCR context detected)');
             // Default to split fields (same as unstructured)
             const fullDateFields = ['start', 'end'];
+            const hasStartRequested = selected.some(field => this.normalizePromptFieldName(field) === 'start');
+            const hasEndRequested = selected.some(field => this.normalizePromptFieldName(field) === 'end');
             selected = selected.filter(field => !fullDateFields.includes(field));
+
+            // Same time companions as the OCR branch — plain page text can still carry
+            // times ("Doors Open at 9:00 pm") even when no OCR/structured signals exist.
+            // Without these, events from this branch get midnight defaults.
+            const hasStartDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'startdate');
+            const hasStartTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'starttime');
+            if ((hasStartRequested || hasStartDateSelected) && !hasStartTimeSelected) {
+                selected.push('startTime');
+                console.log(`🤖 AI Web: Added split field => startTime (because ${hasStartRequested ? 'start' : 'startDate'} was selected)`);
+            }
+            if (hasStartRequested && !hasStartDateSelected) {
+                selected.push('startDate');
+                console.log('🤖 AI Web: Added split field => startDate (because start was selected)');
+            }
+            const hasEndDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'enddate');
+            const hasEndTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'endtime');
+            if ((hasEndRequested || hasEndDateSelected) && !hasEndTimeSelected) {
+                selected.push('endTime');
+                console.log(`🤖 AI Web: Added split field => endTime (because ${hasEndRequested ? 'end' : 'endDate'} was selected)`);
+            }
+            if (hasEndRequested && !hasEndDateSelected) {
+                selected.push('endDate');
+                console.log('🤖 AI Web: Added split field => endDate (because end was selected)');
+            }
         }
 
         // Ensure fields follow the canonical order from EventSchema
@@ -5648,9 +5700,14 @@ TEXT:
     }
 
     hasUrlEvidence(evidenceContext, value) {
-        const normalized = this.normalizeHttpUrlValue(value);
-        if (!normalized) return false;
-        if (this.hasExactEvidence(evidenceContext, normalized)) {
+        const rawText = String(value || '').trim();
+        if (!rawText) return false;
+        // Bare-domain values ("WWW.MASSIVE.CLUB", "bearracuda.com") fail strict URL
+        // normalization but are still verifiable verbatim against the source —
+        // normalize them by prefixing a scheme instead of rejecting outright.
+        const normalized = this.normalizeHttpUrlValue(rawText)
+            || this.normalizeHttpUrlValue(`https://${rawText}`);
+        if (normalized && this.hasExactEvidence(evidenceContext, normalized)) {
             return true;
         }
         if (typeof normalized === 'string') {
@@ -5665,7 +5722,7 @@ TEXT:
                 }
             }
         }
-        return this.hasExactEvidence(evidenceContext, String(value || '').trim());
+        return this.hasExactEvidence(evidenceContext, rawText);
     }
 
     extractDateEvidenceParts(value) {
@@ -6373,6 +6430,19 @@ TEXT:
         // If we only have a start date and no end date info at all, match the end exactly to the start
         if (!endProvided && !endDateRaw && !endTimeRaw && combinedStartDate) {
             combinedEndDate = new Date(combinedStartDate);
+        }
+
+        // Past-midnight ends ("Party Goes Until 2:00 am!") usually arrive with the
+        // START's date because the next-day endDate isn't verbatim in the source and
+        // gets evidence-dropped. When an explicit end time lands before the start,
+        // roll it to the next day instead of collapsing the event to zero duration.
+        if (endTimeRaw && !endProvided
+            && combinedStartDate instanceof Date && !Number.isNaN(combinedStartDate.getTime())
+            && combinedEndDate instanceof Date && !Number.isNaN(combinedEndDate.getTime())
+            && combinedEndDate.getTime() < combinedStartDate.getTime()
+            && combinedStartDate.getTime() - combinedEndDate.getTime() < 24 * 60 * 60 * 1000) {
+            combinedEndDate = new Date(combinedEndDate.getTime() + 24 * 60 * 60 * 1000);
+            console.log(`🤖 AI Web: End time precedes start — assuming past-midnight end (+1 day): ${combinedEndDate.toISOString()}`);
         }
 
         // Without a timezone, combineDateAndTime stored the extracted local time as wall-clock
