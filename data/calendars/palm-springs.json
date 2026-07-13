@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/Los_Angeles",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "9PM-12PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.8189101,
+        "lng": -116.5470896
+      },
+      "startDate": "2026-02-21T21:00:00",
+      "endDate": "2026-02-22T12:00:00",
+      "unprocessedDescription": "description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n\raddress: 333 S Palm Canyon Dr Unit, Palm Springs, CA 92262\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651\ncover: $16.84 - $43.15 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE\nkey: megawoof|2026-02-22|palm springs",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "88686A1C-DD82-4C9B-A917-74B3647FD814",
+      "uid": "88686A1C-DD82-4C9B-A917-74B3647FD814",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Palm Springs",
+      "cover": "$16.84 - $43.15 (as of 2/8)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175105336%2F185013722403%2F1%2Foriginal.20260117-003934?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5e6fb763c38a115a60476dbf25ac3ad3",
+      "tea": "SHINY DISCO BALLS IBC WEEKEND",
+      "address": "333 S Palm Canyon Dr Unit, Palm Springs, CA 92262",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE",
+      "ticketUrl": "https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651",
+      "shortName": "MEGA-WOOF",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.8189101%2C-116.5470896&query_place_id=ChIJs-Xb_9Qa24ARfHntwodp5aE",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/shiny-disco-balls-ibc-weekend-mlk-special-early-bird-15-tickets-1976070697651",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-22570191"
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/Chicago",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "NEW ORLEANS",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2025-08-29T21:00:00",
+      "endDate": "2025-08-30T02:00:00",
+      "unprocessedDescription": "description: Music & Entertainment\n• Matt Stands &amp; Freddy\r King of Pants (Seattle)\n• Decor &amp; Photos by Dusti Cunningham\nbar: Joy Theatre\naddress: 1200 Canal St, New Orleans, LA 70112\ntimezone: America/Chicago\nurl: https://bearracuda.com/events/new-orleans/\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-nola-august-2025-web.jpg\nfacebook: https://www.facebook.com/share/1EZ2P4X4Ek/\nticketUrl: https://www.ticketmaster.com/bearracuda-new-orleans-louisiana-08-29-2025/event/1B006275D3607BD4\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=1200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112\nkey: bearracuda-2025-08-30-new-orleans",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "96ED5A57-14F4-4189-81C5-1AA44B8E365F",
+      "uid": "96ED5A57-14F4-4189-81C5-1AA44B8E365F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Joy Theatre",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-nola-august-2025-web.jpg",
+      "tea": "Music & Entertainment",
+      "address": "1200 Canal St, New Orleans, LA 70112",
+      "website": "https://bearracuda.com/events/new-orleans/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/share/1EZ2P4X4Ek/",
+      "gmaps": "https://maps.google.com/?q=1200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
+      "ticketUrl": "https://www.ticketmaster.com/bearracuda-new-orleans-louisiana-08-29-2025/event/1B006275D3607BD4",
+      "shortName": "Bear-rac-uda",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/new-orleans/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/share/1EZ2P4X4Ek/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.google.com/?q=1200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.ticketmaster.com/bearracuda-new-orleans-louisiana-08-29-2025/event/1B006275D3607BD4",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "new-orleans-605b589e"
+    },
+    {
+      "name": "New Orleans⚜️",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-09-04T21:00:00",
+      "endDate": "2026-09-05T02:00:00",
+      "unprocessedDescription": "description: Music & Entertainment\n• DJ MATEO SEGADE\n• KELLY \r(Shoes) LIVE!\nbar: Joy Theater\naddress: 1200 Canal Street, New Orleans, LA\ntimezone: America/Chicago\nimage: https://bearracuda.com/wp-content/uploads/2026/03/webnola-2.jpg\nfacebook: https://www.facebook.com/events/839699329141079\nticketUrl: https://www.ticketmaster.com/event/1B006454A32CE162\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nwebsite: https://bearracuda.com/events/decadence/\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20Orleans%2C%20LA\nkey: bearracuda-2026-09-05-nola",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "74648B34-07A1-4BD2-8E78-D67B991A920E",
+      "uid": "74648B34-07A1-4BD2-8E78-D67B991A920E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Joy Theater",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/03/webnola-2.jpg",
+      "tea": "Music & Entertainment",
+      "address": "1200 Canal Street, New Orleans, LA",
+      "website": "https://bearracuda.com/events/decadence/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/839699329141079",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20Orleans%2C%20LA",
+      "ticketUrl": "https://www.ticketmaster.com/event/1B006454A32CE162",
+      "shortName": "Bear-rac-uda",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/decadence/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/839699329141079",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20Orleans%2C%20LA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.ticketmaster.com/event/1B006454A32CE162",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "new-orleans-578ac888"
+    }
+  ]
+}

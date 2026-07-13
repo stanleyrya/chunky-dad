@@ -10,6 +10,7 @@ on:
       - 'js/city-config.js'
       - '.github/workflows/update-calendar-data.yml'
       - 'tools/generate-event-pages.js'
+      - 'tools/process-calendars.js'
       - 'tools/generate-og-images.js'
       - 'tools/download-images.js'
       - 'tools/extract-favicon-colors.js'

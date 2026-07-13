@@ -1,0 +1,122 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/New_York",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "Riptide",
+      "day": "Thursday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0510476,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-07-16T22:00:00",
+      "unprocessedDescription": "description: MUSIC\\:\nGSP + HARLOW\nJOCKS · UNDERWEAR · GEAR\n\rLIMITED CLOTHES CHECK (FIRST COME, FIRST SERVED)\n$5 DISCOUNT WITH BEAR TAGS\nbar: REDROOM\naddress: 258 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/UnderbearNYC-bear-week-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png/v1/fill/w_296,h_476,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png\ncover: $5 DISCOUNT WITH BEAR TAGS\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=REDROOM%2C%20258%20COMMERCIAL%20ST%2C%20PROVINCETOWN%2C%20MA\nkey: riptide|2026-07-17|redroom",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "EA8572E1-44B4-47B7-A8F3-9D128EE5C5A5",
+      "uid": "EA8572E1-44B4-47B7-A8F3-9D128EE5C5A5",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "REDROOM",
+      "cover": "$5 DISCOUNT WITH BEAR TAGS",
+      "image": "https://static.wixstatic.com/media/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png/v1/fill/w_296,h_476,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "MUSIC:",
+      "address": "258 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=REDROOM%2C%20258%20COMMERCIAL%20ST%2C%20PROVINCETOWN%2C%20MA",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/UnderbearNYC-bear-week-2026",
+      "shortName": "FUR-BALL",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=REDROOM%2C%20258%20COMMERCIAL%20ST%2C%20PROVINCETOWN%2C%20MA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/UnderbearNYC-bear-week-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "riptide-3342cdd1"
+    },
+    {
+      "name": "FURBALL",
+      "day": "Saturday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2026-07-11T22:00:00",
+      "unprocessedDescription": "description: PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY O\rPENING PARTY\nbar: Boatslip\naddress: 161 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_560,h_700,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg\ncover: FREE FOR BEAR WEEK PACKAGE REGISTRANTS\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St\nkey: furball|2026-07-12|boatslip",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "D0D6C7F9-24C0-48F2-B9AB-8F785BF13389",
+      "uid": "D0D6C7F9-24C0-48F2-B9AB-8F785BF13389",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "cover": "FREE FOR BEAR WEEK PACKAGE REGISTRANTS",
+      "image": "https://static.wixstatic.com/media/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_560,h_700,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY OPENING PARTY",
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026",
+      "shortName": "FUR-BALL",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-51be4236"
+    }
+  ]
+}

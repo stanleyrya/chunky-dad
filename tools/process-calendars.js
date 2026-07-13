@@ -46,8 +46,8 @@ try {
     process.exit(1);
 }
 
-// Target cities to test the new JSON logic with
-const TARGET_CITIES = ['nyc', 'seattle'];
+// JSON mode is enabled for all configured cities
+const TARGET_CITIES = Object.keys(CITY_CONFIG);
 
 async function processCalendars() {
     let successCount = 0;

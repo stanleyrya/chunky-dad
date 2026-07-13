@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "calendarTimezone": "America/New_York",
+    "timezoneData": null
+  },
+  "events": [
+    {
+      "name": "MEGAWOOF",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 38.9162081,
+        "lng": -77.0213011
+      },
+      "startDate": "2026-02-13T21:00:00",
+      "endDate": "2026-02-14T03:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee\rkend\nbar: Uproar Lounge & Restaurant\naddress: 639 Florida Avenue Northwest, Washington, DC 20001\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055\ncover: $11.58 - $22.10 (as of 2/8)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.20260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc\nkey: megawoof|2026-02-14|uproar lounge & restaurant",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC",
+      "uid": "C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Uproar Lounge & Restaurant",
+      "cover": "$11.58 - $22.10 (as of 2/8)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1175380239%2F185013722403%2F1%2Foriginal.20260120-203950?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8fcf2a3b96dea4876485890a59c19bba",
+      "tea": "MEGAWOOF AMERICA - S.VALENTINE + President Day Weekend",
+      "address": "639 Florida Avenue Northwest, Washington, DC 20001",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055",
+      "shortName": "MEGA-WOOF",
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=38.9162081%2C-77.0213011&query_place_id=ChIJvfMkyPq3t4kRztqpgf-qNEc",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-svalentine-weekend-tickets-1981048053055",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-5e604137"
+    }
+  ]
+}

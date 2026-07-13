@@ -1400,8 +1400,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.loadCalendarDataFallback(cityKey, cityConfig);
         }
         
-        // Helper function to process dates recursively
-        const isJsonCity = (cityKey === 'nyc' || cityKey === 'seattle');
+        // All cities use pre-processed JSON calendar data
+        const isJsonCity = true;
         const ext = isJsonCity ? 'json' : 'ics';
 
         // Normal flow: Try to load cached calendar data first
