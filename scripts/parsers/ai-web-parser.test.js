@@ -882,3 +882,110 @@ test('getOcrTextForImage retries overflowed images at reduced resolution before 
   assert.equal(failed, null);
   assert.ok(cacheWrites.some(text => text.includes('context-overflow')), 'persistent overflow is negative-cached');
 });
+
+// ---------------------------------------------------------------------------
+// Organizer/site-brand guard (2026-07-12 run findings: bearracuda.com pages
+// leaked bar: "BEARRACUDA" — the promoter, not a venue — from og:title)
+// ---------------------------------------------------------------------------
+
+const BEARRACUDA_HTML = `
+  <html>
+    <head>
+      <meta property="og:site_name" content="BEARRACUDA" />
+      <meta property="og:title" content="Portland PRIDE FRIDAY | BEARRACUDA" />
+      <script type="application/ld+json">
+        {"@context":"https://schema.org","@graph":[
+          {"@type":"Organization","name":"Bearracuda, Inc.","alternateName":"Bearracuda"},
+          {"@type":"WebSite","name":"BEARRACUDA"}
+        ]}
+      </script>
+    </head>
+    <body><p>Pride Friday at Nova PDX, 722 E Burnside St</p></body>
+  </html>
+`;
+
+test('extractPageBrandNames reads JSON-LD Organization/WebSite and og:site_name', () => {
+  const parser = createParser();
+  const brands = parser.extractPageBrandNames(BEARRACUDA_HTML);
+  assert.ok(brands.includes('Bearracuda, Inc.'));
+  assert.ok(brands.includes('Bearracuda'));
+  assert.ok(brands.includes('BEARRACUDA'));
+});
+
+test('normalizeAiEvent drops a bar matching the page organizer and strips the title brand suffix', () => {
+  const parser = createParser();
+  const aiEvent = {
+    title: 'Portland PRIDE FRIDAY | BEARRACUDA',
+    bar: 'BEARRACUDA',
+    startDate: '2026-07-17',
+    startTime: '22:00'
+  };
+  const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };
+
+  const event = parser.normalizeAiEvent(aiEvent, {}, htmlData, null, null);
+  assert.ok(event, 'event should normalize');
+  assert.equal(event.bar, '', 'the promoter brand must not survive as the venue');
+  assert.equal(event.title, 'Portland PRIDE FRIDAY', 'the brand suffix must be stripped from the title');
+});
+
+test('normalizeAiEvent keeps an explicitly configured bar even when it matches the site brand', () => {
+  // Venue sites ARE their own brand (a bar scraping its own homepage): a
+  // configured metadata bar is a deliberate override and must survive the guard —
+  // including as the fallback when the AI-extracted bar is dropped as the brand.
+  const parser = createParser();
+  const parserConfig = { metadata: { bar: 'Bearracuda' } };
+  const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };
+
+  const configured = parser.normalizeAiEvent(
+    { title: 'Portland PRIDE FRIDAY', startDate: '2026-07-17', startTime: '22:00' },
+    parserConfig, htmlData, null, null);
+  assert.equal(configured.bar, 'Bearracuda', 'configured bar must survive the brand guard');
+
+  const fallback = parser.normalizeAiEvent(
+    { title: 'Portland PRIDE FRIDAY', bar: 'BEARRACUDA', startDate: '2026-07-17', startTime: '22:00' },
+    parserConfig, htmlData, null, null);
+  assert.equal(fallback.bar, 'Bearracuda', 'dropped AI brand-bar must fall back to the configured value');
+});
+
+test('normalizeAiEvent drops a bar matching og:site_name when the page has no JSON-LD', () => {
+  const parser = createParser();
+  const html = `
+    <html>
+      <head><meta property="og:site_name" content="BEARRACUDA" /></head>
+      <body><p>Provincetown Bear Week kickoff</p></body>
+    </html>
+  `;
+  const aiEvent = {
+    title: 'Provincetown⚓ | BEARRACUDA',
+    bar: 'Bearracuda',
+    startDate: '2026-07-17'
+  };
+
+  const event = parser.normalizeAiEvent(aiEvent, {}, { html, url: 'https://bearracuda.com/ptown' }, null, null);
+  assert.ok(event, 'event should normalize');
+  assert.equal(event.bar, '', 'og:site_name alone must be enough to reject the brand');
+  assert.equal(event.title, 'Provincetown⚓');
+});
+
+test('normalizeAiEvent keeps a legitimate venue and non-brand titles untouched', () => {
+  const parser = createParser();
+  const aiEvent = {
+    title: 'Portland PRIDE FRIDAY | Late Night',
+    bar: 'Nova PDX',
+    startDate: '2026-07-17',
+    startTime: '22:00'
+  };
+  const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };
+
+  const event = parser.normalizeAiEvent(aiEvent, {}, htmlData, null, null);
+  assert.ok(event, 'event should normalize');
+  assert.equal(event.bar, 'Nova PDX', 'real venues must survive the brand guard');
+  assert.equal(event.title, 'Portland PRIDE FRIDAY | Late Night', 'non-brand segments are never stripped');
+});
+
+test('matchesPageBrandName matches across trailing corporate suffixes and punctuation', () => {
+  const parser = createParser();
+  assert.equal(parser.matchesPageBrandName('BEARRACUDA', ['Bearracuda, Inc.']), true);
+  assert.equal(parser.matchesPageBrandName('bearracuda inc', ['Bearracuda, Inc.']), true);
+  assert.equal(parser.matchesPageBrandName('Nova PDX', ['Bearracuda, Inc.', 'BEARRACUDA']), false);
+});

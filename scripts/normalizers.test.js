@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { LocationNormalizer } = require('./normalizers');
+const { LocationNormalizer, OpenStreetMapNormalizer } = require('./normalizers');
 const { SharedCore } = require('./shared-core');
 const { EventSchema } = require('./event-schema');
 
@@ -64,6 +64,99 @@ test('resolveWallClockDates leaves dates untouched when the timezone stays unkno
 
   assert.equal(event.startDate.toISOString(), '2026-07-17T22:00:00.000Z');
   assert.equal(event._timezoneUnresolved, true, 'flag should remain so the gap stays visible');
+});
+
+// ---------------------------------------------------------------------------
+// OpenStreetMapNormalizer forward-geocode city validation (2026-07-12 run
+// findings: flyer-OCR typo "922 E. BURNSIDE" geocoded to Burnside, Michigan
+// for an event in Portland)
+// ---------------------------------------------------------------------------
+
+function createOsmNormalizer() {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema });
+  return new OpenStreetMapNormalizer(core);
+}
+
+// Stub httpAdapter that records the requested URLs and returns canned
+// Nominatim search results.
+function createStubHttpAdapter(results) {
+  const requests = [];
+  return {
+    requests,
+    fetchData: async (url) => {
+      requests.push(url);
+      return JSON.stringify(results);
+    }
+  };
+}
+
+const WRONG_CITY_RESULT = {
+  lat: '43.2105820',
+  lon: '-83.0771632',
+  display_name: 'Burnside, Argyle Township, Sanilac County, Michigan, United States',
+  address: { hamlet: 'Burnside', county: 'Sanilac County', state: 'Michigan' }
+};
+
+const PORTLAND_RESULT = {
+  lat: '45.5230622',
+  lon: '-122.6564816',
+  display_name: '722, East Burnside Street, Portland, Multnomah County, Oregon, 97214, United States',
+  address: { city: 'Portland', county: 'Multnomah County', state: 'Oregon' }
+};
+
+test('forward geocode ignores a result that resolves outside the event city', async () => {
+  const normalizer = createOsmNormalizer();
+  const httpAdapter = createStubHttpAdapter([WRONG_CITY_RESULT]);
+  const event = { title: 'PRIDE FRIDAY', address: '922 E. BURNSIDE', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, undefined, 'coordinates in the wrong state must not be applied');
+});
+
+test('forward geocode appends the event city to the query and accepts a matching result', async () => {
+  const normalizer = createOsmNormalizer();
+  const httpAdapter = createStubHttpAdapter([PORTLAND_RESULT]);
+  const event = { title: 'PRIDE FRIDAY', address: '922 E. BURNSIDE', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '45.5230622, -122.6564816');
+  assert.equal(httpAdapter.requests.length, 1);
+  assert.ok(
+    httpAdapter.requests[0].includes(encodeURIComponent('922 E. BURNSIDE, portland')),
+    `query must carry the city for context: ${httpAdapter.requests[0]}`
+  );
+  assert.ok(httpAdapter.requests[0].includes('&addressdetails=1'), 'validation needs address details');
+});
+
+test('forward geocode does not append the city when the address already contains it', async () => {
+  const normalizer = createOsmNormalizer();
+  const httpAdapter = createStubHttpAdapter([PORTLAND_RESULT]);
+  const event = { title: 'PRIDE FRIDAY', address: '722 E Burnside St, Portland, OR', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '45.5230622, -122.6564816');
+  assert.ok(
+    httpAdapter.requests[0].includes(`q=${encodeURIComponent('722 E Burnside St, Portland, OR')}&`),
+    `query must stay the bare address: ${httpAdapter.requests[0]}`
+  );
+});
+
+test('forward geocode without an event city keeps the legacy query and accepts the result', async () => {
+  const normalizer = createOsmNormalizer();
+  const httpAdapter = createStubHttpAdapter([WRONG_CITY_RESULT]);
+  const event = { title: 'MYSTERY EVENT', address: '922 E. BURNSIDE' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '43.2105820, -83.0771632', 'no city context means no validation (old behavior)');
+  assert.equal(
+    httpAdapter.requests[0],
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent('922 E. BURNSIDE')}&limit=1`,
+    'the request URL must be byte-identical to the pre-validation behavior'
+  );
 });
 
 test('resolveWallClockDates ignores events without the wall-clock flag', () => {

@@ -6271,7 +6271,7 @@ TEXT:
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
             htmlData && typeof htmlData.url === 'string' ? htmlData.url : ''
         );
-        const title = this.firstNonEmpty(
+        let title = this.firstNonEmpty(
             aiEvent.title,
             aiEvent.name,
             aiEvent.summary,
@@ -6283,12 +6283,34 @@ TEXT:
             this.getResolvedParserMetadataFieldValue(parserConfig, ['description', 'desc'], aiEvent),
             ''
         );
-        const bar = this.firstNonEmpty(
-            aiEvent.bar,
-            aiEvent.venue,
+        const aiBar = this.firstNonEmpty(aiEvent.bar, aiEvent.venue, '');
+        const configBar = this.firstNonEmpty(
             this.getResolvedParserMetadataFieldValue(parserConfig, ['bar', 'venue'], aiEvent),
             ''
         );
+        let bar = aiBar || configBar;
+
+        // Organizer/site-brand guard: promoter pages surface the brand in og:title
+        // ("Portland PRIDE FRIDAY | BEARRACUDA") and extraction leaks it into
+        // bar/title. The brand names are derived from the page's own markup —
+        // see extractPageBrandNames — never from a hardcoded organizer list.
+        const pageBrandNames = this.extractPageBrandNames(
+            htmlData && typeof htmlData.html === 'string' ? htmlData.html : ''
+        );
+        if (pageBrandNames.length > 0) {
+            // Only AI-extracted values are guarded: an explicitly configured bar is a
+            // deliberate override and must survive even when it matches the site brand
+            // (venue sites ARE their own brand, e.g. a bar scraping its own homepage).
+            if (bar && bar === aiBar && this.matchesPageBrandName(bar, pageBrandNames)) {
+                console.log(`🤖 AI Web: Dropping bar "${bar}" — matches the page's organizer/site name, not a venue`);
+                bar = configBar;
+            }
+            const strippedTitle = this.stripPageBrandFromTitle(title, pageBrandNames);
+            if (strippedTitle !== title) {
+                console.log(`🤖 AI Web: Stripping page brand from title "${title}" → "${strippedTitle}"`);
+                title = strippedTitle;
+            }
+        }
         const address = this.firstNonEmpty(
             aiEvent.address,
             aiEvent.addr,
@@ -6921,6 +6943,108 @@ TEXT:
         }
         const selected = eventResults.length > 0 ? eventResults : results;
         return selected.slice(0, this.extractionLimits.maxJsonLdParts);
+    }
+
+    // Derive the page's own brand names — the organizer/site identity the page
+    // declares about itself: JSON-LD Organization name + alternateName, JSON-LD
+    // WebSite name, and the og:site_name meta tag. Promoter pages (e.g.
+    // bearracuda.com) put the brand in og:title/page titles and extraction leaks
+    // it into bar/title; deriving the brand from the page keeps the guard generic
+    // (no hardcoded organizer lists). og:site_name is deliberately excluded from
+    // prompt meta parts (excludedMetaKeyRegexes), so it is read from the raw HTML.
+    extractPageBrandNames(html) {
+        const source = String(html || '').slice(0, 500000);
+        const names = new Set();
+        const addName = value => {
+            const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
+            if (text) names.add(text);
+        };
+        const collectBrandNodes = (node, depth) => {
+            if (!node || depth > 6) return;
+            if (Array.isArray(node)) {
+                node.forEach(child => collectBrandNodes(child, depth + 1));
+                return;
+            }
+            if (typeof node !== 'object') return;
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            const isBrandType = types.some(type =>
+                /^(Organization|WebSite)$/i.test(String(type || '').replace(/^https?:\/\/schema\.org\//i, '').trim()));
+            if (isBrandType) {
+                if (typeof node.name === 'string') addName(node.name);
+                const alternates = Array.isArray(node.alternateName) ? node.alternateName : [node.alternateName];
+                alternates.forEach(alternate => {
+                    if (typeof alternate === 'string') addName(alternate);
+                });
+            }
+            // Only descend through graph containers: an Organization nested inside an
+            // Event (e.g. as location) may legitimately be the venue, not the brand.
+            if (node['@graph']) collectBrandNodes(node['@graph'], depth + 1);
+        };
+        const scriptRegex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptRegex.exec(source)) !== null) {
+            const text = this.normalizeWhitespace(this.decodeBasicEntities(match[1] || ''));
+            if (!text) continue;
+            let parsed = null;
+            try {
+                parsed = JSON.parse(text);
+            } catch (_) {
+                continue;
+            }
+            collectBrandNodes(parsed, 0);
+        }
+        const metaRegex = /<meta\b[^>]*>/gi;
+        while ((match = metaRegex.exec(source)) !== null) {
+            const tag = match[0];
+            const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
+            if (!nameMatch || this.normalizeWhitespace(nameMatch[1]).toLowerCase() !== 'og:site_name') continue;
+            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
+            if (contentMatch) addName(this.sanitizeMetaContent('og:site_name', contentMatch[1]));
+        }
+        return Array.from(names);
+    }
+
+    // Comparable variants of a brand-ish name: lowercased, punctuation stripped,
+    // plus a copy without a trailing corporate suffix so "Bearracuda, Inc." matches
+    // both "bearracuda inc" and "Bearracuda".
+    getBrandNameVariants(value) {
+        const variants = new Set();
+        const stripped = String(value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9&\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!stripped) return variants;
+        variants.add(stripped);
+        const withoutSuffix = stripped.replace(/\s+(inc|incorporated|llc|ltd|co|corp|corporation|company)$/, '').trim();
+        if (withoutSuffix) variants.add(withoutSuffix);
+        return variants;
+    }
+
+    matchesPageBrandName(value, brandNames) {
+        const valueVariants = this.getBrandNameVariants(value);
+        if (valueVariants.size === 0) return false;
+        return (Array.isArray(brandNames) ? brandNames : []).some(brand => {
+            for (const variant of this.getBrandNameVariants(brand)) {
+                if (valueVariants.has(variant)) return true;
+            }
+            return false;
+        });
+    }
+
+    // Strip a leading/trailing site-brand segment from pipe-delimited titles
+    // ("Portland PRIDE FRIDAY | BEARRACUDA" → "Portland PRIDE FRIDAY"). Only exact
+    // brand matches are stripped, and at least one non-brand segment must remain.
+    stripPageBrandFromTitle(title, brandNames) {
+        const text = String(title || '');
+        if (!text.includes('|') || !Array.isArray(brandNames) || brandNames.length === 0) return text;
+        const parts = text.split('|').map(part => part.trim()).filter(Boolean);
+        if (parts.length < 2) return text;
+        const kept = parts.slice();
+        while (kept.length > 1 && this.matchesPageBrandName(kept[kept.length - 1], brandNames)) kept.pop();
+        while (kept.length > 1 && this.matchesPageBrandName(kept[0], brandNames)) kept.shift();
+        if (kept.length === parts.length) return text;
+        return kept.join(' | ');
     }
 
     extractBodyParts(html) {
