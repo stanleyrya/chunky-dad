@@ -300,6 +300,15 @@ class AiWebParser {
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
 
+            // Derive the page's organizer/site brand ONCE per page (from JSON-LD
+            // Organization/WebSite and og:site_name). Extraction prompts, the
+            // post-extraction guard in normalizeAiEvent, and downstream merge
+            // arbitration all reuse this cached result instead of re-parsing HTML.
+            const pageBrandNames = this.getPageBrandNames(htmlData);
+            if (pageBrandNames.length > 0) {
+                console.log(`🤖 AI Web: Page organizer/brand derived from metadata: ${pageBrandNames.map(name => `"${name}"`).join(', ')}`);
+            }
+
             // Deterministic extraction from schema.org Event JSON-LD. Ticketing pages
             // (sickening.events, tryst.events, Eventbrite) hand us complete structured
             // data — when it covers title + start + venue, OCR and AI extraction add
@@ -314,6 +323,9 @@ class AiWebParser {
                 && (pageClassification !== 'multi-event-page' || completeJsonLdEvents.length >= 2);
             if (useJsonLdEvents) {
                 console.log(`🤖 AI Web: Extracted ${completeJsonLdEvents.length} event(s) from JSON-LD structured data — skipping OCR and AI extraction`);
+                if (pageBrandNames.length > 0) {
+                    completeJsonLdEvents.forEach(event => { event._organizer = pageBrandNames[0]; });
+                }
                 return {
                     events: completeJsonLdEvents,
                     additionalLinks: additionalLinks,
@@ -5319,6 +5331,27 @@ ${String(snippet || '')}`;
 `;
         }
 
+        // Page-level steering context, present in every extraction variant
+        // (default/alternate/repair): the organizer brand derived from the page's
+        // own metadata (prevention up front, complementing the post-extraction
+        // guard in normalizeAiEvent) plus any configured ai.extraContext override,
+        // which is appended verbatim.
+        let steeringContext = '';
+        const pageBrandNames = this.getPageBrandNames(htmlData);
+        if (pageBrandNames.length > 0) {
+            const aliasSuffix = pageBrandNames.length > 1
+                ? ` (also appears as ${pageBrandNames.slice(1).map(name => `"${name}"`).join(', ')})`
+                : '';
+            steeringContext += `KNOWN ORGANIZER (derived from page metadata): "${pageBrandNames[0]}"${aliasSuffix} — this is the event promoter/site brand, NOT the venue. Never return it as "bar", and do not treat its name in page titles as part of the event name.\n`;
+        }
+        const extraContext = aiConfig && typeof aiConfig.extraContext === 'string' ? aiConfig.extraContext.trim() : '';
+        if (extraContext) {
+            steeringContext += `${extraContext}\n`;
+        }
+        if (steeringContext) {
+            steeringContext += `\n`;
+        }
+
         const exampleOutput = `EXAMPLE OUTPUT FORMAT (structure only, not real data):\n{"city": {"value": "miami", "evidence": "Miami, FL", "confidence": 90}, "bar": {"value": "Eagle Bar", "evidence": "@ Eagle Bar", "confidence": 95}}`;
 
         const templates = {
@@ -5326,7 +5359,7 @@ ${String(snippet || '')}`;
 
 Format the output as a single JSON object where each requested key maps to an object containing "value", "evidence", and "confidence".
 
-${dataProvided}${sourceData}${additionalContext}Preferred keys:
+${dataProvided}${sourceData}${additionalContext}${steeringContext}Preferred keys:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
@@ -5340,7 +5373,7 @@ ${exampleOutput}
 
 Format the output as a single JSON object where each requested key maps to an object containing "value", "evidence", and "confidence".
 
-${dataProvided}${sourceData}${additionalContext}Fields to find:
+${dataProvided}${sourceData}${additionalContext}${steeringContext}Fields to find:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
@@ -5355,7 +5388,7 @@ ${exampleOutput}
 
 Format the output as a single JSON object where each requested key maps to an object containing "value", "evidence", and "confidence".
 
-${additionalContext}Preferred keys:
+${additionalContext}${steeringContext}Preferred keys:
 ${fieldContext}
 Rules:
 - JSON object only
@@ -5378,8 +5411,13 @@ TEXT:
         return this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, 'alternate', dataFlags);
     }
 
-    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags = {}) {
-        return this.buildExtractionPrompt(null, aiConfig, cityConfig, parserConfig, fields, rawResponse, 'repair', dataFlags);
+    buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags = {}, htmlData = null) {
+        // The repair pass sees only the broken JSON text, but still needs the
+        // page-level steering context (organizer brand, ai.extraContext). Pass the
+        // cached brand names through WITHOUT the page html so the repair prompt
+        // stays free of page/OCR payload.
+        const contextHtmlData = htmlData ? { pageBrandNames: this.getPageBrandNames(htmlData) } : null;
+        return this.buildExtractionPrompt(contextHtmlData, aiConfig, cityConfig, parserConfig, fields, rawResponse, 'repair', dataFlags);
     }
 
     /**
@@ -5506,7 +5544,7 @@ TEXT:
 
         // PASS 3: Try repair if extraction returned unparseable JSON
         console.warn(`🤖 AI Web: Extraction pass${passSuffix} returned unparseable JSON; attempting repair`);
-        const repairPrompt = this.buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags);
+        const repairPrompt = this.buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags, htmlData);
         const repairResponse = await this.core.callAiGenerate(aiConfig, repairPrompt, 'repair', httpAdapter, this.recordAiPrompt.bind(this));
         if (!repairResponse) return null;
         event = parseAndFilterConfidence(repairResponse);
@@ -6345,9 +6383,8 @@ TEXT:
         // ("Portland PRIDE FRIDAY | BEARRACUDA") and extraction leaks it into
         // bar/title. The brand names are derived from the page's own markup —
         // see extractPageBrandNames — never from a hardcoded organizer list.
-        const pageBrandNames = this.extractPageBrandNames(
-            htmlData && typeof htmlData.html === 'string' ? htmlData.html : ''
-        );
+        // (Cached per page; parseEvents primes the cache on the original html.)
+        const pageBrandNames = this.getPageBrandNames(htmlData);
         if (pageBrandNames.length > 0) {
             // Only AI-extracted values are guarded: an explicitly configured bar is a
             // deliberate override and must survive even when it matches the site brand
@@ -6584,6 +6621,13 @@ TEXT:
         };
         if (usedWallClockFallback) {
             event._timezoneUnresolved = true;
+        }
+
+        // Stamp the derived organizer as internal metadata (underscore fields are
+        // excluded from calendar notes and merge field loops) so downstream merge
+        // arbitration can warn the model off picking the organizer as the venue.
+        if (pageBrandNames.length > 0) {
+            event._organizer = pageBrandNames[0];
         }
 
         if (aiPrompts.length > 0) {
@@ -7003,6 +7047,20 @@ TEXT:
     // it into bar/title; deriving the brand from the page keeps the guard generic
     // (no hardcoded organizer lists). og:site_name is deliberately excluded from
     // prompt meta parts (excludedMetaKeyRegexes), so it is read from the raw HTML.
+    // Cached per-page brand lookup: brand extraction re-parses the page's JSON-LD,
+    // so it is computed once per parsed page and carried on htmlData (segment and
+    // OCR copies spread htmlData, inheriting the cache). parseEvents primes the
+    // cache on the original page html before any per-pass copies are made.
+    getPageBrandNames(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return [];
+        if (Array.isArray(htmlData.pageBrandNames)) return htmlData.pageBrandNames;
+        const names = this.extractPageBrandNames(typeof htmlData.html === 'string' ? htmlData.html : '');
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageBrandNames = names;
+        }
+        return names;
+    }
+
     extractPageBrandNames(html) {
         const source = String(html || '').slice(0, 500000);
         const names = new Set();

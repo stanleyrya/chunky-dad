@@ -381,7 +381,7 @@ class SharedCore {
     // raw, <labelB>: raw } }]. Returns { [field]: { pick, reason } } containing only
     // fields whose answer survived the verbatim gate, or null when no usable response
     // was obtained at all (caller falls back for everything).
-    async arbitrateMergeConflicts({ conflicts, labels, aiConfig, httpAdapter, eventContext = '' }) {
+    async arbitrateMergeConflicts({ conflicts, labels, aiConfig, httpAdapter, eventContext = '', organizer = '' }) {
         const list = Array.isArray(conflicts) ? conflicts.filter(Boolean) : [];
         if (list.length === 0) return null;
         if (!aiConfig || aiConfig.enabled === false || aiConfig.arbitrateMerges === false) return null;
@@ -411,6 +411,7 @@ class SharedCore {
             'Rules:',
             '- You MUST copy one of the two provided values EXACTLY. Never invent, edit, merge, or reformat a value.',
             '- "bar" must be the physical venue where the event takes place — never the promoter, organizer, or brand whose name appears in page titles.',
+            organizer ? `- KNOWN ORGANIZER: ${JSON.stringify(String(organizer))} — never pick a bar value equal to the organizer.` : '',
             '- For "title", prefer the actual event name — do not prefer a variant just because it appends status text (e.g. sold-out notices) or site branding.',
             `- "pick" must be "${labelA}" or "${labelB}".`,
             'Return JSON only:',
@@ -691,7 +692,10 @@ class SharedCore {
     }
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers, globalProcessedUrls = new Set()) {
-        const effectiveParserConfig = this.applyGlobalAiConfidenceDefaults(parserConfig, mainConfig);
+        const effectiveParserConfig = this.applyGlobalAiExtraContext(
+            this.applyGlobalAiConfidenceDefaults(parserConfig, mainConfig),
+            mainConfig
+        );
 
         // Prefer explicit parser selection from config; otherwise auto-detect from URL.
         const configuredParserName = this.normalizeParserName(effectiveParserConfig && effectiveParserConfig.parser);
@@ -866,6 +870,27 @@ class SharedCore {
             ai: {
                 ...parserAi,
                 confidence: mergedConfidence
+            }
+        };
+    }
+
+    // Global ai.extraContext default (config.ai.extraContext): extra text appended
+    // verbatim to every extraction prompt. A parser's own ai.extraContext — even an
+    // explicit empty string — overrides the global value.
+    applyGlobalAiExtraContext(parserConfig, mainConfig) {
+        const parser = parserConfig && typeof parserConfig === 'object' ? parserConfig : {};
+        const globalAi = mainConfig && mainConfig.config && mainConfig.config.ai && typeof mainConfig.config.ai === 'object'
+            ? mainConfig.config.ai
+            : null;
+        const globalExtraContext = globalAi && typeof globalAi.extraContext === 'string' ? globalAi.extraContext : '';
+        if (!globalExtraContext) return parser;
+        const parserAi = parser.ai && typeof parser.ai === 'object' ? parser.ai : {};
+        if (typeof parserAi.extraContext === 'string') return parser;
+        return {
+            ...parser,
+            ai: {
+                ...parserAi,
+                extraContext: globalExtraContext
             }
         };
     }
@@ -1618,6 +1643,12 @@ class SharedCore {
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
 
+        // Carry the derived organizer across merges: underscore fields are skipped
+        // by the field loop below, so an existing-only _organizer would be lost.
+        if (!mergedEvent._organizer && existingEvent && typeof existingEvent._organizer === 'string' && existingEvent._organizer) {
+            mergedEvent._organizer = existingEvent._organizer;
+        }
+
         // Helper function to check if a value is empty/null/undefined
         const isEmpty = (value) => {
             return value === null || value === undefined || value === '' ||
@@ -1751,7 +1782,8 @@ class SharedCore {
                     labels: ['existing', 'incoming'],
                     aiConfig,
                     httpAdapter: options.httpAdapter,
-                    eventContext: `"${eventTitle}" starting ${this.serializeArbitrationValue('startDate', newEvent.startDate || existingEvent.startDate) || 'unknown'} (record "existing" from ${existingEvent.source || 'unknown'}, record "incoming" from ${newEvent.source || 'unknown'})`
+                    eventContext: `"${eventTitle}" starting ${this.serializeArbitrationValue('startDate', newEvent.startDate || existingEvent.startDate) || 'unknown'} (record "existing" from ${existingEvent.source || 'unknown'}, record "incoming" from ${newEvent.source || 'unknown'})`,
+                    organizer: this.getKnownOrganizer(newEvent, existingEvent)
                 });
             } catch (error) {
                 console.warn(`🤝 AI MERGE: arbitration failed for "${eventTitle}": ${error.message}`);
@@ -1882,7 +1914,8 @@ class SharedCore {
                     labels: ['calendar', 'scraped'],
                     aiConfig,
                     httpAdapter: options.httpAdapter,
-                    eventContext
+                    eventContext,
+                    organizer: this.getKnownOrganizer(scraperObject, calendarObject)
                 });
             } catch (error) {
                 console.warn(`🤝 AI MERGE: arbitration failed for "${eventTitle}": ${error.message}`);
@@ -4216,10 +4249,24 @@ class SharedCore {
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
             arbitrateMerges: aiConfig.arbitrateMerges !== false,
+            // Override-only: extra text appended verbatim to extraction prompt
+            // context. Organizer context is normally derived from page metadata.
+            extraContext: typeof aiConfig.extraContext === 'string' ? aiConfig.extraContext : '',
             verboseConsoleLogs: aiConfig.verboseConsoleLogs === true,
             ollama: aiConfig.ollama && typeof aiConfig.ollama === 'object' ? aiConfig.ollama : {},
             openai: aiConfig.openai && typeof aiConfig.openai === 'object' ? aiConfig.openai : {}
         };
+    }
+
+    // The organizer brand a parser derived from page metadata and stamped as
+    // internal metadata (_organizer, excluded from notes/merge field loops).
+    // First non-empty value across the given event records wins.
+    getKnownOrganizer(...events) {
+        for (const event of events) {
+            const organizer = event && typeof event._organizer === 'string' ? event._organizer.trim() : '';
+            if (organizer) return organizer;
+        }
+        return '';
     }
 
     // AI config for merge arbitration: the event's own parser config wins, the global

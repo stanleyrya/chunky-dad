@@ -54,6 +54,14 @@ const scraperConfig = {
       // (scraped clobbers). This global block also serves events from non-AI
       // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
       arbitrateMerges: true,
+      // extraContext (override-only): free-form text appended VERBATIM to the
+      // context of every AI extraction prompt. Organizer/brand context is
+      // normally derived automatically from each page's own metadata (JSON-LD
+      // Organization/WebSite nodes and og:site_name) — set this only when a
+      // page's markup declares nothing useful and the model needs a hint.
+      // Per-parser ai.extraContext overrides this global value ("" opts out).
+      // Default: "" (no extra context).
+      // extraContext: "",
       // Full AI prompt/response payloads normally go to the debug channel only:
       // captured into the run log file (logs/<runId>.log) but hidden from the
       // visible console. Set true to also mirror them to the live console while

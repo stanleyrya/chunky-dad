@@ -723,6 +723,10 @@ class LocationNormalizer extends BaseNormalizer {
 }
 
 
+// Forward-geocode candidates farther than this from the event city's center are
+// rejected: a candidate 50+ km away is a same-named street/place in another city.
+const CITY_CENTER_RADIUS_KM = 50;
+
 class OpenStreetMapNormalizer extends BaseNormalizer {
     constructor(core) {
         super(core);
@@ -830,6 +834,64 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return candidates.some(value => typeof value === 'string' && value.toLowerCase().includes(target));
     }
 
+    // Known city-center coordinates from the cities config (generated from
+    // js/city-config.js by tools/generate-scraper-cities.js). Returns
+    // { lat, lng } or null when the city is unknown or has no coordinates.
+    getCityCenterCoordinates(city) {
+        const key = String(city || '').trim();
+        if (!key || !this.core || !this.core.cities) return null;
+        const cityConfig = this.core.cities[key];
+        const coords = cityConfig && cityConfig.coordinates;
+        if (!coords) return null;
+        const lat = Number(coords.lat);
+        const lng = Number(coords.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lat, lng };
+    }
+
+    // Great-circle distance in kilometers between two lat/lon points.
+    haversineDistanceKm(lat1, lon1, lat2, lon2) {
+        const toRad = deg => (deg * Math.PI) / 180;
+        const earthRadiusKm = 6371;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const sinLat = Math.sin(dLat / 2);
+        const sinLon = Math.sin(dLon / 2);
+        const a = sinLat * sinLat + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * sinLon * sinLon;
+        return 2 * earthRadiusKm * Math.asin(Math.sqrt(Math.min(1, a)));
+    }
+
+    // Rank forward-geocode candidates by distance to the event city's center and
+    // return the nearest one inside the acceptance radius, or null. This
+    // supersedes the textual city check when center coordinates are known: a
+    // textual "portland" match can still be the wrong Portland — distance can't.
+    pickNearestGeocodeCandidate(candidates, cityCenter, eventCity, addressLabel) {
+        const ranked = [];
+        (Array.isArray(candidates) ? candidates : []).forEach((candidate, index) => {
+            if (!candidate) return;
+            const lat = Number(candidate.lat);
+            const lon = Number(candidate.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+            ranked.push({
+                index,
+                lat: candidate.lat,
+                lon: candidate.lon,
+                distanceKm: this.haversineDistanceKm(lat, lon, cityCenter.lat, cityCenter.lng)
+            });
+        });
+        if (ranked.length === 0) return null;
+        ranked.sort((a, b) => a.distanceKm - b.distanceKm);
+        const nearest = ranked[0];
+        if (nearest.distanceKm > CITY_CENTER_RADIUS_KM) {
+            console.warn(`🗺️ OpenStreetMapNormalizer: All ${ranked.length} geocode candidate${ranked.length === 1 ? '' : 's'} for "${addressLabel}" fall outside ${CITY_CENTER_RADIUS_KM} km of ${eventCity} center (nearest is ${nearest.distanceKm.toFixed(1)} km away) — ignoring coordinates`);
+            return null;
+        }
+        if (ranked.length > 1) {
+            console.log(`🗺️ OpenStreetMapNormalizer: ${ranked.length} candidates for "${addressLabel}"; picked #${nearest.index + 1} (${nearest.distanceKm.toFixed(1)} km from ${eventCity} center)`);
+        }
+        return nearest;
+    }
+
     async normalizeAsync(event, httpAdapter) {
         if (!event || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return event;
 
@@ -848,26 +910,41 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             const address = event.address.trim();
             // Bare street strings geocode anywhere on the planet: a flyer-OCR typo like
             // "922 E. BURNSIDE" (real address: 722 E Burnside, Portland) resolved to
-            // Burnside, Michigan. When the event knows its city, anchor the query to it
-            // and reject results that land outside that city.
+            // Burnside, Michigan. When the event knows its city, anchor the query to it.
+            // When the city also has known center coordinates, request several
+            // candidates and pick by distance to that center (textual matching alone
+            // false-accepts "Portland, Michigan" for a Portland OR event); otherwise
+            // fall back to rejecting results whose address details don't mention the city.
             const eventCity = typeof event.city === 'string' ? event.city.trim() : '';
+            const cityCenter = this.getCityCenterCoordinates(eventCity);
             const addressIncludesCity = eventCity && address.toLowerCase().includes(eventCity.toLowerCase());
             const queryText = eventCity && !addressIncludesCity ? `${address}, ${eventCity}` : address;
             const query = encodeURIComponent(queryText);
             const cityValidationParam = eventCity ? '&addressdetails=1' : '';
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1${cityValidationParam}`;
+            const resultLimit = cityCenter ? 5 : 1;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=${resultLimit}${cityValidationParam}`;
 
             try {
                 const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
                 if (Array.isArray(data) && data.length > 0) {
-                    const firstResult = data[0];
-                    if (firstResult.lat && firstResult.lon) {
-                        if (eventCity && !this.geocodeResultMatchesCity(firstResult, eventCity)) {
-                            console.warn(`🗺️ OpenStreetMapNormalizer: Geocode for "${event.address}" resolved outside event city "${eventCity}" ("${firstResult.display_name || 'no display name'}") — ignoring coordinates`);
-                        } else {
-                            event.location = `${firstResult.lat}, ${firstResult.lon}`;
+                    if (cityCenter) {
+                        // Distance-ranked selection: nearest candidate within the radius wins
+                        const picked = this.pickNearestGeocodeCandidate(data, cityCenter, eventCity, address);
+                        if (picked) {
+                            event.location = `${picked.lat}, ${picked.lon}`;
                             modified = true;
                             console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
+                        }
+                    } else {
+                        const firstResult = data[0];
+                        if (firstResult.lat && firstResult.lon) {
+                            if (eventCity && !this.geocodeResultMatchesCity(firstResult, eventCity)) {
+                                console.warn(`🗺️ OpenStreetMapNormalizer: Geocode for "${event.address}" resolved outside event city "${eventCity}" ("${firstResult.display_name || 'no display name'}") — ignoring coordinates`);
+                            } else {
+                                event.location = `${firstResult.lat}, ${firstResult.lon}`;
+                                modified = true;
+                                console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
+                            }
                         }
                     }
                 }

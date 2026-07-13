@@ -989,3 +989,90 @@ test('matchesPageBrandName matches across trailing corporate suffixes and punctu
   assert.equal(parser.matchesPageBrandName('bearracuda inc', ['Bearracuda, Inc.']), true);
   assert.equal(parser.matchesPageBrandName('Nova PDX', ['Bearracuda, Inc.', 'BEARRACUDA']), false);
 });
+
+// ---------------------------------------------------------------------------
+// Organizer context in extraction prompts (prevention, complementing the
+// post-extraction guard) + the ai.extraContext override
+// ---------------------------------------------------------------------------
+
+test('extraction prompts carry the KNOWN ORGANIZER line when the page declares a brand', () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };
+  const aiConfig = parser.getAiConfig({});
+
+  for (const variant of ['default', 'alternate', 'repair']) {
+    const prompt = parser.buildExtractionPrompt(
+      htmlData, aiConfig, null, {}, ['title', 'bar'], 'SNIPPET', variant, { content: true });
+    assert.match(
+      prompt,
+      /KNOWN ORGANIZER \(derived from page metadata\): "Bearracuda, Inc\."/,
+      `${variant} variant must carry the organizer line`);
+    assert.match(prompt, /NOT the venue/, `${variant} variant must explain the brand is not the venue`);
+  }
+});
+
+test('extraction prompts omit the KNOWN ORGANIZER line when the page declares no brand', () => {
+  const parser = createParser();
+  const htmlData = { html: '<html><body><p>Bear Night at the Eagle</p></body></html>', url: 'https://eagle.example/events' };
+  const prompt = parser.buildExtractionPrompt(
+    htmlData, parser.getAiConfig({}), null, {}, ['title', 'bar'], 'SNIPPET', 'default', { content: true });
+  assert.ok(!/KNOWN ORGANIZER/.test(prompt), 'no page brand → no organizer line');
+});
+
+test('ai.extraContext is appended verbatim to the extraction prompt context', () => {
+  const parser = createParser();
+  const aiConfig = parser.getAiConfig({ ai: { extraContext: 'VENUE HINT: events here are always at Eagle NYC.' } });
+  assert.equal(aiConfig.extraContext, 'VENUE HINT: events here are always at Eagle NYC.');
+
+  const prompt = parser.buildExtractionPrompt(
+    { html: '<p>party</p>', url: 'https://eagle.example/events' },
+    aiConfig, null, {}, ['title', 'bar'], 'SNIPPET', 'default', { content: true });
+  assert.match(prompt, /VENUE HINT: events here are always at Eagle NYC\./);
+
+  const withoutOverride = parser.buildExtractionPrompt(
+    { html: '<p>party</p>', url: 'https://eagle.example/events' },
+    parser.getAiConfig({}), null, {}, ['title', 'bar'], 'SNIPPET', 'default', { content: true });
+  assert.ok(!/VENUE HINT/.test(withoutOverride), 'no override → nothing appended');
+});
+
+test('the repair prompt keeps the organizer context without the page payload', () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };
+  const prompt = parser.buildJsonRepairPrompt(
+    '{"title": broken', parser.getAiConfig({}), null, {}, ['title', 'bar'], {}, htmlData);
+  assert.match(prompt, /KNOWN ORGANIZER \(derived from page metadata\): "Bearracuda, Inc\."/);
+  assert.ok(!prompt.includes('Nova PDX, 722 E Burnside'), 'page body must not leak into the repair prompt');
+});
+
+test('normalizeAiEvent stamps the derived organizer as internal _organizer metadata', () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };
+  const event = parser.normalizeAiEvent(
+    { title: 'Portland PRIDE FRIDAY', bar: 'Nova PDX', startDate: '2026-07-17', startTime: '22:00' },
+    {}, htmlData, null, null);
+  assert.equal(event._organizer, 'Bearracuda, Inc.');
+
+  const plain = parser.normalizeAiEvent(
+    { title: 'Bear Night', startDate: '2026-07-17' },
+    {}, { html: '<p>no brand markup</p>', url: 'https://eagle.example' }, null, null);
+  assert.equal(plain._organizer, undefined, 'no page brand → no organizer stamp');
+});
+
+test('getPageBrandNames caches the brand extraction on htmlData', () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };
+  let extractCalls = 0;
+  const originalExtract = parser.extractPageBrandNames.bind(parser);
+  parser.extractPageBrandNames = (html) => {
+    extractCalls++;
+    return originalExtract(html);
+  };
+
+  const first = parser.getPageBrandNames(htmlData);
+  const second = parser.getPageBrandNames(htmlData);
+  const viaSpread = parser.getPageBrandNames({ ...htmlData, html: 'OCR TEXT\n' + htmlData.html });
+
+  assert.equal(extractCalls, 1, 'the page html must be parsed exactly once');
+  assert.equal(second, first, 'repeat lookups return the cached array');
+  assert.deepEqual(viaSpread, first, 'spread copies (segments/OCR) inherit the cache');
+});

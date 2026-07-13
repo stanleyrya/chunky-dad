@@ -159,6 +159,78 @@ test('forward geocode without an event city keeps the legacy query and accepts t
   );
 });
 
+// ---------------------------------------------------------------------------
+// OpenStreetMapNormalizer distance-ranked geocoding: when the event city has
+// known center coordinates, candidates are ranked by haversine distance to the
+// center (textual matching alone false-accepts "Portland, Michigan" for a
+// Portland OR event because the display name contains "portland").
+// ---------------------------------------------------------------------------
+
+const CITIES_WITH_COORDS = {
+  portland: {
+    timezone: 'America/Los_Angeles',
+    patterns: ['portland', 'pdx'],
+    coordinates: { lat: 45.5152, lng: -122.6784 }
+  }
+};
+
+function createOsmNormalizerWithCoords() {
+  const core = new SharedCore(CITIES_WITH_COORDS, { eventSchema: EventSchema });
+  return new OpenStreetMapNormalizer(core);
+}
+
+// Textually matches "portland" but is ~2800 km from Portland, Oregon.
+const PORTLAND_MICHIGAN_RESULT = {
+  lat: '42.8692006',
+  lon: '-84.9030517',
+  display_name: 'Portland, Ionia County, Michigan, United States',
+  address: { city: 'Portland', county: 'Ionia County', state: 'Michigan' }
+};
+
+test('distance ranking picks the candidate nearest the city center, not the first textual match', async () => {
+  const normalizer = createOsmNormalizerWithCoords();
+  // The wrong-state (but textually matching) candidate is listed FIRST
+  const httpAdapter = createStubHttpAdapter([PORTLAND_MICHIGAN_RESULT, PORTLAND_RESULT]);
+  const event = { title: 'PRIDE FRIDAY', address: '722 E Burnside', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '45.5230622, -122.6564816', 'the Oregon candidate must win by distance');
+  assert.ok(
+    httpAdapter.requests[0].includes('&limit=5'),
+    `known city coordinates must request 5 candidates: ${httpAdapter.requests[0]}`
+  );
+  assert.ok(httpAdapter.requests[0].includes('&addressdetails=1'), 'address details stay requested');
+});
+
+test('distance ranking rejects every candidate beyond the 50 km radius', async () => {
+  const normalizer = createOsmNormalizerWithCoords();
+  const httpAdapter = createStubHttpAdapter([WRONG_CITY_RESULT, PORTLAND_MICHIGAN_RESULT]);
+  const event = { title: 'PRIDE FRIDAY', address: '922 E. BURNSIDE', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, undefined, 'candidates outside the radius must not set coordinates');
+});
+
+test('a configured city without coordinates keeps the textual validation path', async () => {
+  const normalizer = createOsmNormalizer(); // CITIES: nyc has no coordinates
+  const httpAdapter = createStubHttpAdapter([WRONG_CITY_RESULT]);
+  const event = { title: 'BEAR NIGHT', address: '355 W 41st St', city: 'nyc' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, undefined, 'textual city mismatch must still reject the result');
+  assert.ok(httpAdapter.requests[0].includes('&limit=1'), 'no coordinates → legacy single-result request');
+});
+
+test('haversineDistanceKm sanity: Portland→Seattle ≈ 233 km, identical points are 0', () => {
+  const normalizer = createOsmNormalizerWithCoords();
+  const distance = normalizer.haversineDistanceKm(45.5152, -122.6784, 47.6062, -122.3321);
+  assert.ok(Math.abs(distance - 233) < 5, `expected ~233 km, got ${distance}`);
+  assert.equal(normalizer.haversineDistanceKm(45.5, -122.6, 45.5, -122.6), 0);
+});
+
 test('resolveWallClockDates ignores events without the wall-clock flag', () => {
   const normalizer = createLocationNormalizer();
   const event = {
