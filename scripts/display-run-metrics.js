@@ -25,7 +25,8 @@ const CHART_STYLE = {
   padding: 6
 };
 
-const DEBUG_CHART_POINTS = true;
+// Off by default; enable per-render with ?debugCharts=1
+const DEBUG_CHART_POINTS = false;
 
 const CHART_AXIS_LABELS = {
   runs: 'Runs (oldest to newest)',
@@ -421,11 +422,12 @@ class MetricsDisplay {
       }
     });
 
-    records.sort((a, b) => {
-      const aTime = a?.finished_at ? new Date(a.finished_at).getTime() : 0;
-      const bTime = b?.finished_at ? new Date(b.finished_at).getTime() : 0;
-      return aTime - bTime;
-    });
+    const getFinishedTime = (record) => {
+      const time = record?.finished_at ? new Date(record.finished_at).getTime() : 0;
+      // A malformed finished_at yields NaN, which would corrupt the sort order
+      return Number.isFinite(time) ? time : 0;
+    };
+    records.sort((a, b) => getFinishedTime(a) - getFinishedTime(b));
 
     return records;
   }
@@ -452,19 +454,29 @@ class MetricsDisplay {
   }
 
   async loadRunDetails(record) {
-    const runPath = record?.run_file_path || null;
-    if (!runPath) return null;
-    if (!this.fm.fileExists(runPath)) {
-      return null;
+    // Prefer reconstructing the path from run_id: run_file_path is stored as a
+    // device-absolute path and goes stale across devices/container changes
+    const candidatePaths = [];
+    if (record?.run_id) {
+      const runsDir = this.fm.joinPath(this.baseDir, 'runs');
+      candidatePaths.push(this.fm.joinPath(runsDir, `${record.run_id}.json`));
     }
-    try {
-      await this.fm.downloadFileFromiCloud(runPath);
-      const content = this.fm.readString(runPath);
-      return JSON.parse(content);
-    } catch (error) {
-      console.log(`Metrics: Failed to load run details: ${error.message}`);
-      return null;
+    if (record?.run_file_path) {
+      candidatePaths.push(record.run_file_path);
     }
+    for (const runPath of candidatePaths) {
+      if (!this.fm.fileExists(runPath)) {
+        continue;
+      }
+      try {
+        await this.fm.downloadFileFromiCloud(runPath);
+        const content = this.fm.readString(runPath);
+        return JSON.parse(content);
+      } catch (error) {
+        console.log(`Metrics: Failed to load run details: ${error.message}`);
+      }
+    }
+    return null;
   }
 
   getConfiguredParsers() {
@@ -1993,10 +2005,15 @@ class MetricsDisplay {
     if (!view || view.mode !== 'runs') return null;
     const fromParam = this.getRunFiltersFromParam(this.runtime.widgetParameter);
     const fromQuery = this.getRunFiltersFromQuery(this.getQueryParams());
-    return {
-      ...fromParam,
-      ...fromQuery
-    };
+    // Query values win only when actually set — an empty query object returns
+    // all-null fields, which must not clobber widget-parameter filters
+    const merged = { ...fromParam };
+    Object.entries(fromQuery).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        merged[key] = value;
+      }
+    });
+    return merged;
   }
 
   async resolveView() {

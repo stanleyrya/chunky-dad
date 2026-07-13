@@ -774,3 +774,16 @@ test('relaxed identity signal matches same-local-day despite degraded start time
   assert.equal(core.getSameEventIdentitySignal(a, b), null, 'strict signal requires close start times');
   assert.equal(core.getSameEventIdentitySignal(a, b, { requireCloseStartTimes: false }), 'place-day-name');
 });
+
+test('filterEventsForExecution excludes events from dry-run parsers', () => {
+  const live = { title: 'Live Event', _parserConfig: { name: 'Live Parser', dryRun: false } };
+  const dry = { title: 'Dry Event', _parserConfig: { name: 'Dry Parser', dryRun: true } };
+  const unstamped = { title: 'No Parser Config' };
+  const result = SharedCore.filterEventsForExecution([live, dry, unstamped]);
+  assert.deepEqual(result.map(e => e.title), ['Live Event', 'No Parser Config']);
+});
+
+test('filterEventsForExecution tolerates non-array input', () => {
+  assert.deepEqual(SharedCore.filterEventsForExecution(null), []);
+  assert.deepEqual(SharedCore.filterEventsForExecution(undefined), []);
+});

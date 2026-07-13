@@ -474,7 +474,12 @@ class ScriptableAdapter {
     this.pageStorageDir = this.fm.joinPath(this.storageDir, "pages");
     this.cacheDir = this.fm.joinPath(this.baseDir, "cache");
 
-    this.runtimeContext = this.getScriptableRuntimeContext();
+    // Reuse a resolved run context (with automation overrides applied) when the
+    // orchestrator hands one over; otherwise detect it fresh
+    this.runtimeContext =
+      config.runtime && typeof config.runtime === "object"
+        ? { ...config.runtime }
+        : this.getScriptableRuntimeContext();
     this.runStartedAt = new Date();
     this.warnCount = 0;
     this.lastExecutionActionCounts = null;
@@ -540,6 +545,8 @@ class ScriptableAdapter {
 
   applyAutomationRunContext(runtimeContext, automationRun, automationOverride) {
     const updated = { ...(runtimeContext || {}) };
+    const hasOverride =
+      automationOverride !== null && automationOverride !== undefined;
     if (automationRun) {
       updated.type = "automated";
       if (
@@ -547,14 +554,13 @@ class ScriptableAdapter {
         updated.trigger === "app" ||
         updated.trigger === "unknown"
       ) {
-        updated.trigger =
-          automationOverride !== null ? "shortcut" : updated.trigger;
+        updated.trigger = hasOverride ? "shortcut" : updated.trigger;
       }
     } else if (automationOverride === false) {
       updated.type = "manual";
     }
     updated.automationRun = automationRun === true;
-    if (automationOverride !== null && automationOverride !== undefined) {
+    if (hasOverride) {
       updated.automationOverride = automationOverride;
     }
     return updated;
@@ -2407,13 +2413,17 @@ class ScriptableAdapter {
     if (results?._isDisplayingSavedRun || runContext?.type === "display") {
       return false;
     }
+    // Widgets can never present WebViews/alerts
+    if (runContext?.runsInWidget || this.runtimeContext?.runsInWidget) {
+      return true;
+    }
+    // Any automation run (scheduled, Siri, or automation=true override) must not
+    // block on UI — even when no parser is automationEnabled
     const automationRun =
-      Boolean(config?.runtime?.automationRun) ||
-      runContext?.type === "automated";
-    const hasAutomationParsers =
-      Array.isArray(config?.parsers) &&
-      config.parsers.some((parser) => parser?.automationEnabled === true);
-    return automationRun && hasAutomationParsers;
+      typeof config?.runtime?.automationRun === "boolean"
+        ? config.runtime.automationRun
+        : runContext?.type === "automated";
+    return automationRun;
   }
 
   // Results Display - Enhanced with calendar preview and comparison
@@ -2527,8 +2537,13 @@ class ScriptableAdapter {
       const automationRunForSave =
         Boolean(runtimeForSave.automationRun) ||
         runtimeForSave.type === "automated";
+      // Only apply the automationEnabled filter when the schedule filter was
+      // actually in effect — override runs (parserName/url input + automation=true)
+      // run other parsers and must still be saved for audit/metrics
+      const automationFilterForSave =
+        automationRunForSave && runtimeForSave.automationFilter !== false;
       const activeParsers = parserConfigs.filter((parser) => {
-        if (automationRunForSave) {
+        if (automationFilterForSave) {
           return parser?.automationEnabled === true;
         }
         return parser?.enabled !== false;
@@ -2555,7 +2570,7 @@ class ScriptableAdapter {
         const reason = results?._isDisplayingSavedRun
           ? "display mode"
           : !hasActiveParsers
-            ? automationRunForSave
+            ? automationFilterForSave
               ? "no automation-enabled parsers"
               : "no enabled parsers"
             : "missing analyzed events";
@@ -3177,14 +3192,8 @@ class ScriptableAdapter {
         !results._isDisplayingSavedRun
       ) {
         // Check if we have any events from non-dry-run parsers
-        const eventsFromActiveParsers = results.analyzedEvents.filter(
-          (event) => {
-            const parserConfig = results.config?.parsers?.find(
-              (p) => p.name === event._parserConfig?.name,
-            );
-            const isParserDryRun = parserConfig?.dryRun === true;
-            return !isParserDryRun;
-          },
+        const eventsFromActiveParsers = SharedCore.filterEventsForExecution(
+          results.analyzedEvents,
         );
 
         const globalDryRun = results.config?.config?.dryRun;
@@ -7482,16 +7491,35 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     const lines = existing.split("\n").filter((line) => line.trim().length > 0);
     const keptLines = [];
 
+    let corruptLines = 0;
     lines.forEach((line) => {
-      const parsed = JSON.parse(line);
+      let parsed = null;
+      try {
+        parsed = JSON.parse(line);
+      } catch (parseError) {
+        // A single corrupt line (interrupted write, partial sync) must not
+        // poison the whole file and block every future metrics append
+        corruptLines += 1;
+        return;
+      }
       const finishedAtMs = parsed?.finished_at
         ? new Date(parsed.finished_at).getTime()
         : null;
-      if (!finishedAtMs || !Number.isFinite(finishedAtMs)) return;
+      if (!Number.isFinite(finishedAtMs)) {
+        // Keep records without a parseable finished_at; only retention pruning
+        // is allowed to drop lines
+        keptLines.push(line);
+        return;
+      }
       if (!cutoffMs || finishedAtMs >= cutoffMs) {
         keptLines.push(line);
       }
     });
+    if (corruptLines > 0) {
+      console.warn(
+        `📱 Scriptable: Dropped ${corruptLines} corrupt metrics line(s) during append`,
+      );
+    }
 
     const line = JSON.stringify(record);
     keptLines.push(line);

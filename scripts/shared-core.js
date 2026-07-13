@@ -2812,6 +2812,13 @@ class SharedCore {
     // business logic lives in exactly one place.
     // -------------------------------------------------------------------------
 
+    // Events from parsers marked dryRun must never reach calendar writes,
+    // regardless of which path (automation or interactive prompt) executes them
+    static filterEventsForExecution(analyzedEvents) {
+        if (!Array.isArray(analyzedEvents)) return [];
+        return analyzedEvents.filter(event => event?._parserConfig?.dryRun !== true);
+    }
+
     static normalizeOverrideUid(value) {
         if (value === null || value === undefined) return '';
         return String(value).trim();

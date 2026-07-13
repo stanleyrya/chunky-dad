@@ -246,6 +246,9 @@ class BearEventScraperOrchestrator {
                 finalAdapter = new this.modules.adapter({
                     cities: config.cities,
                     pageCache: config.config?.pageCache || null,
+                    // Carry the resolved run context (automation overrides) into the
+                    // instance that saves runs/metrics, not just the config object
+                    runtime: config.runtime || null,
                     ...this.config
                 });
             }
@@ -276,18 +279,19 @@ class BearEventScraperOrchestrator {
             // Process events using shared core
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
             results.config = config;
+            results.calendarEvents = 0;
             if (!Array.isArray(results.analyzedEvents)) {
                 results.analyzedEvents = [];
             }
-            
+
             // Add to calendar if not dry run and we have events
             if (results.allProcessedEvents && results.allProcessedEvents.length > 0) {
                 console.log(`🐻 Orchestrator: Preparing ${results.allProcessedEvents.length} events for calendar...`);
-                
+
                 let calendarEvents = 0;
-                
+
                 // Check if we should add to calendar
-                const isDryRun = config.config.dryRun;
+                const isDryRun = Boolean(config.config?.dryRun);
                 
                 // Always prepare events for analysis (even in dry run mode) to show action types
                 // Perform cross-parser deduplication to merge events from different parsers
@@ -304,22 +308,28 @@ class BearEventScraperOrchestrator {
 
                 // Determine execution mode based on environment
                 const automationRun = Boolean(config?.runtime?.automationRun);
+                const isWidget = this.isScriptable && Boolean(config?.runtime?.runsInWidget);
                 const hasDisplay = (this.isScriptable || this.isWeb) && !automationRun;
-                const isWidget = this.isScriptable && config.widgetParameter;
                 if (automationRun) {
                     console.log('🐻 Orchestrator: Automation run detected - executing without UI prompt');
                 }
-                
+
                 if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function' && analyzedEvents) {
                     if (hasDisplay && !isWidget) {
                         // If we have a display (not widget), show results first and let user decide
                         console.log('🐻 Orchestrator: Display mode - review results before execution');
                         // The display will handle the execution decision
                     } else {
-                        // No display (widget mode) or explicit execution requested
-                        console.log(`🐻 Orchestrator: Executing calendar actions (${analyzedEvents.length} events)`);
+                        // No display (automation or widget mode) - execute directly,
+                        // excluding events from parsers marked dryRun
+                        const executableEvents = this.modules.SharedCore.filterEventsForExecution(analyzedEvents);
+                        const dryRunSkipped = analyzedEvents.length - executableEvents.length;
+                        if (dryRunSkipped > 0) {
+                            console.log(`🐻 Orchestrator: Excluding ${dryRunSkipped} events from dry-run parsers`);
+                        }
+                        console.log(`🐻 Orchestrator: Executing calendar actions (${executableEvents.length} events)`);
                         try {
-                            calendarEvents = await finalAdapter.executeCalendarActions(analyzedEvents, config);
+                            calendarEvents = await finalAdapter.executeCalendarActions(executableEvents, config);
                             console.log(`🐻 Orchestrator: ✓ Processed ${calendarEvents} events to calendar`);
                         } catch (error) {
                             console.error(`🐻 Orchestrator: ✗ Failed to process events to calendar: ${error.message}`);
@@ -329,10 +339,8 @@ class BearEventScraperOrchestrator {
                 } else {
                     console.log('🐻 Orchestrator: Skipping calendar execution (dry run or unsupported)');
                 }
-                
-            // Add calendar count and config to results
-            results.calendarEvents = calendarEvents;
-            results.config = config;
+
+                results.calendarEvents = calendarEvents;
             }
 
             // Display results
@@ -377,19 +385,29 @@ class BearEventScraperOrchestrator {
     }
 }
 
-// Auto-execute when loaded
-(async () => {
-    try {
-        const results = await BearEventScraperOrchestrator.execute();
-        console.log('🐻 Bear Event Scraper: Execution completed successfully');
-    } catch (error) {
-        console.error(`🐻 Bear Event Scraper: Execution failed: ${error}`);
-    } finally {
-        if (typeof Script !== 'undefined' && typeof Script.complete === 'function') {
-            Script.complete();
+// Auto-execute when loaded — but never on require(): in Node, only run when
+// invoked directly, so tests/tools can import the orchestrator without scraping.
+// Scriptable also defines a module global, so check importModule first.
+const isScriptableEnvironment = typeof importModule !== 'undefined';
+const isNodeEnvironment = !isScriptableEnvironment && typeof module !== 'undefined' && module.exports && typeof window === 'undefined';
+const isDirectNodeRun = isNodeEnvironment && typeof require !== 'undefined' && require.main === module;
+if (!isNodeEnvironment || isDirectNodeRun) {
+    (async () => {
+        try {
+            const results = await BearEventScraperOrchestrator.execute();
+            console.log('🐻 Bear Event Scraper: Execution completed successfully');
+        } catch (error) {
+            console.error(`🐻 Bear Event Scraper: Execution failed: ${error}`);
+            if (typeof process !== 'undefined') {
+                process.exitCode = 1;
+            }
+        } finally {
+            if (typeof Script !== 'undefined' && typeof Script.complete === 'function') {
+                Script.complete();
+            }
         }
-    }
-})();
+    })();
+}
 
 // Export for manual execution if needed
 if (typeof module !== 'undefined' && module.exports) {

@@ -161,7 +161,7 @@ const scraperConfig = {
       alwaysBear: true,      // Skip bear keyword filtering
       urlDiscoveryDepth: 1,  // Recursive crawl depth for discovered URLs (0 = no discovery crawl)
       maxAdditionalUrls: 20, // Optional: per-page cap for discovered URLs (uses parser default if omitted)
-      dryRun: false,         // Optional: override global dryRun setting for this parser
+      dryRun: true,          // Optional: never write this parser's events (global dryRun: true still blocks everything)
       allowlist: ["keyword1", "keyword2"],
       city: "nyc"
     },
