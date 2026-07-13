@@ -243,11 +243,33 @@ class SharedCore {
     // (URL rules, JSON-LD) had no answer and the month-count heuristic is all we have.
     // Returns { classification, confidence, reason } or null when the response is
     // unusable — callers should keep their heuristic answer in that case.
-    async classifyPageWithAi(url, html, aiConfig, httpAdapter) {
+    // `cache` is an optional { read(url, signature), write(url, signature, outcome) }
+    // provider (persistence lives in the adapter/parser layer — this file stays pure);
+    // outcomes are cached per URL + page-summary + model so repeat runs over unchanged
+    // pages cost nothing.
+    async classifyPageWithAi(url, html, aiConfig, httpAdapter, cache = null) {
         if (!aiConfig || aiConfig.enabled === false || !httpAdapter) return null;
         const validLabels = ['event-page', 'multi-event-page', 'link-aggregator', 'ad', 'unknown'];
         const summary = this.summarizePageForClassification(html);
         if (!summary.bodyText && !summary.title) return null;
+
+        const cacheSignature = {
+            model: String(aiConfig.model || ''),
+            title: summary.title,
+            metaDescription: summary.metaDescription,
+            bodyText: summary.bodyText
+        };
+        if (cache && typeof cache.read === 'function') {
+            try {
+                const cachedOutcome = await cache.read(url, cacheSignature);
+                if (cachedOutcome && typeof cachedOutcome === 'object') {
+                    console.log(`🗂️ SharedCore: AI classification cache hit for ${url} → ${cachedOutcome.rejected ? 'rejected' : cachedOutcome.classification}`);
+                    return cachedOutcome.rejected ? null : cachedOutcome;
+                }
+            } catch (error) {
+                console.log(`🗂️ SharedCore: AI classification cache read failed for ${url}: ${error.message}`);
+            }
+        }
 
         const prompt = [
             'You are classifying a web page for an event scraper.',
@@ -277,18 +299,34 @@ class SharedCore {
         try {
             parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse);
         } catch (_) {
+            // Unparseable response — could be a transient server problem, don't cache
             return null;
         }
         if (!parsed || typeof parsed !== 'object') return null;
+
+        // The model answered; both accepted and rejected outcomes are deterministic
+        // for this page+model (temperature 0) and worth caching.
         const classification = String(parsed.classification || '').trim().toLowerCase();
-        if (!validLabels.includes(classification) || classification === 'unknown') return null;
         const confidence = Number(parsed.confidence);
-        if (Number.isFinite(confidence) && confidence < 60) return null;
-        return {
-            classification,
-            confidence: Number.isFinite(confidence) ? confidence : null,
-            reason: typeof parsed.reason === 'string' ? parsed.reason : ''
-        };
+        let outcome;
+        if (!validLabels.includes(classification) || classification === 'unknown'
+            || (Number.isFinite(confidence) && confidence < 60)) {
+            outcome = { rejected: true };
+        } else {
+            outcome = {
+                classification,
+                confidence: Number.isFinite(confidence) ? confidence : null,
+                reason: typeof parsed.reason === 'string' ? parsed.reason : ''
+            };
+        }
+        if (cache && typeof cache.write === 'function') {
+            try {
+                await cache.write(url, cacheSignature, outcome);
+            } catch (error) {
+                console.log(`🗂️ SharedCore: AI classification cache write failed for ${url}: ${error.message}`);
+            }
+        }
+        return outcome.rejected ? null : outcome;
     }
 
     // Schema.org Event and its subtypes (MusicEvent, DanceEvent, Festival, ...).
@@ -1007,8 +1045,11 @@ class SharedCore {
             const aiConfig = aiParser && typeof aiParser.getAiConfig === 'function'
                 ? aiParser.getAiConfig(parserConfig)
                 : null;
+            const classificationCache = aiParser && typeof aiParser.getAiClassificationCache === 'function'
+                ? aiParser.getAiClassificationCache()
+                : null;
             try {
-                const aiResult = await this.classifyPageWithAi(url, htmlData.html, aiConfig, httpAdapter);
+                const aiResult = await this.classifyPageWithAi(url, htmlData.html, aiConfig, httpAdapter, classificationCache);
                 if (aiResult && aiResult.classification && aiResult.classification !== pageClassification) {
                     await displayAdapter.logInfo(`SYSTEM: AI reclassified ${url} → ${aiResult.classification} (was ${pageClassification} via ${classificationSignal}, confidence ${aiResult.confidence === null ? 'n/a' : aiResult.confidence}: ${aiResult.reason})`);
                     pageClassification = aiResult.classification;
