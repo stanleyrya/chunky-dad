@@ -57,7 +57,7 @@
     "nola": {
       "name": "New Orleans",
       "status": "success",
-      "dataLength": 2340,
+      "dataLength": 2352,
       "eventCount": 2
     },
     "nyc": {
@@ -87,7 +87,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 21077,
+      "dataLength": 20209,
       "eventCount": 16
     },
     "ptown": {

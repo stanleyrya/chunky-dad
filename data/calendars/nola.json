@@ -5,7 +5,7 @@
   },
   "events": [
     {
-      "name": "New Orleans⚜️",
+      "name": "BEARRACUDA: New Orleans⚜️",
       "day": "Friday",
       "time": "9PM-2AM",
       "eventType": "routine",
@@ -16,7 +16,7 @@
       },
       "startDate": "2026-09-04T21:00:00",
       "endDate": "2026-09-05T02:00:00",
-      "unprocessedDescription": "timezone: America/Chicago\ninstagram: https://www.instagram.com\r/bearracuda\nimage: https://bearracuda.com/wp-content/uploads/2026/03/webnola-2.jpg\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/decadence/\nkey: bearracuda-2026-09-05-nola\ndescription: Music & Entertainment\n• DJ MATEO SEGADE\n• KELLY (Shoes) LIVE!\nbar: Joy Theater\naddress: 1200 Canal Street, New Orleans, LA\nticketUrl: https://www.ticketmaster.com/event/1B006454A32CE162\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20Orleans%2C%20LA",
+      "unprocessedDescription": "bar: Joy Theater\ntimezone: America/Chicago\ninstagram: https:/\r/www.instagram.com/bearracuda\nimage: https://bearracuda.com/wp-content/uploads/2026/03/webnola-2.jpg\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/decadence/\nkey: bearracuda-2026-09-05-nola\ndescription: Music & Entertainment\n• DJ MATEO SEGADE\n• KELLY (Shoes) LIVE!\naddress: 1200 Canal Street, New Orleans, LA\nticketUrl: https://www.ticketmaster.com/event/1B006454A32CE162\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20Orleans%2C%20LA",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
@@ -58,7 +58,7 @@
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "new-orleans-578ac888"
+      "slug": "bearracuda-new-orleans-578ac888"
     },
     {
       "name": "NEW ORLEANS",
