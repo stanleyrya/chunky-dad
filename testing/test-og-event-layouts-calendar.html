@@ -280,8 +280,13 @@
       display: flex; flex-direction: column; justify-content: space-between;
     }
     .l-editorial .brand-mark span { color: #131217; }
+    .l-editorial .brand-mark .city { color: #6d6a75; font-weight: 500; }
     .l-editorial .og-title { color: #131217; letter-spacing: -2.5px; }
-    .l-editorial .info { display: flex; flex-direction: column; gap: 20px; margin-top: 44px; }
+    /* title floats optically centered in the space above the footer row */
+    .l-editorial .mid { flex: 1; display: flex; align-items: center; }
+    .l-editorial .foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
+    .l-editorial .foot .brand-mark { flex-shrink: 0; white-space: nowrap; }
+    .l-editorial .info { display: flex; flex-direction: column; gap: 16px; }
     .l-editorial .meta-plain { color: #3c3a44; }
     .l-editorial .orb {
       position: absolute; width: 520px; height: 520px; border-radius: 50%;
@@ -290,8 +295,8 @@
     }
     .l-editorial .photo-chip {
       /* real <img> so the photo keeps its natural aspect ratio — no square crop */
-      position: absolute; right: 76px; top: 50%;
-      max-width: 400px; max-height: 400px; width: auto; height: auto;
+      position: absolute; right: 76px; top: 45%;
+      max-width: 400px; max-height: 360px; width: auto; height: auto;
       display: block; border-radius: 28px;
       box-shadow: 0 30px 60px rgba(19,18,23,0.25);
       transform: translateY(-50%) rotate(3deg);
@@ -989,21 +994,26 @@
             {
               key: 'editorial',
               name: 'Editorial Minimal',
-              desc: 'Light, type-first layout — title up top, details stacked below',
+              desc: 'Light, type-first layout — centered title, details bottom-left, brand bottom-right',
               chips: hasImage ? ['favicon colors', 'event image'] : ['favicon colors'],
               html: `
                 <div class="artboard l-editorial">
                   <div class="orb" style="background:radial-gradient(circle, ${p.c1}, transparent 70%)"></div>
                   ${hasImage ? `<img class="photo-chip" src="${escapeHtml(data.cover)}" alt="" style="background:linear-gradient(145deg, ${p.c1}, ${p.c4})" onerror="this.remove()">` : ''}
                   <div class="content">
-                    <div>
+                    <div class="mid">
                       <h2 class="og-title ${data.titleClass}" style="max-width:${hasImage ? '640px' : '1000px'};">${escapeHtml(data.title)}</h2>
-                      <div class="info" style="max-width:${hasImage ? '620px' : '1000px'};">
+                    </div>
+                    <div class="foot">
+                      <div class="info" style="max-width:${hasImage ? '620px' : '760px'};">
                         <div class="meta-plain"><b>${escapeHtml(data.date)}</b>${data.time ? ' · ' + escapeHtml(data.time) : ''}</div>
-                        <div class="meta-plain">${data.favicon ? venueIco + ' ' : ''}${escapeHtml(data.venue)} · ${escapeHtml(data.city)}</div>
+                        <div class="meta-plain">${data.favicon ? venueIco + ' ' : ''}${escapeHtml(data.venue)}</div>
+                      </div>
+                      <div class="brand-mark">
+                        <img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad">
+                        <span>chunky.dad <span class="city">· ${escapeHtml(data.city)}</span></span>
                       </div>
                     </div>
-                    ${brand}
                   </div>
                 </div>`
             },
