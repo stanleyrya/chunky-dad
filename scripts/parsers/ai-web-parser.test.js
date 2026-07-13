@@ -1109,3 +1109,168 @@ test('getPageBrandNames caches the brand extraction on htmlData', () => {
   assert.equal(second, first, 'repeat lookups return the cached array');
   assert.deepEqual(viaSpread, first, 'spread copies (segments/OCR) inherit the cache');
 });
+// ---------------------------------------------------------------------------
+// Pass-result guards (2026-07-13 run findings: a junk meta-pass answer — bar:
+// "BEARRACUDA" from og:title — consumed the field slot, later passes never
+// re-requested bar, and the end-of-pipeline guard left the event with NO bar
+// even though the page body named the venue. Same mechanism for the site-level
+// WebSite.description tagline leaking in as the event description.)
+// ---------------------------------------------------------------------------
+
+const BEARRACUDA_TAGLINE_HTML = `
+  <html>
+    <head>
+      <meta property="og:site_name" content="BEARRACUDA" />
+      <script type="application/ld+json">
+        {"@context":"https://schema.org","@graph":[
+          {"@type":"Organization","name":"Bearracuda, Inc.","alternateName":"Bearracuda"},
+          {"@type":"WebSite","name":"BEARRACUDA","description":"A Safe and Inclusive Space for Furry Friends and Their Admirers!"},
+          {"@type":"Event","name":"Treasure Trail Portland PRIDE","description":"One night only at Sanctuary."}
+        ]}
+      </script>
+    </head>
+    <body><p>Treasure Trail Portland PRIDE — 🪩 Sanctuary, 📍 Map → Sanctuary</p></body>
+  </html>
+`;
+
+const SITE_TAGLINE = 'A Safe and Inclusive Space for Furry Friends and Their Admirers!';
+
+// Drives extractFieldsAcrossSnippets — the seam where per-pass results are
+// merged (mergeAiEventFields) and later passes are narrowed to still-missing
+// fields (getRemainingPromptFields) — with one stubbed AI answer per snippet.
+async function runPassSequence(parser, htmlData, fields, passResults) {
+  const requestedFieldsPerPass = [];
+  parser.extractEventWithTwoPassAi = async (hd, aiConfig, cityConfig, parserConfig, requestedFields) => {
+    requestedFieldsPerPass.push(requestedFields.slice());
+    return passResults[requestedFieldsPerPass.length - 1] || {};
+  };
+  // Evidence validation is exercised elsewhere; pass results through untouched.
+  parser.validateAiEventEvidence = (partial) => ({ event: partial || {}, report: { dropped: [] } });
+  const snippets = passResults.map((_, index) => `SNIPPET ${index + 1}`);
+  const merged = await parser.extractFieldsAcrossSnippets(
+    htmlData, {}, null, {}, fields, snippets, 'test');
+  return { merged, requestedFieldsPerPass };
+}
+
+test('a brand bar is rejected at pass time and the field is re-requested in later passes', async () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_TAGLINE_HTML, url: 'https://bearracuda.com/events/treasurepdx/' };
+
+  const { merged, requestedFieldsPerPass } = await runPassSequence(parser, htmlData, ['title', 'bar'], [
+    { title: 'Treasure Trail Portland PRIDE', bar: 'BEARRACUDA' }, // meta-style pass: brand leak
+    { bar: 'Sanctuary' }                                            // content-style pass: real venue
+  ]);
+
+  assert.deepEqual(requestedFieldsPerPass[0], ['title', 'bar']);
+  assert.deepEqual(requestedFieldsPerPass[1], ['bar'],
+    'bar must stay in the next pass\'s field list after the brand rejection (title resolved, so only bar remains)');
+  assert.equal(merged.bar, 'Sanctuary', 'the later pass\'s real venue must be accepted');
+  assert.equal(merged.title, 'Treasure Trail Portland PRIDE');
+
+  // ...and it survives to the final event through normalizeAiEvent
+  const event = parser.normalizeAiEvent(
+    { ...merged, startDate: '2026-07-18', startTime: '21:00' }, {}, htmlData, null, null);
+  assert.equal(event.bar, 'Sanctuary');
+});
+
+test('a non-brand bar from an early pass is accepted and NOT re-requested', async () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_TAGLINE_HTML, url: 'https://bearracuda.com/events/treasurepdx/' };
+
+  const { merged, requestedFieldsPerPass } = await runPassSequence(parser, htmlData, ['title', 'bar'], [
+    { bar: 'Sanctuary' },
+    { title: 'Treasure Trail Portland PRIDE', bar: 'Some Other Venue' }
+  ]);
+
+  assert.deepEqual(requestedFieldsPerPass[0], ['title', 'bar']);
+  assert.deepEqual(requestedFieldsPerPass[1], ['title'], 'an accepted bar must not be requested again');
+  assert.equal(merged.bar, 'Sanctuary', 'the first accepted value wins');
+});
+
+test('a title that IS the brand is rejected at pass time; a brand-suffixed title is kept', async () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_TAGLINE_HTML, url: 'https://bearracuda.com/events/ptown/' };
+
+  const { merged, requestedFieldsPerPass } = await runPassSequence(parser, htmlData, ['title'], [
+    { title: 'BEARRACUDA' },                 // whole title is the brand → rejected
+    { title: 'Provincetown⚓ | BEARRACUDA' }  // brand suffix only → kept at pass time
+  ]);
+
+  assert.deepEqual(requestedFieldsPerPass[1], ['title'], 'title must be re-requested after the brand-only rejection');
+  assert.equal(merged.title, 'Provincetown⚓ | BEARRACUDA',
+    'a title merely containing the brand is kept at pass time (suffix strip happens at the end)');
+});
+
+test('extractPageSiteTaglines reads only WebSite.description, never Event descriptions', () => {
+  const parser = createParser();
+  const taglines = parser.extractPageSiteTaglines(BEARRACUDA_TAGLINE_HTML);
+  assert.deepEqual(taglines, [SITE_TAGLINE]);
+  assert.ok(!taglines.includes('One night only at Sanctuary.'),
+    'Event-level descriptions are never treated as site taglines');
+  assert.deepEqual(parser.extractPageSiteTaglines(BEARRACUDA_HTML), [],
+    'a WebSite node without a description yields no taglines');
+});
+
+test('a site-tagline description is rejected at pass time and later passes can recover the real one', async () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_TAGLINE_HTML, url: 'https://bearracuda.com/events/neworleans/' };
+
+  const { merged, requestedFieldsPerPass } = await runPassSequence(parser, htmlData, ['description'], [
+    // Differing whitespace and case must still match exactly after normalization
+    { description: '  a safe  and inclusive space for furry friends and their admirers!  ' },
+    { description: 'One night only at Sanctuary.' }
+  ]);
+
+  assert.deepEqual(requestedFieldsPerPass[1], ['description'],
+    'description must stay open after the tagline rejection');
+  assert.equal(merged.description, 'One night only at Sanctuary.');
+});
+
+test('normalizeAiEvent drops a site-tagline description as a final backstop', () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_TAGLINE_HTML, url: 'https://bearracuda.com/events/neworleans/' };
+
+  const event = parser.normalizeAiEvent(
+    { title: 'Bearracuda New Orleans', description: SITE_TAGLINE, startDate: '2026-08-01' },
+    {}, htmlData, null, null);
+  assert.equal(event.description, '', 'the site blurb must not survive as the event description');
+
+  // A configured metadata description is a deliberate override and survives,
+  // including as the fallback when the AI tagline is dropped.
+  const configured = parser.normalizeAiEvent(
+    { title: 'Bearracuda New Orleans', description: SITE_TAGLINE, startDate: '2026-08-01' },
+    { metadata: { description: 'Bearracuda takes over NOLA.' } }, htmlData, null, null);
+  assert.equal(configured.description, 'Bearracuda takes over NOLA.');
+});
+
+test('genuine event taglines are never dropped, even ones containing brand words', async () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_TAGLINE_HTML, url: 'https://bearracuda.com/events/ptown/' };
+
+  const { merged } = await runPassSequence(parser, htmlData, ['description'], [
+    { description: 'BEAR WEEK KICK OFF' }
+  ]);
+  assert.equal(merged.description, 'BEAR WEEK KICK OFF', 'distinct event taglines are kept at pass time');
+
+  const event = parser.normalizeAiEvent(
+    { title: 'Bearracuda Provincetown', description: 'BEAR WEEK KICK OFF', startDate: '2026-07-11' },
+    {}, htmlData, null, null);
+  assert.equal(event.description, 'BEAR WEEK KICK OFF', 'distinct event taglines survive the final guard');
+});
+
+test('the description guard is inert on pages with no WebSite.description', async () => {
+  const parser = createParser();
+  // BEARRACUDA_HTML declares WebSite/Organization names but no description
+  const htmlData = { html: BEARRACUDA_HTML, url: 'https://bearracuda.com/events/portland' };
+
+  const { merged, requestedFieldsPerPass } = await runPassSequence(parser, htmlData, ['description'], [
+    { description: SITE_TAGLINE }
+  ]);
+  assert.equal(requestedFieldsPerPass.length, 1, 'nothing left to re-request');
+  assert.equal(merged.description, SITE_TAGLINE, 'no site tagline on the page → nothing to reject');
+
+  const event = parser.normalizeAiEvent(
+    { title: 'Portland PRIDE FRIDAY', description: SITE_TAGLINE, startDate: '2026-07-17' },
+    {}, htmlData, null, null);
+  assert.equal(event.description, SITE_TAGLINE, 'final guard is inert without a page tagline');
+});

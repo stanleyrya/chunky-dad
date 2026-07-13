@@ -4600,6 +4600,48 @@ class AiWebParser {
         return merged;
     }
 
+    // Per-pass organizer-brand / site-tagline guard. Values rejected here never
+    // enter the accumulated event, so the field stays in later passes' request
+    // lists. Deliberately narrow:
+    // - bar: rejected when it matches a page brand name (same test as the
+    //   normalizeAiEvent backstop).
+    // - title: rejected ONLY when the WHOLE title is a brand name — a title
+    //   merely containing the brand ("Provincetown⚓ | BEARRACUDA") is kept;
+    //   the suffix strip happens at the end (stripPageBrandFromTitle).
+    // - description: rejected ONLY when exactly equal (trimmed, whitespace-
+    //   collapsed, case-insensitive) to the site's own JSON-LD
+    //   WebSite.description. No fuzzy matching — genuine event taglines must
+    //   never be dropped.
+    rejectBrandLikePassFields(partial, htmlData, passLabel = '') {
+        if (!partial || typeof partial !== 'object') return partial;
+        const brandNames = this.getPageBrandNames(htmlData);
+        const siteTaglines = this.getPageSiteTaglines(htmlData);
+        if (brandNames.length === 0 && siteTaglines.length === 0) return partial;
+        const guarded = { ...partial };
+        const passName = String(passLabel || '').trim() || 'extraction';
+        Object.keys(guarded).forEach(key => {
+            if (this.isInternalAiFieldKey(key)) return;
+            const value = guarded[key];
+            if (typeof value !== 'string' || !value.trim()) return;
+            const normalizedField = this.normalizePromptFieldName(key);
+            if (normalizedField === 'bar' && brandNames.length > 0 && this.matchesPageBrandName(value, brandNames)) {
+                console.log(`🤖 AI Web: Rejecting bar "${value}" from ${passName} pass — matches page organizer/brand; keeping field open for later passes`);
+                delete guarded[key];
+                return;
+            }
+            if (normalizedField === 'title' && brandNames.length > 0 && this.matchesPageBrandName(value, brandNames)) {
+                console.log(`🤖 AI Web: Rejecting title "${value}" from ${passName} pass — the whole title is the page organizer/brand; keeping field open for later passes`);
+                delete guarded[key];
+                return;
+            }
+            if (normalizedField === 'description' && this.matchesSiteTagline(value, siteTaglines)) {
+                console.log(`🤖 AI Web: Rejecting description from ${passName} pass — identical to the site's own tagline, not event-specific`);
+                delete guarded[key];
+            }
+        });
+        return guarded;
+    }
+
     getBestModePromptGroups(sectionBundle) {
         const jsonGroup = sectionBundle && sectionBundle.jsonLd
             ? { label: 'jsonld', sections: [sectionBundle.jsonLd] }
@@ -4687,10 +4729,19 @@ class AiWebParser {
             const partial = await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, remainingFields, snippetText, passLabel, { ...options, dataFlags }, httpAdapter);
 
             // Validate extracted fields
-            const validatedPartial = this.validateAiEventEvidence(partial, htmlData, parserConfig, remainingFields, {
+            let validatedPartial = this.validateAiEventEvidence(partial, htmlData, parserConfig, remainingFields, {
                 evidenceContext: snippetEvidenceContext,
                 validationContext: { imageEvidenceUrls: snippetImageEvidence, cityConfig: cityConfig }
             }).event || {};
+
+            // Reject organizer-brand / site-tagline values AT PASS-RESULT TIME:
+            // an accepted value consumes the field slot (later passes only ask for
+            // still-missing fields via getRemainingPromptFields), so a junk meta
+            // answer like bar:"BEARRACUDA" would permanently block the correct
+            // value even when a later content pass could find it. Rejecting here
+            // keeps the field open; normalizeAiEvent keeps the same guards as an
+            // end-of-pipeline backstop.
+            validatedPartial = this.rejectBrandLikePassFields(validatedPartial, htmlData, passLabel);
 
             // Track field sources for traceability
             const validatedFields = validationState ? validationState.validatedFields : new Set();
@@ -6366,12 +6417,12 @@ TEXT:
             aiEvent.summary,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
         );
-        const description = this.firstNonEmpty(
-            aiEvent.description,
-            aiEvent.desc,
+        const aiDescription = this.firstNonEmpty(aiEvent.description, aiEvent.desc, '');
+        const configDescription = this.firstNonEmpty(
             this.getResolvedParserMetadataFieldValue(parserConfig, ['description', 'desc'], aiEvent),
             ''
         );
+        let description = aiDescription || configDescription;
         const aiBar = this.firstNonEmpty(aiEvent.bar, aiEvent.venue, '');
         const configBar = this.firstNonEmpty(
             this.getResolvedParserMetadataFieldValue(parserConfig, ['bar', 'venue'], aiEvent),
@@ -6398,6 +6449,16 @@ TEXT:
                 console.log(`🤖 AI Web: Stripping page brand from title "${title}" → "${strippedTitle}"`);
                 title = strippedTitle;
             }
+        }
+        // Site-tagline backstop (the primary guard runs at pass-result time in
+        // rejectBrandLikePassFields): an AI-extracted description that exactly
+        // equals the site's own JSON-LD WebSite.description is the site blurb,
+        // not an event description. Only the AI value is guarded — a configured
+        // metadata description is a deliberate override and survives.
+        if (description && description === aiDescription
+            && this.matchesSiteTagline(description, this.getPageSiteTaglines(htmlData))) {
+            console.log(`🤖 AI Web: Rejecting description from final normalization — identical to the site's own tagline, not event-specific`);
+            description = configDescription;
         }
         const address = this.firstNonEmpty(
             aiEvent.address,
@@ -7120,6 +7181,72 @@ TEXT:
             if (contentMatch) addName(this.sanitizeMetaContent('og:site_name', contentMatch[1]));
         }
         return Array.from(names);
+    }
+
+    // The page's site-level tagline(s): JSON-LD WebSite.description ONLY.
+    // Promoter sites repeat the same site blurb on every event page (e.g.
+    // bearracuda.com's "A Safe and Inclusive Space for Furry Friends and Their
+    // Admirers!") and extraction can return it as the event description.
+    // og:description and Event/WebPage-level descriptions are deliberately NOT
+    // collected — those can legitimately be event-specific, and genuine event
+    // taglines must never be dropped. Cached per page like getPageBrandNames.
+    getPageSiteTaglines(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return [];
+        if (Array.isArray(htmlData.pageSiteTaglines)) return htmlData.pageSiteTaglines;
+        const taglines = this.extractPageSiteTaglines(typeof htmlData.html === 'string' ? htmlData.html : '');
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageSiteTaglines = taglines;
+        }
+        return taglines;
+    }
+
+    extractPageSiteTaglines(html) {
+        const source = String(html || '').slice(0, 500000);
+        const taglines = new Set();
+        const addTagline = value => {
+            const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
+            if (text) taglines.add(text);
+        };
+        const collectWebSiteNodes = (node, depth) => {
+            if (!node || depth > 6) return;
+            if (Array.isArray(node)) {
+                node.forEach(child => collectWebSiteNodes(child, depth + 1));
+                return;
+            }
+            if (typeof node !== 'object') return;
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            const isWebSite = types.some(type =>
+                /^WebSite$/i.test(String(type || '').replace(/^https?:\/\/schema\.org\//i, '').trim()));
+            if (isWebSite && typeof node.description === 'string') addTagline(node.description);
+            // Same traversal rule as extractPageBrandNames: only descend through
+            // graph containers — descriptions nested inside Event nodes are the
+            // event's own data, never a site tagline.
+            if (node['@graph']) collectWebSiteNodes(node['@graph'], depth + 1);
+        };
+        const scriptRegex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptRegex.exec(source)) !== null) {
+            const text = this.normalizeWhitespace(this.decodeBasicEntities(match[1] || ''));
+            if (!text) continue;
+            let parsed = null;
+            try {
+                parsed = JSON.parse(text);
+            } catch (_) {
+                continue;
+            }
+            collectWebSiteNodes(parsed, 0);
+        }
+        return Array.from(taglines);
+    }
+
+    // Exact match only, after trimming + whitespace-collapsing (case-insensitive).
+    // No fuzzy or substring matching whatsoever: an event tagline that merely
+    // resembles the site blurb must survive.
+    matchesSiteTagline(value, taglines) {
+        const normalized = this.normalizeWhitespace(String(value || '')).toLowerCase();
+        if (!normalized) return false;
+        return (Array.isArray(taglines) ? taglines : []).some(tagline =>
+            this.normalizeWhitespace(String(tagline || '')).toLowerCase() === normalized);
     }
 
     // Comparable variants of a brand-ish name: lowercased, punctuation stripped,
