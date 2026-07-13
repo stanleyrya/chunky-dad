@@ -155,6 +155,14 @@ class FileLogger {
       error: typeof console.error === "function" ? console.error : null,
     };
 
+    // Debug channel: captured into the log file but NEVER echoed to the visible
+    // console. shared-core routes full AI payload dumps here (SharedCore.logDebug)
+    // so runs stay readable while the file log retains full detail.
+    console.debug = (...args) => {
+      const message = this.formatArgs(args);
+      this.append("debug", message);
+    };
+
     const callOriginal = (method, message) => {
       const original =
         this.originalConsole?.[method] || this.originalConsole?.log;
@@ -191,7 +199,10 @@ class FileLogger {
     if (this.captureMode === "none") {
       return;
     }
-    if (this.captureMode === "errors" && normalized === "info") {
+    if (
+      this.captureMode === "errors" &&
+      (normalized === "info" || normalized === "debug")
+    ) {
       return;
     }
     const line = this.formatEntry(normalized, message);
@@ -242,6 +253,7 @@ class FileLogger {
     const normalized = String(level || "info").toLowerCase();
     if (normalized === "warn" || normalized === "warning") return "warn";
     if (normalized === "error") return "error";
+    if (normalized === "debug") return "debug";
     return "info";
   }
 

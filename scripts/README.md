@@ -364,6 +364,21 @@ If URL input is present, `scraper-input.js` is optional, but `scraper-cities.js`
 - Check network tab for HTTP request failures
 - Verify CORS settings for cross-origin requests
 
+### Run Logs & Log Analysis
+- **Two-tier logging**: the visible Scriptable console shows compact info lines only; full AI prompt/response payloads and per-field diagnostics go to the `debug` channel, which is captured into the run log file but never echoed to the console.
+- **Where run logs live**: Scriptable writes each run to `Documents/chunky-dad-scraper/logs/<runId>.log` (alongside the saved-run JSON in `runs/`).
+- **See payloads live**: set `ai.verboseConsoleLogs: true` in `scraper-input.js` to mirror full AI payloads to the visible console while actively debugging.
+- **Analyze a run log** with the dependency-free CLI:
+  ```bash
+  node tools/analyze-scraper-log.js path/to/run.log            # run summary
+  node tools/analyze-scraper-log.js run.log --ai context-prep  # full AI payloads for one pass
+  node tools/analyze-scraper-log.js run.log --url furball      # only lines about matching URLs
+  node tools/analyze-scraper-log.js run.log --errors           # warnings/errors only
+  node tools/analyze-scraper-log.js run.log --merges           # merge/arbitration decisions
+  node tools/analyze-scraper-log.js run.log --json             # machine-readable summary
+  ```
+  Raw console pastes (`2026-07-13 09:12:13: message`) are accepted too.
+
 ---
 
 **⚠️ REMEMBER: This architecture prevents environment-specific code from contaminating shared business logic. Maintain this separation to ensure the codebase remains maintainable and testable across both Scriptable and web environments.**

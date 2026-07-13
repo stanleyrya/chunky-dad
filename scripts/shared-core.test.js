@@ -1143,3 +1143,83 @@ test('filterBearEvents: requireKeywords + allowlist gates keyword matching', () 
   const result = core.filterBearEvents(events, { allowlist: ['furball'], requireKeywords: true });
   assert.deepEqual(result.map(e => e.title), ['FURBALL Bear Bash']);
 });
+
+// ---------------------------------------------------------------------------
+// logDebug / logAiPayloadDebug (two-tier logging)
+// ---------------------------------------------------------------------------
+
+function withStubbedConsole(fn, { withDebug = true } = {}) {
+  const captured = { log: [], debug: [] };
+  const originalLog = console.log;
+  const originalDebug = console.debug;
+  console.log = (message) => captured.log.push(String(message));
+  if (withDebug) {
+    console.debug = (message) => captured.debug.push(String(message));
+  } else {
+    console.debug = undefined;
+  }
+  try {
+    fn();
+  } finally {
+    console.log = originalLog;
+    console.debug = originalDebug;
+  }
+  return captured;
+}
+
+test('logDebug uses console.debug when present', () => {
+  const core = createCore();
+  const captured = withStubbedConsole(() => {
+    core.logDebug('debug channel line');
+  });
+  assert.deepEqual(captured.debug, ['debug channel line']);
+  assert.deepEqual(captured.log, []);
+});
+
+test('logDebug falls back to console.log when console.debug is missing', () => {
+  const core = createCore();
+  const captured = withStubbedConsole(() => {
+    core.logDebug('fallback line');
+  }, { withDebug: false });
+  assert.deepEqual(captured.log, ['fallback line']);
+});
+
+test('logDebug mirrors to console.log when mirrorToConsole is set', () => {
+  const core = createCore();
+  const captured = withStubbedConsole(() => {
+    core.logDebug('verbose line', true);
+  });
+  assert.deepEqual(captured.log, ['verbose line']);
+  assert.deepEqual(captured.debug, []);
+});
+
+test('logAiPayloadDebug suppresses an identical payload logged twice', () => {
+  const core = createCore();
+  const payload = 'PROMPT BODY\nline two of the payload';
+  const captured = withStubbedConsole(() => {
+    core.logAiPayloadDebug('🤖 AI Web: Full prompt (context-prep pass)', payload);
+    core.logAiPayloadDebug('🤖 AI Web: Full prompt (context-prep pass)', payload);
+  });
+  assert.equal(captured.debug.length, 2);
+  // First emission carries the full body
+  assert.ok(captured.debug[0].includes('PROMPT BODY'));
+  assert.ok(captured.debug[0].includes(`(${payload.length} chars)`));
+  // Second emission is the one-line suppression notice, no body
+  assert.ok(captured.debug[1].includes('identical to payload logged earlier'));
+  assert.ok(captured.debug[1].includes('suppressed'));
+  assert.ok(captured.debug[1].includes(`${payload.length} chars`));
+  assert.ok(!captured.debug[1].includes('PROMPT BODY'));
+  assert.equal(captured.debug[1].split('\n').length, 1);
+});
+
+test('logAiPayloadDebug logs different payloads in full', () => {
+  const core = createCore();
+  const captured = withStubbedConsole(() => {
+    core.logAiPayloadDebug('🤖 AI Web: Full prompt (extraction pass)', 'payload A');
+    core.logAiPayloadDebug('🤖 AI Web: Full prompt (extraction pass)', 'payload B');
+  });
+  assert.equal(captured.debug.length, 2);
+  assert.ok(captured.debug[0].includes('payload A'));
+  assert.ok(captured.debug[1].includes('payload B'));
+  assert.ok(!captured.debug[1].includes('suppressed'));
+});

@@ -4141,6 +4141,48 @@ class SharedCore {
     // AI ORCHESTRATION HELPERS
     // ============================================================================
 
+    // Debug log channel: full payload dumps go here so the Scriptable adapter can
+    // capture them into the run log file without spamming the visible console.
+    // In Node console.debug === console.log, so behavior there is unchanged.
+    // Pass mirrorToConsole=true (ai.verboseConsoleLogs) to force payloads onto the
+    // visible console while actively debugging.
+    logDebug(message, mirrorToConsole = false) {
+        if (!mirrorToConsole && typeof console.debug === 'function') {
+            console.debug(message);
+            return;
+        }
+        console.log(message);
+    }
+
+    // djb2 string hash (environment-agnostic — no Node crypto). Used to detect
+    // identical AI payloads so repeated dumps can be suppressed in the logs.
+    hashString(text) {
+        const source = String(text || '');
+        let hash = 5381;
+        for (let i = 0; i < source.length; i++) {
+            hash = (((hash << 5) + hash) + source.charCodeAt(i)) >>> 0;
+        }
+        return hash.toString(16);
+    }
+
+    // Log a full AI payload (prompt or response) on the debug channel, suppressing
+    // exact repeats: the context-prep pass and confidence retries would otherwise
+    // dump the identical multi-KB payload twice per page.
+    logAiPayloadDebug(header, body, aiConfig = null) {
+        const payload = String(body || '');
+        const mirrorToConsole = Boolean(aiConfig && aiConfig.verboseConsoleLogs);
+        if (!this._loggedAiPayloadHashes) {
+            this._loggedAiPayloadHashes = new Set();
+        }
+        const hash = this.hashString(payload);
+        if (this._loggedAiPayloadHashes.has(hash)) {
+            this.logDebug(`${header} — identical to payload logged earlier (hash ${hash}, ${payload.length} chars), suppressed`, mirrorToConsole);
+            return;
+        }
+        this._loggedAiPayloadHashes.add(hash);
+        this.logDebug(`${header} (${payload.length} chars)\n${payload}`, mirrorToConsole);
+    }
+
     normalizePayloadMode(mode) {
         const normalized = String(mode || '').trim().toLowerCase();
         if (normalized === 'exhaustive' || normalized === 'jsonld' || normalized === 'meta') return normalized;
@@ -4174,6 +4216,7 @@ class SharedCore {
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
             arbitrateMerges: aiConfig.arbitrateMerges !== false,
+            verboseConsoleLogs: aiConfig.verboseConsoleLogs === true,
             ollama: aiConfig.ollama && typeof aiConfig.ollama === 'object' ? aiConfig.ollama : {},
             openai: aiConfig.openai && typeof aiConfig.openai === 'object' ? aiConfig.openai : {}
         };
@@ -4336,7 +4379,7 @@ class SharedCore {
         }
 
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, provider: ${aiConfig.provider}, prompt: ${promptChars} chars`);
-        console.log(`🤖 AI Web: Full prompt${label} (${promptChars} chars)\n${prompt}`);
+        this.logAiPayloadDebug(`🤖 AI Web: Full prompt${label}`, prompt, aiConfig);
 
         const startTime = Date.now();
         try {
@@ -4372,7 +4415,7 @@ class SharedCore {
 
             if (responseContent && typeof responseContent === 'string' && responseContent.length > 0) {
                 console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseContent.length} chars`);
-                console.log(`🤖 AI Web: Model response text${label}\n${responseContent}`);
+                this.logAiPayloadDebug(`🤖 AI Web: Model response text${label}`, responseContent, aiConfig);
                 return responseContent;
             }
 
