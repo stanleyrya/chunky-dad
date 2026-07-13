@@ -244,3 +244,78 @@ test('long crawl lists are capped in the rendered HTML', () => {
   assert.ok(html.includes('more page(s) not shown'));
   assert.ok(!html.includes('page-79'));
 });
+
+// ---------------------------------------------------------------------------
+// Per-event provenance section (event-provenance.js glue)
+// ---------------------------------------------------------------------------
+
+test('event cards embed the collapsed provenance section with the export control', () => {
+  const adapter = buildAdapter();
+  const event = {
+    title: 'BEARRACUDA: Atlanta',
+    startDate: '2026-08-01T02:00:00.000Z',
+    endDate: '2026-08-01T06:00:00.000Z',
+    url: 'https://bearracuda.com/events/atlanta',
+    source: 'bearracuda',
+    _action: 'merge',
+    _analysis: { action: 'merge' },
+    _original: {
+      scraper: { title: 'BEARRACUDA: Atlanta', endDate: '2026-08-01T04:00:00.000Z' },
+      calendar: { title: 'Bearracuda Atlanta', endDate: '2026-08-01T06:00:00.000Z' },
+      merged: {},
+      aiArbitration: { arbitrated: ['endDate'], fallbacks: [] }
+    },
+    _mergeDecisions: [{
+      field: 'endDate',
+      existingValue: '2026-08-01T06:00:00.000Z',
+      newValue: '2026-08-01T04:00:00.000Z',
+      chosenValue: '2026-08-01T06:00:00.000Z',
+      reason: 'calendar end matches doors-close time',
+      source: 'ai'
+    }]
+  };
+
+  const card = adapter.generateEventCard(event, { runId: '20260713-090000' });
+
+  assert.ok(card.includes('provenance-details'));
+  assert.ok(card.includes('🔍 Provenance'));
+  assert.ok(card.includes('Parser: bearracuda'));
+  assert.ok(card.includes('AI: calendar end matches doors-close time'));
+  assert.ok(card.includes('exportProvenanceIssue(this)'));
+
+  // The embedded export payload carries the run id passed through by the card
+  const payloadMatch = card.match(/data-payload="([^"]*)"/);
+  assert.ok(payloadMatch, 'export payload missing from card');
+  const payload = JSON.parse(decodeURIComponent(payloadMatch[1]));
+  assert.equal(payload.runId, '20260713-090000');
+  assert.equal(payload.mergeDecisions.length, 1);
+});
+
+test('a provenance build failure degrades to an empty section, never blocks the card', () => {
+  const adapter = buildAdapter();
+  const hostile = { title: 'Bad Event', startDate: '2026-08-01T02:00:00.000Z' };
+  Object.defineProperty(hostile, '_mergeDecisions', {
+    get() { throw new Error('boom'); },
+    enumerable: true
+  });
+
+  // The adapter wrapper swallows the throw and returns an empty section —
+  // the card build continues without provenance instead of dying.
+  assert.equal(adapter.buildEventProvenanceHtml(hostile), '');
+});
+
+test('generateRichHTML defines the exportProvenanceIssue page handler once', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML({
+    totalEvents: 1,
+    bearEvents: 1,
+    calendarEvents: 0,
+    errors: [],
+    analyzedEvents: [{ title: 'Bear Night', startDate: '2026-08-01T02:00:00.000Z', _action: 'new' }],
+    parserResults: []
+  });
+
+  assert.equal((html.match(/function exportProvenanceIssue\(/g) || []).length, 1);
+  assert.ok(html.includes('provenance-details'));
+  assert.ok(html.includes('No provenance recorded'));
+});

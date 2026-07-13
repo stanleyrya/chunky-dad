@@ -379,6 +379,7 @@ const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const { EventSchema: SharedEventSchema } = importModule("event-schema");
 const { SharedCore } = importModule("shared-core");
 const { RunLogSummary } = importModule("run-log-summary");
+const { EventProvenance } = importModule("event-provenance");
 
 if (
   !SharedEventSchema ||
@@ -3236,6 +3237,8 @@ class ScriptableAdapter {
     const runMetaLabel = runIdLabel
       ? `Run: ${runContextLabel} | ID: ${runIdLabel}`
       : `Run: ${runContextLabel}`;
+    // Run identity handed to each event card's provenance/export-issue section
+    const provenanceRunInfo = { runId: runIdLabel };
     const shouldShowLogs = results?._isDisplayingSavedRun === true;
     const runLogInfo = shouldShowLogs
       ? await this.loadRunLogsForDisplay(results)
@@ -4278,7 +4281,118 @@ class ScriptableAdapter {
             font-size: 12px;
             margin: 4px 0;
         }
-        
+
+        /* Per-event provenance section (built by event-provenance.js) */
+        .provenance-details {
+            margin-top: 12px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+        }
+
+        .provenance-details > summary {
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-color);
+            padding: 5px 0;
+        }
+
+        .provenance-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin: 4px 0;
+        }
+
+        .provenance-url {
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .provenance-table-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 6px;
+        }
+
+        .provenance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .provenance-table th {
+            text-align: left;
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .provenance-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            word-break: break-word;
+            vertical-align: top;
+        }
+
+        .provenance-table .provenance-field {
+            font-family: monospace;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .provenance-table .provenance-missing {
+            color: var(--text-secondary);
+        }
+
+        .provenance-table .provenance-decision {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .provenance-note {
+            color: var(--text-secondary);
+            font-size: 11px;
+            margin: 6px 0 0;
+        }
+
+        .provenance-export {
+            margin-top: 10px;
+        }
+
+        .provenance-export-btn {
+            padding: 4px 10px;
+            font-size: 11px;
+            background: var(--primary-color);
+            color: var(--text-inverse);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+        }
+
+        .provenance-export-text {
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 10px;
+            background: var(--background-light);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .provenance-export-status {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-top: 4px;
+        }
+
         .event-card.raw-mode .event-details,
         .event-card.raw-mode .event-metadata,
         .event-card.raw-mode .existing-info,
@@ -4473,7 +4587,7 @@ class ScriptableAdapter {
             <span class="section-title">New Events to Add</span>
             <span class="section-count">${newEvents.length}</span>
         </div>
-        ${newEvents.map((event) => this.generateEventCard(event)).join("")}
+        ${newEvents.map((event) => this.generateEventCard(event, provenanceRunInfo)).join("")}
     </div>
     `
         : ""
@@ -4488,7 +4602,7 @@ class ScriptableAdapter {
             <span class="section-title">Events to Merge (Adding Info)</span>
             <span class="section-count">${mergeEvents.length}</span>
         </div>
-        ${mergeEvents.map((event) => this.generateEventCard(event)).join("")}
+        ${mergeEvents.map((event) => this.generateEventCard(event, provenanceRunInfo)).join("")}
     </div>
     `
         : ""
@@ -4503,7 +4617,7 @@ class ScriptableAdapter {
                             <span class="section-title">Events Requiring Review</span>
             <span class="section-count">${conflictEvents.length}</span>
         </div>
-        ${conflictEvents.map((event) => this.generateEventCard(event)).join("")}
+        ${conflictEvents.map((event) => this.generateEventCard(event, provenanceRunInfo)).join("")}
     </div>
     `
         : ""
@@ -4974,6 +5088,46 @@ class ScriptableAdapter {
             filterEvents();
         }
         
+        // Per-event "Export issue" (provenance section). WKWebView has no
+        // reliable navigator.clipboard and no window.open, so: reveal a
+        // readonly textarea holding the JSON (auto-selects on focus), attempt
+        // the legacy execCommand copy, and tell the user which worked.
+        function exportProvenanceIssue(button) {
+            try {
+                const wrapper = button.closest ? button.closest('.provenance-export') : button.parentElement;
+                if (!wrapper) return;
+                const area = wrapper.querySelector('.provenance-export-area');
+                const textarea = wrapper.querySelector('.provenance-export-text');
+                const status = wrapper.querySelector('.provenance-export-status');
+                if (!area || !textarea || !status) return;
+
+                let text = '';
+                try {
+                    text = decodeURIComponent(button.getAttribute('data-payload') || '');
+                } catch (decodeError) {
+                    text = button.getAttribute('data-payload') || '';
+                }
+
+                area.style.display = 'block';
+                textarea.value = text;
+                textarea.focus();
+                textarea.select();
+                if (textarea.setSelectionRange) {
+                    textarea.setSelectionRange(0, textarea.value.length);
+                }
+
+                let copied = false;
+                try {
+                    copied = document.execCommand('copy');
+                } catch (copyError) {
+                    copied = false;
+                }
+                status.textContent = copied ? 'Copied ✓' : 'Select & copy above';
+            } catch (error) {
+                console.error('Export issue failed: ' + error);
+            }
+        }
+
         function copyEventJSON(button) {
             const eventJSON = button.getAttribute('data-event-json');
             
@@ -5315,6 +5469,26 @@ class ScriptableAdapter {
     }
   }
 
+  // Per-event "🔍 Provenance" section (field origins, merge decisions, and the
+  // export-issue payload). Builders live in the pure event-provenance module;
+  // this is just the environment glue. A failure here must never block an
+  // event card, so this degrades to an empty string (mirrors
+  // buildRunHealthBadgeHtml).
+  buildEventProvenanceHtml(event, runInfo = {}) {
+    try {
+      return EventProvenance.buildEventProvenanceSectionHtml(event, {
+        action: this.normalizeIntentAction(event),
+        runId: runInfo.runId || null,
+        timestamp: runInfo.timestamp || null,
+      });
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Provenance section build failed for "${event?.title || "unknown"}": ${error.message}`,
+      );
+      return "";
+    }
+  }
+
   // Structured per-event decisions from the analyzed results (preferred over
   // log-derived data where both exist).
   collectEventDecisionLines(results) {
@@ -5566,7 +5740,7 @@ class ScriptableAdapter {
   }
 
   // Generate HTML for individual event card
-  generateEventCard(event) {
+  generateEventCard(event, runInfo = {}) {
     const intentAction = this.normalizeIntentAction(event) || "other";
     const writeAction = this.getWriteActionFromEvent(event);
     const actionBadge =
@@ -5949,7 +6123,10 @@ class ScriptableAdapter {
                   })()
                 : ""
             }
-            
+
+            <!-- Per-event provenance (field origins + export-issue button) -->
+            ${this.buildEventProvenanceHtml(event, runInfo)}
+
             <!-- Simplified metadata -->
             ${
               event._action === "conflict" && event._conflicts
