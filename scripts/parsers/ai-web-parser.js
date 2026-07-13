@@ -4448,11 +4448,21 @@ class AiWebParser {
             meta: new Set(),
             content: new Set()
         };
+        let excludedLocation = false;
         Object.keys(confidenceByField).forEach(field => {
             const confidence = confidenceByField[field];
             const expectation = expectations[field] || { expected: [], strong: [] };
             const hasContentExpected = expectation.expected && expectation.expected.includes('content');
             if (!confidence || confidence.level !== 'low') return;
+            // Never retry location (coordinates): across production runs the
+            // retry pass never legitimately recovered coordinates — the model
+            // fabricated them from the street address every time and the
+            // evidence gate dropped them. Main extraction passes still request
+            // location (a page could legitimately embed coordinates).
+            if (field === 'location') {
+                if (confidence.retryCandidates?.length || hasContentExpected) excludedLocation = true;
+                return;
+            }
             if (!confidence.retryCandidates?.length) {
                 // No retry candidates - if content is expected, add to content since OCR content might still have the field
                 if (hasContentExpected && grouped.content !== undefined) {
@@ -4466,6 +4476,9 @@ class AiWebParser {
                 });
             }
         });
+        if (excludedLocation) {
+            console.log('🤖 AI Web: Skipping location in confidence retry — never legitimately recovered on retry');
+        }
         return ['jsonld', 'meta', 'content']
             .map(partition => ({
                 partition,

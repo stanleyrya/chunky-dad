@@ -984,6 +984,58 @@ test('mergeParsedEvents: same-host root-vs-deep website resolves deterministical
   assert.equal(merged.website, 'https://bearracuda.com/events/portland-pridefriday/');
 });
 
+// ---------------------------------------------------------------------------
+// Case-only variants (2026-07-12 run: bar="NOVA PDX" vs "Nova PDX",
+// bar="MASSIVE" vs "Massive", title="Treasure Trail Portland PRIDE" vs
+// "TREASURE TRAIL Portland PRIDE" each burned a 1.5–7s AI arbitration, with
+// inconsistent picks between runs)
+// ---------------------------------------------------------------------------
+
+test('guardrail: case-only variants keep the less-uppercased form without AI', () => {
+  const core = createCore();
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'NOVA PDX', 'Nova PDX'),
+    { winner: 'b', reason: 'case-only variants — kept less-uppercased form' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', 'TREASURE TRAIL Portland PRIDE', 'Treasure Trail Portland PRIDE'),
+    { winner: 'b', reason: 'case-only variants — kept less-uppercased form' },
+    'the less-uppercased variant wins');
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Massive'),
+    { winner: 'b', reason: 'case-only variants — kept less-uppercased form' });
+  // Exact tie (whitespace-collapse-equal, same uppercase count) keeps valueA
+  // — the existing/calendar side, for stability
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'Nova PDX', 'Nova  PDX'),
+    { winner: 'a', reason: 'case-only variants — kept less-uppercased form' });
+  // Genuinely different values must still go to AI
+  assert.equal(core.resolveConflictDeterministically('bar', 'The Heretic', 'The Heretic Atlanta'), null);
+  assert.equal(core.resolveConflictDeterministically('address', '722 E Burnside', '722 East Burnside Street'), null);
+});
+
+test('guardrail: earlier deterministic rules keep priority over the case-only rule', () => {
+  const core = createCore();
+  // Emoji twins that are ALSO case-fold-equal (whitespace-only difference):
+  // the emoji-twin rule fires first — longer variant wins with the twin
+  // reason, where the case-only rule alone would have kept valueA on a tie.
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', 'Nova PDX 🔥', 'Nova  PDX 🔥'),
+    { winner: 'b', reason: 'emoji title variant beats its emoji-stripped twin' });
+  // Two bare-city case variants: the city rule needs exactly ONE city-only
+  // side so it stays silent, and the case-only rule now resolves what
+  // previously went to AI ("two bare-city variants still arbitrate" no longer
+  // applies when the variants differ only by case).
+  const cityCore = createCityTitleCore();
+  assert.deepEqual(
+    cityCore.resolveConflictDeterministically('title', 'NEW ORLEANS', 'New Orleans', { cityKey: 'nola' }),
+    { winner: 'b', reason: 'case-only variants — kept less-uppercased form' });
+  // A named-vs-bare-city pair keeps the city rule's reason (it can never be
+  // case-fold-equal, so the earlier rule always decides first)
+  assert.deepEqual(
+    cityCore.resolveConflictDeterministically('title', 'BEARRACUDA: New Orleans⚜️', 'New Orleans⚜️', { cityKey: 'nola' }),
+    { winner: 'a', reason: 'named title beats bare city title' });
+});
+
 test('resolveAiConfig defaults and the arbitrateMerges flag', () => {
   const core = createCore();
   const defaults = core.resolveAiConfig({});
