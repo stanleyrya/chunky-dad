@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 // ============================================================================
-// analyze-scraper-log.js - Summarize a bear-event-scraper run log
+// analyze-scraper-log.js - Summarize a bear-event-scraper run log (CLI)
+//
+// Thin Node wrapper (fs + args + printing) around the environment-agnostic
+// parsing/summarizing core in scripts/run-log-summary.js — the same module the
+// Scriptable displays use for their run-insight sections.
 //
 // Reads a run log written by the Scriptable adapter's FileLogger
 // (Documents/chunky-dad-scraper/logs/<runId>.log, format:
@@ -21,214 +25,14 @@
 'use strict';
 
 const fs = require('fs');
-
-const FILE_ENTRY_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) \[([A-Z]+)\] (.*)$/;
-const PASTE_ENTRY_RE = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})(?:\.\d+)?: (.*)$/;
-
-// Parse log text into entries: { ts, level, message } — message may be multi-line.
-function parseLog(text) {
-    const entries = [];
-    const lines = String(text || '').split(/\r?\n/);
-    for (const line of lines) {
-        let match = line.match(FILE_ENTRY_RE);
-        if (match) {
-            entries.push({ ts: match[1], level: match[2].toLowerCase(), message: match[3] });
-            continue;
-        }
-        match = line.match(PASTE_ENTRY_RE);
-        if (match) {
-            const message = match[2];
-            // Raw console pastes carry no level — infer warnings from emoji markers.
-            const level = /^(⚠️|🚨|❌)/.test(message) ? 'warn' : 'info';
-            entries.push({ ts: match[1], level, message });
-            continue;
-        }
-        if (entries.length > 0) {
-            entries[entries.length - 1].message += `\n${line}`;
-        } else if (line.trim()) {
-            entries.push({ ts: '', level: 'info', message: line });
-        }
-    }
-    return entries;
-}
-
-const URL_CONTEXT_RES = [
-    /🤖 AI Web: Running AI extraction for (\S+)/,
-    /🤖 AI Web: Fields for (\S+): \d+ selected/,
-    /🤖 AI Web: URL discovery stats for (\S+)/
-];
-
-// Annotate each entry with the page URL it belongs to (last URL-setting line wins).
-function annotateUrls(entries) {
-    let currentUrl = '';
-    for (const entry of entries) {
-        for (const re of URL_CONTEXT_RES) {
-            const match = entry.message.match(re);
-            if (match && match[1] && match[1] !== 'extraction' && match[1] !== 'unknown') {
-                currentUrl = match[1];
-                break;
-            }
-        }
-        entry.url = currentUrl;
-    }
-    return entries;
-}
-
-function normalizePass(raw) {
-    return String(raw || 'extraction').replace(/\s*pass$/i, '').trim() || 'extraction';
-}
-
-function buildSummary(entries) {
-    annotateUrls(entries);
-    const pages = new Map(); // url -> { events, passes:Set, aiMs, requests }
-    const aiByPass = new Map(); // pass -> { sent, succeeded, totalMs }
-    const merges = [];
-    const droppedFields = [];
-    const dedupe = [];
-    const filtered = [];
-    const calendar = [];
-    const problems = [];
-
-    const pageFor = (url) => {
-        const key = url || '(no url)';
-        if (!pages.has(key)) pages.set(key, { events: 0, passes: new Set(), aiMs: 0, requests: 0 });
-        return pages.get(key);
-    };
-
-    for (const entry of entries) {
-        const msg = entry.message;
-        const firstLine = msg.split('\n', 1)[0];
-
-        if (entry.level === 'warn' || entry.level === 'error') {
-            problems.push({ level: entry.level, line: firstLine });
-        }
-
-        let match = firstLine.match(/🤖 AI Web: Sending AI request(?: \(([^)]+)\))? to /);
-        if (match) {
-            const pass = normalizePass(match[1]);
-            if (!aiByPass.has(pass)) aiByPass.set(pass, { sent: 0, succeeded: 0, totalMs: 0 });
-            aiByPass.get(pass).sent += 1;
-            const page = pageFor(entry.url);
-            page.requests += 1;
-            page.passes.add(pass);
-            continue;
-        }
-        match = firstLine.match(/🤖 AI Web: AI request(?: \(([^)]+)\))? succeeded in (\d+)ms/);
-        if (match) {
-            const pass = normalizePass(match[1]);
-            if (!aiByPass.has(pass)) aiByPass.set(pass, { sent: 0, succeeded: 0, totalMs: 0 });
-            const stats = aiByPass.get(pass);
-            stats.succeeded += 1;
-            stats.totalMs += Number(match[2]);
-            pageFor(entry.url).aiMs += Number(match[2]);
-            continue;
-        }
-        match = firstLine.match(/🤖 AI Web: Extracted (\S+) →/);
-        if (match) {
-            pageFor(match[1]).events += 1;
-            continue;
-        }
-        if (firstLine.includes('🤖 AI Web: Running AI extraction for')) {
-            pageFor(entry.url);
-            continue;
-        }
-        if (/🤝 AI MERGE|🔄 PARSER MERGE|🔄 MERGE/.test(firstLine)) {
-            merges.push(firstLine);
-            continue;
-        }
-        if (/Dropped \d+ field\(s\) lacking source evidence|Dropping field .* low confidence/.test(firstLine)) {
-            droppedFields.push(firstLine);
-            continue;
-        }
-        match = firstLine.match(/🔄 SharedCore: Deduplicated (\d+) → (\d+)/);
-        if (match) {
-            dedupe.push(firstLine);
-            continue;
-        }
-        if (firstLine.includes('SharedCore: Filtering out event')) {
-            filtered.push(firstLine);
-            continue;
-        }
-        if (/^(📅|📊|🌍|🕐|✅ Found calendars|❌ Missing calendars)/.test(firstLine)) {
-            calendar.push(firstLine);
-        }
-    }
-
-    return {
-        pages: Array.from(pages.entries()).map(([url, data]) => ({
-            url,
-            events: data.events,
-            aiRequests: data.requests,
-            passes: Array.from(data.passes),
-            aiMs: data.aiMs
-        })),
-        aiRequestsByPass: Array.from(aiByPass.entries()).map(([pass, s]) => ({
-            pass,
-            sent: s.sent,
-            succeeded: s.succeeded,
-            totalMs: s.totalMs,
-            avgMs: s.succeeded > 0 ? Math.round(s.totalMs / s.succeeded) : 0
-        })),
-        merges,
-        droppedFields,
-        dedupe,
-        filtered,
-        calendar,
-        problems
-    };
-}
-
-// Full AI payload dumps (debug channel): Full prompt / Model response text blocks.
-function extractAiPayloads(entries, passType = null) {
-    const payloads = [];
-    for (const entry of entries) {
-        const match = entry.message.match(/^🤖 AI Web: (Full prompt|Model response text)(?: \(([^)]+)\))?/);
-        if (!match) continue;
-        const pass = normalizePass(match[2]);
-        if (passType && pass !== normalizePass(passType)) continue;
-        payloads.push({ kind: match[1], pass, url: entry.url || '', text: entry.message });
-    }
-    return payloads;
-}
-
-function formatSummary(summary) {
-    const out = [];
-    out.push('=== PAGES ===');
-    if (summary.pages.length === 0) out.push('  (none found)');
-    for (const page of summary.pages) {
-        out.push(`  ${page.url} → ${page.events} event(s), ${page.aiRequests} AI request(s) [${page.passes.join(', ')}], ${page.aiMs}ms AI time`);
-    }
-    out.push('', '=== AI REQUESTS BY PASS ===');
-    if (summary.aiRequestsByPass.length === 0) out.push('  (none found)');
-    for (const stats of summary.aiRequestsByPass) {
-        out.push(`  ${stats.pass}: ${stats.sent} sent, ${stats.succeeded} succeeded, total ${stats.totalMs}ms, avg ${stats.avgMs}ms`);
-    }
-    out.push('', `=== MERGE DECISIONS (${summary.merges.length}) ===`);
-    summary.merges.forEach(line => out.push(`  ${line}`));
-    if (summary.droppedFields.length > 0) {
-        out.push('', `=== DROPPED FIELDS (${summary.droppedFields.length}) ===`);
-        summary.droppedFields.forEach(line => out.push(`  ${line}`));
-    }
-    if (summary.dedupe.length > 0 || summary.filtered.length > 0) {
-        out.push('', '=== DEDUP / FILTER ===');
-        summary.dedupe.forEach(line => out.push(`  ${line}`));
-        summary.filtered.forEach(line => out.push(`  ${line}`));
-    }
-    if (summary.calendar.length > 0) {
-        out.push('', '=== CALENDAR ===');
-        summary.calendar.forEach(line => out.push(`  ${line}`));
-    }
-    out.push('', `=== WARNINGS / ERRORS (${summary.problems.length}) ===`);
-    summary.problems.forEach(problem => out.push(`  [${problem.level.toUpperCase()}] ${problem.line}`));
-    return out.join('\n');
-}
-
-function filterByUrl(entries, urlSubstring) {
-    const needle = String(urlSubstring || '');
-    return entries.filter(entry =>
-        (entry.url && entry.url.includes(needle)) || entry.message.includes(needle)
-    );
-}
+const {
+    parseLog,
+    annotateUrls,
+    buildSummary,
+    extractAiPayloads,
+    formatSummary,
+    filterByUrl
+} = require('../scripts/run-log-summary');
 
 const HELP = `Analyze a bear-event-scraper run log.
 
@@ -238,8 +42,8 @@ Log files live in Scriptable's Documents/chunky-dad-scraper/logs/<runId>.log;
 raw console pastes ("2026-07-13 09:12:13: message") are also accepted.
 
 Options:
-  (none)            run summary: pages, AI timings, merges, dropped fields,
-                    dedup/filter results, calendar section, warnings/errors
+  (none)            run summary: crawl tree, pages, AI timings, merges, dropped
+                    fields, dedup/filter results, calendar section, warnings/errors
   --ai [passType]   print full AI prompt/response payloads (debug lines),
                     optionally only one pass type (extraction, context-prep,
                     repair, ocr, ...)
@@ -326,6 +130,7 @@ function main(argv) {
     return 0;
 }
 
+// Re-export the shared core so existing consumers/tests of this module keep working.
 module.exports = { parseLog, annotateUrls, buildSummary, extractAiPayloads, formatSummary, filterByUrl };
 
 if (require.main === module) {
