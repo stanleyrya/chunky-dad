@@ -5,10 +5,13 @@ const path = require('node:path');
 // ---------------------------------------------------------------------------
 // Headless load of the Scriptable adapter: stub the Scriptable globals the
 // module touches at require time (importModule, FileManager) so the pure
-// HTML-builder methods can be exercised under Node. WebView/Calendar/Device
-// are NOT stubbed on purpose — the methods under test must never touch them.
+// HTML-builder methods can be exercised under Node. Calendar/Device carry
+// minimal stubs for generateRichHTML; WebView is NOT stubbed on purpose —
+// the methods under test must never present UI.
 // ---------------------------------------------------------------------------
 global.importModule = (name) => require(path.join(__dirname, '..', name));
+global.Calendar = { forEvents: async () => [] };
+global.Device = { isUsingDarkAppearance: () => false };
 
 const fileManagerStub = {
   documentsDirectory: () => '/tmp/chunky-dad-adapter-test',
@@ -131,6 +134,98 @@ test('saved run with a log file feeds its full text through the summary', () => 
   assert.equal(insights.available, true);
   assert.equal(insights.summary.crawl.length, 1);
   assert.equal(insights.summary.crawl[0].roots[0].children.length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// Metrics 2.0: per-run signals block + results-UI health badge
+// ---------------------------------------------------------------------------
+
+test('buildMetricsRecord emits the additive signals block from the run log + results', () => {
+  const adapter = buildAdapter();
+
+  // Feed guard/AI/arbitration/funnel lines through the console capture — the
+  // exact path production lines take into the adapter's in-memory FileLogger.
+  console.log('SYSTEM: Bearracuda → bearracuda (1 URL): https://bearracuda.com/');
+  console.log('🤖 AI Web: Sending AI request (extraction pass) to http://rybook.example:8000/v1/chat/completions — model: qwen, provider: openai, prompt: 4000 chars');
+  console.log('🤖 AI Web: AI request (extraction pass) succeeded in 2000ms — response: 400 chars');
+  console.log('🤖 AI Web: Rejecting bar "BEARRACUDA" from best meta 1/1 pass — matches page organizer/brand; keeping field open for later passes');
+  console.warn('🗺️ OpenStreetMapNormalizer: Geocode for "922 E. BURNSIDE" resolved outside event city "portland" ("Denver, Colorado") — ignoring coordinates');
+  console.log('🤝 AI MERGE: "BEARRACUDA: Portland" field=bar chose calendar ("Sanctuary") over scraped ("BEARRACUDA") — venue, not the organizer');
+  console.log('SYSTEM: Event filtering complete: 18 → 16 future → 16 bear → 9 final');
+  console.log('🔄 SharedCore: Deduplicated 16 → 9 (removed 7)');
+
+  const results = {
+    savedRunId: '20260713-090000',
+    errors: [],
+    totalEvents: 18,
+    bearEvents: 9,
+    duplicatesRemoved: 7,
+    parserResults: [],
+    analyzedEvents: [
+      {
+        title: 'BEARRACUDA: Portland',
+        bar: 'Sanctuary',
+        coordinates: { lat: 45.52, lng: -122.65 },
+        startDate: '2026-08-01T02:00:00.000Z',
+        endDate: '2026-08-01T06:00:00.000Z'
+      },
+      { title: 'No-venue event', startDate: '2026-08-02T02:00:00.000Z' }
+    ]
+  };
+
+  const record = adapter.buildMetricsRecord(results);
+
+  // Existing schema unchanged (additive record)
+  assert.equal(record.schema_version, 2);
+  assert.equal(record.run_id, '20260713-090000');
+  assert.equal(record.totals.total_events, 18);
+  assert.equal(record.totals.final_bear_events, 9);
+  assert.ok(record.actions);
+  assert.ok(record.calendar_actions);
+
+  // New signals block: aggregates only
+  const signals = record.signals;
+  assert.ok(signals, 'signals block missing from metrics record');
+  assert.equal(signals.ai.requests, 1);
+  assert.equal(signals.ai.failures, 0);
+  assert.deepEqual(signals.ai.byPass.extraction, { n: 1, ms: 2000 });
+  assert.equal(signals.guards.brandBarRejected, 1);
+  assert.equal(signals.guards.geocodeRejected, 1);
+  assert.equal(signals.guards.taglineRejected, 0);
+  assert.deepEqual(signals.arbitration, {
+    conflicts: 1, calendarPicks: 1, scrapedPicks: 0, fallbacks: 0
+  });
+  assert.deepEqual(signals.funnel, {
+    found: 18, future: 16, bear: 16, final: 9, duplicatesRemoved: 7
+  });
+  assert.deepEqual(signals.quality, {
+    events: 2, withBar: 1, withCoords: 1, withEndDuration: 1
+  });
+
+  // Compactness: no payload-sized strings sneak into the record
+  assert.ok(JSON.stringify(signals).length < 2000);
+});
+
+test('results-UI header contains the one-line run-health badge', async () => {
+  const adapter = buildAdapter();
+  // The shared logger already carries a geocode rejection from the metrics
+  // test above; the badge must surface it as a warning.
+  const html = await adapter.generateRichHTML({
+    totalEvents: 1,
+    bearEvents: 1,
+    calendarEvents: 0,
+    errors: [],
+    analyzedEvents: [],
+    parserResults: []
+  });
+
+  const badgeMatch = html.match(/<div class="header-health-badge (ok|warn)">([^<]*)<\/div>/);
+  assert.ok(badgeMatch, 'health badge missing from results header');
+  assert.equal(badgeMatch[1], 'warn');
+  assert.ok(badgeMatch[2].startsWith('🟡'));
+  assert.ok(badgeMatch[2].includes('geocode rejected'));
+  // Surgical: exactly one badge element, no extra structure added to the UI
+  assert.equal((html.match(/<div class="header-health-badge/g) || []).length, 1);
 });
 
 test('long crawl lists are capped in the rendered HTML', () => {

@@ -3193,6 +3193,10 @@ class ScriptableAdapter {
       runInsights,
       results,
     );
+    const runHealthBadgeHtml = this.buildRunHealthBadgeHtml(
+      runInsights,
+      results,
+    );
     const headerLogoData = await this.loadHeaderLogoData();
     const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
 
@@ -3424,6 +3428,22 @@ class ScriptableAdapter {
             font-weight: 500;
             opacity: 0.85;
             margin-top: 6px;
+        }
+
+        .header-health-badge {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 6px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .header-health-badge.warn {
+            background: rgba(254, 202, 87, 0.25);
+            border-color: rgba(254, 202, 87, 0.6);
         }
         
         .disclaimer {
@@ -4239,6 +4259,7 @@ class ScriptableAdapter {
                 <div class="header-title">chunky.dad</div>
                 <div class="header-subtitle">Bear Event Scraper Results</div>
                 <div class="header-run-context">${runMetaLabel}</div>
+                ${runHealthBadgeHtml}
             </h1>
         </div>
         <div class="header-controls">
@@ -5209,6 +5230,30 @@ class ScriptableAdapter {
         reason: `Log summary failed: ${error.message}`,
         summary: null,
       };
+    }
+  }
+
+  // One-line run-health badge for the results-UI header, derived from the same
+  // insight summary that feeds the What Happened/What We Did sections. The
+  // verdict logic lives in run-log-summary.js; a failure here must never
+  // block the results display, so this degrades to an empty string.
+  buildRunHealthBadgeHtml(runInsights, results) {
+    try {
+      const signals = RunLogSummary.buildRunSignals(
+        runInsights?.available ? runInsights.summary : null,
+        results,
+      );
+      const health = RunLogSummary.evaluateRunHealth(signals, {
+        errorsCount: (results?.errors || []).length,
+      });
+      const badgeText = RunLogSummary.formatRunHealthBadge(health);
+      const variant = health.status === "warn" ? "warn" : "ok";
+      return `<div class="header-health-badge ${variant}">${this.escapeHtml(badgeText)}</div>`;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Health badge build failed: ${error.message}`,
+      );
+      return "";
     }
   }
 
@@ -7324,6 +7369,26 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return "success";
   }
 
+  // Compact per-run guard/AI/quality signals for the metrics record and the
+  // results-UI health badge. All parsing/aggregation logic lives in
+  // run-log-summary.js — this method only supplies the in-memory log text
+  // (or a saved run's log text via logText) and the structured results.
+  buildRunSignalsFromResults(results, logText = null) {
+    try {
+      const text =
+        typeof logText === "string"
+          ? logText
+          : logger.getLogText({ mode: "full" });
+      const summary = RunLogSummary.summarizeLogText(text);
+      return RunLogSummary.buildRunSignals(summary, results);
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Run signals extraction failed: ${error.message}`,
+      );
+      return null;
+    }
+  }
+
   buildMetricsRecord(results) {
     const runId =
       results?.savedRunId ||
@@ -7390,6 +7455,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       return sum + updatedCount;
     }, 0);
 
+    // Aggregates only (counts + milliseconds), never payloads — see
+    // buildRunSignals in run-log-summary.js. Additive: old readers ignore it.
+    const signals = this.buildRunSignalsFromResults(results);
+
     const totals = {
       total_events: results?.totalEvents || 0,
       raw_bear_events: results?.rawBearEvents || 0,
@@ -7451,6 +7520,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       calendar_actions: calendarActions,
       calendar_actions_mode: calendarActionsMode,
       merge_diff_fields_updated: mergeDiffFieldsUpdated,
+      signals,
       parsers,
     };
   }

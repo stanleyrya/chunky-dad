@@ -253,6 +253,40 @@ function countCrawlNodes(sources) {
     return count;
 }
 
+// ---------------------------------------------------------------------------
+// Guard-activity lines — one regex per guard, matched against a log line's
+// first line. Sources:
+//   - ai-web-parser organizer-brand / site-tagline guards (#1460/#1465):
+//       "🤖 AI Web: Dropping bar "X" — matches the page's organizer/site name, not a venue"
+//       "🤖 AI Web: Rejecting bar "X" from <pass> pass — matches page organizer/brand; ..."
+//       "🤖 AI Web: Stripping page brand from title "X" → "Y""
+//       "🤖 AI Web: Rejecting title "X" from <pass> pass — the whole title is the page organizer/brand; ..."
+//       "🤖 AI Web: Rejecting description from <pass|final normalization> — identical to the site's own tagline, ..."
+//   - normalizers.js distance-ranked geocoding (#1462):
+//       "🗺️ OpenStreetMapNormalizer: 5 candidates for "922 E. BURNSIDE"; picked #1 (1.9 km from portland center)"
+//       "🗺️ OpenStreetMapNormalizer: Geocode for "X" resolved outside event city "Y" (...) — ignoring coordinates"
+//       "🗺️ OpenStreetMapNormalizer: All 3 geocode candidates for "X" fall outside 15 km of ... — ignoring coordinates"
+//   - shared-core merge guards (#1464 degenerate ends, coordinate/bar preservation):
+//       "⚠️ MERGE: "T" existing|incoming|scraped endDate <= startDate (zero duration) — treating as missing, ..."
+//       "📍 MERGE: "T" location kept calendar coordinates over scraped text/empty value"
+//       "📍 MERGE: "T" bar kept from calendar (scrape found no venue)"
+const GUARD_LINE_RES = {
+    brandBarRejected: /🤖 AI Web: (?:Dropping|Rejecting) bar ".*?" (?:—|from .*? pass —) matches (?:the )?page/,
+    brandTitleStripped: /🤖 AI Web: (?:Stripping page brand from title ".*?"|Rejecting title ".*?" from .*? pass)/,
+    taglineRejected: /🤖 AI Web: Rejecting description from .*? — identical to the site's own tagline/,
+    geocodePicked: /🗺️ \w*Normalizer: \d+ candidates? for ".*?"; picked #\d+/,
+    geocodeRejected: /🗺️ \w*Normalizer: (?:Geocode for ".*?" resolved outside event city|All \d+ geocode candidates? for ".*?" fall outside)/,
+    degenerateEndCaught: /⚠️ MERGE: ".*?" \S+ endDate <= startDate/,
+    coordsPreserved: /📍 MERGE: ".*?" location kept calendar coordinates/,
+    barPreserved: /📍 MERGE: ".*?" bar kept from calendar/
+};
+
+function createGuardCounts() {
+    const counts = {};
+    for (const key of Object.keys(GUARD_LINE_RES)) counts[key] = 0;
+    return counts;
+}
+
 // Curated OCR activity lines (per-image cache/similarity chatter is excluded).
 const OCR_ACTIVITY_RES = [
     /🤖 AI Web: Extracted OCR from \d+ image/,
@@ -268,7 +302,8 @@ const OCR_ACTIVITY_RES = [
 function buildSummary(entries) {
     annotateUrls(entries);
     const pages = new Map(); // url -> { events, passes:Set, aiMs, requests }
-    const aiByPass = new Map(); // pass -> { sent, succeeded, totalMs }
+    const aiByPass = new Map(); // pass -> { sent, succeeded, failed, totalMs }
+    const guards = createGuardCounts();
     const merges = [];
     const droppedFields = [];
     const dedupe = [];
@@ -291,10 +326,19 @@ function buildSummary(entries) {
             problems.push({ level: entry.level, line: firstLine });
         }
 
+        // Guard activity is counted without consuming the line: guard lines are
+        // often warnings and must still reach the problems list above / below.
+        for (const [guardKey, guardRe] of Object.entries(GUARD_LINE_RES)) {
+            if (guardRe.test(firstLine)) {
+                guards[guardKey] += 1;
+                break;
+            }
+        }
+
         let match = firstLine.match(/🤖 AI Web: Sending AI request(?: \(([^)]+)\))? to /);
         if (match) {
             const pass = normalizePass(match[1]);
-            if (!aiByPass.has(pass)) aiByPass.set(pass, { sent: 0, succeeded: 0, totalMs: 0 });
+            if (!aiByPass.has(pass)) aiByPass.set(pass, { sent: 0, succeeded: 0, failed: 0, totalMs: 0 });
             aiByPass.get(pass).sent += 1;
             const page = pageFor(entry.url);
             page.requests += 1;
@@ -304,11 +348,19 @@ function buildSummary(entries) {
         match = firstLine.match(/🤖 AI Web: AI request(?: \(([^)]+)\))? succeeded in (\d+)ms/);
         if (match) {
             const pass = normalizePass(match[1]);
-            if (!aiByPass.has(pass)) aiByPass.set(pass, { sent: 0, succeeded: 0, totalMs: 0 });
+            if (!aiByPass.has(pass)) aiByPass.set(pass, { sent: 0, succeeded: 0, failed: 0, totalMs: 0 });
             const stats = aiByPass.get(pass);
             stats.succeeded += 1;
             stats.totalMs += Number(match[2]);
             pageFor(entry.url).aiMs += Number(match[2]);
+            continue;
+        }
+        // "🤖 AI Web: AI request (pass) to <endpoint> with model <m> failed after 1234ms (timeout): ..."
+        match = firstLine.match(/🤖 AI Web: AI request(?: \(([^)]+)\))? to \S+ with model .*? failed after (\d+)ms/);
+        if (match) {
+            const pass = normalizePass(match[1]);
+            if (!aiByPass.has(pass)) aiByPass.set(pass, { sent: 0, succeeded: 0, failed: 0, totalMs: 0 });
+            aiByPass.get(pass).failed += 1;
             continue;
         }
         match = firstLine.match(/🤖 AI Web: Extracted (\S+) →/);
@@ -373,9 +425,11 @@ function buildSummary(entries) {
             pass,
             sent: s.sent,
             succeeded: s.succeeded,
+            failed: s.failed,
             totalMs: s.totalMs,
             avgMs: s.succeeded > 0 ? Math.round(s.totalMs / s.succeeded) : 0
         })),
+        guards,
         crawl,
         ocr,
         merges,
@@ -390,6 +444,170 @@ function buildSummary(entries) {
 // Convenience: raw log text → structured summary.
 function summarizeLogText(text) {
     return buildSummary(parseLog(text));
+}
+
+// ---------------------------------------------------------------------------
+// Run signals — the compact, aggregate-only block persisted per run in
+// metrics.ndjson (buildMetricsRecord in the Scriptable adapter). Never carries
+// payloads: counts and milliseconds only.
+// ---------------------------------------------------------------------------
+
+// Free-form pass labels ("best meta 1/1", "content 2/3", "extraction") are all
+// extraction work; the named passes get their own bounded buckets so the
+// per-run record stays small no matter how many partitions a page needed.
+const SIGNAL_PASS_BUCKETS = ['context-prep', 'repair', 'merge-arbitration', 'ocr'];
+
+function canonicalSignalsPass(pass) {
+    const normalized = String(pass || '').toLowerCase();
+    for (const bucket of SIGNAL_PASS_BUCKETS) {
+        if (normalized.includes(bucket)) return bucket;
+    }
+    return 'extraction';
+}
+
+function hasEventCoordinates(event) {
+    const coords = event && event.coordinates;
+    if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) return true;
+    const location = String((event && event.location) || '').trim();
+    return /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(location);
+}
+
+// Build the per-run `signals` block from a buildSummary() result plus the
+// structured results object ({ analyzedEvents, duplicatesRemoved }). Both
+// inputs are optional; missing data yields zeroed aggregates, never a throw.
+function buildRunSignals(summary, results = null) {
+    const safeSummary = summary || {};
+
+    // --- ai: request totals plus per-bucket counts/latency ---
+    const ai = { requests: 0, failures: 0, totalMs: 0, byPass: {} };
+    for (const stats of safeSummary.aiRequestsByPass || []) {
+        const bucket = canonicalSignalsPass(stats.pass);
+        if (!ai.byPass[bucket]) ai.byPass[bucket] = { n: 0, ms: 0 };
+        ai.byPass[bucket].n += stats.sent || 0;
+        ai.byPass[bucket].ms += stats.totalMs || 0;
+        ai.requests += stats.sent || 0;
+        ai.failures += stats.failed || 0;
+        ai.totalMs += stats.totalMs || 0;
+    }
+
+    // --- guards: counts already gathered by buildSummary ---
+    const guards = Object.assign(createGuardCounts(), safeSummary.guards || {});
+
+    // --- arbitration: decisions and fallbacks from the merge log lines ---
+    // conflicts ≈ decided picks + fallback fields, so calendarPicks +
+    // scrapedPicks + fallbacks ≤ conflicts (parser-vs-parser picks use
+    // existing/incoming labels and only count toward conflicts).
+    const arbitration = { conflicts: 0, calendarPicks: 0, scrapedPicks: 0, fallbacks: 0 };
+    for (const line of safeSummary.merges || []) {
+        if (/🤝 AI MERGE: .*? field=\S+ chose /.test(line)) {
+            arbitration.conflicts += 1;
+            if (/ chose calendar\b/.test(line)) arbitration.calendarPicks += 1;
+            else if (/ chose scraped\b/.test(line)) arbitration.scrapedPicks += 1;
+            continue;
+        }
+        // "no arbitration result for "T" — falling back to scraped values for N conflicted field(s)"
+        const bulkFallback = line.match(/falling back to scraped values for (\d+) conflicted field/);
+        if (bulkFallback) {
+            arbitration.fallbacks += Number(bulkFallback[1]);
+            arbitration.conflicts += Number(bulkFallback[1]);
+            continue;
+        }
+        // Per-field arbitration rejections that fall back (no "chose" line follows)
+        if (/🤝 AI MERGE: (?:no answer for field|rejected answer for) .*falling back/.test(line)) {
+            arbitration.fallbacks += 1;
+            arbitration.conflicts += 1;
+        }
+    }
+
+    // --- funnel: "Event filtering complete: A → B future → C bear → D final" summed ---
+    const funnel = { found: 0, future: 0, bear: 0, final: 0, duplicatesRemoved: 0 };
+    for (const source of safeSummary.crawl || []) {
+        if (!source || !source.filtering) continue;
+        funnel.found += source.filtering.total || 0;
+        funnel.future += source.filtering.future || 0;
+        funnel.bear += source.filtering.bear || 0;
+        funnel.final += source.filtering.final || 0;
+    }
+    if (results && Number.isFinite(results.duplicatesRemoved)) {
+        funnel.duplicatesRemoved = results.duplicatesRemoved;
+    } else {
+        // Fall back to "🔄 SharedCore: Deduplicated 16 → 9 (removed 7)" lines
+        for (const line of safeSummary.dedupe || []) {
+            const match = line.match(/Deduplicated (\d+) → (\d+)/);
+            if (match) funnel.duplicatesRemoved += Math.max(0, Number(match[1]) - Number(match[2]));
+        }
+    }
+
+    // --- quality: field coverage over the structured analyzed events ---
+    const analyzedEvents = results && Array.isArray(results.analyzedEvents)
+        ? results.analyzedEvents
+        : [];
+    const quality = { events: analyzedEvents.length, withBar: 0, withCoords: 0, withEndDuration: 0 };
+    for (const event of analyzedEvents) {
+        if (String((event && event.bar) || '').trim()) quality.withBar += 1;
+        if (hasEventCoordinates(event)) quality.withCoords += 1;
+        const startMs = event && event.startDate ? new Date(event.startDate).getTime() : NaN;
+        const endMs = event && event.endDate ? new Date(event.endDate).getTime() : NaN;
+        if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs) {
+            quality.withEndDuration += 1;
+        }
+    }
+
+    return { ai, guards, arbitration, funnel, quality };
+}
+
+// ---------------------------------------------------------------------------
+// Run health — ok/warn verdict over a signals block. Pure and threshold-driven;
+// rendered by both the results UI header badge and the metrics dashboard.
+// ---------------------------------------------------------------------------
+const HEALTH_THRESHOLDS = {
+    // A single failed AI request is usually a transient blip; two or more in
+    // one run points at a dead/misconfigured endpoint.
+    AI_FAILURES_WARN_AT: 2,
+    // The venue-coverage ratio is only meaningful once a run has >2 events.
+    VENUE_RATIO_MIN_EVENTS: 3,
+    // Fewer than half the events carrying a venue is unusually low.
+    VENUE_RATIO_WARN_BELOW: 0.5
+};
+
+// signals may be null (old runs recorded before signals existed): only the
+// context-provided error count can warn then.
+function evaluateRunHealth(signals, context = {}) {
+    const reasons = [];
+    const errorsCount = Number.isFinite(context.errorsCount) ? context.errorsCount : 0;
+    if (errorsCount > 0) {
+        reasons.push(`${errorsCount} error${errorsCount === 1 ? '' : 's'}`);
+    }
+    const ai = (signals && signals.ai) || {};
+    const guards = (signals && signals.guards) || {};
+    const funnel = (signals && signals.funnel) || {};
+    const quality = (signals && signals.quality) || {};
+    if ((ai.failures || 0) >= HEALTH_THRESHOLDS.AI_FAILURES_WARN_AT) {
+        reasons.push(`AI failures ×${ai.failures}`);
+    }
+    if ((guards.geocodeRejected || 0) > 0) {
+        reasons.push(`geocode rejected ×${guards.geocodeRejected}`);
+    }
+    const events = quality.events || 0;
+    const withBar = quality.withBar || 0;
+    if (events >= HEALTH_THRESHOLDS.VENUE_RATIO_MIN_EVENTS
+        && withBar / events < HEALTH_THRESHOLDS.VENUE_RATIO_WARN_BELOW) {
+        reasons.push(`no venue on ${events - withBar} of ${events} events`);
+    }
+    if ((funnel.found || 0) > 0 && (funnel.final || 0) === 0) {
+        reasons.push(`0 of ${funnel.found} found events survived filtering`);
+    }
+    return { status: reasons.length > 0 ? 'warn' : 'ok', reasons };
+}
+
+// One-line plain-text badge, e.g. "🟢 Run healthy" or
+// "🟡 2 warnings: geocode rejected ×1, no venue on 3 of 5 events".
+function formatRunHealthBadge(health) {
+    if (!health || health.status !== 'warn' || !(health.reasons || []).length) {
+        return '🟢 Run healthy';
+    }
+    const count = health.reasons.length;
+    return `🟡 ${count} warning${count === 1 ? '' : 's'}: ${health.reasons.join(', ')}`;
 }
 
 // Full AI payload dumps (debug channel): Full prompt / Model response text blocks.
@@ -527,7 +745,10 @@ const RunLogSummary = {
     formatCrawlTreeText,
     extractAiPayloads,
     formatSummary,
-    filterByUrl
+    filterByUrl,
+    buildRunSignals,
+    evaluateRunHealth,
+    formatRunHealthBadge
 };
 
 // Export for both environments
@@ -543,7 +764,10 @@ if (typeof module !== 'undefined' && module.exports) {
         formatCrawlTreeText,
         extractAiPayloads,
         formatSummary,
-        filterByUrl
+        filterByUrl,
+        buildRunSignals,
+        evaluateRunHealth,
+        formatRunHealthBadge
     };
 } else if (typeof window !== 'undefined') {
     window.RunLogSummary = RunLogSummary;
