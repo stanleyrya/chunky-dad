@@ -794,6 +794,146 @@ test('guardrail: emoji twin detection covers ⚜️, ⚓ and ⛓️ in both dire
   assert.equal(core.resolveConflictDeterministically('title', '🐻', '⚓'), null, 'pure-emoji titles are not twins');
 });
 
+// ---------------------------------------------------------------------------
+// Bare-city titles (2026-07-12 run: bearracuda.com pages are named after the
+// city — "New Orleans⚜️ | BEARRACUDA" → brand strip leaves just the city)
+// ---------------------------------------------------------------------------
+
+const CITY_TITLE_CITIES = {
+  nola: { timezone: 'America/Chicago', patterns: ['new orleans', 'nola'] },
+  ptown: { timezone: 'America/New_York', patterns: ['provincetown', 'ptown'] },
+  sf: { timezone: 'America/Los_Angeles', name: 'San Francisco', patterns: ['sf'] },
+  'new-york': { timezone: 'America/New_York', patterns: [] },
+  portland: { timezone: 'America/Los_Angeles', patterns: ['portland', 'pdx'] },
+  chicago: { timezone: 'America/Chicago', patterns: ['chicago'] },
+  atlanta: { timezone: 'America/New_York', patterns: ['atlanta'] }
+};
+
+function createCityTitleCore() {
+  return new SharedCore(CITY_TITLE_CITIES, { eventSchema: EventSchema });
+}
+
+test('isCityOnlyTitle matches key, display name, patterns, and emoji variants — whole title only', () => {
+  const core = createCityTitleCore();
+  // Key, patterns, and case-folding
+  assert.equal(core.isCityOnlyTitle('nola', 'nola'), true, 'the city key itself');
+  assert.equal(core.isCityOnlyTitle('New Orleans', 'nola'), true, 'configured pattern');
+  assert.equal(core.isCityOnlyTitle('NOLA', 'nola'), true, 'pattern is case-folded');
+  assert.equal(core.isCityOnlyTitle('  new   orleans ', 'nola'), true, 'whitespace collapsed');
+  // Emoji/pictograph variants
+  assert.equal(core.isCityOnlyTitle('New Orleans⚜️', 'nola'), true, 'emoji is stripped before matching');
+  assert.equal(core.isCityOnlyTitle('Provincetown⚓', 'ptown'), true);
+  // Display name and dashed keys read as spaces
+  assert.equal(core.isCityOnlyTitle('San Francisco', 'sf'), true, 'display name counts');
+  assert.equal(core.isCityOnlyTitle('New York', 'new-york'), true, 'key dashes read as spaces');
+  // Whole-title match only: a title that merely CONTAINS the city is a real name
+  assert.equal(core.isCityOnlyTitle('Hot Take Portland', 'portland'), false);
+  assert.equal(core.isCityOnlyTitle('Treasure Trail Chicago', 'chicago'), false);
+  assert.equal(core.isCityOnlyTitle('Atlanta 17 Year', 'atlanta'), false);
+  assert.equal(core.isCityOnlyTitle('Bearracuda Atlanta 17 Year Anniversary', 'atlanta'), false);
+  // Defensive: unknown/missing city or empty title is never city-only
+  assert.equal(core.isCityOnlyTitle('Denver', 'denver'), false, 'unknown city key');
+  assert.equal(core.isCityOnlyTitle('New Orleans', ''), false, 'missing city key');
+  assert.equal(core.isCityOnlyTitle('', 'nola'), false, 'empty title');
+  assert.equal(core.isCityOnlyTitle('⚜️', 'nola'), false, 'pure-emoji title strips to nothing');
+});
+
+test('guardrail: a named title beats a bare city title in both directions; ties still arbitrate', () => {
+  const core = createCityTitleCore();
+  const context = { cityKey: 'nola' };
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', 'BEARRACUDA: New Orleans⚜️', 'New Orleans⚜️', context),
+    { winner: 'a', reason: 'named title beats bare city title' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', 'New Orleans⚜️', 'BEARRACUDA: New Orleans⚜️', context),
+    { winner: 'b', reason: 'named title beats bare city title' });
+  // Emoji-twin rule runs FIRST: two city-only twins keep the emoji variant
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', 'New Orleans⚜️', 'New Orleans', context),
+    { winner: 'a', reason: 'emoji title variant beats its emoji-stripped twin' });
+  // Two named titles (or two bare-city titles) are still a genuine question
+  assert.equal(core.resolveConflictDeterministically('title', 'FURBALL', 'MEGAWOOF', context), null);
+  assert.equal(core.resolveConflictDeterministically('title', 'New Orleans⚜️', 'NOLA', context), null,
+    'two bare-city variants still arbitrate');
+  // No city context → the rule never fires
+  assert.equal(core.resolveConflictDeterministically('title', 'FURBALL', 'New Orleans'), null);
+});
+
+test('guardrail: calendar bare-city title loses to the scraped named title without AI', async () => {
+  const core = createCore(); // dallas cities config — 'Dallas' is city-only
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.title = 'BEARRACUDA: Dallas';
+  existing.title = 'Dallas';
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'the only conflict resolved deterministically — no AI request at all');
+  assert.equal(finalEvent.title, 'BEARRACUDA: Dallas');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['title']);
+  assert.ok(logLines.includes(
+    '🔒 MERGE: "BEARRACUDA: Dallas" field=title resolved deterministically — named title beats bare city title'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+});
+
+test('guardrail: scraped bare-city title loses to the calendar named title without AI', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.title = 'Dallas';
+  existing.title = 'FURBALL DALLAS';
+  const adapter = buildArbitrationAdapter({});
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'zero AI calls when the city rule decides the only conflict');
+  assert.equal(finalEvent.title, 'FURBALL DALLAS', 'the named calendar title wins');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['title']);
+});
+
+test('mergeParsedEvents: named-vs-bare-city titles resolve deterministically in both directions', async () => {
+  const core = createCityTitleCore();
+  const priorities = { title: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const base = { city: 'nola', source: 'ai-web', _fieldPriorities: priorities };
+
+  // Incoming bare city vs existing named title
+  const adapterA = buildArbitrationAdapter({});
+  const mergedA = await core.mergeParsedEvents(
+    { ...base, title: 'BEARRACUDA: New Orleans⚜️' },
+    { ...base, title: 'New Orleans⚜️', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterA });
+  assert.equal(adapterA.calls.length, 0, 'zero AI calls — the city rule decides');
+  assert.equal(mergedA.title, 'BEARRACUDA: New Orleans⚜️');
+
+  // Incoming named title vs existing bare city
+  const adapterB = buildArbitrationAdapter({});
+  const mergedB = await core.mergeParsedEvents(
+    { ...base, title: 'New Orleans⚜️' },
+    { ...base, title: 'BEARRACUDA: New Orleans⚜️', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterB });
+  assert.equal(adapterB.calls.length, 0);
+  assert.equal(mergedB.title, 'BEARRACUDA: New Orleans⚜️');
+
+  // Two named titles remain a genuine AI question
+  const adapterC = buildArbitrationAdapter({
+    title: { pick: 'existing', value: 'FURBALL', reason: 'canonical name' }
+  });
+  const mergedC = await core.mergeParsedEvents(
+    { ...base, title: 'FURBALL' },
+    { ...base, title: 'MEGAWOOF', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterC });
+  assert.equal(adapterC.calls.length, 1, 'two named titles still arbitrate');
+  assert.equal(mergedC.title, 'FURBALL');
+});
+
 test('guardrail: logo-path image loses to event artwork in both directions; both-logo goes to AI', async () => {
   const core = createCore();
   const logo = 'https://res.cloudinary.com/eventservice/image/upload/w_600/saas/logos/image_abc.webp';

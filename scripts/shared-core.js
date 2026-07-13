@@ -443,11 +443,41 @@ class SharedCore {
             .trim();
     }
 
+    // A bare city name is not an event name (bearracuda.com titles its event
+    // pages after the city: og:title "New Orleans⚜️ | BEARRACUDA" → the brand
+    // strip leaves "New Orleans⚜️"). True when the title — after stripping
+    // emoji (stripEmojiForTitleTwin), collapsing whitespace, and case-folding —
+    // exactly equals the resolved city's key (dashes/underscores read as
+    // spaces), its display name, or ANY configured pattern/alias ("new
+    // orleans", "nola"). Whole-title match only: "Hot Take Portland" is a real
+    // event name. Missing/unknown cities are never city-only.
+    isCityOnlyTitle(title, cityKey) {
+        if (!title || !cityKey || !this.cities || typeof this.cities !== 'object') return false;
+        const normalizedKey = String(cityKey).trim().toLowerCase();
+        const cityData = this.cities[cityKey] || this.cities[normalizedKey];
+        if (!cityData || typeof cityData !== 'object') return false;
+        const normalizedTitle = this.stripEmojiForTitleTwin(title).replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!normalizedTitle) return false;
+        const candidates = new Set();
+        const addCandidate = value => {
+            const text = String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (!text) return;
+            candidates.add(text);
+            candidates.add(text.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim());
+        };
+        addCandidate(normalizedKey);
+        addCandidate(cityData.name);
+        if (Array.isArray(cityData.patterns)) cityData.patterns.forEach(addCandidate);
+        if (Array.isArray(cityData.aliases)) cityData.aliases.forEach(addCandidate);
+        return candidates.has(normalizedTitle);
+    }
+
     // Deterministic conflict resolution consulted by BOTH merge paths
     // (createFinalEventObject and mergeParsedEvents) before a field is queued
     // for AI arbitration. Returns { winner: 'a'|'b', reason } or null (→
-    // arbitrate as usual). Callers map a/b onto their own labels.
-    resolveConflictDeterministically(fieldName, valueA, valueB) {
+    // arbitrate as usual). Callers map a/b onto their own labels and thread
+    // event context (currently { cityKey }) for the city-aware title rule.
+    resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
         if (urlA && urlB) {
@@ -492,6 +522,23 @@ class SharedCore {
                     reason: 'emoji title variant beats its emoji-stripped twin'
                 };
             }
+            // A bare city is not an event name: when exactly one side's title is
+            // just the event's city (per isCityOnlyTitle), the named side wins.
+            // MUST run after the emoji-twin rule above — twins like "New Orleans"
+            // vs "New Orleans⚜️" are BOTH city-only, and the emoji variant should
+            // win there rather than tie through this rule. Two named titles (or
+            // two bare-city titles) still arbitrate.
+            const cityKey = context && context.cityKey;
+            if (cityKey) {
+                const cityOnlyA = this.isCityOnlyTitle(valueA, cityKey);
+                const cityOnlyB = this.isCityOnlyTitle(valueB, cityKey);
+                if (cityOnlyA !== cityOnlyB) {
+                    return {
+                        winner: cityOnlyA ? 'b' : 'a',
+                        reason: 'named title beats bare city title'
+                    };
+                }
+            }
         }
         return null;
     }
@@ -532,6 +579,7 @@ class SharedCore {
             '- "bar" must be the physical venue where the event takes place — never the promoter, organizer, or brand whose name appears in page titles.',
             organizer ? `- KNOWN ORGANIZER: ${JSON.stringify(String(organizer))} — never pick a bar value equal to the organizer.` : '',
             '- For "title", prefer the actual event name — do not prefer a variant just because it appends status text (e.g. sold-out notices) or site branding.',
+            '- For "title", a bare city name is not an event name — prefer the variant that names the event or its organizer.',
             '- For "image", prefer event-specific promotional artwork over site or ticketing-service logos.',
             `- "pick" must be "${labelA}" or "${labelB}".`,
             'Return JSON only:',
@@ -1792,8 +1840,12 @@ class SharedCore {
         // run before a conflict is queued for AI — both merge paths consult
         // resolveConflictDeterministically so behavior is identical.
         const mergeEventTitle = newEvent.title || existingEvent.title || 'event';
+        // City context for the city-aware title rule (a bare city title loses
+        // to a named title) — both records describe the same event, so either
+        // side's resolved city works.
+        const mergeContext = { cityKey: newEvent.city || existingEvent.city || '' };
         const queueArbitrationConflict = (fieldName, existingValue, newValue, fallbackPick, fallbackReason) => {
-            const resolved = this.resolveConflictDeterministically(fieldName, existingValue, newValue);
+            const resolved = this.resolveConflictDeterministically(fieldName, existingValue, newValue, mergeContext);
             if (!resolved) {
                 pendingAiConflicts.push({
                     field: fieldName,
@@ -2091,8 +2143,12 @@ class SharedCore {
         // Deterministic pre-arbitration rules (URL shape / emoji-twin titles)
         // run before a conflict is queued for AI — both merge paths consult
         // resolveConflictDeterministically so behavior is identical.
+        // City context for the city-aware title rule (a bare city title loses
+        // to a named title) — the scraper object carries the resolved city; the
+        // calendar object may carry one parsed from its notes.
+        const mergeContext = { cityKey: scraperObject.city || calendarObject.city || '' };
         const queueArbitrationConflict = (fieldName, calendarValue, scraperValue) => {
-            const resolved = this.resolveConflictDeterministically(fieldName, calendarValue, scraperValue);
+            const resolved = this.resolveConflictDeterministically(fieldName, calendarValue, scraperValue, mergeContext);
             if (!resolved) {
                 pendingAiConflicts.push({
                     field: fieldName,

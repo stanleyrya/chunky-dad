@@ -328,7 +328,17 @@ class AiWebParser {
             if (useJsonLdEvents) {
                 console.log(`🤖 AI Web: Extracted ${completeJsonLdEvents.length} event(s) from JSON-LD structured data — skipping OCR and AI extraction`);
                 if (pageBrandNames.length > 0) {
-                    completeJsonLdEvents.forEach(event => { event._organizer = pageBrandNames[0]; });
+                    completeJsonLdEvents.forEach(event => {
+                        event._organizer = pageBrandNames[0];
+                        // JSON-LD events skip normalizeAiEvent, so the bare-city
+                        // title rule (organizer prefix) is applied here too.
+                        const prefixedTitle = this.buildOrganizerPrefixedTitle(
+                            event.title, event.city, pageBrandNames, htmlData, cityConfig);
+                        if (prefixedTitle) {
+                            console.log(`🤖 AI Web: Title "${event.title}" is just the event's city — prefixed known organizer → "${prefixedTitle}"`);
+                            event.title = prefixedTitle;
+                        }
+                    });
                 }
                 return {
                     events: completeJsonLdEvents,
@@ -6633,6 +6643,17 @@ TEXT:
                 ''
             )
         );
+        // A bare city is not an event name — after the brand strip above (which
+        // is what exposes the bare city), prefix the page's known organizer:
+        // "New Orleans⚜️" → "BEARRACUDA: New Orleans⚜️". Titles already naming
+        // the organizer or a real event are untouched.
+        if (pageBrandNames.length > 0 && city) {
+            const prefixedTitle = this.buildOrganizerPrefixedTitle(title, city, pageBrandNames, htmlData, cityConfig);
+            if (prefixedTitle) {
+                console.log(`🤖 AI Web: Title "${title}" is just the event's city — prefixed known organizer → "${prefixedTitle}"`);
+                title = prefixedTitle;
+            }
+        }
         const timezone = this.firstNonEmpty(
             aiEvent.timezone,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['timezone'], aiEvent),
@@ -7443,6 +7464,132 @@ TEXT:
         while (kept.length > 1 && this.matchesPageBrandName(kept[0], brandNames)) kept.shift();
         if (kept.length === parts.length) return text;
         return kept.join(' | ');
+    }
+
+    // Emoji/pictograph-stripped view of a title — identical to SharedCore's
+    // stripEmojiForTitleTwin (parsers are standalone and cannot import shared
+    // code, so the regex is deliberately duplicated; keep the two in sync).
+    // Conservative on purpose: ASCII and real punctuation are never stripped.
+    stripEmojiFromTitle(value) {
+        return String(value)
+            .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0E}\u{FE0F}\u{20E3}\u{200D}]/gu, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    // First og-style meta content for a key (e.g. 'og:title', 'og:site_name'),
+    // entity-decoded and whitespace-collapsed. '' when absent.
+    extractOgMetaContent(html, keyName) {
+        const source = String(html || '').slice(0, 500000);
+        const metaRegex = /<meta\b[^>]*>/gi;
+        let match;
+        while ((match = metaRegex.exec(source)) !== null) {
+            const tag = match[0];
+            const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
+            if (!nameMatch || this.normalizeWhitespace(nameMatch[1]).toLowerCase() !== keyName) continue;
+            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
+            if (!contentMatch) continue;
+            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentMatch[1]));
+            if (value) return value;
+        }
+        return '';
+    }
+
+    // Cached per page like getPageBrandNames (segment/OCR copies spread
+    // htmlData and inherit the cache).
+    getPageOgTitle(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return '';
+        if (typeof htmlData.pageOgTitle === 'string') return htmlData.pageOgTitle;
+        const ogTitle = this.extractOgMetaContent(typeof htmlData.html === 'string' ? htmlData.html : '', 'og:title');
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageOgTitle = ogTitle;
+        }
+        return ogTitle;
+    }
+
+    getPageOgSiteName(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return '';
+        if (typeof htmlData.pageOgSiteName === 'string') return htmlData.pageOgSiteName;
+        const siteName = this.extractOgMetaContent(typeof htmlData.html === 'string' ? htmlData.html : '', 'og:site_name');
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageOgSiteName = siteName;
+        }
+        return siteName;
+    }
+
+    // A bare city name is not an event name. True when the title — after
+    // stripping emoji, collapsing whitespace, and case-folding — exactly equals
+    // any configured name of the event's resolved city (key, display name,
+    // patterns, aliases; dashes/underscores in a candidate read as spaces).
+    // Whole-title match only: "Hot Take Portland" is a real event name.
+    // Missing/unknown cities are never city-only. Mirrors
+    // SharedCore.isCityOnlyTitle, which drives the deterministic merge rule.
+    isCityOnlyTitle(title, cityValue, cityConfig) {
+        if (!title || !cityValue) return false;
+        const entry = this.findCityConfigEntry(cityValue, cityConfig);
+        if (!entry) return false;
+        const normalizedTitle = this.stripEmojiFromTitle(title).toLowerCase();
+        if (!normalizedTitle) return false;
+        return entry.aliases.some(alias => {
+            const collapsed = this.normalizeWhitespace(alias).toLowerCase();
+            return collapsed === normalizedTitle
+                || collapsed.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim() === normalizedTitle;
+        });
+    }
+
+    // Word-level brand containment (matchesPageBrandName is whole-value
+    // equality only): "Bearracuda Atlanta 17 Year Anniversary" CONTAINS the
+    // "Bearracuda" brand and must never be organizer-prefixed again.
+    titleContainsPageBrandName(title, brandNames) {
+        const normalizedTitle = String(title || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9&\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!normalizedTitle) return false;
+        const paddedTitle = ` ${normalizedTitle} `;
+        return (Array.isArray(brandNames) ? brandNames : []).some(brand => {
+            for (const variant of this.getBrandNameVariants(brand)) {
+                if (paddedTitle.includes(` ${variant} `)) return true;
+            }
+            return false;
+        });
+    }
+
+    // A bare city is not an event name: bearracuda.com names its event pages
+    // after the city (og:title "New Orleans⚜️ | BEARRACUDA" → brand strip
+    // leaves "New Orleans⚜️"). When the extracted title is exactly the event's
+    // resolved city and the page declares a known organizer, return
+    // "<ORGANIZER>: <city title>" so the calendar title names the party; ''
+    // when the rule doesn't apply. Everything is derived from page metadata +
+    // the cities config — no per-site rules.
+    // - organizerDisplay: og:site_name (how the site displays its own brand,
+    //   e.g. "BEARRACUDA") when present, else the primary extracted brand name
+    //   (the same value the _organizer stamp uses).
+    // - baseTitle: models often strip emoji ("New Orleans" from og:title
+    //   "New Orleans⚜️ | BEARRACUDA"), so when the brand-stripped og:title is
+    //   an emoji-richer variant of the title (equal after emoji-strip +
+    //   case-fold), the og:title variant is used to preserve the emoji.
+    buildOrganizerPrefixedTitle(title, cityValue, pageBrandNames, htmlData, cityConfig) {
+        if (!title || !cityValue) return '';
+        if (!Array.isArray(pageBrandNames) || pageBrandNames.length === 0) return '';
+        if (!this.isCityOnlyTitle(title, cityValue, cityConfig)) return '';
+        if (this.titleContainsPageBrandName(title, pageBrandNames)) return '';
+        const ogSiteName = this.getPageOgSiteName(htmlData);
+        const organizerDisplay = ogSiteName && this.matchesPageBrandName(ogSiteName, pageBrandNames)
+            ? ogSiteName
+            : pageBrandNames[0];
+        let baseTitle = title;
+        const ogTitle = this.getPageOgTitle(htmlData);
+        if (ogTitle) {
+            const ogStripped = this.stripPageBrandFromTitle(ogTitle, pageBrandNames);
+            const ogWithoutEmoji = this.stripEmojiFromTitle(ogStripped);
+            if (ogStripped !== ogWithoutEmoji
+                && ogWithoutEmoji.toLowerCase() === this.stripEmojiFromTitle(title).toLowerCase()) {
+                baseTitle = ogStripped;
+            }
+        }
+        return `${organizerDisplay}: ${baseTitle}`;
     }
 
     extractBodyParts(html) {
