@@ -46,9 +46,11 @@ const GUARD_LABELS = [
     { key: 'taglineRejected', label: 'Site tagline rejected as description' },
     { key: 'geocodePicked', label: 'Geocode candidate picked by distance' },
     { key: 'geocodeRejected', label: 'Geocode rejected (outside event city)' },
+    { key: 'geocodeNoResults', label: 'Geocode found no results (address unresolvable)' },
     { key: 'degenerateEndCaught', label: 'Degenerate end date caught' },
     { key: 'coordsPreserved', label: 'Calendar coordinates preserved' },
-    { key: 'barPreserved', label: 'Calendar venue preserved' }
+    { key: 'barPreserved', label: 'Calendar venue preserved' },
+    { key: 'locationPreserved', label: 'Calendar location preserved' }
 ];
 
 const SIGNALS_PASS_ORDER = ['extraction', 'context-prep', 'repair', 'merge-arbitration', 'ocr'];

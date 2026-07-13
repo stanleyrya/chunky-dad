@@ -262,23 +262,28 @@ function countCrawlNodes(sources) {
 //       "🤖 AI Web: Stripping page brand from title "X" → "Y""
 //       "🤖 AI Web: Rejecting title "X" from <pass> pass — the whole title is the page organizer/brand; ..."
 //       "🤖 AI Web: Rejecting description from <pass|final normalization> — identical to the site's own tagline, ..."
-//   - normalizers.js distance-ranked geocoding (#1462):
+//   - normalizers.js distance-ranked geocoding (#1462) and retry-ladder exhaustion:
 //       "🗺️ OpenStreetMapNormalizer: 5 candidates for "922 E. BURNSIDE"; picked #1 (1.9 km from portland center)"
 //       "🗺️ OpenStreetMapNormalizer: Geocode for "X" resolved outside event city "Y" (...) — ignoring coordinates"
 //       "🗺️ OpenStreetMapNormalizer: All 3 geocode candidates for "X" fall outside 15 km of ... — ignoring coordinates"
-//   - shared-core merge guards (#1464 degenerate ends, coordinate/bar preservation):
+//       "🗺️ OpenStreetMapNormalizer: No geocode results for "X" (city) after 3 queries — leaving location empty"
+//   - shared-core merge guards (#1464 degenerate ends, coordinate/bar/location preservation):
 //       "⚠️ MERGE: "T" existing|incoming|scraped endDate <= startDate (zero duration) — treating as missing, ..."
 //       "📍 MERGE: "T" location kept calendar coordinates over scraped text/empty value"
 //       "📍 MERGE: "T" bar kept from calendar (scrape found no venue)"
+//       "📍 MERGE: "T" location kept from calendar (scrape found none)"
+//       "📍 MERGE: "T" location kept from existing (incoming scrape found none)"
 const GUARD_LINE_RES = {
     brandBarRejected: /🤖 AI Web: (?:Dropping|Rejecting) bar ".*?" (?:—|from .*? pass —) matches (?:the )?page/,
     brandTitleStripped: /🤖 AI Web: (?:Stripping page brand from title ".*?"|Rejecting title ".*?" from .*? pass)/,
     taglineRejected: /🤖 AI Web: Rejecting description from .*? — identical to the site's own tagline/,
     geocodePicked: /🗺️ \w*Normalizer: \d+ candidates? for ".*?"; picked #\d+/,
     geocodeRejected: /🗺️ \w*Normalizer: (?:Geocode for ".*?" resolved outside event city|All \d+ geocode candidates? for ".*?" fall outside)/,
+    geocodeNoResults: /🗺️ \w*Normalizer: No geocode results for ".*?" \(.*?\) after \d+ quer(?:y|ies) — leaving location empty/,
     degenerateEndCaught: /⚠️ MERGE: ".*?" \S+ endDate <= startDate/,
     coordsPreserved: /📍 MERGE: ".*?" location kept calendar coordinates/,
-    barPreserved: /📍 MERGE: ".*?" bar kept from calendar/
+    barPreserved: /📍 MERGE: ".*?" bar kept from calendar/,
+    locationPreserved: /📍 MERGE: ".*?" location kept from (?:calendar|existing)/
 };
 
 function createGuardCounts() {
@@ -587,6 +592,9 @@ function evaluateRunHealth(signals, context = {}) {
     }
     if ((guards.geocodeRejected || 0) > 0) {
         reasons.push(`geocode rejected ×${guards.geocodeRejected}`);
+    }
+    if ((guards.geocodeNoResults || 0) > 0) {
+        reasons.push(`geocode no-results ×${guards.geocodeNoResults}`);
     }
     const events = quality.events || 0;
     const withBar = quality.withBar || 0;

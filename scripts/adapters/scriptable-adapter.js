@@ -1101,9 +1101,16 @@ class ScriptableAdapter {
         pageCacheConfig.enabled &&
         (options.method || "GET").toUpperCase() === "GET" &&
         !options.body;
+      // Optional caller hook (options.isCacheableResponse): a response it
+      // rejects is neither served from the disk cache nor written to it —
+      // used by the geocode path so an empty Nominatim body can't poison a
+      // venue for the whole TTL. Callers that don't pass it are unaffected.
+      const isCacheableResponse = (responseData) =>
+        typeof options.isCacheableResponse !== "function" ||
+        options.isCacheableResponse(responseData) !== false;
       if (canUseCache) {
         const cachedPage = await this.readCachedPage(url, pageCacheConfig);
-        if (cachedPage) {
+        if (cachedPage && isCacheableResponse(cachedPage)) {
           return cachedPage;
         }
       }
@@ -1138,7 +1145,7 @@ class ScriptableAdapter {
           headers: request.response ? request.response.headers : {},
         };
 
-        if (canUseCache) {
+        if (canUseCache && isCacheableResponse(responseData)) {
           await this.writeCachedPage(url, responseData, pageCacheConfig);
         }
 
@@ -1154,6 +1161,57 @@ class ScriptableAdapter {
       const errorMessage = `📱 Scriptable: ✗ HTTP request failed for ${url}: ${error.message}`;
       console.log(errorMessage);
       throw new Error(`HTTP request failed for ${url}: ${error.message}`);
+    }
+  }
+
+  // Native reverse geocode via Scriptable's Location API (Apple's geocoding
+  // service — no network quota, no Nominatim rate-limit budget). Returns a
+  // "street, city, state zip" string or null when nothing usable comes back.
+  // normalizers.js calls this hook only when it exists; all Scriptable API
+  // usage stays in this adapter (pure-module rule).
+  async reverseGeocode(lat, lon) {
+    if (
+      typeof Location === "undefined" ||
+      typeof Location.reverseGeocode !== "function"
+    ) {
+      return null;
+    }
+    try {
+      const placemarks = await Location.reverseGeocode(lat, lon);
+      const mark =
+        Array.isArray(placemarks) && placemarks.length > 0
+          ? placemarks[0]
+          : null;
+      if (!mark || typeof mark !== "object") {
+        return null;
+      }
+      const postal =
+        mark.postalAddress && typeof mark.postalAddress === "object"
+          ? mark.postalAddress
+          : {};
+      const clean = (value) =>
+        typeof value === "string" || typeof value === "number"
+          ? String(value).trim()
+          : "";
+      let street = clean(postal.street);
+      if (!street) {
+        street = [clean(mark.subThoroughfare), clean(mark.thoroughfare)]
+          .filter((part) => part.length > 0)
+          .join(" ");
+      }
+      const city = clean(postal.city) || clean(mark.locality);
+      const state = clean(postal.state) || clean(mark.administrativeArea);
+      const zip = clean(postal.postalCode) || clean(mark.postalCode);
+      const stateZip = [state, zip].filter((part) => part.length > 0).join(" ");
+      const parts = [street, city, stateZip].filter(
+        (part) => part.length > 0,
+      );
+      return parts.length > 0 ? parts.join(", ") : null;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Native reverse geocode failed for ${lat},${lon}: ${error.message}`,
+      );
+      return null;
     }
   }
 

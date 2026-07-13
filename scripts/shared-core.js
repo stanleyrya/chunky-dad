@@ -1734,6 +1734,28 @@ class SharedCore {
                     }
                     return;
                 }
+                // Neither side is coordinates: an empty side is an extraction
+                // gap, not data — it must never clear a non-empty location
+                // (observed 2026-07-12: an empty scrape wiped a calendar's text
+                // location). Mirrors the bar rule below; both-non-empty text
+                // still falls through to the normal priority resolution.
+                const existingLocationEmpty = isEmpty(existingValue);
+                const newLocationEmpty = isEmpty(newValue);
+                if (existingLocationEmpty !== newLocationEmpty) {
+                    const chosenValue = existingLocationEmpty ? newValue : existingValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    if (!existingLocationEmpty) {
+                        console.log(`📍 MERGE: "${newEvent.title || existingEvent.title || 'event'}" location kept from existing (incoming scrape found none)`);
+                    }
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: 'location kept from the non-empty side — an empty scrape must not clear a location'
+                    });
+                    return;
+                }
             }
 
             // bar mirrors the location rule in spirit: an empty side is an
@@ -2008,6 +2030,18 @@ class SharedCore {
                     if (scraperValue !== calendarValue) {
                         console.log(`📍 MERGE: "${mergeTitle}" location kept calendar coordinates over scraped text/empty value`);
                     }
+                    continue;
+                }
+                // Neither side is coordinates: an empty/whitespace scraped
+                // location is an extraction gap, not data — under clobber
+                // semantics it wiped a calendar's text location (observed
+                // 2026-07-12: "clobbered 4 fields (… location)" on the Atlanta
+                // event). Text-vs-text still falls through to the configured
+                // merge strategy below.
+                if (this.isEmptyArbitrationValue(scraperValue)
+                    && !this.isEmptyArbitrationValue(calendarValue)) {
+                    mergedObject[fieldName] = calendarValue;
+                    console.log(`📍 MERGE: "${mergeTitle}" location kept from calendar (scrape found none)`);
                     continue;
                 }
             }
