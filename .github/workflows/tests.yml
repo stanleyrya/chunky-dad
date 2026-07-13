@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
       # The scraper tests are dependency-free (node:test + node:assert only),
       # so no npm install is needed.
       - run: npm test
