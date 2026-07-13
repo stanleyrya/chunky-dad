@@ -9,79 +9,6 @@
 // - Widget/Read-Only (readOnly: true): Safe viewing only, forces isDryRun override
 // - Manual Run (readOnly: false): Preserves original config, allows calendar updates
 
-/**
- * Author: Ryan Stanley (stanleyrya@gmail.com)
- * Tips: https://www.paypal.me/stanleyrya
- *
- * Class that can read and write JSON objects using the file system.
- *
- * This is a minified version but it can be replaced with the full version here!
- * https://github.com/stanleyrya/scriptable-playground/tree/main/json-file-manager
- *
- * Usage:
- *  * write(relativePath, jsonObject): Writes JSON object to a relative path.
- *  * read(relativePath): Reads JSON object from a relative path.
- */
-class JSONFileManager {
-    write(relativePath, jsonObject) {
-        const fm = this.getFileManager();
-        const fullPath = this.getCurrentDir() + relativePath;
-        const pathParts = relativePath.split("/");
-        
-        // Create directory if needed
-        if (pathParts.length > 1) {
-            const fileName = pathParts[pathParts.length - 1];
-            const dirPath = fullPath.replace("/" + fileName, "");
-            fm.createDirectory(dirPath, true);
-        }
-        
-        // Check if path is a directory
-        if (fm.fileExists(fullPath) && fm.isDirectory(fullPath)) {
-            throw new Error("JSON file is a directory, please delete!");
-        }
-        
-        fm.writeString(fullPath, JSON.stringify(jsonObject));
-    }
-    
-    read(relativePath) {
-        const fm = this.getFileManager();
-        const fullPath = this.getCurrentDir() + relativePath;
-        
-        if (!fm.fileExists(fullPath)) {
-            throw new Error("JSON file does not exist! Could not load: " + fullPath);
-        }
-        
-        if (fm.isDirectory(fullPath)) {
-            throw new Error("JSON file is a directory! Could not load: " + fullPath);
-        }
-        
-        fm.downloadFileFromiCloud(fullPath);
-        const content = fm.readString(fullPath);
-        const parsed = JSON.parse(content);
-        
-        if (parsed !== null) {
-            return parsed;
-        }
-        
-        throw new Error("Could not read file as JSON! Could not load: " + fullPath);
-    }
-    
-    getFileManager() {
-        try {
-            return FileManager.iCloud();
-        } catch (e) {
-            return FileManager.local();
-        }
-    }
-    
-    getCurrentDir() {
-        const fm = this.getFileManager();
-        const filename = module.filename;
-        return filename.replace(fm.fileName(filename, true), "");
-    }
-}
-const jsonFileManager = new JSONFileManager();
-
 // Display-specific functionality
 class SavedRunDisplay {
     constructor() {
@@ -279,7 +206,7 @@ class SavedRunDisplay {
             }
 
             // Normalize to the same shape expected by display/present methods
-            // Set calendarEvents to 0 to prevent saving a new run when viewing saved runs
+            // (re-saving is prevented by the _isDisplayingSavedRun flag the adapter checks)
             let config = saved?.config;
             
             // If readOnly mode (default), force isDryRun override for all parsers
@@ -295,7 +222,7 @@ class SavedRunDisplay {
             const resultsLike = {
                 totalEvents: saved?.summary?.totals?.totalEvents || 0,
                 bearEvents: saved?.summary?.totals?.bearEvents || 0,
-                calendarEvents: 0, // Always 0 for saved runs to prevent re-saving
+                calendarEvents: 0, // Display-only value; the adapter's _isDisplayingSavedRun guard is what prevents re-saving
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
                 analyzedEvents: Array.isArray(saved?.analyzedEvents) ? saved.analyzedEvents : [],
