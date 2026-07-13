@@ -279,6 +279,17 @@ class AiWebParser {
         }
     }
 
+    // Debug channel: detailed per-URL diagnostics land in the captured log file
+    // (via SharedCore.logDebug) without spamming the visible console. Falls back
+    // to console.log when no core reference is wired up (e.g. isolated tests).
+    logDebug(message) {
+        if (this.core && typeof this.core.logDebug === 'function') {
+            this.core.logDebug(message);
+            return;
+        }
+        console.log(message);
+    }
+
     async parseEvents(htmlData = {}, parserConfig = {}, cityConfig = null, pageClassification = null, httpAdapter = null) {
 
         var discoveredSegments = null;
@@ -385,7 +396,7 @@ class AiWebParser {
             const aiConfig = this.getAiConfig(parserConfig);
             const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
             const dataFlags = this.getDataFlagsForPartition(sectionBundle, payloadMode, '');
-            const promptFields = this.getAiPromptFields(parserConfig, dataFlags);
+            const promptFields = this.getAiPromptFields(parserConfig, dataFlags, sourceUrl);
             const events = pageClassification === 'multi-event-page'
                 ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter)
                 : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
@@ -427,7 +438,7 @@ class AiWebParser {
         };
 
         // Recalculate prompt fields because OCR results might have changed the preferred date format (e.g. from start/end to split fields)
-        const adjustedPromptFields = this.getAiPromptFields(parserConfig, dataFlags);
+        const adjustedPromptFields = this.getAiPromptFields(parserConfig, dataFlags, htmlData && htmlData.url ? htmlData.url : '');
 
         const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, adjustedPromptFields, dataFlags, httpAdapter);
         return event ? [event] : [];
@@ -449,7 +460,7 @@ class AiWebParser {
 
         // Segments are unstructured data (page content + OCR), so always use split fields
         const segmentDataFlags = { ocr: true, segment: true };
-        const segmentPromptFields = this.getAiPromptFields(parserConfig, segmentDataFlags);
+        const segmentPromptFields = this.getAiPromptFields(parserConfig, segmentDataFlags, sourceUrl);
 
         const events = [];
         for (let i = 0; i < segments.length; i++) {
@@ -496,7 +507,7 @@ class AiWebParser {
         // Use pre-computed dataFlags if available (e.g., from segments), otherwise compute from htmlData
         const computedDataFlags = htmlData.dataFlags || dataFlags || {};
 
-        console.log(`🤖 AI Web: Using extraction fields: ${Array.isArray(promptFields) ? promptFields.join(', ') : 'none'}`);
+        this.logDebug(`🤖 AI Web: Using extraction fields: ${Array.isArray(promptFields) ? promptFields.join(', ') : 'none'}`);
 
         const aiEvent = await this.getAiEvent(promptHtmlData, parserConfig, cityConfig, promptFields, computedDataFlags, httpAdapter);
         if (!aiEvent) {
@@ -523,6 +534,7 @@ class AiWebParser {
             console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
             return null;
         }
+        console.log(this.formatExtractionSummary(event, htmlData && htmlData.url ? htmlData.url : 'unknown URL'));
         const confidenceDiagnostics = aiEvent && aiEvent.__confidenceDiagnostics && typeof aiEvent.__confidenceDiagnostics === 'object'
             ? aiEvent.__confidenceDiagnostics
             : null;
@@ -546,6 +558,28 @@ class AiWebParser {
             event._aiValidation = report;
         }
         return event;
+    }
+
+    // One-line info summary of a finalized extraction: only fields that are set,
+    // each value truncated so a page's outcome is readable at a glance.
+    formatExtractionSummary(event, sourceUrl) {
+        const formatValue = (value) => {
+            let text;
+            if (value instanceof Date && !isNaN(value.getTime())) {
+                text = value.toISOString();
+            } else {
+                text = String(value);
+            }
+            return text.length > 50 ? `${text.slice(0, 50)}…` : text;
+        };
+        const parts = [];
+        ['title', 'bar', 'startDate', 'endDate', 'address', 'city'].forEach(field => {
+            const value = event ? event[field] : null;
+            if (value === null || value === undefined || value === '') return;
+            const bareValue = field === 'startDate' || field === 'endDate' || field === 'city';
+            parts.push(`${field}=${bareValue ? formatValue(value) : `"${formatValue(value)}"`}`);
+        });
+        return `🤖 AI Web: Extracted ${sourceUrl} → ${parts.join(', ')}`;
     }
 
     buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments, ocrResults = []) {
@@ -1791,7 +1825,7 @@ class AiWebParser {
         if (discoveryStats.rejectedCandidates > 0) {
             const rejectedPreview = this.formatRejectedSamples(discoveryStats.rejectedSamples);
             if (rejectedPreview) {
-                console.log(`🤖 AI Web: URL discovery rejected samples: ${rejectedPreview}`);
+                this.logDebug(`🤖 AI Web: URL discovery rejected samples: ${rejectedPreview}`);
             }
         }
         if (limitedUrls.length > 0) {
@@ -1803,7 +1837,7 @@ class AiWebParser {
         }
         const structuredDiag = this.formatStructuredDiscoveryDiagnostics(discoveryStats);
         if (structuredDiag) {
-            console.log(`🤖 AI Web: URL discovery structured diagnostics: ${structuredDiag}`);
+            this.logDebug(`🤖 AI Web: URL discovery structured diagnostics: ${structuredDiag}`);
         }
 
         return limitedUrls;
@@ -3815,12 +3849,12 @@ class AiWebParser {
         }
         const promptFields = Array.isArray(selectedPromptFields) && selectedPromptFields.length > 0
             ? selectedPromptFields
-            : this.getAiPromptFields(parserConfig, dataFlags);
+            : this.getAiPromptFields(parserConfig, dataFlags, htmlData.url || '');
         if (promptFields.length === 0) {
             console.warn('🤖 AI Web: No eligible AI prompt fields configured - skipping extraction');
             return null;
         }
-        console.log(`🤖 AI Web: Prompt fields selected (${promptFields.length}): ${promptFields.join(', ')}`);
+        this.logDebug(`🤖 AI Web: Prompt fields selected (${promptFields.length}): ${promptFields.join(', ')}`);
         console.log(`🤖 AI Web: Running AI extraction for ${htmlData.url || 'unknown URL'} (${promptFields.length} field${promptFields.length === 1 ? '' : 's'})`);
         const extracted = await this.extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, promptFields, httpAdapter);
         if (!extracted || typeof extracted !== 'object') {
@@ -5001,7 +5035,7 @@ class AiWebParser {
         return this.cachedEventSchemaFieldSignalRegexMap.get(normalizedField) || [];
     }
 
-    getAiPromptFields(parserConfig = {}, dataFlags = {}) {
+    getAiPromptFields(parserConfig = {}, dataFlags = {}, sourceUrl = '') {
         const priorities = this.core.getResolvedFieldPriorities(parserConfig);
         const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object'
             ? parserConfig.metadata
@@ -5028,18 +5062,20 @@ class AiWebParser {
             && Object.keys(metadata).some(field => this.normalizePromptFieldName(field) === 'city');
         if (!hasCitySelected && !cityOverriddenByMetadata) {
             selected.push('city');
-            console.log('🤖 AI Web: Added special prompt field => city');
+            this.logDebug('🤖 AI Web: Added special prompt field => city');
         }
         const hasOcr = !!dataFlags.ocr || !!dataFlags.segment;
         const hasJsonLd = !!dataFlags.jsonLd;
         const hasMeta = !!dataFlags.meta;
+        let fieldMode = 'split-default';
 
         // For structured data (JSON-LD/meta), prefer start/end fields over split fields
         // For unstructured data (OCR/content/segments), use split fields
         // IMPORTANT: OCR/Segment context (unstructured) takes precedence over structured data flags
         // because segments/OCR text are often mixed into pages that otherwise have structured data.
         if (hasOcr) {
-            console.log(`🤖 AI Web: Using split fields (startDate/startTime/etc) because OCR or segment data is present (hasOcr=${!!dataFlags.ocr}, hasSegment=${!!dataFlags.segment})`);
+            fieldMode = 'split+ocr';
+            this.logDebug(`🤖 AI Web: Using split fields (startDate/startTime/etc) because OCR or segment data is present (hasOcr=${!!dataFlags.ocr}, hasSegment=${!!dataFlags.segment})`);
             // Unstructured data - prefer split fields, remove start/end
             const fullDateFields = ['start', 'end'];
             const originalSelected = [...selected];
@@ -5048,7 +5084,7 @@ class AiWebParser {
 
             selected = selected.filter(field => !fullDateFields.includes(field));
             if (selected.length !== originalSelected.length) {
-                console.log('🤖 AI Web: Removed full datetime fields (using split fields for unstructured data)');
+                this.logDebug('🤖 AI Web: Removed full datetime fields (using split fields for unstructured data)');
             }
 
             // Ensure split fields are present if full fields were requested or if only one of the split pair is present
@@ -5056,25 +5092,26 @@ class AiWebParser {
             const hasStartTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'starttime');
             if ((hasStartRequested || hasStartDateSelected) && !hasStartTimeSelected) {
                 selected.push('startTime');
-                console.log(`🤖 AI Web: Added split field => startTime (because ${hasStartRequested ? 'start' : 'startDate'} was selected)`);
+                this.logDebug(`🤖 AI Web: Added split field => startTime (because ${hasStartRequested ? 'start' : 'startDate'} was selected)`);
             }
             if (hasStartRequested && !hasStartDateSelected) {
                 selected.push('startDate');
-                console.log('🤖 AI Web: Added split field => startDate (because start was selected)');
+                this.logDebug('🤖 AI Web: Added split field => startDate (because start was selected)');
             }
 
             const hasEndDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'enddate');
             const hasEndTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'endtime');
             if ((hasEndRequested || hasEndDateSelected) && !hasEndTimeSelected) {
                 selected.push('endTime');
-                console.log(`🤖 AI Web: Added split field => endTime (because ${hasEndRequested ? 'end' : 'endDate'} was selected)`);
+                this.logDebug(`🤖 AI Web: Added split field => endTime (because ${hasEndRequested ? 'end' : 'endDate'} was selected)`);
             }
             if (hasEndRequested && !hasEndDateSelected) {
                 selected.push('endDate');
-                console.log('🤖 AI Web: Added split field => endDate (because end was selected)');
+                this.logDebug('🤖 AI Web: Added split field => endDate (because end was selected)');
             }
         } else if (hasJsonLd || hasMeta) {
-            console.log(`🤖 AI Web: Using full datetime fields (start/end) because structured data is present (hasJsonLd=${hasJsonLd}, hasMeta=${hasMeta})`);
+            fieldMode = 'full+structured';
+            this.logDebug(`🤖 AI Web: Using full datetime fields (start/end) because structured data is present (hasJsonLd=${hasJsonLd}, hasMeta=${hasMeta})`);
             // Structured data - prefer start/end, remove split fields
             const splitDateFields = ['startDate', 'startTime', 'endDate', 'endTime'];
             const originalSelected = [...selected];
@@ -5085,23 +5122,23 @@ class AiWebParser {
 
             selected = selected.filter(field => !splitDateFields.includes(field));
             if (selected.length !== originalSelected.length) {
-                console.log('🤖 AI Web: Removed split date fields (using start/end for structured data)');
+                this.logDebug('🤖 AI Web: Removed split date fields (using start/end for structured data)');
             }
 
             // Ensure start/end are present if any split fields were requested
             const hasStartSelected = selected.some(field => this.normalizePromptFieldName(field) === 'start');
             if (!hasStartSelected && (hasStartDateRequested || hasStartTimeRequested)) {
                 selected.push('start');
-                console.log('🤖 AI Web: Added full datetime field => start (because split fields were requested)');
+                this.logDebug('🤖 AI Web: Added full datetime field => start (because split fields were requested)');
             }
 
             const hasEndSelected = selected.some(field => this.normalizePromptFieldName(field) === 'end');
             if (!hasEndSelected && (hasEndDateRequested || hasEndTimeRequested || hasStartSelected)) {
                 selected.push('end');
-                console.log('🤖 AI Web: Added full datetime field => end (because split fields or start was requested)');
+                this.logDebug('🤖 AI Web: Added full datetime field => end (because split fields or start was requested)');
             }
         } else {
-            console.log('🤖 AI Web: Defaulting to split fields (no structured data or OCR context detected)');
+            this.logDebug('🤖 AI Web: Defaulting to split fields (no structured data or OCR context detected)');
             // Default to split fields (same as unstructured)
             const fullDateFields = ['start', 'end'];
             const hasStartRequested = selected.some(field => this.normalizePromptFieldName(field) === 'start');
@@ -5115,21 +5152,21 @@ class AiWebParser {
             const hasStartTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'starttime');
             if ((hasStartRequested || hasStartDateSelected) && !hasStartTimeSelected) {
                 selected.push('startTime');
-                console.log(`🤖 AI Web: Added split field => startTime (because ${hasStartRequested ? 'start' : 'startDate'} was selected)`);
+                this.logDebug(`🤖 AI Web: Added split field => startTime (because ${hasStartRequested ? 'start' : 'startDate'} was selected)`);
             }
             if (hasStartRequested && !hasStartDateSelected) {
                 selected.push('startDate');
-                console.log('🤖 AI Web: Added split field => startDate (because start was selected)');
+                this.logDebug('🤖 AI Web: Added split field => startDate (because start was selected)');
             }
             const hasEndDateSelected = selected.some(field => this.normalizePromptFieldName(field) === 'enddate');
             const hasEndTimeSelected = selected.some(field => this.normalizePromptFieldName(field) === 'endtime');
             if ((hasEndRequested || hasEndDateSelected) && !hasEndTimeSelected) {
                 selected.push('endTime');
-                console.log(`🤖 AI Web: Added split field => endTime (because ${hasEndRequested ? 'end' : 'endDate'} was selected)`);
+                this.logDebug(`🤖 AI Web: Added split field => endTime (because ${hasEndRequested ? 'end' : 'endDate'} was selected)`);
             }
             if (hasEndRequested && !hasEndDateSelected) {
                 selected.push('endDate');
-                console.log('🤖 AI Web: Added split field => endDate (because end was selected)');
+                this.logDebug('🤖 AI Web: Added split field => endDate (because end was selected)');
             }
         }
 
@@ -5152,12 +5189,26 @@ class AiWebParser {
         const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
         const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
         const removedManualFields = aiPromptFields.filter(field => manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
-        console.log(`🤖 AI Web: Field priority filter selected ${selected.length} field(s) from ${Object.keys(priorities).length}`);
+        this.logDebug(`🤖 AI Web: Field priority filter selected ${selected.length} field(s) from ${Object.keys(priorities).length}`);
         if (skippedFieldReasons.length > 0) {
-            console.log(`🤖 AI Web: Skipped priority fields => ${JSON.stringify(skippedFieldReasons)}`);
+            this.logDebug(`🤖 AI Web: Skipped priority fields => ${JSON.stringify(skippedFieldReasons)}`);
         }
         if (removedManualFields.length > 0) {
-            console.log(`🤖 AI Web: Removed manually scraped fields => ${removedManualFields.join(', ')}`);
+            this.logDebug(`🤖 AI Web: Removed manually scraped fields => ${removedManualFields.join(', ')}`);
+        }
+        // One compact console line per extraction setup replaces the per-field chatter
+        // above (which stays visible in the debug/file log).
+        const skippedNames = [
+            ...skippedFieldReasons.map(entry => entry.field),
+            ...removedManualFields
+        ];
+        const skippedText = skippedNames.length > 0 ? `skipped: ${skippedNames.join(', ')}; ` : '';
+        const summaryLine = `🤖 AI Web: Fields for ${sourceUrl || 'extraction'}: ${filteredPromptFields.length} selected (${skippedText}mode: ${fieldMode})`;
+        if (sourceUrl) {
+            console.log(summaryLine);
+        } else {
+            // No URL context (e.g. per-field requested checks) — keep it off the console.
+            this.logDebug(summaryLine);
         }
         if (filteredPromptFields.length === 0) {
             console.warn('🤖 AI Web: No AI prompt fields selected from fieldPriorities; skipping AI extraction for this parser');
@@ -5216,7 +5267,7 @@ ${String(snippet || '')}`;
     buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, variant = 'default', dataFlags = {}) {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
-            : this.getAiPromptFields(parserConfig, dataFlags);
+            : this.getAiPromptFields(parserConfig, dataFlags, htmlData && htmlData.url ? htmlData.url : '');
         const fieldContext = this.buildFieldContextText(promptFields, cityConfig);
 
         // Build DATA PROVIDED section based on flags

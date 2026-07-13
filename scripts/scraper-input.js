@@ -54,6 +54,11 @@ const scraperConfig = {
       // (scraped clobbers). This global block also serves events from non-AI
       // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
       arbitrateMerges: true,
+      // Full AI prompt/response payloads normally go to the debug channel only:
+      // captured into the run log file (logs/<runId>.log) but hidden from the
+      // visible console. Set true to also mirror them to the live console while
+      // actively debugging. Default: false.
+      verboseConsoleLogs: false,
     },
     ocr: {
       enabled: true,
