@@ -238,9 +238,15 @@ class WebAdapter {
         try {
             const pageCacheConfig = this.getPageCacheConfig();
             const canUseCache = pageCacheConfig.enabled && (options.method || 'GET').toUpperCase() === 'GET' && !options.body;
+            // Optional caller hook (options.isCacheableResponse): a response it
+            // rejects is neither served from the disk cache nor written to it —
+            // used by the geocode path so an empty Nominatim body can't poison a
+            // venue for the whole TTL. Callers that don't pass it are unaffected.
+            const isCacheableResponse = (responseData) =>
+                typeof options.isCacheableResponse !== 'function' || options.isCacheableResponse(responseData) !== false;
             if (canUseCache) {
                 const cachedPage = await this.readCachedPage(url, pageCacheConfig);
-                if (cachedPage) {
+                if (cachedPage && isCacheableResponse(cachedPage)) {
                     return cachedPage;
                 }
             }
@@ -279,7 +285,7 @@ class WebAdapter {
                     headers: Object.fromEntries(response.headers.entries())
                 };
 
-                if (canUseCache) {
+                if (canUseCache && isCacheableResponse(responseData)) {
                     await this.writeCachedPage(url, responseData, pageCacheConfig);
                 }
 

@@ -840,6 +840,105 @@ test('location merge is deterministic: coordinates always beat text/empty and ne
   assert.equal(adapterB.calls.length, 0, 'no location scenario may consult the AI');
 });
 
+test('location preserve-on-empty: an empty scrape never clears a calendar location (text or coords)', async () => {
+  // 2026-07-12 run findings: only calendar COORDINATES were protected — an empty
+  // scraped location CLEARED a calendar location holding text ("clobbered 4
+  // fields (startDate, endDate, url, location)" on the Atlanta event).
+  const core = createCore();
+  const buildScraped = (location) => ({
+    title: 'ATL BEAR NIGHT',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    location,
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const buildExisting = (location) => ({
+    title: 'ATL BEAR NIGHT',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    location,
+    notes: ''
+  });
+  const adapter = buildArbitrationAdapter({});
+
+  // Calendar TEXT survives an empty scrape
+  const keptText = await core.createFinalEventObject(
+    buildExisting('2069 Cheshire Bridge Rd NE, Atlanta'),
+    buildScraped(''),
+    { httpAdapter: adapter }
+  );
+  assert.equal(keptText.location, '2069 Cheshire Bridge Rd NE, Atlanta', 'an empty scrape must not clear a text location');
+
+  // Whitespace-only counts as empty
+  const keptWhitespace = await core.createFinalEventObject(
+    buildExisting('2069 Cheshire Bridge Rd NE, Atlanta'),
+    buildScraped('   '),
+    { httpAdapter: adapter }
+  );
+  assert.equal(keptWhitespace.location, '2069 Cheshire Bridge Rd NE, Atlanta', 'a whitespace scrape must not clear a text location');
+
+  // Calendar COORDINATES survive an empty scrape (existing rule, unchanged)
+  const keptCoords = await core.createFinalEventObject(
+    buildExisting('33.8226, -84.3510'),
+    buildScraped(''),
+    { httpAdapter: adapter }
+  );
+  assert.equal(keptCoords.location, '33.8226, -84.3510');
+
+  // Non-empty scraped coordinates still win over calendar text (unchanged)
+  const coordsWin = await core.createFinalEventObject(
+    buildExisting('2069 Cheshire Bridge Rd NE, Atlanta'),
+    buildScraped('33.8226, -84.3510'),
+    { httpAdapter: adapter }
+  );
+  assert.equal(coordsWin.location, '33.8226, -84.3510', 'scraped coordinates must still replace calendar text');
+
+  assert.equal(adapter.calls.length, 0, 'location is never AI-arbitrated');
+});
+
+test('mergeParsedEvents: an empty location loses to the non-empty side (text and coordinates)', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+  const buildEvent = (location) => ({
+    title: 'ATL BEAR NIGHT',
+    location,
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    _fieldPriorities: priorities
+  });
+
+  // Existing TEXT survives an empty incoming
+  const keptText = await core.mergeParsedEvents(
+    buildEvent('2069 Cheshire Bridge Rd NE, Atlanta'),
+    buildEvent(''),
+    { httpAdapter: adapter }
+  );
+  assert.equal(keptText.location, '2069 Cheshire Bridge Rd NE, Atlanta', 'an empty incoming location must not clear existing text');
+
+  // An empty existing is filled by incoming text
+  const filled = await core.mergeParsedEvents(
+    buildEvent(''),
+    buildEvent('2069 Cheshire Bridge Rd NE, Atlanta'),
+    { httpAdapter: adapter }
+  );
+  assert.equal(filled.location, '2069 Cheshire Bridge Rd NE, Atlanta');
+
+  // Existing COORDINATES survive an empty incoming (coordinate rule, unchanged)
+  const keptCoords = await core.mergeParsedEvents(
+    buildEvent('33.8226, -84.3510'),
+    buildEvent(''),
+    { httpAdapter: adapter }
+  );
+  assert.equal(keptCoords.location, '33.8226, -84.3510');
+
+  assert.equal(adapter.calls.length, 0, 'location resolves deterministically without AI');
+});
+
 test('mergeParsedEvents: coordinates beat text and degenerate ends lose, without AI', async () => {
   const core = createCore();
   const priorities = core.getResolvedFieldPriorities({});

@@ -213,10 +213,14 @@ const SIGNALS_FIXTURE = [
   '2026-07-13T09:00:16.000Z [INFO] 🗺️ OpenStreetMapNormalizer: 5 candidates for "922 E. BURNSIDE"; picked #1 (1.9 km from portland center)',
   '2026-07-13T09:00:17.000Z [WARN] 🗺️ OpenStreetMapNormalizer: Geocode for "Sanctuary" resolved outside event city "portland" ("Sanctuary, Denver, Colorado") — ignoring coordinates',
   '2026-07-13T09:00:18.000Z [WARN] 🗺️ OpenStreetMapNormalizer: All 3 geocode candidates for "123 Main St" fall outside 15 km of atlanta center (nearest is 42.0 km away) — ignoring coordinates',
-  // Merge-time guards: degenerate end, coordinate preservation, bar preservation
+  // Geocode retry-ladder exhaustion (address unresolvable after all variants)
+  '2026-07-13T09:00:18.500Z [WARN] 🗺️ OpenStreetMapNormalizer: No geocode results for "2069 CHESHIRE BRIDGE RD NE" (atlanta) after 3 queries — leaving location empty',
+  // Merge-time guards: degenerate end, coordinate/bar/location preservation
   '2026-07-13T09:00:19.000Z [WARN] ⚠️ MERGE: "BEARRACUDA: Portland" scraped endDate <= startDate (zero duration) — treating as missing, keeping calendar end',
   '2026-07-13T09:00:20.000Z [INFO] 📍 MERGE: "BEARRACUDA: Portland" location kept calendar coordinates over scraped text/empty value',
   '2026-07-13T09:00:21.000Z [INFO] 📍 MERGE: "BEARRACUDA: Portland" bar kept from calendar (scrape found no venue)',
+  '2026-07-13T09:00:21.300Z [INFO] 📍 MERGE: "BEARRACUDA: Atlanta" location kept from calendar (scrape found none)',
+  '2026-07-13T09:00:21.600Z [INFO] 📍 MERGE: "BEARRACUDA: Atlanta" location kept from existing (incoming scrape found none)',
   // AI merge arbitration: one calendar pick, one scraped pick, one bulk fallback
   '2026-07-13T09:00:22.000Z [INFO] 🤝 AI MERGE: "BEARRACUDA: Portland" field=bar chose calendar ("Sanctuary") over scraped ("BEARRACUDA") — venue, not the organizer',
   '2026-07-13T09:00:23.000Z [INFO] 🤝 AI MERGE: "BEARRACUDA: Portland" field=description chose scraped ("Doors at 9") over calendar ("TBD") — fresher source',
@@ -235,9 +239,11 @@ test('buildSummary counts each guard line type', () => {
     taglineRejected: 1,
     geocodePicked: 1,
     geocodeRejected: 2,       // outside-city + all-candidates-outside
+    geocodeNoResults: 1,      // retry-ladder exhaustion warn
     degenerateEndCaught: 1,
     coordsPreserved: 1,
-    barPreserved: 1
+    barPreserved: 1,
+    locationPreserved: 2      // "kept from calendar" + "kept from existing"
   });
 });
 
@@ -347,6 +353,12 @@ test('evaluateRunHealth: each warn trigger fires independently', () => {
   geocode.guards = Object.assign({}, geocode.guards, { geocodeRejected: 1 });
   health = evaluateRunHealth(geocode, { errorsCount: 0 });
   assert.deepEqual(health.reasons, ['geocode rejected ×1']);
+
+  // geocode retry-ladder exhaustion (address unresolvable)
+  const noResults = buildHealthySignals();
+  noResults.guards = Object.assign({}, noResults.guards, { geocodeNoResults: 2 });
+  health = evaluateRunHealth(noResults, { errorsCount: 0 });
+  assert.deepEqual(health.reasons, ['geocode no-results ×2']);
 
   // low venue coverage (only with >2 events)
   const lowVenue = buildHealthySignals();

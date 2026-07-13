@@ -231,6 +231,246 @@ test('haversineDistanceKm sanity: Portland→Seattle ≈ 233 km, identical point
   assert.equal(normalizer.haversineDistanceKm(45.5, -122.6, 45.5, -122.6), 0);
 });
 
+// ---------------------------------------------------------------------------
+// Forward-geocode retry ladder (2026-07-12 run findings: Nominatim returns 0
+// results for "2069 CHESHIRE BRIDGE RD NE" — its free-text parser chokes on a
+// trailing directional after a street type — while "2069 Cheshire Bridge Rd,
+// Atlanta" and "The Heretic, Atlanta" both resolve to the right venue)
+// ---------------------------------------------------------------------------
+
+const CITIES_WITH_ATLANTA = {
+  atlanta: {
+    timezone: 'America/New_York',
+    patterns: ['atlanta', 'atl'],
+    coordinates: { lat: 33.749, lng: -84.388 }
+  }
+};
+
+function createOsmNormalizerWithAtlanta() {
+  const core = new SharedCore(CITIES_WITH_ATLANTA, { eventSchema: EventSchema });
+  return new OpenStreetMapNormalizer(core);
+}
+
+// Stub httpAdapter that returns one canned Nominatim result set per request,
+// in order (the last one repeats if more requests arrive).
+function createSequencedStubAdapter(responses) {
+  const requests = [];
+  return {
+    requests,
+    fetchData: async (url) => {
+      requests.push(url);
+      const index = Math.min(requests.length - 1, responses.length - 1);
+      return JSON.stringify(responses[index]);
+    }
+  };
+}
+
+function decodeQueryParam(url) {
+  const match = /[?&]q=([^&]*)/.exec(url);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+// The Heretic, ~8 km from the Atlanta city center.
+const HERETIC_RESULT = {
+  lat: '33.8226',
+  lon: '-84.3510',
+  display_name: 'The Heretic, 2069, Cheshire Bridge Road Northeast, Atlanta, Fulton County, Georgia, 30324, United States',
+  address: { city: 'Atlanta', county: 'Fulton County', state: 'Georgia' }
+};
+
+test('stripTrailingDirectionals strips only directionals that follow a street type', () => {
+  const normalizer = createOsmNormalizerWithAtlanta();
+  assert.equal(
+    normalizer.stripTrailingDirectionals('2069 CHESHIRE BRIDGE RD NE'),
+    '2069 CHESHIRE BRIDGE RD'
+  );
+  assert.equal(
+    normalizer.stripTrailingDirectionals('2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324'),
+    '2069 Cheshire Bridge Road, Atlanta, GA, 30324',
+    'a mid-address directional before a comma must also be stripped'
+  );
+  // Directional PREFIXES are part of the street name and must pass through
+  assert.equal(normalizer.stripTrailingDirectionals('3702 N Halsted'), '3702 N Halsted');
+  assert.equal(normalizer.stripTrailingDirectionals('722 E Burnside'), '722 E Burnside');
+  assert.equal(normalizer.stripTrailingDirectionals('355 W 41st St'), '355 W 41st St');
+});
+
+test('buildGeocodeQueryVariants orders, dedupes and caps the ladder', () => {
+  const normalizer = createOsmNormalizerWithAtlanta();
+
+  const full = normalizer.buildGeocodeQueryVariants('2069 CHESHIRE BRIDGE RD NE', 'atlanta', 'The Heretic');
+  assert.deepEqual(full, [
+    '2069 CHESHIRE BRIDGE RD NE, atlanta',
+    '2069 CHESHIRE BRIDGE RD, atlanta',
+    'The Heretic, atlanta'
+  ]);
+  assert.ok(full.length <= 3, 'hard cap: at most 3 queries per event');
+
+  // No strippable directional and no bar → the ladder collapses to one query
+  assert.deepEqual(
+    normalizer.buildGeocodeQueryVariants('3702 N Halsted', 'chicago', ''),
+    ['3702 N Halsted, chicago']
+  );
+  assert.deepEqual(
+    normalizer.buildGeocodeQueryVariants('722 E Burnside', 'portland', null),
+    ['722 E Burnside, portland']
+  );
+
+  // Address already containing the city is not re-anchored (today's behavior)
+  assert.deepEqual(
+    normalizer.buildGeocodeQueryVariants('2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324', 'atlanta', 'The Heretic'),
+    [
+      '2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324',
+      '2069 Cheshire Bridge Road, Atlanta, GA, 30324',
+      'The Heretic, atlanta'
+    ]
+  );
+});
+
+test('retry ladder: 0 results retries with the directional stripped, rate-limited per request', async () => {
+  const normalizer = createOsmNormalizerWithAtlanta();
+  let delays = 0;
+  normalizer.delayForRateLimit = async () => { delays += 1; };
+  const httpAdapter = createSequencedStubAdapter([[], [HERETIC_RESULT]]);
+  const event = { title: 'ATL BEAR NIGHT', address: '2069 CHESHIRE BRIDGE RD NE', city: 'atlanta', bar: 'The Heretic' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '33.8226, -84.3510');
+  assert.equal(httpAdapter.requests.length, 2, 'exactly one retry after the empty first response');
+  assert.equal(decodeQueryParam(httpAdapter.requests[0]), '2069 CHESHIRE BRIDGE RD NE, atlanta');
+  assert.equal(
+    decodeQueryParam(httpAdapter.requests[1]),
+    '2069 CHESHIRE BRIDGE RD, atlanta',
+    'the second query must have the trailing directional stripped'
+  );
+  assert.equal(delays, 2, 'every live request must pass through the rate limiter');
+});
+
+test('retry ladder: falls back to bar+city and stops at the hard cap of 3 requests', async () => {
+  const normalizer = createOsmNormalizerWithAtlanta();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createSequencedStubAdapter([[], [], [HERETIC_RESULT]]);
+  const event = { title: 'ATL BEAR NIGHT', address: '2069 CHESHIRE BRIDGE RD NE', city: 'atlanta', bar: 'The Heretic' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(httpAdapter.requests.length, 3);
+  assert.equal(decodeQueryParam(httpAdapter.requests[2]), 'The Heretic, atlanta');
+  assert.equal(event.location, '33.8226, -84.3510', 'the venue-name lookup must rescue the event');
+});
+
+test('retry ladder: distance validation still applies to fallback variants', async () => {
+  const normalizer = createOsmNormalizerWithAtlanta();
+  normalizer.delayForRateLimit = async () => {};
+  // Variant 2 returns a candidate ~1000 km from Atlanta — must be rejected, ladder continues
+  const httpAdapter = createSequencedStubAdapter([[], [PORTLAND_MICHIGAN_RESULT], []]);
+  const event = { title: 'ATL BEAR NIGHT', address: '2069 CHESHIRE BRIDGE RD NE', city: 'atlanta', bar: 'The Heretic' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, undefined, 'a far-away candidate from a simplified query must not win');
+  assert.equal(httpAdapter.requests.length, 3, 'rejection counts as failure and the ladder continues to the cap');
+});
+
+test('retry ladder: identical variants are deduped so no duplicate request is sent', async () => {
+  const normalizer = createOsmNormalizerWithAtlanta();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createSequencedStubAdapter([[]]);
+  // No strippable directional, no bar → a single query, then exhaustion
+  const event = { title: 'CHI BEAR NIGHT', address: '3702 N Halsted', city: 'atlanta' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(httpAdapter.requests.length, 1, 'the stripped variant equals the original and must be skipped');
+  assert.equal(event.location, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Geocode cache poisoning (2026-07-12 run findings: cached empty Nominatim
+// bodies silently skipped venues that geocode fine live)
+// ---------------------------------------------------------------------------
+
+test('geocode requests carry a cache predicate that rejects empty/unparseable bodies', async () => {
+  const normalizer = createOsmNormalizer();
+  let capturedOptions = null;
+  const httpAdapter = {
+    fetchData: async (url, options) => {
+      capturedOptions = options;
+      return JSON.stringify([WRONG_CITY_RESULT]);
+    }
+  };
+  const event = { title: 'MYSTERY EVENT', address: '922 E. BURNSIDE' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(typeof capturedOptions.isCacheableResponse, 'function', 'the adapters gate disk-cache writes on this hook');
+  assert.equal(capturedOptions.isCacheableResponse({ html: '[]' }), false, 'an empty result set must never reach the disk cache');
+  assert.equal(capturedOptions.isCacheableResponse({ html: 'not json at all' }), false, 'an unparseable body must never reach the disk cache');
+  assert.equal(capturedOptions.isCacheableResponse({ html: JSON.stringify([WRONG_CITY_RESULT]) }), true);
+  assert.equal(capturedOptions.isCacheableResponse({ html: JSON.stringify({ display_name: 'reverse result' }) }), true);
+});
+
+test('a cached empty geocode body is treated as a miss and refetched live', async () => {
+  const normalizer = createOsmNormalizerWithCoords();
+  const requests = [];
+  const httpAdapter = {
+    getPageCacheConfig: () => ({ enabled: true, ttlDays: 7 }),
+    readCachedPage: async () => ({ html: '[]' }),
+    fetchData: async (url) => {
+      requests.push(url);
+      return JSON.stringify([PORTLAND_RESULT]);
+    }
+  };
+  const event = { title: 'PRIDE FRIDAY', address: '722 E Burnside', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(requests.length, 1, 'the poisoned cache entry must not satisfy the request');
+  assert.equal(event.location, '45.5230622, -122.6564816', 'the live refetch must fill the coordinates');
+});
+
+// ---------------------------------------------------------------------------
+// Native reverse geocode hook (Scriptable Location.reverseGeocode — the
+// normalizer prefers it over Nominatim when the adapter exposes it)
+// ---------------------------------------------------------------------------
+
+test('reverse geocode prefers the adapter native hook and skips Nominatim', async () => {
+  const normalizer = createOsmNormalizer();
+  const requests = [];
+  const httpAdapter = {
+    fetchData: async (url) => {
+      requests.push(url);
+      return JSON.stringify({ display_name: 'Nominatim must not be consulted' });
+    },
+    reverseGeocode: async () => '2069 Cheshire Bridge Rd NE, Atlanta, GA 30324'
+  };
+  const event = { title: 'ATL BEAR NIGHT', location: '33.8226, -84.3510' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.address, '2069 Cheshire Bridge Rd NE, Atlanta, GA 30324');
+  assert.equal(requests.length, 0, 'the native hook must avoid the Nominatim request entirely');
+});
+
+test('reverse geocode falls back to Nominatim when the native hook returns nothing', async () => {
+  const normalizer = createOsmNormalizer();
+  const requests = [];
+  const httpAdapter = {
+    fetchData: async (url) => {
+      requests.push(url);
+      return JSON.stringify({ display_name: '722 E Burnside St, Portland, OR' });
+    },
+    reverseGeocode: async () => null
+  };
+  const event = { title: 'PRIDE FRIDAY', location: '45.5230622, -122.6564816' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.address, '722 E Burnside St, Portland, OR');
+  assert.equal(requests.length, 1, 'Nominatim stays the fallback');
+});
+
 test('resolveWallClockDates ignores events without the wall-clock flag', () => {
   const normalizer = createLocationNormalizer();
   const event = {

@@ -727,6 +727,25 @@ class LocationNormalizer extends BaseNormalizer {
 // rejected: a candidate 50+ km away is a same-named street/place in another city.
 const CITY_CENTER_RADIUS_KM = 50;
 
+// Hard cap on Nominatim requests per event for the forward-geocode retry
+// ladder. Never raise this without revisiting the rate-limit budget.
+const MAX_GEOCODE_QUERIES_PER_EVENT = 3;
+
+// Street-type words a trailing directional can follow ("Cheshire Bridge Rd NE").
+const GEOCODE_STREET_TYPE_WORDS = 'Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Place|Pl|Court|Ct|Parkway|Pkwy|Highway|Hwy';
+// Longest alternatives first so "Northeast" matches before "North".
+const GEOCODE_DIRECTIONAL_WORDS = 'Northeast|Northwest|Southeast|Southwest|North|South|East|West|NE|NW|SE|SW|N|S|E|W';
+// A directional that FOLLOWS a street-type word and ends the address or a
+// comma-separated segment ("...Cheshire Bridge Rd NE", "...Road Northeast,
+// Atlanta"). Nominatim's free-text parser returns 0 results for these
+// (verified live 2026-07-12). Directional PREFIXES that are part of the
+// street name ("3702 N Halsted", "722 E Burnside") never match: there the
+// directional precedes the name instead of following a street type.
+const GEOCODE_TRAILING_DIRECTIONAL_RE = new RegExp(
+    `\\b((?:${GEOCODE_STREET_TYPE_WORDS})\\.?)\\s+(?:${GEOCODE_DIRECTIONAL_WORDS})\\.?(?=\\s*(?:,|$))`,
+    'gi'
+);
+
 class OpenStreetMapNormalizer extends BaseNormalizer {
     constructor(core) {
         super(core);
@@ -778,17 +797,63 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return null;
     }
 
+    // Usable geocode payload: a non-empty array (forward search) or an object
+    // (reverse lookup). An empty array is Nominatim's "no results" — a transient
+    // bad fetch of one must never be served from the persistent cache for its
+    // whole TTL (observed 2026-07-12: cached empty bodies silently skipped
+    // Chicago and Provincetown venues that geocode fine live).
+    isUsableGeocodeData(data) {
+        if (Array.isArray(data)) return data.length > 0;
+        return data !== null && data !== undefined && typeof data === 'object';
+    }
+
+    // Cache-worthiness hook handed to the adapters via options.isCacheableResponse:
+    // an empty-array or unparseable Nominatim body must not be written to the disk
+    // cache, and a previously cached one is treated as a miss (self-heals poisoned
+    // entries from earlier runs). Adapters apply this generically; only the
+    // geocode fetch path passes it, so website page caching is untouched.
+    isCacheableGeocodeResponse(responseData) {
+        const body = responseData && typeof responseData.html === 'string'
+            ? responseData.html
+            : (typeof responseData === 'string' ? responseData : null);
+        if (body === null) return true; // unknown shape — leave generic caching alone
+        try {
+            return this.isUsableGeocodeData(JSON.parse(body));
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Human-readable label for cache-bypass logging: the decoded q= parameter
+    // when present, else the URL itself (reverse lookups have no q=).
+    describeGeocodeQuery(url) {
+        const match = /[?&]q=([^&]*)/.exec(String(url || ''));
+        if (match) {
+            try {
+                return decodeURIComponent(match[1]);
+            } catch (e) {
+                return match[1];
+            }
+        }
+        return String(url || '');
+    }
+
     async fetchDataWithCacheAndRateLimit(url, options, httpAdapter) {
-        // 1. Check in-memory cache
+        // 1. Check in-memory cache (per-run: a live-fetched empty result stays
+        //    here so the same address is never re-queried within one run)
         if (this.memoryCache[url]) {
             return this.memoryCache[url];
         }
 
-        // 2. Check persistent cache
+        // 2. Check persistent cache. A cached empty/unusable geocode body is a
+        //    poisoned entry from an earlier run — treat it as a miss and refetch.
         const persistentData = await this.checkPersistentCache(url, httpAdapter);
         if (persistentData) {
-            this.memoryCache[url] = persistentData;
-            return persistentData;
+            if (this.isUsableGeocodeData(persistentData)) {
+                this.memoryCache[url] = persistentData;
+                return persistentData;
+            }
+            console.log(`🗺️ OpenStreetMapNormalizer: Ignoring cached empty geocode result for "${this.describeGeocodeQuery(url)}" — refetching`);
         }
 
         // 3. Not cached, so we must fetch. Delay for rate limit first.
@@ -892,6 +957,53 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return nearest;
     }
 
+    // Strip directionals that FOLLOW a street-type word — at the end of the
+    // address or before a comma. "2069 Cheshire Bridge Rd NE" → "2069 Cheshire
+    // Bridge Rd"; "…Road Northeast, Atlanta, GA" → "…Road, Atlanta, GA".
+    // Directional prefixes ("3702 N Halsted", "722 E Burnside") pass through
+    // unchanged (see GEOCODE_TRAILING_DIRECTIONAL_RE).
+    stripTrailingDirectionals(address) {
+        return String(address || '')
+            .replace(GEOCODE_TRAILING_DIRECTIONAL_RE, '$1')
+            .replace(/\s+,/g, ',')
+            .trim();
+    }
+
+    // Forward-geocode retry ladder: deduped, ordered query strings, hard-capped
+    // at MAX_GEOCODE_QUERIES_PER_EVENT. Order:
+    //   1. The query exactly as built today (city-anchored when the address
+    //      doesn't already contain the city).
+    //   2. The address with trailing directionals stripped (same anchoring) —
+    //      Nominatim's free-text parser chokes on "Rd NE" / "Road Northeast".
+    //   3. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
+    buildGeocodeQueryVariants(address, eventCity, bar) {
+        const city = typeof eventCity === 'string' ? eventCity.trim() : '';
+        const anchorToCity = (text) => {
+            const includesCity = city && text.toLowerCase().includes(city.toLowerCase());
+            return city && !includesCity ? `${text}, ${city}` : text;
+        };
+        const variants = [];
+        const seen = new Set();
+        const push = (query) => {
+            const trimmed = typeof query === 'string' ? query.trim() : '';
+            if (!trimmed) return;
+            const key = trimmed.toLowerCase();
+            if (seen.has(key)) return; // skip variants identical to an earlier one
+            seen.add(key);
+            variants.push(trimmed);
+        };
+
+        const baseAddress = String(address || '').trim();
+        push(anchorToCity(baseAddress));
+        push(anchorToCity(this.stripTrailingDirectionals(baseAddress)));
+        const barName = typeof bar === 'string' ? bar.trim() : '';
+        if (barName && city) {
+            push(`${barName}, ${city}`);
+        }
+
+        return variants.slice(0, MAX_GEOCODE_QUERIES_PER_EVENT);
+    }
+
     async normalizeAsync(event, httpAdapter) {
         if (!event || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return event;
 
@@ -903,7 +1015,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         const options = {
             headers: {
                 'User-Agent': 'ChunkyDadScraper/1.0 (https://github.com/chunkeydad)'
-            }
+            },
+            // Cache-worthiness hook honored by the adapters' fetchData: never
+            // persist an empty/unparseable Nominatim body to the disk cache and
+            // treat an already-cached one as a miss (see isCacheableGeocodeResponse).
+            isCacheableResponse: (responseData) => this.isCacheableGeocodeResponse(responseData)
         };
 
         if (hasAddress && !hasLocation) {
@@ -917,39 +1033,58 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // fall back to rejecting results whose address details don't mention the city.
             const eventCity = typeof event.city === 'string' ? event.city.trim() : '';
             const cityCenter = this.getCityCenterCoordinates(eventCity);
-            const addressIncludesCity = eventCity && address.toLowerCase().includes(eventCity.toLowerCase());
-            const queryText = eventCity && !addressIncludesCity ? `${address}, ${eventCity}` : address;
-            const query = encodeURIComponent(queryText);
             const cityValidationParam = eventCity ? '&addressdetails=1' : '';
             const resultLimit = cityCenter ? 5 : 1;
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=${resultLimit}${cityValidationParam}`;
 
-            try {
-                const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
-                if (Array.isArray(data) && data.length > 0) {
-                    if (cityCenter) {
-                        // Distance-ranked selection: nearest candidate within the radius wins
-                        const picked = this.pickNearestGeocodeCandidate(data, cityCenter, eventCity, address);
-                        if (picked) {
-                            event.location = `${picked.lat}, ${picked.lon}`;
-                            modified = true;
-                            console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
-                        }
-                    } else {
-                        const firstResult = data[0];
-                        if (firstResult.lat && firstResult.lon) {
-                            if (eventCity && !this.geocodeResultMatchesCity(firstResult, eventCity)) {
-                                console.warn(`🗺️ OpenStreetMapNormalizer: Geocode for "${event.address}" resolved outside event city "${eventCity}" ("${firstResult.display_name || 'no display name'}") — ignoring coordinates`);
-                            } else {
-                                event.location = `${firstResult.lat}, ${firstResult.lon}`;
-                                modified = true;
-                                console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
+            // Retry ladder: when a query returns 0 candidates (or every candidate
+            // is rejected by the distance/city checks), retry with progressively
+            // simplified queries. Every attempt goes through
+            // fetchDataWithCacheAndRateLimit (rate-limited AND cached) and the
+            // ladder is hard-capped at MAX_GEOCODE_QUERIES_PER_EVENT requests.
+            const queryVariants = this.buildGeocodeQueryVariants(address, eventCity, event.bar);
+            let attempts = 0;
+            let resolvedLocation = null;
+            for (let i = 0; i < queryVariants.length && !resolvedLocation; i++) {
+                const queryText = queryVariants[i];
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}&limit=${resultLimit}${cityValidationParam}`;
+                attempts += 1;
+                try {
+                    const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
+                    if (Array.isArray(data) && data.length > 0) {
+                        if (cityCenter) {
+                            // Distance-ranked selection: nearest candidate within the radius wins
+                            const picked = this.pickNearestGeocodeCandidate(data, cityCenter, eventCity, queryText);
+                            if (picked) {
+                                resolvedLocation = `${picked.lat}, ${picked.lon}`;
+                            }
+                        } else {
+                            const firstResult = data[0];
+                            if (firstResult.lat && firstResult.lon) {
+                                if (eventCity && !this.geocodeResultMatchesCity(firstResult, eventCity)) {
+                                    console.warn(`🗺️ OpenStreetMapNormalizer: Geocode for "${queryText}" resolved outside event city "${eventCity}" ("${firstResult.display_name || 'no display name'}") — ignoring coordinates`);
+                                } else {
+                                    resolvedLocation = `${firstResult.lat}, ${firstResult.lon}`;
+                                }
                             }
                         }
+                    } else if (i < queryVariants.length - 1) {
+                        console.log(`🗺️ OpenStreetMapNormalizer: 0 geocode results for "${queryText}" — trying next variant`);
+                    }
+                } catch (err) {
+                    console.log(`🗺️ OpenStreetMapNormalizer: Failed to geocode address "${event.address}": ${err.message}`);
+                }
+                if (resolvedLocation) {
+                    event.location = resolvedLocation;
+                    modified = true;
+                    console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
+                    if (i > 0) {
+                        console.log(`🗺️ OpenStreetMapNormalizer: Geocoded via simplified query "${queryText}"`);
                     }
                 }
-            } catch (err) {
-                console.log(`🗺️ OpenStreetMapNormalizer: Failed to geocode address "${event.address}": ${err.message}`);
+            }
+            if (!resolvedLocation) {
+                // Exact shape counted by run-log-summary's geocodeNoResults guard.
+                console.warn(`🗺️ OpenStreetMapNormalizer: No geocode results for "${address}" (${eventCity || 'no city'}) after ${attempts} ${attempts === 1 ? 'query' : 'queries'} — leaving location empty`);
             }
         } else if (hasLocation && !hasAddress) {
             const parts = event.location.split(',').map(p => p.trim());
@@ -958,16 +1093,33 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 const lon = parseFloat(parts[1]);
 
                 if (!isNaN(lat) && !isNaN(lon)) {
-                    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
-                    try {
-                        const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
-                        if (data && data.display_name) {
-                            event.address = data.display_name;
-                            modified = true;
-                            console.log(`🗺️ OpenStreetMapNormalizer: Found address for coordinates "${event.location}" -> ${event.address}`);
+                    // Prefer the adapter's native reverse geocoder when it exposes
+                    // one (Scriptable's Location.reverseGeocode — no network quota,
+                    // no Nominatim rate-limit budget). Nominatim stays the fallback.
+                    let nativeAddress = null;
+                    if (typeof httpAdapter.reverseGeocode === 'function') {
+                        try {
+                            nativeAddress = await httpAdapter.reverseGeocode(lat, lon);
+                        } catch (err) {
+                            console.log(`🗺️ OpenStreetMapNormalizer: Native reverse geocode failed for "${event.location}": ${err.message}`);
                         }
-                    } catch (err) {
-                        console.log(`🗺️ OpenStreetMapNormalizer: Failed to reverse geocode location "${event.location}": ${err.message}`);
+                    }
+                    if (typeof nativeAddress === 'string' && nativeAddress.trim().length > 0) {
+                        event.address = nativeAddress.trim();
+                        modified = true;
+                        console.log(`🗺️ OpenStreetMapNormalizer: Found address for coordinates "${event.location}" -> ${event.address} (native reverse geocode)`);
+                    } else {
+                        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+                        try {
+                            const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
+                            if (data && data.display_name) {
+                                event.address = data.display_name;
+                                modified = true;
+                                console.log(`🗺️ OpenStreetMapNormalizer: Found address for coordinates "${event.location}" -> ${event.address}`);
+                            }
+                        } catch (err) {
+                            console.log(`🗺️ OpenStreetMapNormalizer: Failed to reverse geocode location "${event.location}": ${err.message}`);
+                        }
                     }
                 }
             }
