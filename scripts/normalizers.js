@@ -810,6 +810,26 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return data;
     }
 
+    // Accept a forward-geocode result only when Nominatim's own address details
+    // (city/town/village/municipality/county/suburb) or display_name mention the
+    // event's city. A mismatch means the query matched a same-named street in a
+    // different place entirely — worse than no coordinates at all.
+    geocodeResultMatchesCity(result, city) {
+        const target = String(city || '').trim().toLowerCase();
+        if (!target) return true;
+        const details = result && typeof result.address === 'object' && result.address ? result.address : {};
+        const candidates = [
+            details.city,
+            details.town,
+            details.village,
+            details.municipality,
+            details.county,
+            details.suburb,
+            result ? result.display_name : ''
+        ];
+        return candidates.some(value => typeof value === 'string' && value.toLowerCase().includes(target));
+    }
+
     async normalizeAsync(event, httpAdapter) {
         if (!event || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return event;
 
@@ -825,17 +845,30 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         };
 
         if (hasAddress && !hasLocation) {
-            const query = encodeURIComponent(event.address.trim());
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`;
+            const address = event.address.trim();
+            // Bare street strings geocode anywhere on the planet: a flyer-OCR typo like
+            // "922 E. BURNSIDE" (real address: 722 E Burnside, Portland) resolved to
+            // Burnside, Michigan. When the event knows its city, anchor the query to it
+            // and reject results that land outside that city.
+            const eventCity = typeof event.city === 'string' ? event.city.trim() : '';
+            const addressIncludesCity = eventCity && address.toLowerCase().includes(eventCity.toLowerCase());
+            const queryText = eventCity && !addressIncludesCity ? `${address}, ${eventCity}` : address;
+            const query = encodeURIComponent(queryText);
+            const cityValidationParam = eventCity ? '&addressdetails=1' : '';
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1${cityValidationParam}`;
 
             try {
                 const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
                 if (Array.isArray(data) && data.length > 0) {
                     const firstResult = data[0];
                     if (firstResult.lat && firstResult.lon) {
-                        event.location = `${firstResult.lat}, ${firstResult.lon}`;
-                        modified = true;
-                        console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
+                        if (eventCity && !this.geocodeResultMatchesCity(firstResult, eventCity)) {
+                            console.warn(`🗺️ OpenStreetMapNormalizer: Geocode for "${event.address}" resolved outside event city "${eventCity}" ("${firstResult.display_name || 'no display name'}") — ignoring coordinates`);
+                        } else {
+                            event.location = `${firstResult.lat}, ${firstResult.lon}`;
+                            modified = true;
+                            console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
+                        }
                     }
                 }
             } catch (err) {

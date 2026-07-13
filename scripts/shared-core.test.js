@@ -752,6 +752,94 @@ test('deduplicateEvents merges the same event across parsers when keys diverge',
   assert.equal(result.length, 1, 'same venue + same local day + similar names must merge');
 });
 
+test('deduplicateEvents merges same-venue variants that each collided with a different-venue holder', async () => {
+  const core = createCore();
+  // Real scenario: "Portland PRIDE FRIDAY | BEARRACUDA" (bearracuda.com) and
+  // "Bearracuda Portland:PRIDE FRIDAY" (sickening.events) are the SAME event.
+  // Each collided with TREASURE TRAIL (different venue, same promoter/night/city),
+  // each got vetoed and suffixed — but they must still be compared to each other.
+  const parserConfig = { keyTemplate: 'bearracuda-${date}-${city}' };
+  const treasureTrail = {
+    title: 'TREASURE TRAIL Portland PRIDE',
+    bar: 'Sanctuary',
+    address: '33 Northwest 9th Avenue, Portland, OR, 97209',
+    city: 'portland',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-18T03:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: parserConfig
+  };
+  const prideFridayWeb = {
+    title: 'Portland PRIDE FRIDAY | BEARRACUDA',
+    bar: 'NOVA PDX',
+    city: 'portland',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-18T04:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: parserConfig
+  };
+  const prideFridayTickets = {
+    title: 'Bearracuda Portland:PRIDE FRIDAY',
+    bar: 'Nova PDX',
+    city: 'portland',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-18T04:30:00.000Z'),
+    source: 'sickening-events',
+    _parserConfig: parserConfig
+  };
+
+  const result = await core.deduplicateEvents([treasureTrail, prideFridayWeb, prideFridayTickets], null);
+  assert.equal(result.length, 2, 'the two Nova PDX records are one event; Treasure Trail stays separate');
+  const treasure = result.find(event => event.bar === 'Sanctuary');
+  assert.ok(treasure, 'the different-venue event must survive untouched');
+  const merged = result.find(event => event !== treasure);
+  assert.ok(/--2$/.test(merged.key), 'the merged event keeps the suffixed collision key');
+});
+
+test('deduplicateEvents merges a vetoed event into a suffixed holder via the identity scan', async () => {
+  const core = createCore();
+  // The venue text of the two same-event records is too different for the place
+  // comparison, but they share a ticket URL — the identity scan must catch it.
+  const parserConfig = { keyTemplate: 'bearracuda-${date}-${city}' };
+  const treasureTrail = {
+    title: 'TREASURE TRAIL Portland PRIDE',
+    bar: 'Sanctuary',
+    city: 'portland',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-18T03:00:00.000Z'),
+    source: 'ai-web',
+    _parserConfig: parserConfig
+  };
+  const prideFridaySuffixed = {
+    title: 'Portland PRIDE FRIDAY',
+    bar: 'NOVA PDX',
+    city: 'portland',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-18T04:00:00.000Z'),
+    ticketUrl: 'https://www.sickening.events/e/pridefriday/tickets',
+    source: 'ai-web',
+    _parserConfig: parserConfig
+  };
+  const prideFridayIncoming = {
+    title: 'PRIDE FRIDAY',
+    bar: '722 East Burnside Warehouse',
+    city: 'portland',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-18T05:00:00.000Z'),
+    ticketUrl: 'https://www.sickening.events/e/pridefriday/tickets',
+    source: 'sickening-events',
+    _parserConfig: parserConfig
+  };
+
+  assert.equal(
+    core.areEventsDistinctByPlace(prideFridayIncoming, prideFridaySuffixed),
+    true,
+    'precondition: the place comparison alone cannot pair these two records'
+  );
+  const result = await core.deduplicateEvents([treasureTrail, prideFridaySuffixed, prideFridayIncoming], null);
+  assert.equal(result.length, 2, 'shared ticketUrl on the same local day must merge the vetoed event');
+});
+
 test('deduplicateEvents still merges plain key-collision duplicates', async () => {
   const core = createCore();
   const first = {

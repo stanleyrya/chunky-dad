@@ -12,7 +12,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
       # The scraper tests are dependency-free (node:test + node:assert only),
       # so no npm install is needed.
       - run: npm test
+        env:
+          # See scripts/test-quiet-console.js — silences info-level console noise
+          # that intermittently corrupts the node --test runner IPC stream at CI.
+          NODE_OPTIONS: --require ./scripts/test-quiet-console.js

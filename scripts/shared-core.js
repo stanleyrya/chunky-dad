@@ -410,6 +410,8 @@ class SharedCore {
             '',
             'Rules:',
             '- You MUST copy one of the two provided values EXACTLY. Never invent, edit, merge, or reformat a value.',
+            '- "bar" must be the physical venue where the event takes place — never the promoter, organizer, or brand whose name appears in page titles.',
+            '- For "title", prefer the actual event name — do not prefer a variant just because it appends status text (e.g. sold-out notices) or site branding.',
             `- "pick" must be "${labelA}" or "${labelB}".`,
             'Return JSON only:',
             `{"choices": {"<field>": {"pick": "${labelA}" or "${labelB}", "value": "<exact copy of the chosen value>", "reason": "<one short sentence>"}}}`
@@ -1460,6 +1462,40 @@ class SharedCore {
                 // carry place info and the places don't match; merge otherwise
                 // (identity match or inconclusive = previous behavior).
                 if (this.areEventsDistinctByPlace(event, keyMatch)) {
+                    // The base-key holder is at a different venue, but a previous veto may
+                    // have parked another record of THIS event under a suffixed key
+                    // ("key--2", "key--3", ...). Walk the whole collision chain before
+                    // declaring the event new, otherwise two records of the same event
+                    // that each collided with a different-venue holder never meet.
+                    let chainMatch = null;
+                    for (const [existingKey, holder] of seen) {
+                        if (holder === keyMatch) continue;
+                        if (existingKey !== key && !existingKey.startsWith(`${key}--`)) continue;
+                        if (!this.areEventsDistinctByPlace(event, holder)) {
+                            chainMatch = holder;
+                            break;
+                        }
+                    }
+                    if (chainMatch) {
+                        console.log(`🔄 SharedCore: Key collision variant match — merging "${event.title || 'event'}" into "${chainMatch.title || 'event'}"`);
+                        await mergeIntoExisting(chainMatch);
+                        continue;
+                    }
+
+                    // Degraded fields hide chain matches too (same reasoning as the
+                    // no-key-match scan below): a vetoed event may still be identical to
+                    // an existing event by ticketUrl/identity, so run the identity scan
+                    // before pushing it as new. The vetoed base-key holder is excluded —
+                    // its place mismatch already proved it is a different event.
+                    const identityMatch = deduplicated.find(existing =>
+                        existing !== keyMatch &&
+                        this.getSameEventIdentitySignal(event, existing, { requireCloseStartTimes: false }));
+                    if (identityMatch) {
+                        console.log(`🔄 SharedCore: Key collision variant match — merging "${event.title || 'event'}" into "${identityMatch.title || 'event'}" via identity scan`);
+                        await mergeIntoExisting(identityMatch);
+                        continue;
+                    }
+
                     console.warn(`🔄 SharedCore: Key collision but different venues — keeping "${keyMatch.title || 'event'}" and "${event.title || 'event'}" as separate events`);
                     let uniqueKey = key;
                     let suffix = 2;
