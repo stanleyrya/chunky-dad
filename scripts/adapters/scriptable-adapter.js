@@ -1007,7 +1007,11 @@ class ScriptableAdapter {
     return Number.isFinite(statusCode) ? statusCode : null;
   }
 
-  async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1568) {
+  // Default maxDimension of 1024 matches what the OCR overflow-retry path uses:
+  // first attempts at ~1568px reliably overflowed the vision model's context
+  // (0 tokens, finish_reason "length") and only succeeded after retrying ≤1024,
+  // so every large image paid a wasted round trip.
+  async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1024) {
     try {
       const request = new Request(url);
       request.timeoutInterval = timeoutSeconds;

@@ -256,8 +256,10 @@ class AiWebParser {
         this.defaultOcrModel = 'qwen3-vl:4b-instruct';
         this.defaultOcrPrompt = "You are performing OCR on an event flyer.\n\nSTEP 1: OCR\nExtract ALL visible text from the image.\n\nRules:\n- Copy text exactly as shown.\n- Preserve line breaks when possible.\n- Do not summarize.\n- Do not interpret.\n- Do not correct spelling.\n- Do not infer missing words.\n\nSTEP 2: Classification\n\nClassify the image into ONE category:\n\nad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\nevent-flyer: Single event poster/flyer - ONE primary event with ONE title, ONE venue, and ONE date or continuous date range. May contain schedules, activities, DJs, performers, or sub-events that are clearly part of the same event. Examples: Bear Week, Bear Weekend, Pride Festival, Camp Weekend, Resort Weekend Package.\nmulti-event-flyer: Two or more independent events with different titles, different dates/times, and separate ticketing. Often appears as a calendar, event listing, or monthly schedule.\nlogo: Brand or organization logo (minimal text, just brand name)\nthumbnail: Small preview image (low detail)\nhero-banner: Large header/banner image (prominent on page)\n\nDecision rule: If there is ONE overarching event name and the listed activities appear to belong to that event, classify as event-flyer. Only classify as multi-event-flyer when multiple independent events are advertised that require separate tickets.\n\nIMPORTANT CONTEXT: This is for a gay bear community travel guide. Events may be part of:\n- \"Bear Week\" or \"Bear Weekend\" themed events\n- Annual bear gatherings (e.g., \"Puerto Vallarta Bear Week\", \"Sitges Bear Week\")\n- Regular bear-themed parties or meetups\n- Events at bear-owned businesses or bear-friendly venues\n\nSTEP 3: Event Analysis\n\nDetermine:\n- eventName: The primary event title\n- venue: The venue or venue group name\n- startDate: Start date/time if visible\n- endDate: End date/time if visible\n\nUse only information visible in the image.\n\nSTEP 4: Summary\n\nCreate a concise summary describing:\n- event name\n- venue\n- date/time\n- why it may be relevant to the bear community\n\nReturn JSON only with these fields:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"eventSummary\": \"a concise 1-2 sentence summary of the event including: event name, venue, date/time, and any bear-week context if applicable. Focus on what makes this event notable for the bear community.\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
         // When an image overflows the vision model's context, retry once at this
-        // longest-side cap (the adapter's default first-pass cap is 1568px).
-        this.ocrOverflowRetryMaxDimension = 1024;
+        // longest-side cap. The adapter's default first-pass cap is 1024px (the
+        // value overflow retries used to succeed at), so this safety net steps
+        // down further and should rarely fire.
+        this.ocrOverflowRetryMaxDimension = 768;
         this.defaultOcrRequestConfig = {
             // With requests serialized (maxConcurrentRequests), anything slower than
             // 2 minutes on the local vision model is stuck, not slow.
@@ -2010,69 +2012,94 @@ class AiWebParser {
      * Strip size-related parameters from image URLs for deduplication.
      * Removes width/height parameters like w=1920, h=1080, w_296,h_370, etc.
      * to identify the same image at different resolutions.
+     * Built entirely on string/regex parsing — the URL global does not exist in
+     * Scriptable (iOS JavaScriptCore), and a URL-based implementation silently
+     * no-oped there, which broke OCR↔segment image matching (every segment
+     * logged "failed to match any of the N OCR results").
      */
     stripSizeParams(url, unwrapDepth = 0) {
         if (!url) return url;
-        try {
-            const parsed = new URL(url);
+        const text = String(url);
 
-            // Image proxies like img.evbuc.com wrap the source URL inside the path
-            // (img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2F...) with per-variant crop
-            // and signature query params, so no amount of param stripping makes two
-            // variants equal. Dedup on the decoded inner URL instead.
-            if (unwrapDepth < this.maxUrlUnwrapDepth) {
-                const encodedPathMatch = parsed.pathname.match(/^\/(https?%3a%2f%2f.+)$/i);
-                if (encodedPathMatch) {
-                    try {
-                        const innerUrl = decodeURIComponent(encodedPathMatch[1]);
-                        return this.stripSizeParams(innerUrl, unwrapDepth + 1);
-                    } catch (_) {}
-                }
+        // Split hash and query off the scheme://host/path part manually.
+        let withoutHash = text;
+        let hash = '';
+        const hashIndex = withoutHash.indexOf('#');
+        if (hashIndex >= 0) {
+            hash = withoutHash.slice(hashIndex);
+            withoutHash = withoutHash.slice(0, hashIndex);
+        }
+        let base = withoutHash;
+        let queryText = '';
+        const queryIndex = base.indexOf('?');
+        if (queryIndex >= 0) {
+            queryText = base.slice(queryIndex + 1);
+            base = base.slice(0, queryIndex);
+        }
+
+        const baseMatch = base.match(/^(https?:\/\/[^/]+)(\/.*)?$/i);
+        if (!baseMatch) {
+            // Not an absolute http(s) URL — nothing safe to strip.
+            return url;
+        }
+        const origin = baseMatch[1];
+        let pathname = baseMatch[2] || '';
+
+        // Image proxies like img.evbuc.com wrap the source URL inside the path
+        // (img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2F...) with per-variant crop
+        // and signature query params, so no amount of param stripping makes two
+        // variants equal. Dedup on the decoded inner URL instead.
+        if (unwrapDepth < this.maxUrlUnwrapDepth) {
+            const encodedPathMatch = pathname.match(/^\/(https?%3a%2f%2f.+)$/i);
+            if (encodedPathMatch) {
+                try {
+                    const innerUrl = decodeURIComponent(encodedPathMatch[1]);
+                    return this.stripSizeParams(innerUrl, unwrapDepth + 1);
+                } catch (_) {}
             }
+        }
 
-            let pathname = parsed.pathname;
+        // Remove size patterns from pathname (e.g., /w_296,h_370/ or /1920x1080/)
+        // Handle Wix-style /v1/fill/w_296,h_370,.../<name> transform paths: everything
+        // from /v1/fill/ onward is transform params plus a duplicate filename, so the
+        // whole tail is stripped and the bare asset URL remains.
+        pathname = pathname.replace(/\/v1\/(?:fill|crop|fit)\/.*$/i, '');  // Wix transform path
+        pathname = pathname.replace(/\/\d+[xX]\d+\/?/g, '/');  // 1920x1080 patterns
+        pathname = pathname.replace(/\/w_\d+(?:,h_\d+)?\/?/i, '/');  // w_296,h_370 patterns
+        pathname = pathname.replace(/\/h_\d+(?:,w_\d+)?\/?/i, '/');  // h_370,w_296 patterns
+        pathname = pathname.replace(/\/(?:w|h|width|height|wpx|hpx)=\d+\/?/gi, '/');  // /w=1920/ patterns
 
-            // Remove size patterns from pathname (e.g., /w_296,h_370/ or /1920x1080/)
-            // Handle Wix-style /v1/fill/w_296,h_370,.../ patterns
-            pathname = pathname.replace(/\/v1\/(?:fill|crop|fit)\/.*$/i, '');  // Wix transform path
-            pathname = pathname.replace(/\/\d+[xX]\d+\/?/g, '/');  // 1920x1080 patterns
-            pathname = pathname.replace(/\/w_\d+(?:,h_\d+)?\/?/i, '/');  // w_296,h_370 patterns
-            pathname = pathname.replace(/\/h_\d+(?:,w_\d+)?\/?/i, '/');  // h_370,w_296 patterns
-            pathname = pathname.replace(/\/(?:w|h|width|height|wpx|hpx)=\d+\/?/gi, '/');  // ?w=1920 patterns
-
-            if (pathname !== parsed.pathname) {
-                parsed.pathname = pathname;
-            }
-
-            // Remove size query parameters (both w=1920 and w_296,h_370 formats)
-            const searchParams = parsed.searchParams;
-            const keysToRemove = [];
-            for (const key of searchParams.keys()) {
-                const lowerKey = key.toLowerCase();
+        // Remove size query parameters (both w=1920 and w_296,h_370 formats).
+        const keptPairs = [];
+        if (queryText) {
+            for (const pair of queryText.split('&')) {
+                if (!pair) continue;
+                const separatorIndex = pair.indexOf('=');
+                const rawKey = separatorIndex >= 0 ? pair.slice(0, separatorIndex) : pair;
+                const rawValue = separatorIndex >= 0 ? pair.slice(separatorIndex + 1) : '';
+                let key = rawKey;
+                try {
+                    key = decodeURIComponent(rawKey.replace(/\+/g, ' '));
+                } catch (_) {}
+                let value = rawValue;
+                try {
+                    value = decodeURIComponent(rawValue.replace(/\+/g, ' '));
+                } catch (_) {}
                 // Match standard size params: w, h, width, height, wpx, hpx, scale, size, res, resolution
-                if (/^(w|h|width|height|wpx|hpx|scale|size|res|resolution|x|y)$/.test(lowerKey)) {
-                    keysToRemove.push(key);
+                if (/^(w|h|width|height|wpx|hpx|scale|size|res|resolution|x|y)$/.test(key.toLowerCase())) {
+                    continue;
                 }
                 // Match Wix-style params like w_296,h_370 (the key is 'v1' or similar, value contains size info)
                 // Check if the value contains size patterns like w_\d+, h_\d+, or \d+x\d+
-                const value = searchParams.get(key);
                 if (value && (/\d+[xX]\d+/.test(value) || /w_\d+(?:,h_\d+)?/.test(value) || /h_\d+(?:,w_\d+)?/.test(value))) {
-                    keysToRemove.push(key);
+                    continue;
                 }
+                keptPairs.push(pair);
             }
-            for (const key of keysToRemove) {
-                searchParams.delete(key);
-            }
-
-            // Clean up empty search params
-            if (parsed.search === '?') {
-                parsed.search = '';
-            }
-
-            return parsed.toString();
-        } catch (_) {
-            return url;
         }
+
+        const search = keptPairs.length > 0 ? `?${keptPairs.join('&')}` : '';
+        return `${origin}${pathname}${search}${hash}`;
     }
 
     /**
@@ -2978,12 +3005,20 @@ class AiWebParser {
                 .filter(Boolean)
         );
 
-        // Strip sizes for more robust comparison
-        const strippedSegmentImageSet = new Set(
-            Array.from(normalizedSegmentImageSet)
-                .map(u => this.stripSizeParams(u))
-                .filter(Boolean)
-        );
+        // Strip sizes for more robust comparison. Each URL is also run through
+        // upgradeCdnThumbnailUrl first: OCR results are keyed by the upgraded bare
+        // asset URL, so segment thumbnail variants must collapse to the same key
+        // even if a future transform shape slips past stripSizeParams.
+        const strippedSegmentImageSet = new Set();
+        for (const u of normalizedSegmentImageSet) {
+            const stripped = this.stripSizeParams(u);
+            if (stripped) strippedSegmentImageSet.add(stripped);
+            const upgraded = this.upgradeCdnThumbnailUrl(u);
+            if (upgraded && upgraded !== u) {
+                const strippedUpgraded = this.stripSizeParams(upgraded);
+                if (strippedUpgraded) strippedSegmentImageSet.add(strippedUpgraded);
+            }
+        }
 
         console.log(`🤖 AI Web: Filtering OCR results against ${normalizedSegmentImageSet.size} segment images (${strippedSegmentImageSet.size} stripped)`);
 
@@ -4664,6 +4699,16 @@ class AiWebParser {
         const schema = this.getEventSchema();
         Object.keys(nextEvent).forEach(key => {
             const value = nextEvent[key];
+            // Weekday-pin flags from different passes cover different date fields
+            // (e.g. startDate from one pass, endDate from a retry) — union them
+            // instead of letting the first pass's flags shadow later ones.
+            if (key === '__weekdayPinnedYears' && value && typeof value === 'object') {
+                merged.__weekdayPinnedYears = {
+                    ...(merged.__weekdayPinnedYears && typeof merged.__weekdayPinnedYears === 'object' ? merged.__weekdayPinnedYears : {}),
+                    ...value
+                };
+                return;
+            }
             if (!this.isUsableAiFieldValue(value)) return;
             const normalizedName = this.normalizePromptFieldName(key);
             if (this.hasResolvedFieldValue(merged, normalizedName)) return;
@@ -5651,7 +5696,23 @@ TEXT:
                         console.log(`🤖 AI Web: Dropping field ${key} due to low confidence (${confidence})`);
                         continue; // Drop it
                     }
-                    filteredEvent[key] = fieldData.value;
+                    let value = fieldData.value;
+                    // Weekday-pinned year inference: the evidence string is only
+                    // available here (it is discarded when field objects flatten to
+                    // scalars), so this is the seam where "Sat, Aug 22" can pin the
+                    // year the model hallucinated. See resolveWeekdayPinnedYear.
+                    const pinBucket = this.getDateFieldPinBucket(key);
+                    if (pinBucket) {
+                        const pinResult = this.resolveWeekdayPinnedYear(value, fieldData.evidence);
+                        if (pinResult) {
+                            value = pinResult.value;
+                            if (!filteredEvent.__weekdayPinnedYears || typeof filteredEvent.__weekdayPinnedYears !== 'object') {
+                                filteredEvent.__weekdayPinnedYears = {};
+                            }
+                            filteredEvent.__weekdayPinnedYears[pinBucket] = true;
+                        }
+                    }
+                    filteredEvent[key] = value;
                 } else {
                     // Fallback in case AI doesn't follow the format perfectly
                     filteredEvent[key] = fieldData;
@@ -6903,7 +6964,20 @@ TEXT:
             }
         }
 
-        const { startDate, endDate } = this.normalizeEventDates(finalStartDate, finalEndDate);
+        // Weekday-pinned years (see resolveWeekdayPinnedYear) are deterministic and
+        // must not be re-adjusted toward the window. An end that was derived from
+        // the start (no end info of its own) inherits the start's pin so the pair
+        // cannot be split across years, and vice versa for a start that fell back
+        // to the end value.
+        const weekdayPinnedYears = aiEvent.__weekdayPinnedYears && typeof aiEvent.__weekdayPinnedYears === 'object'
+            ? aiEvent.__weekdayPinnedYears
+            : {};
+        const effectivePinnedYears = {
+            start: Boolean(weekdayPinnedYears.start) || (!combinedStartDate && Boolean(weekdayPinnedYears.end)),
+            end: Boolean(weekdayPinnedYears.end) || (!endProvided && !endDateRaw && Boolean(weekdayPinnedYears.start))
+        };
+
+        const { startDate, endDate } = this.normalizeEventDates(finalStartDate, finalEndDate, effectivePinnedYears);
         console.log(`🤖 AI Web: Normalized dates — startDate=${startDate instanceof Date ? startDate.toISOString() : startDate}, endDate=${endDate instanceof Date ? endDate.toISOString() : endDate}`);
 
         if (!title || !startDate) {
@@ -7253,9 +7327,141 @@ TEXT:
         }
     }
 
-    normalizeEventDates(startDate, endDate) {
-        const adjustedStart = this.adjustLikelyEventYear(startDate);
-        const adjustedEnd = this.adjustLikelyEventYear(endDate);
+    // Clock hook — production always uses the real clock; tests override this to
+    // freeze "now" for deterministic year-window and weekday-pinning assertions.
+    now() {
+        return new Date();
+    }
+
+    // Which weekday-pin bucket an AI date field key belongs to ('start'/'end'),
+    // or null for non-date fields. Keys arrive canonical ("startDate") or
+    // lowercased ("startdate") depending on the pass that produced them.
+    getDateFieldPinBucket(key) {
+        const normalized = String(key || '').trim().toLowerCase();
+        if (normalized === 'startdate' || normalized === 'start') return 'start';
+        if (normalized === 'enddate' || normalized === 'end') return 'end';
+        return null;
+    }
+
+    // Extract a weekday stated adjacent to a date in free text ("Sat, Aug 22",
+    // "Aug 22, Saturday", "Sat 8/22"). Returns the JS day index (0=Sunday) or
+    // null when no weekday sits next to a date-looking token.
+    extractStatedWeekdayAdjacentToDate(text) {
+        const raw = String(text || '');
+        if (!raw) return null;
+        const weekday = '(sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:s|nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)';
+        const month = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+        const dayNum = '\\d{1,2}(?:st|nd|rd|th)?';
+        const dateToken = `(?:${month}\\.?\\s*${dayNum}|${dayNum}\\s*(?:of\\s+)?${month}|\\d{1,2}[\\/.\\-]\\d{1,2})`;
+        const weekdayThenDate = new RegExp(`\\b${weekday}\\b\\.?,?\\s*${dateToken}`, 'i');
+        const dateThenWeekday = new RegExp(`${dateToken}\\s*,?\\s*\\(?\\b${weekday}\\b`, 'i');
+        const match = raw.match(weekdayThenDate) || raw.match(dateThenWeekday);
+        if (!match) return null;
+        const dayIndexByPrefix = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+        const prefix = String(match[1] || '').slice(0, 3).toLowerCase();
+        return Object.prototype.hasOwnProperty.call(dayIndexByPrefix, prefix) ? dayIndexByPrefix[prefix] : null;
+    }
+
+    // Build one candidate for weekday pinning: the field value with its 4-digit
+    // year replaced by `year`. Date-only/ISO-leading values use UTC weekday math;
+    // other parseable strings use the host-local weekday (matching how they will
+    // later be parsed). Returns { year, text, date, weekday, iso } or null.
+    buildWeekdayPinCandidate(valueText, yearMatch, year) {
+        const candidateText = valueText.slice(0, yearMatch.index)
+            + String(year)
+            + valueText.slice(yearMatch.index + yearMatch[0].length);
+        const isoMatch = candidateText.match(/^\s*(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]|$)/);
+        if (isoMatch) {
+            const month = Number(isoMatch[2]);
+            const day = Number(isoMatch[3]);
+            const utcDate = new Date(Date.UTC(year, month - 1, day));
+            if (utcDate.getUTCFullYear() !== year || utcDate.getUTCMonth() !== month - 1 || utcDate.getUTCDate() !== day) {
+                return null; // e.g. Feb 29 in a non-leap candidate year
+            }
+            return {
+                year,
+                text: candidateText,
+                date: utcDate,
+                weekday: utcDate.getUTCDay(),
+                iso: utcDate.toISOString().slice(0, 10)
+            };
+        }
+        const parsed = new Date(candidateText);
+        if (Number.isNaN(parsed.getTime()) || parsed.getFullYear() !== year) return null;
+        return {
+            year,
+            text: candidateText,
+            date: parsed,
+            weekday: parsed.getDay(),
+            iso: `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`
+        };
+    }
+
+    // Deterministic weekday→year pinning. Listing/flyer text often states a
+    // weekday but no year ("Sat, Aug 22"); the extraction model then hallucinates
+    // one, and window-based repair (adjustLikelyEventYear) can land on the wrong
+    // weekday (2025-08-22 is a Friday). When the field's own evidence names a
+    // weekday adjacent to the date AND carries no explicit 4-digit year, the year
+    // is derivable: try currentYear−1…currentYear+2 and keep candidates whose
+    // actual weekday matches; prefer one inside the year window, else the nearest
+    // to now. Past dates are intentionally allowed — past events must stay
+    // datable so the downstream past-filter can drop them (never force future).
+    // Returns { value, pinnedYear, aiYear } or null when pinning does not apply
+    // (no weekday, explicit year in evidence, unparseable value, or no candidate
+    // matches the stated weekday — e.g. bad OCR).
+    resolveWeekdayPinnedYear(rawValue, evidenceText) {
+        if (typeof rawValue !== 'string') return null;
+        const valueText = rawValue.trim();
+        if (!valueText) return null;
+        const yearMatch = valueText.match(/\b(?:19|20)\d{2}\b/);
+        if (!yearMatch) return null;
+        const evidence = String(evidenceText || '').trim();
+        if (!evidence || /\b(?:19|20)\d{2}\b/.test(evidence)) return null;
+        const statedWeekday = this.extractStatedWeekdayAdjacentToDate(evidence);
+        if (statedWeekday === null) return null;
+
+        const aiYear = Number(yearMatch[0]);
+        const now = this.now();
+        const currentYear = now.getFullYear();
+        const matches = [];
+        for (let year = currentYear - 1; year <= currentYear + 2; year++) {
+            const candidate = this.buildWeekdayPinCandidate(valueText, yearMatch, year);
+            if (candidate && candidate.weekday === statedWeekday) {
+                matches.push(candidate);
+            }
+        }
+        if (matches.length === 0) return null;
+
+        let chosen = matches[0];
+        if (matches.length > 1) {
+            const dayMs = this.extractionLimits.millisPerDay;
+            const windowStart = new Date(now.getTime() - (this.extractionLimits.yearWindowPastDays * dayMs));
+            const windowEnd = new Date(now.getTime() + (this.extractionLimits.yearWindowFutureDays * dayMs));
+            const inWindow = matches.filter(candidate => candidate.date >= windowStart && candidate.date <= windowEnd);
+            const pool = inWindow.length > 0 ? inWindow : matches;
+            chosen = pool.reduce((best, candidate) => {
+                if (!best) return candidate;
+                return Math.abs(candidate.date.getTime() - now.getTime()) < Math.abs(best.date.getTime() - now.getTime())
+                    ? candidate
+                    : best;
+            }, null);
+        }
+        if (chosen.year !== aiYear) {
+            console.log(`🤖 AI Web: Weekday-pinned year: "${this.trimToMaxLength(evidence, 80)}" → ${chosen.iso} (AI said ${aiYear})`);
+        }
+        return { value: chosen.text, pinnedYear: chosen.year, aiYear };
+    }
+
+    normalizeEventDates(startDate, endDate, weekdayPinnedYears = null) {
+        const pinned = weekdayPinnedYears && typeof weekdayPinnedYears === 'object' ? weekdayPinnedYears : {};
+        // A weekday-pinned year is deterministic — never "repair" it toward the
+        // window (that is exactly the wrong-weekday failure pinning prevents).
+        const adjustedStart = pinned.start && startDate instanceof Date && !Number.isNaN(startDate.getTime())
+            ? new Date(startDate)
+            : this.adjustLikelyEventYear(startDate);
+        const adjustedEnd = pinned.end && endDate instanceof Date && !Number.isNaN(endDate.getTime())
+            ? new Date(endDate)
+            : this.adjustLikelyEventYear(endDate);
         if (!adjustedStart) {
             return { startDate: null, endDate: null };
         }
@@ -7268,7 +7474,7 @@ TEXT:
 
     adjustLikelyEventYear(date) {
         if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
-        const now = new Date();
+        const now = this.now();
         const dayMs = this.extractionLimits.millisPerDay;
         const windowStart = new Date(now.getTime() - (this.extractionLimits.yearWindowPastDays * dayMs));
         const windowEnd = new Date(now.getTime() + (this.extractionLimits.yearWindowFutureDays * dayMs));
@@ -7282,7 +7488,21 @@ TEXT:
             candidate.setFullYear(candidateYear);
             return candidate;
         });
-        const inWindow = candidates.filter(candidate => candidate >= windowStart && candidate <= windowEnd);
+        let inWindow = candidates.filter(candidate => candidate >= windowStart && candidate <= windowEnd);
+        if (inWindow.length === 0) {
+            // Hallucinated years can be more than ±1 off ("Sat, Aug 22" guessed as
+            // 2024 when the window wants 2026) — re-anchor candidates on the current
+            // year before giving up.
+            const currentYear = now.getFullYear();
+            const currentYearCandidates = [];
+            for (let candidateYear = currentYear - 1; candidateYear <= currentYear + 2; candidateYear++) {
+                if (candidateYear >= year - 1 && candidateYear <= year + 1) continue; // already tried
+                const candidate = new Date(date);
+                candidate.setFullYear(candidateYear);
+                currentYearCandidates.push(candidate);
+            }
+            inWindow = currentYearCandidates.filter(candidate => candidate >= windowStart && candidate <= windowEnd);
+        }
         if (inWindow.length === 0) {
             console.warn(`🤖 AI Web: Date ${date.toISOString()} is outside window [${windowStart.toISOString()}, ${windowEnd.toISOString()}] and no candidate year was in window.`);
         }
