@@ -1489,3 +1489,80 @@ test('applyGlobalAiExtraContext: global applies unless the parser defines its ow
   const untouched = { name: 'p' };
   assert.equal(core.applyGlobalAiExtraContext(untouched, {}), untouched, 'no global → config object passes through');
 });
+
+// ---------------------------------------------------------------------------
+// Empty scraped bar must never clear a calendar venue (2026-07-13 run findings:
+// the brand guard left extraction with NO bar and the ai-strategy merge's
+// clear-on-empty-scrape semantics wiped the calendar's correct venue)
+// ---------------------------------------------------------------------------
+
+test('an empty scraped bar keeps the calendar venue and never reaches arbitration', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'Treasure Trail Portland PRIDE',
+    startDate: new Date('2026-07-18T21:00:00.000Z'),
+    bar: '', // brand-guarded away, never recovered — an extraction gap, not data
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = {
+    title: 'Treasure Trail Portland PRIDE',
+    startDate: new Date('2026-07-18T21:00:00.000Z'),
+    notes: 'bar: Sanctuary Club'
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'empty vs non-empty bar is not a conflict — no arbitration request');
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).bar, 'Sanctuary Club',
+    'the calendar venue must survive an empty scrape');
+});
+
+test('a non-empty scraped bar keeps today\'s behavior: genuine conflicts still route to arbitration', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'Treasure Trail Portland PRIDE',
+    startDate: new Date('2026-07-18T21:00:00.000Z'),
+    bar: 'Sanctuary',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = {
+    title: 'Treasure Trail Portland PRIDE',
+    startDate: new Date('2026-07-18T21:00:00.000Z'),
+    notes: 'bar: Sanctuary Club'
+  };
+  const adapter = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'Sanctuary Club', reason: 'full venue name' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'a genuine bar conflict still reaches arbitration exactly as today');
+  assert.match(adapter.calls[0].prompt, /field: bar/);
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).bar, 'Sanctuary Club');
+});
+
+test('mergeParsedEvents: an empty bar loses to the non-empty side regardless of priorities', async () => {
+  const core = createCore();
+
+  // No priority config at all: previously the incoming (empty) bar won via the
+  // newEvent spread and wiped the existing venue.
+  const merged = await core.mergeParsedEvents(
+    { title: 'Treasure Trail', bar: 'Sanctuary Club', source: 'bearracuda', _fieldPriorities: {} },
+    { title: 'Treasure Trail', bar: '', source: 'ai-web', _fieldPriorities: {} },
+    {});
+  assert.equal(merged.bar, 'Sanctuary Club', 'existing venue survives an empty incoming bar');
+
+  // Reverse direction: an incoming venue fills an existing empty bar even when
+  // only the existing source is in the priority list (previously kept empty).
+  const priorities = { bar: { priority: ['bearracuda'], merge: 'upsert' } };
+  const filled = await core.mergeParsedEvents(
+    { title: 'Treasure Trail', bar: '', source: 'bearracuda', _fieldPriorities: priorities },
+    { title: 'Treasure Trail', bar: 'Sanctuary', source: 'ai-web', _fieldPriorities: priorities },
+    {});
+  assert.equal(filled.bar, 'Sanctuary', 'a real venue fills an empty bar across parsers');
+});

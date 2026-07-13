@@ -1736,6 +1736,32 @@ class SharedCore {
                 }
             }
 
+            // bar mirrors the location rule in spirit: an empty side is an
+            // extraction gap, not data — when exactly one record has a venue it
+            // wins deterministically, regardless of source priority. (The
+            // priority path below only prefers the non-empty side when BOTH
+            // sources are in the priority list; without that, an empty incoming
+            // bar could clear a venue.) Both-non-empty falls through to the
+            // normal resolution below.
+            if (fieldName === 'bar') {
+                const existingBarEmpty = isEmpty(existingValue);
+                const newBarEmpty = isEmpty(newValue);
+                if (existingBarEmpty !== newBarEmpty) {
+                    const chosenValue = existingBarEmpty ? newValue : existingValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    if (existingValue !== newValue) {
+                        mergeDecisions.push({
+                            field: fieldName,
+                            existingValue: existingValue,
+                            newValue: newValue,
+                            chosenValue: chosenValue,
+                            reason: 'bar kept from the non-empty side — an empty scrape must not clear a venue'
+                        });
+                    }
+                    return;
+                }
+            }
+
             // A degenerate end (endDate <= that record's own startDate) is a
             // normalization artifact, not data — when exactly one side's end is
             // degenerate, the positive-duration end wins deterministically.
@@ -1984,6 +2010,19 @@ class SharedCore {
                     }
                     continue;
                 }
+            }
+
+            // An empty scraped bar is an extraction gap, not data (e.g. the venue
+            // was rejected by the organizer-brand guard and never recovered) — it
+            // must never clear the calendar's venue, even under clobber/ai
+            // clear-on-empty-scrape semantics. A non-empty scraped bar keeps
+            // today's behavior exactly (strategy/arbitration below).
+            if (fieldName === 'bar'
+                && this.isEmptyArbitrationValue(scraperValue)
+                && !this.isEmptyArbitrationValue(calendarValue)) {
+                mergedObject[fieldName] = calendarValue;
+                console.log(`📍 MERGE: "${mergeTitle}" bar kept from calendar (scrape found no venue)`);
+                continue;
             }
 
             // Dates are calendar-critical: a genuinely different startDate/endDate is
