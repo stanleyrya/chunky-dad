@@ -3,8 +3,8 @@
     "atlanta": {
       "name": "Atlanta",
       "status": "success",
-      "dataLength": 4933,
-      "eventCount": 4
+      "dataLength": 6222,
+      "eventCount": 5
     },
     "berlin": {
       "name": "Berlin",
@@ -21,8 +21,8 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 16441,
-      "eventCount": 14
+      "dataLength": 17895,
+      "eventCount": 15
     },
     "dallas": {
       "name": "Dallas",
@@ -57,7 +57,7 @@
     "nola": {
       "name": "New Orleans",
       "status": "success",
-      "dataLength": 2367,
+      "dataLength": 2340,
       "eventCount": 2
     },
     "nyc": {
@@ -87,8 +87,8 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 18474,
-      "eventCount": 14
+      "dataLength": 21732,
+      "eventCount": 16
     },
     "ptown": {
       "name": "Provincetown",
@@ -105,14 +105,14 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 12362,
-      "eventCount": 10
+      "dataLength": 13820,
+      "eventCount": 11
     },
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 15367,
-      "eventCount": 12
+      "dataLength": 16998,
+      "eventCount": 13
     },
     "sitges": {
       "name": "Sitges",
