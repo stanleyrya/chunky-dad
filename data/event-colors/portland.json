@@ -36,6 +36,12 @@
     "faviconFg": "#ff5000"
   },
   {
+    "slug": "bearracuda-portlandpride-friday-4b51bcfe",
+    "url": "https://bearracuda.com/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
     "slug": "chunk-portland-523-12aa4185",
     "url": "https://www.chunk-party.com",
     "faviconBg": "#f6f4f5",
@@ -56,6 +62,18 @@
   {
     "slug": "hot-take-portland-46ec04ba",
     "url": "https://bearracuda.com/events/hottakepdx/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "hot-take-wnini-coco-162bffff",
+    "url": "https://bearracuda.com/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "portland-pride-saturday-sold-out-17cdfbd9",
+    "url": "https://bearracuda.com/events/portland-pride-saturday/",
     "faviconBg": "#ff1901",
     "faviconFg": "#ff5000"
   },
