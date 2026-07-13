@@ -25,9 +25,17 @@ if (!CITY_CONFIG || typeof CITY_CONFIG !== 'object') {
 const scraperCities = {};
 Object.entries(CITY_CONFIG).forEach(([cityKey, cityConfig]) => {
   if (!cityConfig) return;
-  const { calendar, timezone, patterns } = cityConfig;
+  const { calendar, timezone, patterns, coordinates } = cityConfig;
   if (!calendar || !timezone || !Array.isArray(patterns)) return;
   scraperCities[cityKey] = { calendar, timezone, patterns };
+  // City-center coordinates power distance-ranked geocode validation in the
+  // scraper's OpenStreetMapNormalizer.
+  if (coordinates && Number.isFinite(Number(coordinates.lat)) && Number.isFinite(Number(coordinates.lng))) {
+    scraperCities[cityKey].coordinates = {
+      lat: Number(coordinates.lat),
+      lng: Number(coordinates.lng)
+    };
+  }
 });
 
 if (Object.keys(scraperCities).length === 0) {

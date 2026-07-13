@@ -1223,3 +1223,75 @@ test('logAiPayloadDebug logs different payloads in full', () => {
   assert.ok(captured.debug[1].includes('payload B'));
   assert.ok(!captured.debug[1].includes('suppressed'));
 });
+
+// ---------------------------------------------------------------------------
+// Organizer context in merge arbitration + ai.extraContext resolution
+// ---------------------------------------------------------------------------
+
+test('arbitration prompt includes the organizer line when an event carries _organizer', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair();
+  scraped._organizer = 'Bearracuda';
+  const adapter = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'STATION 4', reason: 'venue' }
+  });
+
+  await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1);
+  assert.match(
+    adapter.calls[0].prompt,
+    /- KNOWN ORGANIZER: "Bearracuda" — never pick a bar value equal to the organizer\./
+  );
+});
+
+test('arbitration prompt omits the organizer line when no event carries _organizer', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair();
+  const adapter = buildArbitrationAdapter({});
+
+  await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1);
+  assert.ok(!/KNOWN ORGANIZER/.test(adapter.calls[0].prompt));
+});
+
+test('mergeParsedEvents passes the organizer to arbitration and carries _organizer across merges', async () => {
+  const core = createCore();
+  const priorities = { title: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const existing = { title: 'FURBALL', source: 'ai-web', _organizer: 'Bearracuda', _fieldPriorities: priorities };
+  const incoming = { title: 'FURBALL DALLAS', source: 'ai-web', _parserConfig: aiParserConfig, _fieldPriorities: priorities };
+  const adapter = buildArbitrationAdapter({
+    title: { pick: 'incoming', value: 'FURBALL DALLAS', reason: 'more specific' }
+  });
+
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1);
+  assert.match(adapter.calls[0].prompt, /- KNOWN ORGANIZER: "Bearracuda" — never pick a bar value equal to the organizer\./);
+  assert.equal(merged._organizer, 'Bearracuda', 'an existing-only _organizer must survive the merge');
+});
+
+test('resolveAiConfig resolves extraContext (override-only, default empty)', () => {
+  const core = createCore();
+  assert.equal(core.resolveAiConfig({}).extraContext, '');
+  assert.equal(core.resolveAiConfig({ extraContext: 'HINT' }).extraContext, 'HINT');
+});
+
+test('applyGlobalAiExtraContext: global applies unless the parser defines its own', () => {
+  const core = createCore();
+  const mainConfig = { config: { ai: { extraContext: 'GLOBAL HINT' } } };
+
+  const inherited = core.applyGlobalAiExtraContext({ name: 'p' }, mainConfig);
+  assert.equal(inherited.ai.extraContext, 'GLOBAL HINT');
+
+  const overridden = core.applyGlobalAiExtraContext({ name: 'p', ai: { extraContext: 'MINE' } }, mainConfig);
+  assert.equal(overridden.ai.extraContext, 'MINE');
+
+  const optedOut = core.applyGlobalAiExtraContext({ name: 'p', ai: { extraContext: '' } }, mainConfig);
+  assert.equal(optedOut.ai.extraContext, '', 'an explicit empty string opts out of the global');
+
+  const untouched = { name: 'p' };
+  assert.equal(core.applyGlobalAiExtraContext(untouched, {}), untouched, 'no global → config object passes through');
+});
