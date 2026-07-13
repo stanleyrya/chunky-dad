@@ -93,6 +93,22 @@ const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const DISPLAY_METRICS_SCRIPT = 'display-run-metrics';
 const DISPLAY_SAVED_RUN_SCRIPT = 'display-saved-run';
 
+// Pure helpers shared with the scraper: run-health verdicts (run-log-summary)
+// and the Health & Guards section builders (metrics-sections). Loaded
+// defensively so the dashboard still renders if a module is missing on-device.
+let RunLogSummary = null;
+let MetricsSections = null;
+try {
+  RunLogSummary = importModule('run-log-summary').RunLogSummary;
+} catch (error) {
+  console.log(`Metrics: run-log-summary unavailable: ${error.message}`);
+}
+try {
+  MetricsSections = importModule('metrics-sections').MetricsSections;
+} catch (error) {
+  console.log(`Metrics: metrics-sections unavailable: ${error.message}`);
+}
+
 class LineChart {
   constructor(width, height, values, options = {}) {
     this.ctx = new DrawContext();
@@ -634,6 +650,22 @@ class MetricsDisplay {
   sumDisplayActions(actions) {
     if (!actions) return 0;
     return (actions.new || 0) + (actions.merge || 0) + (actions.conflict || 0);
+  }
+
+  // Run-health verdict + one-line badge for a metrics record. Old records
+  // without a signals block still get a verdict from their error count.
+  // Returns null when the shared run-log-summary module is unavailable.
+  getRecordHealth(record) {
+    if (!record || !RunLogSummary) return null;
+    try {
+      const health = RunLogSummary.evaluateRunHealth(record.signals || null, {
+        errorsCount: Number.isFinite(record.errors_count) ? record.errors_count : 0
+      });
+      return { health, badgeText: RunLogSummary.formatRunHealthBadge(health) };
+    } catch (error) {
+      console.log(`Metrics: Health evaluation failed: ${error.message}`);
+      return null;
+    }
   }
 
   getParserLastRuns(records) {
@@ -2940,6 +2972,21 @@ class MetricsDisplay {
       } else if (viewMode === 'runs' && runItems.length === 0) {
         cards.push(buildEmptyCard('No run metrics found.', 'Run the scraper to generate metrics.'));
       } else if (viewMode === 'parsers') {
+        // Health & Guards (latest run) — the per-run health badge leads the
+        // dashboard; guard/arbitration/AI details come from record.signals.
+        // Records without signals (pre-metrics-2.0) render a graceful note.
+        if (MetricsSections && RunLogSummary && latest) {
+          const latestHealth = this.getRecordHealth(latest);
+          const healthBody = MetricsSections.buildHealthGuardsSectionHtml(
+            latest,
+            latestHealth ? latestHealth.health : null,
+            latestHealth ? latestHealth.badgeText : ''
+          );
+          const healthSubtitle = latest?.run_id
+            ? escapeHtml(`Latest run ${this.formatRunId(latest.run_id)}`)
+            : null;
+          cards.push(buildSection('Health & Guards (Latest Run)', healthBody, healthSubtitle));
+        }
         const lastRun = latest?.finished_at ? this.formatRelativeTime(latest.finished_at) : 'Unknown';
         const latestErrors = Number.isFinite(latest?.errors_count) ? latest.errors_count : 0;
         const latestWarnings = this.getRunWarningCount(latest);
@@ -3043,6 +3090,43 @@ class MetricsDisplay {
               yLabel: durationAxisLabel,
               legendHtml: parserLegend
             }));
+          }
+        }
+
+        // Quality trends over the retained window — only runs that carry a
+        // signals block are plotted (older records are skipped, not zeroed).
+        if (MetricsSections) {
+          const trend = MetricsSections.buildQualityTrendData(recentRecords);
+          if (trend.count >= 2) {
+            const qualitySeriesList = [
+              { label: '% with venue', values: trend.venuePct, color: CHART_SERIES_COLORS[0] },
+              { label: '% with coordinates', values: trend.coordsPct, color: CHART_SERIES_COLORS[1] },
+              { label: '% with duration', values: trend.durationPct, color: CHART_SERIES_COLORS[3] }
+            ];
+            const qualityChart = this.buildMultiLineChartImage(qualitySeriesList, chartSize, {
+              lineWidth: CHART_STYLE.lineWidth,
+              maxValue: 100
+            });
+            const qualityData = qualityChart ? this.imageToDataUri(qualityChart) : null;
+            if (qualityData) {
+              cards.push(buildChartCard(`Event Quality (Last ${trend.count} Runs)`, qualityData, 'Share of events with a venue, coordinates, and a real duration', {
+                xLabel: runAxisLabel,
+                yLabel: 'Percent of events',
+                legendHtml: buildChartLegend(qualitySeriesList)
+              }));
+            }
+
+            const aiSecondsSeries = trend.aiTotalMs.map(ms => Math.round(ms / 100) / 10);
+            const aiChart = this.buildMultiLineChartImage([
+              { label: 'AI time (s)', values: aiSecondsSeries, color: CHART_STYLE.line }
+            ], chartSize, { lineWidth: CHART_STYLE.lineWidth });
+            const aiData = aiChart ? this.imageToDataUri(aiChart) : null;
+            if (aiData) {
+              cards.push(buildChartCard(`AI Time Per Run (Last ${trend.count} Runs)`, aiData, 'Total AI request time per run', {
+                xLabel: runAxisLabel,
+                yLabel: 'AI time (seconds)'
+              }));
+            }
           }
         }
 
@@ -3578,6 +3662,36 @@ class MetricsDisplay {
     .muted {
       color: var(--text-secondary);
       font-size: 13px;
+    }
+    .health-badge {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+      background: rgba(46, 213, 115, 0.14);
+      border: 1px solid rgba(46, 213, 115, 0.45);
+    }
+    .health-badge.warn {
+      background: rgba(254, 202, 87, 0.16);
+      border-color: rgba(254, 202, 87, 0.55);
+    }
+    .signal-subtitle {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      margin: 10px 0 4px;
+    }
+    .signal-line {
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      margin: 4px 0;
+    }
+    .signal-line.warn-text {
+      color: #b45309;
+      font-weight: 600;
     }
     .chip-group {
       display: flex;
