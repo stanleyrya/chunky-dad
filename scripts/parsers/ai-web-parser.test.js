@@ -832,6 +832,39 @@ test('normalizeAiEvent rolls past-midnight end times to the next day', () => {
   assert.equal(sameDay.endDate.toISOString(), '2026-07-12T00:00:00.000Z'); // 8pm EDT
 });
 
+test('normalizeAiEvent anchors an end time with NO end date to the start date', () => {
+  const parser = createParser();
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+
+  // "Party Goes Until 2:00 am!" — the page never prints the next-day date, so the
+  // evidence gate drops the inferred endDate and only rawEndTime=02:00 survives.
+  // The end must anchor to the START's date and roll past midnight, not go null
+  // and collapse the event to zero duration.
+  const lateNight = parser.normalizeAiEvent({
+    title: 'NEW ORLEANS',
+    startDate: '2026-09-04',
+    startTime: '21:00',
+    endTime: '02:00',
+    address: '800 Bourbon St, New York, NY'
+  }, {}, null, cityConfig, null);
+  assert.ok(lateNight);
+  assert.equal(lateNight.startDate.toISOString(), '2026-09-05T01:00:00.000Z'); // 9pm EDT
+  assert.equal(lateNight.endDate.toISOString(), '2026-09-05T06:00:00.000Z', 'end must land at 2am the NEXT day');
+  assert.equal(lateNight.endDate - lateNight.startDate, 5 * 60 * 60 * 1000, 'the 5-hour duration must survive');
+
+  // An end time AFTER the start time (still no end date) stays on the same day
+  const sameDay = parser.normalizeAiEvent({
+    title: 'TEA DANCE',
+    startDate: '2026-09-04',
+    startTime: '14:00',
+    endTime: '18:00',
+    address: '800 Bourbon St, New York, NY'
+  }, {}, null, cityConfig, null);
+  assert.ok(sameDay);
+  assert.equal(sameDay.startDate.toISOString(), '2026-09-04T18:00:00.000Z'); // 2pm EDT
+  assert.equal(sameDay.endDate.toISOString(), '2026-09-04T22:00:00.000Z', 'same-day end must not roll over');
+});
+
 test('getAiPromptFields default branch still requests split time fields', () => {
   const parser = createParser();
   // No OCR, no JSON-LD, no meta — the branch that previously dropped startTime/endTime

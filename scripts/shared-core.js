@@ -341,7 +341,41 @@ class SharedCore {
     isArbitrationEligibleField(fieldName) {
         const name = String(fieldName || '');
         if (!name || name.startsWith('_')) return false;
-        return name !== 'key' && name !== 'notes' && name !== 'source';
+        // location is never arbitrated: it is ALWAYS coordinates (the calendar is
+        // used as a database), so merges resolve it deterministically via
+        // isCoordinatePair — human-readable text belongs in address/bar.
+        return name !== 'key' && name !== 'notes' && name !== 'source' && name !== 'location';
+    }
+
+    // "lat, lng" / "lat,lng": two finite floats with lat in [-90, 90] and lng in
+    // [-180, 180]. The location field is ALWAYS coordinates — the normalization
+    // layer fills it with coordinates, and merges must never let address text or
+    // an empty scrape displace them.
+    isCoordinatePair(value) {
+        if (typeof value !== 'string') return false;
+        const match = value.trim().match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
+        if (!match) return false;
+        const lat = Number(match[1]);
+        const lng = Number(match[2]);
+        return Number.isFinite(lat) && Number.isFinite(lng)
+            && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    }
+
+    // Date-or-ISO-string → epoch milliseconds, or null when absent/unparseable.
+    toEpochMillis(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const date = value instanceof Date ? value : new Date(value);
+        const time = date.getTime();
+        return Number.isNaN(time) ? null : time;
+    }
+
+    // endDate <= startDate (compared as instants) is a normalization artifact
+    // (e.g. an evidence-dropped end date collapsing an event to zero duration),
+    // not data. Degenerate ends must never displace a positive-duration end.
+    hasDegenerateEnd(event) {
+        const startMs = this.toEpochMillis(event && event.startDate);
+        const endMs = this.toEpochMillis(event && event.endDate);
+        return startMs !== null && endMs !== null && endMs <= startMs;
     }
 
     isEmptyArbitrationValue(value) {
@@ -1677,6 +1711,52 @@ class SharedCore {
             const newValue = newEvent[fieldName];
             const existingSource = existingEvent.source;
             const newSource = newEvent.source;
+
+            // location is ALWAYS coordinates: when exactly one side has a
+            // coordinate pair it wins deterministically — text or an empty value
+            // never displaces coordinates. Both-or-neither coordinates falls
+            // through to the normal priority resolution below (never AI:
+            // location is excluded from arbitration eligibility).
+            if (fieldName === 'location') {
+                const existingIsCoordinates = this.isCoordinatePair(existingValue);
+                const newIsCoordinates = this.isCoordinatePair(newValue);
+                if (existingIsCoordinates !== newIsCoordinates) {
+                    const chosenValue = existingIsCoordinates ? existingValue : newValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    if (existingValue !== newValue) {
+                        mergeDecisions.push({
+                            field: fieldName,
+                            existingValue: existingValue,
+                            newValue: newValue,
+                            chosenValue: chosenValue,
+                            reason: 'location must be coordinates — coordinates win over text/empty'
+                        });
+                    }
+                    return;
+                }
+            }
+
+            // A degenerate end (endDate <= that record's own startDate) is a
+            // normalization artifact, not data — when exactly one side's end is
+            // degenerate, the positive-duration end wins deterministically.
+            if (fieldName === 'endDate' && !isEmpty(existingValue) && !isEmpty(newValue)) {
+                const existingEndDegenerate = this.hasDegenerateEnd(existingEvent);
+                const newEndDegenerate = this.hasDegenerateEnd(newEvent);
+                if (existingEndDegenerate !== newEndDegenerate) {
+                    const chosenValue = existingEndDegenerate ? newValue : existingValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.warn(`⚠️ MERGE: "${newEvent.title || existingEvent.title || 'event'}" ${existingEndDegenerate ? 'existing' : 'incoming'} endDate <= startDate (zero duration) — treating as missing, keeping the positive-duration end`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: 'degenerate end (endDate <= startDate) treated as missing'
+                    });
+                    return;
+                }
+            }
+
             const canArbitrate = this.isArbitrationEligibleField(fieldName)
                 && this.isGenuineFieldConflict(fieldName, existingValue, newValue);
 
@@ -1855,6 +1935,19 @@ class SharedCore {
         // Genuine conflicts deferred to AI arbitration (strategy "ai")
         const pendingAiConflicts = [];
 
+        const mergeTitle = scraperObject.title || calendarObject.title || 'event';
+
+        // A scraped endDate that is <= the scraped startDate (zero/negative duration)
+        // is a normalization artifact, not data — it must never replace a calendar
+        // end that yields positive duration, and it never even becomes a conflict.
+        const calendarStartMs = this.toEpochMillis(calendarObject.startDate);
+        const calendarEndMs = this.toEpochMillis(calendarObject.endDate);
+        const keepCalendarEndOverDegenerateScrape = this.hasDegenerateEnd(scraperObject)
+            && calendarStartMs !== null && calendarEndMs !== null && calendarEndMs > calendarStartMs;
+        if (keepCalendarEndOverDegenerateScrape) {
+            console.warn(`⚠️ MERGE: "${mergeTitle}" scraped endDate <= startDate (zero duration) — treating as missing, keeping calendar end`);
+        }
+
         // Apply merge logic for each field
         for (const fieldName of allFields) {
             // Skip internal fields
@@ -1864,6 +1957,50 @@ class SharedCore {
             const mergeStrategy = priorityConfig?.merge || 'upsert';
             const scraperValue = scraperObject[fieldName];
             const calendarValue = calendarObject[fieldName];
+
+            if (fieldName === 'endDate' && keepCalendarEndOverDegenerateScrape) {
+                mergedObject[fieldName] = calendarValue;
+                continue;
+            }
+
+            if (fieldName === 'location') {
+                // location is ALWAYS coordinates (the calendar is the database; the
+                // normalization layer fills this field with coordinates). Resolve it
+                // deterministically — never via AI: scraped coordinates win; else
+                // calendar coordinates are KEPT (an empty or text scrape must not
+                // wipe them); when neither side is coordinates, fall through to the
+                // configured merge strategy (clobber semantics today).
+                if (this.isCoordinatePair(scraperValue)) {
+                    mergedObject[fieldName] = scraperValue;
+                    if (scraperValue !== calendarValue) {
+                        clobberedFields.push(fieldName);
+                    }
+                    continue;
+                }
+                if (this.isCoordinatePair(calendarValue)) {
+                    mergedObject[fieldName] = calendarValue;
+                    if (scraperValue !== calendarValue) {
+                        console.log(`📍 MERGE: "${mergeTitle}" location kept calendar coordinates over scraped text/empty value`);
+                    }
+                    continue;
+                }
+            }
+
+            // Dates are calendar-critical: a genuinely different startDate/endDate is
+            // arbitrated even when a parser config says clobber — silently overwriting
+            // a differing calendar date is how good ends get destroyed. A failed
+            // arbitration still falls back to the scraped value (exactly clobber).
+            const routeDateConflictToAi = (fieldName === 'startDate' || fieldName === 'endDate')
+                && mergeStrategy === 'clobber'
+                && this.isArbitrationEligibleField(fieldName)
+                && this.isGenuineFieldConflict(fieldName, calendarValue, scraperValue);
+            if (routeDateConflictToAi) {
+                pendingAiConflicts.push({
+                    field: fieldName,
+                    values: { calendar: calendarValue, scraped: scraperValue }
+                });
+                continue;
+            }
 
             switch (mergeStrategy) {
                 case 'ai':
