@@ -1092,6 +1092,130 @@ test('normalizeAiEvent stamps the derived organizer as internal _organizer metad
 });
 
 // ---------------------------------------------------------------------------
+// Bare-city titles (2026-07-12 run: bearracuda.com names its event pages after
+// the city — og:title "New Orleans⚜️ | BEARRACUDA" → brand strip leaves just
+// the city, which is not an event name)
+// ---------------------------------------------------------------------------
+
+const CITY_TITLE_CITY_CONFIG = {
+  nola: { timezone: 'America/Chicago', patterns: ['new orleans', 'nola'] },
+  atlanta: { timezone: 'America/New_York', patterns: ['atlanta'] },
+  portland: { timezone: 'America/Los_Angeles', patterns: ['portland', 'pdx'] }
+};
+
+const BEARRACUDA_NOLA_HTML = `
+  <html>
+    <head>
+      <meta property="og:site_name" content="BEARRACUDA" />
+      <meta property="og:title" content="New Orleans⚜️ | BEARRACUDA" />
+      <script type="application/ld+json">
+        {"@context":"https://schema.org","@graph":[
+          {"@type":"Organization","name":"Bearracuda, Inc.","alternateName":"Bearracuda"},
+          {"@type":"WebSite","name":"BEARRACUDA"}
+        ]}
+      </script>
+    </head>
+    <body><p>Bearracuda New Orleans at the Metropolitan</p></body>
+  </html>
+`;
+
+test('normalizeAiEvent prefixes the organizer onto a bare-city title, restoring emoji from og:title', () => {
+  const parser = createParser();
+  const htmlData = { html: BEARRACUDA_NOLA_HTML, url: 'https://bearracuda.com/events/neworleans' };
+
+  // The model usually drops the emoji: "New Orleans" from og:title "New Orleans⚜️ | BEARRACUDA"
+  const event = parser.normalizeAiEvent(
+    { title: 'New Orleans', city: 'new orleans', startDate: '2026-10-11', startTime: '22:00' },
+    {}, htmlData, CITY_TITLE_CITY_CONFIG, null);
+  assert.ok(event, 'event should normalize');
+  assert.equal(event.title, 'BEARRACUDA: New Orleans⚜️',
+    'organizer prefixed and the emoji-richer og:title variant used as the base');
+
+  // The emoji variant surviving extraction ends the same way (brand strip → prefix)
+  const emojiEvent = parser.normalizeAiEvent(
+    { title: 'New Orleans⚜️ | BEARRACUDA', city: 'nola', startDate: '2026-10-11', startTime: '22:00' },
+    {}, { html: BEARRACUDA_NOLA_HTML, url: 'https://bearracuda.com/events/neworleans' }, CITY_TITLE_CITY_CONFIG, null);
+  assert.equal(emojiEvent.title, 'BEARRACUDA: New Orleans⚜️');
+});
+
+test('normalizeAiEvent leaves titles that already name the organizer or a real event untouched', () => {
+  const parser = createParser();
+
+  // Title already contains the organizer (Atlanta got rescued by its ticketing page)
+  const named = parser.normalizeAiEvent(
+    { title: 'Bearracuda Atlanta 17 Year Anniversary', city: 'atlanta', startDate: '2026-10-11' },
+    {}, { html: BEARRACUDA_NOLA_HTML, url: 'https://bearracuda.com/events/atlanta' }, CITY_TITLE_CITY_CONFIG, null);
+  assert.equal(named.title, 'Bearracuda Atlanta 17 Year Anniversary');
+
+  // An already-prefixed title is not city-only — the rule is idempotent
+  const prefixed = parser.normalizeAiEvent(
+    { title: 'BEARRACUDA: New Orleans⚜️', city: 'nola', startDate: '2026-10-11' },
+    {}, { html: BEARRACUDA_NOLA_HTML, url: 'https://bearracuda.com/events/neworleans' }, CITY_TITLE_CITY_CONFIG, null);
+  assert.equal(prefixed.title, 'BEARRACUDA: New Orleans⚜️', 'never double-prefixed');
+
+  // A title that merely CONTAINS the city is a real event name
+  const containsCity = parser.normalizeAiEvent(
+    { title: 'Hot Take Portland', city: 'portland', startDate: '2026-10-11' },
+    {}, { html: BEARRACUDA_NOLA_HTML, url: 'https://bearracuda.com/events/portland' }, CITY_TITLE_CITY_CONFIG, null);
+  assert.equal(containsCity.title, 'Hot Take Portland');
+
+  // Word-level containment backs the never-double-prefix guard
+  assert.equal(parser.titleContainsPageBrandName('Bearracuda Atlanta 17 Year Anniversary', ['Bearracuda, Inc.', 'BEARRACUDA']), true);
+  assert.equal(parser.titleContainsPageBrandName('Bearracuda Portland:PRIDE FRIDAY', ['BEARRACUDA']), true);
+  assert.equal(parser.titleContainsPageBrandName('New Orleans⚜️', ['BEARRACUDA']), false);
+});
+
+test('normalizeAiEvent keeps a bare-city title when no organizer or no city is known', () => {
+  const parser = createParser();
+
+  // No page brand → nothing to prefix with
+  const noBrand = parser.normalizeAiEvent(
+    { title: 'New Orleans', city: 'nola', startDate: '2026-10-11' },
+    {}, { html: '<html><body><p>party page with no brand markup</p></body></html>', url: 'https://example.com/nola' },
+    CITY_TITLE_CITY_CONFIG, null);
+  assert.equal(noBrand.title, 'New Orleans');
+
+  // No resolved city → the title cannot be judged city-only
+  const noCity = parser.normalizeAiEvent(
+    { title: 'New Orleans', startDate: '2026-10-11' },
+    {}, { html: BEARRACUDA_NOLA_HTML, url: 'https://bearracuda.com/events/neworleans' }, CITY_TITLE_CITY_CONFIG, null);
+  assert.equal(noCity.title, 'New Orleans');
+
+  // Unknown city value → defensive false
+  const unknownCity = parser.normalizeAiEvent(
+    { title: 'Denver', city: 'denver', startDate: '2026-10-11' },
+    {}, { html: BEARRACUDA_NOLA_HTML, url: 'https://bearracuda.com/events/denver' }, CITY_TITLE_CITY_CONFIG, null);
+  assert.equal(unknownCity.title, 'Denver');
+});
+
+test('the JSON-LD fast path applies the bare-city organizer prefix too', async () => {
+  const parser = createParser();
+  const html = `
+    <html>
+      <head>
+        <meta property="og:site_name" content="BEARRACUDA" />
+        <meta property="og:title" content="New Orleans⚜️ | BEARRACUDA" />
+        <script type="application/ld+json">
+          {"@context":"https://schema.org","@graph":[
+            {"@type":"Organization","name":"Bearracuda, Inc.","alternateName":"Bearracuda"},
+            {"@type":"Event","name":"New Orleans⚜️","startDate":"2026-10-11T22:00:00-05:00",
+             "location":{"@type":"Place","name":"The Metropolitan",
+               "address":{"@type":"PostalAddress","streetAddress":"310 Andrew Higgins Blvd","addressLocality":"New Orleans","addressRegion":"LA"}}}
+          ]}
+        </script>
+      </head>
+      <body><p>Bearracuda New Orleans</p></body>
+    </html>
+  `;
+
+  const result = await parser.parseEvents(
+    { html, url: 'https://bearracuda.com/events/neworleans' }, {}, CITY_TITLE_CITY_CONFIG, 'event-page', null);
+  assert.equal(result.events.length, 1, 'the structured-data fast path should be used');
+  assert.equal(result.events[0].title, 'BEARRACUDA: New Orleans⚜️');
+  assert.equal(result.events[0]._organizer, 'Bearracuda, Inc.');
+});
+
+// ---------------------------------------------------------------------------
 // Wasted-AI-call cuts (2026-07-13 run findings): Event-less JSON-LD passes,
 // duplicate context-prep round-trips, and repair passes for evidence-only
 // JSON breakage.
