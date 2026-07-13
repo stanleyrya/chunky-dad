@@ -1738,15 +1738,52 @@ class SharedCore {
             seen.set(key, event);
             deduplicated.push(event);
         }
-        
-        // Log results for large batches
-        if (logProgress) {
-            const duplicatesFound = events.length - deduplicated.length;
-            const duplicateSummary = duplicatesFound > 0 ? ` (removed ${duplicatesFound})` : '';
-            console.log(`🔄 SharedCore: Deduplicated ${events.length} → ${deduplicated.length}${duplicateSummary}`);
+
+        // Second pass: two records of the SAME event can survive the key-bucket
+        // pass under entirely different keys when corrupted fields changed the key
+        // (e.g. OCR on a blurred thumbnail hallucinated a wrong city, or timezone
+        // anchoring shifted the date) — they never collide, so the veto/identity
+        // logic above never even compares them. An identical non-root event URL is
+        // a strong same-event signal: index by normalized URL and merge those
+        // pairs even when city/venue/date disagree, with a 7-day date sanity
+        // window so recurring events that reuse their event page don't collapse.
+        const eventsByUrl = new Map();
+        const urlDeduplicated = [];
+        for (const event of deduplicated) {
+            const urlKey = this.getEventUrlIdentityKey(event && event.url);
+            if (!urlKey) {
+                urlDeduplicated.push(event);
+                continue;
+            }
+            const holder = eventsByUrl.get(urlKey);
+            if (holder && this.areStartDatesWithinDays(holder, event, 7)) {
+                console.log(`🔄 SharedCore: Same event URL — merging "${holder.title || 'event'}" and "${event.title || 'event'}" despite city/venue mismatch`);
+                // Identity fields (key/city/timezone) must come from the richer
+                // record — corrupted identity fields are exactly why these records
+                // escaped the key-based pass, so field priorities can't be trusted
+                // to pick them. Mirrors how key-collision merges keep existing.key.
+                const richer = this.pickRicherIdentityRecord(holder, event);
+                const merged = await this.mergeParsedEvents(holder, event, { httpAdapter, globalConfig });
+                merged.key = richer.key;
+                if (richer.city) merged.city = richer.city;
+                if (richer.timezone) merged.timezone = richer.timezone;
+                eventsByUrl.set(urlKey, merged);
+                const index = urlDeduplicated.indexOf(holder);
+                if (index !== -1) urlDeduplicated[index] = merged;
+                continue;
+            }
+            if (!holder) eventsByUrl.set(urlKey, event);
+            urlDeduplicated.push(event);
         }
 
-        return deduplicated;
+        // Log results for large batches
+        if (logProgress) {
+            const duplicatesFound = events.length - urlDeduplicated.length;
+            const duplicateSummary = duplicatesFound > 0 ? ` (removed ${duplicatesFound})` : '';
+            console.log(`🔄 SharedCore: Deduplicated ${events.length} → ${urlDeduplicated.length}${duplicateSummary}`);
+        }
+
+        return urlDeduplicated;
     }
 
     createEventKey(event, format = null) {
@@ -4445,6 +4482,45 @@ class SharedCore {
         }
 
         return null;
+    }
+
+    // Normalize an event's `url` into a same-event identity key: trimmed,
+    // case-insensitive host, trailing slash ignored, fragment dropped. Returns
+    // null for empty/unparseable URLs, non-http(s) URLs, and domain roots — a
+    // shared homepage URL is where events were FOUND, not what they ARE, so it
+    // must never make two events "the same".
+    getEventUrlIdentityKey(url) {
+        const raw = String(url || '').trim();
+        if (!raw) return null;
+        // parseUrl, not the URL global — this must work in Scriptable (see parseUrl).
+        const parsed = this.parseUrl(raw);
+        if (!parsed || !/^https?:$/i.test(parsed.protocol)) return null;
+        const path = String(parsed.pathname || '').replace(/\/+$/, '');
+        if (!path) return null; // domain root — no meaningful path segment
+        return `${parsed.protocol.toLowerCase()}//${parsed.host.toLowerCase()}${path}${parsed.search || ''}`;
+    }
+
+    // Sanity window for same-URL dedup: recurring events reuse their event page,
+    // so records far apart in time are different nights, not duplicates. Returns
+    // false when either start date is missing or unparseable (stay conservative).
+    areStartDatesWithinDays(eventA, eventB, days) {
+        const toDate = (value) => value instanceof Date ? value : this.parseDate(value);
+        const dateA = toDate(eventA && eventA.startDate);
+        const dateB = toDate(eventB && eventB.startDate);
+        if (!dateA || !dateB || Number.isNaN(dateA.getTime()) || Number.isNaN(dateB.getTime())) return false;
+        return Math.abs(dateA.getTime() - dateB.getTime()) <= days * 24 * 60 * 60 * 1000;
+    }
+
+    // When two records of the same event disagree on identity fields (city/key),
+    // trust the richer one: an address means the detail page was scraped (vs a
+    // homepage segment whose city may come from hallucinated OCR); failing that,
+    // coordinates beat no coordinates. Ties keep the first record.
+    pickRicherIdentityRecord(eventA, eventB) {
+        const hasAddress = (event) => Boolean(String((event && event.address) || '').trim());
+        if (hasAddress(eventA) !== hasAddress(eventB)) return hasAddress(eventA) ? eventA : eventB;
+        const hasCoordinates = (event) => Boolean(this.parseCoordinatesForIdentity(event, null));
+        if (hasCoordinates(eventA) !== hasCoordinates(eventB)) return hasCoordinates(eventA) ? eventA : eventB;
+        return eventA;
     }
 
     // Positive evidence that two records describe DIFFERENT events: both carry place

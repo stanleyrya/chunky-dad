@@ -243,6 +243,11 @@ class AiWebParser {
         // Common CDN/image-transform query keys (w=width, h=height, q=quality, fit/crop/auto/fm/format, s=signature).
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
         this.inlineUrlPattern = /(?:https?:\/\/|\/)[^\s"'<>]+/gi;
+        // Wix static-media transform URLs (/media/<asset>/v1/fill/<params>/<name>) —
+        // recognized so degraded thumbnails can be upgraded to the original asset.
+        this.wixMediaTransformPattern = /^(https?:\/\/static\.wixstatic\.com\/media\/([^/?#]+))\/v1\/(?:fill|fit|crop)\/([^/?#]+)(?:[/?#]|$)/i;
+        // URLs already logged by upgradeCdnThumbnailUrl — log each upgrade once per run.
+        this.upgradedCdnThumbnailUrls = new Set();
         this.aiPromptHistory = [];
         // Context-prep responses keyed by prompt hash: confidence retries rebuild a
         // byte-identical context-prep prompt, so the HTTP round-trip can be reused.
@@ -2070,6 +2075,51 @@ class AiWebParser {
         }
     }
 
+    /**
+     * Upgrade degraded CDN thumbnail URLs to the original full-size asset.
+     * Wix listing pages serve deliberately blurred low-res previews
+     * (e.g. .../media/<asset>/v1/fill/w_147,h_184,...,blur_2,enc_auto/<name>)
+     * of the same asset the detail page carries at full size — OCR on the blurred
+     * 147px preview hallucinates, and events must never store it as their image.
+     * This is a CDN-infrastructure pattern (like the parastorage/wixapps blocked
+     * hosts), not a per-site scraping rule.
+     * Only rewrites when the transform params prove degradation (blur_<n> with
+     * n > 0, or w_<width> with width < 600); large/high-quality transforms and
+     * non-matching URLs are returned unchanged. Conservative: any parse failure
+     * returns the input unchanged.
+     */
+    upgradeCdnThumbnailUrl(url) {
+        if (!url || typeof url !== 'string') return url;
+        try {
+            const raw = url.trim();
+            const match = raw.match(this.wixMediaTransformPattern);
+            if (!match) return url;
+            // match[2] is the asset name (may contain a URL-encoded tilde, %7E) —
+            // kept verbatim so the upgraded URL still strips/dedupes consistently
+            // against thumbnail variants of the same asset.
+            const originalAssetUrl = match[1];
+            const params = String(match[3]).split(',');
+            let width = null;
+            let blur = null;
+            for (const param of params) {
+                const widthMatch = param.match(/^w_(\d+)$/i);
+                if (widthMatch) width = parseInt(widthMatch[1], 10);
+                const blurMatch = param.match(/^blur_(\d+(?:\.\d+)?)$/i);
+                if (blurMatch) blur = parseFloat(blurMatch[1]);
+            }
+            const isDegraded = (Number.isFinite(blur) && blur > 0)
+                || (Number.isFinite(width) && width < 600);
+            if (!isDegraded) return url;
+            if (!this.upgradedCdnThumbnailUrls.has(raw)) {
+                this.upgradedCdnThumbnailUrls.add(raw);
+                console.log(`🤖 AI Web: Upgraded CDN thumbnail to original asset: ${raw} → ${originalAssetUrl}`);
+            }
+            return originalAssetUrl;
+        } catch (_) {
+            return url;
+        }
+    }
+
     parseUrlComponents(url) {
         if (!url || typeof url !== 'string') return null;
         try {
@@ -2613,10 +2663,12 @@ class AiWebParser {
         const candidates = Array.isArray(image) ? image : [image];
         for (const candidate of candidates) {
             if (typeof candidate === 'string' && candidate.trim()) {
-                return this.normalizeHttpUrlValue(candidate) || '';
+                // JSON-LD events skip normalizeAiEvent, so upgrade degraded CDN
+                // thumbnails here — the stored image must never be a blurred preview.
+                return this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(candidate) || '') || '';
             }
             if (candidate && typeof candidate === 'object' && typeof candidate.url === 'string') {
-                return this.normalizeHttpUrlValue(candidate.url) || '';
+                return this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(candidate.url) || '') || '';
             }
         }
         return '';
@@ -3174,6 +3226,10 @@ class AiWebParser {
     }
 
     async getOcrTextForImage(imageUrl, ocrConfig = {}, passLabel = 'ocr', httpAdapter = null) {
+        // Upgrade degraded CDN thumbnails (blurred/low-res Wix previews) to the
+        // original asset BEFORE the cache lookup so both the vision model and the
+        // OCR cache key see the full-size flyer, never the blurry preview.
+        imageUrl = this.upgradeCdnThumbnailUrl(imageUrl);
         const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
         if (cached) {
             if (cached.failureKind) {
@@ -6710,12 +6766,13 @@ TEXT:
             this.getResolvedParserMetadataFieldValue(parserConfig, ['gmaps'], aiEvent),
             ''
         );
-        const image = this.firstNonEmpty(
+        // Upgrade degraded CDN thumbnails so the stored image is never a blurred preview.
+        const image = this.upgradeCdnThumbnailUrl(this.firstNonEmpty(
             aiEvent.image,
             aiEvent.img,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['image', 'img'], aiEvent),
             ''
-        );
+        ));
         const cover = this.firstNonEmpty(
             aiEvent.cover,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['cover'], aiEvent),

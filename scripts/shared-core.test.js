@@ -2042,3 +2042,90 @@ test('mergeParsedEvents: an empty bar loses to the non-empty side regardless of 
     {});
   assert.equal(filled.bar, 'Sanctuary', 'a real venue fills an empty bar across parsers');
 });
+
+test('deduplicateEvents merges records sharing an identical event URL despite city/venue mismatch', async () => {
+  const core = createCore();
+  // Real scenario (chunk-party.com): OCR on a blurred homepage thumbnail hallucinated
+  // a wrong city ("sitges") onto the homepage-segment record while the detail page
+  // resolved "sf", and timezone anchoring put the start dates 2 days apart — the keys
+  // never collide, so only the shared event URL can pair them.
+  const homepageSegment = {
+    title: 'CHUNK DORE ALLEY - Saturday July 25th',
+    bar: 'SEBUCO', // hallucinated venue from the blurred thumbnail
+    city: 'sitges',
+    timezone: 'Europe/Madrid',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    url: 'https://www.chunk-party.com/dore-alley-2026',
+    source: 'ai-web'
+  };
+  const detailPage = {
+    title: 'CHUNK DORE ALLEY - Saturday July 25th',
+    bar: 'Public Works',
+    address: '161 Erie St, San Francisco, CA 94103',
+    city: 'sf',
+    timezone: 'America/Los_Angeles',
+    startDate: new Date('2026-07-27T04:00:00.000Z'), // 2 days apart
+    url: 'https://WWW.chunk-party.com/dore-alley-2026/', // host case + trailing slash must not matter
+    source: 'ai-web'
+  };
+  assert.notEqual(core.createEventKey(homepageSegment), core.createEventKey(detailPage), 'precondition: keys diverge');
+
+  const result = await core.deduplicateEvents([homepageSegment, detailPage], null);
+  assert.equal(result.length, 1, 'an identical non-root event URL must merge the two records');
+  assert.equal(result[0].city, 'sf', 'the surviving city comes from the address-bearing record');
+  assert.equal(result[0].timezone, 'America/Los_Angeles', 'the surviving timezone comes from the address-bearing record');
+  assert.equal(result[0].key, detailPage.key, 'the surviving key comes from the address-bearing record');
+});
+
+test('deduplicateEvents does not merge distinct events sharing a homepage-root URL', async () => {
+  const core = createCore();
+  // A multi-event homepage stamps the SAME root URL on every segment event —
+  // that URL says where the events were found, not that they are one event.
+  const eventA = {
+    title: 'CHUNK DORE ALLEY',
+    bar: 'Public Works',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    url: 'https://www.chunk-party.com/',
+    source: 'ai-web'
+  };
+  const eventB = {
+    title: 'CHUNK SUMMER CAMP',
+    bar: 'Eagle',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-07-26T21:00:00.000Z'),
+    url: 'https://www.chunk-party.com/',
+    source: 'ai-web'
+  };
+
+  const result = await core.deduplicateEvents([eventA, eventB], null);
+  assert.equal(result.length, 2, 'a shared domain-root URL must never trigger the same-URL merge');
+});
+
+test('deduplicateEvents does not merge same-URL records with start dates far apart', async () => {
+  const core = createCore();
+  // Recurring events reuse their event page — a month apart means different nights.
+  const july = {
+    title: 'CHUNK MONTHLY',
+    bar: 'Public Works',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    url: 'https://www.chunk-party.com/chunk-monthly',
+    source: 'ai-web'
+  };
+  const august = {
+    title: 'CHUNK MONTHLY',
+    bar: 'Public Works',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date('2026-08-24T21:00:00.000Z'), // 30 days apart
+    url: 'https://www.chunk-party.com/chunk-monthly',
+    source: 'ai-web'
+  };
+
+  const result = await core.deduplicateEvents([july, august], null);
+  assert.equal(result.length, 2, 'same URL but 30 days apart must stay separate events');
+});

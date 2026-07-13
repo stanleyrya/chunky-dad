@@ -1656,3 +1656,70 @@ test('the confidence-retry field list never contains location; main-pass selecti
     ['location'],
     'a missing location is still requested by the main extraction passes');
 });
+
+test('upgradeCdnThumbnailUrl rewrites blurred Wix thumbnails to the original asset', () => {
+  const parser = createParser();
+  const thumb = 'https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_147,h_184,al_c,q_80,usm_0.66_1.00_0.01,blur_2,enc_auto/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg';
+  assert.equal(
+    parser.upgradeCdnThumbnailUrl(thumb),
+    'https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg'
+  );
+
+  // Small width alone (no blur) also marks a degraded thumbnail
+  const smallNoBlur = 'https://static.wixstatic.com/media/42b6cb_aaa~mv2.jpg/v1/fill/w_300,h_375,al_c,q_80,enc_auto/42b6cb_aaa~mv2.jpg';
+  assert.equal(
+    parser.upgradeCdnThumbnailUrl(smallNoBlur),
+    'https://static.wixstatic.com/media/42b6cb_aaa~mv2.jpg'
+  );
+});
+
+test('upgradeCdnThumbnailUrl leaves high-quality transforms unchanged', () => {
+  const parser = createParser();
+  const fullSize = 'https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg';
+  assert.equal(parser.upgradeCdnThumbnailUrl(fullSize), fullSize, 'w_3300 q_90 is not a degraded thumbnail');
+});
+
+test('upgradeCdnThumbnailUrl leaves non-Wix URLs unchanged', () => {
+  const parser = createParser();
+  const nonWix = 'https://example.com/images/flyer.jpg?w=100&blur=2';
+  assert.equal(parser.upgradeCdnThumbnailUrl(nonWix), nonWix);
+});
+
+test('upgradeCdnThumbnailUrl handles URL-encoded tildes in the asset name', () => {
+  const parser = createParser();
+  const encoded = 'https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278%7Emv2.jpg/v1/fill/w_147,h_184,al_c,q_80,blur_2,enc_auto/42b6cb_272cdd18dcc74ec5a3eb10e288658278%7Emv2.jpg';
+  assert.equal(
+    parser.upgradeCdnThumbnailUrl(encoded),
+    'https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278%7Emv2.jpg'
+  );
+});
+
+test('upgradeCdnThumbnailUrl returns malformed inputs unchanged', () => {
+  const parser = createParser();
+  assert.equal(parser.upgradeCdnThumbnailUrl('not a url'), 'not a url');
+  assert.equal(parser.upgradeCdnThumbnailUrl(''), '');
+  assert.equal(parser.upgradeCdnThumbnailUrl(null), null);
+  assert.equal(parser.upgradeCdnThumbnailUrl(undefined), undefined);
+  // Transform path present but empty params — conservative, unchanged
+  const emptyParams = 'https://static.wixstatic.com/media/abc.jpg/v1/fill/';
+  assert.equal(parser.upgradeCdnThumbnailUrl(emptyParams), emptyParams);
+});
+
+test('normalizeAiEvent upgrades a blurred CDN thumbnail image field', () => {
+  const parser = createParser();
+  const thumb = 'https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_147,h_184,al_c,q_80,usm_0.66_1.00_0.01,blur_2,enc_auto/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg';
+  const aiEvent = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: '2026-07-25',
+    startTime: '21:00',
+    image: thumb
+  };
+
+  const event = parser.normalizeAiEvent(aiEvent, {}, null, null, null);
+  assert.ok(event, 'event should normalize');
+  assert.equal(
+    event.image,
+    'https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg',
+    'the stored image must never be the blurred thumbnail'
+  );
+});
