@@ -1723,3 +1723,141 @@ test('normalizeAiEvent upgrades a blurred CDN thumbnail image field', () => {
     'the stored image must never be the blurred thumbnail'
   );
 });
+
+// ---------------------------------------------------------------------------
+// Scriptable-safe stripSizeParams (2026-07-12 run findings: the URL global does
+// not exist in Scriptable, so URL-based stripping silently no-oped and every
+// segment logged "failed to match any of the N OCR results")
+// ---------------------------------------------------------------------------
+
+test('stripSizeParams strips Wix transforms and unwraps proxies without the URL global (Scriptable)', () => {
+  const parser = createParser();
+  const asset = 'https://static.wixstatic.com/media/8e6e19_16d4c264742a4b0e93a445f2f04e2170~mv2.jpg';
+  const variant = `${asset}/v1/fill/w_147,h_184,al_c,q_80,usm_0.66_1.00_0.01,blur_2,enc_auto/8e6e19_16d4c264742a4b0e93a445f2f04e2170~mv2.jpg`;
+  const inner = 'https://cdn.evbuc.com/images/1184410354/185013722403/1/original.20260512-160408';
+  const wrapped = `https://img.evbuc.com/${encodeURIComponent(inner)}?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&s=79b82ef9b2961bb09d52102535747556`;
+
+  const RealURL = global.URL;
+  global.URL = undefined;
+  try {
+    assert.equal(parser.stripSizeParams(variant), asset, 'Wix transform variant must strip to the bare asset URL');
+    assert.equal(parser.stripSizeParams(asset), asset, 'bare asset URL must pass through unchanged');
+    assert.equal(parser.stripSizeParams(wrapped), inner, 'evbuc path-wrapped proxy must unwrap to the inner URL');
+    assert.equal(
+      parser.stripSizeParams('https://x.example/img.jpg?w=1920&h=1080&fit=crop'),
+      'https://x.example/img.jpg?fit=crop',
+      'size query params must be dropped while other params survive'
+    );
+    assert.equal(
+      parser.stripSizeParams('https://x.example/photos/1920x1080/flyer.jpg'),
+      'https://x.example/photos/flyer.jpg',
+      'dimension path segments must be dropped'
+    );
+  } finally {
+    global.URL = RealURL;
+  }
+});
+
+test('filterOcrResultsForSegment matches bare-asset OCR keys to transform-variant segment images without the URL global', () => {
+  const parser = createParser();
+  const asset = 'https://static.wixstatic.com/media/8e6e19_16d4c264742a4b0e93a445f2f04e2170~mv2.jpg';
+  const variant = `${asset}/v1/fill/w_147,h_184,al_c,q_80,usm_0.66_1.00_0.01,blur_2,enc_auto/8e6e19_16d4c264742a4b0e93a445f2f04e2170~mv2.jpg`;
+  const ocrResults = [
+    { url: asset, text: 'FLYER TEXT', imageClassification: 'event-flyer' },
+    { url: 'https://static.wixstatic.com/media/aaaa11_ffffffffffffffffffffffffffffffff~mv2.jpg', text: 'OTHER FLYER', imageClassification: 'event-flyer' }
+  ];
+  const segment = { html: '', lines: ['SAT, AUG 22 BEAR NIGHT'], imageHintUrls: [variant] };
+
+  const RealURL = global.URL;
+  global.URL = undefined;
+  try {
+    const matched = parser.filterOcrResultsForSegment(ocrResults, segment, 'https://wix-site.example/events');
+    assert.equal(matched.length, 1, 'exactly the segment\'s own flyer OCR must match');
+    assert.equal(matched[0].url, asset);
+  } finally {
+    global.URL = RealURL;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Weekday-pinned year inference (2026-07-12 run findings: listing text stated a
+// weekday but no year, the model hallucinated one, and window repair landed on
+// the wrong weekday — e.g. "Sat, Aug 22" → 2025-08-22, a Friday)
+// ---------------------------------------------------------------------------
+
+const FROZEN_NOW = () => new Date(Date.UTC(2026, 6, 13, 12, 0, 0)); // 2026-07-13
+
+test('resolveWeekdayPinnedYear pins hallucinated years to the stated weekday', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // The four real failures from the 2026-07-12 run:
+  assert.equal(parser.resolveWeekdayPinnedYear('2024-08-22', 'Sat, Aug 22').value, '2026-08-22');
+  assert.equal(parser.resolveWeekdayPinnedYear('2026-10-11', 'Sat, Oct 11').value, '2025-10-11', 'past dates are allowed so the past-filter can drop them');
+  assert.equal(parser.resolveWeekdayPinnedYear('2027-01-17', 'Sat, Jan 17').value, '2026-01-17');
+  assert.equal(parser.resolveWeekdayPinnedYear('2026-12-31', 'Wed, Dec 31').value, '2025-12-31');
+});
+
+test('weekday pinning leaves explicit years and weekday-less evidence alone', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  assert.equal(parser.resolveWeekdayPinnedYear('2024-08-22', 'Sat, Aug 22, 2024'), null, 'an explicit year in evidence is trusted');
+  assert.equal(parser.resolveWeekdayPinnedYear('2024-08-22', 'Aug 22'), null, 'no weekday falls through to existing behavior');
+  assert.equal(parser.resolveWeekdayPinnedYear('2024-08-22', ''), null, 'missing evidence falls through');
+  assert.equal(parser.resolveWeekdayPinnedYear('Aug 22', 'Sat, Aug 22'), null, 'a value without a 4-digit year cannot be rewritten');
+  assert.equal(parser.resolveWeekdayPinnedYear('2026-08-22', 'Saturday party vibes'), null, 'a weekday with no adjacent date does not pin');
+});
+
+test('adjustLikelyEventYear re-anchors on the current year when hallucinated-year ±1 misses the window', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // "Sat, Aug 22" guessed as 2024: 2023/2024/2025 are all outside the window,
+  // but the current-year anchor finds 2026-08-22.
+  const adjusted = parser.adjustLikelyEventYear(new Date(Date.UTC(2024, 7, 22)));
+  assert.equal(adjusted.toISOString().slice(0, 10), '2026-08-22');
+  // In-window dates are untouched.
+  const inWindow = parser.adjustLikelyEventYear(new Date(Date.UTC(2026, 8, 4)));
+  assert.equal(inWindow.toISOString().slice(0, 10), '2026-09-04');
+});
+
+test('normalizeEventDates keeps weekday-pinned past dates instead of repairing them into the window', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const pinnedStart = new Date(Date.UTC(2025, 9, 11, 22, 0, 0)); // Sat 2025-10-11, outside the window
+  const pinnedResult = parser.normalizeEventDates(new Date(pinnedStart), new Date(pinnedStart), { start: true, end: true });
+  assert.equal(pinnedResult.startDate.toISOString(), '2025-10-11T22:00:00.000Z');
+  assert.equal(pinnedResult.endDate.toISOString(), '2025-10-11T22:00:00.000Z');
+  // Without the pin the old window repair still applies (and picks 2026-10-11).
+  const unpinnedResult = parser.normalizeEventDates(new Date(pinnedStart), new Date(pinnedStart));
+  assert.equal(unpinnedResult.startDate.toISOString().slice(0, 10), '2026-10-11');
+});
+
+test('extraction flattens field objects through weekday pinning and normalizeAiEvent honors the pin', async () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const response = JSON.stringify({
+    title: { value: 'BEAR NIGHT', evidence: 'BEAR NIGHT', confidence: 95 },
+    startDate: { value: '2026-10-11', evidence: 'Sat, Oct 11', confidence: 90 }
+  });
+  parser.core.callAiGenerate = async () => response;
+
+  const event = await parser.extractEventWithTwoPassAi(
+    { html: '<p>Sat, Oct 11 BEAR NIGHT</p>', url: 'https://x.example/events' },
+    {}, null, {}, ['title', 'startDate'], 'Sat, Oct 11 BEAR NIGHT', 'test',
+    { dataFlags: { jsonLd: true } }
+  );
+  assert.equal(event.startDate, '2025-10-11', 'the AI year must be overridden by the stated weekday');
+  assert.deepEqual(event.__weekdayPinnedYears, { start: true });
+
+  // normalizeAiEvent must keep the pinned (past) year, and the derived end date
+  // inherits the pin so the pair is not split across years.
+  const normalized = parser.normalizeAiEvent({
+    title: 'BEAR NIGHT',
+    startDate: '2025-10-11',
+    startTime: '21:00',
+    __weekdayPinnedYears: { start: true }
+  }, {}, null, null, null);
+  assert.ok(normalized);
+  assert.equal(normalized.startDate.toISOString().slice(0, 10), '2025-10-11');
+  assert.equal(normalized.endDate.toISOString().slice(0, 10), '2025-10-11');
+});
