@@ -416,6 +416,175 @@ test('retry ladder: identical variants are deduped so no duplicate request is se
 });
 
 // ---------------------------------------------------------------------------
+// Geocoder hardening (2026-07-14 run findings): the simplified-query fallback
+// for "325 Franklin Ave, Brooklyn, NY 11238, USA" eventually queried
+// "Brooklyn, nyc", matched the borough itself and stored its centroid (~4 km
+// from the venue); and full canonical addresses ("1192 Folsom St, San
+// Francisco, CA 94103, USA") return 0 results while the street+city core
+// resolves fine — the postal-code/country decoration chokes Nominatim.
+// ---------------------------------------------------------------------------
+
+const CITIES_NYC_WITH_COORDS = {
+  nyc: {
+    timezone: 'America/New_York',
+    patterns: ['new york', 'nyc', 'brooklyn'],
+    coordinates: { lat: 40.7128, lng: -74.006 }
+  }
+};
+
+function createOsmNormalizerWithNyc() {
+  const core = new SharedCore(CITIES_NYC_WITH_COORDS, { eventSchema: EventSchema });
+  return new OpenStreetMapNormalizer(core);
+}
+
+// The borough of Brooklyn itself — inside the 50 km radius, so only the
+// admin-area check can reject it.
+const BROOKLYN_BOROUGH_RESULT = {
+  lat: '40.6526006',
+  lon: '-73.9497211',
+  class: 'boundary',
+  type: 'administrative',
+  addresstype: 'borough',
+  display_name: 'Brooklyn, Kings County, City of New York, New York, United States',
+  address: { borough: 'Brooklyn', city: 'City of New York', state: 'New York' }
+};
+
+// The venue as Nominatim returns it for a name lookup — an amenity, not an
+// administrative area.
+const CMON_EVERYBODY_RESULT = {
+  lat: '40.6791213',
+  lon: '-73.9556999',
+  class: 'amenity',
+  type: 'bar',
+  addresstype: 'amenity',
+  display_name: "C'mon Everybody, 325, Franklin Avenue, Brooklyn, Kings County, City of New York, New York, 11238, United States",
+  address: { city: 'City of New York', county: 'Kings County', state: 'New York' }
+};
+
+test('stripPostalCodeAndCountry keeps street + city and drops postal/country decoration', () => {
+  const normalizer = createOsmNormalizerWithNyc();
+  assert.equal(
+    normalizer.stripPostalCodeAndCountry('1192 Folsom St, San Francisco, CA 94103, USA'),
+    '1192 Folsom St, San Francisco'
+  );
+  assert.equal(
+    normalizer.stripPostalCodeAndCountry('325 Franklin Ave, Brooklyn, NY 11238, USA'),
+    '325 Franklin Ave, Brooklyn'
+  );
+  assert.equal(
+    normalizer.stripPostalCodeAndCountry('722 E Burnside St, Portland, OR 97214, United States'),
+    '722 E Burnside St, Portland'
+  );
+  // No country decoration → not a canonical address, leave the ladder alone
+  assert.equal(normalizer.stripPostalCodeAndCountry('2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324'), '');
+  assert.equal(normalizer.stripPostalCodeAndCountry('1192 FOLSOM ST'), '');
+  // Stripping must never leave a bare place token — that query can only match
+  // an admin centroid (the "Brooklyn, nyc" poisoning)
+  assert.equal(normalizer.stripPostalCodeAndCountry('Brooklyn, NY 11238, USA'), '');
+});
+
+test('buildGeocodeQueryVariants tries the postal/country-stripped core after the full address', () => {
+  const normalizer = createOsmNormalizerWithNyc();
+  assert.deepEqual(
+    normalizer.buildGeocodeQueryVariants('325 Franklin Ave, Brooklyn, NY 11238, USA', 'nyc', "C'mon Everybody"),
+    [
+      '325 Franklin Ave, Brooklyn, NY 11238, USA, nyc',
+      '325 Franklin Ave, Brooklyn, nyc',
+      "C'mon Everybody, nyc"
+    ]
+  );
+  // With a strippable directional too, the full 4-rung ladder fits the cap and
+  // the venue-name rescue is never evicted
+  const atlanta = createOsmNormalizerWithAtlanta();
+  assert.deepEqual(
+    atlanta.buildGeocodeQueryVariants('2069 Cheshire Bridge Rd NE, Atlanta, GA 30324, USA', 'atlanta', 'The Heretic'),
+    [
+      '2069 Cheshire Bridge Rd NE, Atlanta, GA 30324, USA',
+      '2069 Cheshire Bridge Rd NE, Atlanta',
+      '2069 Cheshire Bridge Rd, Atlanta, GA 30324, USA',
+      'The Heretic, atlanta'
+    ]
+  );
+});
+
+test('a simplified-query admin-area match is rejected instead of poisoning coordinates', async () => {
+  const normalizer = createOsmNormalizerWithNyc();
+  normalizer.delayForRateLimit = async () => {};
+  // Full address → 0 results; stripped variant → the borough itself; venue → 0
+  const httpAdapter = createSequencedStubAdapter([[], [BROOKLYN_BOROUGH_RESULT], []]);
+  const event = { title: 'BEAR NIGHT', address: '325 Franklin Ave, Brooklyn, NY 11238, USA', city: 'nyc', bar: "C'mon Everybody" };
+  const warns = [];
+  const realWarn = console.warn;
+  console.warn = (message) => { warns.push(String(message)); };
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    console.warn = realWarn;
+  }
+
+  assert.equal(event.location, undefined, 'a borough centroid must never become the event location');
+  assert.ok(
+    warns.some(w => w.includes('Rejected admin-area result') && w.includes('type=borough')),
+    `the rejection must be logged: ${warns.join(' | ')}`
+  );
+  assert.equal(httpAdapter.requests.length, 3, 'the ladder continues past the rejected result');
+});
+
+test('a venue-name simplified query still resolves through an amenity result', async () => {
+  const normalizer = createOsmNormalizerWithNyc();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createSequencedStubAdapter([[], [], [CMON_EVERYBODY_RESULT]]);
+  const event = { title: 'BEAR NIGHT', address: '325 Franklin Ave, Brooklyn, NY 11238, USA', city: 'nyc', bar: "C'mon Everybody" };
+  const logs = [];
+  const realLog = console.log;
+  console.log = (message) => { logs.push(String(message)); };
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    console.log = realLog;
+  }
+
+  assert.equal(event.location, '40.6791213, -73.9556999', 'the amenity match must keep working');
+  assert.ok(
+    logs.some(l => l.includes('Geocoded via simplified query "C\'mon Everybody, nyc"')),
+    `the simplified-query success log must be preserved: ${logs.join(' | ')}`
+  );
+});
+
+const CITIES_SF_WITH_COORDS = {
+  sf: {
+    timezone: 'America/Los_Angeles',
+    patterns: ['sf', 'san francisco'],
+    coordinates: { lat: 37.7749, lng: -122.4194 }
+  }
+};
+
+const FOLSOM_RESULT = {
+  lat: '37.7756941',
+  lon: '-122.4103049',
+  display_name: '1192, Folsom Street, San Francisco, California, 94103, United States',
+  address: { city: 'San Francisco', county: 'San Francisco', state: 'California' }
+};
+
+test('a canonical address that only resolves without postal/country decoration is rescued by the new variant', async () => {
+  const core = new SharedCore(CITIES_SF_WITH_COORDS, { eventSchema: EventSchema });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createSequencedStubAdapter([[], [FOLSOM_RESULT]]);
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco, CA 94103, USA', city: 'sf' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '37.7756941, -122.4103049');
+  assert.equal(httpAdapter.requests.length, 2);
+  assert.equal(
+    decodeQueryParam(httpAdapter.requests[1]),
+    '1192 Folsom St, San Francisco, sf',
+    'the second query must be the postal/country-stripped core'
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Geocode cache poisoning (2026-07-12 run findings: cached empty Nominatim
 // bodies silently skipped venues that geocode fine live)
 // ---------------------------------------------------------------------------

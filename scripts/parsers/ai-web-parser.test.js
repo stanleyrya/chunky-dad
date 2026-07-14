@@ -1912,6 +1912,251 @@ test('extraction flattens field objects through weekday pinning and normalizeAiE
 });
 
 // ---------------------------------------------------------------------------
+// Wix server-data (warmup-data) enrichment: the wix-warmup-data blob carries
+// authoritative coordinates, timezone, exact UTC instants and ticket prices.
+// Enrichment ONLY — it fills empty fields on the finished events and never
+// causes any extraction step (JSON-LD path, OCR, AI) to be skipped.
+// ---------------------------------------------------------------------------
+
+// Trimmed real structure from chunk-party.com (the app GUID is deliberately
+// NOT the production events-app GUID — the extractor must iterate keys).
+const WIX_WARMUP_HTML = `
+<html><head>
+<script type="application/json" id="wix-warmup-data">{"appsWarmupData":{"deadbeef-0000-4000-8000-000000000000":{"EventsPageInitialState":{"event":{"event":{
+  "id":"2a06f832-0000-4000-8000-000000000000",
+  "location":{"name":"Nova PDX","coordinates":{"lat":45.52281000000001,"lng":-122.6581342},"address":"722 E Burnside St, Portland, OR 97214, USA","fullAddress":{"country":"US","subdivision":"OR","city":"Portland","postalCode":"97214-1219","formattedAddress":"722 E Burnside St, Portland, OR 97214, USA","geocode":{"latitude":45.52281000000001,"longitude":-122.6581342}}},
+  "scheduling":{"config":{"startDate":"2026-08-23T04:00:00.000Z","endDate":"2026-08-23T09:00:00.000Z","timeZoneId":"America/Los_Angeles"}},
+  "title":"CHUNK Portland - SUMMER BLOW OUT!","slug":"chunk-portland-summer-blow-out",
+  "registration":{"ticketing":{"lowestTicketPrice":{"amount":"20.50","currency":"USD"},"highestTicketPrice":{"amount":"30.75","currency":"USD"},"lowestTicketPriceFormatted":"$20.50","highestTicketPriceFormatted":"$30.75","soldOut":false}}
+}}}}}}</script>
+</head><body>CHUNK Portland - SUMMER BLOW OUT!</body></html>`;
+
+const CHUNK_PAGE_URL = 'https://www.chunk-party.com/event-details/chunk-portland-summer-blow-out';
+
+const PORTLAND_CITY_CONFIG = {
+  portland: { timezone: 'America/Los_Angeles', patterns: ['portland', 'pdx'] }
+};
+
+test('extractWixServerEventData parses the warmup blob without the URL global (Scriptable)', () => {
+  const parser = createParser();
+  const RealURL = global.URL;
+  global.URL = undefined;
+  try {
+    const record = parser.extractWixServerEventData(WIX_WARMUP_HTML);
+    assert.ok(record, 'the blob must parse even though its app GUID is unknown');
+    assert.equal(record.title, 'CHUNK Portland - SUMMER BLOW OUT!');
+    assert.equal(record.slug, 'chunk-portland-summer-blow-out');
+    // Byte-for-byte the OpenStreetMapNormalizer location format: "<lat>, <lng>"
+    assert.equal(record.coordinates, '45.52281000000001, -122.6581342');
+    assert.equal(record.timezone, 'America/Los_Angeles');
+    assert.equal(record.startDateUtc.toISOString(), '2026-08-23T04:00:00.000Z');
+    assert.equal(record.endDateUtc.toISOString(), '2026-08-23T09:00:00.000Z');
+    assert.equal(record.address, '722 E Burnside St, Portland, OR 97214, USA');
+    assert.equal(record.city, 'portland');
+    assert.equal(record.cover, '$20.50-$30.75');
+  } finally {
+    global.URL = RealURL;
+  }
+});
+
+test('extractWixServerEventData yields null for absent, garbage or event-less blobs', () => {
+  const parser = createParser();
+  const RealURL = global.URL;
+  global.URL = undefined;
+  try {
+    assert.equal(parser.extractWixServerEventData('<html><body>no blob here</body></html>'), null);
+    assert.equal(parser.extractWixServerEventData(''), null);
+    assert.equal(parser.extractWixServerEventData(null), null);
+    assert.equal(
+      parser.extractWixServerEventData('<script type="application/json" id="wix-warmup-data">{not json at all'),
+      null
+    );
+    assert.equal(
+      parser.extractWixServerEventData('<script type="application/json" id="wix-warmup-data">{"appsWarmupData":{"x":{"SomethingElse":{}}}}</script>'),
+      null,
+      'a warmup blob without an EventsPageInitialState event is not server data'
+    );
+  } finally {
+    global.URL = RealURL;
+  }
+});
+
+test('extractWixServerEventData ignores wall-clock scheduling dates and bogus timezone ids', () => {
+  const parser = createParser();
+  // Same shape, but offset-less dates and a non-IANA timezone
+  const html = WIX_WARMUP_HTML
+    .replace('2026-08-23T04:00:00.000Z', '2026-08-22T21:00:00')
+    .replace('2026-08-23T09:00:00.000Z', '2026-08-23T02:00:00')
+    .replace('America/Los_Angeles', 'PST');
+  const record = parser.extractWixServerEventData(html);
+  assert.ok(record);
+  assert.equal(record.startDateUtc, null, 'offset-less dates are not exact instants');
+  assert.equal(record.endDateUtc, null);
+  assert.equal(record.timezone, null, 'a non-IANA id must not pass through');
+  // Explicit-offset (non-Z) instants are exact too
+  const offsetRecord = parser.extractWixServerEventData(
+    WIX_WARMUP_HTML.replace('2026-08-23T04:00:00.000Z', '2026-08-22T21:00:00-07:00')
+  );
+  assert.equal(offsetRecord.startDateUtc.toISOString(), '2026-08-23T04:00:00.000Z');
+});
+
+test('applyWixServerDataEnrichment fills only empty fields on a matching event', () => {
+  const parser = createParser();
+  // AI-extraction shape: dates resolved (no wall-clock flag), gaps elsewhere
+  const events = [{
+    title: 'CHUNK Portland - SUMMER BLOW OUT!',
+    startDate: new Date('2026-08-23T04:00:00.000Z'),
+    endDate: new Date('2026-08-23T09:00:00.000Z'),
+    bar: 'Nova PDX',
+    address: '',
+    location: '',
+    city: '',
+    timezone: '',
+    cover: ''
+  }];
+
+  parser.applyWixServerDataEnrichment(events, { url: CHUNK_PAGE_URL, html: WIX_WARMUP_HTML }, PORTLAND_CITY_CONFIG);
+
+  const event = events[0];
+  assert.equal(event.location, '45.52281000000001, -122.6581342');
+  assert.equal(event.timezone, 'America/Los_Angeles');
+  assert.equal(event.cover, '$20.50-$30.75');
+  assert.equal(event.address, '722 E Burnside St, Portland, OR 97214, USA');
+  assert.equal(event.city, 'portland', 'the raw Wix city resolves through the configured city keys');
+  assert.equal(event.bar, 'Nova PDX', 'existing values stay untouched');
+});
+
+test('applyWixServerDataEnrichment never overwrites non-empty fields', () => {
+  const parser = createParser();
+  const events = [{
+    title: 'CHUNK Portland - SUMMER BLOW OUT!',
+    startDate: new Date('2026-08-23T05:00:00.000Z'),
+    endDate: new Date('2026-08-23T10:00:00.000Z'),
+    location: '45.5, -122.6',
+    timezone: 'America/New_York',
+    cover: '$15',
+    address: '123 Somewhere Else St',
+    city: 'nyc'
+  }];
+
+  parser.applyWixServerDataEnrichment(events, { url: CHUNK_PAGE_URL, html: WIX_WARMUP_HTML }, PORTLAND_CITY_CONFIG);
+
+  const event = events[0];
+  assert.equal(event.location, '45.5, -122.6');
+  assert.equal(event.timezone, 'America/New_York');
+  assert.equal(event.cover, '$15');
+  assert.equal(event.address, '123 Somewhere Else St');
+  assert.equal(event.city, 'nyc');
+  assert.equal(event.startDate.toISOString(), '2026-08-23T05:00:00.000Z', 'anchored dates are trusted data');
+});
+
+test('applyWixServerDataEnrichment replaces wall-clock dates with exact UTC instants and clears the flag', () => {
+  const parser = createParser();
+  // Wall-clock 9pm local stored as 9pm UTC by the timezone-less fallback
+  const events = [{
+    title: 'CHUNK Portland - SUMMER BLOW OUT!',
+    startDate: new Date('2026-08-22T21:00:00.000Z'),
+    endDate: new Date('2026-08-23T02:00:00.000Z'),
+    _timezoneUnresolved: true
+  }];
+
+  parser.applyWixServerDataEnrichment(events, { url: CHUNK_PAGE_URL, html: WIX_WARMUP_HTML }, PORTLAND_CITY_CONFIG);
+
+  const event = events[0];
+  assert.equal(event.startDate.toISOString(), '2026-08-23T04:00:00.000Z');
+  assert.equal(event.endDate.toISOString(), '2026-08-23T09:00:00.000Z');
+  assert.equal(event._timezoneUnresolved, undefined, 'authoritative instants resolve the wall-clock gap');
+});
+
+test('applyWixServerDataEnrichment applies nothing when the slug and title both mismatch', () => {
+  const parser = createParser();
+  const events = [{
+    title: 'A COMPLETELY DIFFERENT PARTY',
+    startDate: new Date('2026-09-01T04:00:00.000Z'),
+    endDate: new Date('2026-09-01T09:00:00.000Z'),
+    location: '',
+    cover: ''
+  }];
+
+  parser.applyWixServerDataEnrichment(
+    events,
+    { url: 'https://www.chunk-party.com/event-details/some-other-party', html: WIX_WARMUP_HTML },
+    PORTLAND_CITY_CONFIG
+  );
+
+  assert.equal(events[0].location, '', 'an event-details URL naming a different slug must not be enriched');
+  assert.equal(events[0].cover, '');
+});
+
+test('parseEvents enriches the JSON-LD fast-path result from Wix server data without running OCR or AI', async () => {
+  const parser = createParser();
+  parser.extractOcrFromAllImages = async () => {
+    throw new Error('OCR should not run when JSON-LD covers the event');
+  };
+  parser.core.callAiGenerate = async () => {
+    throw new Error('AI should not be called when JSON-LD covers the event');
+  };
+  // Complete JSON-LD (title + start + venue) with exact instants that differ
+  // from the warmup instants — enrichment must not touch them.
+  const html = `
+    <html><head>
+      <script type="application/ld+json">
+        {"@context":"http://schema.org","@type":"MusicEvent",
+         "name":"CHUNK Portland - SUMMER BLOW OUT!",
+         "startDate":"2026-08-22T21:00:00-07:00","endDate":"2026-08-23T02:00:00-07:00",
+         "location":{"@type":"Place","name":"Nova PDX",
+           "address":{"@type":"PostalAddress","streetAddress":"722 E Burnside St","addressLocality":"Portland","addressRegion":"OR"}}}
+      </script>
+    ${WIX_WARMUP_HTML.replace('<html><head>', '')}`;
+
+  const result = await parser.parseEvents(
+    { url: CHUNK_PAGE_URL, html },
+    {},
+    PORTLAND_CITY_CONFIG,
+    'event-page',
+    null
+  );
+
+  assert.equal(result.events.length, 1);
+  const event = result.events[0];
+  assert.equal(event.bar, 'Nova PDX');
+  // Enrichment filled the JSON-LD gaps...
+  assert.equal(event.location, '45.52281000000001, -122.6581342');
+  assert.equal(event.cover, '$20.50-$30.75');
+  // ...but never overwrote what JSON-LD provided
+  assert.equal(event.startDate.toISOString(), '2026-08-23T04:00:00.000Z');
+  assert.equal(event.address, '722 E Burnside St, Portland, OR');
+});
+
+test('warmup presence never skips extraction steps: OCR and AI still run when JSON-LD is incomplete', async () => {
+  const parser = createParser();
+  let ocrRan = false;
+  let aiExtractionRan = false;
+  parser.extractOcrFromAllImages = async () => {
+    ocrRan = true;
+    return [];
+  };
+  parser.extractEventsFromMultiEventPage = async () => {
+    aiExtractionRan = true;
+    return [];
+  };
+
+  // Multi-event page whose single JSON-LD node does NOT take the fast path —
+  // the warmup blob is present but must not short-circuit anything.
+  const result = await parser.parseEvents(
+    { url: CHUNK_PAGE_URL, html: `${SICKENING_JSONLD_HTML}${WIX_WARMUP_HTML}` },
+    {},
+    PORTLAND_CITY_CONFIG,
+    'multi-event-page',
+    null
+  );
+
+  assert.equal(ocrRan, true, 'OCR must still run with warmup data present');
+  assert.equal(aiExtractionRan, true, 'AI extraction must still run with warmup data present');
+  assert.equal(result.events.length, 0);
+});
+
+// ---------------------------------------------------------------------------
 // JSON-LD offers → cover + fast-path coverage/gap-fill (chunk-party.com event
 // pages: the JSON-LD carries a complete offers block and the body shows
 // prices, but fast-path events never got a cover because the AI never ran)
