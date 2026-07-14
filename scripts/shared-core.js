@@ -895,23 +895,23 @@ class SharedCore {
             mainConfig
         );
 
-        // Prefer explicit parser selection from config; otherwise auto-detect from URL.
-        // Omitting `parser` effectively defaults to 'ai-web': detectParserFromUrl only
-        // picks a legacy site-specific parser (bearracuda/chunk/linktree/redeyetickets)
-        // when a URL matches its pattern, and returns 'ai-web' for everything else.
-        // Note the legacy nuance: absence also enables per-URL parser auto-SWITCHING
-        // during crawls (an explicit parser pins every discovered URL to it).
+        // Parser dispatch contract: an explicit parser name pins EVERY crawled URL
+        // (including discovered ones) to that parser, and omitting `parser` defaults
+        // to 'ai-web', equally pinned. The legacy absence behavior is opt-in via
+        // parser: "auto" — detectParserFromUrl picks a site-specific parser
+        // (bearracuda/chunk/linktree/redeyetickets/scriptable-input) from the first
+        // URL, and discovered URLs may auto-SWITCH parser per URL during the crawl.
         const configuredParserName = this.normalizeParserName(effectiveParserConfig && effectiveParserConfig.parser);
-        const allowParserAutoSwitch = !configuredParserName;
-        let parserName = configuredParserName;
-        if (!parserName && effectiveParserConfig.urls && effectiveParserConfig.urls.length > 0) {
+        const autoDetectParser = configuredParserName === 'auto';
+        const allowParserAutoSwitch = autoDetectParser;
+        let parserName = autoDetectParser ? null : configuredParserName;
+        if (autoDetectParser && effectiveParserConfig.urls && effectiveParserConfig.urls.length > 0) {
             parserName = this.detectParserFromUrl(effectiveParserConfig.urls[0]);
         }
-        
-        // Fallback to generic parser if still no parser found
+
+        // Default to the generic parser (absent/empty parser, or "auto" without URLs)
         if (!parserName) {
             parserName = 'ai-web';
-            await displayAdapter.logInfo('SYSTEM: No parser specified and no URLs provided, using ai-web parser');
         }
         
         const parser = parsers[parserName];

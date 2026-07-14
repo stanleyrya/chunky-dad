@@ -1818,14 +1818,54 @@ test('merge arbitration still resolves the global ai block through inherited par
   assert.equal(viaInheritance.model, 'global-arbiter');
 });
 
-test('parser type defaults to ai-web when no parser is configured and no legacy URL matches', () => {
+test('detectParserFromUrl (the parser:"auto" resolver) maps legacy sites and falls back to ai-web', () => {
   const core = createCore();
-  // Legacy site-specific parsers are still auto-detected from their URL patterns...
   assert.equal(core.detectParserFromUrl('https://www.chunk-party.com'), 'chunk');
   assert.equal(core.detectParserFromUrl('https://linktr.ee/cubhouse'), 'linktree');
-  // ...and everything else (including no URL at all) falls back to ai-web
   assert.equal(core.detectParserFromUrl('https://www.eventbrite.com/o/some-org-123'), 'ai-web');
   assert.equal(core.detectParserFromUrl(''), 'ai-web');
+});
+
+test('processParser: absent parser pins ai-web; parser:"auto" opts into legacy detection + auto-switching', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const httpAdapter = {
+    fetchData: async (url) => ({ html: '<html><body></body></html>', url, statusCode: 200, headers: {} })
+  };
+  const makeParsers = (parseCalls) => {
+    const stubParser = (name) => ({
+      parseEvents: () => {
+        parseCalls.push(name);
+        return { events: [], additionalLinks: [] };
+      }
+    });
+    return { 'ai-web': stubParser('ai-web'), chunk: stubParser('chunk'), linktree: stubParser('linktree') };
+  };
+  const entry = (extra) => ({
+    name: 'Dispatch',
+    urls: ['https://www.chunk-party.com', 'https://linktr.ee/dispatch'],
+    ai: { classifyPages: false }, // keep the crawl deterministic (no AI second opinion)
+    ...extra
+  });
+
+  // Absent parser → pinned ai-web for every URL, even ones matching legacy mappings
+  const absentCalls = [];
+  const absent = await core.processParser(entry({}), {}, httpAdapter, display, makeParsers(absentCalls));
+  assert.equal(absent.parserType, 'ai-web');
+  assert.deepEqual(absentCalls, ['ai-web', 'ai-web'], 'no per-URL auto-switching without parser:"auto"');
+
+  // parser: "auto" → the old absence behavior: legacy detection from the first URL
+  // plus per-URL parser auto-switching for the rest of the crawl
+  const autoCalls = [];
+  const auto = await core.processParser(entry({ parser: 'auto' }), {}, httpAdapter, display, makeParsers(autoCalls));
+  assert.equal(auto.parserType, 'chunk');
+  assert.deepEqual(autoCalls, ['chunk', 'linktree']);
+
+  // Explicit parser names keep working unchanged (pinned, no switching)
+  const explicitCalls = [];
+  const explicit = await core.processParser(entry({ parser: 'chunk' }), {}, httpAdapter, display, makeParsers(explicitCalls));
+  assert.equal(explicit.parserType, 'chunk');
+  assert.deepEqual(explicitCalls, ['chunk', 'chunk']);
 });
 
 // ---------------------------------------------------------------------------

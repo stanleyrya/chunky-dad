@@ -212,6 +212,7 @@ const scraperConfig = {
       name: "CHUNK",
       enabled: true,
       automationEnabled: true,
+      parser: "auto", // chunk-party.com auto-detects the chunk parser (absent = pinned ai-web)
       urls: ["https://www.chunk-party.com"],
       alwaysBear: true, // Chunk parties are always bear events
       urlDiscoveryDepth: 1, // Depth 1 to find detail pages from main page // No limit on additional URLs discovered           // Override global dryRun if needed
@@ -270,7 +271,7 @@ const scraperConfig = {
       enabled: true,
       automationEnabled: true,
       urls: ["https://linktr.ee/cubhouse"],
-      // parser: "linktree",    // Auto-detected from URL pattern
+      parser: "auto", // linktr.ee auto-detects the linktree parser; discovered ticket links auto-switch to ai-web
       alwaysBear: true, // Cubhouse events are always bear events
       urlDiscoveryDepth: 2, // Depth 2 to follow ticket links and their detail pages
       maxAdditionalUrls: 10, // Limit additional URLs discovered
@@ -305,6 +306,7 @@ const scraperConfig = {
       name: "Goldiloxx",
       enabled: true,
       automationEnabled: true,
+      parser: "auto", // api.redeyetickets.com auto-detects the redeyetickets parser (absent = pinned ai-web)
       urls: [
         "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
       ],
