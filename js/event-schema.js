@@ -89,6 +89,7 @@ const EVENT_KEY_ALIASES = {
     img: 'image',
     photo: 'image',
     cover: 'cover',
+    bearreview: 'bearReview',
 
     shortname: 'shortName',
     short: 'shortName',

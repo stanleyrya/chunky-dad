@@ -2515,6 +2515,17 @@ class ScriptableAdapter {
       // Show event actions summary if available
       const allEvents = this.getAllEventsFromResults(results);
       if (allEvents && allEvents.length > 0) {
+        const bearReviewCount = allEvents.filter(
+          (event) =>
+            typeof event?.bearReview === "string" &&
+            /^(unlikely|unsure)/i.test(event.bearReview.trim()),
+        ).length;
+        if (bearReviewCount > 0) {
+          console.log(
+            `🐻 ${bearReviewCount} event(s) flagged for bear review`,
+          );
+        }
+
         const intentCounts = this.countMetricsActions(allEvents);
         const writeCounts = this.countMetricsCalendarActions(allEvents);
         const hasIntentCounts = Object.values(intentCounts).some(

@@ -52,6 +52,7 @@
       "website": "https://jackhammerchicago.com/belly-up",
       "facebook": "https://www.facebook.com/chijackhammer/events",
       "gmaps": "https://maps.app.goo.gl/Groc2oBnZyjMU2cJA",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -102,6 +103,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20HALSTED%20ST",
       "ticketUrl": "https://www.chunk-party.com",
       "shortName": "CHUNK",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -159,6 +161,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626",
       "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-market-days-tickets-1991246880021",
       "shortName": "COACH",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -212,6 +215,7 @@
       "address": null,
       "website": "https://northalsted.com/main-events/northalsted-market-days/",
       "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -256,6 +260,7 @@
       "gmaps": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
       "shortName": "Furball",
       "shorterName": "FUR",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -302,6 +307,7 @@
       "instagram": "https://www.instagram.com/coachafterdark",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ44RAWrzRD4gRDGoLchD_2SI",
       "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1980995304282",
+      "bearReview": null,
       "links": [
         {
           "type": "instagram",
@@ -352,6 +358,7 @@
       "instagram": "https://www.instagram.com/coachafterdark",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626",
       "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -409,6 +416,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%20Chicago%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613%2C%20USA",
       "ticketUrl": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
       "shortName": "CHUNK",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -466,6 +474,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626",
       "ticketUrl": "https://www.eventbrite.com/e/megawoof-chicago-july-bearwatch-tickets-1987363318183",
       "shortName": "MEGA-WOOF",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -523,6 +532,7 @@
       "gmaps": "https://maps.google.com/?q=41.9493756,-87.64979",
       "ticketUrl": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
       "shortName": "CHUNK",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -579,6 +589,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Metro%2C%203730%20N%20CLARK%20ST",
       "ticketUrl": "https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729",
       "shortName": "FUR-BALL",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -632,6 +643,7 @@
       "address": null,
       "website": "https://northalsted.com/main-events/northalsted-market-days/",
       "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -676,6 +688,7 @@
       "gmaps": "https://maps.google.com/?q=41.99842,-87.67112",
       "ticketUrl": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -734,6 +747,7 @@
       "address": null,
       "website": "https://northalsted.com/main-events/northalsted-market-days/",
       "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -774,6 +788,7 @@
       "website": "https://linktr.ee/bearhappyhour",
       "instagram": "https://www.instagram.com/bearhappyhourchi",
       "shorterName": "BHH",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -819,6 +834,7 @@
       "instagram": "https://www.instagram.com/bearracuda",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N.%20Halsted%2C%20Chicago%2C%20IL%2C%2060613",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",

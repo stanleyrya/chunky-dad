@@ -36,6 +36,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
       "ticketUrl": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -93,6 +94,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=33.4833086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM",
       "ticketUrl": "https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-tickets-1675720327609",
       "shortName": "MEGA-WOOF",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -150,6 +152,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
       "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
       "shortName": "MEGA-WOOF",
+      "bearReview": null,
       "links": [
         {
           "type": "website",

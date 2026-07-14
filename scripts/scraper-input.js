@@ -58,6 +58,7 @@ const scraperConfig = {
       // (scraped clobbers). This global block also serves events from non-AI
       // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
       arbitrateMerges: true,
+      bearCheck: { mode: "report" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior.
       // extraContext (override-only): free-form text appended VERBATIM to the
       // context of every AI extraction prompt. Organizer/brand context is
       // normally derived automatically from each page's own metadata (JSON-LD
@@ -218,7 +219,7 @@ const scraperConfig = {
       automationEnabled: true,
       parser: "auto", // chunk-party.com auto-detects the chunk parser (absent = pinned ai-web)
       urls: ["https://www.chunk-party.com"],
-      alwaysBear: true, // Chunk parties are always bear events
+      alwaysBear: true, // Trusted bear-scene promoter: prompt context + fallback for the bear-check cascade (still a full bypass while bearCheck mode is report/off)
       urlDiscoveryDepth: 1, // Depth 1 to find detail pages from main page // No limit on additional URLs discovered           // Override global dryRun if needed
       discoveryBlockedPatterns: [
         "chunk-party.com/chunkbearandcubsocial",

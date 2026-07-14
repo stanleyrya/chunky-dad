@@ -47,10 +47,19 @@ class SharedCore {
         }
 
         this.visitedUrls = new Set();
-        this.bearKeywords = [
-            'bear', 'bears', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 
-            'otter', 'leather', 'muscle bear', 'bearracuda', 'furball', 'megawoof',
-            'leather bears', 'bear night', 'bear party', 'polar bear', 'grizzly'
+        // Two-tier bear keyword lists (see matchBearKeywords): substring terms
+        // are distinctive enough to hit smooshed brand names (CHUNKA GO,
+        // CUBHOUSE, BEEFWITCH, Bearracuda); common words that misfire as
+        // substrings ("fatal", "furniture", "update", "puppet") require word
+        // boundaries.
+        this.bearSubstringKeywords = [
+            'bear', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 'otter',
+            'leather', 'bearracuda', 'furball', 'megawoof', 'grizzly', 'chunk',
+            'chub', 'beef', 'scruff', 'jock'
+        ];
+        this.bearWordBoundaryKeywords = [
+            'dad', 'dads', 'fat', 'fur', 'pup', 'pig', 'wolf', 'wolves',
+            'thick', 'burly', 'stocky', 'husky', 'beard', 'bearded', 'harness'
         ];
         
         // Store cities config for timezone assignment
@@ -986,7 +995,7 @@ class SharedCore {
 
         // Filter and process events
         const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
-        const bearEvents = this.filterBearEvents(futureEvents, effectiveParserConfig);
+        const bearEvents = await this.filterBearEvents(futureEvents, effectiveParserConfig, httpAdapter);
         const deduplicatedEvents = await this.deduplicateEvents(bearEvents, httpAdapter, mainConfig?.config || mainConfig || null);
         
         // Calculate deduplication stats
@@ -1714,25 +1723,112 @@ class SharedCore {
         });
     }
 
-    filterBearEvents(events, parserConfig) {
-        // If alwaysBear is true, return all events
-        if (parserConfig.alwaysBear) {
-            return events.map(event => ({...event, isBearEvent: true}));
+    // Bear-check cascade: keyword match → AI verdict with promoter context →
+    // alwaysBear as trusted-promoter fallback. Mode knob
+    // (parserConfig.ai.bearCheck.mode): 'report' (default) logs each event's
+    // would-be decision while returning exactly today's behavior; 'enforce'
+    // keeps/flags/rescues/drops on the cascade's decisions; 'off' is exact
+    // legacy behavior (alwaysBear bypass, keyword filter) with no new logs.
+    async filterBearEvents(events, parserConfig, httpAdapter = null) {
+        const legacyFilter = () => parserConfig.alwaysBear
+            ? events.map(event => ({...event, isBearEvent: true}))
+            : events.filter(event => this.isBearEvent(event, parserConfig));
+
+        const mode = this.getBearCheckMode(parserConfig);
+        if (mode === 'off') return legacyFilter();
+
+        const trusted = parserConfig.alwaysBear === true;
+        const tag = mode === 'report' ? ' [report]' : '';
+        const counts = { bear: 0, keyword: 0, ai: 0, flagged: 0, dropped: 0 };
+        const kept = [];
+        for (const event of events) {
+            const decision = await this.computeBearCheckDecision(event, parserConfig, httpAdapter);
+            const title = event.title || 'Unknown';
+            if (decision.result === 'bear') {
+                counts.bear++;
+                if (decision.provenance.startsWith('keyword:')) counts.keyword++;
+                if (decision.provenance.startsWith('ai:')) counts.ai++;
+                // In report mode an AI-bear verdict on an untrusted source is a
+                // rescue the legacy keyword filter still drops — say so, or the
+                // calibration logs claim the event was kept when it wasn't.
+                const rescueNote = tag && !trusted && decision.provenance.startsWith('ai:')
+                    ? ' (would-rescue — legacy keyword filter still drops it)'
+                    : '';
+                console.log(`🐻 BEAR CHECK${tag}: "${title}" → bear (${decision.provenance})${rescueNote}`);
+                kept.push({...event, isBearEvent: true});
+            } else if (decision.result === 'not_bear' && !trusted) {
+                counts.dropped++;
+                console.log(`🐻 BEAR CHECK${tag}: "${title}" → DROP (${decision.provenance})`);
+            } else {
+                // alwaysBear sources never lose events: not_bear/unsure is kept
+                // with a review flag; untrusted unsure is likewise kept+flagged.
+                counts.flagged++;
+                console.log(`🐻 BEAR CHECK${tag}: "${title}" → FLAG (${decision.provenance})`);
+                const label = decision.result === 'not_bear' ? 'unlikely' : 'unsure';
+                kept.push({...event, bearReview: `${label} — ${decision.provenance}`});
+            }
+        }
+        const flagLabel = mode === 'report' ? 'would-flag' : 'flagged';
+        const dropLabel = mode === 'report' ? 'would-drop' : 'dropped';
+        console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}`);
+
+        return mode === 'report' ? legacyFilter() : kept;
+    }
+
+    getBearCheckMode(parserConfig) {
+        const bearCheck = parserConfig && parserConfig.ai && parserConfig.ai.bearCheck && typeof parserConfig.ai.bearCheck === 'object'
+            ? parserConfig.ai.bearCheck
+            : null;
+        const mode = bearCheck ? String(bearCheck.mode || '').trim().toLowerCase() : '';
+        return mode === 'enforce' || mode === 'off' ? mode : 'report';
+    }
+
+    // One cascade decision per event: { result: 'bear'|'not_bear'|'unsure',
+    // provenance: 'keyword: ...' | 'allowlist: ...' | 'ai: ...' | 'config/fallback: ...' }.
+    async computeBearCheckDecision(event, parserConfig, httpAdapter) {
+        const searchText = `${event.title || ''} ${event.description || ''} ${event.bar || ''}`;
+
+        // Existing allowlist gate keeps its exact legacy semantics: for
+        // non-alwaysBear sources with requireKeywords, an allowlist miss
+        // rejects the event before any other tier.
+        if (!parserConfig.alwaysBear
+            && parserConfig.allowlist && parserConfig.allowlist.length > 0
+            && parserConfig.requireKeywords) {
+            const lowered = searchText.toLowerCase();
+            const hasAllowlistKeyword = parserConfig.allowlist.some(keyword =>
+                lowered.includes(String(keyword).toLowerCase())
+            );
+            if (!hasAllowlistKeyword) {
+                return { result: 'not_bear', provenance: 'allowlist: required keyword missing' };
+            }
         }
 
-        // Filter based on keywords and allowlist
-        return events.filter(event => this.isBearEvent(event, parserConfig));
+        const matched = this.matchBearKeywords(searchText);
+        if (matched.length > 0) {
+            return { result: 'bear', provenance: `keyword: ${matched.join(', ')}` };
+        }
+
+        const aiVerdict = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
+        if (aiVerdict) {
+            return { result: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
+        }
+
+        if (parserConfig.alwaysBear === true) {
+            return { result: 'bear', provenance: 'config: alwaysBear (ai unavailable)' };
+        }
+        return { result: 'unsure', provenance: 'fallback: ai unavailable' };
     }
 
     isBearEvent(event, parserConfig) {
         if (parserConfig.alwaysBear) return true;
 
-        const searchText = `${event.title || ''} ${event.description || ''} ${event.bar || ''}`.toLowerCase();
-        
+        const searchText = `${event.title || ''} ${event.description || ''} ${event.bar || ''}`;
+
         // Check allowlist first (if provided)
         if (parserConfig.allowlist && parserConfig.allowlist.length > 0) {
-            const hasAllowlistKeyword = parserConfig.allowlist.some(keyword => 
-                searchText.includes(keyword.toLowerCase())
+            const lowered = searchText.toLowerCase();
+            const hasAllowlistKeyword = parserConfig.allowlist.some(keyword =>
+                lowered.includes(keyword.toLowerCase())
             );
             if (parserConfig.requireKeywords && !hasAllowlistKeyword) {
                 return false;
@@ -1740,7 +1836,103 @@ class SharedCore {
         }
 
         // Check bear keywords
-        return this.bearKeywords.some(keyword => searchText.includes(keyword));
+        return this.matchBearKeywords(searchText).length > 0;
+    }
+
+    // Returns the list of bear keywords the text hits (empty array = no match).
+    matchBearKeywords(text) {
+        const source = String(text || '').toLowerCase();
+        if (!source) return [];
+        const matched = [];
+        for (const keyword of this.bearSubstringKeywords) {
+            if (source.includes(keyword)) matched.push(keyword);
+        }
+        for (const keyword of this.bearWordBoundaryKeywords) {
+            const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (new RegExp(`\\b${escaped}\\b`, 'i').test(source)) matched.push(keyword);
+        }
+        return matched;
+    }
+
+    // Provenance context for the bear-check prompt: where the event was scraped
+    // from, plus the owner's trusted-promoter marking when alwaysBear is set —
+    // that promoter context is what lets the model keep promoter events with
+    // zero bear vocabulary (validated against real calendar data).
+    buildBearCheckProvenance(event, parserConfig) {
+        const sourceUrl = String(event.url || event.website || (parserConfig.urls && parserConfig.urls[0]) || '');
+        const hostMatch = sourceUrl.match(/^https?:\/\/([^/?#]+)/i);
+        const origin = hostMatch ? hostMatch[1] : (sourceUrl || 'unknown source');
+        let provenance = `Scraped from ${origin}, source entry "${parserConfig.name || 'unknown'}".`;
+        if (parserConfig.alwaysBear === true) {
+            provenance += ' The calendar owner has marked this promoter as a trusted bear-scene promoter.';
+        }
+        return provenance;
+    }
+
+    // AI verdict tier of the bear-check cascade. Returns
+    // { verdict: 'bear'|'not_bear'|'unsure', reason, provenance } or null when
+    // AI is unavailable or the response is unusable (caller falls back).
+    // Memoized per run by title+description+bar so duplicate records and
+    // repeat titles cost one request.
+    async getAiBearVerdict(event, parserConfig, httpAdapter) {
+        if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return null;
+        const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        if (rawAi.enabled === false) return null;
+        const resolved = this.resolveAiConfig(rawAi);
+        if (!resolved.enabled || !resolved.endpoint) return null;
+
+        const title = String(event.title || '').trim();
+        const description = String(event.description || '').trim();
+        const bar = String(event.bar || '').trim();
+        const memoKey = `${title}|${description}|${bar}`;
+        if (!this._bearVerdictMemo) {
+            this._bearVerdictMemo = new Map();
+        }
+        if (this._bearVerdictMemo.has(memoKey)) {
+            return this._bearVerdictMemo.get(memoKey);
+        }
+
+        const provenance = this.buildBearCheckProvenance(event, parserConfig);
+        const prompt = [
+            'You are curating a calendar for the gay bear community. Decide whether the event below belongs on a BEAR calendar.',
+            '',
+            "Bear events include: bear/cub/chub/otter parties, bear happy hours, bear-run dance parties, leather/kink nights with bear crowds, and cruise/underwear/jockstrap parties thrown by bear promoters. Events thrown by a bear-scene promoter are almost always bear events even when the event text has no bear words — the promoter's crowd follows the promoter.",
+            '',
+            'NOT bear events: shows or parties aimed at a clearly different audience (e.g. a drag-headliner show, a lesbian night, a general-audience concert) even when a bear promoter produces them, and generic events with no connection to the bear scene.',
+            '',
+            'Event:',
+            `- Title: ${title}`,
+            `- Venue: ${bar || 'unknown'}`,
+            `- City: ${event.city || 'unknown'}`,
+            `- Description: ${description ? description.slice(0, 500) : '(none)'}`,
+            `- Provenance: ${provenance}`,
+            '',
+            'Respond with ONLY a JSON object, no other text:',
+            '{"verdict": "bear" | "not_bear" | "unsure", "reason": "<one short sentence>"}',
+            '',
+            'Rules: answer "bear" when the promoter is bear-scene and nothing signals a different target audience. When the calendar owner has marked the promoter as trusted, default to "bear" — but still answer "not_bear" when the event itself clearly targets a different audience (e.g. a drag-headliner show). Answer "not_bear" only when you are confident. Answer "unsure" only when you genuinely cannot tell.'
+        ].join('\n');
+
+        const verdictConfig = { ...resolved, temperature: 0, numPredict: Math.min(Number(resolved.numPredict) || 200, 200) };
+        const pending = (async () => {
+            const rawResponse = await this.callAiGenerate(verdictConfig, prompt, 'bear-check', httpAdapter);
+            if (!rawResponse) return null;
+            let parsed = null;
+            try {
+                parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse);
+            } catch (_) {
+                return null;
+            }
+            const verdict = parsed && typeof parsed.verdict === 'string' ? parsed.verdict.trim().toLowerCase() : '';
+            if (verdict !== 'bear' && verdict !== 'not_bear' && verdict !== 'unsure') return null;
+            return {
+                verdict,
+                reason: typeof parsed.reason === 'string' ? parsed.reason.trim() : '',
+                provenance
+            };
+        })().catch(() => null);
+        this._bearVerdictMemo.set(memoKey, pending);
+        return pending;
     }
 
     async deduplicateEvents(events, httpAdapter, globalConfig = null) {
@@ -2493,6 +2685,18 @@ class SharedCore {
                     console.log(`📍 MERGE: "${mergeTitle}" location kept from calendar (scrape found none)`);
                     continue;
                 }
+            }
+
+            // bearReview is a human-owned review flag: the bear-check cascade
+            // writes it, the calendar owner edits it (e.g. to "confirmed") —
+            // the calendar's value ALWAYS wins over a fresh scrape's flag, and
+            // the field never enters clobber/arbitration tracking (a fresh flag
+            // differing from the human's edit would otherwise churn every run).
+            if (fieldName === 'bearReview') {
+                mergedObject[fieldName] = !this.isEmptyArbitrationValue(calendarValue)
+                    ? calendarValue
+                    : scraperValue;
+                continue;
             }
 
             // An empty scraped bar is an extraction gap, not data (e.g. the venue
