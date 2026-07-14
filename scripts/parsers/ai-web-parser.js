@@ -285,6 +285,14 @@ class AiWebParser {
             'href',
             'link'
         ];
+        // JSON-LD fast-path gap-fill signals: normalized prompt field → regexes a
+        // VISIBLE-page-text match of which justifies one targeted AI extraction for
+        // that field. Data-driven so future fields just add an entry; only plain
+        // string event fields may appear here (never startDate/endDate — those are
+        // Date-typed on JSON-LD events).
+        this.jsonLdGapFillSignals = {
+            cover: [/[$€£]\s?\d/, /\b\d+(?:\.\d{2})?\s?(?:USD|EUR|GBP)\b/i]
+        };
         if (typeof this.config.normalizeUrl !== 'function') {
             throw new Error('AiWebParser requires config.normalizeUrl from SharedCore');
         }
@@ -347,6 +355,7 @@ class AiWebParser {
                         }
                     });
                 }
+                await this.applyJsonLdGapFill(completeJsonLdEvents, htmlData, parserConfig, cityConfig, httpAdapter);
                 return {
                     events: completeJsonLdEvents,
                     additionalLinks: additionalLinks,
@@ -2604,6 +2613,7 @@ class AiWebParser {
         const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
         const offerUrl = offer && typeof offer === 'object' ? this.normalizeHttpUrlValue(offer.url) : '';
         const ticketUrl = offerUrl || this.normalizeHttpUrlValue(node.url) || '';
+        const cover = this.formatJsonLdOffersCover(node.offers);
 
         const event = {
             title,
@@ -2617,6 +2627,7 @@ class AiWebParser {
             image: this.pickJsonLdImage(node.image),
             source: this.config.source
         };
+        if (cover) event.cover = cover;
         // The JSON-LD address carries the locality (e.g. "Portland, OR") — resolve city
         // and timezone from it directly so nothing downstream has to guess. Address only:
         // bar names produce false city matches ("Brooklyn Bowl" in Vegas).
@@ -2701,6 +2712,79 @@ class AiWebParser {
         return '';
     }
 
+    // Cover (price) from schema.org offers: a single offer object, a plain offer
+    // array, or an AggregateOffer wrapping tier offers. Tiers still on sale
+    // (availability without "SoldOut") define the honest walk-up range; when every
+    // tier is sold out or unpriced, fall back to all tier prices, then to the
+    // AggregateOffer lowPrice/highPrice. Defensive like the sibling pickJsonLd*
+    // helpers: malformed offers must never break the JSON-LD fast path.
+    formatJsonLdOffersCover(offers) {
+        try {
+            const tierOffers = [];
+            const aggregateOffers = [];
+            const collect = (node, depth) => {
+                if (!node || depth > 3) return;
+                if (Array.isArray(node)) {
+                    node.forEach(item => collect(item, depth + 1));
+                    return;
+                }
+                if (typeof node !== 'object') return;
+                if (node.offers || /aggregate/i.test(String(node['@type'] || ''))) {
+                    aggregateOffers.push(node);
+                    collect(node.offers, depth + 1);
+                    return;
+                }
+                tierOffers.push(node);
+            };
+            collect(offers, 0);
+
+            // Prices of 0, negative, or unparseable never make a cover.
+            const parsePrice = (value) => {
+                if (value === null || value === undefined || value === '') return null;
+                const amount = Number(String(value).trim());
+                return Number.isFinite(amount) && amount > 0 ? amount : null;
+            };
+            const priced = tierOffers
+                .map(offer => ({
+                    amount: parsePrice(offer.price),
+                    currency: offer.priceCurrency,
+                    soldOut: /soldout/i.test(String(offer.availability || ''))
+                }))
+                .filter(entry => entry.amount !== null);
+            let selected = priced.filter(entry => !entry.soldOut);
+            if (selected.length === 0) selected = priced;
+            if (selected.length === 0) {
+                for (const aggregate of aggregateOffers) {
+                    const amounts = [parsePrice(aggregate.lowPrice), parsePrice(aggregate.highPrice)]
+                        .filter(amount => amount !== null);
+                    if (amounts.length > 0) {
+                        selected = amounts.map(amount => ({ amount, currency: aggregate.priceCurrency }));
+                        break;
+                    }
+                }
+            }
+            if (selected.length === 0) return '';
+
+            const amounts = selected.map(entry => entry.amount);
+            const min = Math.min(...amounts);
+            const max = Math.max(...amounts);
+            // Whole-dollar values render without trailing ".00"; anything with cents
+            // always gets two decimals ("20.5" → "$20.50").
+            const formatAmount = (amount) => Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+            const firstCurrency = selected.find(entry => entry.currency && String(entry.currency).trim());
+            const currency = firstCurrency ? String(firstCurrency.currency).trim().toUpperCase() : '';
+            if (!currency || currency === 'USD' || currency === '$') {
+                return min === max ? `$${formatAmount(min)}` : `$${formatAmount(min)}-$${formatAmount(max)}`;
+            }
+            return min === max
+                ? `${formatAmount(min)} ${currency}`
+                : `${formatAmount(min)}-${formatAmount(max)} ${currency}`;
+        } catch (error) {
+            console.warn(`🤖 AI Web: JSON-LD offers→cover mapping failed: ${error && error.message ? error.message : error}`);
+            return '';
+        }
+    }
+
     // Discovery mode drops events, but the discovery tree should still show what a
     // page is about — surface JSON-LD events in the same shape as discovered segments.
     describeJsonLdEventsAsSegments(jsonLdEvents) {
@@ -2721,6 +2805,130 @@ class AiWebParser {
                 resourceLines: event.image ? [`SEGMENT_IMAGE_URL: ${event.image}`] : []
             };
         });
+    }
+
+    // Event property that carries a prompt field on JSON-LD-built events: split
+    // and full date fields all land in startDate/endDate, and the page URL
+    // satisfies website. Everything else maps through the schema's canonical key.
+    getJsonLdEventKeyForPromptField(promptField) {
+        const normalized = this.normalizePromptFieldName(promptField);
+        if (normalized === 'start' || normalized === 'startdate' || normalized === 'starttime') return 'startDate';
+        if (normalized === 'end' || normalized === 'enddate' || normalized === 'endtime') return 'endDate';
+        if (normalized === 'website') return 'url';
+        const schema = this.getEventSchema();
+        if (schema && typeof schema.canonicalizeEventKey === 'function') {
+            const canonical = schema.canonicalizeEventKey(normalized);
+            if (canonical) return canonical;
+        }
+        return normalized;
+    }
+
+    hasJsonLdEventValue(event, eventKey) {
+        const value = event ? event[eventKey] : null;
+        if (value instanceof Date) return !Number.isNaN(value.getTime());
+        if (typeof value === 'string') return value.trim().length > 0;
+        return value !== null && value !== undefined;
+    }
+
+    // First usable value in an AI pass result for a prompt field, tolerating the
+    // lowercased key echoes the retry-style prompts produce.
+    getUsableAiFieldValueForPromptField(aiEvent, promptField) {
+        if (!aiEvent || typeof aiEvent !== 'object') return null;
+        const normalizedField = this.normalizePromptFieldName(promptField);
+        for (const key of Object.keys(aiEvent)) {
+            if (this.isInternalAiFieldKey(key)) continue;
+            if (this.normalizePromptFieldName(key) !== normalizedField) continue;
+            if (this.isUsableAiFieldValue(aiEvent[key])) return aiEvent[key];
+        }
+        return null;
+    }
+
+    // JSON-LD fast-path coverage + targeted gap-fill. The fast path skips AI
+    // entirely, so fields the structured data never carries (cover on most
+    // ticketing pages) were silently lost even when the visible page shows them.
+    // A missing field triggers ONE restricted AI extraction only when the page
+    // text matches its jsonLdGapFillSignals entry; validated results fill ONLY
+    // empty fields — a JSON-LD-provided value is never overwritten. Any failure
+    // degrades to the previous behavior (events returned unchanged).
+    async applyJsonLdGapFill(events, htmlData, parserConfig, cityConfig, httpAdapter) {
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        try {
+            const promptFields = this.getAiPromptFields(parserConfig, { jsonLd: true }, sourceUrl);
+            const seenKeys = new Set();
+            const entries = [];
+            for (const promptField of promptFields) {
+                const eventKey = this.getJsonLdEventKeyForPromptField(promptField);
+                if (seenKeys.has(eventKey)) continue;
+                seenKeys.add(eventKey);
+                entries.push({
+                    promptField,
+                    eventKey,
+                    provided: events.every(event => this.hasJsonLdEventValue(event, eventKey))
+                });
+            }
+            const provided = entries.filter(entry => entry.provided).map(entry => entry.eventKey);
+            const missing = entries.filter(entry => !entry.provided).map(entry => entry.eventKey);
+            console.log(`🤖 AI Web: JSON-LD coverage for ${sourceUrl}: provided=[${provided.join(', ')}], missing=[${missing.join(', ')}]`);
+            if (missing.length === 0) return;
+
+            // A page-level text match can't be attributed to a specific event when
+            // the fast path returned several — gap-fill only for single-event pages.
+            if (events.length !== 1) return;
+
+            const pageText = this.extractBodyParts(htmlData && htmlData.html ? htmlData.html : '').join('\n');
+            const requested = entries.filter(entry => {
+                if (entry.provided) return false;
+                // Date fields are Date-typed on JSON-LD events; gap-fill writes plain
+                // strings, so they can never be requested even if signal-mapped.
+                if (entry.eventKey === 'startDate' || entry.eventKey === 'endDate') return false;
+                const signals = this.jsonLdGapFillSignals[this.normalizePromptFieldName(entry.promptField)];
+                return Array.isArray(signals) && pageText && signals.some(regex => regex.test(pageText));
+            });
+            if (requested.length === 0) return;
+            const requestedNames = requested.map(entry => entry.eventKey);
+
+            const aiConfig = this.getAiConfig(parserConfig);
+            const maxHtmlChars = Math.max(500, Number(aiConfig.maxHtmlChars));
+            const sectionBundle = this.getPromptSectionBundle(htmlData && htmlData.html ? htmlData.html : '', aiConfig);
+            // One targeted request: first content snippet only. dataFlags carry
+            // jsonLd (true for this page) so the two-pass extractor skips its
+            // context-prep round-trip.
+            const contentSnippets = sectionBundle.content
+                ? this.buildPromptSnippets([], [sectionBundle.content], maxHtmlChars).slice(0, 1)
+                : [];
+            if (!aiConfig.enabled || contentSnippets.length === 0) {
+                console.log(`🤖 AI Web: JSON-LD gap-fill for ${sourceUrl}: requested=[${requestedNames.join(', ')}], filled=[] (${aiConfig.enabled ? 'no page text to extract from' : 'AI disabled'})`);
+                return;
+            }
+            const partial = await this.extractFieldsAcrossSnippets(
+                htmlData,
+                aiConfig,
+                cityConfig,
+                parserConfig,
+                requested.map(entry => entry.promptField),
+                contentSnippets,
+                'jsonld gap-fill',
+                null,
+                { partitionLabel: 'content', dataFlags: { jsonLd: true, content: true } },
+                httpAdapter
+            );
+
+            const filled = [];
+            for (const entry of requested) {
+                const value = this.getUsableAiFieldValueForPromptField(partial, entry.promptField);
+                if (typeof value !== 'string' || !value.trim()) continue;
+                let filledAny = false;
+                for (const event of events) {
+                    if (this.hasJsonLdEventValue(event, entry.eventKey)) continue;
+                    event[entry.eventKey] = value.trim();
+                    filledAny = true;
+                }
+                if (filledAny) filled.push(entry.eventKey);
+            }
+            console.log(`🤖 AI Web: JSON-LD gap-fill for ${sourceUrl}: requested=[${requestedNames.join(', ')}], filled=[${filled.join(', ')}]`);
+        } catch (error) {
+            console.warn(`🤖 AI Web: JSON-LD gap-fill failed for ${sourceUrl} — keeping JSON-LD events unchanged: ${error && error.message ? error.message : error}`);
+        }
     }
 
     // OCR is only worth paying for when something consumes it: segment pairing on
