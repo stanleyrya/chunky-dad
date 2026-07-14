@@ -87,8 +87,8 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 20209,
-      "eventCount": 16
+      "dataLength": 21571,
+      "eventCount": 17
     },
     "ptown": {
       "name": "Provincetown",
@@ -111,7 +111,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 16998,
+      "dataLength": 17005,
       "eventCount": 13
     },
     "sitges": {
