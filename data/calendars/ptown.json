@@ -37,6 +37,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=REDROOM%2C%20258%20COMMERCIAL%20ST%2C%20PROVINCETOWN%2C%20MA",
       "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/UnderbearNYC-bear-week-2026",
       "shortName": "FUR-BALL",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -94,6 +95,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St",
       "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026",
       "shortName": "FUR-BALL",
+      "bearReview": null,
       "links": [
         {
           "type": "website",

@@ -34,6 +34,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
       "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
       "shortName": "FUR-BALL",
+      "bearReview": null,
       "links": [
         {
           "type": "website",

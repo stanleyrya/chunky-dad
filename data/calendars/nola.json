@@ -36,6 +36,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20Orleans%2C%20LA",
       "ticketUrl": "https://www.ticketmaster.com/event/1B006454A32CE162",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -89,6 +90,7 @@
       "gmaps": "https://maps.google.com/?q=1200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
       "ticketUrl": "https://www.ticketmaster.com/bearracuda-new-orleans-louisiana-08-29-2025/event/1B006275D3607BD4",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",

@@ -33,6 +33,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
       "ticketUrl": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -91,6 +92,7 @@
       "gmaps": "https://maps.google.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202",
       "ticketUrl": "https://www.ticketmaster.com/event/1E0062E79CD214B2",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -154,6 +156,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=39.7402498%2C-104.9790098&query_place_id=ChIJw4sroyx5bIcR5jU8EDoneGU",
       "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-denver-feat-djproducer-matt-consola-tickets-1985473771498",
       "shortName": "TWIST-ED BEAR",
+      "bearReview": null,
       "links": [
         {
           "type": "instagram",
@@ -207,6 +210,7 @@
       "gmaps": "https://maps.google.com/?q=1215%2020th%20Street%2C%20Denver%2C%20CO%2080202",
       "ticketUrl": "https://www.ticketmaster.com/event/1E00632CA5D027C6",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -265,6 +269,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=SUMMIT%2C%201302%20Blake%20St%2C%20Denver%2C%20CO",
       "ticketUrl": "https://www.ticketmaster.com/event/1E00642CF2CCADDC",
       "shortName": "Bear-rac-uda",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
@@ -326,6 +331,7 @@
       "instagram": "https://www.instagram.com/megawoof_america",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY",
       "shortName": "MEGA-WOOF",
+      "bearReview": null,
       "links": [
         {
           "type": "website",
