@@ -2576,7 +2576,9 @@ class ScriptableAdapter {
         automationRunForSave && runtimeForSave.automationFilter !== false;
       const activeParsers = parserConfigs.filter((parser) => {
         if (automationFilterForSave) {
-          return parser?.automationEnabled === true;
+          // Mirrors SharedCore.evaluateAutomationForParser: automationEnabled
+          // defaults to true, only an explicit false opts out
+          return Boolean(parser) && parser.automationEnabled !== false;
         }
         return parser?.enabled !== false;
       });

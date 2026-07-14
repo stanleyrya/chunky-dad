@@ -774,7 +774,9 @@ class SharedCore {
         if (!automationContext || !automationContext.filterParsers) {
             return { shouldRun: true, reason: null };
         }
-        if (!parserConfig || parserConfig.automationEnabled !== true) {
+        // automationEnabled defaults to true — only an explicit false opts a
+        // parser out of automation runs (absence used to mean "opted out").
+        if (!parserConfig || parserConfig.automationEnabled === false) {
             return { shouldRun: false, reason: 'automation-disabled' };
         }
         return { shouldRun: true, reason: null };
@@ -834,13 +836,16 @@ class SharedCore {
                 
                 // Collect all processed events
                 if (parserResult.events && parserResult.events.length > 0) {
-                    // Add parser config reference to each event for later use
+                    // Add parser config reference to each event for later use — the
+                    // effective config, so inherited global ai/ocr blocks travel with
+                    // the event into cross-parser dedupe and merge arbitration
+                    const stampedConfig = parserResult.config || parserConfig;
                     parserResult.events.forEach((event, index, arr) => {
                         if (!Object.isExtensible(event)) {
                             event = { ...event };
                             arr[index] = event;
                         }
-                        event._parserConfig = parserConfig;
+                        event._parserConfig = stampedConfig;
                     });
                     results.allProcessedEvents.push(...parserResult.events);
                 }
@@ -883,11 +888,19 @@ class SharedCore {
 
     async processParser(parserConfig, mainConfig, httpAdapter, displayAdapter, parsers, globalProcessedUrls = new Set()) {
         const effectiveParserConfig = this.applyGlobalAiExtraContext(
-            this.applyGlobalAiConfidenceDefaults(parserConfig, mainConfig),
+            this.applyGlobalAiConfidenceDefaults(
+                this.resolveEffectiveParserConfig(parserConfig, mainConfig),
+                mainConfig
+            ),
             mainConfig
         );
 
         // Prefer explicit parser selection from config; otherwise auto-detect from URL.
+        // Omitting `parser` effectively defaults to 'ai-web': detectParserFromUrl only
+        // picks a legacy site-specific parser (bearracuda/chunk/linktree/redeyetickets)
+        // when a URL matches its pattern, and returns 'ai-web' for everything else.
+        // Note the legacy nuance: absence also enables per-URL parser auto-SWITCHING
+        // during crawls (an explicit parser pins every discovered URL to it).
         const configuredParserName = this.normalizeParserName(effectiveParserConfig && effectiveParserConfig.parser);
         const allowParserAutoSwitch = !configuredParserName;
         let parserName = configuredParserName;
@@ -1083,6 +1096,74 @@ class SharedCore {
                 extraContext: globalExtraContext
             }
         };
+    }
+
+    // Defensive deep merge for config blocks: override keys win, nested plain
+    // objects merge key-wise, and everything else (arrays, primitives, RegExp,
+    // null) replaces as-is rather than merging.
+    deepMergeConfig(base, override) {
+        const isPlainObject = value => Boolean(value)
+            && typeof value === 'object'
+            && !Array.isArray(value)
+            && !(value instanceof RegExp);
+        if (!isPlainObject(base)) {
+            return override === undefined ? base : override;
+        }
+        if (!isPlainObject(override)) {
+            return override === undefined ? { ...base } : override;
+        }
+        const merged = { ...base };
+        Object.keys(override).forEach(key => {
+            merged[key] = isPlainObject(merged[key]) && isPlainObject(override[key])
+                ? this.deepMergeConfig(merged[key], override[key])
+                : override[key];
+        });
+        return merged;
+    }
+
+    // Global → parser config inheritance: every parser inherits the global
+    // config.ai and config.ocr blocks (per-parser keys win key-wise; arrays
+    // replace, not concat), and the global config.discoveryBlockedPatterns list
+    // is unioned with the parser's own. When no global block exists the parser
+    // entry is returned untouched, so behavior without global config is
+    // identical to the pre-inheritance code paths (parser defaults unchanged).
+    resolveEffectiveParserConfig(parserConfig, mainConfig) {
+        const parser = parserConfig && typeof parserConfig === 'object' ? parserConfig : {};
+        const globalConfig = mainConfig && mainConfig.config && typeof mainConfig.config === 'object'
+            ? mainConfig.config
+            : {};
+        const globalAi = globalConfig.ai && typeof globalConfig.ai === 'object' ? globalConfig.ai : null;
+        const globalOcr = globalConfig.ocr && typeof globalConfig.ocr === 'object' ? globalConfig.ocr : null;
+        const globalBlockedPatterns = Array.isArray(globalConfig.discoveryBlockedPatterns) && globalConfig.discoveryBlockedPatterns.length > 0
+            ? globalConfig.discoveryBlockedPatterns
+            : null;
+        if (!globalAi && !globalOcr && !globalBlockedPatterns) return parser;
+
+        const parserAi = parser.ai && typeof parser.ai === 'object' ? parser.ai : null;
+        const effective = { ...parser };
+        if (globalAi) {
+            effective.ai = this.deepMergeConfig(globalAi, parserAi || {});
+        }
+        if (globalOcr) {
+            // Same precedence getOcrConfig uses: a parser's ai.ocr wins over its
+            // top-level ocr block; the merged result lands in the slot the parser
+            // used (or top-level ocr when it configured neither).
+            const parserAiOcr = parserAi && parserAi.ocr && typeof parserAi.ocr === 'object' ? parserAi.ocr : null;
+            const parserTopOcr = parser.ocr && typeof parser.ocr === 'object' ? parser.ocr : null;
+            const mergedOcr = this.deepMergeConfig(globalOcr, parserAiOcr || parserTopOcr || {});
+            if (parserAiOcr) {
+                effective.ai = { ...(effective.ai || parserAi), ocr: mergedOcr };
+            } else {
+                effective.ocr = mergedOcr;
+            }
+        }
+        if (globalBlockedPatterns) {
+            const parserPatterns = Array.isArray(parser.discoveryBlockedPatterns)
+                ? parser.discoveryBlockedPatterns
+                : [];
+            effective.discoveryBlockedPatterns = [...globalBlockedPatterns, ...parserPatterns];
+        }
+        return effective;
     }
 
     extractHttpStatusCodeFromError(error) {

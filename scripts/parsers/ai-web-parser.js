@@ -3936,14 +3936,24 @@ class AiWebParser {
         const configBlockedHosts = Array.isArray(parserConfig.discoveryBlockedHosts) ? parserConfig.discoveryBlockedHosts : [];
         const configBlockedHost = configBlockedHosts.find(host => hostname === host.toLowerCase() || hostname.endsWith(`.${host.toLowerCase()}`));
         if (configBlockedHost) return { valid: false, reason: `config-blocked-host:${configBlockedHost}` };
+        // Per-config discovery blocked patterns (global config.discoveryBlockedPatterns is
+        // unioned in). Strings match as case-insensitive substrings; RegExp entries test
+        // against the lowercased URL (same dual semantics as invalidUrlPatterns above),
+        // which allows anchoring — e.g. /\/shop(\/|$)/ without swallowing "/shop-party".
         const configBlockedPatterns = Array.isArray(parserConfig.discoveryBlockedPatterns) ? parserConfig.discoveryBlockedPatterns : [];
         const configBlockedPattern = configBlockedPatterns.find(pattern => {
+            if (pattern instanceof RegExp) return pattern.test(lowerUrl);
             if (typeof pattern !== 'string') return false;
             const normalizedPattern = pattern.trim().toLowerCase();
             if (!normalizedPattern) return false;
             return lowerUrl.includes(normalizedPattern);
         });
-        if (configBlockedPattern) return { valid: false, reason: `config-blocked-pattern:${configBlockedPattern}` };
+        if (configBlockedPattern) {
+            const configBlockedPatternReason = typeof configBlockedPattern === 'string'
+                ? configBlockedPattern
+                : configBlockedPattern.source;
+            return { valid: false, reason: `config-blocked-pattern:${configBlockedPatternReason}` };
+        }
         const lowerSearch = String(parsedUrl.search || '').toLowerCase();
         if (/^\/(?:sharer(?:\.php)?|share(?:\/url)?|dialog\/send)$/i.test(lowerPath)) {
             return { valid: false, reason: 'share-endpoint-path' };

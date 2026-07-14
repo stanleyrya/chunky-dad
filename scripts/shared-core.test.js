@@ -1686,7 +1686,7 @@ test('resolveAutomationContext treats manual and empty configs as non-automation
   );
 });
 
-test('evaluateAutomationForParser requires an explicit automationEnabled: true under filtering', () => {
+test('evaluateAutomationForParser defaults automationEnabled to true; explicit false opts out', () => {
   const core = createCore();
   const filtering = { automationRun: true, filterParsers: true };
   assert.deepEqual(
@@ -1697,9 +1697,10 @@ test('evaluateAutomationForParser requires an explicit automationEnabled: true u
     core.evaluateAutomationForParser({ automationEnabled: false }, filtering),
     { shouldRun: false, reason: 'automation-disabled' }
   );
+  // Absence now means enabled (the default flipped from opt-in to opt-out)
   assert.deepEqual(
     core.evaluateAutomationForParser({ name: 'No Flag' }, filtering),
-    { shouldRun: false, reason: 'automation-disabled' }
+    { shouldRun: true, reason: null }
   );
   assert.deepEqual(
     core.evaluateAutomationForParser(null, filtering),
@@ -1713,6 +1714,118 @@ test('evaluateAutomationForParser lets everything run when filtering is off', ()
   assert.deepEqual(core.evaluateAutomationForParser({ automationEnabled: false }, noFiltering), { shouldRun: true, reason: null });
   assert.deepEqual(core.evaluateAutomationForParser({}, noFiltering), { shouldRun: true, reason: null });
   assert.deepEqual(core.evaluateAutomationForParser({}, null), { shouldRun: true, reason: null });
+});
+
+// ---------------------------------------------------------------------------
+// Global → parser config inheritance (resolveEffectiveParserConfig)
+// ---------------------------------------------------------------------------
+
+test('resolveEffectiveParserConfig inherits global ai; per-parser keys win key-wise', () => {
+  const core = createCore();
+  const mainConfig = {
+    config: {
+      ai: {
+        endpoint: 'http://global.example:8000/v1/chat/completions',
+        model: 'global-model',
+        numPredict: 2000,
+        openai: { responseFormat: 'json_object' }
+      }
+    }
+  };
+
+  // Parser with no ai block inherits the whole global block
+  const inherited = core.resolveEffectiveParserConfig({ name: 'Plain' }, mainConfig);
+  assert.equal(inherited.ai.endpoint, 'http://global.example:8000/v1/chat/completions');
+  assert.equal(inherited.ai.model, 'global-model');
+  assert.equal(inherited.name, 'Plain');
+
+  // Per-parser keys override while untouched global keys are retained,
+  // including key-wise merges of nested objects (openai)
+  const overridden = core.resolveEffectiveParserConfig(
+    { name: 'Override', ai: { numPredict: 500, openai: { apiKey: 'k' } } },
+    mainConfig
+  );
+  assert.equal(overridden.ai.numPredict, 500);
+  assert.equal(overridden.ai.endpoint, 'http://global.example:8000/v1/chat/completions');
+  assert.deepEqual(overridden.ai.openai, { responseFormat: 'json_object', apiKey: 'k' });
+});
+
+test('resolveEffectiveParserConfig inherits global ocr with the getOcrConfig precedence', () => {
+  const core = createCore();
+  const mainConfig = {
+    config: {
+      ocr: {
+        provider: 'openai',
+        endpoint: 'http://global.example:8001/v1/chat/completions',
+        model: 'global-vision-model',
+        maxImages: 2
+      }
+    }
+  };
+
+  // No parser ocr anywhere → global lands as the top-level ocr block
+  const inherited = core.resolveEffectiveParserConfig({ name: 'Plain' }, mainConfig);
+  assert.equal(inherited.ocr.endpoint, 'http://global.example:8001/v1/chat/completions');
+  assert.equal(inherited.ai, undefined, 'no ai block should be fabricated');
+
+  // Parser ai.ocr wins key-wise and stays in its canonical ai.ocr slot
+  const viaAi = core.resolveEffectiveParserConfig(
+    { name: 'AiOcr', ai: { ocr: { model: 'parser-model' } } },
+    mainConfig
+  );
+  assert.equal(viaAi.ai.ocr.model, 'parser-model');
+  assert.equal(viaAi.ai.ocr.endpoint, 'http://global.example:8001/v1/chat/completions');
+
+  // Top-level parser ocr merges in place too
+  const viaTop = core.resolveEffectiveParserConfig(
+    { name: 'TopOcr', ocr: { maxImages: 4 } },
+    mainConfig
+  );
+  assert.equal(viaTop.ocr.maxImages, 4);
+  assert.equal(viaTop.ocr.model, 'global-vision-model');
+});
+
+test('resolveEffectiveParserConfig without global blocks returns the parser entry untouched', () => {
+  const core = createCore();
+  const parserEntry = { name: 'Plain', ai: { model: 'mine' }, discoveryBlockedPatterns: ['/x'] };
+  assert.equal(core.resolveEffectiveParserConfig(parserEntry, { config: {} }), parserEntry);
+  assert.equal(core.resolveEffectiveParserConfig(parserEntry, null), parserEntry);
+});
+
+test('resolveEffectiveParserConfig unions global discoveryBlockedPatterns with the parser list', () => {
+  const core = createCore();
+  const globalPattern = /\/(shop|cart)(?:\/|[?#]|$)/;
+  const mainConfig = { config: { discoveryBlockedPatterns: [globalPattern, '/_api/'] } };
+
+  const merged = core.resolveEffectiveParserConfig(
+    { name: 'Union', discoveryBlockedPatterns: ['example.com/?p='] },
+    mainConfig
+  );
+  assert.deepEqual(merged.discoveryBlockedPatterns, [globalPattern, '/_api/', 'example.com/?p=']);
+
+  const globalOnly = core.resolveEffectiveParserConfig({ name: 'NoOwn' }, mainConfig);
+  assert.deepEqual(globalOnly.discoveryBlockedPatterns, [globalPattern, '/_api/']);
+});
+
+test('merge arbitration still resolves the global ai block through inherited parser configs', () => {
+  const core = createCore();
+  const globalConfig = { ai: { model: 'global-arbiter', arbitrateMerges: true } };
+  const effective = core.resolveEffectiveParserConfig({ name: 'Plain' }, { config: globalConfig });
+  const viaInheritance = core.getMergeArbitrationConfig({ _parserConfig: effective }, globalConfig);
+  // Same resolution as the pre-inheritance global fallback path
+  const viaFallback = core.getMergeArbitrationConfig({ _parserConfig: { name: 'Plain' } }, globalConfig);
+  assert.deepEqual(viaInheritance, viaFallback);
+  assert.equal(viaInheritance.model, 'global-arbiter');
+});
+
+test('parser type defaults to ai-web when no parser is configured and no legacy URL matches', () => {
+  const core = createCore();
+  // Legacy site-specific parsers are still auto-detected from their URL patterns...
+  assert.equal(core.detectParserFromUrl('https://www.chunk-party.com'), 'chunk');
+  assert.equal(core.detectParserFromUrl('https://linktr.ee/cubhouse'), 'linktree');
+  // ...and everything else (including no URL at all) falls back to ai-web
+  assert.equal(core.detectParserFromUrl('https://www.eventbrite.com/o/some-org-123'), 'ai-web');
+  assert.equal(core.detectParserFromUrl(''), 'ai-web');
 });
 
 // ---------------------------------------------------------------------------
@@ -1737,16 +1850,17 @@ test('processEvents: enabled:false + automationEnabled:true RUNS in automation m
     runtime: { automationRun: true },
     parsers: [
       { name: 'Disabled But Automated', enabled: false, automationEnabled: true, urls: [] },
-      { name: 'No Automation Flag', enabled: true, urls: [] }
+      { name: 'No Automation Flag', enabled: true, urls: [] },
+      { name: 'Automation Opt-Out', enabled: true, automationEnabled: false, urls: [] }
     ]
   };
 
   const results = await core.processEvents(config, {}, display, STUB_PARSERS);
 
-  assert.deepEqual(results.parserResults.map(r => r.name), ['Disabled But Automated'],
-    '"enabled" is a manual-run switch; automation only honors automationEnabled');
+  assert.deepEqual(results.parserResults.map(r => r.name), ['Disabled But Automated', 'No Automation Flag'],
+    '"enabled" is a manual-run switch; automation honors automationEnabled (default true, explicit false opts out)');
   assert.deepEqual(results.automationSkippedParsers,
-    [{ name: 'No Automation Flag', reason: 'automation-disabled' }]);
+    [{ name: 'Automation Opt-Out', reason: 'automation-disabled' }]);
 });
 
 test('processEvents: manual runs honor enabled and ignore automationEnabled', async () => {
