@@ -246,6 +246,8 @@ class BearEventScraperOrchestrator {
                 finalAdapter = new this.modules.adapter({
                     cities: config.cities,
                     pageCache: config.config?.pageCache || null,
+                    // Global OCR block, for the end-of-run cache-retention prune
+                    ocr: config.config?.ocr || null,
                     // Carry the resolved run context (automation overrides) into the
                     // instance that saves runs/metrics, not just the config object
                     runtime: config.runtime || null,

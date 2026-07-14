@@ -319,3 +319,59 @@ test('generateRichHTML defines the exportProvenanceIssue page handler once', asy
   assert.ok(html.includes('provenance-details'));
   assert.ok(html.includes('No provenance recorded'));
 });
+
+// ---------------------------------------------------------------------------
+// End-of-run cache pruning: cleanupOldFiles recursion + retention config
+// ---------------------------------------------------------------------------
+
+test('cleanupOldFiles recurses into nested cache host dirs and reports the pruned count', async () => {
+  const adapter = buildAdapter();
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const base = '/tmp/chunky-dad-adapter-test/chunky-dad-scraper/storage/ocr';
+  const dirs = {
+    [base]: ['host-a', 'host-b'],
+    [`${base}/host-a`]: ['stale.json', 'fresh.json'],
+    [`${base}/host-b`]: ['ancient.json']
+  };
+  // Touch-on-hit rewrites entries on use, so mtime IS last use (within the
+  // 7-day rate limit) — the pruner never needs to read payloads
+  const mtimes = {
+    [`${base}/host-a/stale.json`]: new Date(now - 120 * DAY),
+    [`${base}/host-a/fresh.json`]: new Date(now - 5 * DAY),
+    [`${base}/host-b/ancient.json`]: new Date(now - 400 * DAY)
+  };
+  const removed = [];
+  adapter.fm = {
+    documentsDirectory: () => '/tmp/chunky-dad-adapter-test',
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => Boolean(dirs[p]) || Boolean(mtimes[p]),
+    isDirectory: (p) => Boolean(dirs[p]),
+    listContents: (p) => dirs[p] || [],
+    modificationDate: (p) => mtimes[p] || null,
+    remove: (p) => removed.push(p)
+  };
+
+  const count = await adapter.cleanupOldFiles('chunky-dad-scraper/storage/ocr', {
+    maxAgeDays: 97, // 90d retention + 7d touch-interval grace
+    recurse: true
+  });
+
+  assert.equal(count, 2);
+  assert.deepEqual(removed.sort(), [
+    `${base}/host-a/stale.json`,
+    `${base}/host-b/ancient.json`
+  ]);
+});
+
+test('getOcrCacheRetentionDays reads config.ocr.cacheRetentionDays with a 90d default', () => {
+  assert.equal(buildAdapter().getOcrCacheRetentionDays(), 90);
+  assert.equal(
+    new ScriptableAdapter({ cities: {}, ocr: { cacheRetentionDays: 30 } }).getOcrCacheRetentionDays(),
+    30
+  );
+  assert.equal(
+    new ScriptableAdapter({ cities: {}, ocr: { cacheRetentionDays: 'bogus' } }).getOcrCacheRetentionDays(),
+    90
+  );
+});

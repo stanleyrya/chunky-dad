@@ -2493,3 +2493,86 @@ test('the fast path logs a JSON-LD coverage line and a gap-fill outcome line', a
   assert.match(gapFillLine, /requested=\[cover\]/);
   assert.match(gapFillLine, /filled=\[cover\]/);
 });
+
+// ---------------------------------------------------------------------------
+// Cache retention: hits refresh a lastUsedAt marker, rate-limited to 7 days,
+// so the adapter's end-of-run prune can work from file mtime alone
+// ---------------------------------------------------------------------------
+
+test('OCR cache hits stamp lastUsedAt at most once per 7 days', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-touch-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+
+  const ocrConfig = { cacheEnabled: true, model: 'test-model', prompt: 'ocr prompt' };
+  const imageUrl = 'https://cdn.example/recurring-flyer.jpg';
+  const resultText = JSON.stringify({ text: 'BEAR NIGHT 10PM', imageClassification: 'event-flyer' });
+  const cachePath = await parser.writeCachedOcrResult(imageUrl, ocrConfig, resultText);
+  assert.ok(cachePath, 'cache write should return the entry path');
+  assert.equal(JSON.parse(fs.readFileSync(cachePath, 'utf8')).lastUsedAt, undefined);
+
+  // First hit on a legacy entry (no lastUsedAt): rewritten with a day-precision stamp
+  const today = new Date().toISOString().slice(0, 10);
+  const first = await parser.readCachedOcrResult(imageUrl, ocrConfig);
+  assert.equal(first.cached, true);
+  const afterFirst = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+  assert.equal(afterFirst.lastUsedAt, today);
+  assert.equal(afterFirst.response.text, resultText, 'touching must preserve the cached payload');
+
+  // Second hit the same day: rate-limited, NO rewrite (sentinel survives)
+  afterFirst._sentinel = 'untouched';
+  fs.writeFileSync(cachePath, JSON.stringify(afterFirst, null, 2), 'utf8');
+  const second = await parser.readCachedOcrResult(imageUrl, ocrConfig);
+  assert.equal(second.cached, true);
+  assert.equal(
+    JSON.parse(fs.readFileSync(cachePath, 'utf8'))._sentinel,
+    'untouched',
+    'a same-day hit must not rewrite the entry'
+  );
+
+  // A marker older than the 7-day rate limit is refreshed
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  afterFirst.lastUsedAt = eightDaysAgo;
+  fs.writeFileSync(cachePath, JSON.stringify(afterFirst, null, 2), 'utf8');
+  await parser.readCachedOcrResult(imageUrl, ocrConfig);
+  assert.equal(JSON.parse(fs.readFileSync(cachePath, 'utf8')).lastUsedAt, today);
+
+  // Negative-cached failures are valid hits too — touched the same way
+  const failureUrl = 'https://cdn.example/huge-banner.webp';
+  const failurePath = await parser.writeCachedOcrResult(
+    failureUrl,
+    ocrConfig,
+    JSON.stringify({ failureKind: 'context-overflow' })
+  );
+  const failureHit = await parser.readCachedOcrResult(failureUrl, ocrConfig);
+  assert.equal(failureHit.failureKind, 'context-overflow');
+  assert.equal(JSON.parse(fs.readFileSync(failurePath, 'utf8')).lastUsedAt, today);
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('classification cache hits refresh lastUsedAt through the same touch helper', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cls-touch-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, classificationCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+
+  const url = 'https://bearracuda.example/events';
+  const signature = { model: 'test-model', summaryHash: 'abc' };
+  const written = await parser.writeCachedAiClassification(url, signature, { classification: 'multi-event-page' });
+  assert.ok(written);
+
+  const outcome = await parser.readCachedAiClassification(url, signature);
+  assert.equal(outcome.classification, 'multi-event-page');
+  const payload = JSON.parse(fs.readFileSync(written, 'utf8'));
+  assert.equal(payload.lastUsedAt, new Date().toISOString().slice(0, 10));
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});

@@ -31,6 +31,11 @@ const LOGO_URL = 'https://chunky.dad/favicons/logo-hero.png';
 const LOGO_CACHE_TTL_DAYS = 7;
 const DEFAULT_PRUNE_DAYS = 7;
 const QUICK_DAY_OPTIONS = [3, 7, 14, 30, 60];
+// OCR results are expensive to regenerate (each one is a vision-model request)
+// and the scraper itself only prunes them after 90 days unused — the broom's
+// OCR scope gets matching, much longer defaults than the short-lived page cache.
+const OCR_DEFAULT_PRUNE_DAYS = 90;
+const OCR_QUICK_DAY_OPTIONS = [30, 60, 90, 180, 365];
 const MAX_HOST_ROWS = 40;
 
 class PageCacheMaintenance {
@@ -46,13 +51,19 @@ class PageCacheMaintenance {
         key: 'pages',
         label: 'Page cache',
         dir: this.pageStorageDir,
-        footerLabel: 'storage/pages'
+        footerLabel: 'storage/pages',
+        daysParam: 'days',
+        defaultDays: DEFAULT_PRUNE_DAYS,
+        quickDayOptions: QUICK_DAY_OPTIONS
       },
       {
         key: 'ocr',
         label: 'OCR cache',
         dir: this.ocrStorageDir,
-        footerLabel: 'storage/ocr'
+        footerLabel: 'storage/ocr',
+        daysParam: 'ocrDays',
+        defaultDays: OCR_DEFAULT_PRUNE_DAYS,
+        quickDayOptions: OCR_QUICK_DAY_OPTIONS
       }
     ];
     this.cacheDir = this.fm.joinPath(this.baseDir, 'cache');
@@ -89,16 +100,18 @@ class PageCacheMaintenance {
     return runtime;
   }
 
-  getConfiguredDefaultDays() {
+  getConfiguredDefaultDays(scope) {
     try {
       const scraperConfig = importModule('scraper-input');
-      const raw = scraperConfig?.config?.pageCache?.ttlDays;
+      const raw = scope.key === 'ocr'
+        ? scraperConfig?.config?.ocr?.cacheRetentionDays
+        : scraperConfig?.config?.pageCache?.ttlDays;
       const parsed = Number(raw);
       if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
     } catch (error) {
       console.log(`PageCacheMaintenance: Could not load scraper-input: ${error.message}`);
     }
-    return DEFAULT_PRUNE_DAYS;
+    return scope.defaultDays;
   }
 
   parseDaysValue(value) {
@@ -128,12 +141,24 @@ class PageCacheMaintenance {
     return null;
   }
 
-  getSelectedDays() {
-    const queryDays = this.parseDaysParameter(this.runtime.queryParameters?.days);
+  getSelectedDaysForScope(scope) {
+    const queryDays = this.parseDaysParameter(this.runtime.queryParameters?.[scope.daysParam]);
     if (queryDays) return queryDays;
-    const widgetDays = this.parseDaysParameter(this.runtime.widgetParameter);
-    if (widgetDays) return widgetDays;
-    return this.getConfiguredDefaultDays();
+    // The widget parameter predates per-scope thresholds and keeps its original
+    // meaning: it only overrides the page-cache threshold
+    if (scope.key === 'pages') {
+      const widgetDays = this.parseDaysParameter(this.runtime.widgetParameter);
+      if (widgetDays) return widgetDays;
+    }
+    return this.getConfiguredDefaultDays(scope);
+  }
+
+  getSelectedDays() {
+    const daysByScope = {};
+    this.cacheScopes.forEach(scope => {
+      daysByScope[scope.key] = this.getSelectedDaysForScope(scope);
+    });
+    return daysByScope;
   }
 
   parseBoolean(value) {
@@ -438,6 +463,9 @@ class PageCacheMaintenance {
       key: scope.key,
       label: scope.label,
       dir: scope.dir,
+      days,
+      daysParam: scope.daysParam,
+      quickDayOptions: scope.quickDayOptions,
       exists: this.fm.fileExists(scope.dir),
       hostCount: hosts.length,
       totalFileCount: hosts.reduce((sum, host) => sum + host.totalFileCount, 0),
@@ -448,8 +476,8 @@ class PageCacheMaintenance {
     };
   }
 
-  async analyzePageCache(days) {
-    const scopePromises = this.cacheScopes.map(scope => this.analyzeCacheScope(scope, days));
+  async analyzePageCache(daysByScope) {
+    const scopePromises = this.cacheScopes.map(scope => this.analyzeCacheScope(scope, daysByScope[scope.key]));
     const scopes = await Promise.all(scopePromises);
     const hosts = scopes.reduce((allHosts, scope) => allHosts.concat(scope.hosts), []);
     hosts.sort((left, right) => {
@@ -463,7 +491,7 @@ class PageCacheMaintenance {
 
     return {
       generatedAt: new Date(),
-      days,
+      daysByScope,
       exists: scopes.some(scope => scope.exists),
       cacheScopes: scopes,
       hostCount: hosts.length,
@@ -478,9 +506,9 @@ class PageCacheMaintenance {
   async confirmPrune(analysis, deleteHosts) {
     const alert = new Alert();
     alert.title = deleteHosts ? 'Delete old files + empty hosts?' : 'Delete old files?';
-    const messageLines = [
-      `${analysis.oldFileCount} file(s) are older than ${analysis.days} day(s).`
-    ];
+    const messageLines = analysis.cacheScopes.map(scope =>
+      `${scope.label}: ${scope.oldFileCount} file(s) older than ${scope.days} day(s).`
+    );
     if (deleteHosts) {
       messageLines.push(`${analysis.removableHostCount} host folder(s) can be removed if empty after pruning.`);
     }
@@ -522,7 +550,7 @@ class PageCacheMaintenance {
     });
 
     return {
-      days: analysis.days,
+      daysByScope: analysis.daysByScope,
       deleteHosts,
       deletedFileCount: deletedFiles.length,
       deletedHostCount: deletedHosts.length,
@@ -533,17 +561,17 @@ class PageCacheMaintenance {
     };
   }
 
-  async maybeRunAction(days) {
+  async maybeRunAction(daysByScope) {
     const action = this.getActionFromQuery();
     if (action !== 'prune') return null;
 
     const deleteHosts = this.parseBoolean(
       this.runtime.queryParameters?.deleteHosts || this.runtime.queryParameters?.pruneHosts
     );
-    const analysis = await this.analyzePageCache(days);
+    const analysis = await this.analyzePageCache(daysByScope);
     if (analysis.oldFileCount === 0 && (!deleteHosts || analysis.removableHostCount === 0)) {
       return {
-        days,
+        daysByScope,
         deleteHosts,
         deletedFileCount: 0,
         deletedHostCount: 0,
@@ -558,7 +586,7 @@ class PageCacheMaintenance {
     const confirmed = await this.confirmPrune(analysis, deleteHosts);
     if (!confirmed) {
       return {
-        days,
+        daysByScope,
         deleteHosts,
         cancelled: true,
         deletedFileCount: 0,
@@ -685,16 +713,37 @@ class PageCacheMaintenance {
     const logoImage = await this.loadLogoImage();
     const logoDataUri = this.imageToDataUri(logoImage);
     const resultMessage = this.buildResultMessage(result);
-    const days = analysis.days;
-    const dayChips = QUICK_DAY_OPTIONS.map(option => {
-      const activeClass = option === days ? 'chip active' : 'chip';
-      const href = this.escapeHtml(this.buildSelfUrl({ days: option }));
-      return `<a class="${activeClass}" href="${href}">${this.escapeHtml(option)}d</a>`;
+    const daysByScope = analysis.daysByScope;
+    // Every self-link carries BOTH scope thresholds so changing one never
+    // resets the other back to its default
+    const buildDaysParams = (overrides = {}) => {
+      const params = {};
+      this.cacheScopes.forEach(scope => {
+        params[scope.daysParam] = overrides[scope.key] !== undefined
+          ? overrides[scope.key]
+          : daysByScope[scope.key];
+      });
+      return params;
+    };
+    const thresholdSections = analysis.cacheScopes.map(scope => {
+      const chips = scope.quickDayOptions.map(option => {
+        const activeClass = option === scope.days ? 'chip active' : 'chip';
+        const href = this.escapeHtml(this.buildSelfUrl(buildDaysParams({ [scope.key]: option })));
+        return `<a class="${activeClass}" href="${href}">${this.escapeHtml(option)}d</a>`;
+      }).join('');
+      return `
+        <div>
+          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px;">${this.escapeHtml(scope.label)} threshold</h2>
+          <div class="chip-row">${chips}</div>
+        </div>`;
     }).join('');
+    const thresholdSummary = analysis.cacheScopes
+      .map(scope => `${scope.label}: ${scope.days}d`)
+      .join(' • ');
 
-    const pruneHref = this.escapeHtml(this.buildSelfUrl({ action: 'prune', days }));
-    const pruneHostsHref = this.escapeHtml(this.buildSelfUrl({ action: 'prune', days, deleteHosts: 1 }));
-    const refreshHref = this.escapeHtml(this.buildSelfUrl({ days }));
+    const pruneHref = this.escapeHtml(this.buildSelfUrl({ action: 'prune', ...buildDaysParams() }));
+    const pruneHostsHref = this.escapeHtml(this.buildSelfUrl({ action: 'prune', ...buildDaysParams(), deleteHosts: 1 }));
+    const refreshHref = this.escapeHtml(this.buildSelfUrl(buildDaysParams()));
 
     const activeModel = this.getModelFromQuery();
     const ocrScope = analysis.cacheScopes.find(s => s.key === 'ocr');
@@ -702,10 +751,10 @@ class PageCacheMaintenance {
     const availableModels = [...new Set(allOcrFiles.map(f => f.modelName).filter(Boolean))].sort();
 
     const modelChips = availableModels.length > 0 ? [
-      `<a class="chip ${!activeModel ? 'active' : ''}" href="${this.escapeHtml(this.buildSelfUrl({ days }))}">All models</a>`,
+      `<a class="chip ${!activeModel ? 'active' : ''}" href="${this.escapeHtml(this.buildSelfUrl(buildDaysParams()))}">All models</a>`,
       ...availableModels.map(m => {
         const activeClass = m === activeModel ? 'chip active' : 'chip';
-        const href = this.escapeHtml(this.buildSelfUrl({ days, model: m }));
+        const href = this.escapeHtml(this.buildSelfUrl({ ...buildDaysParams(), model: m }));
         return `<a class="${activeClass}" href="${href}">${this.escapeHtml(m)}</a>`;
       })
     ].join('') : '';
@@ -975,7 +1024,7 @@ class PageCacheMaintenance {
         </div>
       </div>
       <div class="meta">
-        Threshold: <strong>${this.escapeHtml(days)} day(s)</strong><br>
+        <strong>${this.escapeHtml(thresholdSummary)}</strong><br>
         Updated: ${this.escapeHtml(this.formatTimestamp(analysis.generatedAt))}
       </div>
     </div>
@@ -984,10 +1033,7 @@ class PageCacheMaintenance {
 
     <div class="panel controls">
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px;">
-        <div>
-          <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px;">Threshold</h2>
-          <div class="chip-row">${dayChips}</div>
-        </div>
+        ${thresholdSections}
         ${modelChips ? `
         <div>
           <h2 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px;">Model Filter</h2>
@@ -1060,12 +1106,16 @@ class PageCacheMaintenance {
     await WebView.loadHTML(html, null, null, true);
   }
 
-  async renderWidget(days) {
-    const analysis = await this.analyzePageCache(days);
+  async renderWidget(daysByScope) {
+    const analysis = await this.analyzePageCache(daysByScope);
     const widget = new ListWidget();
     widget.backgroundColor = new Color(BRAND.primary);
     widget.setPadding(12, 12, 12, 12);
-    widget.url = this.buildSelfUrl({ days: analysis.days });
+    const widgetDaysParams = {};
+    this.cacheScopes.forEach(scope => {
+      widgetDaysParams[scope.daysParam] = daysByScope[scope.key];
+    });
+    widget.url = this.buildSelfUrl(widgetDaysParams);
 
     const title = widget.addText('Cache');
     title.font = Font.boldSystemFont(FONT_SIZES.widget.label);
@@ -1077,10 +1127,13 @@ class PageCacheMaintenance {
     count.font = Font.boldSystemFont(FONT_SIZES.widget.metric);
     count.textColor = new Color(analysis.oldFileCount > 0 ? BRAND.danger : BRAND.success);
 
+    const widgetThresholds = analysis.cacheScopes
+      .map(scope => `${scope.key} ${scope.days}d`)
+      .join(' • ');
     const detail = widget.addText(
       analysis.oldFileCount > 0
-        ? `${analysis.oldFileCount} old files > ${analysis.days}d`
-        : `No files older than ${analysis.days}d`
+        ? `${analysis.oldFileCount} old files (${widgetThresholds})`
+        : `No old files (${widgetThresholds})`
     );
     detail.font = Font.systemFont(FONT_SIZES.widget.small);
     detail.textColor = new Color(BRAND.textMuted);
@@ -1101,14 +1154,14 @@ class PageCacheMaintenance {
 (async () => {
   try {
     const maintenance = new PageCacheMaintenance();
-    const days = maintenance.getSelectedDays();
-    const actionResult = maintenance.runtime.runsInWidget ? null : await maintenance.maybeRunAction(days);
+    const daysByScope = maintenance.getSelectedDays();
+    const actionResult = maintenance.runtime.runsInWidget ? null : await maintenance.maybeRunAction(daysByScope);
 
     if (maintenance.runtime.runsInWidget) {
-      const widget = await maintenance.renderWidget(days);
+      const widget = await maintenance.renderWidget(daysByScope);
       Script.setWidget(widget);
     } else {
-      const analysis = await maintenance.analyzePageCache(days);
+      const analysis = await maintenance.analyzePageCache(daysByScope);
       await maintenance.renderApp(analysis, actionResult);
     }
   } catch (error) {
