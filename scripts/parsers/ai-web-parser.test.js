@@ -1797,14 +1797,63 @@ test('resolveWeekdayPinnedYear pins hallucinated years to the stated weekday', (
   assert.equal(parser.resolveWeekdayPinnedYear('2026-12-31', 'Wed, Dec 31').value, '2025-12-31');
 });
 
-test('weekday pinning leaves explicit years and weekday-less evidence alone', () => {
+test('weekday pinning leaves weekday-less evidence and unparseable values alone', () => {
   const parser = createParser();
   parser.now = FROZEN_NOW;
-  assert.equal(parser.resolveWeekdayPinnedYear('2024-08-22', 'Sat, Aug 22, 2024'), null, 'an explicit year in evidence is trusted');
+  assert.equal(parser.resolveWeekdayPinnedYear('2024-08-22', 'Aug 22, 2024'), null, 'an explicit year with no weekday anywhere falls through');
   assert.equal(parser.resolveWeekdayPinnedYear('2024-08-22', 'Aug 22'), null, 'no weekday falls through to existing behavior');
   assert.equal(parser.resolveWeekdayPinnedYear('2024-08-22', ''), null, 'missing evidence falls through');
   assert.equal(parser.resolveWeekdayPinnedYear('Aug 22', 'Sat, Aug 22'), null, 'a value without a 4-digit year cannot be rewritten');
   assert.equal(parser.resolveWeekdayPinnedYear('2026-08-22', 'Saturday party vibes'), null, 'a weekday with no adjacent date does not pin');
+});
+
+test('weekday pinning verifies explicit evidence years against the stated weekday', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // NYE Chicago (2026-07-13 run): the helper pass leaked "2025" into the
+  // evidence string, so the old explicit-year guard refused to pin an extracted
+  // date that was CORRECT (but past) — window repair then invented a 2027
+  // phantom. The stated weekday matches the date+year as extracted → pin as-is.
+  const nye = parser.resolveWeekdayPinnedYear(
+    '2025-12-31',
+    'OCR_IMAGE_TEXT: "WEDNESDAY DECEMBER 31st" and PRE-PARSED HELPER DATA: "Core Event Date": "Wednesday, December 31, 2025"'
+  );
+  assert.ok(nye, 'matching weekday and year must pin the extracted date');
+  assert.equal(nye.value, '2025-12-31');
+  assert.equal(nye.pinnedYear, 2025);
+  // The pin must protect the correct past date from the year-window bump.
+  const normalized = parser.normalizeEventDates(
+    new Date(Date.UTC(2026, 0, 1, 3, 0, 0)), // combined 10PM CT on the pinned date
+    new Date(Date.UTC(2026, 0, 1, 3, 0, 0)),
+    { start: true, end: true }
+  );
+  assert.equal(normalized.startDate.toISOString(), '2026-01-01T03:00:00.000Z', 'pinned past instant stays past so the past-filter can drop it');
+  // Contradicting year: the weekday wins and the year is recomputed.
+  const contradicted = parser.resolveWeekdayPinnedYear('2024-08-22', 'Sat, Aug 22, 2024');
+  assert.equal(contradicted.value, '2026-08-22', '2024-08-22 is a Thursday; the stated Saturday pins 2026');
+  // Genuinely future date with agreeing year and weekday stays untouched.
+  const future = parser.resolveWeekdayPinnedYear('2026-08-22', 'Sat, Aug 22, 2026');
+  assert.equal(future.value, '2026-08-22');
+  assert.equal(future.pinnedYear, 2026);
+});
+
+test('weekday pinning falls back to the source content when evidence lacks a weekday', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // CHUNK SF Jan 17 (2026-07-13 run): the flyer put "SATURDAY" on its own line
+  // above "JANUARY 17TH", and the model's evidence quoted only the date line —
+  // no weekday, no pin, and 2025-01-17 was bumped to a phantom future date.
+  const source = 'CHUNK\nSATURDAY\nJANUARY 17TH\n9PM-2AM\n1192 FOLSOM ST';
+  const pinned = parser.resolveWeekdayPinnedYear('2025-01-17', 'JANUARY 17TH', source);
+  assert.ok(pinned, 'a weekday on the line above the date token must pin');
+  assert.equal(pinned.value, '2026-01-17', '2026-01-17 is the Saturday');
+  // No weekday anywhere near the date token → existing behavior (no pin).
+  assert.equal(parser.resolveWeekdayPinnedYear('2025-01-17', 'JANUARY 17TH', 'CHUNK\nJANUARY 17TH\n9PM-2AM'), null);
+  // Ambiguous: the date token appears twice with conflicting adjacent weekdays.
+  const ambiguous = 'FRIDAY\nJANUARY 17TH\nother party\nSATURDAY\nJANUARY 17TH';
+  assert.equal(parser.resolveWeekdayPinnedYear('2025-01-17', 'JANUARY 17TH', ambiguous), null);
+  // Date-like text between the weekday and the token breaks adjacency.
+  assert.equal(parser.resolveWeekdayPinnedYear('2025-01-17', 'JANUARY 17TH', 'SATURDAY DEC 13\nJANUARY 17TH'), null);
 });
 
 test('adjustLikelyEventYear re-anchors on the current year when hallucinated-year ±1 misses the window', () => {

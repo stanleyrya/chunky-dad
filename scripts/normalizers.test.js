@@ -67,6 +67,35 @@ test('resolveWallClockDates leaves dates untouched when the timezone stays unkno
 });
 
 // ---------------------------------------------------------------------------
+// City-from-address guard (2026-07-13 run findings: the flyer address
+// "1192 FOLSOM ST" has no city part and the fallback returned the lowercased
+// street address as the "city", blocking timezone resolution and breaking
+// geocoding)
+// ---------------------------------------------------------------------------
+
+test('extractCityFromAddress never returns a raw street address as a city', () => {
+  const core = new SharedCore(
+    {
+      sf: { timezone: 'America/Los_Angeles', patterns: ['sf', 'san francisco'] },
+      portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] }
+    },
+    { eventSchema: EventSchema }
+  );
+  const normalizer = new LocationNormalizer(core);
+
+  assert.equal(normalizer.extractCityFromAddress('1192 FOLSOM ST'), null, 'an address without a city part yields no city');
+  assert.equal(
+    normalizer.extractCityFromEvent({ title: 'CHUNK', address: '1192 FOLSOM ST' }),
+    'unknown',
+    'the caller falls through to unknown instead of a garbage city'
+  );
+
+  // Legitimate addresses still resolve to their mapped city.
+  assert.equal(normalizer.extractCityFromAddress('722 E Burnside St, Portland, OR 97214, USA'), 'portland');
+  assert.equal(normalizer.extractCityFromAddress('1192 Folsom St, San Francisco, CA'), 'sf');
+});
+
+// ---------------------------------------------------------------------------
 // OpenStreetMapNormalizer forward-geocode city validation (2026-07-12 run
 // findings: flyer-OCR typo "922 E. BURNSIDE" geocoded to Burnside, Michigan
 // for an event in Portland)

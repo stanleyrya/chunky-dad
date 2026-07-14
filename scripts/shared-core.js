@@ -1793,6 +1793,18 @@ class SharedCore {
             urlDeduplicated.push(event);
         }
 
+        // Post-merge re-anchor: a merge can resolve the city (e.g. AI arbitration
+        // picked the detail page's "sf") for an event whose dates are still
+        // wall-clock components labeled UTC (_timezoneUnresolved) — the normal
+        // LocationNormalizer re-anchor already ran before dedup and could not
+        // help. Convert those dates now that the timezone is knowable; events
+        // that stay unresolved keep the flag (and its warning).
+        for (const event of urlDeduplicated) {
+            if (event && event._timezoneUnresolved) {
+                this.resolveWallClockDates(event);
+            }
+        }
+
         // Log results for large batches
         if (logProgress) {
             const duplicatesFound = events.length - urlDeduplicated.length;
@@ -2046,6 +2058,32 @@ class SharedCore {
                 }
             }
 
+            // A record flagged _timezoneUnresolved stores wall-clock components
+            // labeled UTC (a possibly wrong instant); an unflagged record's dates
+            // are real timezone-anchored instants. When exactly one side is
+            // flagged, the anchored side's date wins deterministically — source
+            // priority/tie-breaks must never let a wall-clock value clobber a
+            // correct instant (observed 2026-07-13: a segment record's wall-clock
+            // 22:00Z beat the detail page's JSON-LD-anchored 05:00Z).
+            if ((fieldName === 'startDate' || fieldName === 'endDate')
+                && !isEmpty(existingValue) && !isEmpty(newValue)) {
+                const existingWallClock = Boolean(existingEvent._timezoneUnresolved);
+                const newWallClock = Boolean(newEvent._timezoneUnresolved);
+                if (existingWallClock !== newWallClock && String(existingValue) !== String(newValue)) {
+                    const chosenValue = existingWallClock ? newValue : existingValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.log(`⏰ MERGE: "${mergeEventTitle}" kept timezone-anchored ${fieldName} over wall-clock value`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: 'timezone-anchored date wins over wall-clock (_timezoneUnresolved) date'
+                    });
+                    return;
+                }
+            }
+
             const canArbitrate = this.isArbitrationEligibleField(fieldName)
                 && this.isGenuineFieldConflict(fieldName, existingValue, newValue);
 
@@ -2160,6 +2198,36 @@ class SharedCore {
                     chosenValue: chosenValue,
                     reason: decision ? `ai: ${decision.reason || `chose ${pick}`}` : conflict.fallbackReason
                 });
+            }
+        }
+
+        // _timezoneUnresolved must describe the merged event's DATES, not the base
+        // record: the `{ ...newEvent }` spread above copies newEvent's flag even
+        // when existing's anchored dates won, and drops existing's flag even when
+        // its wall-clock dates won (underscore fields are skipped by the field
+        // loop). Recompute the flag from whichever record supplied the final
+        // startDate/endDate so downstream re-anchoring still knows.
+        {
+            const existingWallClock = Boolean(existingEvent._timezoneUnresolved);
+            const newWallClock = Boolean(newEvent._timezoneUnresolved);
+            if (existingWallClock || newWallClock) {
+                const finalDateIsWallClock = (fieldName) => {
+                    const value = mergedEvent[fieldName];
+                    if (isEmpty(value)) return false;
+                    const fromExisting = value === existingEvent[fieldName];
+                    const fromNew = value === newEvent[fieldName];
+                    if (fromExisting && fromNew) return existingWallClock && newWallClock;
+                    if (fromExisting) return existingWallClock;
+                    if (fromNew) return newWallClock;
+                    // Values always come from one of the two records; fall back to
+                    // the base record's flag (mergedEvent started as { ...newEvent }).
+                    return newWallClock;
+                };
+                if (finalDateIsWallClock('startDate') || finalDateIsWallClock('endDate')) {
+                    mergedEvent._timezoneUnresolved = true;
+                } else {
+                    delete mergedEvent._timezoneUnresolved;
+                }
             }
         }
 
@@ -2708,7 +2776,48 @@ class SharedCore {
         }
         return new Date(utcMillis);
     }
-    
+
+    // The ai-web parser stores extracted local times as wall-clock components labeled
+    // UTC when it cannot resolve a timezone at parse time (flagged via
+    // event._timezoneUnresolved). Once a timezone/city is known — during normalization
+    // or resolved later by a merge — convert those wall-clock values to real UTC
+    // instants and clear the flag. Shared seam: LocationNormalizer.resolveWallClockDates
+    // delegates here, and deduplicateEvents runs it post-merge for events whose city
+    // was only resolved during merge arbitration. Log strings intentionally keep the
+    // LocationNormalizer prefix so existing log consumers keep working.
+    resolveWallClockDates(event) {
+        if (!event || !event._timezoneUnresolved) return event;
+
+        const timezone = event.timezone
+            || (event.city && this.cities && this.cities[event.city]?.timezone)
+            || '';
+        if (!timezone) {
+            const title = event.title || 'unknown';
+            this.warnOnce(
+                `wallclock:${title}`,
+                `🚨 LocationNormalizer: Could not resolve timezone for "${title}" (city: "${event.city || 'unknown'}") — dates remain wall-clock UTC and may be wrong`
+            );
+            return event;
+        }
+
+        const reanchor = (value) => {
+            if (!value) return value;
+            const converted = this.convertWallClockDateToUtc(value, timezone);
+            if (!converted || isNaN(converted.getTime())) return value;
+            return value instanceof Date ? converted : converted.toISOString();
+        };
+
+        const originalStart = event.startDate;
+        event.startDate = reanchor(event.startDate);
+        event.endDate = reanchor(event.endDate);
+        event.timezone = timezone;
+        delete event._timezoneUnresolved;
+
+        const format = (value) => value instanceof Date ? value.toISOString() : String(value);
+        console.log(`🗺️ LocationNormalizer: Re-anchored wall-clock dates to ${timezone} — start ${format(originalStart)} → ${format(event.startDate)}`);
+        return event;
+    }
+
     // Normalize event date using local or specified timezone
     normalizeEventDateLocal(dateInput, timezone = null) {
         if (!dateInput) return '';
