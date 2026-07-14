@@ -1346,6 +1346,107 @@ test('mergeParsedEvents: coordinates beat text and degenerate ends lose, without
 });
 
 // ---------------------------------------------------------------------------
+// Wall-clock vs timezone-anchored dates across merges (2026-07-13 run findings:
+// "BEARS IN SPACE" — the segment record's wall-clock 22:00Z survived the merge
+// with the detail page's JSON-LD-anchored 05:00Z, the _timezoneUnresolved flag
+// was dropped, and nothing re-anchored after dedup)
+// ---------------------------------------------------------------------------
+
+test('mergeParsedEvents: timezone-anchored dates beat wall-clock dates in both directions', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+
+  const wallClock = {
+    title: 'BEARS IN SPACE',
+    startDate: new Date('2026-07-25T22:00:00.000Z'), // flyer said 10PM PT; stored as wall-clock UTC
+    endDate: new Date('2026-07-26T00:00:00.000Z'),
+    source: 'ai-web',
+    _timezoneUnresolved: true,
+    _fieldPriorities: priorities
+  };
+  const anchored = {
+    title: 'BEARS IN SPACE',
+    startDate: new Date('2026-07-26T05:00:00.000Z'), // 10PM PT as the real instant
+    endDate: new Date('2026-07-26T09:00:00.000Z'),
+    city: 'sf',
+    timezone: 'America/Los_Angeles',
+    source: 'ai-web',
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    _fieldPriorities: priorities
+  };
+
+  // Flagged record is EXISTING (the real failure: the same-priority tie-break
+  // kept the existing wall-clock dates)
+  const mergedA = await core.mergeParsedEvents({ ...wallClock }, { ...anchored }, { httpAdapter: adapter });
+  assert.equal(mergedA.startDate.toISOString(), '2026-07-26T05:00:00.000Z', 'anchored start wins over existing wall-clock');
+  assert.equal(mergedA.endDate.toISOString(), '2026-07-26T09:00:00.000Z', 'anchored end wins over existing wall-clock');
+  assert.equal(mergedA._timezoneUnresolved, undefined, 'the flag must not describe anchored dates');
+
+  // Flagged record is INCOMING (base spread would otherwise carry both the
+  // wall-clock dates and the flag)
+  const mergedB = await core.mergeParsedEvents({ ...anchored }, { ...wallClock }, { httpAdapter: adapter });
+  assert.equal(mergedB.startDate.toISOString(), '2026-07-26T05:00:00.000Z', 'anchored start wins over incoming wall-clock');
+  assert.equal(mergedB.endDate.toISOString(), '2026-07-26T09:00:00.000Z', 'anchored end wins over incoming wall-clock');
+  assert.equal(mergedB._timezoneUnresolved, undefined, 'the incoming flag must not survive onto anchored dates');
+
+  assert.equal(adapter.calls.length, 0, 'the wall-clock rule resolves deterministically without AI');
+});
+
+test('mergeParsedEvents: the wall-clock flag follows the record that supplied the dates', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+
+  // Both records flagged: the merged dates are still wall-clock → flag stays.
+  const bothFlagged = await core.mergeParsedEvents(
+    { title: 'BEARS IN SPACE', startDate: new Date('2026-07-25T22:00:00.000Z'), source: 'ai-web', _timezoneUnresolved: true, _fieldPriorities: priorities },
+    { title: 'BEARS IN SPACE', startDate: new Date('2026-07-25T22:00:00.000Z'), source: 'ai-web', _timezoneUnresolved: true, _fieldPriorities: priorities },
+    { httpAdapter: adapter }
+  );
+  assert.equal(bothFlagged._timezoneUnresolved, true, 'both-flagged merges must keep the flag for downstream re-anchoring');
+
+  // Flagged side wins because the anchored side has no dates → flag propagates
+  // even though the base record (incoming) was unflagged.
+  const flaggedDatesWon = await core.mergeParsedEvents(
+    { title: 'BEARS IN SPACE', startDate: new Date('2026-07-25T22:00:00.000Z'), source: 'ai-web', _timezoneUnresolved: true, _fieldPriorities: priorities },
+    { title: 'BEARS IN SPACE', source: 'ai-web', _fieldPriorities: priorities },
+    { httpAdapter: adapter }
+  );
+  assert.equal(flaggedDatesWon.startDate.toISOString(), '2026-07-25T22:00:00.000Z', 'the only available date wins');
+  assert.equal(flaggedDatesWon._timezoneUnresolved, true, 'wall-clock dates keep their flag');
+  assert.equal(adapter.calls.length, 0);
+});
+
+test('deduplicateEvents re-anchors wall-clock dates once the merged event has a resolvable city', async () => {
+  const core = new SharedCore(
+    { sf: { timezone: 'America/Los_Angeles', patterns: ['sf', 'san francisco'] } },
+    { eventSchema: EventSchema }
+  );
+  // Two flagged records of the same event; only one knows the city (in the real
+  // run the city was resolved during merge arbitration). The merge keeps the
+  // wall-clock dates + flag, and the post-merge pass must convert them.
+  const segmentA = {
+    title: 'BEARS IN SPACE',
+    bar: 'The Stud',
+    startDate: new Date('2026-07-25T22:00:00.000Z'), // 10PM PT wall-clock
+    endDate: new Date('2026-07-26T00:00:00.000Z'),
+    source: 'ai-web',
+    _timezoneUnresolved: true
+  };
+  const segmentB = { ...segmentA, city: 'sf' };
+
+  const result = await core.deduplicateEvents([segmentA, segmentB], null);
+  assert.equal(result.length, 1, 'same key merges');
+  const merged = result[0];
+  // 10PM wall-clock in America/Los_Angeles (PDT, UTC-7) is 05:00Z the next day
+  assert.equal(merged.startDate.toISOString(), '2026-07-26T05:00:00.000Z');
+  assert.equal(merged.endDate.toISOString(), '2026-07-26T07:00:00.000Z');
+  assert.equal(merged.timezone, 'America/Los_Angeles');
+  assert.equal(merged._timezoneUnresolved, undefined, 're-anchoring must clear the flag');
+});
+
+// ---------------------------------------------------------------------------
 // Identity-verified cross-parser dedup (2026-07-12 run findings)
 // ---------------------------------------------------------------------------
 

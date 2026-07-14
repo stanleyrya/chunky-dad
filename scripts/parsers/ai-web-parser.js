@@ -5703,7 +5703,11 @@ TEXT:
                     // year the model hallucinated. See resolveWeekdayPinnedYear.
                     const pinBucket = this.getDateFieldPinBucket(key);
                     if (pinBucket) {
-                        const pinResult = this.resolveWeekdayPinnedYear(value, fieldData.evidence);
+                        // Pass the raw source content (not processedSnippet — the
+                        // helper-pass prefix is model output) so pinning can fall
+                        // back to a weekday the flyer states on the line above the
+                        // date when the model's evidence omits it.
+                        const pinResult = this.resolveWeekdayPinnedYear(value, fieldData.evidence, snippet);
                         if (pinResult) {
                             value = pinResult.value;
                             if (!filteredEvent.__weekdayPinnedYears || typeof filteredEvent.__weekdayPinnedYears !== 'object') {
@@ -7397,30 +7401,136 @@ TEXT:
         };
     }
 
+    // Month/day (1-based) of a date field value, for locating its token in source
+    // text. ISO-leading values are read positionally; other parseable strings go
+    // through Date (month/day are stable regardless of host timezone at noon-less
+    // date strings' local-midnight parse).
+    getMonthDayFromDateText(valueText) {
+        const raw = String(valueText || '').trim();
+        if (!raw) return null;
+        const isoMatch = raw.match(/^\s*(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]|$)/);
+        if (isoMatch) {
+            return { month: Number(isoMatch[2]), day: Number(isoMatch[3]) };
+        }
+        const parsed = new Date(raw);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return { month: parsed.getMonth() + 1, day: parsed.getDate() };
+    }
+
+    // Source-content fallback for weekday pinning: flyers often put the weekday on
+    // its own line directly above the date ("SATURDAY\nJANUARY 17TH"), and the
+    // model's evidence string quotes only the date line — no weekday, no pin.
+    // Search the pass's source content for the extracted month+day token and
+    // accept a weekday named in the preceding ~2 lines / ~40 chars, with nothing
+    // date-like (digits or another month name) between the weekday and the date.
+    // Conservative by design: pins only when the token match is unambiguous — the
+    // month+day appears exactly once, or every occurrence agrees on the adjacent
+    // weekday. Returns the JS day index (0=Sunday) or null.
+    extractWeekdayNearDateInSource(sourceText, valueText) {
+        const source = String(sourceText || '');
+        if (!source.trim()) return null;
+        const monthDay = this.getMonthDayFromDateText(valueText);
+        if (!monthDay || monthDay.month < 1 || monthDay.month > 12) return null;
+
+        const monthPatterns = [
+            'jan(?:uary)?', 'feb(?:ruary)?', 'mar(?:ch)?', 'apr(?:il)?', 'may', 'jun(?:e)?',
+            'jul(?:y)?', 'aug(?:ust)?', 'sep(?:t(?:ember)?)?', 'oct(?:ober)?', 'nov(?:ember)?', 'dec(?:ember)?'
+        ];
+        const monthPattern = monthPatterns[monthDay.month - 1];
+        const dayPattern = `${monthDay.day}(?:st|nd|rd|th)?`;
+        const dateTokenRegex = new RegExp(
+            `\\b(?:${monthPattern}\\.?\\s*${dayPattern}|${dayPattern}\\s*(?:of\\s+)?${monthPattern}|${monthDay.month}[\\/.\\-]${monthDay.day})\\b`,
+            'gi'
+        );
+        const weekdayPattern = '(sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:s|nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)';
+        const anyMonthRegex = new RegExp(`\\b(?:${monthPatterns.join('|')})\\b`, 'i');
+        const dayIndexByPrefix = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+
+        const adjacentWeekdays = [];
+        let occurrenceCount = 0;
+        let tokenMatch;
+        while ((tokenMatch = dateTokenRegex.exec(source)) !== null) {
+            occurrenceCount++;
+            // Preceding window: tail of the current line plus up to two lines
+            // above, capped at 40 chars.
+            const before = source.slice(0, tokenMatch.index);
+            const context = before.split(/\r?\n/).slice(-3).join('\n').slice(-40);
+            // The weekday closest to the date token wins; require only non-date
+            // filler between them (no digits, no other month name).
+            const weekdayRegex = new RegExp(`\\b${weekdayPattern}\\b`, 'gi');
+            let lastWeekdayMatch = null;
+            let weekdayMatch;
+            while ((weekdayMatch = weekdayRegex.exec(context)) !== null) {
+                lastWeekdayMatch = weekdayMatch;
+            }
+            let adjacentWeekday = null;
+            if (lastWeekdayMatch) {
+                const between = context.slice(lastWeekdayMatch.index + lastWeekdayMatch[0].length);
+                if (!/\d/.test(between) && !anyMonthRegex.test(between)) {
+                    const prefix = String(lastWeekdayMatch[1] || '').slice(0, 3).toLowerCase();
+                    if (Object.prototype.hasOwnProperty.call(dayIndexByPrefix, prefix)) {
+                        adjacentWeekday = dayIndexByPrefix[prefix];
+                    }
+                }
+            }
+            adjacentWeekdays.push(adjacentWeekday);
+        }
+
+        if (occurrenceCount === 0) return null;
+        if (occurrenceCount === 1) return adjacentWeekdays[0];
+        const first = adjacentWeekdays[0];
+        if (first === null) return null;
+        return adjacentWeekdays.every(weekday => weekday === first) ? first : null;
+    }
+
     // Deterministic weekday→year pinning. Listing/flyer text often states a
     // weekday but no year ("Sat, Aug 22"); the extraction model then hallucinates
     // one, and window-based repair (adjustLikelyEventYear) can land on the wrong
-    // weekday (2025-08-22 is a Friday). When the field's own evidence names a
-    // weekday adjacent to the date AND carries no explicit 4-digit year, the year
-    // is derivable: try currentYear−1…currentYear+2 and keep candidates whose
-    // actual weekday matches; prefer one inside the year window, else the nearest
-    // to now. Past dates are intentionally allowed — past events must stay
-    // datable so the downstream past-filter can drop them (never force future).
+    // weekday (2025-08-22 is a Friday). When a weekday is stated adjacent to the
+    // date — in the field's own evidence, or (fallback) in the pass's source
+    // content just above the date token — the year is derivable:
+    //   - evidence carries an explicit 4-digit year too: verify weekday against
+    //     the value as extracted; on agreement pin it as-is (protects a correct
+    //     past date from window repair), on contradiction the weekday wins
+    //     (flyers state weekdays reliably; years leak from helper-pass output)
+    //     and the year is recomputed below;
+    //   - no explicit year: try currentYear−1…currentYear+2 and keep candidates
+    //     whose actual weekday matches; prefer one inside the year window, else
+    //     the nearest to now.
+    // Past dates are intentionally allowed — past events must stay datable so the
+    // downstream past-filter can drop them (never force future).
     // Returns { value, pinnedYear, aiYear } or null when pinning does not apply
-    // (no weekday, explicit year in evidence, unparseable value, or no candidate
-    // matches the stated weekday — e.g. bad OCR).
-    resolveWeekdayPinnedYear(rawValue, evidenceText) {
+    // (no weekday anywhere, unparseable value, or no candidate matches the stated
+    // weekday — e.g. bad OCR).
+    resolveWeekdayPinnedYear(rawValue, evidenceText, sourceText = '') {
         if (typeof rawValue !== 'string') return null;
         const valueText = rawValue.trim();
         if (!valueText) return null;
         const yearMatch = valueText.match(/\b(?:19|20)\d{2}\b/);
         if (!yearMatch) return null;
         const evidence = String(evidenceText || '').trim();
-        if (!evidence || /\b(?:19|20)\d{2}\b/.test(evidence)) return null;
-        const statedWeekday = this.extractStatedWeekdayAdjacentToDate(evidence);
+        if (!evidence) return null;
+        let statedWeekday = this.extractStatedWeekdayAdjacentToDate(evidence);
+        if (statedWeekday === null) {
+            statedWeekday = this.extractWeekdayNearDateInSource(sourceText, valueText);
+            if (statedWeekday !== null) {
+                console.log(`🤖 AI Web: Weekday for "${this.trimToMaxLength(valueText, 40)}" found in source content (evidence had none)`);
+            }
+        }
         if (statedWeekday === null) return null;
 
         const aiYear = Number(yearMatch[0]);
+        if (/\b(?:19|20)\d{2}\b/.test(evidence)) {
+            // Explicit year in evidence + stated weekday: verify them against each
+            // other instead of refusing to pin (helper-pass output leaks years into
+            // evidence strings). Agreement pins the date exactly as extracted.
+            const asExtracted = this.buildWeekdayPinCandidate(valueText, yearMatch, aiYear);
+            if (asExtracted && asExtracted.weekday === statedWeekday) {
+                return { value: asExtracted.text, pinnedYear: aiYear, aiYear };
+            }
+            // Contradiction (or unparseable value): fall through — the weekday
+            // recomputes the year via the candidate loop below.
+        }
         const now = this.now();
         const currentYear = now.getFullYear();
         const matches = [];

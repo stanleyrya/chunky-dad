@@ -587,7 +587,18 @@ class LocationNormalizer extends BaseNormalizer {
         if (addressParts.length > 0) {
             const firstPart = addressParts[0].toLowerCase();
             const normalizedCity = this.normalizeCityName(firstPart);
-            return normalizedCity;
+            // Guard: normalizeCityName echoes unmapped input back (lowercased), so
+            // without this check a bare street address ("1192 folsom st") would
+            // masquerade as a city and poison timezone resolution and geocoding
+            // (observed 2026-07-13). Only return candidates that map to a known
+            // city; otherwise report no city found so callers fall through to the
+            // next strategy.
+            if (normalizedCity && (
+                (this.core.cities && Object.prototype.hasOwnProperty.call(this.core.cities, normalizedCity)) ||
+                Object.values(this.core.cityMappings).includes(normalizedCity)
+            )) {
+                return normalizedCity;
+            }
         }
 
         return null;
@@ -618,35 +629,11 @@ class LocationNormalizer extends BaseNormalizer {
     // Once the city is known here, convert those wall-clock values to real UTC instants.
     resolveWallClockDates(event) {
         if (!event || !event._timezoneUnresolved) return event;
-
-        const timezone = event.timezone
-            || (event.city && this.core && this.core.cities && this.core.cities[event.city]?.timezone)
-            || '';
-        if (!timezone || typeof this.core?.convertWallClockDateToUtc !== 'function') {
-            const title = event.title || 'unknown';
-            this.core?.warnOnce?.(
-                `wallclock:${title}`,
-                `🚨 LocationNormalizer: Could not resolve timezone for "${title}" (city: "${event.city || 'unknown'}") — dates remain wall-clock UTC and may be wrong`
-            );
-            return event;
-        }
-
-        const reanchor = (value) => {
-            if (!value) return value;
-            const converted = this.core.convertWallClockDateToUtc(value, timezone);
-            if (!converted || isNaN(converted.getTime())) return value;
-            return value instanceof Date ? converted : converted.toISOString();
-        };
-
-        const originalStart = event.startDate;
-        event.startDate = reanchor(event.startDate);
-        event.endDate = reanchor(event.endDate);
-        event.timezone = timezone;
-        delete event._timezoneUnresolved;
-
-        const format = (value) => value instanceof Date ? value.toISOString() : String(value);
-        console.log(`🗺️ LocationNormalizer: Re-anchored wall-clock dates to ${timezone} — start ${format(originalStart)} → ${format(event.startDate)}`);
-        return event;
+        // The conversion logic lives in SharedCore.resolveWallClockDates so the
+        // post-merge re-anchor pass in deduplicateEvents shares the exact same
+        // behavior (merges can resolve a city AFTER this normalizer already ran).
+        if (!this.core || typeof this.core.resolveWallClockDates !== 'function') return event;
+        return this.core.resolveWallClockDates(event);
     }
 
     extractCityFromEvent(event) {
