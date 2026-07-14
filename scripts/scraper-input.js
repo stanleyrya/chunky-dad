@@ -91,6 +91,10 @@ const scraperConfig = {
       concurrency: 1, // Concurrent OCR requests; keep 1 for a single local GPU
       maxTextChars: 4000,
       cache: true, // OCR result cache (key is `cache`, not `cacheEnabled`)
+      // End-of-run auto-prune: cached OCR results unused for this many days
+      // are deleted (cache hits refresh an entry's last-use marker, so
+      // recurring flyers are kept indefinitely). Default: 90.
+      cacheRetentionDays: 90,
       requireMissingFields: true,
     },
     // Discovery URL blocklist inherited by every parser — UNIONED with each

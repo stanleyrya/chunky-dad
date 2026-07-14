@@ -747,6 +747,15 @@ class ScriptableAdapter {
     };
   }
 
+  // How long unused OCR/classification cache entries survive the end-of-run
+  // prune. Reads the global `ocr` block threaded in by the orchestrator (the
+  // same way pageCache is) — the single retention knob, everything else about
+  // cache retention is fixed policy.
+  getOcrCacheRetentionDays() {
+    const raw = Number(this.config.ocr?.cacheRetentionDays);
+    return Number.isFinite(raw) && raw > 0 ? raw : 90;
+  }
+
   normalizePageCacheUrl(url) {
     try {
       const normalized = new URL(String(url));
@@ -2651,6 +2660,52 @@ class ScriptableAdapter {
         } catch (metricsErr) {
           console.log(
             `📱 Scriptable: Metrics write failed: ${metricsErr.message}`,
+          );
+        }
+      }
+
+      if (!results?._isDisplayingSavedRun) {
+        // Prune persistent caches. Pages past their TTL are dead weight
+        // already (readCachedPage ignores them), so they only get a 1-day
+        // grace. OCR/classification entries are retained by LAST USE: cache
+        // hits rewrite ("touch") the entry at most every 7 days (see
+        // AiWebParser.touchCacheEntryOnHit), so a file's mtime tracks its
+        // last use to within that window — pruning works from mtime alone,
+        // no payload reads, with the touch interval added as grace.
+        try {
+          const pageTtlDays = this.getPageCacheConfig().ttlDays;
+          const prunedPages = await this.cleanupOldFiles(
+            "chunky-dad-scraper/storage/pages",
+            { maxAgeDays: pageTtlDays + 1, recurse: true },
+          );
+          if (prunedPages > 0) {
+            console.log(
+              `📱 Scriptable: Pruned ${prunedPages} expired page cache file(s) (ttl ${pageTtlDays}d)`,
+            );
+          }
+          const ocrRetentionDays = this.getOcrCacheRetentionDays();
+          const unusedCutoffDays = ocrRetentionDays + 7;
+          const prunedOcr = await this.cleanupOldFiles(
+            "chunky-dad-scraper/storage/ocr",
+            { maxAgeDays: unusedCutoffDays, recurse: true },
+          );
+          if (prunedOcr > 0) {
+            console.log(
+              `📱 Scriptable: Pruned ${prunedOcr} OCR cache entries unused for ${ocrRetentionDays}d`,
+            );
+          }
+          const prunedClassification = await this.cleanupOldFiles(
+            "chunky-dad-scraper/storage/classification",
+            { maxAgeDays: unusedCutoffDays, recurse: true },
+          );
+          if (prunedClassification > 0) {
+            console.log(
+              `📱 Scriptable: Pruned ${prunedClassification} classification cache entries unused for ${ocrRetentionDays}d`,
+            );
+          }
+        } catch (pruneErr) {
+          console.log(
+            `📱 Scriptable: Cache prune failed: ${pruneErr.message}`,
           );
         }
       }
@@ -7430,33 +7485,52 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
   async cleanupOldFiles(
     relDirPath,
-    { maxAgeDays = 30, keep = () => false, afterCleanup = null } = {},
+    { maxAgeDays = 30, keep = () => false, recurse = false, afterCleanup = null } = {},
   ) {
     // Use documents directory as base, not script directory
     const documentsDir = this.fm.documentsDirectory();
     const dirPath = this.fm.joinPath(documentsDir, relDirPath);
     const fm = this.fm || FileManager.iCloud();
-    if (!fm.fileExists(dirPath)) return;
+    if (!fm.fileExists(dirPath)) return 0;
     const now = Date.now();
     const cutoff = now - maxAgeDays * 24 * 60 * 60 * 1000;
-    const files = fm.listContents(dirPath) || [];
-    files.forEach((name) => {
-      if (keep(name)) return;
-      const path = fm.joinPath(dirPath, name);
-      let mtime = null;
-      try {
-        mtime = fm.modificationDate(path);
-      } catch (_) {}
-      const ms = mtime ? mtime.getTime() : null;
-      if (ms && ms < cutoff) {
+    const removeOldEntries = (currentDir) => {
+      let removed = 0;
+      const files = fm.listContents(currentDir) || [];
+      files.forEach((name) => {
+        if (keep(name)) return;
+        const path = fm.joinPath(currentDir, name);
+        // Nested cache layouts (storage/<scope>/<host>/<file>) opt into
+        // descending; flat dirs (runs/, logs/) keep the original behavior
+        if (recurse) {
+          let isDirectory = false;
+          try {
+            isDirectory = fm.isDirectory(path);
+          } catch (_) {}
+          if (isDirectory) {
+            removed += removeOldEntries(path);
+            return;
+          }
+        }
+        let mtime = null;
         try {
-          fm.remove(path);
+          mtime = fm.modificationDate(path);
         } catch (_) {}
-      }
-    });
+        const ms = mtime ? mtime.getTime() : null;
+        if (ms && ms < cutoff) {
+          try {
+            fm.remove(path);
+            removed += 1;
+          } catch (_) {}
+        }
+      });
+      return removed;
+    };
+    const removedCount = removeOldEntries(dirPath);
     if (typeof afterCleanup === "function") {
       await afterCleanup();
     }
+    return removedCount;
   }
 
   // Metrics helpers

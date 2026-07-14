@@ -25,6 +25,13 @@ const ImportedEventSchema = (() => {
     return null;
 })();
 
+// Persistent cache entries (OCR, classification) are retained by LAST USE, not
+// write date: cache hits refresh a `lastUsedAt` payload field so recurring
+// flyers survive the adapter's end-of-run pruning. Refreshes are rate-limited
+// to once per this many days so steady-state runs do zero extra writes (and no
+// iCloud sync churn).
+const CACHE_TOUCH_INTERVAL_DAYS = 7;
+
 // ============================================================================
 // NORMALIZATION HELPERS
 // ============================================================================
@@ -2259,6 +2266,32 @@ class AiWebParser {
         return null;
     }
 
+    // "Touch" a cache entry on a hit so pruning can work from last USE instead
+    // of write date. Scriptable's FileManager has no utimes, so the mechanism is
+    // a `lastUsedAt` payload field (ISO day precision) plus an occasional full
+    // rewrite — Node deliberately uses the same payload field (not fs.utimes) so
+    // both platforms share one code path. Rate-limited: the file is only
+    // rewritten when the stored marker is absent or older than
+    // CACHE_TOUCH_INTERVAL_DAYS, so entries hit on every run cost nothing.
+    // Because a touch rewrites the file, mtime tracks last use to within the
+    // interval — the adapter's auto-prune reads mtime alone, no payloads.
+    async touchCacheEntryOnHit(runtime, cachePath, cached) {
+        if (!runtime || !cachePath || !cached || typeof cached !== 'object') return;
+        const lastUsedMs = Date.parse(String(cached.lastUsedAt || ''));
+        const staleMs = CACHE_TOUCH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
+        if (Number.isFinite(lastUsedMs) && (Date.now() - lastUsedMs) <= staleMs) return;
+        cached.lastUsedAt = new Date().toISOString().slice(0, 10);
+        try {
+            if (runtime.type === 'scriptable') {
+                runtime.fm.writeString(cachePath, JSON.stringify(cached, null, 2));
+            } else {
+                await runtime.fs.promises.writeFile(cachePath, JSON.stringify(cached, null, 2), 'utf8');
+            }
+        } catch (_) {
+            // A failed touch is harmless — the entry just keeps aging by mtime
+        }
+    }
+
     getOcrCachePathParts(imageUrl, ocrConfig = {}) {
         const rawUrl = String(imageUrl || '').trim();
         const normalizedSource = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
@@ -2368,20 +2401,23 @@ class AiWebParser {
         if (!runtime) return null;
         const { hostDir, fileName } = this.getAiClassificationCachePathParts(url, signature);
         try {
+            let cachePath;
             let rawPayload = null;
             if (runtime.type === 'scriptable') {
-                const cachePath = runtime.fm.joinPath(runtime.fm.joinPath(runtime.baseDir, hostDir), fileName);
+                cachePath = runtime.fm.joinPath(runtime.fm.joinPath(runtime.baseDir, hostDir), fileName);
                 if (!runtime.fm.fileExists(cachePath)) return null;
                 try {
                     await runtime.fm.downloadFileFromiCloud(cachePath);
                 } catch (_) {}
                 rawPayload = runtime.fm.readString(cachePath);
             } else {
-                const cachePath = runtime.path.join(runtime.baseDir, hostDir, fileName);
+                cachePath = runtime.path.join(runtime.baseDir, hostDir, fileName);
                 rawPayload = await runtime.fs.promises.readFile(cachePath, 'utf8');
             }
             const cached = JSON.parse(rawPayload);
-            return cached && cached.outcome && typeof cached.outcome === 'object' ? cached.outcome : null;
+            const outcome = cached && cached.outcome && typeof cached.outcome === 'object' ? cached.outcome : null;
+            if (outcome) await this.touchCacheEntryOnHit(runtime, cachePath, cached);
+            return outcome;
         } catch (error) {
             const missingFile = error && (error.code === 'ENOENT' || /does not exist/i.test(String(error.message || '')));
             if (!missingFile) {
@@ -2450,6 +2486,9 @@ class AiWebParser {
             if (responseText === undefined || responseText === null) return null;
 
             const parsed = JSON.parse(responseText);
+            // A parseable payload is a hit either way — negative-cached failures
+            // included — so refresh its last-use marker before branching
+            await this.touchCacheEntryOnHit(runtime, cachePath, cached);
             if (parsed && typeof parsed === 'object' && parsed.failureKind) {
                 return {
                     imageUrl: cached.url || normalizedUrl,
