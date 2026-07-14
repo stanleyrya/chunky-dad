@@ -79,11 +79,18 @@ const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
 
-// Cache duration: 14 days (2 weeks) in milliseconds
-const CACHE_DURATION = 14 * 24 * 60 * 60 * 1000;
+// Favicon cache duration: 90 days in milliseconds.
+// Only favicons use this TTL — event image URLs are content-fingerprinted by their CDNs
+// (Wix, Eventbrite, etc.) and local filenames are derived from the URL, so an existing
+// event image never goes stale: a changed image arrives under a new URL/filename.
+const CACHE_DURATION = 90 * 24 * 60 * 60 * 1000;
 
-// Randomization factor: ±2 days to prevent all favicons from expiring simultaneously
-const CACHE_RANDOMIZATION = 2 * 24 * 60 * 60 * 1000;
+// Randomization factor: ±7 days to prevent all favicons from expiring simultaneously
+// (scaled up from ±2 days to stay proportional to the 90-day TTL)
+const CACHE_RANDOMIZATION = 7 * 24 * 60 * 60 * 1000;
+
+// Dry-run mode: log download decisions without downloading or writing any files
+const DRY_RUN = process.argv.includes('--dry-run');
 
 // Ensure directories exist
 // Helper to read existing failure count, increment it, and write metadata
@@ -105,6 +112,61 @@ function saveFailureMetadata(metadataPathFallback, failureMetadata) {
 
   failureMetadata.failureCount = failureCount + 1;
   fs.writeFileSync(metadataPathFallback, JSON.stringify(failureMetadata, null, 2));
+}
+
+// Write metadata only when its serialized content actually changed.
+// Rewriting identical .meta files resets mtimes and creates needless git churn.
+function writeMetadataIfChanged(metadataPath, metadata) {
+  const serialized = JSON.stringify(metadata, null, 2);
+  if (fs.existsSync(metadataPath)) {
+    try {
+      const existing = fs.readFileSync(metadataPath, 'utf8');
+      if (existing === serialized) {
+        return false;
+      }
+    } catch (e) {
+      // Unreadable existing metadata — fall through and rewrite it
+    }
+  }
+  fs.writeFileSync(metadataPath, serialized);
+  return true;
+}
+
+// After an HTTP 304 (Not Modified), record when we last verified the favicon with the
+// server — WITHOUT touching the image file itself (no image rewrite, no git churn).
+// lastCheckedAt is stored at day precision so repeated 304s within the same day
+// don't rewrite the .meta file either.
+function touchMetadataCheckedAt(metadataPath) {
+  let metadata = {};
+  if (fs.existsSync(metadataPath)) {
+    try {
+      metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    } catch (e) {
+      console.warn(`⚠️  Could not read metadata for revalidation touch ${metadataPath}:`, e.message);
+    }
+  }
+  metadata.lastCheckedAt = new Date().toISOString().slice(0, 10); // day precision (YYYY-MM-DD)
+  return writeMetadataIfChanged(metadataPath, metadata);
+}
+
+// Extract stored HTTP validators (ETag / Last-Modified) from metadata, if any
+function getStoredValidators(metadata) {
+  if (!metadata) return null;
+  if (!metadata.etag && !metadata.lastModified) return null;
+  return { etag: metadata.etag, lastModified: metadata.lastModified };
+}
+
+// Stamp download time and any HTTP cache validators onto metadata so favicons can be
+// revalidated with conditional requests instead of full re-downloads later
+function applyDownloadStamp(metadata, downloadResult) {
+  metadata.downloadedAt = new Date().toISOString();
+  if (downloadResult.etag) {
+    metadata.etag = downloadResult.etag;
+  }
+  if (downloadResult.lastModified) {
+    metadata.lastModified = downloadResult.lastModified;
+  }
+  return metadata;
 }
 
 function ensureDir(dir) {
@@ -135,13 +197,18 @@ async function downloadEventImage(imageUrl, eventInfo) {
     const metadataPath = localPath + '.meta';
     
     // Check if we should download
-    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
-    
+    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath, 'event');
+
     if (!shouldDownload) {
       console.log(`⏭️  Skipping event image: ${filename} (${reason})`);
       return { success: true, skipped: true, filename, reason };
     }
-    
+
+    if (DRY_RUN) {
+      console.log(`🔎 [dry-run] Would download event image: ${filename} (${reason})`);
+      return { success: true, skipped: true, dryRun: true, filename, reason };
+    }
+
     console.log(`📥 Downloading event image: ${filename} (${reason})`);
     console.log(`   Event: ${eventInfo.name}`);
     console.log(`   Type: ${eventInfo.recurring ? 'recurring' : 'one-time'}`);
@@ -187,7 +254,8 @@ async function downloadEventImage(imageUrl, eventInfo) {
             recurring: eventInfo.recurring
           }
         };
-          fs.writeFileSync(finalMetadataPath, JSON.stringify(metadata, null, 2));
+          applyDownloadStamp(metadata, downloadResult);
+          writeMetadataIfChanged(finalMetadataPath, metadata);
           console.log(`✅ Downloaded event image: ${finalFilename} (${actualExtension})`);
         return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
       }
@@ -207,9 +275,10 @@ async function downloadEventImage(imageUrl, eventInfo) {
         recurring: eventInfo.recurring
       }
     };
-    
-    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-    
+
+    applyDownloadStamp(metadata, downloadResult);
+    writeMetadataIfChanged(metadataPath, metadata);
+
     console.log(`✅ Downloaded event image: ${filename} (${detectedExtension})`);
     return { success: true, skipped: false, filename, localPath };
     
@@ -386,8 +455,11 @@ async function processProfilePicture(inputPath, outputPath, targetSize = 96) {
   }
 }
 
-// Download file with timeout and redirect handling
-function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
+// Download file with timeout, redirect handling and optional HTTP conditional revalidation.
+// Pass `validators` ({ etag, lastModified }) to send If-None-Match / If-Modified-Since;
+// when the server answers 304 Not Modified the promise resolves with { notModified: true }
+// and the existing file on disk is left untouched.
+function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5, validators = null) {
   return new Promise((resolve, reject) => {
     const downloadWithRedirects = (currentUrl, redirectCount = 0) => {
       if (redirectCount > maxRedirects) {
@@ -396,13 +468,28 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
       }
       const parsedUrl = new URL(currentUrl);
       const client = parsedUrl.protocol === 'https:' ? https : http;
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (compatible; chunky.dad-image-downloader/1.0)',
+        'Accept': 'image/*,*/*;q=0.8'
+      };
+      if (validators) {
+        if (validators.etag) {
+          headers['If-None-Match'] = validators.etag;
+        }
+        if (validators.lastModified) {
+          headers['If-Modified-Since'] = validators.lastModified;
+        }
+      }
       const request = client.get(currentUrl, {
         timeout: timeout,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; chunky.dad-image-downloader/1.0)',
-          'Accept': 'image/*,*/*;q=0.8'
-        }
+        headers: headers
       }, (response) => {
+        // Handle 304 Not Modified from conditional revalidation — keep the existing file
+        if (response.statusCode === 304) {
+          response.resume(); // Drain the (empty) response
+          resolve({ notModified: true });
+          return;
+        }
         // Handle redirects (301, 302, 303, 307, 308)
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           const redirectUrl = new URL(response.headers.location, currentUrl).href;
@@ -415,10 +502,12 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
           response.pipe(fileStream);
           fileStream.on('finish', () => {
             fileStream.close();
-            // Return content type information
+            // Return content type information plus cache validators for revalidation
             resolve({
               contentType: response.headers['content-type'],
-              contentLength: response.headers['content-length']
+              contentLength: response.headers['content-length'],
+              etag: response.headers['etag'],
+              lastModified: response.headers['last-modified']
             });
           });
           fileStream.on('error', (err) => {
@@ -435,7 +524,7 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5) {
         reject(new Error('Request timeout'));
       });
     };
-    
+
     downloadWithRedirects(url);
   });
 }
@@ -468,19 +557,31 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
     const metadataPath = localPath + '.meta';
     
     // Check if we should download
-    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
-    
+    const { shouldDownload, reason, revalidation } = shouldDownloadImage(imageUrl, localPath, metadataPath, type);
+
     if (!shouldDownload) {
       console.log(`⏭️  Skipping ${type} image: ${customFilename} (${reason})`);
       return { success: true, skipped: true, filename: customFilename, reason };
     }
-    
+
+    if (DRY_RUN) {
+      console.log(`🔎 [dry-run] Would download ${type} image: ${customFilename} (${reason})`);
+      return { success: true, skipped: true, dryRun: true, filename: customFilename, reason };
+    }
+
     console.log(`📥 Downloading ${type} image: ${customFilename} (${reason})`);
     console.log(`   URL: ${imageUrl}`);
-    
-    // Download the image
-    const downloadResult = await downloadFile(imageUrl, localPath);
-    
+
+    // Download the image (conditionally, when we have stored validators)
+    const downloadResult = await downloadFile(imageUrl, localPath, 30000, 5, revalidation);
+
+    // Server confirmed our cached copy is still current — record the check, keep the file
+    if (downloadResult.notModified) {
+      touchMetadataCheckedAt(metadataPath);
+      console.log(`✅ Revalidated ${type} image (HTTP 304, not modified): ${customFilename}`);
+      return { success: true, skipped: true, notModified: true, filename: customFilename, reason: 'Not modified (HTTP 304)' };
+    }
+
     // Process Linktree profile pictures with optimization
     if (isLinktreeProfile && type === 'favicon') {
       const tempPath = localPath + '.temp';
@@ -523,9 +624,10 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
       contentLength: downloadResult.contentLength,
       isLinktreeProfile: isLinktreeProfile
     };
-    
-    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-    
+
+    applyDownloadStamp(metadata, downloadResult);
+    writeMetadataIfChanged(metadataPath, metadata);
+
     console.log(`✅ Downloaded ${type} image: ${customFilename}`);
     return { success: true, skipped: false, filename: customFilename, localPath };
     
@@ -552,50 +654,90 @@ async function downloadImageWithCustomFilename(imageUrl, customFilename, type = 
 }
 
 // Check if we should download the image
-function shouldDownloadImage(imageUrl, localPath, metadataPath) {
-  // 1. Check metadata for URL changes or recent failures
+// - Event images: URLs are content-fingerprinted by their CDNs (Wix, Eventbrite, etc.) and
+//   local filenames are derived from the URL, so same URL -> same bytes. An existing
+//   non-empty file is cached indefinitely; a changed image arrives under a new URL and
+//   hence a new filename that downloads naturally.
+// - Favicons: stable URLs (e.g. /favicon.ico) whose content can change, so they use the
+//   90-day TTL and, when stored validators exist, HTTP conditional revalidation
+//   (If-None-Match / If-Modified-Since) so unchanged favicons cost a 304 instead of a
+//   re-download.
+// Returns { shouldDownload, reason, revalidation? } where revalidation carries stored
+// ETag/Last-Modified validators for a conditional request.
+function shouldDownloadImage(imageUrl, localPath, metadataPath, type = 'event') {
+  // 1. Read metadata and check for URL changes or recent failures
+  let metadata = null;
   if (fs.existsSync(metadataPath)) {
     try {
-      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-      if (metadata.originalUrl !== imageUrl) {
-        return { shouldDownload: true, reason: 'URL has changed' };
-      }
-
-      // Check for failure backoff
-      if (metadata.failedAt) {
-        const failedAge = Date.now() - new Date(metadata.failedAt).getTime();
-        const failureCount = metadata.failureCount || 1;
-
-        let backoffDurationDays = 7;
-        if (failureCount === 2) {
-          backoffDurationDays = 14;
-        } else if (failureCount >= 3) {
-          backoffDurationDays = 30;
-        }
-
-        const backoffDuration = backoffDurationDays * 24 * 60 * 60 * 1000;
-
-        if (failedAge < backoffDuration) {
-          const daysRemaining = Math.ceil((backoffDuration - failedAge) / (24 * 60 * 60 * 1000));
-          return { shouldDownload: false, reason: `Previous download failed (${failureCount} times), backing off for ${daysRemaining} more days` };
-        } else {
-          return { shouldDownload: true, reason: 'Backoff period expired, retrying download' };
-        }
-      }
+      metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
     } catch (error) {
       console.warn(`⚠️  Could not read metadata for ${localPath}:`, error.message);
       return { shouldDownload: true, reason: 'Invalid metadata file' };
     }
   }
 
-  // 2. Check if file exists
+  if (metadata) {
+    if (metadata.originalUrl !== imageUrl) {
+      return { shouldDownload: true, reason: 'URL has changed' };
+    }
+
+    // Check for failure backoff
+    if (metadata.failedAt) {
+      const failedAge = Date.now() - new Date(metadata.failedAt).getTime();
+      const failureCount = metadata.failureCount || 1;
+
+      let backoffDurationDays = 7;
+      if (failureCount === 2) {
+        backoffDurationDays = 14;
+      } else if (failureCount >= 3) {
+        backoffDurationDays = 30;
+      }
+
+      const backoffDuration = backoffDurationDays * 24 * 60 * 60 * 1000;
+
+      if (failedAge < backoffDuration) {
+        const daysRemaining = Math.ceil((backoffDuration - failedAge) / (24 * 60 * 60 * 1000));
+        return { shouldDownload: false, reason: `Previous download failed (${failureCount} times), backing off for ${daysRemaining} more days` };
+      } else {
+        return { shouldDownload: true, reason: 'Backoff period expired, retrying download' };
+      }
+    }
+  }
+
+  // 2. Check if file exists and is non-empty
   if (!fs.existsSync(localPath)) {
     return { shouldDownload: true, reason: 'File does not exist' };
   }
-  
-  // 3. Check file age with randomization
-  const fileAge = Date.now() - fs.statSync(localPath).mtime.getTime();
-  
+  if (fs.statSync(localPath).size === 0) {
+    return { shouldDownload: true, reason: 'File is empty' };
+  }
+
+  // 3. Event images never expire — same URL means same bytes
+  if (type === 'event') {
+    return { shouldDownload: false, reason: 'File exists (URL-fingerprinted, cached indefinitely)' };
+  }
+
+  // 4. Favicons: check freshness against the TTL
+  if (!metadata) {
+    return { shouldDownload: true, reason: 'No metadata file found' };
+  }
+
+  // Prefer metadata timestamps over file mtime: CI runs on fresh git checkouts where
+  // every file's mtime is the checkout time, so mtime alone would make favicons look
+  // permanently fresh. downloadedAt is set on every successful download and
+  // lastCheckedAt on every 304 revalidation; mtime remains as a fallback for files
+  // downloaded locally before those fields existed.
+  const downloadedAtMs = metadata.downloadedAt ? Date.parse(metadata.downloadedAt) : NaN;
+  const lastCheckedAtMs = metadata.lastCheckedAt ? Date.parse(metadata.lastCheckedAt) : NaN;
+  let lastVerifiedMs = Math.max(
+    Number.isNaN(downloadedAtMs) ? 0 : downloadedAtMs,
+    Number.isNaN(lastCheckedAtMs) ? 0 : lastCheckedAtMs
+  );
+  if (lastVerifiedMs === 0) {
+    lastVerifiedMs = fs.statSync(localPath).mtime.getTime();
+  }
+  const fileAge = Date.now() - lastVerifiedMs;
+
   // Generate a consistent random offset based on the filename to ensure
   // the same file always gets the same randomization
   const filename = path.basename(localPath);
@@ -605,17 +747,21 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath) {
   }, 0);
   const randomOffset = (Math.abs(hash) % (CACHE_RANDOMIZATION * 2)) - CACHE_RANDOMIZATION;
   const effectiveCacheDuration = CACHE_DURATION + randomOffset;
-  
+
   if (fileAge > effectiveCacheDuration) {
     const daysOld = Math.round(fileAge / (24 * 60 * 60 * 1000));
     const effectiveDays = Math.round(effectiveCacheDuration / (24 * 60 * 60 * 1000));
+    const revalidation = getStoredValidators(metadata);
+    if (revalidation) {
+      return {
+        shouldDownload: true,
+        reason: `File is ${daysOld} days old (expires after ${effectiveDays} days), revalidating via ${revalidation.etag ? 'ETag' : 'Last-Modified'}`,
+        revalidation
+      };
+    }
     return { shouldDownload: true, reason: `File is ${daysOld} days old (expires after ${effectiveDays} days)` };
   }
-  
-  if (!fs.existsSync(metadataPath)) {
-    return { shouldDownload: true, reason: 'No metadata file found' };
-  }
-  
+
   return { shouldDownload: false, reason: 'File is up to date' };
 }
 
@@ -628,19 +774,31 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
     const metadataPath = localPath + '.meta';
     
     // Check if we should download
-    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
-    
+    const { shouldDownload, reason, revalidation } = shouldDownloadImage(imageUrl, localPath, metadataPath, type);
+
     if (!shouldDownload) {
       console.log(`⏭️  Skipping ${type} image: ${filename} (${reason})`);
       return { success: true, skipped: true, filename, reason };
     }
-    
+
+    if (DRY_RUN) {
+      console.log(`🔎 [dry-run] Would download ${type} image: ${filename} (${reason})`);
+      return { success: true, skipped: true, dryRun: true, filename, reason };
+    }
+
     console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
     console.log(`   URL: ${imageUrl}`);
-    
-    // Download the image
-    const downloadResult = await downloadFile(imageUrl, localPath);
-    
+
+    // Download the image (conditionally, when we have stored validators)
+    const downloadResult = await downloadFile(imageUrl, localPath, 30000, 5, revalidation);
+
+    // Server confirmed our cached copy is still current — record the check, keep the file
+    if (downloadResult.notModified) {
+      touchMetadataCheckedAt(metadataPath);
+      console.log(`✅ Revalidated ${type} image (HTTP 304, not modified): ${filename}`);
+      return { success: true, skipped: true, notModified: true, filename, reason: 'Not modified (HTTP 304)' };
+    }
+
     // Save metadata
     const metadata = {
       originalUrl: imageUrl,
@@ -650,9 +808,10 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
       contentType: downloadResult.contentType,
       contentLength: downloadResult.contentLength
     };
-    
-    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-    
+
+    applyDownloadStamp(metadata, downloadResult);
+    writeMetadataIfChanged(metadataPath, metadata);
+
     console.log(`✅ Downloaded ${type} image: ${filename}`);
     return { success: true, skipped: false, filename, localPath };
     
@@ -689,19 +848,31 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
     const metadataPath = localPath + '.meta';
     
     // Check if we should download
-    const { shouldDownload, reason } = shouldDownloadImage(imageUrl, localPath, metadataPath);
-    
+    const { shouldDownload, reason, revalidation } = shouldDownloadImage(imageUrl, localPath, metadataPath, type);
+
     if (!shouldDownload) {
       console.log(`⏭️  Skipping ${type} image: ${filename} (${reason})`);
       return { success: true, skipped: true, filename, reason };
     }
-    
+
+    if (DRY_RUN) {
+      console.log(`🔎 [dry-run] Would download ${type} image: ${filename} (${reason})`);
+      return { success: true, skipped: true, dryRun: true, filename, reason };
+    }
+
     console.log(`📥 Downloading ${type} image: ${filename} (${reason})`);
     console.log(`   URL: ${imageUrl}`);
-    
-    // Download the image
-    const downloadResult = await downloadFile(imageUrl, localPath);
-    
+
+    // Download the image (conditionally, when we have stored validators)
+    const downloadResult = await downloadFile(imageUrl, localPath, 30000, 5, revalidation);
+
+    // Server confirmed our cached copy is still current — record the check, keep the file
+    if (downloadResult.notModified) {
+      touchMetadataCheckedAt(metadataPath);
+      console.log(`✅ Revalidated ${type} image (HTTP 304, not modified): ${filename}`);
+      return { success: true, skipped: true, notModified: true, filename, reason: 'Not modified (HTTP 304)' };
+    }
+
     // Process Linktree profile pictures with optimization
     if (isLinktreeProfile && type === 'favicon') {
       const tempPath = localPath + '.temp';
@@ -744,9 +915,10 @@ async function downloadImage(imageUrl, type = 'event', isLinktreeProfile = false
       contentLength: downloadResult.contentLength,
       isLinktreeProfile: isLinktreeProfile
     };
-    
-    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-    
+
+    applyDownloadStamp(metadata, downloadResult);
+    writeMetadataIfChanged(metadataPath, metadata);
+
     console.log(`✅ Downloaded ${type} image: ${filename}`);
     return { success: true, skipped: false, filename, localPath };
     
@@ -972,7 +1144,10 @@ async function extractImageUrls() {
 // Main function
 async function main() {
   console.log('🖼️  Starting image download process...');
-  
+  if (DRY_RUN) {
+    console.log('🔎 Dry-run mode: decisions will be logged but nothing will be downloaded or written');
+  }
+
   // Ensure directories exist
   ensureDir(IMAGES_DIR);
   ensureDir(FAVICONS_DIR);
