@@ -103,8 +103,12 @@ class CalendarCore {
                     });
                     
                     const eventData = this.parseEventData(currentEvent);
-                    
-                    if (eventData) {
+
+                    if (eventData && this.isHiddenForBearReview(eventData.bearReview)) {
+                        logger.info('CALENDAR', `Hiding event flagged for bear review: ${eventData.name}`, {
+                            bearReview: eventData.bearReview
+                        });
+                    } else if (eventData) {
                         events.push(eventData);
                         logger.debug('CALENDAR', `✅ Successfully parsed event: ${eventData.name}`, {
                             eventType: eventData.eventType,
@@ -342,6 +346,14 @@ class CalendarCore {
     }
 
     // Parse individual event data
+    // Events the scraper's bear-check cascade flagged for review (bearReview
+    // starting "unlikely"/"unsure") stay off the website until a human edits
+    // the flag (e.g. to "confirmed") or removes it.
+    isHiddenForBearReview(bearReview) {
+        if (typeof bearReview !== 'string') return false;
+        return /^(unlikely|unsure)/i.test(bearReview.trim());
+    }
+
     parseEventData(calendarEvent) {
         try {
             const eventData = {
@@ -402,6 +414,7 @@ class CalendarCore {
                     eventData.ticketUrl = additionalData.ticketUrl;
                     eventData.shortName = additionalData.shortName;
                     eventData.shorterName = additionalData.shorterName;
+                    eventData.bearReview = additionalData.bearReview || null;
                     eventData.links = this.parseLinks(additionalData);
                     
                     if (additionalData.type || additionalData.eventType) {

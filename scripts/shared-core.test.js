@@ -2143,18 +2143,18 @@ test('filterFutureEvents drops events with missing or invalid startDate', () => 
 // filterBearEvents
 // ---------------------------------------------------------------------------
 
-test('filterBearEvents: alwaysBear keeps everything and stamps isBearEvent', () => {
+test('filterBearEvents: alwaysBear keeps everything and stamps isBearEvent', async () => {
   const core = createCore();
   const events = [
     { title: 'Techno Tuesday' },
     { title: 'Wine Tasting' }
   ];
-  const result = core.filterBearEvents(events, { alwaysBear: true });
+  const result = await core.filterBearEvents(events, { alwaysBear: true });
   assert.equal(result.length, 2);
   assert.ok(result.every(e => e.isBearEvent === true));
 });
 
-test('filterBearEvents matches bear keywords in title, description, or bar', () => {
+test('filterBearEvents matches bear keywords in title, description, or bar', async () => {
   const core = createCore();
   const events = [
     { title: 'Bear Night' },
@@ -2162,19 +2162,201 @@ test('filterBearEvents matches bear keywords in title, description, or bar', () 
     { title: 'Happy Hour', bar: 'Woof Lounge' },
     { title: 'Techno Tuesday', description: 'four to the floor' }
   ];
-  const result = core.filterBearEvents(events, {});
+  const result = await core.filterBearEvents(events, {});
   assert.deepEqual(result.map(e => e.title), ['Bear Night', 'Saturday Social', 'Happy Hour']);
 });
 
-test('filterBearEvents: requireKeywords + allowlist gates keyword matching', () => {
+test('filterBearEvents: requireKeywords + allowlist gates keyword matching', async () => {
   const core = createCore();
   const events = [
     { title: 'Bear Night at the Eagle' },
     { title: 'FURBALL Bear Bash' }
   ];
-  // Both match bear keywords, but only the allowlisted one passes the gate
-  const result = core.filterBearEvents(events, { allowlist: ['furball'], requireKeywords: true });
-  assert.deepEqual(result.map(e => e.title), ['FURBALL Bear Bash']);
+  // Both match bear keywords, but only the allowlisted one passes the gate —
+  // in every mode, and without ever consulting the AI tier
+  for (const mode of ['report', 'enforce', 'off']) {
+    const adapter = buildBearVerdictAdapter({ verdict: 'bear', reason: 'should not be asked' });
+    const result = await core.filterBearEvents(
+      events,
+      { allowlist: ['furball'], requireKeywords: true, ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'm', bearCheck: { mode } } },
+      adapter
+    );
+    assert.deepEqual(result.map(e => e.title), ['FURBALL Bear Bash'], `mode ${mode}`);
+    assert.equal(adapter.calls.length, 0, `mode ${mode} must not call the AI`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Bear-check cascade: matchBearKeywords → AI verdict → alwaysBear fallback
+// ---------------------------------------------------------------------------
+
+function buildBearVerdictAdapter(verdict, options = {}) {
+  const calls = [];
+  return {
+    calls,
+    postJson: async (endpoint, payload) => {
+      calls.push(payload);
+      if (options.fail) throw new Error('AI endpoint down');
+      const body = options.raw !== undefined ? options.raw : JSON.stringify(verdict);
+      return { ok: true, status: 200, text: JSON.stringify({ response: body }) };
+    }
+  };
+}
+
+function bearCheckConfig(mode, overrides = {}) {
+  return {
+    name: 'Test Promoter',
+    urls: ['https://promoter.example/events'],
+    ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model', bearCheck: { mode } },
+    ...overrides
+  };
+}
+
+test('matchBearKeywords: substring tier hits smooshed brand names', () => {
+  const core = createCore();
+  assert.ok(core.matchBearKeywords('CHUNKA GO').includes('chunk'));
+  assert.ok(core.matchBearKeywords('CUBHOUSE presents').includes('cub'));
+  assert.ok(core.matchBearKeywords('BEEFWITCH').includes('beef'));
+  assert.ok(core.matchBearKeywords('Bearracuda Portland').includes('bearracuda'));
+});
+
+test('matchBearKeywords: boundary tier hits whole words, never substrings', () => {
+  const core = createCore();
+  const hits = core.matchBearKeywords('Fat dad happy hour');
+  assert.ok(hits.includes('fat'));
+  assert.ok(hits.includes('dad'));
+  // "fatal" (fat), "furniture" (fur), "update" (dad), "puppet" (pup) must not fire
+  assert.deepEqual(core.matchBearKeywords('fatal furniture update puppet'), []);
+});
+
+test('bear check report mode returns exactly what legacy returns', async () => {
+  const events = [
+    { title: 'Bear Night' },
+    { title: 'HOT TAKE' },
+    { title: 'Treasure Trail Seattle' }
+  ];
+  const notBearAdapter = () => buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'drag show' });
+
+  for (const alwaysBear of [true, false]) {
+    const legacy = await createCore().filterBearEvents(events, bearCheckConfig('off', { alwaysBear }));
+    const withAdapter = await createCore().filterBearEvents(events, bearCheckConfig('report', { alwaysBear }), notBearAdapter());
+    const withoutAdapter = await createCore().filterBearEvents(events, bearCheckConfig('report', { alwaysBear }), null);
+    assert.deepEqual(withAdapter, legacy, `alwaysBear:${alwaysBear} with adapter`);
+    assert.deepEqual(withoutAdapter, legacy, `alwaysBear:${alwaysBear} without adapter`);
+  }
+});
+
+test('bear check enforce: trusted promoter keeps AI-not_bear events with an unlikely flag', async () => {
+  const core = createCore();
+  const adapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'drag-headliner show' });
+  const result = await core.filterBearEvents(
+    [{ title: 'HOT TAKE' }],
+    bearCheckConfig('enforce', { alwaysBear: true }),
+    adapter
+  );
+  assert.equal(result.length, 1, 'alwaysBear sources never lose events');
+  assert.equal(result[0].bearReview, 'unlikely — ai: drag-headliner show');
+  // The trusted-promoter sentence is what makes prompt accuracy work
+  assert.match(adapter.calls[0].prompt, /trusted bear-scene promoter/);
+  assert.match(adapter.calls[0].prompt, /source entry "Test Promoter"/);
+});
+
+test('bear check enforce: untrusted sources rescue on bear, flag on unsure, drop on not_bear', async () => {
+  const cases = [
+    { verdict: { verdict: 'bear', reason: 'bear promoter event' }, kept: true, bearReview: undefined, isBearEvent: true },
+    { verdict: { verdict: 'unsure', reason: 'cannot tell' }, kept: true, bearReview: 'unsure — ai: cannot tell', isBearEvent: undefined },
+    { verdict: { verdict: 'not_bear', reason: 'lesbian night' }, kept: false }
+  ];
+  for (const testCase of cases) {
+    const core = createCore();
+    const adapter = buildBearVerdictAdapter(testCase.verdict);
+    const result = await core.filterBearEvents(
+      [{ title: 'Treasure Trail Seattle' }],
+      bearCheckConfig('enforce'),
+      adapter
+    );
+    if (!testCase.kept) {
+      assert.equal(result.length, 0, `${testCase.verdict.verdict} must drop`);
+      continue;
+    }
+    assert.equal(result.length, 1, `${testCase.verdict.verdict} must keep`);
+    assert.equal(result[0].bearReview, testCase.bearReview);
+    assert.equal(result[0].isBearEvent, testCase.isBearEvent);
+  }
+});
+
+test('bear check enforce: AI failure falls back to alwaysBear or an unsure flag', async () => {
+  // Trusted source + dead AI → kept as bear via config provenance, no flag
+  const trustedCore = createCore();
+  const trusted = await trustedCore.filterBearEvents(
+    [{ title: 'DENVER @ Ophelia\'s' }],
+    bearCheckConfig('enforce', { alwaysBear: true }),
+    buildBearVerdictAdapter(null, { fail: true })
+  );
+  assert.equal(trusted.length, 1);
+  assert.equal(trusted[0].isBearEvent, true);
+  assert.equal(trusted[0].bearReview, undefined);
+
+  // Untrusted source + unparseable AI response → kept with an unsure fallback flag
+  const untrustedCore = createCore();
+  const untrusted = await untrustedCore.filterBearEvents(
+    [{ title: 'DENVER @ Ophelia\'s' }],
+    bearCheckConfig('enforce'),
+    buildBearVerdictAdapter(null, { raw: 'no json here' })
+  );
+  assert.equal(untrusted.length, 1);
+  assert.equal(untrusted[0].bearReview, 'unsure — fallback: ai unavailable');
+});
+
+test('bear check: keyword hit short-circuits without any AI call', async () => {
+  const core = createCore();
+  const adapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'should never be asked' });
+  const result = await core.filterBearEvents(
+    [{ title: 'Bear Night' }, { title: 'CHUNKA GO' }],
+    bearCheckConfig('enforce'),
+    adapter
+  );
+  assert.equal(result.length, 2);
+  assert.equal(adapter.calls.length, 0);
+});
+
+test('bear check: identical events share one memoized AI call per run', async () => {
+  const core = createCore();
+  const adapter = buildBearVerdictAdapter({ verdict: 'bear', reason: 'bear promoter' });
+  const event = { title: 'Treasure Trail Seattle', description: 'promoter party', bar: 'Neighbours' };
+  const result = await core.filterBearEvents(
+    [{ ...event }, { ...event }],
+    bearCheckConfig('enforce'),
+    adapter
+  );
+  assert.equal(result.length, 2);
+  assert.equal(adapter.calls.length, 1, 'second identical event must reuse the memoized verdict');
+});
+
+test('bearReview round-trips notes and an existing calendar value survives merges', async () => {
+  const core = createCore();
+
+  // Notes codec round-trip (value contains a colon — must escape/unescape)
+  const notes = core.formatEventNotes({ bar: 'Eagle', bearReview: 'unlikely — ai: drag show' });
+  assert.equal(core.parseNotesIntoFields(notes).bearReview, 'unlikely — ai: drag show');
+
+  // Existing calendar bearReview (human-edited "confirmed") beats an incoming flag
+  const scraped = buildScrapedEvent({ bearReview: 'unlikely — ai: drag show' });
+  const existing = buildCalendarEvent({}, [
+    'bar: STATION 4',
+    'bearReview: confirmed'
+  ].join('\n'));
+  const finalEvent = await core.createFinalEventObject(existing, scraped, {});
+  assert.equal(finalEvent.bearReview, 'confirmed');
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).bearReview, 'confirmed');
+
+  // With no calendar value, the incoming flag lands in the merged notes
+  const freshFlag = await core.createFinalEventObject(
+    buildCalendarEvent(),
+    buildScrapedEvent({ bearReview: 'unsure — fallback: ai unavailable' }),
+    {}
+  );
+  assert.equal(core.parseNotesIntoFields(freshFlag.notes).bearReview, 'unsure — fallback: ai unavailable');
 });
 
 // ---------------------------------------------------------------------------
