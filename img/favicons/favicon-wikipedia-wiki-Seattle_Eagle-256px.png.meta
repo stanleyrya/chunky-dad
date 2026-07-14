@@ -1,9 +1,7 @@
 {
   "originalUrl": "https://upload.wikimedia.org/wikipedia/en/thumb/3/3f/Seattle_Eagle_logo.png/250px-Seattle_Eagle_logo.png",
-  "downloadedAt": "2025-10-27T01:53:43.646Z",
+  "error": "HTTP 429: Too many requests (f061ab2)",
   "type": "favicon",
   "filename": "favicon-wikipedia-wiki-Seattle_Eagle-256px.png",
-  "contentType": "image/png",
-  "contentLength": "59196",
-  "isLinktreeProfile": true
+  "failureCount": 1
 }
