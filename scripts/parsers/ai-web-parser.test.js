@@ -501,6 +501,102 @@ test('getOcrConfig defaults the openai provider to a vision model and accepts to
   assert.equal(both.maxImages, 4);
 });
 
+test('getOcrConfig sees inherited global ocr through resolveEffectiveParserConfig', () => {
+  const parser = createParser();
+  const mainConfig = {
+    config: {
+      ocr: {
+        provider: 'openai',
+        endpoint: 'http://rybook.example:8001/v1/chat/completions',
+        model: 'mlx-community/Qwen3-VL-4B-Instruct-4bit'
+      }
+    }
+  };
+
+  // Global ocr + no parser ocr → the global endpoint/model apply
+  const inherited = parser.getOcrConfig(parser.core.resolveEffectiveParserConfig({ name: 'Plain' }, mainConfig));
+  assert.equal(inherited.provider, 'openai');
+  assert.equal(inherited.endpoint, 'http://rybook.example:8001/v1/chat/completions');
+  assert.equal(inherited.model, 'mlx-community/Qwen3-VL-4B-Instruct-4bit');
+
+  // Parser override wins key-wise: only `model` is set, the global endpoint is retained
+  const overridden = parser.getOcrConfig(parser.core.resolveEffectiveParserConfig(
+    { name: 'Override', ai: { ocr: { model: 'parser-vision-model' } } },
+    mainConfig
+  ));
+  assert.equal(overridden.model, 'parser-vision-model');
+  assert.equal(overridden.endpoint, 'http://rybook.example:8001/v1/chat/completions');
+
+  // No global + no parser ocr → identical to today's hardcoded defaults
+  const bareEntry = { name: 'Bare' };
+  assert.deepEqual(
+    parser.getOcrConfig(parser.core.resolveEffectiveParserConfig(bareEntry, { config: {} })),
+    parser.getOcrConfig(bareEntry)
+  );
+});
+
+test('getAiConfig sees inherited global ai through resolveEffectiveParserConfig', () => {
+  const parser = createParser();
+  const mainConfig = {
+    config: {
+      ai: {
+        provider: 'openai',
+        endpoint: 'http://rybook.example:8000/v1/chat/completions',
+        model: 'global-extraction-model',
+        numPredict: 2000
+      }
+    }
+  };
+
+  // Parser with no ai block inherits the global endpoint/model
+  const inherited = parser.getAiConfig(parser.core.resolveEffectiveParserConfig({ name: 'Plain' }, mainConfig));
+  assert.equal(inherited.endpoint, 'http://rybook.example:8000/v1/chat/completions');
+  assert.equal(inherited.model, 'global-extraction-model');
+
+  // Per-parser ai.numPredict overrides while the global endpoint is retained
+  const overridden = parser.getAiConfig(parser.core.resolveEffectiveParserConfig(
+    { name: 'Override', ai: { numPredict: 512 } },
+    mainConfig
+  ));
+  assert.equal(overridden.numPredict, 512);
+  assert.equal(overridden.endpoint, 'http://rybook.example:8000/v1/chat/completions');
+
+  // No global + no parser ai → identical to today's hardcoded defaults
+  const bareEntry = { name: 'Bare' };
+  assert.deepEqual(
+    parser.getAiConfig(parser.core.resolveEffectiveParserConfig(bareEntry, { config: {} })),
+    parser.getAiConfig(bareEntry)
+  );
+});
+
+test('validateEventUrl applies global + parser discoveryBlockedPatterns unioned by resolveEffectiveParserConfig', () => {
+  const parser = createParser();
+  const mainConfig = {
+    config: {
+      discoveryBlockedPatterns: [/\/(shop|cart|contact(?:-us)?)(?:\/|[?#]|$)/, '/_api/']
+    }
+  };
+  const effective = parser.core.resolveEffectiveParserConfig(
+    { name: 'Union', discoveryBlockedPatterns: ['x.example/?p='] },
+    mainConfig
+  );
+  const sourceUrl = 'https://x.example/events';
+
+  // Global RegExp entries block whole path segments...
+  const shop = parser.validateEventUrl('https://x.example/shop', sourceUrl, effective);
+  assert.equal(shop.valid, false);
+  assert.match(shop.reason, /^config-blocked-pattern:/);
+  assert.equal(parser.validateEventUrl('https://x.example/_api/v1/foo', sourceUrl, effective).valid, false);
+
+  // ...without swallowing legitimate event slugs that merely start the same way
+  assert.equal(parser.validateEventUrl('https://x.example/shop-party', sourceUrl, effective).valid, true);
+
+  // The parser's own substring patterns still apply alongside the global list
+  const own = parser.validateEventUrl('https://x.example/?p=123', sourceUrl, effective);
+  assert.equal(own.valid, false);
+  assert.equal(own.reason, 'config-blocked-pattern:x.example/?p=');
+});
+
 test('parseOcrResponseWithClassification salvages OCR text from truncated/degenerate JSON', () => {
   const parser = createParser();
 

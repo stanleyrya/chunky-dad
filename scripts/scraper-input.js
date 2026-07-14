@@ -31,6 +31,10 @@ const scraperConfig = {
         },
       },
     },
+    // Global AI extraction defaults — inherited by EVERY parser (extraction +
+    // merge arbitration). The effective per-parser block is a deep merge of this
+    // block with the parser's own `ai`, so per-parser keys override key-wise.
+    // Keys mirror what SharedCore.resolveAiConfig reads.
     ai: {
       enabled: true,
       endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
@@ -68,21 +72,44 @@ const scraperConfig = {
       // actively debugging. Default: false.
       verboseConsoleLogs: false,
     },
+    // Global OCR defaults — inherited by EVERY parser the same way as `ai`
+    // (a parser's own `ai.ocr` — or top-level `ocr` — block overrides key-wise).
+    // rapid-mlx (OpenAI-compatible, Apple Silicon) serving a VISION model on its
+    // own port, alongside the text/extraction server on :8000.
     ocr: {
       enabled: true,
-      endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-      model: "qwen3-vl:4b-instruct",
-      timeoutSeconds: 300,
+      provider: "openai",
+      endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
+      model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
+      timeoutSeconds: 120,
       numCtx: 8192,
       numPredict: 2000,
       temperature: 0,
       think: false,
       keepAlive: "5m",
-      maxImages: 2,
+      maxImages: 2, // Per-page OCR budget on single-event pages (multi-event pages use 10 + segment top-up)
+      concurrency: 1, // Concurrent OCR requests; keep 1 for a single local GPU
       maxTextChars: 4000,
-      cacheEnabled: true,
+      cache: true, // OCR result cache (key is `cache`, not `cacheEnabled`)
       requireMissingFields: true,
     },
+    // Discovery URL blocklist inherited by every parser — UNIONED with each
+    // parser's own discoveryBlockedPatterns (global entries first). String
+    // entries are case-insensitive URL substrings (same semantics as per-parser
+    // lists); RegExp entries test against the lowercased URL, which allows
+    // anchoring — a plain "/shop" substring would also swallow legitimate event
+    // slugs like "/shop-party", so store/contact paths use an anchored RegExp
+    // that requires the whole path segment.
+    discoveryBlockedPatterns: [
+      // Store/checkout/contact pages, matched as a complete path segment
+      /\/(shop|cart|contact(?:-us)?)(?:\/|[?#]|$)/,
+      // Policy pages — safe as plain substrings ("/privacy-policy" and
+      // "/terms-of-service" are junk too)
+      "/privacy",
+      "/terms",
+      // Wix internal API endpoints (e.g. chunk-party.com/_api/...)
+      "/_api/",
+    ],
     // URL pattern rules for page classification. Checked in order — first match wins.
     // More specific patterns (e.g. /events/:slug) must come before broader ones (e.g. domain root).
     pageClassificationRules: [
@@ -185,6 +212,7 @@ const scraperConfig = {
       name: "CHUNK",
       enabled: true,
       automationEnabled: true,
+      parser: "auto", // chunk-party.com auto-detects the chunk parser (absent = pinned ai-web)
       urls: ["https://www.chunk-party.com"],
       alwaysBear: true, // Chunk parties are always bear events
       urlDiscoveryDepth: 1, // Depth 1 to find detail pages from main page // No limit on additional URLs discovered           // Override global dryRun if needed
@@ -243,7 +271,7 @@ const scraperConfig = {
       enabled: true,
       automationEnabled: true,
       urls: ["https://linktr.ee/cubhouse"],
-      // parser: "linktree",    // Auto-detected from URL pattern
+      parser: "auto", // linktr.ee auto-detects the linktree parser; discovered ticket links auto-switch to ai-web
       alwaysBear: true, // Cubhouse events are always bear events
       urlDiscoveryDepth: 2, // Depth 2 to follow ticket links and their detail pages
       maxAdditionalUrls: 10, // Limit additional URLs discovered
@@ -278,6 +306,7 @@ const scraperConfig = {
       name: "Goldiloxx",
       enabled: true,
       automationEnabled: true,
+      parser: "auto", // api.redeyetickets.com auto-detects the redeyetickets parser (absent = pinned ai-web)
       urls: [
         "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
       ],

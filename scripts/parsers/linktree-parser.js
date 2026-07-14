@@ -291,13 +291,16 @@ class LinktreeParser {
             // Skip anchor links and javascript
             if (url.startsWith('#') || url.startsWith('javascript:')) return false;
 
+            // Strings match as case-insensitive substrings; RegExp entries (used by the
+            // global config.discoveryBlockedPatterns list) test against the lowercased URL
             const configBlockedPatterns = Array.isArray(parserConfig.discoveryBlockedPatterns)
                 ? parserConfig.discoveryBlockedPatterns
                 : [];
             const lowerUrl = url.toLowerCase();
-            const hasConfigBlockedPattern = configBlockedPatterns.some(pattern =>
-                typeof pattern === 'string' && lowerUrl.includes(pattern.toLowerCase())
-            );
+            const hasConfigBlockedPattern = configBlockedPatterns.some(pattern => {
+                if (pattern instanceof RegExp) return pattern.test(lowerUrl);
+                return typeof pattern === 'string' && lowerUrl.includes(pattern.toLowerCase());
+            });
             if (hasConfigBlockedPattern) return false;
             
             return true;

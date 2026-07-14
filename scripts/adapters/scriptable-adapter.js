@@ -1625,6 +1625,9 @@ class ScriptableAdapter {
     const parserConfig = {
       name: "Scriptable URL Input",
       enabled: true,
+      // "auto" resolves scriptable-input:// to the scriptable-input parser via URL
+      // detection (an absent parser key would pin the default ai-web parser instead)
+      parser: "auto",
       urls: ["scriptable-input://event"],
       alwaysBear: alwaysBear,
       allowPastEvents: options.allowPastEvents === true,
@@ -2576,7 +2579,9 @@ class ScriptableAdapter {
         automationRunForSave && runtimeForSave.automationFilter !== false;
       const activeParsers = parserConfigs.filter((parser) => {
         if (automationFilterForSave) {
-          return parser?.automationEnabled === true;
+          // Mirrors SharedCore.evaluateAutomationForParser: automationEnabled
+          // defaults to true, only an explicit false opts out
+          return Boolean(parser) && parser.automationEnabled !== false;
         }
         return parser?.enabled !== false;
       });
