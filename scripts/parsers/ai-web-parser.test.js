@@ -1910,3 +1910,245 @@ test('extraction flattens field objects through weekday pinning and normalizeAiE
   assert.equal(normalized.startDate.toISOString().slice(0, 10), '2025-10-11');
   assert.equal(normalized.endDate.toISOString().slice(0, 10), '2025-10-11');
 });
+
+// ---------------------------------------------------------------------------
+// JSON-LD offers → cover + fast-path coverage/gap-fill (chunk-party.com event
+// pages: the JSON-LD carries a complete offers block and the body shows
+// prices, but fast-path events never got a cover because the AI never ran)
+// ---------------------------------------------------------------------------
+
+const CHUNK_OFFERS = {
+  '@type': 'AggregateOffer', highPrice: '30.75', lowPrice: '20.50',
+  offerCount: '3', priceCurrency: 'USD',
+  availability: 'https://schema.org/InStock',
+  url: 'https://tix.example/chunk-pdx',
+  offers: [
+    { '@type': 'offer', name: 'Early Bird GA', price: '20.5', priceCurrency: 'USD', availability: 'https://schema.org/SoldOut', url: 'https://tix.example/chunk-pdx' },
+    { '@type': 'offer', name: 'Tier 1 GA', price: '25.63', priceCurrency: 'USD', availability: 'https://schema.org/InStock', url: 'https://tix.example/chunk-pdx' },
+    { '@type': 'offer', name: 'Tier 2 GA', price: '30.75', priceCurrency: 'USD', availability: 'https://schema.org/InStock', url: 'https://tix.example/chunk-pdx' }
+  ]
+};
+
+const CHUNK_JSONLD_HTML = `
+  <html><head>
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"Event",
+       "name":"CHUNK Portland Summer Blow Out",
+       "startDate":"2026-08-22T21:00:00-07:00",
+       "endDate":"2026-08-23T02:00:00-07:00",
+       "description":"CHUNK returns to Portland.",
+       "image":"https://static.example/chunk-pdx.jpg",
+       "location":{"@type":"Place","name":"Bossanova Ballroom",
+         "address":{"@type":"PostalAddress","streetAddress":"722 E Burnside St","addressLocality":"Portland","addressRegion":"OR"}},
+       "offers":${JSON.stringify(CHUNK_OFFERS)}}
+    </script>
+  </head><body>CHUNK Portland Summer Blow Out at Bossanova Ballroom. Tickets from $20.50 to $30.75.</body></html>`;
+
+test('formatJsonLdOffersCover maps schema.org offer shapes to display prices (Scriptable-safe)', () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema
+  const parser = createParser();
+  const RealURL = global.URL;
+  global.URL = undefined;
+  try {
+    // AggregateOffer with tiers: the sold-out early bird is excluded from the range
+    assert.equal(parser.formatJsonLdOffersCover(CHUNK_OFFERS), '$25.63-$30.75');
+
+    // Every tier sold out → all tier prices back the range
+    const allSoldOut = {
+      ...CHUNK_OFFERS,
+      offers: CHUNK_OFFERS.offers.map(offer => ({ ...offer, availability: 'https://schema.org/SoldOut' }))
+    };
+    assert.equal(parser.formatJsonLdOffersCover(allSoldOut), '$20.50-$30.75');
+
+    // Tiers without usable prices → AggregateOffer lowPrice/highPrice fallback
+    const unpricedTiers = { ...CHUNK_OFFERS, offers: [{ '@type': 'offer', name: 'GA' }] };
+    assert.equal(parser.formatJsonLdOffersCover(unpricedTiers), '$20.50-$30.75');
+    const bareAggregate = { '@type': 'AggregateOffer', lowPrice: '20.50', highPrice: '30.75' };
+    assert.equal(parser.formatJsonLdOffersCover(bareAggregate), '$20.50-$30.75');
+
+    // Single offer object and plain offer arrays
+    assert.equal(parser.formatJsonLdOffersCover({ price: '25.63', priceCurrency: 'USD' }), '$25.63');
+    assert.equal(parser.formatJsonLdOffersCover([{ price: '20.5' }, { price: '30.75' }]), '$20.50-$30.75');
+
+    // Whole-dollar values render without ".00"; cents always get two decimals
+    assert.equal(parser.formatJsonLdOffersCover({ price: '20' }), '$20');
+    assert.equal(parser.formatJsonLdOffersCover({ price: '20.5' }), '$20.50');
+
+    // Non-USD currencies render as amount + space + code
+    assert.equal(parser.formatJsonLdOffersCover({ price: '25.63', priceCurrency: 'EUR' }), '25.63 EUR');
+    assert.equal(
+      parser.formatJsonLdOffersCover([{ price: '20.5', priceCurrency: 'EUR' }, { price: '30.75', priceCurrency: 'EUR' }]),
+      '20.50-30.75 EUR'
+    );
+
+    // Zero/negative/unparseable prices and absent offers yield no cover
+    assert.equal(parser.formatJsonLdOffersCover({ price: '0' }), '');
+    assert.equal(parser.formatJsonLdOffersCover({ price: '-5' }), '');
+    assert.equal(parser.formatJsonLdOffersCover({ price: 'TBD' }), '');
+    assert.equal(parser.formatJsonLdOffersCover(undefined), '');
+    assert.equal(parser.formatJsonLdOffersCover(null), '');
+    assert.equal(parser.formatJsonLdOffersCover('not-an-offer'), '');
+    assert.equal(parser.formatJsonLdOffersCover([]), '');
+  } finally {
+    global.URL = RealURL;
+  }
+});
+
+test('the JSON-LD fast path sets cover from offers and needs no gap-fill AI request', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  let aiCalls = 0;
+  parser.core.callAiGenerate = async () => {
+    aiCalls++;
+    return '{}';
+  };
+
+  const result = await parser.parseEvents(
+    { url: 'https://www.chunk-party.example/event-details/chunk-portland-summer-blow-out', html: CHUNK_JSONLD_HTML },
+    {},
+    null,
+    'event-page',
+    null
+  );
+
+  assert.equal(result.events.length, 1, 'the structured-data fast path must be used');
+  assert.equal(result.events[0].title, 'CHUNK Portland Summer Blow Out');
+  assert.equal(result.events[0].cover, '$25.63-$30.75', 'in-stock tier range from the offers block');
+  assert.equal(aiCalls, 0, 'offers already provided cover, so the page price signal must not trigger gap-fill');
+
+  // The offers block without nested tiers still maps through extractEventsFromJsonLd
+  const events = parser.extractEventsFromJsonLd(CHUNK_JSONLD_HTML, 'https://www.chunk-party.example/e/x');
+  assert.equal(events.length, 1);
+  assert.equal(events[0].cover, '$25.63-$30.75');
+  assert.equal(events[0].ticketUrl, 'https://tix.example/chunk-pdx', 'offers.url → ticketUrl is unchanged');
+});
+
+const GAPFILL_JSONLD_HTML = `
+  <html><head>
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"Event",
+       "name":"UNDERBEAR Lounge",
+       "startDate":"2026-08-22T21:00:00-04:00",
+       "location":{"@type":"Place","name":"Rockbar NYC",
+         "address":{"@type":"PostalAddress","streetAddress":"185 Christopher St","addressLocality":"New York","addressRegion":"NY"}}}
+    </script>
+  </head><body>
+    <p>UNDERBEAR Lounge at Rockbar NYC.</p>
+    <p>Party with the bears all night long downstairs.</p>
+    <p>$15 cover at the door.</p>
+  </body></html>`;
+
+test('JSON-LD gap-fill pays exactly one restricted AI request when the page shows a price signal', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  const aiCalls = [];
+  parser.core.callAiGenerate = async (config, prompt, label) => {
+    aiCalls.push(label);
+    return JSON.stringify({
+      cover: { value: '$15', evidence: '$15 cover at the door', confidence: 95 },
+      // A field JSON-LD already provided must never win, even if the model returns it
+      title: { value: 'AI Title That Must Not Win', evidence: 'UNDERBEAR Lounge', confidence: 95 }
+    });
+  };
+  const requestedFieldLists = [];
+  const originalExtract = parser.extractFieldsAcrossSnippets.bind(parser);
+  parser.extractFieldsAcrossSnippets = (htmlData, aiConfig, cityConfig, parserConfig, fields, ...rest) => {
+    requestedFieldLists.push(fields.slice());
+    return originalExtract(htmlData, aiConfig, cityConfig, parserConfig, fields, ...rest);
+  };
+
+  const result = await parser.parseEvents(
+    { url: 'https://underbear.example/party', html: GAPFILL_JSONLD_HTML },
+    {},
+    null,
+    'event-page',
+    null
+  );
+
+  assert.equal(result.events.length, 1, 'the fast path must still return the JSON-LD event');
+  assert.deepEqual(aiCalls, ['extraction'], 'exactly one AI request, no context-prep/repair round-trips');
+  assert.deepEqual(requestedFieldLists, [['cover']], 'the request must be restricted to the missing signal-matched field');
+  assert.equal(result.events[0].cover, '$15', 'the validated AI cover must fill the empty field');
+  assert.equal(result.events[0].title, 'UNDERBEAR Lounge', 'a JSON-LD-provided value must never be overwritten');
+  assert.equal(result.events[0].bar, 'Rockbar NYC');
+});
+
+test('JSON-LD gap-fill makes no AI request when no missing field has a page signal', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  let aiCalls = 0;
+  parser.core.callAiGenerate = async () => {
+    aiCalls++;
+    return '{}';
+  };
+
+  const html = GAPFILL_JSONLD_HTML.replace('$15 cover at the door.', 'Free entry before ten.');
+  const result = await parser.parseEvents(
+    { url: 'https://underbear.example/party', html },
+    {},
+    null,
+    'event-page',
+    null
+  );
+
+  assert.equal(result.events.length, 1);
+  assert.equal(aiCalls, 0, 'no price signal in the page text → no AI request at all');
+  assert.equal(result.events[0].cover, undefined);
+});
+
+test('JSON-LD gap-fill errors degrade to returning the JSON-LD events unchanged', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.core.callAiGenerate = async () => {
+    throw new Error('AI endpoint down');
+  };
+
+  const result = await parser.parseEvents(
+    { url: 'https://underbear.example/party', html: GAPFILL_JSONLD_HTML },
+    {},
+    null,
+    'event-page',
+    null
+  );
+
+  assert.equal(result.events.length, 1, 'a gap-fill failure must never fail the page');
+  assert.equal(result.events[0].title, 'UNDERBEAR Lounge');
+  assert.equal(result.events[0].bar, 'Rockbar NYC');
+  assert.equal(result.events[0].cover, undefined, 'the event is returned exactly as JSON-LD built it');
+});
+
+test('the fast path logs a JSON-LD coverage line and a gap-fill outcome line', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.core.callAiGenerate = async () => JSON.stringify({
+    cover: { value: '$15', evidence: '$15 cover at the door', confidence: 95 }
+  });
+
+  const lines = [];
+  const realLog = console.log;
+  console.log = (...args) => {
+    lines.push(args.map(String).join(' '));
+  };
+  try {
+    await parser.parseEvents(
+      { url: 'https://underbear.example/party', html: GAPFILL_JSONLD_HTML },
+      {},
+      null,
+      'event-page',
+      null
+    );
+  } finally {
+    console.log = realLog;
+  }
+
+  const coverageLine = lines.find(line => line.includes('JSON-LD coverage for https://underbear.example/party'));
+  assert.ok(coverageLine, 'a coverage line must always be logged on the fast path');
+  assert.match(coverageLine, /provided=\[[^\]]*\btitle\b/);
+  assert.match(coverageLine, /provided=\[[^\]]*\bbar\b/);
+  assert.match(coverageLine, /missing=\[[^\]]*\bcover\b/);
+
+  const gapFillLine = lines.find(line => line.includes('JSON-LD gap-fill for https://underbear.example/party'));
+  assert.ok(gapFillLine, 'the gap-fill outcome must be logged');
+  assert.match(gapFillLine, /requested=\[cover\]/);
+  assert.match(gapFillLine, /filled=\[cover\]/);
+});

@@ -951,6 +951,7 @@ class ScriptableAdapter {
         statusCode: cached.statusCode || 200,
         headers: cached.headers || {},
         fetchedAt: cached.fetchedAt || null,
+        modifiedAtMs: modifiedAt ? modifiedAt.getTime() : null,
         cachePath,
       };
     } catch (error) {
@@ -962,6 +963,33 @@ class ScriptableAdapter {
       );
       return null;
     }
+  }
+
+  // Hours below 24h ("5.3h"), days otherwise ("2.1d"); null when unknown.
+  formatPageCacheAge(ageMs) {
+    if (!Number.isFinite(ageMs) || ageMs < 0) {
+      return null;
+    }
+    const hours = ageMs / (60 * 60 * 1000);
+    return hours < 24 ? `${hours.toFixed(1)}h` : `${(hours / 24).toFixed(1)}d`;
+  }
+
+  // Cache hits were previously silent, hiding why a page showed stale content.
+  logPageCacheHit(url, cachedPage, pageCacheConfig) {
+    const fetchedAtMs = cachedPage.fetchedAt
+      ? Date.parse(cachedPage.fetchedAt)
+      : NaN;
+    const baseMs = Number.isFinite(fetchedAtMs)
+      ? fetchedAtMs
+      : Number(cachedPage.modifiedAtMs);
+    const age =
+      Number.isFinite(baseMs) && baseMs > 0
+        ? this.formatPageCacheAge(Date.now() - baseMs)
+        : null;
+    const agePart = age ? `age ${age}, ` : "";
+    console.log(
+      `📱 Scriptable: Page cache hit (${agePart}ttl ${pageCacheConfig.ttlDays}d) for ${url}`,
+    );
   }
 
   async writeCachedPage(url, responseData, pageCacheConfig) {
@@ -1116,6 +1144,7 @@ class ScriptableAdapter {
       if (canUseCache) {
         const cachedPage = await this.readCachedPage(url, pageCacheConfig);
         if (cachedPage && isCacheableResponse(cachedPage)) {
+          this.logPageCacheHit(url, cachedPage, pageCacheConfig);
           return cachedPage;
         }
       }
