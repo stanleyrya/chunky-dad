@@ -369,6 +369,22 @@ class SharedCore {
         return Number.isNaN(time) ? null : time;
     }
 
+    // Value equality for clobber TRACKING/logging only — never for choosing a
+    // winner. Two Dates (or a Date vs ISO string) naming the same instant are
+    // the same value; everything else compares strictly. Keeps identical-instant
+    // startDate/endDate re-reads out of the `🔄 MERGE: ... clobbered N fields`
+    // log, which previously listed them on every run because each run builds
+    // fresh Date objects that fail the `!==` identity check.
+    mergeValuesEqualForTracking(a, b) {
+        if (a === b) return true;
+        if (a instanceof Date || b instanceof Date) {
+            const aMs = this.toEpochMillis(a);
+            const bMs = this.toEpochMillis(b);
+            return aMs !== null && aMs === bMs;
+        }
+        return false;
+    }
+
     // endDate <= startDate (compared as instants) is a normalization artifact
     // (e.g. an evidence-dropped end date collapsing an event to zero duration),
     // not data. Degenerate ends must never displace a positive-duration end.
@@ -2248,9 +2264,21 @@ class SharedCore {
 
     // Create complete merged event object that represents exactly what will be saved
     // Following the 6-step process: 1) scraper object, 2) calendar object, 3) simple merge, 4) gmaps, 5) notes, 6) display
+    //
+    // url vs website: they are ONE logical field. Notes persist only a "website:"
+    // line (url is notes-excluded) and Scriptable cannot read or write the native
+    // CalendarEvent.url property, so `website` is the canonical field that merges
+    // and round-trips; `url` is just an output view of it (set after the merge).
+    // Merging url as a separate field made every Scriptable run see an "empty"
+    // calendar url vs a scraped url and flag/clobber url forever.
     async createFinalEventObject(existingEvent, newEvent, options = {}) {
         // STEP 1: Build scraper object using priority list (already done - newEvent)
         const scraperObject = { ...newEvent };
+        // Fold a scraped url into the canonical website field when the parser
+        // found no website, so the one canonical field carries it into the merge.
+        if (this.isEmptyArbitrationValue(scraperObject.website) && scraperObject.url) {
+            scraperObject.website = scraperObject.url;
+        }
 
         // STEP 2: Build calendar object using calendar data
         const calendarObject = {
@@ -2264,6 +2292,13 @@ class SharedCore {
             notes: existingEvent.notes,
             url: existingEvent.url,
         };
+        // The notes-parsed website is canonical. A native url (readable on the
+        // web/Node adapter) only fills in when the notes carry no website —
+        // Scriptable always reports url as empty, and that empty value must not
+        // shadow the notes-parsed website.
+        if (this.isEmptyArbitrationValue(calendarObject.website) && existingEvent.url) {
+            calendarObject.website = existingEvent.url;
+        }
 
         // STEP 3: Simple merge - respect merge logic, grab from correct object
         const fieldPriorities = newEvent._fieldPriorities || {};
@@ -2302,7 +2337,7 @@ class SharedCore {
             }
             const chosenValue = resolved.winner === 'a' ? calendarValue : scraperValue;
             mergedObject[fieldName] = chosenValue;
-            if (resolved.winner === 'b' && scraperValue !== calendarValue) {
+            if (resolved.winner === 'b' && !this.mergeValuesEqualForTracking(scraperValue, calendarValue)) {
                 clobberedFields.push(fieldName);
             }
             console.log(`🔒 MERGE: "${mergeTitle}" field=${fieldName} resolved deterministically — ${resolved.reason}`);
@@ -2329,8 +2364,10 @@ class SharedCore {
 
         // Apply merge logic for each field
         for (const fieldName of allFields) {
-            // Skip internal fields
-            if (fieldName.startsWith('_') || fieldName === 'notes') continue;
+            // Skip internal fields. 'url' is an alias/view of 'website' (folded
+            // into website above) — it must never merge, clobber, or be logged
+            // as a separate field; website is the only field that merges.
+            if (fieldName.startsWith('_') || fieldName === 'notes' || fieldName === 'url') continue;
 
             const priorityConfig = fieldPriorities[fieldName];
             const mergeStrategy = priorityConfig?.merge || 'upsert';
@@ -2351,7 +2388,7 @@ class SharedCore {
                 // configured merge strategy (clobber semantics today).
                 if (this.isCoordinatePair(scraperValue)) {
                     mergedObject[fieldName] = scraperValue;
-                    if (scraperValue !== calendarValue) {
+                    if (!this.mergeValuesEqualForTracking(scraperValue, calendarValue)) {
                         clobberedFields.push(fieldName);
                     }
                     continue;
@@ -2413,14 +2450,14 @@ class SharedCore {
                     // No genuine conflict → clobber semantics (today's default),
                     // including clear-on-empty-scrape
                     mergedObject[fieldName] = scraperValue;
-                    if (scraperValue !== calendarValue) {
+                    if (!this.mergeValuesEqualForTracking(scraperValue, calendarValue)) {
                         clobberedFields.push(fieldName);
                     }
                     break;
                 case 'clobber':
                     mergedObject[fieldName] = scraperValue;
                     // Track when clobber actually changes a value
-                    if (scraperValue !== calendarValue) {
+                    if (!this.mergeValuesEqualForTracking(scraperValue, calendarValue)) {
                         clobberedFields.push(fieldName);
                     }
                     break;
@@ -2466,7 +2503,7 @@ class SharedCore {
                 if (decision) {
                     const otherPick = decision.pick === 'calendar' ? 'scraped' : 'calendar';
                     mergedObject[conflict.field] = conflict.values[decision.pick];
-                    if (decision.pick === 'scraped' && conflict.values.scraped !== conflict.values.calendar) {
+                    if (decision.pick === 'scraped' && !this.mergeValuesEqualForTracking(conflict.values.scraped, conflict.values.calendar)) {
                         clobberedFields.push(conflict.field);
                     }
                     console.log(`🤝 AI MERGE: "${eventTitle}" field=${conflict.field} chose ${decision.pick} ("${preview(conflict.values[decision.pick])}") over ${otherPick} ("${preview(conflict.values[otherPick])}")${decision.reason ? ` — ${decision.reason}` : ''}`);
@@ -2480,7 +2517,9 @@ class SharedCore {
                     });
                 } else {
                     mergedObject[conflict.field] = conflict.values.scraped;
-                    clobberedFields.push(conflict.field);
+                    if (!this.mergeValuesEqualForTracking(conflict.values.scraped, conflict.values.calendar)) {
+                        clobberedFields.push(conflict.field);
+                    }
                     aiDecisionRecords.push({
                         field: conflict.field,
                         existingValue: conflict.values.calendar,
@@ -2517,7 +2556,11 @@ class SharedCore {
             endDate: mergedObject.endDate || calendarObject.endDate,
             location: mergedObject.location || calendarObject.location,
             notes: newNotes,
-            url: mergedObject.url || calendarObject.url || calendarObject.website,
+            // url is a VIEW of the canonical merged website (one logical field) —
+            // kept because the web adapter and display read event.url; it is
+            // never independently stored ('url' is skipped by the merge loop, so
+            // the mergedObject spread below cannot override this).
+            url: mergedObject.website || '',
             
             // Copy all merged fields to final event
             ...mergedObject,
@@ -2561,9 +2604,13 @@ class SharedCore {
         if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
         if (!this.datesEqualForDisplay(finalEvent.endDate, existingEvent.endDate)) changes.push('endDate');
         if (finalEvent.location !== existingEvent.location) changes.push('location');
-        // url and website are aliases - treat existingEvent.url and calendarObject.website as the same
-        const existingUrl = existingEvent.url || calendarObject.website;
-        if (finalEvent.url !== existingUrl) changes.push('url');
+        // url is an output view of website (one logical field): compare the
+        // canonical merged website against the calendar's canonical website
+        // (which already folds in a real native url when the notes had none).
+        // The 'url' label is kept for display continuity. Comparing a scraped
+        // url against Scriptable's always-empty native url flagged 'url' on
+        // every run.
+        if (finalEvent.url !== (calendarObject.website || '')) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
         
         finalEvent._changes = changes;

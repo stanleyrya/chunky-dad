@@ -91,7 +91,9 @@ const CALENDAR_SNAPSHOT = {
 };
 
 // Frozen deterministic outcome of dedup(A1, A2) + createFinalEventObject
-// against CALENDAR_SNAPSHOT.
+// against CALENDAR_SNAPSHOT. The snapshot's native url folds into the canonical
+// website field (url/website are one logical field) and round-trips via the
+// "website:" notes line.
 const SAVED_MERGED_A = {
   title: 'FURBALL',
   startDate: '2026-07-05T21:00:00.000Z',
@@ -104,9 +106,11 @@ const SAVED_MERGED_A = {
     'timezone: America/Chicago',
     `ticketUrl: ${TICKET_URL}`,
     'key: dallas-freedom-tea|2026-07-05|station 4',
-    'shortName: FUR-BALL'
+    'shortName: FUR-BALL',
+    'website: https://furball.example'
   ].join('\n'),
   url: 'https://furball.example',
+  website: 'https://furball.example',
   description: 'FURBALL PRESENTS',
   bar: 'STATION 4',
   address: '3911 Cedar Springs Rd, Dallas, TX 75219',
