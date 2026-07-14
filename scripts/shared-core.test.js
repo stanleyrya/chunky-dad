@@ -795,6 +795,114 @@ test('guardrail: emoji twin detection covers ⚜️, ⚓ and ⛓️ in both dire
 });
 
 // ---------------------------------------------------------------------------
+// url/website canonicalization (ONE logical field: website is canonical and
+// round-trips via the "website:" notes line; url is an output view of it) and
+// honest clobber logging (same-instant Dates are not "clobbered")
+// ---------------------------------------------------------------------------
+
+test('url/website are one field: a scraped url persists as website and goes quiet on re-run', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  const detailUrl = 'https://bearracuda.com/events/dallas-freedom-tea/';
+  scraped.url = detailUrl; // parser found no separate website
+  existing.url = ''; // Scriptable can never read the native CalendarEvent.url
+
+  const firstRun = await core.createFinalEventObject(existing, scraped, {});
+  assert.equal(firstRun.website, detailUrl, 'the scraped url folds into the canonical website field');
+  assert.equal(firstRun.url, detailUrl, 'url is a view of the merged website');
+  assert.equal(core.parseNotesIntoFields(firstRun.notes).website, detailUrl,
+    'the url round-trips through the website: notes line');
+  assert.ok(!/^url:/m.test(firstRun.notes), 'notes never carry a separate url: line');
+  assert.ok(firstRun._changes.includes('url'), 'the first run legitimately flags the newly stored website');
+
+  // Re-run with identical scraped data against the saved notes (Scriptable
+  // read-back: the native url is still empty) — everything must go quiet.
+  const readBack = { ...existing, notes: firstRun.notes, url: '' };
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let secondRun;
+  try {
+    secondRun = await core.createFinalEventObject(readBack, scraped, {});
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(secondRun.url, detailUrl);
+  assert.ok(!secondRun._changes.includes('url'), 'an identical re-scrape must not flag url');
+  assert.ok(!secondRun._changes.includes('notes'), 'notes are stable across identical runs');
+  assert.ok(!logLines.some(line => line.startsWith('🔄 MERGE:')),
+    `no clobber log on an identical re-run, got: ${JSON.stringify(logLines)}`);
+});
+
+test('url/website: a real scraped website wins over the detail url and nothing churns', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.url = 'https://tickets.example/detail/123';
+  scraped.website = 'https://furball.nyc/'; // page metadata website — url must not displace it
+  existing.notes += '\ndescription: FURBALL PRESENTS\nwebsite: https://furball.nyc/';
+  existing.url = '';
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, {});
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(finalEvent.website, 'https://furball.nyc/');
+  assert.equal(finalEvent.url, 'https://furball.nyc/', 'the url view mirrors the canonical website');
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).website, 'https://furball.nyc/');
+  assert.ok(!/^url:/m.test(finalEvent.notes), 'no url: line even when the scrape carried both fields');
+  assert.ok(!finalEvent._changes.includes('url'), 'matching stored website → url never flagged');
+  assert.ok(!logLines.some(line => line.startsWith('🔄 MERGE:')),
+    `url must not be merged/clobbered as its own field, got: ${JSON.stringify(logLines)}`);
+});
+
+test('clobber tracking: same-instant Date objects are not reported clobbered; differing instants are', async () => {
+  const core = createCore();
+  const buildExisting = () => ({
+    title: 'FURBALL',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    url: '',
+    notes: ''
+  });
+  const scraped = {
+    title: 'FURBALL',
+    startDate: new Date('2026-07-05T22:00:00.000Z'), // fresh objects, same instants
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    source: 'ai-web',
+    _fieldPriorities: { startDate: { merge: 'clobber' }, endDate: { merge: 'clobber' } }
+  };
+
+  const capture = async (existingEvent, scrapedEvent) => {
+    const logLines = [];
+    const originalLog = console.log;
+    console.log = (message) => { logLines.push(String(message)); };
+    try {
+      await core.createFinalEventObject(existingEvent, scrapedEvent, {});
+    } finally {
+      console.log = originalLog;
+    }
+    return logLines;
+  };
+
+  const quietLines = await capture(buildExisting(), scraped);
+  assert.ok(!quietLines.some(line => line.startsWith('🔄 MERGE:')),
+    `identical instants must not count as clobbered, got: ${JSON.stringify(quietLines)}`);
+
+  const scrapedLater = { ...scraped, startDate: new Date('2026-07-05T23:00:00.000Z') };
+  const clobberLines = await capture(buildExisting(), scrapedLater);
+  const clobberLog = clobberLines.find(line => line.startsWith('🔄 MERGE:'));
+  assert.ok(clobberLog, `a genuinely different instant is still reported, got: ${JSON.stringify(clobberLines)}`);
+  assert.match(clobberLog, /clobbered 1 field \(startDate\)/);
+});
+
+// ---------------------------------------------------------------------------
 // Bare-city titles (2026-07-12 run: bearracuda.com pages are named after the
 // city — "New Orleans⚜️ | BEARRACUDA" → brand strip leaves just the city)
 // ---------------------------------------------------------------------------
