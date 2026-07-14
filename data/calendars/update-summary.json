@@ -21,8 +21,8 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 17825,
-      "eventCount": 15
+      "dataLength": 18673,
+      "eventCount": 16
     },
     "dallas": {
       "name": "Dallas",
@@ -87,7 +87,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 21571,
+      "dataLength": 21628,
       "eventCount": 17
     },
     "ptown": {
@@ -111,7 +111,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 17005,
+      "dataLength": 16961,
       "eventCount": 13
     },
     "sitges": {
