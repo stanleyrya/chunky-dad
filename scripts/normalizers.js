@@ -715,13 +715,27 @@ class LocationNormalizer extends BaseNormalizer {
 const CITY_CENTER_RADIUS_KM = 50;
 
 // Hard cap on Nominatim requests per event for the forward-geocode retry
-// ladder. Never raise this without revisiting the rate-limit budget.
-const MAX_GEOCODE_QUERIES_PER_EVENT = 3;
+// ladder. 4 covers the full ladder (canonical address, postal/country strip,
+// directional strip, venue-name rescue); every request stays 1.1s-throttled
+// and later rungs only fire after earlier ones return nothing usable. Never
+// raise this without revisiting the rate-limit budget.
+const MAX_GEOCODE_QUERIES_PER_EVENT = 4;
 
 // Street-type words a trailing directional can follow ("Cheshire Bridge Rd NE").
 const GEOCODE_STREET_TYPE_WORDS = 'Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Place|Pl|Court|Ct|Parkway|Pkwy|Highway|Hwy';
 // Longest alternatives first so "Northeast" matches before "North".
 const GEOCODE_DIRECTIONAL_WORDS = 'Northeast|Northwest|Southeast|Southwest|North|South|East|West|NE|NW|SE|SW|N|S|E|W';
+// Nominatim result kinds that are administrative areas rather than a concrete
+// venue or address. A simplified/fallback query reduced to a place name (e.g.
+// "Brooklyn, nyc") happily matches the admin area itself; its centroid is a
+// wrong-but-plausible coordinate that wins merges downstream — worse than no
+// coordinates at all (observed 2026-07-14: "325 Franklin Ave, Brooklyn, NY
+// 11238, USA" stored the Brooklyn borough centroid, ~4 km from the venue).
+const GEOCODE_ADMIN_AREA_TYPES = [
+    'city', 'borough', 'suburb', 'neighbourhood', 'quarter', 'town', 'village',
+    'state', 'county', 'municipality', 'district', 'city_district', 'postcode'
+];
+
 // A directional that FOLLOWS a street-type word and ends the address or a
 // comma-separated segment ("...Cheshire Bridge Rd NE", "...Road Northeast,
 // Atlanta"). Nominatim's free-text parser returns 0 results for these
@@ -944,6 +958,42 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return nearest;
     }
 
+    // True when a Nominatim result is an administrative area (city/borough/
+    // suburb/neighbourhood...) rather than a concrete venue or address. Venue
+    // matches (class=amenity, addresstype=amenity) are never admin areas.
+    isAdminAreaGeocodeResult(result) {
+        if (!result || typeof result !== 'object') return false;
+        const resultClass = String(result.class || '').toLowerCase();
+        const resultType = String(result.type || '').toLowerCase();
+        if (resultClass === 'boundary' && resultType === 'administrative') return true;
+        if (resultClass === 'place' && GEOCODE_ADMIN_AREA_TYPES.includes(resultType)) return true;
+        return GEOCODE_ADMIN_AREA_TYPES.includes(String(result.addresstype || '').toLowerCase());
+    }
+
+    // Canonical addresses ("1192 Folsom St, San Francisco, CA 94103, USA") return
+    // 0 Nominatim results while "1192 Folsom St, San Francisco" resolves — the
+    // postal-code/country decoration chokes the free-text parser (verified live
+    // 2026-07-14). Drops the trailing country token plus any state/zip tokens
+    // before it, keeping street + city. Returns '' when the address carries no
+    // country decoration (looser addresses already geocode and the ladder budget
+    // is tight) or when stripping would leave a bare place token — that query
+    // could only match an admin centroid, so it must never be issued.
+    stripPostalCodeAndCountry(address) {
+        const parts = String(address || '').split(',').map(part => part.trim()).filter(Boolean);
+        if (parts.length < 2 || !/^(USA|US|United States)$/i.test(parts[parts.length - 1])) return '';
+        parts.pop();
+        while (parts.length > 0) {
+            const tail = parts[parts.length - 1];
+            const isStateZip = /^[A-Z]{2}\s+\d{5}(-\d{4})?$/.test(tail);
+            const isBareZip = /^\d{5}(-\d{4})?$/.test(tail);
+            const isLoneStateCode = /^[A-Z]{2}$/.test(tail);
+            if (!isStateZip && !isBareZip && !isLoneStateCode) break;
+            parts.pop();
+        }
+        if (parts.length === 0 || (parts.length === 1 && !/\d/.test(parts[0]))) return '';
+        return parts.join(', ');
+    }
+
     // Strip directionals that FOLLOW a street-type word — at the end of the
     // address or before a comma. "2069 Cheshire Bridge Rd NE" → "2069 Cheshire
     // Bridge Rd"; "…Road Northeast, Atlanta, GA" → "…Road, Atlanta, GA".
@@ -960,9 +1010,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     // at MAX_GEOCODE_QUERIES_PER_EVENT. Order:
     //   1. The query exactly as built today (city-anchored when the address
     //      doesn't already contain the city).
-    //   2. The address with trailing directionals stripped (same anchoring) —
+    //   2. The address with postal-code/country decoration stripped (same
+    //      anchoring) — Nominatim chokes on "…, CA 94103, USA" endings.
+    //   3. The address with trailing directionals stripped (same anchoring) —
     //      Nominatim's free-text parser chokes on "Rd NE" / "Road Northeast".
-    //   3. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
+    //   4. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
     buildGeocodeQueryVariants(address, eventCity, bar) {
         const city = typeof eventCity === 'string' ? eventCity.trim() : '';
         const anchorToCity = (text) => {
@@ -982,6 +1034,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
 
         const baseAddress = String(address || '').trim();
         push(anchorToCity(baseAddress));
+        const postalStripped = this.stripPostalCodeAndCountry(baseAddress);
+        if (postalStripped) push(anchorToCity(postalStripped));
         push(anchorToCity(this.stripTrailingDirectionals(baseAddress)));
         const barName = typeof bar === 'string' ? bar.trim() : '';
         if (barName && city) {
@@ -1037,15 +1091,28 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 attempts += 1;
                 try {
                     const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
-                    if (Array.isArray(data) && data.length > 0) {
+                    // Simplified/fallback queries can degrade to a bare place name and
+                    // match the admin area itself — reject those centroids. The first
+                    // (full-address) query keeps today's behavior: a full address that
+                    // resolves to an admin boundary is a different failure mode.
+                    let candidates = Array.isArray(data) ? data : [];
+                    if (i > 0 && candidates.length > 0) {
+                        candidates = candidates.filter(result => {
+                            if (!this.isAdminAreaGeocodeResult(result)) return true;
+                            const kind = result.addresstype || result.type || 'unknown';
+                            console.warn(`🗺️ OpenStreetMapNormalizer: Rejected admin-area result for "${queryText}" (type=${kind}) — not a venue/address`);
+                            return false;
+                        });
+                    }
+                    if (candidates.length > 0) {
                         if (cityCenter) {
                             // Distance-ranked selection: nearest candidate within the radius wins
-                            const picked = this.pickNearestGeocodeCandidate(data, cityCenter, eventCity, queryText);
+                            const picked = this.pickNearestGeocodeCandidate(candidates, cityCenter, eventCity, queryText);
                             if (picked) {
                                 resolvedLocation = `${picked.lat}, ${picked.lon}`;
                             }
                         } else {
-                            const firstResult = data[0];
+                            const firstResult = candidates[0];
                             if (firstResult.lat && firstResult.lon) {
                                 if (eventCity && !this.geocodeResultMatchesCity(firstResult, eventCity)) {
                                     console.warn(`🗺️ OpenStreetMapNormalizer: Geocode for "${queryText}" resolved outside event city "${eventCity}" ("${firstResult.display_name || 'no display name'}") — ignoring coordinates`);
@@ -1054,7 +1121,7 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                                 }
                             }
                         }
-                    } else if (i < queryVariants.length - 1) {
+                    } else if ((!Array.isArray(data) || data.length === 0) && i < queryVariants.length - 1) {
                         console.log(`🗺️ OpenStreetMapNormalizer: 0 geocode results for "${queryText}" — trying next variant`);
                     }
                 } catch (err) {

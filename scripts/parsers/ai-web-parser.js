@@ -355,6 +355,9 @@ class AiWebParser {
                         }
                     });
                 }
+                // Enrichment only: fills empty fields from the Wix warmup blob,
+                // never skips or replaces an extraction step.
+                this.applyWixServerDataEnrichment(completeJsonLdEvents, htmlData, cityConfig);
                 await this.applyJsonLdGapFill(completeJsonLdEvents, htmlData, parserConfig, cityConfig, httpAdapter);
                 return {
                     events: completeJsonLdEvents,
@@ -442,6 +445,10 @@ class AiWebParser {
             const events = pageClassification === 'multi-event-page'
                 ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter)
                 : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
+
+            // Enrichment only: fills empty fields on the finished AI/OCR events
+            // from the Wix warmup blob, never skips or replaces an extraction step.
+            this.applyWixServerDataEnrichment(events, htmlData, cityConfig);
 
             return {
                 events,
@@ -2805,6 +2812,206 @@ class AiWebParser {
                 resourceLines: event.image ? [`SEGMENT_IMAGE_URL: ${event.image}`] : []
             };
         });
+    }
+
+    // ============================================================================
+    // WIX SERVER-DATA (warmup-data) EVENT ENRICHMENT
+    // ============================================================================
+
+    // Wix event pages embed authoritative server state in
+    // <script type="application/json" id="wix-warmup-data">: exact UTC instants,
+    // an IANA timezone, venue coordinates and ticket prices. Returns a normalized
+    // record or null; any absent/unparseable/odd-shaped blob means "no server
+    // data" and leaves the extraction flow untouched.
+    extractWixServerEventData(html) {
+        if (!html || typeof html !== 'string') return null;
+        try {
+            const startMatch = html.match(/<script\b[^>]*\bid=["']wix-warmup-data["'][^>]*>/i);
+            if (!startMatch) return null;
+            const jsonString = this.extractJsonObject(html, startMatch.index + startMatch[0].length);
+            if (!jsonString) return null;
+            const eventNode = this.findWixWarmupEventNode(JSON.parse(jsonString));
+            return eventNode ? this.buildWixServerEventRecord(eventNode) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // The events-app GUID key inside appsWarmupData is deployment-specific —
+    // iterate every app's state and take the first EventsPageInitialState event.
+    findWixWarmupEventNode(warmup) {
+        if (!warmup || typeof warmup !== 'object') return null;
+        const apps = warmup.appsWarmupData && typeof warmup.appsWarmupData === 'object'
+            ? Object.values(warmup.appsWarmupData)
+            : [warmup];
+        for (const app of apps) {
+            if (!app || typeof app !== 'object') continue;
+            const state = app.EventsPageInitialState;
+            if (!state || typeof state !== 'object') continue;
+            const wrapper = state.event;
+            if (!wrapper || typeof wrapper !== 'object') continue;
+            // Observed shape nests the event once more (state.event.event); accept
+            // the flat shape too in case other app versions skip the wrapper.
+            if (wrapper.event && typeof wrapper.event === 'object') return wrapper.event;
+            if (wrapper.title || wrapper.scheduling) return wrapper;
+        }
+        return null;
+    }
+
+    buildWixServerEventRecord(node) {
+        const clean = (value) => typeof value === 'string' ? this.normalizeWhitespace(value) : '';
+        const location = node.location && typeof node.location === 'object' ? node.location : {};
+        const fullAddress = location.fullAddress && typeof location.fullAddress === 'object' ? location.fullAddress : {};
+        const geocode = fullAddress.geocode && typeof fullAddress.geocode === 'object' ? fullAddress.geocode : {};
+        const coords = location.coordinates && typeof location.coordinates === 'object' ? location.coordinates : {};
+
+        const pickCoordinatePair = (latValue, lngValue) => {
+            const lat = Number(latValue);
+            const lng = Number(lngValue);
+            return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+        };
+        const pair = pickCoordinatePair(coords.lat, coords.lng)
+            || pickCoordinatePair(geocode.latitude, geocode.longitude);
+
+        const scheduling = node.scheduling && node.scheduling.config && typeof node.scheduling.config === 'object'
+            ? node.scheduling.config
+            : {};
+        const timeZoneId = clean(scheduling.timeZoneId);
+        const ticketing = node.registration && node.registration.ticketing && typeof node.registration.ticketing === 'object'
+            ? node.registration.ticketing
+            : {};
+
+        const record = {
+            title: clean(node.title) || null,
+            slug: clean(node.slug) || null,
+            // OpenStreetMapNormalizer stores event.location as `${lat}, ${lng}` —
+            // match it byte-for-byte so merge comparisons treat both the same.
+            coordinates: pair ? `${pair.lat}, ${pair.lng}` : null,
+            timezone: /^[A-Za-z]+\/[A-Za-z_\-+0-9]+/.test(timeZoneId) ? timeZoneId : null,
+            startDateUtc: this.parseWixExactInstant(scheduling.startDate),
+            endDateUtc: this.parseWixExactInstant(scheduling.endDate),
+            address: clean(location.address) || clean(fullAddress.formattedAddress) || null,
+            city: clean(fullAddress.city).toLowerCase() || null,
+            cover: this.formatWixTicketPriceRange(ticketing)
+        };
+        return Object.values(record).some(value => value !== null) ? record : null;
+    }
+
+    // Only explicit-offset/Z timestamps are exact instants; wall-clock strings
+    // are ignored (the normal pipeline handles those with re-anchoring).
+    parseWixExactInstant(value) {
+        const raw = String(value || '').trim();
+        if (!raw || !/(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw)) return null;
+        const date = new Date(raw);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    // "$20.50-$30.75" from the Wix ticketing block, collapsing equal bounds to a
+    // single value. Sold-out events keep their price — sold-out handling is a
+    // separate concern.
+    formatWixTicketPriceRange(ticketing) {
+        const formatAmount = (price) => {
+            if (!price || typeof price !== 'object') return '';
+            const amount = String(price.amount || '').trim();
+            if (!amount || !Number.isFinite(Number(amount))) return '';
+            const currency = String(price.currency || '').trim().toUpperCase();
+            return currency === 'USD' ? `$${amount}` : (currency ? `${amount} ${currency}` : amount);
+        };
+        const formattedText = (value) => typeof value === 'string' ? value.trim() : '';
+        const low = formattedText(ticketing.lowestTicketPriceFormatted) || formatAmount(ticketing.lowestTicketPrice);
+        const high = formattedText(ticketing.highestTicketPriceFormatted) || formatAmount(ticketing.highestTicketPrice);
+        if (low && high) return low === high ? low : `${low}-${high}`;
+        return low || high || null;
+    }
+
+    // ENRICHMENT ONLY — runs on the parser's finished events just before they
+    // are returned (both the JSON-LD fast path and the AI-extraction path) and
+    // never influences which extraction steps run. Each field fills only when
+    // currently empty; values from JSON-LD/AI/OCR are never overwritten. The
+    // sole date exception: wall-clock dates (_timezoneUnresolved) are unanchored
+    // guesses, so the blob's exact UTC instants replace them and clear the flag.
+    applyWixServerDataEnrichment(events, htmlData, cityConfig) {
+        try {
+            if (!Array.isArray(events) || events.length === 0) return events;
+            const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+            const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+            const record = this.extractWixServerEventData(html);
+            if (!record) return events;
+
+            const filledFields = new Set();
+            let enrichedCount = 0;
+            for (const event of events) {
+                if (!event || typeof event !== 'object') continue;
+                if (!this.wixServerRecordMatchesEvent(record, event, sourceUrl, events.length)) continue;
+                const filled = this.fillEventFromWixServerRecord(event, record, cityConfig);
+                if (filled.length > 0) {
+                    enrichedCount += 1;
+                    filled.forEach(field => filledFields.add(field));
+                }
+            }
+            if (filledFields.size > 0) {
+                console.log(`🤖 AI Web: Wix server data enriched ${enrichedCount} event(s) for ${sourceUrl}: filled=[${Array.from(filledFields).join(', ')}]`);
+            } else {
+                console.log(`🤖 AI Web: Wix server data present for ${sourceUrl} but no empty fields to fill`);
+            }
+        } catch (error) {
+            console.warn(`🤖 AI Web: Wix server data enrichment failed — events unchanged: ${error.message}`);
+        }
+        return events;
+    }
+
+    // Conservative same-event check: the warmup blob describes ONE event, so it
+    // applies only when the slug appears in the page URL, the titles match, or a
+    // single-event event-details page leaves no other candidate. Ambiguity means
+    // no enrichment.
+    wixServerRecordMatchesEvent(record, event, sourceUrl, eventCount) {
+        const url = String(sourceUrl || '').toLowerCase();
+        const slug = record.slug ? record.slug.toLowerCase() : '';
+        if (slug && url.includes(slug)) return true;
+        if (record.title && event && event.title
+            && this.normalizeEvidenceText(record.title) === this.normalizeEvidenceText(event.title)) return true;
+        // An event-details URL naming a DIFFERENT slug is a mismatch, not ambiguity.
+        if (slug && /\/event-details\//.test(url)) return false;
+        return eventCount === 1 && /\/event-details\//.test(url);
+    }
+
+    fillEventFromWixServerRecord(event, record, cityConfig) {
+        const filled = [];
+        const isEmpty = (value) => value === null || value === undefined || String(value).trim() === '';
+        const fill = (field, value) => {
+            if (value && isEmpty(event[field])) {
+                event[field] = value;
+                filled.push(field);
+            }
+        };
+        fill('location', record.coordinates);
+        fill('timezone', record.timezone);
+        fill('cover', record.cover);
+        fill('address', record.address);
+        if (record.city && isEmpty(event.city)) {
+            // Only configured city keys, resolved through the same alias matching
+            // the rest of the parser uses — never invent a key from raw Wix text.
+            const cityKey = this.findCityKeyInText(record.city, cityConfig);
+            if (cityKey) {
+                event.city = cityKey;
+                filled.push('city');
+            }
+        }
+        // Replacing wall-clock dates needs an end instant whenever the event has
+        // an end date, so the pair is never split across anchoring schemes. When
+        // instants are missing but the timezone was filled above, the flag stays
+        // set and LocationNormalizer re-anchors with that timezone as usual.
+        if (event._timezoneUnresolved && record.startDateUtc
+            && (record.endDateUtc || isEmpty(event.endDate))) {
+            event.startDate = record.startDateUtc;
+            filled.push('startDate');
+            if (record.endDateUtc) {
+                event.endDate = record.endDateUtc;
+                filled.push('endDate');
+            }
+            delete event._timezoneUnresolved;
+        }
+        return filled;
     }
 
     // Event property that carries a prompt field on JSON-LD-built events: split
