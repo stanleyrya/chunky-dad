@@ -364,7 +364,12 @@ class SharedCore {
         // location is never arbitrated: it is ALWAYS coordinates (the calendar is
         // used as a database), so merges resolve it deterministically via
         // isCoordinatePair — human-readable text belongs in address/bar.
-        return name !== 'key' && name !== 'notes' && name !== 'source' && name !== 'location';
+        // gmaps is never arbitrated either: it is DERIVED (a pure function of
+        // bar + address), so arbitrating it independently let it disagree with
+        // the merged bar/address — createFinalEventObject regenerates it from
+        // the final merged values instead.
+        return name !== 'key' && name !== 'notes' && name !== 'source'
+            && name !== 'location' && name !== 'gmaps';
     }
 
     // "lat, lng" / "lat,lng": two finite floats with lat in [-90, 90] and lng in
@@ -379,6 +384,28 @@ class SharedCore {
         const lng = Number(match[2]);
         return Number.isFinite(lat) && Number.isFinite(lng)
             && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    }
+
+    // "lat, lng" string → { lat, lng } numbers, or null when not a pair.
+    parseCoordinatePair(value) {
+        if (!this.isCoordinatePair(value)) return null;
+        const [lat, lng] = String(value).split(',').map(part => Number(part.trim()));
+        return { lat, lng };
+    }
+
+    // Great-circle distance in km between two "lat, lng" strings (haversine —
+    // pure math, no platform APIs). Null when either side isn't a pair.
+    coordinatePairDistanceKm(valueA, valueB) {
+        const a = this.parseCoordinatePair(valueA);
+        const b = this.parseCoordinatePair(valueB);
+        if (!a || !b) return null;
+        const toRadians = (degrees) => degrees * Math.PI / 180;
+        const sinHalfLat = Math.sin(toRadians(b.lat - a.lat) / 2);
+        const sinHalfLng = Math.sin(toRadians(b.lng - a.lng) / 2);
+        const h = sinHalfLat * sinHalfLat
+            + Math.cos(toRadians(a.lat)) * Math.cos(toRadians(b.lat)) * sinHalfLng * sinHalfLng;
+        const earthRadiusKm = 6371;
+        return 2 * earthRadiusKm * Math.asin(Math.min(1, Math.sqrt(h)));
     }
 
     // Date-or-ISO-string → epoch milliseconds, or null when absent/unparseable.
@@ -427,13 +454,27 @@ class SharedCore {
         return String(value === null || value === undefined ? '' : value).trim();
     }
 
+    // Cover values that differ only in whitespace are the SAME price: the old
+    // formatter spaced the range dash ("$22.10 - $39.98"), the sticker-price
+    // formatter doesn't ("$22.10-$39.98"), and that formatting twin burned an
+    // AI arbitration on every run.
+    coverValuesEquivalent(valueA, valueB) {
+        const stripWhitespace = (value) => String(value === null || value === undefined ? '' : value).replace(/\s+/g, '');
+        const strippedA = stripWhitespace(valueA);
+        return strippedA !== '' && strippedA === stripWhitespace(valueB);
+    }
+
     // A genuine conflict: both sides non-empty primitives whose serialized forms
-    // differ. Same-instant Date vs ISO string is NOT a conflict.
+    // differ. Same-instant Date vs ISO string is NOT a conflict, and neither are
+    // whitespace-only cover formatting twins.
     isGenuineFieldConflict(fieldName, valueA, valueB) {
         if (this.isEmptyArbitrationValue(valueA) || this.isEmptyArbitrationValue(valueB)) return false;
         const isPrimitive = (v) => v instanceof Date || typeof v !== 'object';
         if (!isPrimitive(valueA) || !isPrimitive(valueB)) return false;
-        return this.serializeArbitrationValue(fieldName, valueA) !== this.serializeArbitrationValue(fieldName, valueB);
+        const serializedA = this.serializeArbitrationValue(fieldName, valueA);
+        const serializedB = this.serializeArbitrationValue(fieldName, valueB);
+        if (fieldName === 'cover' && this.coverValuesEquivalent(serializedA, serializedB)) return false;
+        return serializedA !== serializedB;
     }
 
     arbitrationValuesEqual(fieldName, answerText, candidateText) {
@@ -443,6 +484,9 @@ class SharedCore {
             const candidateDate = new Date(candidateText);
             return !Number.isNaN(answerDate.getTime()) && !Number.isNaN(candidateDate.getTime())
                 && answerDate.getTime() === candidateDate.getTime();
+        }
+        if (fieldName === 'cover') {
+            return this.coverValuesEquivalent(answerText, candidateText);
         }
         return false;
     }
@@ -3006,6 +3050,9 @@ class SharedCore {
         const pendingAiConflicts = [];
         // Arbitration outcomes (deterministic, ai, fallback) for display/metrics
         const aiDecisionRecords = [];
+        // Both-coordinates location conflict, resolved AFTER arbitration when
+        // the final merged address is known (see the location block below).
+        let deferredCoordinateDecision = null;
 
         const mergeTitle = scraperObject.title || calendarObject.title || 'event';
 
@@ -3059,6 +3106,11 @@ class SharedCore {
             // as a separate field; website is the only field that merges.
             if (fieldName.startsWith('_') || fieldName === 'notes' || fieldName === 'url') continue;
 
+            // gmaps is DERIVED (a pure function of the merged bar + address) —
+            // it never merges or arbitrates; STEP 4 below regenerates it from
+            // the final merged bar/address so it can never disagree with them.
+            if (fieldName === 'gmaps') continue;
+
             const priorityConfig = fieldPriorities[fieldName];
             const mergeStrategy = priorityConfig?.merge || 'upsert';
             const scraperValue = scraperObject[fieldName];
@@ -3072,11 +3124,22 @@ class SharedCore {
             if (fieldName === 'location') {
                 // location is ALWAYS coordinates (the calendar is the database; the
                 // normalization layer fills this field with coordinates). Resolve it
-                // deterministically — never via AI: scraped coordinates win; else
-                // calendar coordinates are KEPT (an empty or text scrape must not
-                // wipe them); when neither side is coordinates, fall through to the
-                // configured merge strategy (clobber semantics today).
+                // deterministically — never via AI: scraped coordinates win over a
+                // non-coordinate calendar value; else calendar coordinates are KEPT
+                // (an empty or text scrape must not wipe them); when neither side is
+                // coordinates, fall through to the configured merge strategy
+                // (clobber semantics today).
                 if (this.isCoordinatePair(scraperValue)) {
+                    if (this.isCoordinatePair(calendarValue)) {
+                        // Both sides are coordinates: whether the fresh geocode may
+                        // replace the stored pin depends on whether this event's
+                        // ADDRESS actually changed this run — and the address may
+                        // still be pending AI arbitration at this point in the
+                        // loop, so the decision is deferred until after
+                        // arbitration, when the final merged address is known.
+                        deferredCoordinateDecision = { scraperValue, calendarValue };
+                        continue;
+                    }
                     mergedObject[fieldName] = scraperValue;
                     if (!this.mergeValuesEqualForTracking(scraperValue, calendarValue)) {
                         clobberedFields.push(fieldName);
@@ -3135,6 +3198,43 @@ class SharedCore {
                     calendarKeptFields.push(fieldName);
                 }
                 continue;
+            }
+
+            // Cover is priced by the LIVE ticket page: the calendar copy is just
+            // last run's snapshot, so AI arbitration (which has no freshness
+            // signal) is the wrong tool. Under the default "ai" strategy
+            // (explicit parser-config strategies still win):
+            // - formatting twins (whitespace-only difference, e.g.
+            //   "$22.10 - $39.98" vs "$22.10-$39.98") are the SAME price — the
+            //   calendar value is kept: no conflict, no AI call, no clobber entry;
+            // - genuinely different prices take the scraped (fresh) value
+            //   deterministically. An empty scraped cover never reaches here —
+            //   the empty-scrape rule above already kept the calendar value.
+            if (fieldName === 'cover' && mergeStrategy === 'ai'
+                && !this.isEmptyArbitrationValue(scraperValue)
+                && !this.isEmptyArbitrationValue(calendarValue)) {
+                const serializedScraped = this.serializeArbitrationValue(fieldName, scraperValue);
+                const serializedCalendar = this.serializeArbitrationValue(fieldName, calendarValue);
+                if (this.coverValuesEquivalent(serializedScraped, serializedCalendar)) {
+                    mergedObject[fieldName] = calendarValue;
+                    continue;
+                }
+                if (serializedScraped !== serializedCalendar) {
+                    const freshnessReason = 'cover reflects the live ticket page — freshness wins';
+                    mergedObject[fieldName] = scraperValue;
+                    clobberedFields.push(fieldName);
+                    console.log(`🔒 MERGE: "${mergeTitle}" field=${fieldName} resolved deterministically — ${freshnessReason}`);
+                    aiDecisionRecords.push({
+                        field: fieldName,
+                        existingValue: calendarValue,
+                        newValue: scraperValue,
+                        chosenValue: scraperValue,
+                        reason: freshnessReason,
+                        source: 'deterministic'
+                    });
+                    continue;
+                }
+                // Identical values fall through to the configured strategy (no-op).
             }
 
             // Dates are calendar-critical: a genuinely different startDate/endDate is
@@ -3242,6 +3342,79 @@ class SharedCore {
             }
         }
 
+        // STEP 3c: deferred both-coordinates location decision — resolved only
+        // now because the final address may have been decided by arbitration
+        // above. The stored pin may be human-corrected, so it is only replaced
+        // when the venue actually MOVED (the final merged address differs from
+        // the calendar's stored address). When the address is unchanged the
+        // calendar pin is kept, and a large divergence from the fresh geocode
+        // is FLAGGED for review — never silently applied or dropped.
+        if (deferredCoordinateDecision) {
+            const { scraperValue, calendarValue } = deferredCoordinateDecision;
+            const normalizeAddressForComparison = (value) =>
+                String(value === null || value === undefined ? '' : value).replace(/\s+/g, ' ').trim().toLowerCase();
+            const calendarAddress = normalizeAddressForComparison(calendarObject.address);
+            const finalAddress = normalizeAddressForComparison(
+                Object.prototype.hasOwnProperty.call(mergedObject, 'address') ? mergedObject.address : calendarObject.address
+            );
+            // "Unchanged" requires a stored calendar address to compare against:
+            // with no address on record there is no venue-stability signal, and
+            // the scraped (fresher) coordinates win as they always have.
+            const addressUnchanged = calendarAddress !== '' && finalAddress === calendarAddress;
+            if (addressUnchanged) {
+                mergedObject.location = calendarValue;
+                if (scraperValue !== calendarValue) {
+                    console.log(`📍 MERGE: "${mergeTitle}" location kept calendar pin (address unchanged)`);
+                    const distanceKm = this.coordinatePairDistanceKm(calendarValue, scraperValue);
+                    if (distanceKm !== null && distanceKm > 1) {
+                        console.log(`📍 MERGE: "${mergeTitle}" calendar pin is ${distanceKm.toFixed(1)}km from fresh geocode of the same address — verify pin`);
+                    }
+                }
+            } else {
+                mergedObject.location = scraperValue;
+                if (!this.mergeValuesEqualForTracking(scraperValue, calendarValue)) {
+                    clobberedFields.push('location');
+                }
+            }
+        }
+
+        // STEP 4: regenerate gmaps from the FINAL merged bar + address. gmaps
+        // is a derived field — a pure function of bar + address — so merging or
+        // arbitrating it independently let it disagree with the merged
+        // bar/address (and churn arbitration every run). Regeneration happens
+        // only when the field is actually in play (either side carries a
+        // non-empty gmaps — the normalizer builds one for every scraped event)
+        // AND there is a bar or address to derive from; otherwise whatever
+        // existed is kept (calendar first), and an absent field stays absent.
+        {
+            const finalBar = typeof mergedObject.bar === 'string' ? mergedObject.bar.trim() : '';
+            const finalAddressForGmaps = typeof mergedObject.address === 'string' ? mergedObject.address.trim() : '';
+            const calendarHasGmaps = !this.isEmptyArbitrationValue(calendarObject.gmaps);
+            const scraperHasGmaps = !this.isEmptyArbitrationValue(scraperObject.gmaps);
+            let finalGmaps = calendarHasGmaps
+                ? calendarObject.gmaps
+                : (scraperHasGmaps ? scraperObject.gmaps : '');
+            if ((calendarHasGmaps || scraperHasGmaps) && (finalBar || finalAddressForGmaps)) {
+                const regenerated = SharedCore.generateGoogleMapsUrl({
+                    coordinates: null,
+                    placeId: null,
+                    address: finalAddressForGmaps || null,
+                    venueName: finalBar || null,
+                    cityName: null
+                });
+                if (regenerated) finalGmaps = regenerated;
+            }
+            if (finalGmaps !== '' || allFields.has('gmaps')) {
+                mergedObject.gmaps = finalGmaps;
+            }
+            // Clobber tracking stays honest: gmaps counts as changed only when
+            // the final value actually differs from the calendar's.
+            const calendarGmaps = calendarHasGmaps ? String(calendarObject.gmaps).trim() : '';
+            if (String(finalGmaps || '').trim() !== calendarGmaps) {
+                clobberedFields.push('gmaps');
+            }
+        }
+
         if (calendarKeptFields.length > 0) {
             console.log(`📍 MERGE: "${mergeTitle}" kept calendar values for empty-scraped field(s): ${calendarKeptFields.join(', ')}`);
         }
@@ -3255,9 +3428,6 @@ class SharedCore {
                 : previewFields.join(', ');
             console.log(`🔄 MERGE: "${mergedObject.title || 'event'}" clobbered ${clobberedFields.length} field${clobberedFields.length === 1 ? '' : 's'} (${previewText})`);
         }
-        
-        // STEP 4: Gmaps URLs are already built by parsers and enrichEventLocation()
-        // The merge strategy above has already chosen the correct gmaps URL
         
         // STEP 5: Build new notes from merged object
         const newNotes = this.formatEventNotes(mergedObject);

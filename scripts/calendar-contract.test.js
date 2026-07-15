@@ -113,10 +113,13 @@ test('contract: createFinalEventObject keeps location as coordinates against the
 
   const table = [
     {
-      name: 'scraped coordinates replace calendar coordinates',
+      // Both sides are coordinates and the address did not change → the stored
+      // pin (possibly human-corrected) is KEPT; the divergent fresh geocode is
+      // flagged in the logs instead of silently applied.
+      name: 'calendar pin kept over scraped coordinates when the address is unchanged',
       existing: calendarWithCoords,
       scraped: buildScrapedEvent({ location: NOLA_COORDS }),
-      expected: NOLA_COORDS
+      expected: PORTLAND_COORDS_LEADING_SPACE
     },
     {
       name: 'scraped address text must NOT wipe calendar coordinates',
