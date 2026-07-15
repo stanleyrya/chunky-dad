@@ -3,5 +3,70 @@
     "calendarTimezone": "Europe/London",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "TWISTED BEAR LONDON - THE RETURN",
+      "day": "Friday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.5284734,
+        "lng": -0.0925783
+      },
+      "startDate": "2026-07-17T22:00:00",
+      "endDate": "2026-07-18T04:00:00",
+      "unprocessedDescription": "description: Super excited to be relaunching in London on July \r17th!!\nbar: MA1\\: The Bunker\naddress: 217-221 City Road, London, EC1V 1JN, London, England\nticketUrl: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175\ncover: 11.55-22.38 GBP\ntimezone: Europe/London\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\nwebsite: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\ngmaps: https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
+      "uid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "MA1: The Bunker",
+      "cover": "11.55-22.38 GBP",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175",
+      "tea": "Super excited to be relaunching in London on July 17th!!",
+      "address": "217-221 City Road, London, EC1V 1JN, London, England",
+      "website": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+      "instagram": "https://www.instagram.com/twistedbearparty",
+      "facebook": "https://www.facebook.com/twistedglobal/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
+      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+      "shortName": "TWIST-ED BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/twistedbearparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/twistedglobal/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "twisted-bear-london-the-return-5fafb1d5"
+    }
+  ]
 }

@@ -5,4 +5,32 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-london
 X-WR-TIMEZONE:Europe/London
+BEGIN:VEVENT
+DTSTART:20260717T210000Z
+DTEND:20260718T030000Z
+DTSTAMP:20260715T122836Z
+UID:0EF35488-A88B-49E8-8D79-A864F11A8113
+CREATED:20260715T120616Z
+DESCRIPTION:description: Super excited to be relaunching in London on July 
+ 17th!!\nbar: MA1\\: The Bunker\naddress: 217-221 City Road\, London\, EC1V 
+ 1JN\, London\, England\nticketUrl: https://www.eventbrite.com/e/twisted-bea
+ r-london-the-return-tickets-1992217564364\nimage: https://img.evbuc.com/htt
+ ps%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Forigin
+ al.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=
+ 75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175\ncover: 11
+ .55-22.38 GBP\ntimezone: Europe/London\nshortName: TWIST-ED BEAR\ninstagram
+ : https://www.instagram.com/twistedbearparty\nfacebook: https://www.faceboo
+ k.com/twistedglobal/\nwebsite: https://www.eventbrite.com/e/twisted-bear-lo
+ ndon-the-return-tickets-1992217564364\ngmaps: https://www.google.com/maps/s
+ earch/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20Lo
+ ndon%2C%20EC1V%201JN%2C%20London%2C%20England
+LAST-MODIFIED:20260715T120616Z
+LOCATION:51.5284734\, -0.0925783
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TWISTED BEAR LONDON - THE RETURN
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

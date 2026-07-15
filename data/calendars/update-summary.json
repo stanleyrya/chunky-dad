@@ -51,8 +51,8 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 193,
-      "eventCount": 0
+      "dataLength": 1589,
+      "eventCount": 1
     },
     "nola": {
       "name": "New Orleans",
@@ -111,8 +111,8 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 17021,
-      "eventCount": 13
+      "dataLength": 18448,
+      "eventCount": 14
     },
     "sitges": {
       "name": "Sitges",
