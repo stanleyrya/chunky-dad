@@ -63,7 +63,7 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 13389,
+      "dataLength": 13406,
       "eventCount": 14
     },
     "palm-springs": {
@@ -81,7 +81,7 @@
     "phoenix": {
       "name": "Phoenix",
       "status": "success",
-      "dataLength": 4205,
+      "dataLength": 4206,
       "eventCount": 3
     },
     "portland": {
