@@ -75,8 +75,8 @@
     "philly": {
       "name": "Philadelphia",
       "status": "success",
-      "dataLength": 4689,
-      "eventCount": 3
+      "dataLength": 5981,
+      "eventCount": 4
     },
     "phoenix": {
       "name": "Phoenix",
@@ -87,7 +87,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 21628,
+      "dataLength": 21647,
       "eventCount": 17
     },
     "ptown": {
@@ -111,7 +111,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 17005,
+      "dataLength": 17021,
       "eventCount": 13
     },
     "sitges": {
