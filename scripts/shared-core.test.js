@@ -2752,3 +2752,198 @@ test('deduplicateEvents merges same-URL records whose titles are prefixed varian
   const result = await core.deduplicateEvents([segment, detail], null);
   assert.equal(result.length, 1, 'variant titles at the same event URL must merge');
 });
+
+// ---------------------------------------------------------------------------
+// Empty side never displaces data (2026-07-14 run findings: with ai-web as the
+// universal parser every dedup pair hits the same-priority branch, which
+// "preserved existing" even when existing was EMPTY — wiping the detail page's
+// cover/ticketUrl; the emptied cover then reached the calendar merge, whose
+// clear-on-empty-scrape clobber semantics deleted the stored cover: notes line)
+// ---------------------------------------------------------------------------
+
+test('mergeParsedEvents: one-sided cover/ticketUrl survive a same-source dedup merge', async () => {
+  const core = createCore();
+  // Homepage segment record: flyers don't print prices — no cover, no ticketUrl
+  const existing = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    bar: 'SF Eagle',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  // Detail-page record: JSON-LD carries the price and ticket link
+  const incoming = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    bar: 'SF Eagle',
+    cover: '$46.13-$61.50',
+    ticketUrl: 'https://tickets.example/chunk-dore-alley',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'one-sided fields are not conflicts — no arbitration request');
+  assert.equal(merged.cover, '$46.13-$61.50', 'the empty existing side must not wipe the incoming cover');
+  assert.equal(merged.ticketUrl, 'https://tickets.example/chunk-dore-alley');
+});
+
+test('mergeParsedEvents: an existing cover survives an incoming record without one', async () => {
+  const core = createCore();
+  const existing = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    cover: '$25.63 - $61.50',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const incoming = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    cover: '',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0);
+  assert.equal(merged.cover, '$25.63 - $61.50', 'the empty incoming side must not wipe the existing cover');
+});
+
+test('mergeParsedEvents: both-non-empty differing covers at the same priority still arbitrate', async () => {
+  const core = createCore();
+  const existing = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    cover: '$25.63 - $61.50',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const incoming = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    cover: '$46.13-$61.50',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const adapter = buildArbitrationAdapter({
+    cover: { pick: 'incoming', value: '$46.13-$61.50', reason: 'detail page price' }
+  });
+
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'a genuine same-priority cover conflict must reach arbitration');
+  assert.match(adapter.calls[0].prompt, /field: cover/);
+  assert.equal(merged.cover, '$46.13-$61.50', 'the arbitration winner is applied');
+});
+
+test('an empty scraped cover keeps the calendar cover and never appears clobbered', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    bar: 'SF Eagle',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    notes: 'bar: SF Eagle\ncover: $25.63 - $61.50'
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'empty vs non-empty cover is not a conflict — no arbitration request');
+  assert.equal(finalEvent.cover, '$25.63 - $61.50', 'the calendar cover must survive an empty scrape');
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).cover, '$25.63 - $61.50',
+    'the cover: notes line round-trips');
+  assert.ok(!logLines.some(line => line.includes('clobbered') && line.includes('cover')),
+    `cover must never be logged as clobbered, got: ${JSON.stringify(logLines)}`);
+  assert.ok(logLines.some(line => line.includes('kept calendar values for empty-scraped field(s):') && line.includes('cover')),
+    `expected the kept-calendar summary to list cover, got: ${JSON.stringify(logLines)}`);
+});
+
+test('a genuinely differing scraped cover still reaches arbitration and the winner is applied', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    cover: '$46.13-$61.50',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    notes: 'cover: $25.63 - $61.50'
+  };
+  const adapter = buildArbitrationAdapter({
+    cover: { pick: 'scraped', value: '$46.13-$61.50', reason: 'current listed price' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'a genuine cover conflict must reach arbitration');
+  assert.match(adapter.calls[0].prompt, /field: cover/);
+  assert.equal(finalEvent.cover, '$46.13-$61.50');
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).cover, '$46.13-$61.50');
+});
+
+test('PARSER MERGE summary lists only fields the merge actually changed on the outgoing record', async () => {
+  const core = createCore();
+  // bar: existing wins over the empty incoming side → the outgoing record changed.
+  // cover: incoming wins (existing empty) → the base { ...newEvent } spread already
+  // carried it, so nothing changed — it must NOT be listed as updated.
+  const existing = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    bar: 'SF Eagle',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const incoming = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    bar: '',
+    cover: '$46.13-$61.50',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let merged;
+  try {
+    merged = await core.mergeParsedEvents(existing, incoming, {});
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(merged.bar, 'SF Eagle');
+  assert.equal(merged.cover, '$46.13-$61.50');
+  const summary = logLines.find(line => line.includes('🔄 PARSER MERGE:'));
+  assert.ok(summary, `expected a PARSER MERGE summary, got: ${JSON.stringify(logLines)}`);
+  assert.match(summary, /1 field updated \(bar\)/, 'only the genuinely changed field is counted');
+  assert.ok(!summary.includes('cover'), 'a preserved-from-base field must not be listed as updated');
+});
