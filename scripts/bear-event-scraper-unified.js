@@ -278,8 +278,28 @@ class BearEventScraperOrchestrator {
                 }
             }
 
+            // Learned dead-end store: adapter owns persistence, shared-core owns
+            // the (pure) skip/retry semantics — load before the run, save after.
+            try {
+                if (typeof finalAdapter.loadDeadEnds === 'function') {
+                    config.deadEndStore = await finalAdapter.loadDeadEnds();
+                }
+            } catch (error) {
+                console.log(`🐻 Orchestrator: Dead-end store load failed (${error.message}) — continuing with empty store`);
+                config.deadEndStore = {};
+            }
+
             // Process events using shared core
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
+
+            try {
+                if (results.deadEndStoreChanged && results.deadEndStore && typeof finalAdapter.saveDeadEnds === 'function') {
+                    await finalAdapter.saveDeadEnds(results.deadEndStore);
+                }
+            } catch (error) {
+                console.log(`🐻 Orchestrator: Dead-end store save failed: ${error.message}`);
+            }
+
             results.config = config;
             results.calendarEvents = 0;
             if (!Array.isArray(results.analyzedEvents)) {

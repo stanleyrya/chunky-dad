@@ -375,3 +375,62 @@ test('getOcrCacheRetentionDays reads config.ocr.cacheRetentionDays with a 90d de
     90
   );
 });
+
+// ---------------------------------------------------------------------------
+// Learned dead-end store persistence (dead-ends.json)
+// ---------------------------------------------------------------------------
+
+function createDeadEndFmStub() {
+  const files = new Map();
+  return {
+    files,
+    documentsDirectory: () => '/tmp/chunky-dad-adapter-test',
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => files.has(p),
+    isDirectory: () => false,
+    createDirectory: () => {},
+    readString: (p) => (files.has(p) ? files.get(p) : null),
+    writeString: (p, s) => { files.set(p, s); },
+    downloadFileFromiCloud: async () => {}
+  };
+}
+
+test('loadDeadEnds/saveDeadEnds round-trip through dead-ends.json', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+
+  // Missing file → empty store, never throws
+  assert.deepEqual(await adapter.loadDeadEnds(), {});
+
+  const store = {
+    'https://site.example/dead': {
+      firstSeen: '2026-06-01T00:00:00.000Z',
+      lastSeen: '2026-07-01T00:00:00.000Z',
+      misses: 3
+    }
+  };
+  await adapter.saveDeadEnds(store);
+  assert.ok(adapter.fm.files.has(adapter.getDeadEndsFilePath()), 'store written to dead-ends.json in the scraper dir');
+  assert.deepEqual(await adapter.loadDeadEnds(), store);
+});
+
+test('loadDeadEnds tolerates corrupt or wrong-shaped files with an empty store', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+  const path = adapter.getDeadEndsFilePath();
+
+  adapter.fm.files.set(path, '{"https://x.example": {broken json');
+  assert.deepEqual(await adapter.loadDeadEnds(), {}, 'parse failure → empty store');
+
+  adapter.fm.files.set(path, '["not", "an", "object"]');
+  assert.deepEqual(await adapter.loadDeadEnds(), {}, 'array payload → empty store');
+
+  adapter.fm.files.set(path, 'null');
+  assert.deepEqual(await adapter.loadDeadEnds(), {}, 'null payload → empty store');
+
+  // saveDeadEnds refuses non-object stores instead of clobbering the file
+  adapter.fm.files.delete(path);
+  await adapter.saveDeadEnds(null);
+  await adapter.saveDeadEnds(['nope']);
+  assert.ok(!adapter.fm.files.has(path));
+});

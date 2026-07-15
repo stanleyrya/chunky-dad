@@ -1033,6 +1033,61 @@ class ScriptableAdapter {
     }
   }
 
+  // ---------------------------------------------------------------------
+  // Learned dead-end store persistence: dead-ends.json alongside the other
+  // scraper storage. Shape: { "<url>": { firstSeen, lastSeen, misses } }.
+  // The semantics (skip/retry/prune) live in shared-core; the orchestrator
+  // loads the store before the run and saves the updated store after it.
+  // ---------------------------------------------------------------------
+  getDeadEndsFilePath() {
+    return this.fm.joinPath(this.baseDir, "dead-ends.json");
+  }
+
+  async loadDeadEnds() {
+    const path = this.getDeadEndsFilePath();
+    try {
+      if (!this.fm.fileExists(path)) {
+        return {};
+      }
+      try {
+        await this.fm.downloadFileFromiCloud(path);
+      } catch (_) {}
+      const parsed = JSON.parse(this.fm.readString(path));
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        console.log(
+          "📱 Scriptable: Dead-end store has unexpected shape — starting with empty store",
+        );
+        return {};
+      }
+      return parsed;
+    } catch (error) {
+      // Corrupt or unreadable file must never break a run — the store is a
+      // pure optimization and rebuilds itself over subsequent runs.
+      console.log(
+        `📱 Scriptable: Dead-end store read failed (${error.message}) — starting with empty store`,
+      );
+      return {};
+    }
+  }
+
+  async saveDeadEnds(store) {
+    if (!store || typeof store !== "object" || Array.isArray(store)) {
+      return;
+    }
+    const path = this.getDeadEndsFilePath();
+    try {
+      this.ensureDirectoryExists(this.baseDir);
+      this.fm.writeString(path, JSON.stringify(store, null, 2));
+      console.log(
+        `📱 Scriptable: ✓ Saved dead-end store (${Object.keys(store).length} entries) to ${path}`,
+      );
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Dead-end store write failed: ${error.message}`,
+      );
+    }
+  }
+
   extractHttpStatusCodeFromError(error) {
     const message =
       error && typeof error.message === "string" ? error.message : "";

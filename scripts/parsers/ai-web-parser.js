@@ -433,10 +433,28 @@ class AiWebParser {
                     console.log(`🤖 AI Web: JSON-LD provided ${discoveredSegments.length} event segment(s) for discovery`);
                 }
                 console.log(`🤖 AI Web: Link-finding mode (${parserConfig.discoveryOnly ? 'discoveryOnly' : 'link-aggregator'}) found ${additionalLinks.length} additional links`);
+                // Onboarding harvest — discoveryOnly mode ONLY (inert everywhere
+                // else): social profile links + JSON-LD organizer feed the
+                // suggested-config block printed after discovery.
+                let discoveredSocialLinks = null;
+                let discoveredOrganizer = null;
+                if (parserConfig.discoveryOnly === true) {
+                    const socialLinks = this.collectDiscoverySocialLinks(html, sourceUrl);
+                    if (Object.keys(socialLinks).length > 0) {
+                        discoveredSocialLinks = socialLinks;
+                        console.log(`🤖 AI Web: Discovery harvested social link(s): ${Object.values(socialLinks).join(', ')}`);
+                    }
+                    discoveredOrganizer = this.extractJsonLdOrganizer(html);
+                    if (discoveredOrganizer) {
+                        console.log(`🤖 AI Web: Discovery harvested JSON-LD organizer: ${discoveredOrganizer.name || '(no name)'}${discoveredOrganizer.url ? ` (${discoveredOrganizer.url})` : ''}`);
+                    }
+                }
                 return {
                     events: [],
                     additionalLinks: additionalLinks,
                     discoveredSegments,
+                    discoveredSocialLinks,
+                    discoveredOrganizer,
                     ocrResults: ocrResults,
                     source: this.config.source,
                     url: sourceUrl
@@ -1870,6 +1888,14 @@ class AiWebParser {
         const limitedUrls = hasFiniteLimit
             ? dedupedRankedUrls.slice(0, maxAdditionalUrls)
             : dedupedRankedUrls;
+        // Non-enumerable tag: valid unique links BEFORE the maxAdditionalUrls
+        // budget. The dead-end detector reads this so a budget of 0 (e.g.
+        // Furball) can never make a link-rich page look like a dead end.
+        Object.defineProperty(limitedUrls, 'uniqueValidCount', {
+            value: dedupedRankedUrls.length,
+            enumerable: false,
+            configurable: true
+        });
         const limitText = hasFiniteLimit ? `${maxAdditionalUrls}` : 'none';
         const rejectedTopReasons = this.formatTopRejectedReasons(discoveryStats.rejectedReasons);
         const extraSources = discoveryStats.serverDataCandidates > 0 || discoveryStats.nextDataCandidates > 0
@@ -1944,6 +1970,63 @@ class AiWebParser {
             candidates.push({ url: match[1], context: match[0] });
         }
         return candidates;
+    }
+
+    // Onboarding harvest (discoveryOnly runs only): instagram/facebook links are
+    // scanned during URL discovery but rejected as blocked hosts — here the FIRST
+    // profile-like link per host is collected instead, for the suggested-config
+    // block. Profile-like = non-empty path whose first segment is not a
+    // share/login/interstitial endpoint.
+    collectDiscoverySocialLinks(html, sourceUrl) {
+        const results = {};
+        if (!html) return results;
+        const hostKeys = [
+            { key: 'instagram', host: 'instagram.com' },
+            { key: 'facebook', host: 'facebook.com' }
+        ];
+        const excludedFirstSegments = /^(?:sharer(?:\.php)?|share|login|intent|plugins)$/i;
+        for (const candidate of this.extractHrefCandidates(html)) {
+            const url = this.stripTrackingParams(this.normalizeUrl(candidate.url, sourceUrl));
+            const parsedUrl = this.parseUrlComponents(url);
+            if (!parsedUrl || !/^https?:$/.test(parsedUrl.protocol)) continue;
+            const hostname = String(parsedUrl.hostname || '').toLowerCase();
+            const hostEntry = hostKeys.find(entry => hostname === entry.host || hostname.endsWith(`.${entry.host}`));
+            if (!hostEntry || results[hostEntry.key]) continue;
+            const pathSegments = String(parsedUrl.pathname || '').split('/').filter(Boolean);
+            if (pathSegments.length === 0) continue;
+            if (excludedFirstSegments.test(pathSegments[0])) continue;
+            results[hostEntry.key] = url;
+            if (Object.keys(results).length === hostKeys.length) break;
+        }
+        return results;
+    }
+
+    // Onboarding harvest (discoveryOnly runs only): the organizer name/url from
+    // the page's schema.org Event JSON-LD, seeding shortName and website in the
+    // suggested-config block. First Event node with an organizer wins.
+    extractJsonLdOrganizer(html) {
+        if (!this.core || typeof this.core.extractJsonLdEventNodes !== 'function') return null;
+        let nodes = [];
+        try {
+            nodes = this.core.extractJsonLdEventNodes(html);
+        } catch (error) {
+            console.warn(`🤖 AI Web: JSON-LD organizer extraction failed: ${error.message}`);
+            return null;
+        }
+        for (const node of nodes) {
+            const organizers = Array.isArray(node.organizer) ? node.organizer : [node.organizer];
+            for (const organizer of organizers) {
+                if (!organizer || typeof organizer !== 'object') continue;
+                const name = typeof organizer.name === 'string'
+                    ? this.normalizeWhitespace(this.decodeBasicEntities(organizer.name))
+                    : '';
+                const url = this.normalizeHttpUrlValue(organizer.url) || '';
+                if (name || url) {
+                    return { name, url };
+                }
+            }
+        }
+        return null;
     }
 
     addAdditionalUrlCandidate(urls, rawUrl, sourceUrl, context = '', discoveryStats = null, parserConfig = {}) {
@@ -3934,6 +4017,14 @@ class AiWebParser {
             /\/[^/?#\s]+@[^/?#\s]+\.[a-z]{2,}(?:[/?#]|$)/i,
             // Block Wix auto-frontend module paths including malformed static./services variant.
             /\/static\.?\/services\/auto-frontend-modules\//i,
+            // Generic non-event site sections, anchored to WHOLE path segments so
+            // event slugs containing these words survive (e.g. /events/all-about-bears).
+            // /login is already covered by the substring list above.
+            /\/(?:shop|store|merch|cart|checkout|contact|about|faq|account|signin|signup)(?:\/|[?#]|$)/i,
+            // Wix internal API endpoints (e.g. chunk-party.com/_api/...)
+            '/_api/',
+            // WordPress ?p=<digits> shortlinks (e.g. bearracuda.com/?p=8724)
+            /[?&]p=\d+(?:[&#]|$)/,
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
             'analytics.google.com'
         ];

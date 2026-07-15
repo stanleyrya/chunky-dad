@@ -582,28 +582,35 @@ test('validateEventUrl applies global + parser discoveryBlockedPatterns unioned 
   const parser = createParser();
   const mainConfig = {
     config: {
-      discoveryBlockedPatterns: [/\/(shop|cart|contact(?:-us)?)(?:\/|[?#]|$)/, '/_api/']
+      // /shop etc. are blocked built-in now — the config union mechanism is
+      // exercised with patterns the built-ins do NOT cover
+      discoveryBlockedPatterns: [/\/(members|vip-lounge)(?:\/|[?#]|$)/, '/private-hire/']
     }
   };
   const effective = parser.core.resolveEffectiveParserConfig(
-    { name: 'Union', discoveryBlockedPatterns: ['x.example/?p='] },
+    { name: 'Union', discoveryBlockedPatterns: ['x.example/hidden'] },
     mainConfig
   );
   const sourceUrl = 'https://x.example/events';
 
   // Global RegExp entries block whole path segments...
-  const shop = parser.validateEventUrl('https://x.example/shop', sourceUrl, effective);
-  assert.equal(shop.valid, false);
-  assert.match(shop.reason, /^config-blocked-pattern:/);
-  assert.equal(parser.validateEventUrl('https://x.example/_api/v1/foo', sourceUrl, effective).valid, false);
+  const members = parser.validateEventUrl('https://x.example/members', sourceUrl, effective);
+  assert.equal(members.valid, false);
+  assert.match(members.reason, /^config-blocked-pattern:/);
+  assert.equal(parser.validateEventUrl('https://x.example/private-hire/rooms', sourceUrl, effective).valid, false);
 
   // ...without swallowing legitimate event slugs that merely start the same way
-  assert.equal(parser.validateEventUrl('https://x.example/shop-party', sourceUrl, effective).valid, true);
+  assert.equal(parser.validateEventUrl('https://x.example/members-party', sourceUrl, effective).valid, true);
 
   // The parser's own substring patterns still apply alongside the global list
-  const own = parser.validateEventUrl('https://x.example/?p=123', sourceUrl, effective);
+  const own = parser.validateEventUrl('https://x.example/hidden', sourceUrl, effective);
   assert.equal(own.valid, false);
-  assert.equal(own.reason, 'config-blocked-pattern:x.example/?p=');
+  assert.equal(own.reason, 'config-blocked-pattern:x.example/hidden');
+
+  // The formerly-config-only generic junk is now built-in (no config needed)
+  const shop = parser.validateEventUrl('https://x.example/shop', sourceUrl, {});
+  assert.equal(shop.valid, false);
+  assert.match(shop.reason, /^blocked-pattern:/);
 });
 
 test('parseOcrResponseWithClassification salvages OCR text from truncated/degenerate JSON', () => {
@@ -2734,4 +2741,129 @@ test('classification cache hits refresh lastUsedAt through the same touch helper
   assert.equal(payload.lastUsedAt, new Date().toISOString().slice(0, 10));
 
   fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
+// Built-in generic blocked patterns (segment-anchored, accuracy first)
+// ---------------------------------------------------------------------------
+
+test('validateEventUrl blocks generic non-event paths built-in, anchored to whole path segments', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://x.example/events';
+  const blocked = [
+    'https://x.example/shop',
+    'https://x.example/shop/tees',
+    'https://x.example/store',
+    'https://x.example/merch',
+    'https://x.example/cart',
+    'https://x.example/checkout',
+    'https://x.example/contact',
+    'https://x.example/about',
+    'https://x.example/faq',
+    'https://x.example/account',
+    'https://x.example/signin',
+    'https://x.example/signup',
+    'https://x.example/_api/v1/site',
+    'https://bearracuda.example/?p=8724'   // WordPress shortlink
+  ];
+  for (const url of blocked) {
+    const result = parser.validateEventUrl(url, sourceUrl, {});
+    assert.equal(result.valid, false, `${url} should be blocked`);
+    assert.match(result.reason, /^blocked-pattern:/, `${url} → ${result.reason}`);
+  }
+
+  // Event slugs containing overlapping WORDS survive — anchoring is per path segment
+  const allowed = [
+    'https://x.example/events/all-about-bears',
+    'https://x.example/shop-party',
+    'https://x.example/events/checkout-these-bears',
+    'https://x.example/contact-high-dance-party',
+    'https://x.example/events/party?page=2'
+  ];
+  for (const url of allowed) {
+    const result = parser.validateEventUrl(url, sourceUrl, {});
+    assert.equal(result.valid, true, `${url} should pass but was rejected: ${result.reason}`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// discoveryOnly onboarding harvest (social links + JSON-LD organizer)
+// ---------------------------------------------------------------------------
+
+const HARVEST_HTML = `
+  <html>
+    <head>
+      <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Event",
+          "name": "Twisted Bear: Dallas",
+          "startDate": "2026-08-15T21:00:00-05:00",
+          "organizer": {
+            "@type": "Organization",
+            "name": "Twisted Bear Events",
+            "url": "https://twistedbear.example"
+          }
+        }
+      </script>
+    </head>
+    <body>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fx.example">Share</a>
+      <a href="https://www.instagram.com/">Instagram home</a>
+      <a href="https://www.instagram.com/twistedbearparty">Follow us</a>
+      <a href="https://www.instagram.com/other.account">Second profile (first wins)</a>
+      <a href="https://www.facebook.com/login/?next=x">Log in</a>
+      <a href="https://www.facebook.com/twistedglobal/">Facebook page</a>
+      <a href="https://x.example/e/party-tickets">Tickets</a>
+    </body>
+  </html>
+`;
+
+test('discoveryOnly harvests the first profile-like social link per host and the JSON-LD organizer', async () => {
+  const parser = createParser();
+  const result = await parser.parseEvents(
+    { html: HARVEST_HTML, url: 'https://x.example/events' },
+    { discoveryOnly: true },
+    null,
+    'event-page',
+    null
+  );
+
+  assert.deepEqual(result.discoveredSocialLinks, {
+    instagram: 'https://www.instagram.com/twistedbearparty',
+    facebook: 'https://www.facebook.com/twistedglobal/'
+  }, 'sharer/login/root links are excluded; first profile-like link per host wins');
+  assert.deepEqual(result.discoveredOrganizer, {
+    name: 'Twisted Bear Events',
+    url: 'https://twistedbear.example/'
+  });
+  assert.deepEqual(result.events, [], 'discoveryOnly extracts no events');
+});
+
+test('social/organizer harvest is inert outside discoveryOnly mode', async () => {
+  const parser = createParser();
+  // link-aggregator classification takes the same no-AI return path as discovery,
+  // so this exercises a normal (non-discovery) run without any network use.
+  const result = await parser.parseEvents(
+    { html: HARVEST_HTML, url: 'https://x.example/events' },
+    {},
+    null,
+    'link-aggregator',
+    null
+  );
+  assert.equal(result.discoveredSocialLinks, null);
+  assert.equal(result.discoveredOrganizer, null);
+});
+
+test('extractAdditionalUrls tags uniqueValidCount (pre-budget) non-enumerably for the dead-end detector', () => {
+  const parser = createParser();
+  const html = `
+    <a href="https://x.example/e/party-one">One</a>
+    <a href="https://x.example/e/party-two">Two</a>
+    <a href="https://x.example/e/party-three">Three</a>
+  `;
+  const links = parser.extractAdditionalUrls(html, 'https://x.example/events', { maxAdditionalUrls: 0 });
+  assert.equal(links.length, 0, 'budget of 0 returns no links');
+  assert.equal(links.uniqueValidCount, 3, 'but the pre-budget valid count is preserved');
+  assert.ok(!Object.keys(links).includes('uniqueValidCount'), 'tag is non-enumerable');
 });

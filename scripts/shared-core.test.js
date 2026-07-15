@@ -2947,3 +2947,567 @@ test('PARSER MERGE summary lists only fields the merge actually changed on the o
   assert.match(summary, /1 field updated \(bar\)/, 'only the genuinely changed field is counted');
   assert.ok(!summary.includes('cover'), 'a preserved-from-base field must not be listed as updated');
 });
+
+// ---------------------------------------------------------------------------
+// Built-in page classification rules (platform defaults beneath config rules)
+// ---------------------------------------------------------------------------
+
+test('built-in classification rules are active with an empty config', () => {
+  const core = createCore();
+  assert.equal(core.classifyPage('https://www.eventbrite.com/e/party-123', null), 'event-page');
+  assert.equal(core.classifyPage('https://www.eventbrite.com/o/org-456', null), 'multi-event-page');
+  assert.equal(core.classifyPage('https://linktr.ee/somepromoter', null), 'link-aggregator');
+  // They resolve at the deterministic url-rule tier (no HTML needed)
+  assert.deepEqual(
+    core.classifyPageWithSignal('https://linktr.ee/somepromoter', null),
+    { classification: 'link-aggregator', signal: 'url-rule' }
+  );
+});
+
+test('config classification rules are checked BEFORE built-ins (config overrides)', () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /eventbrite\.com\/e\//i, classification: 'multi-event-page' }
+    ]
+  });
+  assert.equal(core.classifyPage('https://www.eventbrite.com/e/party-123', null), 'multi-event-page',
+    'first match wins, and config rules come first');
+  // Untouched built-ins still apply beneath the config rule
+  assert.equal(core.classifyPage('https://www.eventbrite.com/o/org-456', null), 'multi-event-page');
+  assert.equal(core.classifyPage('https://linktr.ee/x', null), 'link-aggregator');
+});
+
+// ---------------------------------------------------------------------------
+// Built-in Eventbrite /e/ confidence defaults (merge-under config)
+// ---------------------------------------------------------------------------
+
+test('built-in Eventbrite confidence defaults apply without any config and sit beneath config defaults', () => {
+  const core = createCore();
+
+  // No global config at all → built-in urlPattern present
+  const bare = core.applyGlobalAiConfidenceDefaults({ name: 'X' }, null);
+  const barePatterns = bare.ai.confidence.expectations.urlPatterns;
+  assert.equal(barePatterns.length, 1);
+  assert.match(barePatterns[0].pattern, /eventbrite\\\.com\/e\//);
+  assert.deepEqual(barePatterns[0].fields.cover, { expected: ['jsonld'], strong: ['jsonld'] });
+  assert.deepEqual(barePatterns[0].fields.location, { expected: ['meta'], strong: ['meta'] });
+
+  // Config-provided defaults come AFTER the built-in (later urlPatterns entries
+  // win at consumption time, so config extends/overrides)
+  const mainConfig = {
+    config: {
+      aiConfidenceDefaults: {
+        confidence: {
+          expectations: {
+            urlPatterns: [{ pattern: 'custom-site', fields: { image: { expected: ['meta'] } } }]
+          }
+        }
+      }
+    }
+  };
+  const merged = core.applyGlobalAiConfidenceDefaults({ name: 'X' }, mainConfig);
+  const mergedPatterns = merged.ai.confidence.expectations.urlPatterns;
+  assert.equal(mergedPatterns.length, 2);
+  assert.match(mergedPatterns[0].pattern, /eventbrite/);
+  assert.equal(mergedPatterns[1].pattern, 'custom-site');
+
+  // A parser's own confidence keys still win key-wise over both layers
+  const parserEntry = {
+    name: 'Y',
+    ai: { confidence: { minScore: 42, expectations: { urlPatterns: [{ pattern: 'parser-own', fields: {} }] } } }
+  };
+  const parserMerged = core.applyGlobalAiConfidenceDefaults(parserEntry, mainConfig);
+  assert.equal(parserMerged.ai.confidence.minScore, 42);
+  const parserPatterns = parserMerged.ai.confidence.expectations.urlPatterns;
+  assert.deepEqual(parserPatterns.map(p => p.pattern), [
+    barePatterns[0].pattern, 'custom-site', 'parser-own'
+  ], 'layering is built-in < global config < parser');
+});
+
+// ---------------------------------------------------------------------------
+// Adaptive crawl depth (urlDiscoveryDepth absent)
+// ---------------------------------------------------------------------------
+
+// Harness: canned pages keyed by URL. `fail` throws on fetch; everything else
+// returns 200 with empty HTML — classification is driven purely by URL rules.
+function createCrawlHarness(pages) {
+  const fetched = [];
+  const parsedConfigs = {};
+  const httpAdapter = {
+    fetchData: async (url) => {
+      const page = pages[url];
+      if (page && page.fail) {
+        throw new Error(page.fail);
+      }
+      fetched.push(url);
+      return { html: (page && page.html) || '<html><body></body></html>', url, statusCode: 200, headers: {} };
+    }
+  };
+  const parsers = {
+    'ai-web': {
+      parseEvents: (htmlData, parserConfig) => {
+        const page = pages[htmlData.url] || {};
+        parsedConfigs[htmlData.url] = parserConfig;
+        const result = {
+          events: page.events || [],
+          additionalLinks: page.additionalLinks || []
+        };
+        if (page.discoveredSegments) result.discoveredSegments = page.discoveredSegments;
+        if (page.discoveredSocialLinks) result.discoveredSocialLinks = page.discoveredSocialLinks;
+        if (page.discoveredOrganizer) result.discoveredOrganizer = page.discoveredOrganizer;
+        return result;
+      }
+    }
+  };
+  return { fetched, parsedConfigs, httpAdapter, parsers };
+}
+
+// Deterministic crawl entries: no AI classification second opinion, no bear-check chatter
+const CRAWL_AI = { classifyPages: false, bearCheck: { mode: 'off' } };
+
+test('adaptive crawl: aggregator and multi-event pages follow links; event pages follow only rule-classified event links + extracted ticketUrl', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://linktr.ee/newsite': { additionalLinks: ['https://www.eventbrite.com/o/newsite-123'] },
+    'https://www.eventbrite.com/o/newsite-123': { additionalLinks: ['https://www.eventbrite.com/e/party-1'] },
+    'https://www.eventbrite.com/e/party-1': {
+      events: [{ title: 'Party One', startDate: new Date(Date.now() + 7 * 86400000), ticketUrl: 'https://tickets.example/party-1' }],
+      additionalLinks: [
+        'https://www.eventbrite.com/e/party-2',      // rule-classifiable event page → followed
+        'https://newsite.example/press-and-media'     // valid but not an event page by URL rules → NOT followed
+      ]
+    },
+    'https://www.eventbrite.com/e/party-2': {},
+    'https://tickets.example/party-1': {}
+  };
+  const { fetched, parsedConfigs, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processParser(
+    { name: 'Adaptive Chain', urls: ['https://linktr.ee/newsite'], ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.ok(display.logs.includes('SYSTEM: Adaptive Chain → adaptive crawl depth'), 'adaptive mode announced once per parser');
+  assert.ok(fetched.includes('https://www.eventbrite.com/o/newsite-123'), 'link-aggregator links are followed');
+  assert.ok(fetched.includes('https://www.eventbrite.com/e/party-1'), 'multi-event-page links are followed');
+  assert.ok(fetched.includes('https://www.eventbrite.com/e/party-2'), 'event page follows sibling links pre-classifiable as event-page');
+  assert.ok(fetched.includes('https://tickets.example/party-1'), 'event page follows its extracted ticketUrl');
+  assert.ok(!fetched.includes('https://newsite.example/press-and-media'), 'nav/related links stay unfollowed on event pages');
+
+  // Adaptive mode never stamps a numeric depth onto per-page configs
+  assert.equal(parsedConfigs['https://www.eventbrite.com/e/party-1'].urlDiscoveryDepth, undefined);
+});
+
+test('adaptive crawl: ad and unknown pages follow nothing', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /ads\.example/i, classification: 'ad' }]
+  });
+  const display = createDisplayAdapterStub();
+  const pages = {
+    // No URL rule + empty HTML → 'unknown'
+    'https://mystery.example/': { additionalLinks: ['https://mystery.example/next'] },
+    'https://mystery.example/next': {},
+    'https://ads.example/': { additionalLinks: ['https://ads.example/promo'] },
+    'https://ads.example/promo': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processParser(
+    { name: 'Unknown Root', urls: ['https://mystery.example/'], ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.deepEqual(fetched, ['https://mystery.example/'], 'unknown pages follow nothing');
+  assert.ok(display.logs.includes('SYSTEM: Adaptive crawl: stopping at https://mystery.example/ (unknown)'));
+
+  fetched.length = 0;
+  await core.processParser(
+    { name: 'Ad Root', urls: ['https://ads.example/'], ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.deepEqual(fetched, ['https://ads.example/'], 'ad pages skip the parser and follow nothing');
+});
+
+test('adaptive crawl: hard chain cap at 4 hops (logged when hit)', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /chain\.example/i, classification: 'link-aggregator' }]
+  });
+  const display = createDisplayAdapterStub();
+  const pages = {};
+  for (let i = 1; i <= 6; i++) {
+    pages[`https://chain.example/p${i}`] = i < 6
+      ? { additionalLinks: [`https://chain.example/p${i + 1}`] }
+      : {};
+  }
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processParser(
+    { name: 'Chain', urls: ['https://chain.example/p1'], ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.deepEqual(fetched, [1, 2, 3, 4, 5].map(i => `https://chain.example/p${i}`),
+    'pages 4 hops from the root never have their links followed');
+  assert.ok(
+    display.logs.some(line => line.includes('Adaptive crawl: chain cap (4 hops) reached at https://chain.example/p5')),
+    `expected chain-cap log, got: ${JSON.stringify(display.logs.filter(l => l.includes('Adaptive')))}`
+  );
+});
+
+test('explicit numeric urlDiscoveryDepth keeps legacy behavior byte-for-byte (including 0 = never crawl)', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /fixed\.example/i, classification: 'link-aggregator' }]
+  });
+  const pages = {
+    'https://fixed.example/root': { additionalLinks: ['https://fixed.example/a'] },
+    'https://fixed.example/a': { additionalLinks: ['https://fixed.example/b'] },
+    'https://fixed.example/b': {}
+  };
+
+  // depth 1: root + depth-1 pages, deeper links hit the legacy depth-limit log
+  {
+    const display = createDisplayAdapterStub();
+    const { fetched, parsedConfigs, httpAdapter, parsers } = createCrawlHarness(pages);
+    await core.processParser(
+      { name: 'Depth One', urls: ['https://fixed.example/root'], urlDiscoveryDepth: 1, ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+    assert.deepEqual(fetched, ['https://fixed.example/root', 'https://fixed.example/a']);
+    assert.ok(display.logs.includes('SYSTEM: Crawling 1 discovered URLs (depth 1/1)'), 'numeric crawl log keeps its exact shape');
+    assert.ok(display.logs.includes(
+      'SYSTEM: Crawl page https://fixed.example/a found 1 unique additional URLs, but depth limit (1) reached or URL discovery disabled - ignoring'
+    ), 'legacy depth-limit log unchanged');
+    assert.ok(!display.logs.some(line => line.includes('adaptive')), 'no adaptive logs in numeric mode');
+    // Legacy remaining-depth math still stamped onto per-page configs
+    assert.equal(parsedConfigs['https://fixed.example/a'].urlDiscoveryDepth, 0);
+  }
+
+  // depth 0: never crawl
+  {
+    const display = createDisplayAdapterStub();
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+    await core.processParser(
+      { name: 'Depth Zero', urls: ['https://fixed.example/root'], urlDiscoveryDepth: 0, ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+    assert.deepEqual(fetched, ['https://fixed.example/root']);
+    assert.ok(display.logs.some(line => line.includes('depth limit (0) reached')));
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Suggested-config block (discoveryOnly onboarding output)
+// ---------------------------------------------------------------------------
+
+test('buildSuggestedParserConfig renders harvested fields and omits lines without data', () => {
+  const core = createCore();
+
+  const full = core.buildSuggestedParserConfig(
+    { name: 'Twisted Bear', urls: ['https://www.eventbrite.com/o/nab-events-llc-51471535173'] },
+    {
+      socialLinks: { instagram: 'https://www.instagram.com/twistedbearparty' },
+      organizer: { name: 'Twisted Bear Events', url: 'https://twistedbear.example' }
+    }
+  );
+  assert.equal(full, [
+    '📋 SUGGESTED CONFIG for "Twisted Bear" — paste into parsers[] in scraper-input.js:',
+    '{',
+    '  name: "Twisted Bear",',
+    '  enabled: false, // flip on after a dry-run preview looks right',
+    '  urls: ["https://www.eventbrite.com/o/nab-events-llc-51471535173"],',
+    '  alwaysBear: false, // set true for trusted bear promoters (AI trust context)',
+    '  metadata: {',
+    '    shortName: { value: "TWISTED BEAR EVENTS" }, // add a hyphen where it should line-break',
+    '    instagram: { value: "https://www.instagram.com/twistedbearparty" }, // found on page',
+    '    website: { value: "https://twistedbear.example" }, // found on page',
+    '  },',
+    '},'
+  ].join('\n'));
+
+  // Nothing harvested → shortName falls back to the parser name; no social/website lines
+  const minimal = core.buildSuggestedParserConfig(
+    { name: 'Plain Site', urls: ['https://plain.example/events'] },
+    { socialLinks: {}, organizer: null }
+  );
+  assert.ok(minimal.includes('    shortName: { value: "PLAIN SITE" }, // add a hyphen where it should line-break'));
+  assert.ok(!minimal.includes('instagram:'));
+  assert.ok(!minimal.includes('facebook:'));
+  assert.ok(!minimal.includes('website:'));
+});
+
+test('discoveryOnly runs emit the suggested-config block with harvested social links', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://www.eventbrite.com/o/newsite-123': {
+      additionalLinks: ['https://www.eventbrite.com/e/party-1'],
+      discoveredSocialLinks: { instagram: 'https://www.instagram.com/newsite' }
+    },
+    'https://www.eventbrite.com/e/party-1': {
+      discoveredOrganizer: { name: 'New Site Events', url: 'https://newsite.example' },
+      discoveredSegments: [{ index: 1, lineCount: 2, preview: 'PARTY', imageUrls: [], resourceLines: [] }]
+    }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processParser(
+    { name: 'New Site', urls: ['https://www.eventbrite.com/o/newsite-123'], discoveryOnly: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.ok(display.logs.some(line => line.startsWith('SYSTEM: New Site → Discovery only mode (depth adaptive)')),
+    'discoveryOnly startup line carries the adaptive marker when depth is absent');
+  const block = display.logs.find(line => line.startsWith('📋 SUGGESTED CONFIG for "New Site"'));
+  assert.ok(block, 'suggested config emitted after discovery');
+  assert.ok(block.includes('    shortName: { value: "NEW SITE EVENTS" }, // add a hyphen where it should line-break'));
+  assert.ok(block.includes('    instagram: { value: "https://www.instagram.com/newsite" }, // found on page'));
+  assert.ok(block.includes('    website: { value: "https://newsite.example" }, // found on page'));
+});
+
+// ---------------------------------------------------------------------------
+// Learned dead-end store (pure semantics — persistence lives in adapters)
+// ---------------------------------------------------------------------------
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function deadEndCore() {
+  // hub.example → multi-event-page so its links are always followed in adaptive mode
+  return new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /hub\.example/i, classification: 'multi-event-page' },
+      { pattern: /ads\.example/i, classification: 'ad' }
+    ]
+  });
+}
+
+function deadEndConfig({ store = {}, retryDays, discoveryOnly = false, links, name = 'Dead End Run' } = {}) {
+  return {
+    config: retryDays === undefined ? {} : { deadEndRetryDays: retryDays },
+    deadEndStore: store,
+    parsers: [{
+      name,
+      urls: ['https://hub.example/'],
+      discoveryOnly,
+      ai: CRAWL_AI,
+      _links: links
+    }]
+  };
+}
+
+test('dead-end store: barren discovered pages are learned; productive, failed-fetch, and root pages never are', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://hub.example/': {
+      additionalLinks: [
+        'https://site.example/dead',
+        'https://site.example/past-events',
+        'https://site.example/broken'
+      ]
+    },
+    'https://site.example/dead': {},                        // fetched fine, 0 events/segments/links → dead end
+    'https://site.example/past-events': {
+      // RAW parse output counts: all-past events are still events → NOT a dead end
+      events: [{ title: 'Old Party', startDate: new Date('2020-01-01T00:00:00.000Z') }]
+    },
+    'https://site.example/broken': { fail: 'HTTP 503: unavailable' } // fetch failure → never dead-ended
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const config = deadEndConfig({});
+
+  const results = await core.processEvents(config, httpAdapter, display, parsers);
+
+  assert.deepEqual(Object.keys(results.deadEndStore), ['https://site.example/dead']);
+  const entry = results.deadEndStore['https://site.example/dead'];
+  assert.equal(entry.misses, 1);
+  assert.ok(Date.parse(entry.firstSeen) > 0 && entry.firstSeen === entry.lastSeen);
+  assert.equal(results.deadEndStoreChanged, true);
+  assert.ok(display.logs.includes('SYSTEM: Learned 1 new dead-end URL(s): https://site.example/dead'));
+  // The barren ROOT of a barren site is still never stored
+  assert.ok(!('https://hub.example/' in results.deadEndStore));
+});
+
+test('dead-end store: young entries are skipped before enqueueing, with the reset hint in the log', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const youngLastSeen = new Date(Date.now() - 1 * DAY_MS).toISOString();
+  const store = {
+    'https://site.example/dead': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1 }
+  };
+  const pages = {
+    'https://hub.example/': { additionalLinks: ['https://site.example/dead'] },
+    'https://site.example/dead': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+
+  assert.ok(!fetched.includes('https://site.example/dead'), 'young dead end is not fetched');
+  assert.equal(results.deadEndStoreChanged, false, 'skipping does not touch the store');
+  const skipLine = display.logs.find(line => line.startsWith('SYSTEM: Skipped 1 known dead-end URL(s)'));
+  assert.ok(skipLine, `expected skip log, got: ${JSON.stringify(display.logs)}`);
+  assert.ok(skipLine.includes('retry after 30d'), 'retry horizon in the log');
+  assert.ok(skipLine.includes('delete dead-ends.json or set deadEndRetryDays: 0 to reset'), 'recovery hint in the log');
+  assert.ok(skipLine.includes('https://site.example/dead'), 'sample URL in the log');
+});
+
+test('dead-end store: expired entries retry once — removed when productive, refreshed when still dead', async () => {
+  const core = deadEndCore();
+  const expiredLastSeen = new Date(Date.now() - 40 * DAY_MS).toISOString();
+
+  // Now productive → removed from the store
+  {
+    const display = createDisplayAdapterStub();
+    const store = {
+      'https://site.example/revived': { firstSeen: expiredLastSeen, lastSeen: expiredLastSeen, misses: 2 }
+    };
+    const pages = {
+      'https://hub.example/': { additionalLinks: ['https://site.example/revived'] },
+      'https://site.example/revived': {
+        events: [{ title: 'Comeback Party', startDate: new Date(Date.now() + 7 * DAY_MS) }]
+      }
+    };
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+    const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+
+    assert.ok(fetched.includes('https://site.example/revived'), 'expired entry is retried');
+    assert.deepEqual(results.deadEndStore, {}, 'productive page self-heals out of the store');
+    assert.equal(results.deadEndStoreChanged, true);
+  }
+
+  // Still dead → lastSeen refreshed + misses incremented (not re-learned)
+  {
+    const display = createDisplayAdapterStub();
+    const store = {
+      'https://site.example/still-dead': { firstSeen: expiredLastSeen, lastSeen: expiredLastSeen, misses: 2 }
+    };
+    const pages = {
+      'https://hub.example/': { additionalLinks: ['https://site.example/still-dead'] },
+      'https://site.example/still-dead': {}
+    };
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+    const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+
+    assert.ok(fetched.includes('https://site.example/still-dead'));
+    const entry = results.deadEndStore['https://site.example/still-dead'];
+    assert.equal(entry.misses, 3);
+    assert.ok(Date.parse(entry.lastSeen) > Date.now() - DAY_MS, 'lastSeen refreshed to now');
+    assert.equal(entry.firstSeen, expiredLastSeen, 'firstSeen preserved');
+    assert.ok(!display.logs.some(line => line.includes('Learned 1 new dead-end')), 'a refreshed miss is not re-learned');
+  }
+});
+
+test('dead-end store: entries unseen for 2× the retry window are pruned at end of run', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const staleLastSeen = new Date(Date.now() - 90 * DAY_MS).toISOString();  // > 2×30d
+  const freshLastSeen = new Date(Date.now() - 10 * DAY_MS).toISOString();
+  const store = {
+    'https://gone.example/forgotten': { firstSeen: staleLastSeen, lastSeen: staleLastSeen, misses: 4 },
+    'https://site.example/recent': { firstSeen: freshLastSeen, lastSeen: freshLastSeen, misses: 1 }
+  };
+  const pages = { 'https://hub.example/': {} };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+
+  assert.deepEqual(Object.keys(results.deadEndStore), ['https://site.example/recent']);
+  assert.equal(results.deadEndStoreChanged, true);
+  assert.ok(display.logs.some(line => line.includes('Pruned 1 stale dead-end URL(s)')));
+});
+
+test('dead-end store: deadEndRetryDays 0 is a kill switch — nothing skipped, nothing learned', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const youngLastSeen = new Date(Date.now() - 1 * DAY_MS).toISOString();
+  const store = {
+    'https://site.example/dead': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1 }
+  };
+  const pages = {
+    'https://hub.example/': { additionalLinks: ['https://site.example/dead', 'https://site.example/newly-dead'] },
+    'https://site.example/dead': {},
+    'https://site.example/newly-dead': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const results = await core.processEvents(deadEndConfig({ store, retryDays: 0 }), httpAdapter, display, parsers);
+
+  assert.ok(fetched.includes('https://site.example/dead'), 'young entry fetched anyway — no skipping when disabled');
+  assert.ok(!('https://site.example/newly-dead' in results.deadEndStore), 'nothing new learned when disabled');
+  assert.equal(results.deadEndStoreChanged, false);
+  assert.ok(display.logs.some(line => line.includes('Dead-end store disabled')), 'one-liner announces the store is off');
+});
+
+test('dead-end store: discoveryOnly never skips, and a productive fetch removes the entry', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const youngLastSeen = new Date(Date.now() - 1 * DAY_MS).toISOString();
+  const store = {
+    'https://site.example/revived': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1 }
+  };
+  const pages = {
+    'https://hub.example/': { additionalLinks: ['https://site.example/revived'] },
+    'https://site.example/revived': { additionalLinks: ['https://site.example/deeper'] },
+    'https://site.example/deeper': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const results = await core.processEvents(deadEndConfig({ store, discoveryOnly: true }), httpAdapter, display, parsers);
+
+  assert.ok(fetched.includes('https://site.example/revived'), 'discovery mode always fetches, even young dead ends');
+  assert.ok(!('https://site.example/revived' in results.deadEndStore), 'productive page removed from the store');
+  assert.equal(results.deadEndStoreChanged, true);
+});
+
+test('dead-end store: ad-classified pages are stored regardless of links; unknown pages follow the strict output rule', async () => {
+  const core = deadEndCore();
+
+  // Unit-level force rule: 'ad' with plenty of valid links is still a dead end
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: {} });
+  core.recordDeadEndObservation({
+    url: 'https://ads.example/promo',
+    currentDepth: 1,
+    parseResult: { events: [], additionalLinks: ['https://x.example/e/party'] },
+    pageClassification: 'ad'
+  });
+  core.recordDeadEndObservation({
+    url: 'https://mystery.example/links',
+    currentDepth: 1,
+    parseResult: { events: [], additionalLinks: ['https://x.example/e/party'] },
+    pageClassification: 'unknown'
+  });
+  const store = core.deadEndRunContext.store;
+  assert.ok('https://ads.example/promo' in store, 'ad page with valid links is a dead end');
+  assert.ok(!('https://mystery.example/links' in store), 'unknown page with valid links is NOT force-stored');
+  core.deadEndRunContext = null;
+
+  // End-to-end: a discovered ad page lands in the store after the run
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://hub.example/': { additionalLinks: ['https://ads.example/promo'] },
+    'https://ads.example/promo': {}
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const results = await core.processEvents(deadEndConfig({}), httpAdapter, display, parsers);
+  assert.ok('https://ads.example/promo' in results.deadEndStore);
+});
+
+test('dead-end store: maxAdditionalUrls 0 cannot fake a dead end when the parser tags uniqueValidCount', () => {
+  const core = deadEndCore();
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: {} });
+  const budgetedLinks = [];
+  Object.defineProperty(budgetedLinks, 'uniqueValidCount', { value: 7, enumerable: false });
+  core.recordDeadEndObservation({
+    url: 'https://site.example/budgeted',
+    currentDepth: 1,
+    parseResult: { events: [], additionalLinks: budgetedLinks },
+    pageClassification: 'multi-event-page'
+  });
+  assert.deepEqual(core.deadEndRunContext.store, {}, 'valid-but-budget-capped links keep the page productive');
+  core.deadEndRunContext = null;
+});

@@ -19,6 +19,14 @@
 // 📖 READ scripts/README.md BEFORE EDITING - Contains full architecture rules
 // ============================================================================
 
+// Sentinel maxDepth for adaptive crawling (urlDiscoveryDepth absent): each
+// page's classification decides whether its links are followed, bounded by a
+// hard chain cap instead of a fixed numeric depth.
+const ADAPTIVE_CRAWL_DEPTH = 'adaptive';
+// Hard cap on adaptive crawl chains: pages this many hops from a root never
+// have their links followed, no matter how they classify.
+const ADAPTIVE_CRAWL_MAX_HOPS = 4;
+
 class SharedCore {
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
@@ -75,6 +83,9 @@ class SharedCore {
         // Initialize city mappings from centralized cities config
         this.cityMappings = this.convertCitiesConfigToCityMappings(this.cities);
         this.loggedWarnings = new Set();
+        // Per-run learned dead-end context (created by processEvents from the
+        // store the orchestrator loaded; null outside a run = feature inert)
+        this.deadEndRunContext = null;
         this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         
         // URL-to-parser mapping for automatic parser detection
@@ -106,8 +117,12 @@ class SharedCore {
             // Generic parser will be used as fallback if no pattern matches
         ];
 
-        // URL pattern rules for page classification (checked in order, first match wins)
-        this.pageClassificationRules = this.normalizePageClassificationRules(options.pageClassificationRules || []);
+        // URL pattern rules for page classification (checked in order, first match wins).
+        // Built-in platform rules are appended AFTER config rules so config always overrides.
+        this.pageClassificationRules = [
+            ...this.normalizePageClassificationRules(options.pageClassificationRules || []),
+            ...this.normalizePageClassificationRules(this.getBuiltInPageClassificationRules())
+        ];
 
         // Compiled regex and thresholds for HTML heuristics in classifyPage
         this.pageClassificationMonthPattern = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi;
@@ -185,13 +200,9 @@ class SharedCore {
     // optionally re-check them with AI.
     classifyPageWithSignal(url, html) {
         // 1. URL pattern rules (deterministic, no HTML needed)
-        if (url) {
-            for (const rule of this.pageClassificationRules) {
-                if (this.pageClassificationRuleMatchesUrl(rule, url)) {
-                    return { classification: rule.classification, signal: 'url-rule' };
-                }
-            }
-
+        const ruleClassification = this.classifyUrlByRules(url);
+        if (ruleClassification) {
+            return { classification: ruleClassification, signal: 'url-rule' };
         }
 
         // 2. Schema.org Event JSON-LD (deterministic). Ticketing pages (sickening.events,
@@ -724,6 +735,29 @@ class SharedCore {
         }
     }
 
+    // Baked-in platform knowledge: URL shapes that are the same on every site.
+    // These sit BENEATH config rules (config is checked first), so a config rule
+    // matching the same URL always wins.
+    getBuiltInPageClassificationRules() {
+        return [
+            { pattern: /eventbrite\.com\/e\//i, classification: 'event-page' },
+            { pattern: /eventbrite\.com\/o\//i, classification: 'multi-event-page' },
+            { pattern: /linktr\.ee/i, classification: 'link-aggregator' }
+        ];
+    }
+
+    // Classify a URL using ONLY the URL pattern rules (config + built-ins, first
+    // match wins) — no HTML heuristics. Returns null when no rule matches.
+    classifyUrlByRules(url) {
+        if (!url) return null;
+        for (const rule of this.pageClassificationRules) {
+            if (this.pageClassificationRuleMatchesUrl(rule, url)) {
+                return rule.classification;
+            }
+        }
+        return null;
+    }
+
     normalizePageClassificationRules(rules) {
         if (!Array.isArray(rules)) {
             return [];
@@ -825,8 +859,16 @@ class SharedCore {
         const automationContext = this.resolveAutomationContext(config);
         const automationSkipped = [];
 
+        // Learned dead-end store: orchestrator loads it into config.deadEndStore
+        // and saves results.deadEndStore back when results.deadEndStoreChanged.
+        this.deadEndRunContext = this.createDeadEndRunContext(config);
+        if (this.deadEndRunContext.disabledExplicitly) {
+            await displayAdapter.logInfo('SYSTEM: Dead-end store disabled (deadEndRetryDays ≤ 0) — no URLs skipped or learned');
+        }
+
         if (!config.parsers || config.parsers.length === 0) {
             await displayAdapter.logWarn('SYSTEM: No parser configurations found in config');
+            await this.finalizeDeadEndRun(displayAdapter, results);
             return results;
         }
 
@@ -904,6 +946,8 @@ class SharedCore {
             results.automationSkippedParsers = automationSkipped;
         }
 
+        await this.finalizeDeadEndRun(displayAdapter, results);
+
         const duplicateSummary = results.duplicatesRemoved > 0
             ? ` (removed ${results.duplicatesRemoved} dupes)`
             : ' (no duplicates)';
@@ -957,9 +1001,16 @@ class SharedCore {
         // Use global processedUrls to prevent duplicate processing across all parsers
 
         const discoveryOnly = effectiveParserConfig.discoveryOnly === true;
-        const maxDepth = effectiveParserConfig.urlDiscoveryDepth ?? 1;
+        // Absent urlDiscoveryDepth → adaptive crawling: each page's classification
+        // decides whether its links are followed. An explicit numeric depth
+        // (including 0) keeps the exact legacy fixed-depth behavior.
+        const configuredDepth = effectiveParserConfig.urlDiscoveryDepth;
+        const adaptiveDepth = configuredDepth === undefined || configuredDepth === null;
+        const maxDepth = adaptiveDepth ? ADAPTIVE_CRAWL_DEPTH : configuredDepth;
         if (discoveryOnly) {
-            await displayAdapter.logInfo(`SYSTEM: ${effectiveParserConfig.name} → Discovery only mode (depth ${maxDepth})`);
+            await displayAdapter.logInfo(`SYSTEM: ${effectiveParserConfig.name} → Discovery only mode (depth ${adaptiveDepth ? 'adaptive' : maxDepth})`);
+        } else if (adaptiveDepth) {
+            await displayAdapter.logInfo(`SYSTEM: ${effectiveParserConfig.name} → adaptive crawl depth`);
         }
 
         const discoveryTreeCollector = discoveryOnly
@@ -968,7 +1019,9 @@ class SharedCore {
                 rootUrlSet: new Set(),
                 allNodes: new Set(),
                 edges: [],
-                segmentsByUrl: {}
+                segmentsByUrl: {},
+                socialLinks: {},
+                organizer: null
             }
             : null;
 
@@ -1032,9 +1085,120 @@ class SharedCore {
             const totalSegmentCount = Object.values(discoveryTree.segmentsByUrl).reduce((sum, segs) => sum + segs.length, 0);
             const segmentSuffix = segmentUrlCount > 0 ? `, ${totalSegmentCount} segment(s) on ${segmentUrlCount} multi-event page(s)` : '';
             await displayAdapter.logInfo(`SYSTEM: Discovery complete: ${discoveryTree.allNodes.length} URL(s) found across ${discoveryTree.edges.length} link(s)${segmentSuffix}`);
+            await displayAdapter.logInfo(this.buildSuggestedParserConfig(effectiveParserConfig, discoveryTreeCollector));
         }
 
         return result;
+    }
+
+    // Paste-ready parser entry printed after discoveryOnly runs. Only
+    // high-confidence lines are included: configured root URLs always; social
+    // links and organizer website only when harvested from the crawled pages.
+    buildSuggestedParserConfig(parserConfig, collector = null) {
+        const name = parserConfig && typeof parserConfig.name === 'string' && parserConfig.name.trim()
+            ? parserConfig.name.trim()
+            : 'New Site';
+        const rootUrls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        const organizer = collector && collector.organizer && typeof collector.organizer === 'object'
+            ? collector.organizer
+            : null;
+        const socialLinks = collector && collector.socialLinks && typeof collector.socialLinks === 'object'
+            ? collector.socialLinks
+            : {};
+        const organizerName = organizer && typeof organizer.name === 'string' ? organizer.name.trim() : '';
+        const organizerUrl = organizer && typeof organizer.url === 'string' ? organizer.url.trim() : '';
+        const shortName = (organizerName || name).toUpperCase();
+
+        const lines = [];
+        lines.push(`📋 SUGGESTED CONFIG for "${name}" — paste into parsers[] in scraper-input.js:`);
+        lines.push('{');
+        lines.push(`  name: ${JSON.stringify(name)},`);
+        lines.push('  enabled: false, // flip on after a dry-run preview looks right');
+        lines.push(`  urls: [${rootUrls.map(url => JSON.stringify(url)).join(', ')}],`);
+        lines.push('  alwaysBear: false, // set true for trusted bear promoters (AI trust context)');
+        lines.push('  metadata: {');
+        lines.push(`    shortName: { value: ${JSON.stringify(shortName)} }, // add a hyphen where it should line-break`);
+        if (socialLinks.instagram) {
+            lines.push(`    instagram: { value: ${JSON.stringify(socialLinks.instagram)} }, // found on page`);
+        }
+        if (socialLinks.facebook) {
+            lines.push(`    facebook: { value: ${JSON.stringify(socialLinks.facebook)} }, // found on page`);
+        }
+        if (organizerUrl) {
+            lines.push(`    website: { value: ${JSON.stringify(organizerUrl)} }, // found on page`);
+        }
+        lines.push('  },');
+        lines.push('},');
+        return lines.join('\n');
+    }
+
+    // Baked-in platform confidence expectations: Eventbrite /e/ event pages ship
+    // complete JSON-LD (offers → cover, image, ticketUrl) and reliable location
+    // meta tags. Merged BENEATH config-provided aiConfidenceDefaults, which are in
+    // turn beneath per-parser blocks — later urlPatterns entries win in
+    // getAiConfidenceExpectations, so config extends/overrides the built-ins.
+    getBuiltInAiConfidenceDefaults() {
+        return {
+            confidence: {
+                expectations: {
+                    urlPatterns: [
+                        {
+                            pattern: '^https?://(?:www\\.)?eventbrite\\.com/e/',
+                            fields: {
+                                cover: { expected: ['jsonld'], strong: ['jsonld'] },
+                                image: { expected: ['jsonld'], strong: ['jsonld'] },
+                                ticketUrl: { expected: ['jsonld'], strong: ['jsonld'] },
+                                location: { expected: ['meta'], strong: ['meta'] }
+                            }
+                        }
+                    ]
+                }
+            }
+        };
+    }
+
+    // Merge one confidence block beneath another: override keys win key-wise for
+    // confidence/expectations/fields; urlPatterns concatenate base-first (later
+    // entries win at consumption time, so override extends/overrides base).
+    mergeAiConfidenceLayers(baseConfidence, overrideConfidence) {
+        const base = baseConfidence && typeof baseConfidence === 'object' ? baseConfidence : {};
+        const override = overrideConfidence && typeof overrideConfidence === 'object' ? overrideConfidence : {};
+
+        const baseExpectations = base.expectations && typeof base.expectations === 'object'
+            ? base.expectations
+            : {};
+        const overrideExpectations = override.expectations && typeof override.expectations === 'object'
+            ? override.expectations
+            : {};
+        const baseFields = baseExpectations.fields && typeof baseExpectations.fields === 'object'
+            ? baseExpectations.fields
+            : {};
+        const overrideFields = overrideExpectations.fields && typeof overrideExpectations.fields === 'object'
+            ? overrideExpectations.fields
+            : {};
+
+        const baseUrlPatterns = Array.isArray(baseExpectations.urlPatterns) ? baseExpectations.urlPatterns : [];
+        const overrideUrlPatterns = Array.isArray(overrideExpectations.urlPatterns) ? overrideExpectations.urlPatterns : [];
+
+        const mergedExpectations = {
+            ...baseExpectations,
+            ...overrideExpectations
+        };
+        if (Object.keys(baseFields).length > 0 || Object.keys(overrideFields).length > 0) {
+            mergedExpectations.fields = {
+                ...baseFields,
+                ...overrideFields
+            };
+        }
+        if (baseUrlPatterns.length > 0 || overrideUrlPatterns.length > 0) {
+            mergedExpectations.urlPatterns = [...baseUrlPatterns, ...overrideUrlPatterns];
+        }
+
+        return {
+            ...base,
+            ...override,
+            expectations: mergedExpectations
+        };
     }
 
     applyGlobalAiConfidenceDefaults(parserConfig, mainConfig) {
@@ -1045,53 +1209,25 @@ class SharedCore {
             && typeof mainConfig.config.aiConfidenceDefaults === 'object'
             ? mainConfig.config.aiConfidenceDefaults
             : null;
-        if (!globalDefaults) return parser;
 
-        const globalConfidence = globalDefaults.confidence && typeof globalDefaults.confidence === 'object'
+        const builtInConfidence = this.getBuiltInAiConfidenceDefaults().confidence;
+        const globalConfidence = globalDefaults
+            && globalDefaults.confidence
+            && typeof globalDefaults.confidence === 'object'
             ? globalDefaults.confidence
             : null;
-        if (!globalConfidence) return parser;
+
+        // Layering (lowest first): built-in platform defaults < global config < parser
+        const effectiveGlobalConfidence = globalConfidence
+            ? this.mergeAiConfidenceLayers(builtInConfidence, globalConfidence)
+            : builtInConfidence;
 
         const parserAi = parser.ai && typeof parser.ai === 'object' ? parser.ai : {};
         const parserConfidence = parserAi.confidence && typeof parserAi.confidence === 'object'
             ? parserAi.confidence
             : {};
 
-        const globalExpectations = globalConfidence.expectations && typeof globalConfidence.expectations === 'object'
-            ? globalConfidence.expectations
-            : {};
-        const parserExpectations = parserConfidence.expectations && typeof parserConfidence.expectations === 'object'
-            ? parserConfidence.expectations
-            : {};
-        const globalFields = globalExpectations.fields && typeof globalExpectations.fields === 'object'
-            ? globalExpectations.fields
-            : {};
-        const parserFields = parserExpectations.fields && typeof parserExpectations.fields === 'object'
-            ? parserExpectations.fields
-            : {};
-
-        const globalUrlPatterns = Array.isArray(globalExpectations.urlPatterns) ? globalExpectations.urlPatterns : [];
-        const parserUrlPatterns = Array.isArray(parserExpectations.urlPatterns) ? parserExpectations.urlPatterns : [];
-
-        const mergedExpectations = {
-            ...globalExpectations,
-            ...parserExpectations
-        };
-        if (Object.keys(globalFields).length > 0 || Object.keys(parserFields).length > 0) {
-            mergedExpectations.fields = {
-                ...globalFields,
-                ...parserFields
-            };
-        }
-        if (globalUrlPatterns.length > 0 || parserUrlPatterns.length > 0) {
-            mergedExpectations.urlPatterns = [...globalUrlPatterns, ...parserUrlPatterns];
-        }
-
-        const mergedConfidence = {
-            ...globalConfidence,
-            ...parserConfidence,
-            expectations: mergedExpectations
-        };
+        const mergedConfidence = this.mergeAiConfidenceLayers(effectiveGlobalConfidence, parserConfidence);
 
         return {
             ...parser,
@@ -1263,12 +1399,15 @@ class SharedCore {
         discoveryOnly = false,
         discoveryTreeCollector = null
     }) {
+        const adaptiveCrawl = maxDepth === ADAPTIVE_CRAWL_DEPTH;
         const urlsToProcess = currentDepth > 0
             ? this.limitAdditionalUrls(urls, parserConfig)
             : (Array.isArray(urls) ? urls : []);
 
         if (currentDepth > 0) {
-            await displayAdapter.logInfo(`SYSTEM: Crawling ${urlsToProcess.length} discovered URLs (depth ${currentDepth}/${maxDepth})`);
+            await displayAdapter.logInfo(adaptiveCrawl
+                ? `SYSTEM: Crawling ${urlsToProcess.length} discovered URLs (depth ${currentDepth}, adaptive)`
+                : `SYSTEM: Crawling ${urlsToProcess.length} discovered URLs (depth ${currentDepth}/${maxDepth})`);
         }
 
         for (let i = 0; i < urlsToProcess.length; i++) {
@@ -1311,7 +1450,10 @@ class SharedCore {
                     ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
                     : await httpAdapter.fetchData(url);
 
-                const perPageParserConfig = currentDepth === 0
+                // Adaptive mode keeps urlDiscoveryDepth ABSENT on per-page configs
+                // (absence is what signals adaptive to parsers); numeric mode passes
+                // the remaining depth budget down exactly as before.
+                const perPageParserConfig = currentDepth === 0 || adaptiveCrawl
                     ? parserConfig
                     : {
                         ...parserConfig,
@@ -1345,6 +1487,27 @@ class SharedCore {
                     discoveryTreeCollector.segmentsByUrl[url] = parseResult.discoveredSegments;
                 }
 
+                // Harvested onboarding hints (discoveryOnly runs): first-seen wins
+                // for each social host and for the JSON-LD organizer.
+                if (discoveryTreeCollector) {
+                    const harvestedSocial = parseResult?.discoveredSocialLinks;
+                    if (harvestedSocial && typeof harvestedSocial === 'object') {
+                        for (const [host, link] of Object.entries(harvestedSocial)) {
+                            if (link && !discoveryTreeCollector.socialLinks[host]) {
+                                discoveryTreeCollector.socialLinks[host] = link;
+                            }
+                        }
+                    }
+                    const harvestedOrganizer = parseResult?.discoveredOrganizer;
+                    if (harvestedOrganizer && typeof harvestedOrganizer === 'object' && !discoveryTreeCollector.organizer) {
+                        discoveryTreeCollector.organizer = harvestedOrganizer;
+                    }
+                }
+
+                // Learned dead-end store: the page fetched successfully, so record
+                // whether it was productive (raw pre-filter counts) or a dead end.
+                this.recordDeadEndObservation({ url, currentDepth, parseResult, pageClassification, discoveryOnly });
+
                 if (!discoveryOnly) {
                     const parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter);
                     if (parsedEvents.length > 0) {
@@ -1353,12 +1516,26 @@ class SharedCore {
                 }
 
                 const additionalLinks = parseResult?.additionalLinks || [];
-                if (additionalLinks.length === 0) {
+                let linksToConsider = additionalLinks;
+                if (adaptiveCrawl) {
+                    // The page's own classification decides which links (if any)
+                    // are followed; a hard hop cap bounds runaway chains.
+                    linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
+                    if (linksToConsider.length > 0 && currentDepth >= ADAPTIVE_CRAWL_MAX_HOPS) {
+                        await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: chain cap (${ADAPTIVE_CRAWL_MAX_HOPS} hops) reached at ${url} — not following ${linksToConsider.length} link(s)`);
+                        linksToConsider = [];
+                    } else if (linksToConsider.length > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: following ${linksToConsider.length} links from ${url} (${pageClassification})`);
+                    } else if (additionalLinks.length > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: stopping at ${url} (${pageClassification})`);
+                    }
+                }
+                if (linksToConsider.length === 0) {
                     continue;
                 }
 
-                const deduplicatedUrls = this.deduplicateUrls(additionalLinks, processedUrls);
-                const shouldFollowLinks = currentDepth < maxDepth;
+                const deduplicatedUrls = this.deduplicateUrls(linksToConsider, processedUrls);
+                const shouldFollowLinks = adaptiveCrawl || currentDepth < maxDepth;
 
                 if (shouldFollowLinks) {
                     if (discoveryTreeCollector) {
@@ -1369,12 +1546,15 @@ class SharedCore {
                     }
                     await displayAdapter.logInfo(
                         currentDepth === 0
-                            ? `SYSTEM: Following ${additionalLinks.length} discovered URLs → ${deduplicatedUrls.length} unique for crawl depth ${currentDepth + 1}`
-                            : `SYSTEM: Crawl page ${url} found ${additionalLinks.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`
+                            ? `SYSTEM: Following ${linksToConsider.length} discovered URLs → ${deduplicatedUrls.length} unique for crawl depth ${currentDepth + 1}`
+                            : `SYSTEM: Crawl page ${url} found ${linksToConsider.length} URLs → ${deduplicatedUrls.length} unique for depth ${currentDepth + 1}`
                     );
-                    if (deduplicatedUrls.length > 0) {
+                    // Known dead ends younger than the retry window are skipped
+                    // before enqueueing (discoveryOnly always fetches everything).
+                    const enqueueUrls = this.filterKnownDeadEndUrls(deduplicatedUrls, discoveryOnly);
+                    if (enqueueUrls.length > 0) {
                         await this.crawlUrlsForEvents({
-                            urls: deduplicatedUrls,
+                            urls: enqueueUrls,
                             allEvents,
                             parsers,
                             parserConfig,
@@ -1438,6 +1618,207 @@ class SharedCore {
         return Number.isFinite(maxUrls)
             ? additionalLinks.slice(0, maxUrls)
             : additionalLinks;
+    }
+
+    // Adaptive crawl follow rules — the parent page's classification decides:
+    //   link-aggregator   → follow every valid link (links ARE the payload)
+    //   multi-event-page  → follow every valid link (detail pages carry the data)
+    //   event-page        → follow ONLY links pre-classifiable as event-page via
+    //                       URL rules, plus the page's own extracted ticketUrl(s)
+    //   ad / unknown      → follow nothing
+    selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, pageUrl) {
+        const links = Array.isArray(additionalLinks) ? additionalLinks : [];
+        if (pageClassification === 'link-aggregator' || pageClassification === 'multi-event-page') {
+            return links;
+        }
+        if (pageClassification !== 'event-page') {
+            return [];
+        }
+        const selected = [];
+        const seen = new Set();
+        const push = (candidate) => {
+            const normalized = this.normalizeUrl(candidate, pageUrl || candidate);
+            if (!normalized || seen.has(normalized)) return;
+            seen.add(normalized);
+            selected.push(normalized);
+        };
+        for (const link of links) {
+            if (this.classifyUrlByRules(link) === 'event-page') {
+                push(link);
+            }
+        }
+        const events = Array.isArray(parseResult?.events) ? parseResult.events : [];
+        for (const event of events) {
+            const ticketUrl = event && typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+            if (ticketUrl) {
+                push(ticketUrl);
+            }
+        }
+        return selected;
+    }
+
+    // ------------------------------------------------------------------
+    // Learned dead-end store (pure logic — persistence lives in adapters).
+    // A URL is a dead end only if it FETCHED successfully AND produced 0 raw
+    // events (pre future/bear filtering), 0 segments, AND 0 valid discovered
+    // links. Fetch failures and configured root URLs are never dead-ended.
+    // ------------------------------------------------------------------
+
+    createDeadEndRunContext(config) {
+        const globalConfig = config && config.config && typeof config.config === 'object' ? config.config : {};
+        const raw = globalConfig.deadEndRetryDays;
+        let retryDays = 30;
+        let disabledExplicitly = false;
+        if (raw !== undefined && raw !== null) {
+            const parsed = Number(raw);
+            if (Number.isFinite(parsed)) {
+                if (parsed <= 0) {
+                    // Kill switch: non-positive disables the store entirely
+                    disabledExplicitly = true;
+                } else {
+                    retryDays = parsed;
+                }
+            }
+        }
+        const store = config && config.deadEndStore && typeof config.deadEndStore === 'object' && !Array.isArray(config.deadEndStore)
+            ? config.deadEndStore
+            : {};
+        return {
+            enabled: !disabledExplicitly,
+            disabledExplicitly,
+            retryDays,
+            store,
+            dirty: false,
+            skippedCount: 0,
+            skippedSamples: [],
+            learned: [],
+            recovered: [],
+            prunedCount: 0
+        };
+    }
+
+    // Drop discovered URLs whose dead-end entry is younger than the retry
+    // window. Older entries pass through and get retried once. discoveryOnly
+    // runs never skip — discovery is the mapping/debugging mode and must fetch
+    // everything (productive pages then self-heal out of the store).
+    filterKnownDeadEndUrls(urls, discoveryOnly = false, nowMs = Date.now()) {
+        const context = this.deadEndRunContext;
+        const list = Array.isArray(urls) ? urls : [];
+        if (!context || !context.enabled || discoveryOnly) {
+            return list;
+        }
+        const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
+        const allowed = [];
+        for (const url of list) {
+            const entry = context.store[url];
+            const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+            if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+                context.skippedCount += 1;
+                if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
+                    context.skippedSamples.push(url);
+                }
+                continue;
+            }
+            allowed.push(url);
+        }
+        return allowed;
+    }
+
+    // Record the outcome of a successfully-fetched page. Productive pages are
+    // removed from the store (self-heal); dead pages refresh an existing entry
+    // (retry miss) or are learned as new dead ends — never for root URLs.
+    // Pages classified 'ad' are ALWAYS dead ends (ads never get extraction or
+    // link-following, so re-fetching them is pure waste); 'unknown' pages stay
+    // under the strict output rule — that classification is too weak a signal.
+    recordDeadEndObservation({ url, currentDepth, parseResult, pageClassification = null, discoveryOnly = false, nowMs = Date.now() }) {
+        const context = this.deadEndRunContext;
+        if (!context || !context.enabled || !url) {
+            return;
+        }
+        // RAW pre-filter counts: a page whose events are all in the past still
+        // produced events — it is NOT a dead end.
+        const rawEventCount = Array.isArray(parseResult?.events) ? parseResult.events.length : 0;
+        const segmentCount = Array.isArray(parseResult?.discoveredSegments) ? parseResult.discoveredSegments.length : 0;
+        const links = parseResult?.additionalLinks;
+        // uniqueValidCount (when the parser tags it) counts valid links BEFORE
+        // the maxAdditionalUrls budget, so a budget of 0 can't fake a dead end.
+        const taggedUniqueValid = Array.isArray(links) ? Number(links.uniqueValidCount) : NaN;
+        const uniqueValidLinkCount = Number.isFinite(taggedUniqueValid)
+            ? taggedUniqueValid
+            : (Array.isArray(links) ? links.length : 0);
+        const productive = pageClassification !== 'ad'
+            && (rawEventCount > 0 || segmentCount > 0 || uniqueValidLinkCount > 0);
+
+        const store = context.store;
+        const entry = store[url];
+        if (productive) {
+            if (entry) {
+                delete store[url];
+                context.dirty = true;
+                context.recovered.push(url);
+            }
+            return;
+        }
+        if (currentDepth === 0) {
+            // Configured root URLs are never dead-ended
+            return;
+        }
+        const nowIso = new Date(nowMs).toISOString();
+        if (entry) {
+            entry.lastSeen = nowIso;
+            entry.misses = (Number(entry.misses) || 0) + 1;
+            context.dirty = true;
+        } else {
+            store[url] = { firstSeen: nowIso, lastSeen: nowIso, misses: 1 };
+            context.dirty = true;
+            context.learned.push(url);
+        }
+    }
+
+    // End-of-run retention pass: entries unseen for 2× the retry window are
+    // stale (their page has been retried and confirmed dead at least once
+    // without ever recovering) and get dropped.
+    pruneDeadEndStore(context, nowMs = Date.now()) {
+        if (!context || !context.enabled) {
+            return;
+        }
+        const horizonMs = 2 * context.retryDays * 24 * 60 * 60 * 1000;
+        for (const [url, entry] of Object.entries(context.store)) {
+            const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+            if (!Number.isFinite(lastSeenMs) || (nowMs - lastSeenMs) > horizonMs) {
+                delete context.store[url];
+                context.prunedCount += 1;
+                context.dirty = true;
+            }
+        }
+    }
+
+    async finalizeDeadEndRun(displayAdapter, results, nowMs = Date.now()) {
+        const context = this.deadEndRunContext;
+        this.deadEndRunContext = null;
+        if (!context) {
+            return;
+        }
+        if (context.enabled) {
+            this.pruneDeadEndStore(context, nowMs);
+            if (context.skippedCount > 0) {
+                const samples = context.skippedSamples.length > 0 ? `: ${context.skippedSamples.join(', ')}` : '';
+                await displayAdapter.logInfo(`SYSTEM: Skipped ${context.skippedCount} known dead-end URL(s) (retry after ${context.retryDays}d; delete dead-ends.json or set deadEndRetryDays: 0 to reset)${samples}`);
+            }
+            if (context.learned.length > 0) {
+                await displayAdapter.logInfo(`SYSTEM: Learned ${context.learned.length} new dead-end URL(s): ${context.learned.join(', ')}`);
+            }
+            if (context.recovered.length > 0) {
+                await displayAdapter.logInfo(`SYSTEM: Removed ${context.recovered.length} recovered URL(s) from dead-end store: ${context.recovered.join(', ')}`);
+            }
+            if (context.prunedCount > 0) {
+                await displayAdapter.logInfo(`SYSTEM: Pruned ${context.prunedCount} stale dead-end URL(s) (last seen more than ${2 * context.retryDays}d ago)`);
+            }
+        }
+        if (results && typeof results === 'object') {
+            results.deadEndStore = context.store;
+            results.deadEndStoreChanged = context.dirty;
+        }
     }
 
     async prepareParsedEvents(events, parserConfig, mainConfig, pageClassification, normalizerPipeline, httpAdapter) {
