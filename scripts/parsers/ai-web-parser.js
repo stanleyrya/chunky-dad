@@ -4584,11 +4584,15 @@ class AiWebParser {
             temperature: this.defaultOcrRequestConfig.temperature,
             think: this.defaultOcrRequestConfig.think
         };
-        const provider = String(rawOcr.provider || 'ollama');
+        // Default provider is the rybook rapid-mlx vision server — desktop
+        // ollama is explicit opt-in only (provider: "ollama").
+        const provider = String(rawOcr.provider || 'openai');
 
         let defaultEndpoint;
         if (provider === 'openai') {
-            defaultEndpoint = 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions';
+            // Port 8001 is the VISION (VLM) server; 8000 serves the text/coder
+            // model and rejects image input.
+            defaultEndpoint = 'http://rybook.taila7523c.ts.net:8001/v1/chat/completions';
         } else {
             // If the base AI config is also ollama, inherit its endpoint so custom endpoints aren't lost
             defaultEndpoint = baseAiConfig.provider === 'ollama' && baseAiConfig.endpoint
