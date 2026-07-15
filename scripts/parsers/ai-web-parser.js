@@ -2673,7 +2673,15 @@ class AiWebParser {
             image: this.pickJsonLdImage(node.image),
             source: this.config.source
         };
-        if (cover) event.cover = cover;
+        if (cover) {
+            event.cover = cover;
+            // Wix JSON-LD offers only publish fee-inclusive totals ("46.13" =
+            // $45.00 + service fee). Flag the cover so Wix warmup enrichment —
+            // the same system's data at base-sticker-price fidelity — may
+            // upgrade it. Underscore fields are internal metadata (excluded
+            // from calendar notes and merge field loops).
+            event._coverFromJsonLdOffers = true;
+        }
         // The JSON-LD address carries the locality (e.g. "Portland, OR") — resolve city
         // and timezone from it directly so nothing downstream has to guess. Address only:
         // bar names produce false city matches ("Brooklyn Bowl" in Vegas).
@@ -2869,8 +2877,8 @@ class AiWebParser {
             if (!startMatch) return null;
             const jsonString = this.extractJsonObject(html, startMatch.index + startMatch[0].length);
             if (!jsonString) return null;
-            const eventNode = this.findWixWarmupEventNode(JSON.parse(jsonString));
-            return eventNode ? this.buildWixServerEventRecord(eventNode) : null;
+            const found = this.findWixWarmupEventNode(JSON.parse(jsonString));
+            return found ? this.buildWixServerEventRecord(found.event, found.tickets) : null;
         } catch (error) {
             return null;
         }
@@ -2878,6 +2886,8 @@ class AiWebParser {
 
     // The events-app GUID key inside appsWarmupData is deployment-specific —
     // iterate every app's state and take the first EventsPageInitialState event.
+    // Returns { event, tickets }: the per-ticket array (state.tickets, a sibling
+    // of state.event) is the only Wix surface carrying BASE sticker prices.
     findWixWarmupEventNode(warmup) {
         if (!warmup || typeof warmup !== 'object') return null;
         const apps = warmup.appsWarmupData && typeof warmup.appsWarmupData === 'object'
@@ -2889,15 +2899,16 @@ class AiWebParser {
             if (!state || typeof state !== 'object') continue;
             const wrapper = state.event;
             if (!wrapper || typeof wrapper !== 'object') continue;
+            const tickets = Array.isArray(state.tickets) ? state.tickets : [];
             // Observed shape nests the event once more (state.event.event); accept
             // the flat shape too in case other app versions skip the wrapper.
-            if (wrapper.event && typeof wrapper.event === 'object') return wrapper.event;
-            if (wrapper.title || wrapper.scheduling) return wrapper;
+            if (wrapper.event && typeof wrapper.event === 'object') return { event: wrapper.event, tickets };
+            if (wrapper.title || wrapper.scheduling) return { event: wrapper, tickets };
         }
         return null;
     }
 
-    buildWixServerEventRecord(node) {
+    buildWixServerEventRecord(node, tickets) {
         const clean = (value) => typeof value === 'string' ? this.normalizeWhitespace(value) : '';
         const location = node.location && typeof node.location === 'object' ? node.location : {};
         const fullAddress = location.fullAddress && typeof location.fullAddress === 'object' ? location.fullAddress : {};
@@ -2916,9 +2927,6 @@ class AiWebParser {
             ? node.scheduling.config
             : {};
         const timeZoneId = clean(scheduling.timeZoneId);
-        const ticketing = node.registration && node.registration.ticketing && typeof node.registration.ticketing === 'object'
-            ? node.registration.ticketing
-            : {};
 
         const record = {
             title: clean(node.title) || null,
@@ -2931,7 +2939,7 @@ class AiWebParser {
             endDateUtc: this.parseWixExactInstant(scheduling.endDate),
             address: clean(location.address) || clean(fullAddress.formattedAddress) || null,
             city: clean(fullAddress.city).toLowerCase() || null,
-            cover: this.formatWixTicketPriceRange(ticketing)
+            cover: this.formatWixTicketPriceRange(tickets)
         };
         return Object.values(record).some(value => value !== null) ? record : null;
     }
@@ -2945,22 +2953,62 @@ class AiWebParser {
         return Number.isNaN(date.getTime()) ? null : date;
     }
 
-    // "$20.50-$30.75" from the Wix ticketing block, collapsing equal bounds to a
-    // single value. Sold-out events keep their price — sold-out handling is a
-    // separate concern.
-    formatWixTicketPriceRange(ticketing) {
-        const formatAmount = (price) => {
-            if (!price || typeof price !== 'object') return '';
-            const amount = String(price.amount || '').trim();
-            if (!amount || !Number.isFinite(Number(amount))) return '';
-            const currency = String(price.currency || '').trim().toUpperCase();
-            return currency === 'USD' ? `$${amount}` : (currency ? `${amount} ${currency}` : amount);
+    // "$45-$60" from the warmup tickets[] array — the only Wix surface with BASE
+    // sticker prices. Both JSON-LD offers and the registration.ticketing summary
+    // publish fee-inclusive totals only ("46.13" = $45.00 + $1.13 service fee).
+    // Tiers still purchasable define the walk-up range; when EVERY tier is sold
+    // out, the full range across all tiers backs the cover instead (mirroring
+    // formatJsonLdOffersCover). Sold-out signal, verified empirically against
+    // the live chunk-party.com Dore Alley page (2026-07-14) by cross-checking
+    // each warmup ticket with the JSON-LD offer of the same name: every SoldOut
+    // offer had `limitPerCheckout: 0` and every InStock offer had
+    // `limitPerCheckout > 0` (1 and 50), while `saleStatus` was 1 on ALL
+    // tickets regardless of availability — so `limitPerCheckout === 0` is the
+    // reliable signal and saleStatus is useless. Only an explicit 0 counts as
+    // sold out; an absent limit never hides a purchasable tier.
+    formatWixTicketPriceRange(tickets) {
+        const list = Array.isArray(tickets) ? tickets : [];
+        // Prices of 0, negative, or unparseable never make a cover (free
+        // tickets are RSVPs, not a "$0" cover) — same rule as JSON-LD offers.
+        const parsePrice = (price) => {
+            if (!price || typeof price !== 'object') return null;
+            const amount = Number(String(price.amount || '').trim());
+            return Number.isFinite(amount) && amount > 0 ? amount : null;
         };
-        const formattedText = (value) => typeof value === 'string' ? value.trim() : '';
-        const low = formattedText(ticketing.lowestTicketPriceFormatted) || formatAmount(ticketing.lowestTicketPrice);
-        const high = formattedText(ticketing.highestTicketPriceFormatted) || formatAmount(ticketing.highestTicketPrice);
-        if (low && high) return low === high ? low : `${low}-${high}`;
-        return low || high || null;
+        const priced = [];
+        for (const ticket of list) {
+            if (!ticket || typeof ticket !== 'object') continue;
+            const base = ticket.price && typeof ticket.price === 'object' ? ticket.price : null;
+            const fixed = ticket.pricing && ticket.pricing.fixedPrice && typeof ticket.pricing.fixedPrice === 'object'
+                ? ticket.pricing.fixedPrice
+                : null;
+            const source = parsePrice(base) !== null ? base : fixed;
+            const amount = parsePrice(source);
+            if (amount === null) continue;
+            priced.push({
+                amount,
+                currency: String(source.currency || '').trim().toUpperCase(),
+                soldOut: ticket.limitPerCheckout === 0
+            });
+        }
+        let selected = priced.filter(entry => !entry.soldOut);
+        if (selected.length === 0) selected = priced;
+        if (selected.length === 0) return null;
+
+        const amounts = selected.map(entry => entry.amount);
+        const min = Math.min(...amounts);
+        const max = Math.max(...amounts);
+        // Same conventions as formatJsonLdOffersCover: whole dollars drop the
+        // trailing ".00", real cents keep two decimals ("45.5" → "$45.50").
+        const formatAmount = (amount) => Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+        const firstCurrency = selected.find(entry => entry.currency);
+        const currency = firstCurrency ? firstCurrency.currency : '';
+        if (!currency || currency === 'USD' || currency === '$') {
+            return min === max ? `$${formatAmount(min)}` : `$${formatAmount(min)}-$${formatAmount(max)}`;
+        }
+        return min === max
+            ? `${formatAmount(min)} ${currency}`
+            : `${formatAmount(min)}-${formatAmount(max)} ${currency}`;
     }
 
     // ENRICHMENT ONLY — runs on the parser's finished events just before they
@@ -2978,18 +3026,23 @@ class AiWebParser {
             if (!record) return events;
 
             const filledFields = new Set();
+            const upgradedFields = new Set();
             let enrichedCount = 0;
             for (const event of events) {
                 if (!event || typeof event !== 'object') continue;
                 if (!this.wixServerRecordMatchesEvent(record, event, sourceUrl, events.length)) continue;
-                const filled = this.fillEventFromWixServerRecord(event, record, cityConfig);
-                if (filled.length > 0) {
+                const { filled, upgraded } = this.fillEventFromWixServerRecord(event, record, cityConfig);
+                if (filled.length > 0 || upgraded.length > 0) {
                     enrichedCount += 1;
                     filled.forEach(field => filledFields.add(field));
+                    upgraded.forEach(field => upgradedFields.add(field));
                 }
             }
-            if (filledFields.size > 0) {
-                console.log(`🤖 AI Web: Wix server data enriched ${enrichedCount} event(s) for ${sourceUrl}: filled=[${Array.from(filledFields).join(', ')}]`);
+            if (filledFields.size > 0 || upgradedFields.size > 0) {
+                const upgradedSuffix = upgradedFields.size > 0
+                    ? ` upgraded=[${Array.from(upgradedFields).join(', ')}]`
+                    : '';
+                console.log(`🤖 AI Web: Wix server data enriched ${enrichedCount} event(s) for ${sourceUrl}: filled=[${Array.from(filledFields).join(', ')}]${upgradedSuffix}`);
             } else {
                 console.log(`🤖 AI Web: Wix server data present for ${sourceUrl} but no empty fields to fill`);
             }
@@ -3016,6 +3069,7 @@ class AiWebParser {
 
     fillEventFromWixServerRecord(event, record, cityConfig) {
         const filled = [];
+        const upgraded = [];
         const isEmpty = (value) => value === null || value === undefined || String(value).trim() === '';
         const fill = (field, value) => {
             if (value && isEmpty(event[field])) {
@@ -3025,7 +3079,18 @@ class AiWebParser {
         };
         fill('location', record.coordinates);
         fill('timezone', record.timezone);
-        fill('cover', record.cover);
+        // Cover exception to fill-only-empty: a cover flagged _coverFromJsonLdOffers
+        // came from the SAME Wix system as the warmup blob, just at lower fidelity —
+        // JSON-LD offers only publish fee-inclusive totals while the warmup tickets
+        // carry base sticker prices. Upgrading it follows the same precedent as
+        // exact UTC instants replacing _timezoneUnresolved wall-clock dates below.
+        // A cover extracted by OCR/AI (no flag) is independent evidence and is
+        // NEVER overridden.
+        if (record.cover && (isEmpty(event.cover) || event._coverFromJsonLdOffers)) {
+            (isEmpty(event.cover) ? filled : upgraded).push('cover');
+            event.cover = record.cover;
+            delete event._coverFromJsonLdOffers;
+        }
         fill('address', record.address);
         if (record.city && isEmpty(event.city)) {
             // Only configured city keys, resolved through the same alias matching
@@ -3050,7 +3115,7 @@ class AiWebParser {
             }
             delete event._timezoneUnresolved;
         }
-        return filled;
+        return { filled, upgraded };
     }
 
     // Event property that carries a prompt field on JSON-LD-built events: split
