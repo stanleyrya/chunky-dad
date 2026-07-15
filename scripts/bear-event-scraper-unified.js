@@ -300,24 +300,6 @@ class BearEventScraperOrchestrator {
                 console.log(`🐻 Orchestrator: Dead-end store save failed: ${error.message}`);
             }
 
-            // Suggested configs from discoveryOnly runs: also save each as a
-            // clean paste-ready file (the log copy carries timestamps).
-            try {
-                if (typeof finalAdapter.saveSuggestedConfig === 'function' && Array.isArray(results.parserResults)) {
-                    for (const parserResult of results.parserResults) {
-                        if (!parserResult || typeof parserResult.suggestedConfig !== 'string') continue;
-                        const body = parserResult.suggestedConfig
-                            .split('\n')
-                            .filter(line => !line.startsWith('📋'))
-                            .join('\n');
-                        const fileText = `// Suggested parser entry for "${parserResult.name}" — paste into parsers[] in scraper-input.js\n${body}\n`;
-                        await finalAdapter.saveSuggestedConfig(parserResult.name, fileText);
-                    }
-                }
-            } catch (error) {
-                console.log(`🐻 Orchestrator: Suggested config save failed: ${error.message}`);
-            }
-
             results.config = config;
             results.calendarEvents = 0;
             if (!Array.isArray(results.analyzedEvents)) {

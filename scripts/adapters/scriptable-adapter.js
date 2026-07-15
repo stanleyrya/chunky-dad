@@ -1088,31 +1088,6 @@ class ScriptableAdapter {
     }
   }
 
-  // Paste-ready suggested parser entry from a discoveryOnly run — written as a
-  // file so it can be copied cleanly from the Files app instead of out of a
-  // timestamped log. One file per parser, overwritten on each discovery run.
-  async saveSuggestedConfig(parserName, text) {
-    if (!text || typeof text !== "string") {
-      return null;
-    }
-    try {
-      const dir = this.fm.joinPath(this.baseDir, "suggested-configs");
-      this.ensureDirectoryExists(dir);
-      const path = this.fm.joinPath(
-        dir,
-        `${this.sanitizePageCacheSegment(parserName)}.js`,
-      );
-      this.fm.writeString(path, text);
-      console.log(`📱 Scriptable: ✓ Saved suggested config to ${path}`);
-      return path;
-    } catch (error) {
-      console.log(
-        `📱 Scriptable: Suggested config write failed: ${error.message}`,
-      );
-      return null;
-    }
-  }
-
   extractHttpStatusCodeFromError(error) {
     const message =
       error && typeof error.message === "string" ? error.message : "";
@@ -5861,6 +5836,18 @@ class ScriptableAdapter {
             : 0;
         const mermaidEncoded = encodeURIComponent(r.mermaidGraph || "");
         const asciiEncoded = encodeURIComponent(r.asciiTree || "");
+        // Paste-ready parser entry (the log header line is dropped — the copied
+        // text starts at "{" so it pastes straight into parsers[]).
+        const suggestedConfigText =
+          typeof r.suggestedConfig === "string"
+            ? r.suggestedConfig
+                .split("\n")
+                .filter((line) => !line.startsWith("📋"))
+                .join("\n")
+                .trim()
+            : "";
+        const suggestedEncoded = encodeURIComponent(suggestedConfigText);
+        const hasSuggestedConfig = suggestedConfigText.length > 0;
         const urlListItems =
           r.discoveryTree && Array.isArray(r.discoveryTree.allNodes)
             ? r.discoveryTree.allNodes
@@ -5883,12 +5870,24 @@ class ScriptableAdapter {
         <div class="discovery-parser" style="margin-bottom:16px;">
             <div style="font-weight:600; margin-bottom:8px;">${this.escapeHtml(r.name || "Parser")} <span style="font-weight:400; opacity:0.7;">— ${nodeCount} URL(s) found${hasSegments ? `, ${totalSegments} segment(s)` : ""}</span></div>
             <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
-                <button onclick="switchDiscoveryTab(this,'mermaid_${safeId}')" class="disc-tab-btn disc-tab-active" data-tab="mermaid_${safeId}">Mermaid Graph</button>
+                ${hasSuggestedConfig ? `<button onclick="switchDiscoveryTab(this,'suggested_${safeId}')" class="disc-tab-btn disc-tab-active" data-tab="suggested_${safeId}">📋 Suggested Config</button>` : ""}
+                <button onclick="switchDiscoveryTab(this,'mermaid_${safeId}')" class="disc-tab-btn${hasSuggestedConfig ? "" : " disc-tab-active"}" data-tab="mermaid_${safeId}">Mermaid Graph</button>
                 <button onclick="switchDiscoveryTab(this,'ascii_${safeId}')" class="disc-tab-btn" data-tab="ascii_${safeId}">ASCII Tree</button>
                 <button onclick="switchDiscoveryTab(this,'urls_${safeId}')" class="disc-tab-btn" data-tab="urls_${safeId}">URL List</button>
                 ${segmentsTabButton}
             </div>
-            <div id="mermaid_${safeId}" class="disc-tab-panel">
+            ${
+              hasSuggestedConfig
+                ? `<div id="suggested_${safeId}" class="disc-tab-panel">
+                <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; align-items:center;">
+                    <button onclick="copyDiscoveryText(this)" class="log-copy-btn" data-encoded="${this.escapeHtml(suggestedEncoded)}">📋 Copy Config</button>
+                    <span style="font-size:12px; color:var(--text-secondary);">Paste into parsers[] in scraper-input.js</span>
+                </div>
+                <pre class="discovery-output">${this.escapeHtml(suggestedConfigText)}</pre>
+            </div>`
+                : ""
+            }
+            <div id="mermaid_${safeId}" class="disc-tab-panel"${hasSuggestedConfig ? ' style="display:none"' : ""}>
                 <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
                     <button onclick="copyDiscoveryText(this)" class="log-copy-btn" data-encoded="${this.escapeHtml(mermaidEncoded)}">📋 Copy Mermaid</button>
                     <a href="https://mermaid.live" target="_blank" style="padding:4px 10px; background:var(--background-light); border:1px solid var(--border-color); border-radius:6px; font-size:12px; color:var(--primary-color); text-decoration:none;">Open mermaid.live ↗</a>

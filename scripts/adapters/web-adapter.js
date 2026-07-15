@@ -251,17 +251,6 @@ class WebAdapter {
         }
     }
 
-    // Web/Node equivalent of the Scriptable adapter's suggested-config file:
-    // kept in memory for programmatic access (tests, web UI).
-    async saveSuggestedConfig(parserName, text) {
-        if (!text || typeof text !== 'string') {
-            return null;
-        }
-        this.suggestedConfigs = this.suggestedConfigs || {};
-        this.suggestedConfigs[String(parserName || 'unnamed')] = text;
-        return null;
-    }
-
     getRunContext() {
         const isNode = typeof window === 'undefined';
         const environment = isNode ? 'node' : 'web';
