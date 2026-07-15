@@ -375,3 +375,117 @@ test('getOcrCacheRetentionDays reads config.ocr.cacheRetentionDays with a 90d de
     90
   );
 });
+
+// ---------------------------------------------------------------------------
+// Learned dead-end store persistence (dead-ends.json)
+// ---------------------------------------------------------------------------
+
+function createDeadEndFmStub() {
+  const files = new Map();
+  return {
+    files,
+    documentsDirectory: () => '/tmp/chunky-dad-adapter-test',
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => files.has(p),
+    isDirectory: () => false,
+    createDirectory: () => {},
+    readString: (p) => (files.has(p) ? files.get(p) : null),
+    writeString: (p, s) => { files.set(p, s); },
+    downloadFileFromiCloud: async () => {}
+  };
+}
+
+test('loadDeadEnds/saveDeadEnds round-trip through dead-ends.json', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+
+  // Missing file → empty store, never throws
+  assert.deepEqual(await adapter.loadDeadEnds(), {});
+
+  const store = {
+    'https://site.example/dead': {
+      firstSeen: '2026-06-01T00:00:00.000Z',
+      lastSeen: '2026-07-01T00:00:00.000Z',
+      misses: 3
+    }
+  };
+  await adapter.saveDeadEnds(store);
+  assert.ok(adapter.fm.files.has(adapter.getDeadEndsFilePath()), 'store written to dead-ends.json in the scraper dir');
+  assert.deepEqual(await adapter.loadDeadEnds(), store);
+});
+
+test('loadDeadEnds tolerates corrupt or wrong-shaped files with an empty store', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+  const path = adapter.getDeadEndsFilePath();
+
+  adapter.fm.files.set(path, '{"https://x.example": {broken json');
+  assert.deepEqual(await adapter.loadDeadEnds(), {}, 'parse failure → empty store');
+
+  adapter.fm.files.set(path, '["not", "an", "object"]');
+  assert.deepEqual(await adapter.loadDeadEnds(), {}, 'array payload → empty store');
+
+  adapter.fm.files.set(path, 'null');
+  assert.deepEqual(await adapter.loadDeadEnds(), {}, 'null payload → empty store');
+
+  // saveDeadEnds refuses non-object stores instead of clobbering the file
+  adapter.fm.files.delete(path);
+  await adapter.saveDeadEnds(null);
+  await adapter.saveDeadEnds(['nope']);
+  assert.ok(!adapter.fm.files.has(path));
+});
+
+// ---------------------------------------------------------------------------
+// Suggested-config tab in the URL Discovery UI section
+// ---------------------------------------------------------------------------
+
+test('generateDiscoverySection renders a default-active Suggested Config tab with a copy button', () => {
+  const adapter = buildAdapter();
+  const suggested = '📋 SUGGESTED CONFIG for "New Site" — paste into parsers[] in scraper-input.js:\n{\n  name: "New Site",\n  urls: ["https://x.example"],\n},';
+  const results = {
+    parserResults: [{
+      name: 'New Site',
+      discoveryOnly: true,
+      mermaidGraph: 'graph TD;A-->B;',
+      asciiTree: 'A\n└─ B',
+      discoveryTree: { rootUrls: ['https://x.example'], edges: [], allNodes: ['https://x.example'], segmentsByUrl: {} },
+      suggestedConfig: suggested
+    }]
+  };
+
+  const html = adapter.generateDiscoverySection(results);
+  assert.ok(html.includes('📋 Suggested Config'), 'suggested-config tab button rendered');
+  assert.ok(html.includes(`class="disc-tab-btn disc-tab-active" data-tab="suggested_New_Site_0"`),
+    'suggested tab is the default-active tab');
+  assert.ok(html.includes(`class="disc-tab-btn" data-tab="mermaid_New_Site_0"`),
+    'mermaid tab is no longer default-active');
+  assert.ok(html.includes('📋 Copy Config'), 'copy button rendered');
+
+  // The copy payload starts at "{" — the log header line is stripped so the
+  // copied text pastes straight into parsers[].
+  const payloadMatch = html.match(/data-encoded="([^"]*)"[^>]*>📋 Copy Config/);
+  assert.ok(payloadMatch, 'copy button carries an encoded payload');
+  const decoded = decodeURIComponent(payloadMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+  assert.ok(decoded.startsWith('{'), `payload starts at the config object, got: ${decoded.slice(0, 30)}`);
+  assert.ok(!decoded.includes('📋'), 'log header line stripped from the payload');
+
+  // Mermaid panel is hidden by default when the suggested tab is present
+  assert.ok(html.includes(`<div id="mermaid_New_Site_0" class="disc-tab-panel" style="display:none">`));
+});
+
+test('generateDiscoverySection keeps Mermaid default-active when no suggested config exists', () => {
+  const adapter = buildAdapter();
+  const results = {
+    parserResults: [{
+      name: 'Old Run',
+      discoveryOnly: true,
+      mermaidGraph: 'graph TD;A-->B;',
+      asciiTree: 'A',
+      discoveryTree: { rootUrls: [], edges: [], allNodes: [], segmentsByUrl: {} }
+    }]
+  };
+  const html = adapter.generateDiscoverySection(results);
+  assert.ok(!html.includes('📋 Suggested Config'), 'no suggested tab without data');
+  assert.ok(html.includes(`class="disc-tab-btn disc-tab-active" data-tab="mermaid_Old_Run_0"`), 'mermaid stays the default tab');
+  assert.ok(html.includes(`<div id="mermaid_Old_Run_0" class="disc-tab-panel">`), 'mermaid panel visible');
+});

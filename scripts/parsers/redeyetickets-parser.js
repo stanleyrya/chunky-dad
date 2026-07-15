@@ -46,7 +46,12 @@ class RedEyeTicketsParser {
             }
             
             const jsonEvents = discoveryOnly ? [] : (jsonParseResult.events || []);
-            const additionalLinks = parserConfig.urlDiscoveryDepth > 0 ? (jsonParseResult.additionalLinks || []) : [];
+            // Absent urlDiscoveryDepth = adaptive crawling (shared-core decides
+            // what gets followed), so discovery stays on; explicit numeric depth
+            // keeps the legacy rule (0 disables link discovery).
+            const configuredDepth = parserConfig.urlDiscoveryDepth;
+            const urlDiscoveryEnabled = configuredDepth === undefined || configuredDepth === null || configuredDepth > 0;
+            const additionalLinks = urlDiscoveryEnabled ? (jsonParseResult.additionalLinks || []) : [];
             console.log(`🎫 RedEyeTickets: Parsed API payload -> ${jsonEvents.length} events, ${additionalLinks.length} additional links`);
             
             return {

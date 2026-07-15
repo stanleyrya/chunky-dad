@@ -10,27 +10,15 @@
 const scraperConfig = {
   config: {
     daysToLookAhead: null,
+    // dryRun: true, // Preview mode: analyze + display without writing to the calendar (default: false)
     pageCache: {
       enabled: true,
       ttlDays: 3,
     },
-    aiConfidenceDefaults: {
-      confidence: {
-        expectations: {
-          urlPatterns: [
-            {
-              pattern: "^https?://(?:www\\.)?eventbrite\\.com/e/",
-              fields: {
-                cover: { expected: ["jsonld"], strong: ["jsonld"] },
-                image: { expected: ["jsonld"], strong: ["jsonld"] },
-                ticketUrl: { expected: ["jsonld"], strong: ["jsonld"] },
-                location: { expected: ["meta"], strong: ["meta"] },
-              },
-            },
-          ],
-        },
-      },
-    },
+    // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
+    // NOTE: Eventbrite /e/ confidence defaults (JSON-LD cover/image/ticketUrl,
+    // meta location) are built into shared-core now — an aiConfidenceDefaults
+    // block here is only needed to extend or override them.
     // Global AI extraction defaults — inherited by EVERY parser (extraction +
     // merge arbitration). The effective per-parser block is a deep merge of this
     // block with the parser's own `ai`, so per-parser keys override key-wise.
@@ -98,35 +86,25 @@ const scraperConfig = {
       cacheRetentionDays: 90,
       requireMissingFields: true,
     },
-    // Discovery URL blocklist inherited by every parser — UNIONED with each
-    // parser's own discoveryBlockedPatterns (global entries first). String
-    // entries are case-insensitive URL substrings (same semantics as per-parser
-    // lists); RegExp entries test against the lowercased URL, which allows
-    // anchoring — a plain "/shop" substring would also swallow legitimate event
-    // slugs like "/shop-party", so store/contact paths use an anchored RegExp
-    // that requires the whole path segment.
-    discoveryBlockedPatterns: [
-      // Store/checkout/contact pages, matched as a complete path segment
-      /\/(shop|cart|contact(?:-us)?)(?:\/|[?#]|$)/,
-      // Policy pages — safe as plain substrings ("/privacy-policy" and
-      // "/terms-of-service" are junk too)
-      "/privacy",
-      "/terms",
-      // Wix internal API endpoints (e.g. chunk-party.com/_api/...)
-      "/_api/",
-    ],
+    // NOTE: Generic junk URLs (/shop, /cart, /contact, /_api/, ?p=<digits>
+    // shortlinks, /privacy, /terms, ...) are blocked built-in now, and pages
+    // that fetch fine but yield nothing are learned as dead ends and skipped
+    // automatically. A discoveryBlockedPatterns list (global here, or
+    // per-parser) is only for deliberate exclusions — "never fetch, not even
+    // once". String entries are case-insensitive URL substrings; RegExp
+    // entries test against the lowercased URL, which allows anchoring.
     // URL pattern rules for page classification. Checked in order — first match wins.
     // More specific patterns (e.g. /events/:slug) must come before broader ones (e.g. domain root).
+    // Built-in platform rules apply automatically BENEATH these (config wins):
+    // eventbrite.com/e/ → event-page, eventbrite.com/o/ → multi-event-page,
+    // linktr.ee → link-aggregator. Only site-specific rules belong here.
     pageClassificationRules: [
-      { pattern: /eventbrite\.com\/e\//i, classification: "event-page" },
-      { pattern: /eventbrite\.com\/o\//i, classification: "multi-event-page" },
       { pattern: /furball\.nyc/i, classification: "multi-event-page" },
       {
         pattern: /bearracuda\.com\/events\/[^/?&#\s]+/i,
         classification: "event-page",
       },
       { pattern: /bearracuda\.com/i, classification: "link-aggregator" },
-      { pattern: /linktr\.ee/i, classification: "link-aggregator" },
     ],
   },
   parsers: [
@@ -373,125 +351,93 @@ const scraperConfig = {
       },
     },
     {
-      name: "AI Web Parser (Sample)",
-      enabled: false,
-      automationEnabled: false,
-      parser: "ai-web",
+      // ── New Site Template ─────────────────────────────────────────────
+      // Copy this entry, fill in the live fields, and you're done — depth,
+      // URL blocking, AI/OCR settings, and field merging are all automatic.
+      // Tip: run once with discoveryOnly: true and the scraper prints a
+      // 📋 SUGGESTED CONFIG block (with harvested instagram/facebook/website)
+      // you can paste right back here.
+      name: "New Site Template",
+      enabled: false, // flip on after a dry-run preview looks right
       urls: ["https://example.com/events"],
-      alwaysBear: false,
-      urlDiscoveryDepth: 1,
-      maxAdditionalUrls: 15,
-      discoveryOnly: false, // Set true to run normal crawl/discovery flow while skipping event extraction
-      discoveryBlockedHosts: [], // Hostnames to suppress during URL discovery (e.g. ["example.com"] blocks links back to the source site)
-      discoveryBlockedPatterns: [], // Case-insensitive URL substrings to suppress during discovery (e.g. ["example.com/?p="])
-      dryRun: true,
-      ai: {
-        enabled: true,
-        // --- Option A (default): rapid-mlx text server on rybook ---
-        provider: "openai",
-        endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
-        model: "lmstudio-community/Qwen3-Coder-Next-MLX-6bit", // Main AI model for parsing
-        // --- Option B: Ollama on desktop ---
-        // provider: "ollama",
-        // endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-        // model: "qwen3.5:4b",
-        payloadMode: "best",
-        maxHtmlChars: 6000,
-        numCtx: 2048,
-        numPredict: 2000,
-        temperature: 0,
-        think: false,
-        timeoutSeconds: 120,
-        keepAlive: "5m",
-        // AI page classification second opinion (default: true). When the deterministic
-        // classifiers (URL rules, JSON-LD Event markup) have no answer, the text model
-        // classifies the page instead of the crude month-count heuristic (one small
-        // request per weak-signal page). URL rules and JSON-LD always take precedence.
-        // Set to false to fall back to the month-count heuristic only.
-        classifyPages: true,
-        // OCR settings live inside `ai` (getOcrConfig reads parserConfig.ai.ocr; a
-        // top-level `ocr` block is accepted as fallback, but this is the canonical spot).
-        ocr: {
-          enabled: true,
-          // --- Option A (default): rapid-mlx (OpenAI-compatible, Apple Silicon) on rybook ---
-          // rapid-mlx must be serving a VISION (VLM) model — text models reject image
-          // input with "Model ... does not support image, video, or audio inputs."
-          // A rapid-mlx instance serves ONE model, so the vision server runs on its
-          // own port (8001) alongside the text/extraction server on 8000.
-          // Check what's served: http://rybook.taila7523c.ts.net:8001/v1/models
-          provider: "openai",
-          endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
-          model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
-          // --- Option B: Ollama vision model on desktop ---
-          // provider: "ollama",
-          // endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-          // model: "qwen3-vl:4b-instruct",
-          timeoutSeconds: 120,
-          numCtx: 8192,
-          numPredict: 2000,
-          temperature: 0,
-          think: false,
-          keepAlive: "5m",
-          maxImages: 2, // Per-page OCR budget on single-event pages (multi-event pages use 10 + segment top-up)
-          concurrency: 1, // Concurrent OCR requests; keep 1 for a single local GPU
-          maxTextChars: 4000,
-          cache: true, // OCR result cache (key is `cache`, not `cacheEnabled`)
-          requireMissingFields: true,
-        },
+      alwaysBear: false, // set true for trusted bear promoters (AI trust context)
+      metadata: {
+        shortName: { value: "NEW-SITE" }, // add a hyphen where it should line-break
+        instagram: { value: "https://www.instagram.com/example" },
       },
-      // Comprehensive example of fieldPriorities for merging data from different sources
-      fieldPriorities: {
-        title: { priority: ["ai-web", "static"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
-        description: { priority: ["ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web"], merge: "clobber" },
-        address: { priority: ["ai-web"], merge: "clobber" },
-        startDate: { priority: ["ai-web"], merge: "clobber" },
-        endDate: { priority: ["ai-web"], merge: "clobber" },
-        url: { priority: ["ai-web"], merge: "clobber" },
-        location: { priority: ["ai-web"], merge: "clobber" },
-        gmaps: { priority: ["ai-web"], merge: "clobber" },
-        image: { priority: ["ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web"], merge: "clobber" },
-        facebook: { priority: ["ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web"], merge: "clobber" },
-        key: { priority: ["ai-web"], merge: "clobber" },
-      },
-      metadata: {},
-    },
-    {
-      name: "AI Web Parser (OpenAI Sample)",
-      enabled: false,
-      automationEnabled: false,
-      parser: "ai-web",
-      urls: ["https://example.com/openai-events"],
-      alwaysBear: false,
-      urlDiscoveryDepth: 1,
-      maxAdditionalUrls: 15,
-      dryRun: true,
-      ai: {
-        enabled: true,
-        provider: "openai",
-        endpoint: "https://api.openai.com/v1/chat/completions",
-        model: "gpt-4o",
-        numPredict: 2000,
-        temperature: 0,
-        openai: {
-          responseFormat: "json_object",
-        },
-      },
-      ocr: {
-        enabled: true,
-        provider: "openai",
-        endpoint: "https://api.openai.com/v1/chat/completions",
-        model: "gpt-4o-mini",
-        numPredict: 2000,
-        temperature: 0,
-        openai: {
-          responseFormat: "json_object",
-        },
-      },
-      metadata: {},
+      // ── Optional fields — exhaustive reference (defaults noted) ────────
+      //
+      // Crawl & discovery:
+      // discoveryOnly: true, // First-run mapping: crawl + print/save the 📋 SUGGESTED CONFIG block, extract no events (default: false)
+      // urlDiscoveryDepth: 2, // Omit → adaptive crawling (each page's type decides what gets followed); set a number to pin exact depth, 0 = never crawl (default: adaptive)
+      // maxAdditionalUrls: 15, // Budget of discovered URLs followed per page (default: 15)
+      // discoveryBlockedPatterns: ["example.com/members-only"], // Deliberate exclusions only — generic junk is blocked built-in and dead ends are learned + auto-retried (default: none)
+      // discoveryBlockedHosts: ["example.com"], // Suppress ALL discovered links to these hostnames (default: none)
+      //
+      // Run behavior:
+      // dryRun: true, // Preview this parser's events without writing to the calendar (default: false — global config.dryRun also applies)
+      // automationEnabled: false, // Skip this parser in scheduled automation runs (default: true)
+      // daysToLookAhead: 90, // Only keep events starting within N days (default: global config.daysToLookAhead, null = no limit)
+      // allowPastEvents: true, // Keep events whose start date already passed (default: false)
+      // calendarSearchRangeDays: 40, // ± days searched for wildcard matchKey calendar matches (default: unset)
+      //
+      // AI extraction override — merged key-wise over the global `ai` block.
+      // Normally omit entirely: the built-in default is the local rybook text
+      // server. Shown exhaustively for reference:
+      // ai: {
+      //   enabled: true,
+      //   provider: "openai", // "openai" (OpenAI-compatible, e.g. rapid-mlx/LM Studio/hosted) or "ollama"
+      //   endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+      //   model: "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+      //   // Hosted OpenAI variant:
+      //   // provider: "openai", endpoint: "https://api.openai.com/v1/chat/completions", model: "gpt-4o", openai: { responseFormat: "json_object" },
+      //   // Ollama variant:
+      //   // provider: "ollama", endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate", model: "qwen3.5:4b",
+      //   payloadMode: "best", // "best" | "html" | "text" — what gets sent to the model
+      //   maxHtmlChars: 6000,
+      //   numCtx: 2048,
+      //   numPredict: 2000,
+      //   temperature: 0,
+      //   think: false,
+      //   timeoutSeconds: 120,
+      //   keepAlive: "5m",
+      //   classifyPages: true, // AI second opinion when URL rules/JSON-LD can't classify a page (default: true)
+      //   // OCR override lives INSIDE `ai` (canonical spot: ai.ocr). Default is
+      //   // the rybook VISION server on :8001 — text models reject images.
+      //   ocr: {
+      //     enabled: true,
+      //     provider: "openai",
+      //     endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
+      //     model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
+      //     // Ollama vision variant:
+      //     // provider: "ollama", endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate", model: "qwen3-vl:4b-instruct",
+      //     timeoutSeconds: 120,
+      //     numCtx: 8192,
+      //     numPredict: 2000,
+      //     temperature: 0,
+      //     think: false,
+      //     keepAlive: "5m",
+      //     maxImages: 2, // Per-page OCR budget on single-event pages (multi-event pages use 10 + segment top-up)
+      //     concurrency: 1, // Concurrent OCR requests; keep 1 for a single local GPU
+      //     maxTextChars: 4000,
+      //     cache: true, // OCR result cache (key is `cache`, not `cacheEnabled`)
+      //     cacheRetentionDays: 90,
+      //     requireMissingFields: true, // Only OCR when fields are still missing
+      //   },
+      // },
+      //
+      // Merging & identity:
+      // fieldPriorities: { title: { priority: ["ai-web", "static"], merge: "clobber" }, shortName: { priority: ["static"], merge: "upsert" } }, // Per-field override (default: every field ai-web + AI arbitration; metadata keys auto-static)
+      //
+      // Metadata extras (all static-upserted into events automatically):
+      // metadata: {
+      //   shortName: { value: "MAIN", conditionalValues: [{ keywords: ["subbrand"], value: "SUB-BRAND" }] }, // sub-brands sharing one parser
+      //   shorterName: { value: "MN" }, // ultra-compact display name
+      //   website: { value: "https://example.com" }, // `url` is an alias — website and url are ONE field
+      //   facebook: { value: "https://www.facebook.com/example" },
+      //   favicon: { value: "https://linktr.ee/example" }, // icon-source override, resolved dynamically by the website
+      //   matchKey: { value: "example*|${year}-${month}-*|*" }, // wildcard calendar-dedup key (pair with calendarSearchRangeDays)
+      // },
     },
   ],
 };

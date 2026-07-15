@@ -29,6 +29,9 @@ class WebAdapter {
         
         // Store cities configuration for calendar mapping
         this.cities = config.cities || {};
+        // In-memory learned dead-end store (web/Node runs don't persist it;
+        // the Scriptable adapter is the durable home for dead-ends.json)
+        this.deadEndStore = {};
         this.isNode = typeof process !== 'undefined' && !!(process.versions && process.versions.node);
         this.fs = null;
         this.path = null;
@@ -233,6 +236,21 @@ class WebAdapter {
         }
     }
     
+    // In-memory equivalents of the Scriptable adapter's dead-end persistence:
+    // same interface, survives only for the adapter instance's lifetime.
+    async loadDeadEnds() {
+        if (!this.deadEndStore || typeof this.deadEndStore !== 'object' || Array.isArray(this.deadEndStore)) {
+            this.deadEndStore = {};
+        }
+        return this.deadEndStore;
+    }
+
+    async saveDeadEnds(store) {
+        if (store && typeof store === 'object' && !Array.isArray(store)) {
+            this.deadEndStore = store;
+        }
+    }
+
     getRunContext() {
         const isNode = typeof window === 'undefined';
         const environment = isNode ? 'node' : 'web';
