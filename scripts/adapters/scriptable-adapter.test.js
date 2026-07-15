@@ -434,3 +434,16 @@ test('loadDeadEnds tolerates corrupt or wrong-shaped files with an empty store',
   await adapter.saveDeadEnds(['nope']);
   assert.ok(!adapter.fm.files.has(path));
 });
+
+test('saveSuggestedConfig writes a sanitized per-parser file and tolerates bad input', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+
+  const text = '// Suggested parser entry for "Twisted Bear!"\n{\n  name: "Twisted Bear!",\n},\n';
+  const path = await adapter.saveSuggestedConfig('Twisted Bear!', text);
+  assert.ok(path.endsWith('suggested-configs/twisted-bear.js'), `sanitized filename, got ${path}`);
+  assert.equal(adapter.fm.files.get(path), text);
+
+  assert.equal(await adapter.saveSuggestedConfig('X', ''), null, 'empty text → no write');
+  assert.equal(await adapter.saveSuggestedConfig('X', null), null, 'null text → no write');
+});

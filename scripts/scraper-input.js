@@ -365,17 +365,79 @@ const scraperConfig = {
         shortName: { value: "NEW-SITE" }, // add a hyphen where it should line-break
         instagram: { value: "https://www.instagram.com/example" },
       },
-      // ── Optional fields (shown with their defaults) ───────────────────
-      // discoveryOnly: true, // First-run mapping: crawl + print the 📋 SUGGESTED CONFIG block, extract no events (default: false)
+      // ── Optional fields — exhaustive reference (defaults noted) ────────
+      //
+      // Crawl & discovery:
+      // discoveryOnly: true, // First-run mapping: crawl + print/save the 📋 SUGGESTED CONFIG block, extract no events (default: false)
       // urlDiscoveryDepth: 2, // Omit → adaptive crawling (each page's type decides what gets followed); set a number to pin exact depth, 0 = never crawl (default: adaptive)
-      // discoveryBlockedPatterns: ["example.com/members-only"], // Rarely needed: generic junk is blocked built-in and dead ends are learned + auto-retried; set only for deliberate exclusions (default: none)
+      // maxAdditionalUrls: 15, // Budget of discovered URLs followed per page (default: 15)
+      // discoveryBlockedPatterns: ["example.com/members-only"], // Deliberate exclusions only — generic junk is blocked built-in and dead ends are learned + auto-retried (default: none)
+      // discoveryBlockedHosts: ["example.com"], // Suppress ALL discovered links to these hostnames (default: none)
+      //
+      // Run behavior:
       // dryRun: true, // Preview this parser's events without writing to the calendar (default: false — global config.dryRun also applies)
       // automationEnabled: false, // Skip this parser in scheduled automation runs (default: true)
-      // ai: { endpoint: "...", model: "..." }, // Per-parser AI override, merged over the global `ai` block (default: global block — normally omit)
-      // ai: { provider: "openai", endpoint: "https://api.openai.com/v1/chat/completions", model: "gpt-4o", openai: { responseFormat: "json_object" } }, // Hosted OpenAI instead of the local default (ai.ocr accepts the same shape with a vision model)
-      // fieldPriorities: { title: { priority: ["ai-web", "static"], merge: "clobber" } }, // Per-field merge override (default: all fields ai-web + AI arbitration; metadata keys auto-static)
-      // conditionalValues example for sub-brands sharing one parser:
-      // metadata: { shortName: { value: "MAIN", conditionalValues: [{ keywords: ["subbrand"], value: "SUB-BRAND" }] } },
+      // daysToLookAhead: 90, // Only keep events starting within N days (default: global config.daysToLookAhead, null = no limit)
+      // allowPastEvents: true, // Keep events whose start date already passed (default: false)
+      // calendarSearchRangeDays: 40, // ± days searched for wildcard matchKey calendar matches (default: unset)
+      //
+      // AI extraction override — merged key-wise over the global `ai` block.
+      // Normally omit entirely: the built-in default is the local rybook text
+      // server. Shown exhaustively for reference:
+      // ai: {
+      //   enabled: true,
+      //   provider: "openai", // "openai" (OpenAI-compatible, e.g. rapid-mlx/LM Studio/hosted) or "ollama"
+      //   endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+      //   model: "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+      //   // Hosted OpenAI variant:
+      //   // provider: "openai", endpoint: "https://api.openai.com/v1/chat/completions", model: "gpt-4o", openai: { responseFormat: "json_object" },
+      //   // Ollama variant:
+      //   // provider: "ollama", endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate", model: "qwen3.5:4b",
+      //   payloadMode: "best", // "best" | "html" | "text" — what gets sent to the model
+      //   maxHtmlChars: 6000,
+      //   numCtx: 2048,
+      //   numPredict: 2000,
+      //   temperature: 0,
+      //   think: false,
+      //   timeoutSeconds: 120,
+      //   keepAlive: "5m",
+      //   classifyPages: true, // AI second opinion when URL rules/JSON-LD can't classify a page (default: true)
+      //   // OCR override lives INSIDE `ai` (canonical spot: ai.ocr). Default is
+      //   // the rybook VISION server on :8001 — text models reject images.
+      //   ocr: {
+      //     enabled: true,
+      //     provider: "openai",
+      //     endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
+      //     model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
+      //     // Ollama vision variant:
+      //     // provider: "ollama", endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate", model: "qwen3-vl:4b-instruct",
+      //     timeoutSeconds: 120,
+      //     numCtx: 8192,
+      //     numPredict: 2000,
+      //     temperature: 0,
+      //     think: false,
+      //     keepAlive: "5m",
+      //     maxImages: 2, // Per-page OCR budget on single-event pages (multi-event pages use 10 + segment top-up)
+      //     concurrency: 1, // Concurrent OCR requests; keep 1 for a single local GPU
+      //     maxTextChars: 4000,
+      //     cache: true, // OCR result cache (key is `cache`, not `cacheEnabled`)
+      //     cacheRetentionDays: 90,
+      //     requireMissingFields: true, // Only OCR when fields are still missing
+      //   },
+      // },
+      //
+      // Merging & identity:
+      // fieldPriorities: { title: { priority: ["ai-web", "static"], merge: "clobber" }, shortName: { priority: ["static"], merge: "upsert" } }, // Per-field override (default: every field ai-web + AI arbitration; metadata keys auto-static)
+      //
+      // Metadata extras (all static-upserted into events automatically):
+      // metadata: {
+      //   shortName: { value: "MAIN", conditionalValues: [{ keywords: ["subbrand"], value: "SUB-BRAND" }] }, // sub-brands sharing one parser
+      //   shorterName: { value: "MN" }, // ultra-compact display name
+      //   website: { value: "https://example.com" }, // `url` is an alias — website and url are ONE field
+      //   facebook: { value: "https://www.facebook.com/example" },
+      //   favicon: { value: "https://linktr.ee/example" }, // icon-source override, resolved dynamically by the website
+      //   matchKey: { value: "example*|${year}-${month}-*|*" }, // wildcard calendar-dedup key (pair with calendarSearchRangeDays)
+      // },
     },
   ],
 };

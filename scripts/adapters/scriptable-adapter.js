@@ -1088,6 +1088,31 @@ class ScriptableAdapter {
     }
   }
 
+  // Paste-ready suggested parser entry from a discoveryOnly run — written as a
+  // file so it can be copied cleanly from the Files app instead of out of a
+  // timestamped log. One file per parser, overwritten on each discovery run.
+  async saveSuggestedConfig(parserName, text) {
+    if (!text || typeof text !== "string") {
+      return null;
+    }
+    try {
+      const dir = this.fm.joinPath(this.baseDir, "suggested-configs");
+      this.ensureDirectoryExists(dir);
+      const path = this.fm.joinPath(
+        dir,
+        `${this.sanitizePageCacheSegment(parserName)}.js`,
+      );
+      this.fm.writeString(path, text);
+      console.log(`📱 Scriptable: ✓ Saved suggested config to ${path}`);
+      return path;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Suggested config write failed: ${error.message}`,
+      );
+      return null;
+    }
+  }
+
   extractHttpStatusCodeFromError(error) {
     const message =
       error && typeof error.message === "string" ? error.message : "";

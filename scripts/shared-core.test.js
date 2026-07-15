@@ -3254,7 +3254,7 @@ test('discoveryOnly runs emit the suggested-config block with harvested social l
   };
   const { httpAdapter, parsers } = createCrawlHarness(pages);
 
-  await core.processParser(
+  const parserResult = await core.processParser(
     { name: 'New Site', urls: ['https://www.eventbrite.com/o/newsite-123'], discoveryOnly: true, ai: CRAWL_AI },
     {}, httpAdapter, display, parsers
   );
@@ -3263,6 +3263,8 @@ test('discoveryOnly runs emit the suggested-config block with harvested social l
     'discoveryOnly startup line carries the adaptive marker when depth is absent');
   const block = display.logs.find(line => line.startsWith('📋 SUGGESTED CONFIG for "New Site"'));
   assert.ok(block, 'suggested config emitted after discovery');
+  assert.equal(parserResult.suggestedConfig, block,
+    'suggested config also carried on the parser result so the orchestrator can save it as a file');
   assert.ok(block.includes('    shortName: { value: "NEW SITE EVENTS" }, // add a hyphen where it should line-break'));
   assert.ok(block.includes('    instagram: { value: "https://www.instagram.com/newsite" }, // found on page'));
   assert.ok(block.includes('    website: { value: "https://newsite.example" }, // found on page'));

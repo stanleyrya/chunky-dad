@@ -1085,7 +1085,9 @@ class SharedCore {
             const totalSegmentCount = Object.values(discoveryTree.segmentsByUrl).reduce((sum, segs) => sum + segs.length, 0);
             const segmentSuffix = segmentUrlCount > 0 ? `, ${totalSegmentCount} segment(s) on ${segmentUrlCount} multi-event page(s)` : '';
             await displayAdapter.logInfo(`SYSTEM: Discovery complete: ${discoveryTree.allNodes.length} URL(s) found across ${discoveryTree.edges.length} link(s)${segmentSuffix}`);
-            await displayAdapter.logInfo(this.buildSuggestedParserConfig(effectiveParserConfig, discoveryTreeCollector));
+            const suggestedConfig = this.buildSuggestedParserConfig(effectiveParserConfig, discoveryTreeCollector);
+            result.suggestedConfig = suggestedConfig;
+            await displayAdapter.logInfo(suggestedConfig);
         }
 
         return result;
