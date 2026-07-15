@@ -387,8 +387,14 @@ const scraperConfig = {
       dryRun: true,
       ai: {
         enabled: true,
-        endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-        model: "qwen3.5:4b", // Main AI model for parsing
+        // --- Option A (default): rapid-mlx text server on rybook ---
+        provider: "openai",
+        endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+        model: "lmstudio-community/Qwen3-Coder-Next-MLX-6bit", // Main AI model for parsing
+        // --- Option B: Ollama on desktop ---
+        // provider: "ollama",
+        // endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
+        // model: "qwen3.5:4b",
         payloadMode: "best",
         maxHtmlChars: 6000,
         numCtx: 2048,
@@ -407,19 +413,19 @@ const scraperConfig = {
         // top-level `ocr` block is accepted as fallback, but this is the canonical spot).
         ocr: {
           enabled: true,
-          // --- Option A (default): Ollama vision model on desktop ---
-          provider: "ollama",
-          endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
-          model: "qwen3-vl:4b-instruct", // OCR requires a VISION model
-          // --- Option B: rapid-mlx (OpenAI-compatible, Apple Silicon) on rybook ---
+          // --- Option A (default): rapid-mlx (OpenAI-compatible, Apple Silicon) on rybook ---
           // rapid-mlx must be serving a VISION (VLM) model — text models reject image
           // input with "Model ... does not support image, video, or audio inputs."
           // A rapid-mlx instance serves ONE model, so the vision server runs on its
-          // own port (e.g. 8001) alongside the text/extraction server on 8000.
+          // own port (8001) alongside the text/extraction server on 8000.
           // Check what's served: http://rybook.taila7523c.ts.net:8001/v1/models
-          // provider: "openai",
-          // endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
-          // model: "mlx-community/Qwen3-VL-4B-Instruct-4bit",
+          provider: "openai",
+          endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
+          model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
+          // --- Option B: Ollama vision model on desktop ---
+          // provider: "ollama",
+          // endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate",
+          // model: "qwen3-vl:4b-instruct",
           timeoutSeconds: 120,
           numCtx: 8192,
           numPredict: 2000,
