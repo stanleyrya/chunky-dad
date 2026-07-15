@@ -2015,7 +2015,10 @@ test('extraction flattens field objects through weekday pinning and normalizeAiE
 // ---------------------------------------------------------------------------
 
 // Trimmed real structure from chunk-party.com (the app GUID is deliberately
-// NOT the production events-app GUID — the extractor must iterate keys).
+// NOT the production events-app GUID — the extractor must iterate keys). The
+// registration.ticketing summary carries fee-INCLUSIVE totals ($21.03/$31.52)
+// while the tickets[] array (a sibling of "event") carries the base sticker
+// prices — the cover must come from tickets[], never the summary.
 const WIX_WARMUP_HTML = `
 <html><head>
 <script type="application/json" id="wix-warmup-data">{"appsWarmupData":{"deadbeef-0000-4000-8000-000000000000":{"EventsPageInitialState":{"event":{"event":{
@@ -2023,8 +2026,11 @@ const WIX_WARMUP_HTML = `
   "location":{"name":"Nova PDX","coordinates":{"lat":45.52281000000001,"lng":-122.6581342},"address":"722 E Burnside St, Portland, OR 97214, USA","fullAddress":{"country":"US","subdivision":"OR","city":"Portland","postalCode":"97214-1219","formattedAddress":"722 E Burnside St, Portland, OR 97214, USA","geocode":{"latitude":45.52281000000001,"longitude":-122.6581342}}},
   "scheduling":{"config":{"startDate":"2026-08-23T04:00:00.000Z","endDate":"2026-08-23T09:00:00.000Z","timeZoneId":"America/Los_Angeles"}},
   "title":"CHUNK Portland - SUMMER BLOW OUT!","slug":"chunk-portland-summer-blow-out",
-  "registration":{"ticketing":{"lowestTicketPrice":{"amount":"20.50","currency":"USD"},"highestTicketPrice":{"amount":"30.75","currency":"USD"},"lowestTicketPriceFormatted":"$20.50","highestTicketPriceFormatted":"$30.75","soldOut":false}}
-}}}}}}</script>
+  "registration":{"ticketing":{"lowestTicketPrice":{"amount":"21.03","currency":"USD"},"highestTicketPrice":{"amount":"31.52","currency":"USD"},"lowestTicketPriceFormatted":"$21.03","highestTicketPriceFormatted":"$31.52","soldOut":false}}
+}},"tickets":[
+  {"id":"t1","price":{"amount":"20.50","currency":"USD","value":"20.50"},"free":false,"name":"Early Bird GA","limitPerCheckout":20,"orderIndex":0,"wixFeeConfig":{"type":2},"saleStatus":1,"pricing":{"fixedPrice":{"amount":"20.50","currency":"USD","value":"20.50"},"pricingType":0}},
+  {"id":"t2","price":{"amount":"30.75","currency":"USD","value":"30.75"},"free":false,"name":"Tier 1 GA","limitPerCheckout":50,"orderIndex":1,"wixFeeConfig":{"type":2},"saleStatus":1,"pricing":{"fixedPrice":{"amount":"30.75","currency":"USD","value":"30.75"},"pricingType":0}}
+]}}}}</script>
 </head><body>CHUNK Portland - SUMMER BLOW OUT!</body></html>`;
 
 const CHUNK_PAGE_URL = 'https://www.chunk-party.com/event-details/chunk-portland-summer-blow-out';
@@ -2182,6 +2188,150 @@ test('applyWixServerDataEnrichment applies nothing when the slug and title both 
 
   assert.equal(events[0].location, '', 'an event-details URL naming a different slug must not be enriched');
   assert.equal(events[0].cover, '');
+});
+
+// ---------------------------------------------------------------------------
+// Sticker-price covers: the warmup tickets[] array carries BASE prices
+// ("45.00") while JSON-LD offers and the registration.ticketing summary are
+// fee-inclusive totals ("46.13" = $45.00 + service fee). Verified live on the
+// chunk-party.com Dore Alley page: sold-out tickets keep saleStatus 1 but get
+// limitPerCheckout 0; purchasable ones have limitPerCheckout > 0.
+// ---------------------------------------------------------------------------
+
+const doreTicket = (name, amount, limitPerCheckout) => ({
+  id: name, price: { amount, currency: 'USD', value: amount }, free: false,
+  name, limitPerCheckout, orderIndex: 0, wixFeeConfig: { type: 2 }, saleStatus: 1,
+  pricing: { fixedPrice: { amount, currency: 'USD', value: amount }, pricingType: 0 }
+});
+
+// Real Dore Alley shape: 25/30 tiers sold out, 45/60 tiers still purchasable
+const DORE_TICKETS = [
+  doreTicket("CHUNK DORE '26 Early Bird GA 1", '25.00', 0),
+  doreTicket("CHUNK DORE '26 Tier 1 GA 1", '30.00', 0),
+  doreTicket("CHUNK DORE '26 Tier 2 GA 1", '45.00', 1),
+  doreTicket("CHUNK DORE '26 Tier 3 GA 1", '60.00', 50)
+];
+
+const DORE_PAGE_URL = 'https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th';
+
+const DORE_WARMUP_HTML = `
+<html><head>
+<script type="application/json" id="wix-warmup-data">${JSON.stringify({
+  appsWarmupData: {
+    'deadbeef-0000-4000-8000-000000000000': {
+      EventsPageInitialState: {
+        event: {
+          event: {
+            title: 'CHUNK DORE ALLEY - Saturday July 25th',
+            slug: 'chunk-dore-alley-saturday-july-25th',
+            scheduling: { config: { startDate: '2026-07-26T05:00:00.000Z', endDate: '2026-07-26T11:00:00.000Z', timeZoneId: 'America/Los_Angeles' } },
+            registration: { ticketing: { lowestTicketPriceFormatted: '$25.63', highestTicketPriceFormatted: '$61.50', soldOut: false } }
+          }
+        },
+        tickets: DORE_TICKETS
+      }
+    }
+  }
+})}</script>
+</head><body>CHUNK DORE ALLEY - Saturday July 25th</body></html>`;
+
+// The fee-inclusive offers the same page publishes in JSON-LD (real values)
+const DORE_OFFERS = {
+  '@type': 'AggregateOffer', highPrice: '61.50', lowPrice: '25.63',
+  offerCount: '4', priceCurrency: 'USD',
+  availability: 'https://schema.org/InStock',
+  offers: [
+    { '@type': 'offer', name: "CHUNK DORE '26 Early Bird GA 1", price: '25.63', priceCurrency: 'USD', availability: 'https://schema.org/SoldOut' },
+    { '@type': 'offer', name: "CHUNK DORE '26 Tier 1 GA 1", price: '30.75', priceCurrency: 'USD', availability: 'https://schema.org/SoldOut' },
+    { '@type': 'offer', name: "CHUNK DORE '26 Tier 2 GA 1", price: '46.13', priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
+    { '@type': 'offer', name: "CHUNK DORE '26 Tier 3 GA 1", price: '61.5', priceCurrency: 'USD', availability: 'https://schema.org/InStock' }
+  ]
+};
+
+test('formatWixTicketPriceRange ranges over base prices of purchasable tiers only', () => {
+  const parser = createParser();
+  // 25/30 sold out (limitPerCheckout 0), 45/60 purchasable → walk-up range
+  assert.equal(parser.formatWixTicketPriceRange(DORE_TICKETS), '$45-$60');
+  // ALL tiers sold out → the full range across all tiers keeps a price
+  const allSoldOut = DORE_TICKETS.map(ticket => ({ ...ticket, limitPerCheckout: 0 }));
+  assert.equal(parser.formatWixTicketPriceRange(allSoldOut), '$25-$60');
+  // A single purchasable tier collapses to one value
+  assert.equal(parser.formatWixTicketPriceRange([DORE_TICKETS[0], DORE_TICKETS[2]]), '$45');
+  // Real cents keep two decimals; whole dollars drop the ".00"
+  assert.equal(parser.formatWixTicketPriceRange([doreTicket('GA', '45.50', 10)]), '$45.50');
+  // An absent limitPerCheckout never marks a tier sold out
+  const noLimit = doreTicket('GA', '45.00', 10);
+  delete noLimit.limitPerCheckout;
+  assert.equal(parser.formatWixTicketPriceRange([noLimit]), '$45');
+  // price absent → pricing.fixedPrice fallback
+  const fixedOnly = doreTicket('GA', '45.00', 10);
+  delete fixedOnly.price;
+  assert.equal(parser.formatWixTicketPriceRange([fixedOnly]), '$45');
+  // Non-USD renders as amount + space + code
+  const eur = doreTicket('GA', '45.00', 10);
+  eur.price.currency = 'EUR';
+  assert.equal(parser.formatWixTicketPriceRange([eur]), '45 EUR');
+  // No priced tickets → null: never "$0", never a throw
+  assert.equal(parser.formatWixTicketPriceRange([]), null);
+  assert.equal(parser.formatWixTicketPriceRange(null), null);
+  assert.equal(parser.formatWixTicketPriceRange(undefined), null);
+  assert.equal(parser.formatWixTicketPriceRange([{ free: true, name: 'RSVP', limitPerCheckout: 10 }]), null);
+  assert.equal(parser.formatWixTicketPriceRange([doreTicket('GA', '0.00', 10)]), null);
+  assert.equal(parser.formatWixTicketPriceRange(['garbage', null, 42]), null);
+});
+
+test('a JSON-LD-offers cover is upgraded to warmup base sticker prices and the flag is consumed', () => {
+  const parser = createParser();
+  const event = parser.buildEventFromJsonLdNode({
+    name: 'CHUNK DORE ALLEY - Saturday July 25th',
+    startDate: '2026-07-25T22:00:00-07:00',
+    offers: DORE_OFFERS
+  }, DORE_PAGE_URL);
+  assert.equal(event.cover, '$46.13-$61.50', 'JSON-LD can only see fee-inclusive totals');
+  assert.equal(event._coverFromJsonLdOffers, true, 'the offers-sourced cover is flagged upgradeable');
+
+  const logs = [];
+  const realLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try {
+    parser.applyWixServerDataEnrichment([event], { url: DORE_PAGE_URL, html: DORE_WARMUP_HTML }, {});
+  } finally {
+    console.log = realLog;
+  }
+  assert.equal(event.cover, '$45-$60', 'base prices of purchasable tiers replace fee totals');
+  assert.equal(event._coverFromJsonLdOffers, undefined, 'the scratch flag is consumed by the upgrade');
+  assert.ok(
+    logs.some(line => line.includes('filled=[') && line.includes('upgraded=[cover]')),
+    'the enrichment summary reports the upgrade alongside filled fields'
+  );
+});
+
+test('an OCR/AI-extracted cover (no flag) is never overridden by warmup ticket prices', () => {
+  const parser = createParser();
+  const events = [{
+    title: 'CHUNK DORE ALLEY - Saturday July 25th',
+    startDate: new Date('2026-07-26T05:00:00.000Z'),
+    cover: '$40 at the door'
+  }];
+  parser.applyWixServerDataEnrichment(events, { url: DORE_PAGE_URL, html: DORE_WARMUP_HTML }, {});
+  assert.equal(events[0].cover, '$40 at the door', 'independent OCR/AI evidence always wins');
+});
+
+test('an empty cover is still filled from warmup tickets (fill-only-empty path)', () => {
+  const parser = createParser();
+  const events = [{
+    title: 'CHUNK DORE ALLEY - Saturday July 25th',
+    startDate: new Date('2026-07-26T05:00:00.000Z'),
+    cover: ''
+  }];
+  parser.applyWixServerDataEnrichment(events, { url: DORE_PAGE_URL, html: DORE_WARMUP_HTML }, {});
+  assert.equal(events[0].cover, '$45-$60');
+});
+
+test('formatJsonLdOffersCover keeps the honest fee-inclusive range for non-Wix pages', () => {
+  const parser = createParser();
+  // Dore-shaped offers: unchanged fallback when no warmup data exists
+  assert.equal(parser.formatJsonLdOffersCover(DORE_OFFERS), '$46.13-$61.50');
 });
 
 test('parseEvents enriches the JSON-LD fast-path result from Wix server data without running OCR or AI', async () => {
