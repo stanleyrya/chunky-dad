@@ -372,43 +372,10 @@ const scraperConfig = {
       // dryRun: true, // Preview this parser's events without writing to the calendar (default: false — global config.dryRun also applies)
       // automationEnabled: false, // Skip this parser in scheduled automation runs (default: true)
       // ai: { endpoint: "...", model: "..." }, // Per-parser AI override, merged over the global `ai` block (default: global block — normally omit)
+      // ai: { provider: "openai", endpoint: "https://api.openai.com/v1/chat/completions", model: "gpt-4o", openai: { responseFormat: "json_object" } }, // Hosted OpenAI instead of the local default (ai.ocr accepts the same shape with a vision model)
       // fieldPriorities: { title: { priority: ["ai-web", "static"], merge: "clobber" } }, // Per-field merge override (default: all fields ai-web + AI arbitration; metadata keys auto-static)
       // conditionalValues example for sub-brands sharing one parser:
       // metadata: { shortName: { value: "MAIN", conditionalValues: [{ keywords: ["subbrand"], value: "SUB-BRAND" }] } },
-    },
-    {
-      name: "AI Web Parser (OpenAI Sample)",
-      enabled: false,
-      automationEnabled: false,
-      parser: "ai-web",
-      urls: ["https://example.com/openai-events"],
-      alwaysBear: false,
-      urlDiscoveryDepth: 1,
-      maxAdditionalUrls: 15,
-      dryRun: true,
-      ai: {
-        enabled: true,
-        provider: "openai",
-        endpoint: "https://api.openai.com/v1/chat/completions",
-        model: "gpt-4o",
-        numPredict: 2000,
-        temperature: 0,
-        openai: {
-          responseFormat: "json_object",
-        },
-      },
-      ocr: {
-        enabled: true,
-        provider: "openai",
-        endpoint: "https://api.openai.com/v1/chat/completions",
-        model: "gpt-4o-mini",
-        numPredict: 2000,
-        temperature: 0,
-        openai: {
-          responseFormat: "json_object",
-        },
-      },
-      metadata: {},
     },
   ],
 };
