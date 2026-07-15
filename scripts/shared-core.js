@@ -2373,6 +2373,29 @@ class SharedCore {
                 }
             }
 
+            // Universal empty-loses rule: when exactly one side has a value it
+            // wins, regardless of source priority — an empty side is an
+            // extraction gap, never data. Without this, the same-priority
+            // branch below (every dedup pair now that ai-web is the universal
+            // parser) "preserved existing" even when existing was EMPTY,
+            // wiping one-sided values the { ...newEvent } base already carried
+            // (observed 2026-07-14: cover/ticketUrl from a detail page erased
+            // by the coverless homepage-segment record).
+            const existingSideEmpty = isEmpty(existingValue);
+            const newSideEmpty = isEmpty(newValue);
+            if (existingSideEmpty !== newSideEmpty) {
+                const chosenValue = existingSideEmpty ? newValue : existingValue;
+                mergedEvent[fieldName] = chosenValue;
+                mergeDecisions.push({
+                    field: fieldName,
+                    existingValue: existingValue,
+                    newValue: newValue,
+                    chosenValue: chosenValue,
+                    reason: 'kept the non-empty side — an empty side never displaces data'
+                });
+                return;
+            }
+
             const canArbitrate = this.isArbitrationEligibleField(fieldName)
                 && this.isGenuineFieldConflict(fieldName, existingValue, newValue);
 
@@ -2521,15 +2544,24 @@ class SharedCore {
         }
 
         if (mergeDecisions.length > 0) {
-            const changedFields = Array.from(new Set(mergeDecisions.map(decision => decision.field)));
-            const previewFields = changedFields.slice(0, 6);
-            const extraCount = changedFields.length - previewFields.length;
-            const previewText = extraCount > 0
-                ? `${previewFields.join(', ')}, +${extraCount} more`
-                : previewFields.join(', ');
-            const existingTitle = existingEvent.title || 'event';
-            const newTitle = newEvent.title || 'event';
-            console.log(`🔄 PARSER MERGE: "${existingTitle}" (${existingEvent.source}) + "${newTitle}" (${newEvent.source}) → ${changedFields.length} field${changedFields.length === 1 ? '' : 's'} updated (${previewText})`);
+            // "updated" means the merge changed the outgoing record: only count
+            // fields whose final value differs from what the { ...newEvent }
+            // base spread put there. Decisions that PRESERVED the base value
+            // stay in mergeDecisions (display/metrics) but not in this line —
+            // listing them here as "updated" is how the empty-side wipe hid.
+            const changedFields = Array.from(new Set(mergeDecisions
+                .filter(decision => !this.mergeValuesEqualForTracking(mergedEvent[decision.field], newEvent[decision.field]))
+                .map(decision => decision.field)));
+            if (changedFields.length > 0) {
+                const previewFields = changedFields.slice(0, 6);
+                const extraCount = changedFields.length - previewFields.length;
+                const previewText = extraCount > 0
+                    ? `${previewFields.join(', ')}, +${extraCount} more`
+                    : previewFields.join(', ');
+                const existingTitle = existingEvent.title || 'event';
+                const newTitle = newEvent.title || 'event';
+                console.log(`🔄 PARSER MERGE: "${existingTitle}" (${existingEvent.source}) + "${newTitle}" (${newEvent.source}) → ${changedFields.length} field${changedFields.length === 1 ? '' : 's'} updated (${previewText})`);
+            }
         }
         
         return mergedEvent;
@@ -2585,6 +2617,8 @@ class SharedCore {
 
         // Track clobbered fields for summary logging
         const clobberedFields = [];
+        // Fields where an empty scrape kept the calendar value (summary log)
+        const calendarKeptFields = [];
         // Genuine conflicts deferred to AI arbitration (strategy "ai")
         const pendingAiConflicts = [];
         // Arbitration outcomes (deterministic, ai, fallback) for display/metrics
@@ -2699,16 +2733,24 @@ class SharedCore {
                 continue;
             }
 
-            // An empty scraped bar is an extraction gap, not data (e.g. the venue
-            // was rejected by the organizer-brand guard and never recovered) — it
-            // must never clear the calendar's venue, even under clobber/ai
-            // clear-on-empty-scrape semantics. A non-empty scraped bar keeps
-            // today's behavior exactly (strategy/arbitration below).
-            if (fieldName === 'bar'
+            // An empty scraped value is an extraction gap, never a deletion
+            // instruction — deleting data is the calendar owner's job. Any
+            // field the scrape came back empty on keeps the calendar's value,
+            // ending clear-on-empty-scrape semantics for clobber/ai strategies
+            // (upsert/preserve already kept the calendar value). startDate/
+            // endDate are excluded: their own rules above/below own them
+            // (degenerate-end, routeDateConflictToAi); key is scraper-owned.
+            // location and bearReview never reach here empty-vs-non-empty —
+            // their special cases above already continue.
+            if (fieldName !== 'startDate' && fieldName !== 'endDate' && fieldName !== 'key'
                 && this.isEmptyArbitrationValue(scraperValue)
                 && !this.isEmptyArbitrationValue(calendarValue)) {
                 mergedObject[fieldName] = calendarValue;
-                console.log(`📍 MERGE: "${mergeTitle}" bar kept from calendar (scrape found no venue)`);
+                if (fieldName === 'bar') {
+                    console.log(`📍 MERGE: "${mergeTitle}" bar kept from calendar (scrape found no venue)`);
+                } else {
+                    calendarKeptFields.push(fieldName);
+                }
                 continue;
             }
 
@@ -2815,6 +2857,10 @@ class SharedCore {
                     });
                 }
             }
+        }
+
+        if (calendarKeptFields.length > 0) {
+            console.log(`📍 MERGE: "${mergeTitle}" kept calendar values for empty-scraped field(s): ${calendarKeptFields.join(', ')}`);
         }
 
         // Log summary of clobbered fields
