@@ -183,8 +183,8 @@ test('forward geocode without an event city keeps the legacy query and accepts t
   assert.equal(event.location, '43.2105820, -83.0771632', 'no city context means no validation (old behavior)');
   assert.equal(
     httpAdapter.requests[0],
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent('922 E. BURNSIDE')}&limit=1`,
-    'the request URL must be byte-identical to the pre-validation behavior'
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent('922 E. BURNSIDE')}&limit=1&addressdetails=1`,
+    'the request keeps the legacy query but always carries address details for the grade gate'
   );
 });
 
@@ -399,7 +399,11 @@ test('retry ladder: distance validation still applies to fallback variants', asy
   await normalizer.normalizeAsync(event, httpAdapter);
 
   assert.equal(event.location, undefined, 'a far-away candidate from a simplified query must not win');
-  assert.equal(httpAdapter.requests.length, 3, 'rejection counts as failure and the ladder continues to the cap');
+  assert.equal(httpAdapter.requests.length, 4, 'rejection counts as failure and the ladder continues through the Photon rescue');
+  assert.ok(
+    httpAdapter.requests[3].includes('photon.komoot.io/api/?q='),
+    `the final rung must be the Photon rescue: ${httpAdapter.requests[3]}`
+  );
 });
 
 test('retry ladder: identical variants are deduped so no duplicate request is sent', async () => {
@@ -411,7 +415,9 @@ test('retry ladder: identical variants are deduped so no duplicate request is se
 
   await normalizer.normalizeAsync(event, httpAdapter);
 
-  assert.equal(httpAdapter.requests.length, 1, 'the stripped variant equals the original and must be skipped');
+  assert.equal(httpAdapter.requests.length, 2, 'the stripped variant equals the original and must be skipped (only the Photon rescue follows)');
+  assert.ok(httpAdapter.requests[0].includes('nominatim'), 'exactly one Nominatim query for the deduped ladder');
+  assert.ok(httpAdapter.requests[1].includes('photon.komoot.io'), 'the extra request is the Photon rescue, not a duplicate');
   assert.equal(event.location, undefined);
 });
 
@@ -527,7 +533,8 @@ test('a simplified-query admin-area match is rejected instead of poisoning coord
     warns.some(w => w.includes('Rejected admin-area result') && w.includes('type=borough')),
     `the rejection must be logged: ${warns.join(' | ')}`
   );
-  assert.equal(httpAdapter.requests.length, 3, 'the ladder continues past the rejected result');
+  assert.equal(httpAdapter.requests.length, 4, 'the ladder continues past the rejected result through the Photon rescue');
+  assert.ok(httpAdapter.requests[3].includes('photon.komoot.io'), 'the final request is the Photon rescue');
 });
 
 test('a venue-name simplified query still resolves through an amenity result', async () => {
@@ -667,6 +674,341 @@ test('reverse geocode falls back to Nominatim when the native hook returns nothi
 
   assert.equal(event.address, '722 E Burnside St, Portland, OR');
   assert.equal(requests.length, 1, 'Nominatim stays the fallback');
+});
+
+// ---------------------------------------------------------------------------
+// Geocode verification: grade gate (coarse pins are never written, in any
+// mode), suspect handling per geocodeVerification.mode, the unit/suite and
+// Photon retry rungs, and the Apple reverse cross-check tripwire.
+// ---------------------------------------------------------------------------
+
+// Stub adapter that answers by URL substring (Nominatim query text or the
+// Photon host); unmatched URLs get an empty result set.
+function createRoutedStubAdapter(routes, extras = {}) {
+  const requests = [];
+  return {
+    requests,
+    fetchData: async (url) => {
+      requests.push(url);
+      for (const [substring, response] of routes) {
+        if (url.includes(substring)) return JSON.stringify(response);
+      }
+      return JSON.stringify([]);
+    },
+    ...extras
+  };
+}
+
+async function withCapturedConsole(fn) {
+  const lines = [];
+  const realLog = console.log;
+  const realWarn = console.warn;
+  console.log = (message) => { lines.push(String(message)); };
+  console.warn = (message) => { lines.push(String(message)); };
+  try {
+    await fn();
+  } finally {
+    console.log = realLog;
+    console.warn = realWarn;
+  }
+  return lines;
+}
+
+const POWERHOUSE_POI_RESULT = {
+  lat: '37.7756941',
+  lon: '-122.4103049',
+  class: 'amenity',
+  type: 'nightclub',
+  addresstype: 'amenity',
+  display_name: 'Powerhouse, 1192, Folsom Street, San Francisco, California, 94103, United States',
+  address: { house_number: '1192', road: 'Folsom Street', city: 'San Francisco' }
+};
+
+const FOLSOM_STREET_ONLY_RESULT = {
+  lat: '37.7740000',
+  lon: '-122.4120000',
+  class: 'highway',
+  type: 'secondary',
+  addresstype: 'road',
+  display_name: 'Folsom Street, San Francisco, California, United States',
+  address: { road: 'Folsom Street', city: 'San Francisco' }
+};
+
+const BROOKLYN_SUBURB_RESULT = {
+  lat: '40.6526006',
+  lon: '-73.9497211',
+  class: 'place',
+  type: 'suburb',
+  addresstype: 'suburb',
+  display_name: 'Brooklyn, Kings County, City of New York, New York, United States',
+  address: { suburb: 'Brooklyn', city: 'City of New York' }
+};
+
+const WRONG_STREET_POI_RESULT = {
+  lat: '37.7752000',
+  lon: '-122.4180000',
+  class: 'amenity',
+  type: 'bar',
+  addresstype: 'amenity',
+  display_name: 'Some Other Bar, 999, Mission Street, San Francisco, California, 94103, United States',
+  address: { house_number: '999', road: 'Mission Street', city: 'San Francisco' }
+};
+
+const FOLSOM_PLACEMARK = {
+  subThoroughfare: '1192',
+  thoroughfare: 'Folsom Street',
+  locality: 'San Francisco',
+  postalCode: '94103'
+};
+
+const MISSION_PLACEMARK = {
+  subThoroughfare: '999',
+  thoroughfare: 'Mission Street',
+  locality: 'San Francisco',
+  postalCode: '94103'
+};
+
+test('geocode verification: a POI-grade result pins exactly as before, with no flags', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [POWERHOUSE_POI_RESULT]]]);
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.location, '37.7756941, -122.4103049');
+  assert.ok(
+    lines.some(l => l.includes('OpenStreetMapNormalizer: Found coordinates for address "1192 Folsom St"')),
+    `the load-bearing success line must still emit: ${lines.join(' | ')}`
+  );
+  assert.ok(!lines.some(l => l.includes('GEOCODE VERIFY')), `a clean first-rung accept stays silent: ${lines.join(' | ')}`);
+});
+
+test('geocode verification: a coarse result is refused in every mode, including off', async () => {
+  for (const mode of ['off', 'report', 'enforce']) {
+    const normalizer = createOsmNormalizer();
+    normalizer.delayForRateLimit = async () => {};
+    const httpAdapter = createRoutedStubAdapter([['nominatim', [BROOKLYN_SUBURB_RESULT]]]);
+    const event = { title: 'BK BEAR', address: 'Brooklyn' };
+
+    const lines = await withCapturedConsole(() =>
+      normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode } })
+    );
+
+    assert.equal(event.location, undefined, `mode "${mode}" must never write a borough/suburb centroid`);
+    assert.ok(
+      lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "BK BEAR" refused generic pin (suburb) for address "Brooklyn"')),
+      `mode "${mode}" must log the refusal flag: ${lines.join(' | ')}`
+    );
+  }
+});
+
+test('geocode verification: street-grade pin for a house-numbered input is kept but flagged in report mode', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [FOLSOM_STREET_ONLY_RESULT]]]);
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+
+  assert.equal(event.location, '37.7740000, -122.4120000', 'report mode still writes the pin');
+  assert.ok(
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" street-grade pin for house-numbered address "1192 Folsom St" — verify pin')),
+    `the suspect flag must be logged: ${lines.join(' | ')}`
+  );
+});
+
+test('geocode verification: enforce mode exhausts the ladder on street-grade results and leaves the event unpinned', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([
+    ['nominatim', [FOLSOM_STREET_ONLY_RESULT]],
+    ['photon.komoot.io', {
+      type: 'FeatureCollection',
+      features: [{
+        geometry: { type: 'Point', coordinates: [-122.412, 37.774] },
+        properties: { street: 'Folsom Street', city: 'San Francisco', osm_key: 'highway', osm_value: 'secondary' }
+      }]
+    }]
+  ]);
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.location, undefined, 'enforce mode demands house-number quality for a house-numbered input');
+  assert.ok(httpAdapter.requests.some(url => url.includes('photon.komoot.io')), 'the Photon rung must still be tried');
+  assert.ok(
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" full address but no usable geocoordinate — left unpinned')),
+    `the give-up flag must be logged: ${lines.join(' | ')}`
+  );
+});
+
+test('geocode verification: cross-check mismatch keeps the pin but flags it in report mode', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [['nominatim', [WRONG_STREET_POI_RESULT]]],
+    { reverseGeocodePlacemark: async () => MISSION_PLACEMARK }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+
+  assert.equal(event.location, '37.7752000, -122.4180000', 'report mode keeps the suspect pin');
+  assert.ok(
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" pin failed reverse cross-check') && l.includes('— verify pin')),
+    `the mismatch flag must be logged: ${lines.join(' | ')}`
+  );
+});
+
+test('geocode verification: cross-check mismatch rejects the pin in enforce mode and the ladder recovers on the next rung', async () => {
+  const core = new SharedCore(CITIES_SF_WITH_COORDS, { eventSchema: EventSchema });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [
+      [encodeURIComponent('1192 Folsom St, sf'), [WRONG_STREET_POI_RESULT]],
+      [encodeURIComponent('Powerhouse, sf'), [POWERHOUSE_POI_RESULT]]
+    ],
+    {
+      reverseGeocodePlacemark: async (lat, lon) =>
+        Math.abs(lon - (-122.418)) < 0.0001 ? MISSION_PLACEMARK : FOLSOM_PLACEMARK
+    }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St', bar: 'Powerhouse', city: 'sf' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.location, '37.7756941, -122.4103049', 'the venue-name rung must recover a verified pin');
+  assert.ok(
+    lines.some(l => l.includes('pin failed reverse cross-check')),
+    `the rejected first pin must be flagged: ${lines.join(' | ')}`
+  );
+  assert.ok(
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" accepted exact pin from nominatim (rung 2)')),
+    `the verified accept must be logged: ${lines.join(' | ')}`
+  );
+});
+
+test('geocode verification: cross-check pass writes the pin with no mismatch flag', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [['nominatim', [POWERHOUSE_POI_RESULT]]],
+    { reverseGeocodePlacemark: async () => FOLSOM_PLACEMARK }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+
+  assert.equal(event.location, '37.7756941, -122.4103049');
+  assert.ok(!lines.some(l => l.includes('verify pin')), `no suspect flag on a clean cross-check: ${lines.join(' | ')}`);
+  assert.ok(
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" accepted exact pin from nominatim (rung 1)')),
+    `a cross-checked accept is worth one log line: ${lines.join(' | ')}`
+  );
+});
+
+test('geocode verification: the unit/suite-stripping rung recovers a pin the raw address could not get', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([
+    [encodeURIComponent('1192 Folsom St Suite 200, San Francisco'), []],
+    [encodeURIComponent('1192 Folsom St, San Francisco'), [POWERHOUSE_POI_RESULT]]
+  ]);
+  const event = { title: 'CHUNK', address: '1192 Folsom St Suite 200, San Francisco' };
+
+  await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.location, '37.7756941, -122.4103049');
+  assert.equal(httpAdapter.requests.length, 2);
+  assert.equal(
+    decodeQueryParam(httpAdapter.requests[1]),
+    '1192 Folsom St, San Francisco',
+    'the second rung must be the unit/suite-stripped address'
+  );
+});
+
+test('geocode verification: the Photon rung recovers when Nominatim returns nothing, with [lon, lat] order handled', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([
+    ['nominatim', []],
+    ['photon.komoot.io', {
+      type: 'FeatureCollection',
+      features: [{
+        geometry: { type: 'Point', coordinates: [-122.4103049, 37.7756941] },
+        properties: { housenumber: '1192', street: 'Folsom Street', city: 'San Francisco', osm_key: 'building', osm_value: 'yes' }
+      }]
+    }]
+  ]);
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.location, '37.7756941, -122.4103049', 'the pin must come out "lat, lon" despite GeoJSON [lon, lat]');
+  assert.ok(httpAdapter.requests[httpAdapter.requests.length - 1].includes('photon.komoot.io/api/?q='));
+  assert.ok(
+    lines.some(l => l.includes('accepted exact pin from photon (rung 2)')),
+    `the Photon accept must be logged: ${lines.join(' | ')}`
+  );
+});
+
+test('geocode verification: an adapter without the placemark hook skips the cross-check and still pins', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  // web-adapter case: the hook exists but honestly returns null
+  const httpAdapter = createRoutedStubAdapter(
+    [['nominatim', [POWERHOUSE_POI_RESULT]]],
+    { reverseGeocodePlacemark: async () => null }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+
+  assert.equal(event.location, '37.7756941, -122.4103049');
+  assert.ok(!lines.some(l => l.includes('verify pin')), 'a skipped cross-check never flags');
+
+  // and an adapter with no hook at all (plain fetch stub) must not crash
+  const bareAdapter = createRoutedStubAdapter([['nominatim', [POWERHOUSE_POI_RESULT]]]);
+  const bareEvent = { title: 'CHUNK', address: '1192 Folsom St' };
+  await withCapturedConsole(() =>
+    normalizer.normalizeAsync(bareEvent, bareAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+  assert.equal(bareEvent.location, '37.7756941, -122.4103049');
+});
+
+test('geocode verification: the coords→address reverse path is untouched by verification modes', async () => {
+  const normalizer = createOsmNormalizer();
+  const requests = [];
+  const httpAdapter = {
+    fetchData: async (url) => {
+      requests.push(url);
+      return JSON.stringify({ display_name: '1192 Folsom St, San Francisco, CA' });
+    },
+    reverseGeocode: async () => null
+  };
+  const event = { title: 'CHUNK', location: '37.7756941, -122.4103049' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.address, '1192 Folsom St, San Francisco, CA');
+  assert.ok(requests[0].includes('nominatim.openstreetmap.org/reverse'), 'the reverse endpoint stays Nominatim');
+  assert.ok(!lines.some(l => l.includes('GEOCODE VERIFY')), `the reverse path never emits verification flags: ${lines.join(' | ')}`);
 });
 
 test('resolveWallClockDates ignores events without the wall-clock flag', () => {

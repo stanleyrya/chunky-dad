@@ -16,6 +16,7 @@ const scraperConfig = {
       ttlDays: 3,
     },
     // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
+    // geocodeVerification: { mode: "report" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
     // NOTE: Eventbrite /e/ confidence defaults (JSON-LD cover/image/ticketUrl,
     // meta location) are built into shared-core now — an aiConfidenceDefaults
     // block here is only needed to extend or override them.
