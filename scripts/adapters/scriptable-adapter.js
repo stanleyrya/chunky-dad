@@ -2814,6 +2814,7 @@ class ScriptableAdapter {
       "pin-moved": { icon: "📍", label: "Pin moved" },
       "missing-pin": { icon: "➕", label: "Missing pin" },
       "missing-address": { icon: "🏠", label: "Missing address" },
+      unverified: { icon: "⚠️", label: "Unverified" },
       unpinnable: { icon: "🚫", label: "Won't geocode" },
       "no-data": { icon: "❓", label: "No location data" },
     };
@@ -2821,6 +2822,7 @@ class ScriptableAdapter {
       "pin-moved",
       "missing-pin",
       "missing-address",
+      "unverified",
       "unpinnable",
       "no-data",
       "ok",
@@ -3025,6 +3027,7 @@ class ScriptableAdapter {
         .status-chip.status-pin-moved { background: var(--warn-color); }
         .status-chip.status-missing-pin { background: var(--gradient-primary); }
         .status-chip.status-missing-address { background: var(--accent-color); }
+        .status-chip.status-unverified { background: var(--warn-color); }
         .status-chip.status-unpinnable { background: var(--secondary-color); }
         .status-chip.status-no-data { background: var(--text-secondary); }
 

@@ -35,8 +35,10 @@ const REVIEWER_CONFIG = {
     lookaheadDays: 365,
     // Stored pin vs fresh verified geocode divergence that flags "pin-moved"
     pinMovedThresholdKm: 0.4,
-    // Same knob as the scraper (scraper-input.js): report | enforce | off
-    geocodeVerification: { mode: 'report' },
+    // NOTE: there is deliberately no geocodeVerification knob here — reviewer
+    // probes always run in enforce mode (see SharedCore.runGeocodeReviewCheck):
+    // the reviewer proposes destructive pin replacements, so the scraper's
+    // accept-and-flag report semantics are never good enough for it.
     // Same shape as the scraper's pageCache so geocode results share the
     // scraper's persistent cache
     pageCache: { enabled: true, ttlDays: 3 }
@@ -111,8 +113,7 @@ class CalendarReviewerOrchestrator {
             const findings = await core.reviewCalendarEvents(events, {
                 httpAdapter: adapter,
                 geocodeNormalizer,
-                pinMovedThresholdKm: config.pinMovedThresholdKm,
-                geocodeVerification: config.geocodeVerification
+                pinMovedThresholdKm: config.pinMovedThresholdKm
             });
 
             const summary = this.modules.SharedCore.summarizeReviewFindings(findings);

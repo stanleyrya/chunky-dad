@@ -6143,11 +6143,17 @@ class SharedCore {
         }
         const thresholdRaw = Number(context.pinMovedThresholdKm);
         const thresholdKm = Number.isFinite(thresholdRaw) && thresholdRaw > 0 ? thresholdRaw : PIN_MOVED_THRESHOLD_KM;
-        const geocodeOptions = {
-            geocodeVerification: context.geocodeVerification && typeof context.geocodeVerification === 'object'
-                ? context.geocodeVerification
-                : { mode: 'report' }
-        };
+        // Probes ALWAYS run in enforce mode — any caller-supplied
+        // context.geocodeVerification is deliberately ignored. The scraper's
+        // report mode accepts-and-flags suspect pins (right for scraping: a
+        // flagged pin beats no pin on a brand-new event), but the reviewer
+        // proposes DESTRUCTIVE replacements of stored pins, so a pin that
+        // failed the reverse cross-check or is only street-grade for a
+        // house-numbered address must reject and continue the ladder instead
+        // of coming back as a "fresh verified geocode" (2026-07 run:
+        // report-mode probes proposed moving correct pins 4.7 km onto a
+        // street centroid).
+        const geocodeOptions = { geocodeVerification: { mode: 'enforce' } };
         const normalizeAddressKey = (address) => String(address || '').replace(/\s+/g, ' ').trim().toLowerCase();
         const forwardKeyFor = (city, address) => `${city}|${normalizeAddressKey(address)}`;
         const reverseKeyFor = (pin) => `${pin.lat.toFixed(5)},${pin.lng.toFixed(5)}`;
@@ -6204,7 +6210,16 @@ class SharedCore {
             } catch (error) {
                 console.warn(`🔎 REVIEW: Geocode failed for "${job.address}": ${error.message}`);
             }
-            freshPinByKey.set(key, this.isCoordinatePair(probe.location) ? probe.location.trim() : null);
+            // Keep the normalizer's verdict alongside the pin: only exact-grade,
+            // non-cross-check-failed pins may back a proposal. The grade/crossCheck
+            // breadcrumb also survives when NO pin resolved (enforce rejected a
+            // street-grade or cross-check-failed candidate) so findings can say
+            // "unverifiable" instead of "won't geocode".
+            freshPinByKey.set(key, {
+                location: this.isCoordinatePair(probe.location) ? probe.location.trim() : null,
+                grade: typeof probe._geocodeGrade === 'string' ? probe._geocodeGrade : null,
+                crossCheck: typeof probe._geocodeCrossCheck === 'string' ? probe._geocodeCrossCheck : null
+            });
         }
         // Reverse path (pin → address) is nearly free: the normalizer prefers
         // the adapter's native reverse geocoder over Nominatim.
@@ -6242,23 +6257,41 @@ class SharedCore {
             };
             if (address) {
                 const fresh = freshPinByKey.get(forwardKeyFor(city, address)) || null;
-                if (!fresh) {
+                const freshLocation = fresh && fresh.location ? fresh.location : null;
+                // Belt-and-suspenders proposal gate: only an exact-grade pin whose
+                // reverse cross-check did not fail may be proposed. Enforce-mode
+                // probes should already have rejected failures; street-grade pins
+                // still reach here for addresses without a parseable house number
+                // (e.g. hyphenated Queens numbers like "10-90 Wyckoff Avenue").
+                const proposalGrade = !!(freshLocation && fresh.grade === 'exact' && fresh.crossCheck !== 'fail');
+                if (!freshLocation && !(fresh && fresh.grade)) {
                     finding.status = 'unpinnable';
                     finding.detail = hasPin
                         ? 'address no longer geocodes to a usable pin — stored pin kept but unverified'
                         : 'no usable geocoordinate for this address (grade gate/ladder found nothing)';
+                } else if (!proposalGrade) {
+                    // A pin resolved (or a candidate was rejected by enforce) but
+                    // it is not proposal-grade — never propose it, never touch the
+                    // stored pin.
+                    finding.status = 'unverified';
+                    const reason = fresh.crossCheck === 'fail'
+                        ? 'address geocode failed the reverse cross-check'
+                        : 'address only resolves to a street-grade pin';
+                    finding.detail = hasPin
+                        ? `${reason} — stored pin kept, verify manually`
+                        : `${reason} — not proposing it`;
                 } else if (!hasPin) {
                     finding.status = 'missing-pin';
-                    finding.proposed.location = fresh;
+                    finding.proposed.location = freshLocation;
                     finding.detail = location
                         ? `location "${location}" is not a coordinate pair — fresh geocode proposed`
                         : 'address geocodes but no pin is stored — fresh geocode proposed';
                 } else {
-                    const distanceKm = this.coordinatePairDistanceKm(location, fresh);
+                    const distanceKm = this.coordinatePairDistanceKm(location, freshLocation);
                     finding.distanceKm = distanceKm;
                     if (distanceKm !== null && distanceKm > thresholdKm) {
                         finding.status = 'pin-moved';
-                        finding.proposed.location = fresh;
+                        finding.proposed.location = freshLocation;
                         finding.detail = `stored pin is ${distanceKm.toFixed(1)}km from the fresh verified geocode of this address`;
                     } else {
                         finding.detail = 'stored pin matches a fresh geocode of the address';

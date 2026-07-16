@@ -593,6 +593,12 @@ function buildReviewFindingsFixture() {
       startDate: '2026-08-04T02:00:00.000Z', check: 'geocode', status: 'unpinnable',
       current: { location: '', address: 'Somewhere Nowhere 123' }, proposed: {},
       detail: 'no usable geocoordinate for this address (grade gate/ladder found nothing)'
+    },
+    {
+      id: 'uv-1', calendarTitle: 'chunky-dad-seattle', eventTitle: 'Street Grade Only',
+      startDate: '2026-08-05T02:00:00.000Z', check: 'geocode', status: 'unverified',
+      current: { location: '47.61, -122.33', address: '3796 Fifth Avenue, Seattle' }, proposed: {},
+      detail: 'address only resolves to a street-grade pin — stored pin kept, verify manually'
     }
   ];
 }
@@ -603,9 +609,9 @@ test('generateReviewHTML renders per-calendar sections, chips, buttons, and esca
 
   // Summary header: events reviewed / ok / needing attention
   assert.ok(html.includes('Calendar Reviewer'));
-  assert.ok(html.includes('<span class="stat-value">4</span>'));
+  assert.ok(html.includes('<span class="stat-value">5</span>'));
   assert.ok(html.includes('<span class="stat-value">1</span>'));
-  assert.ok(html.includes('<span class="stat-value">3</span>'));
+  assert.ok(html.includes('<span class="stat-value">4</span>'));
 
   // One section per calendar
   assert.ok(html.includes('chunky-dad-nyc'));
@@ -621,6 +627,14 @@ test('generateReviewHTML renders per-calendar sections, chips, buttons, and esca
   assert.ok(html.includes('status-chip status-pin-moved'));
   assert.ok(html.includes('status-chip status-missing-address'));
   assert.ok(html.includes('status-chip status-unpinnable'));
+  assert.ok(html.includes('status-chip status-unverified'));
+  assert.ok(html.includes('.status-chip.status-unverified'), 'the unverified chip must have its own style');
+  assert.ok(html.includes('⚠️ Unverified'));
+
+  // An unverified finding renders its keep-the-pin detail but NO Apply button
+  const unverifiedCard = html.match(/<div class="event-card review-card" data-finding-id="uv-1"[\s\S]*?<\/div>\s*<\/div>/);
+  assert.ok(unverifiedCard, 'the unverified finding renders a card');
+  assert.ok(html.includes('stored pin kept, verify manually'));
 
   // Distance badge for pin-moved
   assert.ok(html.includes('1.3 km'));

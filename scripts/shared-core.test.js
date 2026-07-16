@@ -4000,13 +4000,183 @@ test('review: summarizeReviewFindings counts statuses and proposals', () => {
     { status: 'pin-moved', proposed: { location: '1, 2' } },
     { status: 'missing-pin', proposed: { location: '1, 2' } },
     { status: 'missing-address', proposed: { address: 'x' } },
+    { status: 'unverified', proposed: {} },
     { status: 'unpinnable', proposed: {} }
   ]);
-  assert.equal(summary.findings, 6);
+  assert.equal(summary.findings, 7);
   assert.equal(summary.ok, 2);
-  assert.equal(summary.proposals, 3);
+  assert.equal(summary.proposals, 3, 'unverified findings never carry a proposal');
   assert.equal(summary.missingProposals, 2);
   assert.deepEqual(summary.byStatus, {
-    ok: 2, 'pin-moved': 1, 'missing-pin': 1, 'missing-address': 1, unpinnable: 1
+    ok: 2, 'pin-moved': 1, 'missing-pin': 1, 'missing-address': 1, unverified: 1, unpinnable: 1
   });
+});
+
+// ---------------------------------------------------------------------------
+// Reviewer proposal verification (2026-07-15 phone run findings: report-mode
+// probes returned accept-and-flag pins as "fresh verified geocodes" and the
+// reviewer proposed replacing CORRECT stored pins with them — e.g. "3796
+// Fifth Avenue, San Diego" onto the Fifth Avenue street centroid 4.7 km away
+// downtown). Probes now always run in enforce mode and only exact-grade,
+// non-cross-check-failed pins may back a proposal.
+// ---------------------------------------------------------------------------
+
+const SAN_DIEGO_REVIEW_CITIES = {
+  'san-diego': {
+    timezone: 'America/Los_Angeles',
+    calendar: 'chunky-dad-san-diego',
+    patterns: ['san diego'],
+    coordinates: { lat: 32.7157, lng: -117.1611 }
+  }
+};
+
+const SD_ADDRESS = '3796 Fifth Avenue, San Diego, CA 92103';
+const SD_STORED_PIN = '32.7481, -117.1609'; // correct hand-verified pin at house 3796
+
+// Nominatim's only answer: the STREET "Fifth Avenue" itself (highway class),
+// centroid kilometers from house 3796 but inside the 50 km city radius.
+const SD_FIFTH_AVENUE_STREET_RESULT = {
+  lat: '32.7150000',
+  lon: '-117.1590000',
+  class: 'highway',
+  type: 'residential',
+  addresstype: 'road',
+  display_name: 'Fifth Avenue, San Diego, California, United States',
+  address: { road: 'Fifth Avenue', city: 'San Diego' }
+};
+
+// What Apple's reverse geocoder said about that street centroid on the real
+// run: a different street entirely.
+const SD_MISMATCH_PLACEMARK = {
+  subThoroughfare: '204',
+  thoroughfare: 'Marina Park Way',
+  locality: 'San Diego'
+};
+
+const SD_HOUSE_PLACEMARK = {
+  subThoroughfare: '3796',
+  thoroughfare: 'Fifth Avenue',
+  locality: 'San Diego',
+  postalCode: '92103'
+};
+
+// US Census house-number interpolation for the same address ({x: lon, y: lat}).
+const SD_CENSUS_MATCH = {
+  result: {
+    addressMatches: [{
+      matchedAddress: '3796 FIFTH AVE, SAN DIEGO, CA, 92103',
+      coordinates: { x: -117.1609, y: 32.7481 }
+    }]
+  }
+};
+
+function buildSanDiegoReviewEvent(overrides = {}) {
+  return {
+    id: 'sd-1',
+    calendarTitle: 'chunky-dad-san-diego',
+    title: 'SD BEAR NIGHT',
+    startDate: new Date('2026-08-01T04:00:00.000Z'),
+    location: SD_STORED_PIN,
+    address: SD_ADDRESS,
+    bar: '',
+    ...overrides
+  };
+}
+
+test('review: San Diego regression — a street-grade-only probe never proposes; the stored pin is kept as unverified', async () => {
+  const core = new SharedCore(SAN_DIEGO_REVIEW_CITIES, { eventSchema: EventSchema });
+  // Nominatim only knows the street; Census/Photon URLs get the same array
+  // body, which their parsers read as "no match"; the reverse placemark for
+  // the street centroid mismatches the input address.
+  const adapter = buildReviewGeocodeAdapter([SD_FIFTH_AVENUE_STREET_RESULT], {
+    reverseGeocodePlacemark: async () => SD_MISMATCH_PLACEMARK
+  });
+  const events = [buildSanDiegoReviewEvent()];
+
+  const { findings } = await captureReview(core, events, createReviewContext(core, adapter));
+
+  assert.equal(findings.length, 1);
+  const finding = findings[0];
+  assert.equal(finding.status, 'unverified');
+  assert.deepEqual(finding.proposed, {}, 'a street-grade probe must NEVER back a pin-replacement proposal');
+  assert.equal(finding.current.location, SD_STORED_PIN, 'the stored pin is untouched');
+  assert.ok(finding.detail.includes('stored pin kept'), `detail must say the pin was kept: ${finding.detail}`);
+
+  // Probes ignore any caller-supplied verification mode: report mode from the
+  // caller must not resurrect the accept-and-flag pin as a proposal.
+  const reportAdapter = buildReviewGeocodeAdapter([SD_FIFTH_AVENUE_STREET_RESULT], {
+    reverseGeocodePlacemark: async () => SD_MISMATCH_PLACEMARK
+  });
+  const { findings: reportFindings } = await captureReview(core, [buildSanDiegoReviewEvent()],
+    createReviewContext(core, reportAdapter, { geocodeVerification: { mode: 'report' } }));
+  assert.equal(reportFindings[0].status, 'unverified');
+  assert.deepEqual(reportFindings[0].proposed, {}, 'the reviewer always probes in enforce mode');
+});
+
+test('review: San Diego regression — a Census house-level match restores verified exact-grade proposals', async () => {
+  const core = new SharedCore(SAN_DIEGO_REVIEW_CITIES, { eventSchema: EventSchema });
+  const calls = [];
+  const adapter = {
+    calls,
+    async fetchData(url) {
+      calls.push(url);
+      if (url.includes('geocoding.geo.census.gov')) return JSON.stringify(SD_CENSUS_MATCH);
+      if (url.includes('nominatim')) return JSON.stringify([SD_FIFTH_AVENUE_STREET_RESULT]);
+      return JSON.stringify([]);
+    },
+    reverseGeocodePlacemark: async () => SD_HOUSE_PLACEMARK
+  };
+  const events = [
+    buildSanDiegoReviewEvent({ id: 'no-pin', location: '' }),
+    // The garbage street-centroid pin the old reviewer would have written
+    buildSanDiegoReviewEvent({ id: 'moved', location: '32.7150, -117.1590' })
+  ];
+
+  const { findings } = await captureReview(core, events, createReviewContext(core, adapter));
+  const byId = new Map(findings.map(finding => [finding.id, finding]));
+
+  assert.equal(byId.get('no-pin').status, 'missing-pin');
+  assert.equal(byId.get('no-pin').proposed.location, '32.7481, -117.1609', 'the verified Census pin is proposed');
+  assert.equal(byId.get('moved').status, 'pin-moved');
+  assert.equal(byId.get('moved').proposed.location, '32.7481, -117.1609');
+  assert.ok(calls.some(url => url.includes('geocoding.geo.census.gov')), 'the Census rescue rung must have run');
+});
+
+test('review: a hyphenated house number that only street-grades stays unverified — hand-verified pins survive', async () => {
+  // "10-90 Wyckoff Avenue, Queens": the house-number regex cannot parse the
+  // hyphenated Queens number, so enforce mode accepts the street-grade pin —
+  // but the reviewer must still refuse to propose it over the stored pin.
+  const core = new SharedCore({
+    nyc: {
+      timezone: 'America/New_York',
+      calendar: 'chunky-dad-nyc',
+      patterns: ['new york', 'nyc'],
+      coordinates: { lat: 40.7128, lng: -74.006 }
+    }
+  }, { eventSchema: EventSchema });
+  const adapter = buildReviewGeocodeAdapter([{
+    lat: '40.7069000',
+    lon: '-73.9216000',
+    class: 'highway',
+    type: 'residential',
+    addresstype: 'road',
+    display_name: 'Wyckoff Avenue, Queens, City of New York, New York, United States',
+    address: { road: 'Wyckoff Avenue', city: 'City of New York' }
+  }]);
+  const events = [{
+    id: 'wyckoff',
+    calendarTitle: 'chunky-dad-nyc',
+    title: 'QUEENS BEAR BASH',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    location: '40.7002, -73.9070', // hand-verified pin at the venue itself
+    address: '10-90 Wyckoff Avenue, Queens',
+    bar: ''
+  }];
+
+  const { findings } = await captureReview(core, events, createReviewContext(core, adapter));
+
+  assert.equal(findings[0].status, 'unverified');
+  assert.deepEqual(findings[0].proposed, {}, 'the street-grade pin must not replace the hand-verified pin');
+  assert.equal(findings[0].current.location, '40.7002, -73.9070');
+  assert.ok(findings[0].detail.includes('street-grade'), findings[0].detail);
 });
