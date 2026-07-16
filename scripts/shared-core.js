@@ -6359,11 +6359,16 @@ class SharedCore {
                 } else if (!proposalGrade) {
                     // A pin resolved (or a candidate was rejected by enforce) but
                     // it is not proposal-grade — never propose it, never touch the
-                    // stored pin.
+                    // stored pin. An exact-grade candidate that ended UNPINNED
+                    // with a 'skipped' breadcrumb was rejected because the
+                    // reverse cross-check could not run (Apple rate-limited/
+                    // down) — surface the recover hint, not a grade complaint.
                     finding.status = 'unverified';
                     const reason = fresh.crossCheck === 'fail'
                         ? 'address geocode failed the reverse cross-check'
-                        : 'address only resolves to a street-grade pin';
+                        : (!freshLocation && fresh.grade === 'exact')
+                            ? 'reverse cross-check unavailable — re-run when Apple geocoding recovers'
+                            : 'address only resolves to a street-grade pin';
                     finding.detail = hasPin
                         ? `${reason} — stored pin kept, verify manually`
                         : `${reason} — not proposing it`;

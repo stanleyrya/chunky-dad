@@ -1135,10 +1135,25 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     // capability exists) plus suspect flagging per verification mode. Returns
     // { location, crossCheck } — the "lat, lon" string to write plus the
     // cross-check verdict ('pass' | 'fail' | 'skipped'; 'fail' only survives
-    // in report mode) — or null when enforce mode sends the ladder on to its
-    // next rung.
+    // in report mode) — or, when enforce mode sends the ladder on to its next
+    // rung, { location: null, crossCheck } carrying the rejection breadcrumb
+    // ('fail' for a failed cross-check, 'skipped' for a vague input or an
+    // unavailable cross-check).
     async confirmGeocodeCandidate(candidate, context, httpAdapter) {
-        const { title, address, inputHasHouseNumber, verifyMode, source, rung } = context;
+        const { title, address, inputHasHouseNumber, verifyMode, streetSpecific, flags, source, rung } = context;
+        // Vague-input rule (enforce only): an address without street-level
+        // detail ("Poconos, PA") asks a question no geocoder can answer
+        // precisely — whatever came back is an arbitrary same-named candidate.
+        // Refuse it before spending cross-check budget; the flag fires once
+        // per event, not per rung. Curated venues never get here — the
+        // BarDataNormalizer runs before geocoding in the pipeline.
+        if (verifyMode === 'enforce' && streetSpecific === false) {
+            if (flags && !flags.vagueInputFlagged) {
+                flags.vagueInputFlagged = true;
+                console.warn(`🗺️ GEOCODE VERIFY: "${title}" address too vague for a trustworthy pin — left unpinned (enforce)`);
+            }
+            return { location: null, crossCheck: 'skipped' };
+        }
         let crossCheck = 'skipped';
         if (verifyMode !== 'off' && typeof httpAdapter.reverseGeocodePlacemark === 'function') {
             let placemark = null;
@@ -1153,13 +1168,35 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                     crossCheck = comparison.matched ? 'pass' : 'fail';
                     if (!comparison.matched) {
                         console.warn(`🗺️ GEOCODE VERIFY: "${title}" pin failed reverse cross-check ("${comparison.got}" vs "${address}") — verify pin`);
-                        if (verifyMode === 'enforce') return null;
+                        if (verifyMode === 'enforce') return { location: null, crossCheck: 'fail' };
                     }
                 }
             }
         }
+        // Skipped ≠ pass rule (enforce only): when the platform CAN reverse
+        // geocode (adapter self-description via supportsReverseGeocode) but
+        // the cross-check produced no comparison (Apple rate-limited/down, no
+        // placemark, nothing comparable), the candidate is rejected — the
+        // 2026-07-16 run showed 'skipped' silently removing the whole safety
+        // layer. Structural absence of the capability (Node/web) is not a
+        // failure and accepts exactly as before. Flag once per event.
+        if (crossCheck === 'skipped' && verifyMode === 'enforce' &&
+            typeof httpAdapter.supportsReverseGeocode === 'function' &&
+            httpAdapter.supportsReverseGeocode() === true) {
+            if (flags && !flags.crossCheckUnavailableFlagged) {
+                flags.crossCheckUnavailableFlagged = true;
+                console.warn(`🗺️ GEOCODE VERIFY: "${title}" pin rejected — cross-check unavailable (enforce)`);
+            }
+            return { location: null, crossCheck: 'skipped' };
+        }
         if (candidate.grade === 'street' && inputHasHouseNumber && verifyMode === 'report') {
             console.warn(`🗺️ GEOCODE VERIFY: "${title}" street-grade pin for house-numbered address "${address}" — verify pin`);
+        }
+        if (streetSpecific === false && verifyMode === 'report') {
+            // Report mode accepts the pin (flag-don't-drop: a flagged pin
+            // beats no pin on a brand-new event) but makes the vagueness
+            // visible.
+            console.warn(`🗺️ GEOCODE VERIFY: "${title}" pin from vague address "${address}" — verify pin`);
         }
         if (rung > 1 || crossCheck !== 'skipped') {
             console.log(`🗺️ GEOCODE VERIFY: "${title}" accepted ${candidate.grade} pin from ${source} (rung ${rung})`);
@@ -1313,7 +1350,10 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             const resultLimit = cityCenter ? 5 : 1;
             const title = event.title || 'unknown';
             const inputHasHouseNumber = GEOCODE_HOUSE_NUMBER_RE.test(address);
-            const verifyContext = { title, address, inputHasHouseNumber, verifyMode };
+            const streetSpecific = this.isStreetSpecificAddress(address);
+            // flags carries the once-per-event verification flag lines across
+            // ladder rungs (the per-rung spreads copy this same object reference).
+            const verifyContext = { title, address, inputHasHouseNumber, verifyMode, streetSpecific, flags: {} };
 
             // Retry ladder: when a query returns 0 candidates (or every candidate
             // is rejected by the grade gate / distance / city checks), retry with
@@ -1327,7 +1367,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // committed to the event's _geocode* metadata fields below. When the
             // ladder ends UNPINNED, rejectedVerdict remembers the first candidate
             // enforce mode turned away (street-grade for a house-numbered input,
-            // or a cross-check failure) so the calendar reviewer can tell "this
+            // a cross-check failure, a vague input, or an unavailable
+            // cross-check) so the calendar reviewer can tell "this
             // address only resolves to an unverifiable pin" apart from "nothing
             // resolves at all". Coarse refusals never leave a breadcrumb.
             let resolvedVerdict = null;
@@ -1394,12 +1435,14 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                                 { ...verifyContext, source: 'nominatim', rung: i + 1 },
                                 httpAdapter
                             );
-                            if (confirmed) {
+                            if (confirmed.location) {
                                 resolvedLocation = confirmed.location;
                                 resolvedVerdict = { grade: pickedCandidate.grade, crossCheck: confirmed.crossCheck, source: 'nominatim', rung: i + 1 };
                             } else if (!rejectedVerdict) {
-                                // null only means an enforce-mode cross-check failure
-                                rejectedVerdict = { grade: pickedCandidate.grade, crossCheck: 'fail', source: 'nominatim', rung: i + 1 };
+                                // enforce-mode rejection: 'fail' for a failed
+                                // cross-check, 'skipped' for a vague input or
+                                // an unavailable cross-check
+                                rejectedVerdict = { grade: pickedCandidate.grade, crossCheck: confirmed.crossCheck, source: 'nominatim', rung: i + 1 };
                             }
                         }
                     } else if ((!Array.isArray(data) || data.length === 0) && i < queryVariants.length - 1) {
@@ -1446,11 +1489,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                                 { ...verifyContext, source: 'census', rung: attempts },
                                 httpAdapter
                             );
-                            if (confirmed) {
+                            if (confirmed.location) {
                                 resolvedLocation = confirmed.location;
                                 resolvedVerdict = { grade: 'exact', crossCheck: confirmed.crossCheck, source: 'census', rung: attempts };
                             } else if (!rejectedVerdict) {
-                                rejectedVerdict = { grade: 'exact', crossCheck: 'fail', source: 'census', rung: attempts };
+                                rejectedVerdict = { grade: 'exact', crossCheck: confirmed.crossCheck, source: 'census', rung: attempts };
                             }
                         } else {
                             console.warn(`🗺️ OpenStreetMapNormalizer: Census match for "${address}" falls outside ${CITY_CENTER_RADIUS_KM} km of ${eventCity} center — ignoring coordinates`);
@@ -1500,11 +1543,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                                 { ...verifyContext, source: 'photon', rung: attempts },
                                 httpAdapter
                             );
-                            if (confirmed) {
+                            if (confirmed.location) {
                                 resolvedLocation = confirmed.location;
                                 resolvedVerdict = { grade, crossCheck: confirmed.crossCheck, source: 'photon', rung: attempts };
                             } else if (!rejectedVerdict) {
-                                rejectedVerdict = { grade, crossCheck: 'fail', source: 'photon', rung: attempts };
+                                rejectedVerdict = { grade, crossCheck: confirmed.crossCheck, source: 'photon', rung: attempts };
                             }
                         }
                     }
