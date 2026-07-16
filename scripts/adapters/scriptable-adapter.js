@@ -2087,6 +2087,68 @@ class ScriptableAdapter {
     }
   }
 
+  // Bar data merged on the website is the source of truth; the phone's local
+  // scraper-bars.js copy goes stale the moment a bar edit lands. Fetch the
+  // per-city JSON the site already serves (data/bars/<city>.json) for the
+  // requested cities, replacing that city's local entry wholesale. Bars URLs
+  // carry their own 1-day cache TTL so runs stay fast without re-downloading
+  // every time; any failure (404 for cities without a file, offline, bad
+  // JSON) quietly keeps the local entry. Returns { bars, counts } — counts
+  // feed the review UI's freshness line.
+  async refreshRemoteBars(cityKeys, localBars) {
+    const merged = {
+      ...(localBars && typeof localBars === "object" ? localBars : {}),
+    };
+    const counts = { remote: 0, local: 0, unavailable: 0 };
+    const keys = Array.isArray(cityKeys) ? cityKeys.filter(Boolean) : [];
+    const barsCacheConfig = {
+      enabled: this.getPageCacheConfig().enabled,
+      ttlDays: 1,
+    };
+    for (const cityKey of keys) {
+      const url = `https://chunky.dad/data/bars/${encodeURIComponent(cityKey)}.json`;
+      let remoteList = null;
+      try {
+        let body = null;
+        const cached = await this.readCachedPage(url, barsCacheConfig);
+        if (cached && typeof cached.html === "string") {
+          body = cached.html;
+        } else {
+          const responseData = await this.fetchData(url, {
+            headers: { Accept: "application/json" },
+            // Bars URLs use barsCacheConfig's 1-day TTL, so keep fetchData's
+            // global-TTL cache out of the way and write back explicitly.
+            isCacheableResponse: () => false,
+          });
+          if (responseData && typeof responseData.html === "string") {
+            body = responseData.html;
+            await this.writeCachedPage(url, responseData, barsCacheConfig);
+          }
+        }
+        if (body) {
+          const parsed = JSON.parse(body);
+          if (Array.isArray(parsed)) {
+            remoteList = parsed;
+          }
+        }
+      } catch (error) {
+        remoteList = null;
+      }
+      if (remoteList) {
+        merged[cityKey] = remoteList;
+        counts.remote += 1;
+      } else if (merged[cityKey]) {
+        counts.local += 1;
+      } else {
+        counts.unavailable += 1;
+      }
+    }
+    console.log(
+      `📱 Scriptable: Bars data — ${counts.remote} cities from chunky.dad, ${counts.local} from local file, ${counts.unavailable} unavailable`,
+    );
+    return { bars: merged, counts };
+  }
+
   // Get existing events for a specific event (called by shared-core)
   async getExistingEvents(event) {
     try {
@@ -3012,6 +3074,28 @@ class ScriptableAdapter {
       )
       .join("\n");
 
+    // Bars freshness line: where the curated bar data came from this run
+    // (counts from refreshRemoteBars). Absent when the caller didn't refresh.
+    const barsFreshness =
+      options.barsFreshness && typeof options.barsFreshness === "object"
+        ? options.barsFreshness
+        : null;
+    const barsFreshnessLine = barsFreshness
+      ? [
+          barsFreshness.remote > 0
+            ? `${barsFreshness.remote} ${barsFreshness.remote === 1 ? "city" : "cities"} live from chunky.dad`
+            : "",
+          barsFreshness.local > 0
+            ? `${barsFreshness.local} local fallback`
+            : "",
+          barsFreshness.unavailable > 0
+            ? `${barsFreshness.unavailable} without bar data`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : "";
+
     const sections = [];
     for (const [calendarTitle, calendarFindings] of byCalendar) {
       const okFindings = calendarFindings.filter((f) => f.status === "ok");
@@ -3124,6 +3208,7 @@ class ScriptableAdapter {
         .stat-label { font-size: 13px; opacity: 0.9; }
 
         .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+        .bars-freshness { font-size: 12px; opacity: 0.85; margin-top: 10px; }
         .summary-chip {
             font-size: 12px;
             font-weight: 600;
@@ -3309,6 +3394,7 @@ class ScriptableAdapter {
             </div>
         </div>
         ${summaryChips ? `<div class="summary-chips">${summaryChips}</div>` : ""}
+        ${barsFreshnessLine ? `<div class="bars-freshness">🍺 Bars: ${this.escapeHtml(barsFreshnessLine)}</div>` : ""}
     </div>
 
     ${sections.join("\n") || '<div class="section">No events found in the review window.</div>'}

@@ -855,3 +855,99 @@ test('selectReviewFindingsForAction resolves single, bulk, and missing-only payl
   assert.deepEqual(adapter.selectReviewFindingsForAction({ action: 'apply', id: 'pm-"1"' }, findings), []);
   assert.deepEqual(adapter.selectReviewFindingsForAction({ action: 'apply', id: 'up-1' }, findings), []);
 });
+
+// ---------------------------------------------------------------------------
+// refreshRemoteBars — website bar data wins per city, local file is fallback
+// ---------------------------------------------------------------------------
+
+function buildRemoteBarsAdapter(remoteByCity) {
+  const adapter = buildAdapter();
+  adapter.getPageCacheConfig = () => ({ enabled: true, ttlDays: 3 });
+  adapter.cacheReads = [];
+  adapter.cacheWrites = [];
+  adapter.fetches = [];
+  adapter.readCachedPage = async (url, config) => {
+    adapter.cacheReads.push({ url, config });
+    return null;
+  };
+  adapter.writeCachedPage = async (url, responseData, config) => {
+    adapter.cacheWrites.push({ url, config });
+  };
+  adapter.fetchData = async (url, options) => {
+    adapter.fetches.push({ url, options });
+    const cityKey = url.split('/').pop().replace('.json', '');
+    if (!(cityKey in remoteByCity)) {
+      throw new Error(`HTTP 404 error from ${url}`);
+    }
+    const body = remoteByCity[cityKey];
+    return { html: typeof body === 'string' ? body : JSON.stringify(body), url, statusCode: 200, headers: {} };
+  };
+  return adapter;
+}
+
+test('refreshRemoteBars replaces a city wholesale from chunky.dad and keeps local on failure', async () => {
+  const localBars = {
+    poconos: [{ name: 'Stale Camp Out', coordinates: '40.0, -75.0' }],
+    nyc: [{ name: 'Eagle NYC', coordinates: '40.7517, -74.0043' }],
+    seattle: [{ name: 'The Cuff', coordinates: '47.6138, -122.3142' }]
+  };
+  const adapter = buildRemoteBarsAdapter({
+    poconos: [{ name: 'Camp Out', city: 'poconos', address: '446 MT NEBO RD, EAST STROUDSBURG, PA, 18301', coordinates: '41.0219799, -75.1167816' }]
+    // nyc: 404 (no remote file) → local entry kept
+  });
+
+  const result = await adapter.refreshRemoteBars(['poconos', 'nyc', 'bogota'], localBars);
+
+  assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Camp Out'],
+    'remote city replaces the local entry wholesale');
+  assert.deepEqual(result.bars.nyc.map((b) => b.name), ['Eagle NYC'],
+    'fetch failure keeps the local entry');
+  assert.deepEqual(result.bars.seattle.map((b) => b.name), ['The Cuff'],
+    'cities not under review pass through untouched');
+  assert.equal(result.bars.bogota, undefined, 'no remote and no local stays absent');
+  assert.deepEqual(result.counts, { remote: 1, local: 1, unavailable: 1 });
+});
+
+test('refreshRemoteBars caches bars URLs with a 1-day TTL, separate from the global pageCache TTL', async () => {
+  const adapter = buildRemoteBarsAdapter({ poconos: [] });
+  await adapter.refreshRemoteBars(['poconos'], {});
+
+  assert.equal(adapter.cacheReads.length, 1);
+  assert.equal(adapter.cacheReads[0].config.ttlDays, 1, 'bars cache reads use the 1-day TTL');
+  assert.equal(adapter.cacheWrites.length, 1);
+  assert.equal(adapter.cacheWrites[0].config.ttlDays, 1, 'bars cache writes use the 1-day TTL');
+  assert.equal(adapter.fetches.length, 1);
+  assert.equal(adapter.fetches[0].options.isCacheableResponse(), false,
+    'fetchData is told to keep its global-TTL cache out of the way');
+
+  // A fresh 1-day cache hit spends no fetch at all
+  adapter.readCachedPage = async () => ({ html: JSON.stringify([{ name: 'Cached Bar' }]) });
+  const cachedRun = await adapter.refreshRemoteBars(['poconos'], {});
+  assert.equal(adapter.fetches.length, 1, 'cache hit performs no network fetch');
+  assert.deepEqual(cachedRun.bars.poconos.map((b) => b.name), ['Cached Bar']);
+});
+
+test('refreshRemoteBars survives invalid JSON and non-array payloads by keeping local data', async () => {
+  const adapter = buildRemoteBarsAdapter({
+    poconos: 'not json at all',
+    nyc: { object: 'not an array' }
+  });
+  const localBars = { poconos: [{ name: 'Local Camp Out' }] };
+  const result = await adapter.refreshRemoteBars(['poconos', 'nyc'], localBars);
+  assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Local Camp Out'], 'invalid JSON keeps local');
+  assert.equal(result.bars.nyc, undefined, 'non-array payload never becomes bar data');
+  assert.deepEqual(result.counts, { remote: 0, local: 1, unavailable: 1 });
+});
+
+test('generateReviewHTML renders the bars freshness line when counts are supplied', () => {
+  const adapter = buildAdapter();
+  const withCounts = adapter.generateReviewHTML([], {
+    barsFreshness: { remote: 18, local: 2, unavailable: 3 }
+  });
+  assert.ok(withCounts.includes('18 cities live from chunky.dad'), 'remote count rendered');
+  assert.ok(withCounts.includes('2 local fallback'), 'local fallback count rendered');
+  assert.ok(withCounts.includes('3 without bar data'), 'unavailable count rendered');
+
+  const without = adapter.generateReviewHTML([], {});
+  assert.ok(!without.includes('🍺 Bars:'), 'no freshness line without counts');
+});

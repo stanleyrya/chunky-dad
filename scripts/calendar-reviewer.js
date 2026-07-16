@@ -121,6 +121,17 @@ class CalendarReviewerOrchestrator {
             }
 
             const events = await adapter.getReviewCalendarEvents(calendars, config);
+
+            // Bar data merged on the website is fresher than the phone's
+            // local scraper-bars.js copy: refresh the cities under review
+            // from chunky.dad (1-day cache TTL), keeping the local entry per
+            // city when the site is unreachable.
+            const cityKeys = [...new Set(events
+                .map(event => core.cityForCalendarTitle(event.calendarTitle))
+                .filter(Boolean))];
+            const refreshedBars = await adapter.refreshRemoteBars(cityKeys, bars);
+            core.bars = refreshedBars.bars;
+
             const findings = await core.reviewCalendarEvents(events, {
                 httpAdapter: adapter,
                 geocodeNormalizer,
@@ -131,7 +142,7 @@ class CalendarReviewerOrchestrator {
             const summary = this.modules.SharedCore.summarizeReviewFindings(findings);
             console.log(`🔎 REVIEW: ${summary.findings} event(s) reviewed — ${summary.ok} ok, ${summary.proposals} with proposed fixes`);
 
-            const appliedCounts = await adapter.presentReviewResults(findings, { config });
+            const appliedCounts = await adapter.presentReviewResults(findings, { config, barsFreshness: refreshedBars.counts });
             return { findings, summary, appliedCounts };
         } catch (error) {
             console.error(`🔎 Calendar Reviewer: ✗ Review failed: ${error}`);
