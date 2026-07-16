@@ -90,3 +90,16 @@ if (changed) {
 } else {
   console.log(`⏭️  No change for ${path.relative(ROOT, outputPath)}`);
 }
+
+// Combined pure-JSON twin of scraper-bars.js: the same object keyed by city,
+// served by the deployed site at https://chunky.dad/data/scraper-bars.json so
+// the scraper/reviewer can refresh every city's bar data with ONE fetch
+// (per-city fetching would mean ~45 requests with many 404s).
+const jsonOutputPath = path.join(ROOT, 'data', 'scraper-bars.json');
+const jsonChanged = writeIfChanged(jsonOutputPath, `${JSON.stringify(scraperBars, null, 2)}\n`);
+
+if (jsonChanged) {
+  console.log(`✓ Wrote ${path.relative(ROOT, jsonOutputPath)}`);
+} else {
+  console.log(`⏭️  No change for ${path.relative(ROOT, jsonOutputPath)}`);
+}

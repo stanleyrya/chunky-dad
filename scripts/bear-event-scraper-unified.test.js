@@ -26,9 +26,11 @@ function buildConfig(overrides = {}) {
 }
 
 // Adapter class factory: run() instantiates the class twice (bootstrap + final),
-// so recorded calls live in a closure shared by all instances.
-function createStubAdapter({ config, executeError = null, omitExecute = false } = {}) {
-  const calls = { executeCalendarActions: [], displayResults: [], showError: [] };
+// so recorded calls live in a closure shared by all instances. refreshBars
+// (optional) becomes the adapter's refreshRemoteBars implementation — omit it
+// to model an adapter without the method (web-adapter-shaped tolerance).
+function createStubAdapter({ config, executeError = null, omitExecute = false, refreshBars = null } = {}) {
+  const calls = { executeCalendarActions: [], displayResults: [], showError: [], refreshRemoteBars: [] };
 
   class StubAdapter {
     constructor(options = {}) {
@@ -53,13 +55,26 @@ function createStubAdapter({ config, executeError = null, omitExecute = false } 
     };
   }
 
+  if (refreshBars) {
+    StubAdapter.prototype.refreshRemoteBars = async function refreshRemoteBars(cityKeys, localBars) {
+      calls.refreshRemoteBars.push({ cityKeys, localBars });
+      return refreshBars(cityKeys, localBars);
+    };
+  }
+
   return { StubAdapter, calls };
 }
 
 // Subclass (never prototype mutation) so each test gets an isolated SharedCore
-// whose event-production stages are canned while run()'s real branching executes.
-function createSharedCoreStub(events) {
+// whose event-production stages are canned while run()'s real branching
+// executes. coreOptionsLog (optional array) records the constructor options so
+// tests can observe what run() wired into the core (e.g. the bars config).
+function createSharedCoreStub(events, coreOptionsLog = null) {
   return class StubSharedCore extends SharedCore {
+    constructor(cities, options) {
+      super(cities, options);
+      if (coreOptionsLog) coreOptionsLog.push(options);
+    }
     async processEvents() {
       return {
         totalEvents: events.length,
@@ -80,14 +95,14 @@ function createSharedCoreStub(events) {
   };
 }
 
-function createOrchestrator({ config, events = [], adapterOptions = {}, isScriptable = true } = {}) {
+function createOrchestrator({ config, events = [], adapterOptions = {}, isScriptable = true, coreOptionsLog = null } = {}) {
   const { StubAdapter, calls } = createStubAdapter({ config, ...adapterOptions });
   const orch = new BearEventScraperOrchestrator();
   orch.isInitialized = true;
   orch.isScriptable = isScriptable;
   orch.isWeb = false;
   orch.modules = {
-    SharedCore: createSharedCoreStub(events),
+    SharedCore: createSharedCoreStub(events, coreOptionsLog),
     EventSchema,
     NormalizerPipeline: StubNormalizerPipeline,
     adapter: StubAdapter,
@@ -184,6 +199,62 @@ test('zero events found short-circuits the calendar stage', async () => {
   assert.deepEqual(results.analyzedEvents, []);
   assert.equal(calls.executeCalendarActions.length, 0);
   assert.equal(calls.displayResults.length, 1);
+});
+
+test('run() refreshes bar data with null cityKeys and wires the merged result into SharedCore', async () => {
+  const localBars = { dallas: [{ name: 'Stale Station 4' }] };
+  const remoteBars = { dallas: [{ name: 'Station 4' }], poconos: [{ name: 'Camp Out' }] };
+  const config = buildConfig({ bars: localBars });
+  const coreOptionsLog = [];
+  const { orch, calls } = createOrchestrator({
+    config,
+    events: buildEvents(),
+    coreOptionsLog,
+    adapterOptions: {
+      refreshBars: async () => ({ bars: remoteBars, counts: { remote: 2, local: 0, unavailable: 0 } })
+    }
+  });
+
+  await orch.run();
+
+  assert.equal(calls.refreshRemoteBars.length, 1, 'exactly one refresh per run');
+  assert.equal(calls.refreshRemoteBars[0].cityKeys, null, 'the scraper cannot know its cities yet — all of them');
+  assert.deepEqual(calls.refreshRemoteBars[0].localBars, localBars, 'local bars are offered as the fallback');
+  assert.deepEqual(coreOptionsLog[0].bars, remoteBars, 'SharedCore receives the merged (refreshed) bars');
+});
+
+test('run() tolerates an adapter without refreshRemoteBars and keeps the local bars', async () => {
+  const localBars = { dallas: [{ name: 'Station 4' }] };
+  const config = buildConfig({ bars: localBars });
+  const coreOptionsLog = [];
+  const { orch, calls } = createOrchestrator({ config, events: buildEvents(), coreOptionsLog });
+
+  const results = await orch.run();
+
+  assert.deepEqual(coreOptionsLog[0].bars, localBars, 'local bars flow through unchanged');
+  assert.equal(results.analyzedEvents.length, 2, 'the run completes normally');
+  assert.equal(calls.displayResults.length, 1);
+});
+
+test('run() keeps local bars and continues when the refresh throws', async () => {
+  const localBars = { dallas: [{ name: 'Station 4' }] };
+  const config = buildConfig({ bars: localBars });
+  const coreOptionsLog = [];
+  const { orch, calls } = createOrchestrator({
+    config,
+    events: buildEvents(),
+    coreOptionsLog,
+    adapterOptions: {
+      refreshBars: async () => { throw new Error('chunky.dad unreachable'); }
+    }
+  });
+
+  const results = await orch.run();
+
+  assert.equal(calls.refreshRemoteBars.length, 1, 'the refresh was attempted');
+  assert.deepEqual(coreOptionsLog[0].bars, localBars, 'a refresh failure keeps the local bars');
+  assert.equal(results.analyzedEvents.length, 2, 'the run continues');
+  assert.equal(calls.showError.length, 0, 'a bars refresh failure is never fatal');
 });
 
 test('require() exports the orchestrator without auto-executing', () => {

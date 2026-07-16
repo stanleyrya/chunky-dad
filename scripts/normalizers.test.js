@@ -1224,6 +1224,126 @@ test('census rescue: still subject to the reverse cross-check and the city-cente
   assert.equal(farEvent.location, undefined, 'a Census match outside the city radius must be ignored');
 });
 
+// ---------------------------------------------------------------------------
+// Fail-closed enforce semantics (2026-07-16 run findings, pipeline side):
+// a vague input refuses every geocoder candidate, and a cross-check the
+// platform COULD run but didn't rejects the candidate. Report mode stays
+// accept-and-flag for scraping.
+// ---------------------------------------------------------------------------
+
+// An exact-grading POI Nominatim happily returns for the vague query
+// "Poconos, PA" — an arbitrary same-named candidate, kilometers from the venue.
+const POCONOS_ATTRACTION_RESULT = {
+  lat: '41.3000000',
+  lon: '-75.3000000',
+  class: 'tourism',
+  type: 'attraction',
+  addresstype: 'tourism',
+  display_name: 'Some Attraction, Poconos, Pennsylvania, United States',
+  address: { county: 'Poconos' }
+};
+
+test('geocode verification: enforce refuses every candidate for a vague address and flags once', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [POCONOS_ATTRACTION_RESULT]]]);
+  const event = { title: 'FURBALL CAMP', address: 'Poconos, PA' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.location, undefined, 'enforce must never pin a vague input, whatever the grade');
+  assert.ok(httpAdapter.requests.length > 0, 'the ladder still ran — the gate refused its answers');
+  const flagCount = lines.filter(l =>
+    l.includes('🗺️ GEOCODE VERIFY: "FURBALL CAMP" address too vague for a trustworthy pin — left unpinned (enforce)')).length;
+  assert.equal(flagCount, 1, `the vague flag fires once per event: ${lines.join(' | ')}`);
+  assert.equal(event._geocodeGrade, 'exact', 'the refused candidate leaves a breadcrumb');
+  assert.equal(event._geocodeCrossCheck, 'skipped', 'a vague refusal is not a cross-check failure');
+});
+
+test('geocode verification: report mode keeps the pin from a vague address but flags it', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [POCONOS_ATTRACTION_RESULT]]]);
+  const event = { title: 'FURBALL CAMP', address: 'Poconos, PA' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+
+  assert.equal(event.location, '41.3000000, -75.3000000', 'report mode accepts as today (flag, don\'t drop)');
+  assert.ok(
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "FURBALL CAMP" pin from vague address "Poconos, PA" — verify pin')),
+    `the vague-pin flag must be logged: ${lines.join(' | ')}`
+  );
+});
+
+test('geocode verification: enforce rejects a candidate when the platform can cross-check but none ran', async () => {
+  const core = new SharedCore(CITIES_SF_WITH_COORDS, { eventSchema: EventSchema });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [
+      [encodeURIComponent('1192 Folsom St, sf'), [POWERHOUSE_POI_RESULT]],
+      [encodeURIComponent('Powerhouse, sf'), [POWERHOUSE_POI_RESULT]]
+    ],
+    {
+      // Apple rate-limited/down: the capability exists but yields nothing
+      reverseGeocodePlacemark: async () => null,
+      supportsReverseGeocode: () => true
+    }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St', bar: 'Powerhouse', city: 'sf' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.location, undefined, 'skipped is not pass — the candidate must be rejected in enforce mode');
+  assert.ok(httpAdapter.requests.some(url => url.includes('photon.komoot.io')), 'the ladder continues past the rejection');
+  const flagCount = lines.filter(l =>
+    l.includes('🗺️ GEOCODE VERIFY: "CHUNK" pin rejected — cross-check unavailable (enforce)')).length;
+  assert.equal(flagCount, 1, `the unavailable flag fires once per event, not per rung: ${lines.join(' | ')}`);
+  assert.equal(event._geocodeGrade, 'exact', 'the rejected candidate leaves a breadcrumb');
+  assert.equal(event._geocodeCrossCheck, 'skipped',
+    'skipped (not fail) — the reviewer renders its "re-run when Apple geocoding recovers" hint from this');
+});
+
+test('geocode verification: structural absence of the cross-check (Node/web) still accepts in enforce mode', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [['nominatim', [POWERHOUSE_POI_RESULT]]],
+    { reverseGeocodePlacemark: async () => null, supportsReverseGeocode: () => false }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.location, '37.7756941, -122.4103049', 'structural absence is not a failure');
+  assert.ok(!lines.some(l => l.includes('cross-check unavailable')), `no rejection flag: ${lines.join(' | ')}`);
+});
+
+test('geocode verification: report mode is unchanged for street-specific inputs even with the capability present', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [['nominatim', [POWERHOUSE_POI_RESULT]]],
+    { reverseGeocodePlacemark: async () => null, supportsReverseGeocode: () => true }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+
+  assert.equal(event.location, '37.7756941, -122.4103049', 'report mode accepts exactly as before');
+  assert.ok(!lines.some(l => l.includes('GEOCODE VERIFY')), `a clean rung-1 accept stays silent: ${lines.join(' | ')}`);
+});
+
 test('stripUnitTokens: hash-unit markers, trailing bare units, and state/ZIP tails', () => {
   const normalizer = createOsmNormalizer();
   // Simple hash markers keep stripping

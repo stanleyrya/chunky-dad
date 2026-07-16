@@ -1370,6 +1370,18 @@ class ScriptableAdapter {
     });
   }
 
+  // Adapter self-description for normalizers' enforce mode: does this
+  // platform structurally have Apple's reverse geocoding? True whenever the
+  // Location API is present (the same typeof checks reverseGeocodePlacemark
+  // gates on) — a rate-limited/down service still "supports" the capability,
+  // which is exactly the case enforce mode must fail closed on.
+  supportsReverseGeocode() {
+    return (
+      typeof Location !== "undefined" &&
+      typeof Location.reverseGeocode === "function"
+    );
+  }
+
   async reverseGeocodePlacemark(lat, lon) {
     if (
       typeof Location === "undefined" ||
@@ -2087,60 +2099,101 @@ class ScriptableAdapter {
     }
   }
 
+  // One bars URL → parsed JSON, or null on any failure (404, offline,
+  // unparseable body). Bars URLs carry their own 1-day cache TTL — read that
+  // cache first, keep fetchData's global-TTL cache out of the way, and write
+  // back explicitly.
+  async fetchRemoteBarsJson(url, barsCacheConfig) {
+    try {
+      let body = null;
+      const cached = await this.readCachedPage(url, barsCacheConfig);
+      if (cached && typeof cached.html === "string") {
+        body = cached.html;
+      } else {
+        const responseData = await this.fetchData(url, {
+          headers: { Accept: "application/json" },
+          isCacheableResponse: () => false,
+        });
+        if (responseData && typeof responseData.html === "string") {
+          body = responseData.html;
+          await this.writeCachedPage(url, responseData, barsCacheConfig);
+        }
+      }
+      return body ? JSON.parse(body) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   // Bar data merged on the website is the source of truth; the phone's local
-  // scraper-bars.js copy goes stale the moment a bar edit lands. Fetch the
-  // per-city JSON the site already serves (data/bars/<city>.json) for the
-  // requested cities, replacing that city's local entry wholesale. Bars URLs
-  // carry their own 1-day cache TTL so runs stay fast without re-downloading
-  // every time; any failure (404 for cities without a file, offline, bad
-  // JSON) quietly keeps the local entry. Returns { bars, counts } — counts
-  // feed the review UI's freshness line.
+  // scraper-bars.js copy goes stale the moment a bar edit lands. Try the
+  // combined file FIRST — one fetch of data/scraper-bars.json covers every
+  // city (the scraper can't know its cities before parsing assigns them, and
+  // per-city fetching would mean ~45 requests with many 404s on a fresh
+  // day) — and fall back to the per-city files (data/bars/<city>.json) when
+  // the combined fetch fails. cityKeys is the array of cities to refresh, or
+  // null for "all cities": the whole combined object replaces local
+  // wholesale, with local-only cities kept as fallback entries (per-city
+  // fetching is impossible without a city list, so a combined failure
+  // returns the local bars unchanged). Any per-city failure quietly keeps
+  // the local entry. Returns { bars, counts } — counts feed the review UI's
+  // freshness line (remote = cities served from website data, combined or
+  // per-city; local = kept from the local file; unavailable = neither).
   async refreshRemoteBars(cityKeys, localBars) {
     const merged = {
       ...(localBars && typeof localBars === "object" ? localBars : {}),
     };
     const counts = { remote: 0, local: 0, unavailable: 0 };
-    const keys = Array.isArray(cityKeys) ? cityKeys.filter(Boolean) : [];
     const barsCacheConfig = {
       enabled: this.getPageCacheConfig().enabled,
       ttlDays: 1,
     };
-    for (const cityKey of keys) {
-      const url = `https://chunky.dad/data/bars/${encodeURIComponent(cityKey)}.json`;
-      let remoteList = null;
-      try {
-        let body = null;
-        const cached = await this.readCachedPage(url, barsCacheConfig);
-        if (cached && typeof cached.html === "string") {
-          body = cached.html;
+    const combinedRaw = await this.fetchRemoteBarsJson(
+      "https://chunky.dad/data/scraper-bars.json",
+      barsCacheConfig,
+    );
+    // The combined file is an object keyed by city — an array (or any other
+    // shape) is not usable and falls back to the per-city path.
+    const combinedBars =
+      combinedRaw &&
+      typeof combinedRaw === "object" &&
+      !Array.isArray(combinedRaw)
+        ? combinedRaw
+        : null;
+    if (combinedBars) {
+      const keys =
+        cityKeys === null
+          ? Object.keys({ ...merged, ...combinedBars })
+          : Array.isArray(cityKeys)
+            ? cityKeys.filter(Boolean)
+            : [];
+      for (const cityKey of keys) {
+        if (Array.isArray(combinedBars[cityKey])) {
+          merged[cityKey] = combinedBars[cityKey];
+          counts.remote += 1;
+        } else if (merged[cityKey]) {
+          counts.local += 1;
         } else {
-          const responseData = await this.fetchData(url, {
-            headers: { Accept: "application/json" },
-            // Bars URLs use barsCacheConfig's 1-day TTL, so keep fetchData's
-            // global-TTL cache out of the way and write back explicitly.
-            isCacheableResponse: () => false,
-          });
-          if (responseData && typeof responseData.html === "string") {
-            body = responseData.html;
-            await this.writeCachedPage(url, responseData, barsCacheConfig);
-          }
+          counts.unavailable += 1;
         }
-        if (body) {
-          const parsed = JSON.parse(body);
-          if (Array.isArray(parsed)) {
-            remoteList = parsed;
-          }
-        }
-      } catch (error) {
-        remoteList = null;
       }
-      if (remoteList) {
-        merged[cityKey] = remoteList;
-        counts.remote += 1;
-      } else if (merged[cityKey]) {
-        counts.local += 1;
-      } else {
-        counts.unavailable += 1;
+    } else if (cityKeys === null) {
+      // No combined file and no city list to fetch per city — keep the local
+      // bars and let the counts say so.
+      counts.local = Object.keys(merged).length;
+    } else {
+      const keys = Array.isArray(cityKeys) ? cityKeys.filter(Boolean) : [];
+      for (const cityKey of keys) {
+        const url = `https://chunky.dad/data/bars/${encodeURIComponent(cityKey)}.json`;
+        const parsed = await this.fetchRemoteBarsJson(url, barsCacheConfig);
+        if (Array.isArray(parsed)) {
+          merged[cityKey] = parsed;
+          counts.remote += 1;
+        } else if (merged[cityKey]) {
+          counts.local += 1;
+        } else {
+          counts.unavailable += 1;
+        }
       }
     }
     console.log(
