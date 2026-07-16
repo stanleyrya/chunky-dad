@@ -26,6 +26,11 @@ const ADAPTIVE_CRAWL_DEPTH = 'adaptive';
 // Hard cap on adaptive crawl chains: pages this many hops from a root never
 // have their links followed, no matter how they classify.
 const ADAPTIVE_CRAWL_MAX_HOPS = 4;
+// Stored-pin vs fresh-geocode divergence (km) that warrants human review.
+// Fresh geocodes are grade-gated and cross-checked (normalizers.js), so
+// sub-km disagreement is meaningful. Shared by the merge-time STEP 3c flag
+// and the calendar reviewer's pin-moved check.
+const PIN_MOVED_THRESHOLD_KM = 0.4;
 
 class SharedCore {
     constructor(cities, options = {}) {
@@ -3367,7 +3372,7 @@ class SharedCore {
                 if (scraperValue !== calendarValue) {
                     console.log(`📍 MERGE: "${mergeTitle}" location kept calendar pin (address unchanged)`);
                     const distanceKm = this.coordinatePairDistanceKm(calendarValue, scraperValue);
-                    if (distanceKm !== null && distanceKm > 1) {
+                    if (distanceKm !== null && distanceKm > PIN_MOVED_THRESHOLD_KM) {
                         console.log(`📍 MERGE: "${mergeTitle}" calendar pin is ${distanceKm.toFixed(1)}km from fresh geocode of the same address — verify pin`);
                     }
                 }
@@ -6054,6 +6059,227 @@ class SharedCore {
             console.warn(`🤖 AI Web: AI request${label} to ${aiConfig.endpoint} with model ${aiConfig.model} failed after ${elapsed}ms (${errorType}): ${error.message}`);
             return null;
         }
+    }
+
+    // ------------------------------------------------------------------
+    // CALENDAR REVIEWER — pure review core. Each check is a named async
+    // function (events, context) → findings; register future checks
+    // (missing fields, duplicates, ...) in getCalendarReviewChecks.
+    // Events are plain objects mapped by the adapter:
+    //   { id, calendarTitle, title, startDate, location, address, bar }
+    // Findings (one per event; 'ok' ones are countable for the summary):
+    //   { id, calendarTitle, eventTitle, startDate, check, status,
+    //     current: {location, address}, proposed: {location?, address?},
+    //     distanceKm?, detail }
+    // Network only via context.httpAdapter and the injected geocode
+    // normalizer — no Scriptable APIs, no env detection.
+    // ------------------------------------------------------------------
+
+    getCalendarReviewChecks() {
+        return {
+            geocode: (events, context) => this.runGeocodeReviewCheck(events, context)
+        };
+    }
+
+    async reviewCalendarEvents(events, context = {}) {
+        const list = Array.isArray(events) ? events : [];
+        const checks = context.checks && typeof context.checks === 'object'
+            ? context.checks
+            : this.getCalendarReviewChecks();
+        const findings = [];
+        for (const [checkName, runCheck] of Object.entries(checks)) {
+            const checkFindings = await runCheck(list, context);
+            if (Array.isArray(checkFindings)) {
+                findings.push(...checkFindings);
+            } else {
+                console.warn(`🔎 REVIEW: Check "${checkName}" returned no findings array — skipped`);
+            }
+        }
+        return findings;
+    }
+
+    // Reverse of the adapter's getCalendarName: calendar title → city key,
+    // via the cities config first, then the `chunky-dad-<city>` convention.
+    cityForCalendarTitle(calendarTitle) {
+        const title = String(calendarTitle || '').trim();
+        if (!title) return '';
+        for (const [cityKey, cityConfig] of Object.entries(this.cities)) {
+            if (cityConfig && cityConfig.calendar === title) return cityKey;
+        }
+        const match = /^chunky-dad-(.+)$/.exec(title);
+        return match ? match[1] : '';
+    }
+
+    static summarizeReviewFindings(findings) {
+        const summary = { findings: 0, ok: 0, byStatus: {}, proposals: 0, missingProposals: 0 };
+        (Array.isArray(findings) ? findings : []).forEach(finding => {
+            if (!finding) return;
+            summary.findings += 1;
+            const status = String(finding.status || 'unknown');
+            summary.byStatus[status] = (summary.byStatus[status] || 0) + 1;
+            if (status === 'ok') summary.ok += 1;
+            if (finding.proposed && Object.keys(finding.proposed).length > 0) {
+                summary.proposals += 1;
+                if (status === 'missing-pin' || status === 'missing-address') {
+                    summary.missingProposals += 1;
+                }
+            }
+        });
+        return summary;
+    }
+
+    // v1 geocode check: verify stored pins against a fresh grade-gated
+    // geocode of each event's address, propose pins/addresses for events
+    // missing one side, and surface addresses that refuse to geocode.
+    // context.geocodeNormalizer must be an OpenStreetMapNormalizer instance —
+    // the scraper's forward ladder / grade gate / verification is reused, not
+    // reimplemented. Unique addresses are geocoded once: venues repeat across
+    // events and every Nominatim call costs 1.1s of throttle.
+    async runGeocodeReviewCheck(events, context = {}) {
+        const httpAdapter = context.httpAdapter || null;
+        const geocoder = context.geocodeNormalizer;
+        if (!geocoder || typeof geocoder.normalizeAsync !== 'function') {
+            throw new Error('Geocode review check requires context.geocodeNormalizer (OpenStreetMapNormalizer instance)');
+        }
+        const thresholdRaw = Number(context.pinMovedThresholdKm);
+        const thresholdKm = Number.isFinite(thresholdRaw) && thresholdRaw > 0 ? thresholdRaw : PIN_MOVED_THRESHOLD_KM;
+        const geocodeOptions = {
+            geocodeVerification: context.geocodeVerification && typeof context.geocodeVerification === 'object'
+                ? context.geocodeVerification
+                : { mode: 'report' }
+        };
+        const normalizeAddressKey = (address) => String(address || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        const forwardKeyFor = (city, address) => `${city}|${normalizeAddressKey(address)}`;
+        const reverseKeyFor = (pin) => `${pin.lat.toFixed(5)},${pin.lng.toFixed(5)}`;
+
+        // Pass 1: unique forward jobs (per city + address) and unique reverse
+        // jobs (per stored pin), plus per-calendar counts for the progress log.
+        const forwardJobs = new Map();
+        const reverseJobs = new Map();
+        const calendarCounts = new Map();
+        for (const event of events) {
+            if (!event) continue;
+            const calendarTitle = String(event.calendarTitle || '');
+            const counts = calendarCounts.get(calendarTitle) || { events: 0, addresses: new Set() };
+            counts.events += 1;
+            calendarCounts.set(calendarTitle, counts);
+            const city = this.cityForCalendarTitle(calendarTitle);
+            const address = typeof event.address === 'string' ? event.address.trim() : '';
+            const title = event.title || address || event.location || 'unknown';
+            if (address) {
+                const key = forwardKeyFor(city, address);
+                counts.addresses.add(key);
+                if (!forwardJobs.has(key)) {
+                    forwardJobs.set(key, {
+                        address,
+                        city,
+                        bar: typeof event.bar === 'string' ? event.bar.trim() : '',
+                        title
+                    });
+                }
+            } else if (this.isCoordinatePair(event.location)) {
+                const pin = this.parseCoordinatePair(event.location);
+                const key = reverseKeyFor(pin);
+                if (!reverseJobs.has(key)) {
+                    reverseJobs.set(key, { location: event.location.trim(), title });
+                }
+            }
+        }
+        for (const [calendarTitle, counts] of calendarCounts) {
+            console.log(`🔎 REVIEW: ${calendarTitle || '(unknown calendar)'} — ${counts.events} events, ${counts.addresses.size} unique addresses to geocode`);
+        }
+
+        // Pass 2: geocode. Probes carry only {title, address, city, bar} with
+        // location stripped so the normalizer's forward path runs exactly as
+        // it does for scraped events (the normalizer's own 🗺️ lines show the
+        // ladder detail).
+        const freshPinByKey = new Map();
+        let jobIndex = 0;
+        for (const [key, job] of forwardJobs) {
+            jobIndex += 1;
+            console.log(`🔎 REVIEW: Geocoding "${job.address}"${job.city ? ` (${job.city})` : ''} — ${jobIndex}/${forwardJobs.size}`);
+            const probe = { title: job.title, address: job.address, city: job.city, bar: job.bar };
+            try {
+                await geocoder.normalizeAsync(probe, httpAdapter, geocodeOptions);
+            } catch (error) {
+                console.warn(`🔎 REVIEW: Geocode failed for "${job.address}": ${error.message}`);
+            }
+            freshPinByKey.set(key, this.isCoordinatePair(probe.location) ? probe.location.trim() : null);
+        }
+        // Reverse path (pin → address) is nearly free: the normalizer prefers
+        // the adapter's native reverse geocoder over Nominatim.
+        const addressByPinKey = new Map();
+        for (const [key, job] of reverseJobs) {
+            const probe = { title: job.title, location: job.location };
+            try {
+                await geocoder.normalizeAsync(probe, httpAdapter, geocodeOptions);
+            } catch (error) {
+                console.warn(`🔎 REVIEW: Reverse geocode failed for "${job.location}": ${error.message}`);
+            }
+            const address = typeof probe.address === 'string' ? probe.address.trim() : '';
+            addressByPinKey.set(key, address || null);
+        }
+
+        // Pass 3: one finding per event.
+        const findings = [];
+        for (const event of events) {
+            if (!event) continue;
+            const calendarTitle = String(event.calendarTitle || '');
+            const city = this.cityForCalendarTitle(calendarTitle);
+            const address = typeof event.address === 'string' ? event.address.trim() : '';
+            const location = typeof event.location === 'string' ? event.location.trim() : '';
+            const hasPin = this.isCoordinatePair(location);
+            const finding = {
+                id: event.id,
+                calendarTitle,
+                eventTitle: event.title || '(untitled)',
+                startDate: event.startDate || null,
+                check: 'geocode',
+                status: 'ok',
+                current: { location, address },
+                proposed: {},
+                detail: ''
+            };
+            if (address) {
+                const fresh = freshPinByKey.get(forwardKeyFor(city, address)) || null;
+                if (!fresh) {
+                    finding.status = 'unpinnable';
+                    finding.detail = hasPin
+                        ? 'address no longer geocodes to a usable pin — stored pin kept but unverified'
+                        : 'no usable geocoordinate for this address (grade gate/ladder found nothing)';
+                } else if (!hasPin) {
+                    finding.status = 'missing-pin';
+                    finding.proposed.location = fresh;
+                    finding.detail = location
+                        ? `location "${location}" is not a coordinate pair — fresh geocode proposed`
+                        : 'address geocodes but no pin is stored — fresh geocode proposed';
+                } else {
+                    const distanceKm = this.coordinatePairDistanceKm(location, fresh);
+                    finding.distanceKm = distanceKm;
+                    if (distanceKm !== null && distanceKm > thresholdKm) {
+                        finding.status = 'pin-moved';
+                        finding.proposed.location = fresh;
+                        finding.detail = `stored pin is ${distanceKm.toFixed(1)}km from the fresh verified geocode of this address`;
+                    } else {
+                        finding.detail = 'stored pin matches a fresh geocode of the address';
+                    }
+                }
+            } else if (hasPin) {
+                const reverse = addressByPinKey.get(reverseKeyFor(this.parseCoordinatePair(location))) || null;
+                finding.status = 'missing-address';
+                if (reverse) {
+                    finding.proposed.address = reverse;
+                    finding.detail = 'pin has no address — reverse-geocoded address proposed';
+                } else {
+                    finding.detail = 'pin has no address and reverse geocoding returned nothing';
+                }
+            } else {
+                finding.status = 'no-data';
+                finding.detail = 'no coordinates and no address on this event';
+            }
+            findings.push(finding);
+        }
+        return findings;
     }
 
 }

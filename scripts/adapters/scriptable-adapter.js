@@ -2510,6 +2510,812 @@ class ScriptableAdapter {
     }
   }
 
+  // ==========================================================================
+  // CALENDAR REVIEWER - calendar enumeration, plain-event mapping, fix
+  // application, and the interactive findings UI. Nothing here writes to a
+  // calendar except applyReviewFinding, and that only runs from the UI's
+  // Apply buttons (see presentReviewResults).
+  // ==========================================================================
+
+  // Candidate calendars for review: explicit titles when configured,
+  // otherwise every writable calendar whose title starts with "chunky-dad".
+  async getReviewCalendars(configuredTitles = []) {
+    const wanted = (Array.isArray(configuredTitles) ? configuredTitles : [])
+      .map((title) => String(title || "").trim())
+      .filter((title) => title.length > 0);
+    const calendars = await Calendar.forEvents();
+    const selected = (Array.isArray(calendars) ? calendars : []).filter(
+      (calendar) => {
+        const title = String(calendar?.title || "");
+        if (wanted.length > 0) return wanted.includes(title);
+        return (
+          title.startsWith("chunky-dad") &&
+          calendar.allowsContentModifications !== false
+        );
+      },
+    );
+    console.log(
+      `🔎 REVIEW: Reviewing ${selected.length} calendar(s): ${selected.map((calendar) => calendar.title).join(", ") || "(none)"}`,
+    );
+    return selected;
+  }
+
+  // Fetch events over the review window and map them to the plain objects the
+  // review core consumes. The live CalendarEvent objects are kept in
+  // reviewEventIndex (by finding id) so applyReviewFinding can save them.
+  async getReviewCalendarEvents(calendars, windowConfig = {}) {
+    const coerceDays = (value, fallback) => {
+      const days = Number(value);
+      return Number.isFinite(days) && days >= 0 ? days : fallback;
+    };
+    const lookbackDays = coerceDays(windowConfig.lookbackDays, 365);
+    const lookaheadDays = coerceDays(windowConfig.lookaheadDays, 365);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - lookbackDays);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    end.setDate(end.getDate() + lookaheadDays);
+
+    this.reviewEventIndex = {};
+    const events = [];
+    for (const calendar of Array.isArray(calendars) ? calendars : []) {
+      const slice = await CalendarEvent.between(start, end, [calendar]);
+      let mapped = 0;
+      for (const item of Array.isArray(slice) ? slice : []) {
+        if (!item) continue;
+        const startIso =
+          item.startDate instanceof Date && !isNaN(item.startDate.getTime())
+            ? item.startDate.toISOString()
+            : String(item.startDate || "");
+        const id = String(
+          item.identifier || `${calendar.title}|${item.title || ""}|${startIso}`,
+        );
+        // Recurring series surface one occurrence per identifier — reviewing
+        // the same series once is enough (the fix saves through that object).
+        if (this.reviewEventIndex[id]) continue;
+        this.reviewEventIndex[id] = item;
+        const fields = this.parseNotesIntoFields(item.notes || "");
+        events.push({
+          id,
+          calendarTitle: calendar.title,
+          title: item.title || "",
+          startDate: item.startDate || null,
+          location: typeof item.location === "string" ? item.location : "",
+          address: typeof fields.address === "string" ? fields.address : "",
+          bar: typeof fields.bar === "string" ? fields.bar : "",
+        });
+        mapped += 1;
+      }
+      console.log(
+        `🔎 REVIEW: ${calendar.title} — fetched ${mapped} event(s) (${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)})`,
+      );
+    }
+    return events;
+  }
+
+  // Replace or append a single `key: value` line in a notes blob without
+  // reformatting the rest — manually created events can carry free text that
+  // a full parse → format round-trip would drop.
+  upsertNotesField(notes, fieldName, value) {
+    const canonicalTarget = SharedEventSchema.canonicalizeEventKey(fieldName, {
+      context: "notes",
+    });
+    const valueString = String(value);
+    const formattedLine = `${fieldName}: ${
+      SharedEventSchema.isUrlLikeField(fieldName, valueString)
+        ? valueString
+        : SharedEventSchema.escapeText(valueString)
+    }`;
+    const keyForLine = (line) => {
+      const colonIndex = SharedEventSchema.findUnescaped(line, ":");
+      if (colonIndex <= 0) return null;
+      const key = SharedEventSchema.unescapeText(
+        line.substring(0, colonIndex).trim(),
+      );
+      if (!key || !SharedEventSchema.isValidMetadataKey(key)) return null;
+      return SharedEventSchema.canonicalizeEventKey(key, { context: "notes" });
+    };
+    const lines = String(notes || "").split("\n");
+    const result = [];
+    let replaced = false;
+    for (let i = 0; i < lines.length; i += 1) {
+      if (!replaced && keyForLine(lines[i]) === canonicalTarget) {
+        result.push(formattedLine);
+        replaced = true;
+        // Swallow continuation lines that belonged to the replaced value
+        while (
+          i + 1 < lines.length &&
+          lines[i + 1].trim() &&
+          keyForLine(lines[i + 1]) === null
+        ) {
+          i += 1;
+        }
+        continue;
+      }
+      result.push(lines[i]);
+    }
+    if (!replaced) {
+      if (result.length === 1 && result[0].trim() === "") result.pop();
+      result.push(formattedLine);
+    }
+    return result.join("\n");
+  }
+
+  // Apply one finding: mutate ONLY the fields in `proposed` on the matching
+  // CalendarEvent (location string, or the address line inside notes), then
+  // save. Returns { success, appliedFields?, message? }.
+  async applyReviewFinding(finding) {
+    try {
+      const id = finding && finding.id ? String(finding.id) : "";
+      const target =
+        id && this.reviewEventIndex ? this.reviewEventIndex[id] : null;
+      if (!target) {
+        return { success: false, message: "calendar event not found" };
+      }
+      const proposed =
+        finding.proposed && typeof finding.proposed === "object"
+          ? finding.proposed
+          : {};
+      const appliedFields = [];
+      if (
+        typeof proposed.location === "string" &&
+        proposed.location.trim().length > 0
+      ) {
+        target.location = proposed.location.trim();
+        appliedFields.push("location");
+      }
+      if (
+        typeof proposed.address === "string" &&
+        proposed.address.trim().length > 0
+      ) {
+        target.notes = this.upsertNotesField(
+          target.notes || "",
+          "address",
+          proposed.address.trim(),
+        );
+        appliedFields.push("address");
+      }
+      if (appliedFields.length === 0) {
+        return { success: false, message: "no proposed changes" };
+      }
+      await target.save();
+      console.log(
+        `🔎 REVIEW: Applied ${appliedFields.join(" + ")} to "${finding.eventTitle}" in ${finding.calendarTitle}`,
+      );
+      return { success: true, appliedFields };
+    } catch (error) {
+      console.log(
+        `🔎 REVIEW: ✗ Failed to apply finding for "${finding?.eventTitle}": ${error.message}`,
+      );
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Resolve a UI action payload to the findings it targets. Only findings
+  // with an unapplied proposal are actionable.
+  selectReviewFindingsForAction(payload, findings) {
+    const all = Array.isArray(findings) ? findings : [];
+    const actionable = (finding) =>
+      finding &&
+      finding.proposed &&
+      Object.keys(finding.proposed).length > 0 &&
+      !finding._applied &&
+      !finding._applyFailed;
+    if (payload && payload.action === "apply") {
+      const finding = all.find(
+        (candidate) => candidate && String(candidate.id) === String(payload.id),
+      );
+      return finding && actionable(finding) ? [finding] : [];
+    }
+    if (payload && payload.action === "apply-bulk") {
+      if (payload.mode === "missing-only") {
+        return all.filter(
+          (finding) =>
+            actionable(finding) &&
+            (finding.status === "missing-pin" ||
+              finding.status === "missing-address"),
+        );
+      }
+      return all.filter(actionable);
+    }
+    return [];
+  }
+
+  formatReviewDate(value) {
+    const date = value instanceof Date ? value : new Date(value || NaN);
+    return isNaN(date.getTime()) ? "" : date.toDateString();
+  }
+
+  // Coordinate pin block: coords + Apple Maps link + a collapsed OpenStreetMap
+  // embed whose iframe src is only assigned on first expand (keeps the page
+  // light; the OSM iframe is the page's only remote resource).
+  buildReviewPinHtml(pinString, eventTitle) {
+    const parts = String(pinString || "")
+      .split(",")
+      .map((part) => part.trim());
+    const lat = Number(parts[0]);
+    const lon = Number(parts[1]);
+    if (parts.length !== 2 || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return "";
+    }
+    const appleUrl = `https://maps.apple.com/?ll=${lat},${lon}&q=${encodeURIComponent(String(eventTitle || "Event"))}`;
+    const boxDegrees = 0.004; // ~400m viewport around the pin
+    const embedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - boxDegrees},${lat - boxDegrees},${lon + boxDegrees},${lat + boxDegrees}&layer=mapnik&marker=${lat},${lon}`;
+    return `
+                <div class="pin-block">
+                    <span class="pin-coords">📍 ${this.escapeHtml(`${lat}, ${lon}`)}</span>
+                    <a class="pin-link" href="${this.escapeHtml(appleUrl)}"> Apple Maps</a>
+                    <details class="map-details" ontoggle="loadMapFrame(this)">
+                        <summary>🗺️ Map preview</summary>
+                        <iframe class="osm-frame" data-src="${this.escapeHtml(embedUrl)}"></iframe>
+                    </details>
+                </div>`;
+  }
+
+  buildReviewFindingCard(finding, statusMeta) {
+    const meta = statusMeta[finding.status] || { icon: "❓", label: finding.status };
+    const current = finding.current || {};
+    const proposed = finding.proposed || {};
+    const hasProposal = Object.keys(proposed).length > 0;
+    const dateLabel = this.formatReviewDate(finding.startDate);
+    const distanceBadge =
+      typeof finding.distanceKm === "number" && finding.status === "pin-moved"
+        ? `<span class="distance-badge">↔️ ${finding.distanceKm.toFixed(1)} km</span>`
+        : "";
+
+    const sideHtml = (label, values, extraClass) => {
+      const rows = [];
+      if (values.address) {
+        rows.push(
+          `<div class="review-field">🏠 ${this.escapeHtml(values.address)}</div>`,
+        );
+      }
+      if (values.location) {
+        rows.push(this.buildReviewPinHtml(values.location, finding.eventTitle));
+      }
+      if (rows.length === 0) return "";
+      return `
+                <div class="review-side ${extraClass}">
+                    <div class="review-side-label">${label}</div>
+                    ${rows.join("\n")}
+                </div>`;
+    };
+    const currentSide = sideHtml("Current", current, "current");
+    const proposedSide = hasProposal
+      ? sideHtml("Proposed", proposed, "proposed")
+      : "";
+
+    return `
+            <div class="event-card review-card" data-finding-id="${this.escapeHtml(String(finding.id))}" data-status="${this.escapeHtml(finding.status)}">
+                <div class="review-chip-row">
+                    <span class="status-chip status-${this.escapeHtml(finding.status)}">${meta.icon} ${this.escapeHtml(meta.label)}</span>
+                    ${distanceBadge}
+                </div>
+                <div class="event-title">${this.escapeHtml(finding.eventTitle)}</div>
+                ${dateLabel ? `<div class="review-meta">📅 ${this.escapeHtml(dateLabel)}</div>` : ""}
+                ${finding.detail ? `<div class="review-detail">${this.escapeHtml(finding.detail)}</div>` : ""}
+                ${currentSide || proposedSide ? `<div class="review-compare">${currentSide}${proposedSide}</div>` : ""}
+                ${hasProposal ? `<div class="review-actions"><button class="apply-btn" onclick="applyFinding(this)">✅ Apply</button></div>` : ""}
+            </div>`;
+  }
+
+  // Rich HTML for the reviewer findings UI. Same visual language as
+  // generateRichHTML (colors, cards, chips, dark mode) but fully
+  // self-contained: no external fonts/scripts — the OSM embed iframes are
+  // the only remote resources, and they load on first expand.
+  generateReviewHTML(findings, options = {}) {
+    const list = Array.isArray(findings) ? findings : [];
+    const isDarkMode =
+      typeof Device !== "undefined" && Device.isUsingDarkAppearance();
+    const summary = SharedCore.summarizeReviewFindings(list);
+    const statusMeta = {
+      ok: { icon: "✅", label: "Looks right" },
+      "pin-moved": { icon: "📍", label: "Pin moved" },
+      "missing-pin": { icon: "➕", label: "Missing pin" },
+      "missing-address": { icon: "🏠", label: "Missing address" },
+      unpinnable: { icon: "🚫", label: "Won't geocode" },
+      "no-data": { icon: "❓", label: "No location data" },
+    };
+    const statusOrder = [
+      "pin-moved",
+      "missing-pin",
+      "missing-address",
+      "unpinnable",
+      "no-data",
+      "ok",
+    ];
+
+    // Group findings per calendar, preserving input order
+    const byCalendar = new Map();
+    list.forEach((finding) => {
+      if (!finding) return;
+      const key = finding.calendarTitle || "(unknown calendar)";
+      if (!byCalendar.has(key)) byCalendar.set(key, []);
+      byCalendar.get(key).push(finding);
+    });
+
+    const summaryChips = statusOrder
+      .filter((status) => summary.byStatus[status])
+      .map(
+        (status) =>
+          `<span class="summary-chip status-${status}">${statusMeta[status].icon} ${this.escapeHtml(statusMeta[status].label)}: ${summary.byStatus[status]}</span>`,
+      )
+      .join("\n");
+
+    const sections = [];
+    for (const [calendarTitle, calendarFindings] of byCalendar) {
+      const okFindings = calendarFindings.filter((f) => f.status === "ok");
+      const attention = calendarFindings.filter((f) => f.status !== "ok");
+      const okBlock =
+        okFindings.length > 0
+          ? `
+                <details class="ok-details">
+                    <summary>✅ ${okFindings.length} event${okFindings.length === 1 ? " looks" : "s look"} right</summary>
+                    <ul class="ok-list">
+                        ${okFindings
+                          .map(
+                            (f) =>
+                              `<li>${this.escapeHtml(f.eventTitle)}${this.formatReviewDate(f.startDate) ? ` — ${this.escapeHtml(this.formatReviewDate(f.startDate))}` : ""}</li>`,
+                          )
+                          .join("\n")}
+                    </ul>
+                </details>`
+          : "";
+      sections.push(`
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-icon">📅</span>
+                    <span class="section-title">${this.escapeHtml(calendarTitle)}</span>
+                    <span class="section-count">${attention.length} finding${attention.length === 1 ? "" : "s"}</span>
+                </div>
+                ${okBlock}
+                ${attention.map((finding) => this.buildReviewFindingCard(finding, statusMeta)).join("\n")}
+            </div>`);
+    }
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Reviewer</title>
+    <style>
+        :root {
+            /* chunky.dad brand colors - light mode (matches the scraper UI) */
+            --primary-color: #667eea;
+            --secondary-color: #ff6b6b;
+            --accent-color: #764ba2;
+            --ok-color: #2ecc71;
+            --warn-color: #f39c12;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-inverse: #ffffff;
+            --background-primary: #ffffff;
+            --background-light: #f8f9ff;
+            --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            --border-color: rgba(102, 126, 234, 0.1);
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            --card-hover-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+        }
+
+        ${
+          isDarkMode
+            ? `
+        :root {
+            /* Dark mode overrides for better bar/low-light readability */
+            --primary-color: #8b9cf7;
+            --secondary-color: #ff8a8a;
+            --accent-color: #9575cd;
+            --ok-color: #4cd98a;
+            --warn-color: #ffb74d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-inverse: #1a1a1a;
+            --background-primary: #2d2d2d;
+            --background-light: #1a1a1a;
+            --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            --border-color: rgba(139, 156, 247, 0.2);
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            --card-hover-shadow: 0 8px 25px rgba(139, 156, 247, 0.25);
+        }
+        `
+            : ""
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            padding-bottom: calc(90px + env(safe-area-inset-bottom));
+            background-color: var(--background-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        a { color: var(--primary-color); text-decoration: none; }
+        a:hover { color: var(--accent-color); text-decoration: underline; }
+
+        .header {
+            background: var(--gradient-primary);
+            color: var(--text-inverse);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .header h1 { margin: 0; font-size: 26px; font-weight: 700; }
+        .header-subtitle { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+
+        .header .stats { display: flex; gap: 30px; margin-top: 18px; }
+        .stat { display: flex; flex-direction: column; text-align: center; }
+        .stat-value { font-size: 30px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .stat-label { font-size: 13px; opacity: 0.9; }
+
+        .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+        .summary-chip {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .section {
+            background: var(--background-primary);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .section-icon { font-size: 22px; margin-right: 10px; }
+        .section-title { font-size: 18px; font-weight: 600; flex: 1; }
+        .section-count {
+            background: var(--gradient-primary);
+            color: var(--text-inverse);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .ok-details {
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: var(--ok-color);
+        }
+        .ok-details summary { cursor: pointer; font-weight: 600; }
+        .ok-list { color: var(--text-secondary); font-size: 13px; margin: 8px 0 0; }
+
+        .event-card {
+            background: var(--background-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .event-title { font-size: 17px; font-weight: 600; margin: 8px 0 2px; }
+        .review-meta { font-size: 13px; color: var(--text-secondary); }
+        .review-detail { font-size: 13px; color: var(--text-secondary); margin-top: 6px; font-style: italic; }
+
+        .review-chip-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .status-chip {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-inverse);
+        }
+        .status-chip.status-ok { background: var(--ok-color); }
+        .status-chip.status-pin-moved { background: var(--warn-color); }
+        .status-chip.status-missing-pin { background: var(--gradient-primary); }
+        .status-chip.status-missing-address { background: var(--accent-color); }
+        .status-chip.status-unpinnable { background: var(--secondary-color); }
+        .status-chip.status-no-data { background: var(--text-secondary); }
+
+        .distance-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--warn-color);
+            color: var(--warn-color);
+        }
+
+        .apply-state { font-size: 12px; font-weight: 600; }
+        .apply-state.applied { color: var(--ok-color); }
+        .apply-state.failed { color: var(--secondary-color); }
+
+        .review-compare { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .review-side {
+            flex: 1 1 220px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+        .review-side.proposed { border-color: var(--ok-color); }
+        .review-side-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .review-side.proposed .review-side-label { color: var(--ok-color); }
+        .review-field { margin-bottom: 6px; overflow-wrap: anywhere; }
+
+        .pin-block { margin-bottom: 6px; }
+        .pin-coords { font-family: ui-monospace, Menlo, monospace; font-size: 12px; margin-right: 8px; }
+        .pin-link { font-size: 12px; font-weight: 600; }
+        .map-details { margin-top: 6px; font-size: 12px; }
+        .map-details summary { cursor: pointer; color: var(--primary-color); font-weight: 600; }
+        .osm-frame {
+            width: 100%;
+            height: 220px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-top: 6px;
+        }
+
+        .review-actions { margin-top: 12px; }
+        .apply-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            background: var(--gradient-primary);
+            color: var(--text-inverse);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        .apply-btn:disabled { opacity: 0.55; cursor: default; }
+
+        .review-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+            background: var(--background-primary);
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        }
+        .footer-btn {
+            flex: 1;
+            padding: 12px 10px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid var(--primary-color);
+            border-radius: 12px;
+            background: var(--background-primary);
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+        .footer-btn.primary {
+            background: var(--gradient-primary);
+            color: var(--text-inverse);
+            border: none;
+        }
+        .footer-btn:disabled { opacity: 0.5; cursor: default; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔎 Calendar Reviewer</h1>
+        <div class="header-subtitle">Geocode check — nothing changes without an Apply tap</div>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-value">${summary.findings}</span>
+                <span class="stat-label">Events Reviewed</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">${summary.ok}</span>
+                <span class="stat-label">Look Right</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">${summary.findings - summary.ok}</span>
+                <span class="stat-label">Need Attention</span>
+            </div>
+        </div>
+        ${summaryChips ? `<div class="summary-chips">${summaryChips}</div>` : ""}
+    </div>
+
+    ${sections.join("\n") || '<div class="section">No events found in the review window.</div>'}
+
+    <div class="review-footer">
+        <button class="footer-btn" id="missingOnlyBtn" onclick="applyBulk('missing-only')">➕ Add missing only (<span id="missingOnlyCount">0</span>)</button>
+        <button class="footer-btn primary" id="applyAllBtn" onclick="applyBulk('all')">✅ Apply all (<span id="applyAllCount">0</span>)</button>
+    </div>
+
+    <script>
+        // Native bridge: every action is queued and drained by the Scriptable
+        // side's evaluateJavaScript polling loop (see presentReviewResults).
+        window.__reviewQueue = [];
+        window.__reviewWaiter = null;
+        function postReviewAction(payload) {
+            var message = JSON.stringify(payload);
+            if (window.__reviewWaiter) {
+                var waiter = window.__reviewWaiter;
+                window.__reviewWaiter = null;
+                waiter(message);
+            } else {
+                window.__reviewQueue.push(message);
+            }
+        }
+
+        function pendingCards(missingOnly) {
+            var cards = document.querySelectorAll('.review-card');
+            var out = [];
+            for (var i = 0; i < cards.length; i++) {
+                var card = cards[i];
+                if (card.getAttribute('data-applied')) continue;
+                if (!card.querySelector('.apply-btn')) continue;
+                var status = card.getAttribute('data-status');
+                if (missingOnly && status !== 'missing-pin' && status !== 'missing-address') continue;
+                out.push(card);
+            }
+            return out;
+        }
+
+        function updateFooterCounts() {
+            var all = pendingCards(false).length;
+            var missing = pendingCards(true).length;
+            document.getElementById('applyAllCount').textContent = all;
+            document.getElementById('missingOnlyCount').textContent = missing;
+            document.getElementById('applyAllBtn').disabled = all === 0;
+            document.getElementById('missingOnlyBtn').disabled = missing === 0;
+        }
+
+        function applyFinding(btn) {
+            var card = btn.closest('.review-card');
+            if (!card) return;
+            btn.disabled = true;
+            btn.textContent = '⏳ Applying…';
+            postReviewAction({ action: 'apply', id: card.getAttribute('data-finding-id') });
+        }
+
+        function applyBulk(mode) {
+            var cards = pendingCards(mode === 'missing-only');
+            for (var i = 0; i < cards.length; i++) {
+                var btn = cards[i].querySelector('.apply-btn');
+                if (btn) { btn.disabled = true; btn.textContent = '⏳ Queued…'; }
+            }
+            postReviewAction({ action: 'apply-bulk', mode: mode });
+        }
+
+        // Called from native after each applyReviewFinding completes.
+        function markFindingApplied(id, ok, message) {
+            var cards = document.querySelectorAll('.review-card');
+            var card = null;
+            for (var i = 0; i < cards.length; i++) {
+                if (cards[i].getAttribute('data-finding-id') === id) { card = cards[i]; break; }
+            }
+            if (!card) return;
+            card.setAttribute('data-applied', ok ? 'ok' : 'failed');
+            var chip = card.querySelector('.apply-state');
+            if (!chip) {
+                chip = document.createElement('span');
+                var row = card.querySelector('.review-chip-row');
+                if (row) row.appendChild(chip);
+            }
+            chip.className = 'apply-state ' + (ok ? 'applied' : 'failed');
+            chip.textContent = ok ? '✅ Applied' : ('❌ Failed' + (message ? ': ' + message : ''));
+            var btn = card.querySelector('.apply-btn');
+            if (btn) { btn.disabled = true; btn.textContent = ok ? '✅ Applied' : '❌ Failed'; }
+            updateFooterCounts();
+        }
+
+        // Assign the OSM iframe src on first expand only — collapsed maps
+        // cost nothing.
+        function loadMapFrame(details) {
+            if (!details.open) return;
+            var frame = details.querySelector('iframe[data-src]');
+            if (frame) {
+                frame.src = frame.getAttribute('data-src');
+                frame.removeAttribute('data-src');
+            }
+        }
+
+        updateFooterCounts();
+    </script>
+</body>
+</html>`;
+  }
+
+  // Drained by the polling loop: hands the completion callback to the page
+  // when no action is queued, so the next button tap resolves it.
+  buildReviewBridgeJs() {
+    return `
+      if (window.__reviewQueue && window.__reviewQueue.length > 0) {
+        completion(window.__reviewQueue.shift());
+      } else {
+        window.__reviewWaiter = completion;
+      }
+    `;
+  }
+
+  // Interactive findings UI. Unlike the scraper's static WebView.loadHTML,
+  // this uses an instance WebView so page buttons can call back into
+  // Scriptable: the loop awaits evaluateJavaScript(bridge, true) — the page
+  // resolves it with a JSON action payload — applies the fix natively, then
+  // pushes the result back into the page and re-arms. The bridge await is
+  // raced against present() so dismissing the sheet exits the loop cleanly.
+  async presentReviewResults(findings, options = {}) {
+    const list = Array.isArray(findings) ? findings : [];
+    const html = this.generateReviewHTML(list, options);
+    const webView = new WebView();
+    await webView.loadHTML(html);
+
+    const DISMISSED = "__review_dismissed__";
+    let dismissed = false;
+    const presented = webView.present(true).then(
+      () => {
+        dismissed = true;
+        return DISMISSED;
+      },
+      () => {
+        dismissed = true;
+        return DISMISSED;
+      },
+    );
+
+    const appliedCounts = { applied: 0, failed: 0 };
+    while (!dismissed) {
+      const bridge = webView
+        .evaluateJavaScript(this.buildReviewBridgeJs(), true)
+        .catch(() => DISMISSED);
+      const message = await Promise.race([bridge, presented]);
+      if (dismissed || message === DISMISSED || typeof message !== "string") {
+        break;
+      }
+      let payload = null;
+      try {
+        payload = JSON.parse(message);
+      } catch (error) {
+        continue;
+      }
+      const targets = this.selectReviewFindingsForAction(payload, list);
+      for (const finding of targets) {
+        const result = await this.applyReviewFinding(finding);
+        finding._applied = result.success === true;
+        finding._applyFailed = result.success !== true;
+        if (result.success) {
+          appliedCounts.applied += 1;
+        } else {
+          appliedCounts.failed += 1;
+        }
+        const updateJs = `markFindingApplied(${JSON.stringify(String(finding.id))}, ${result.success === true}, ${JSON.stringify(result.message || "")})`;
+        await webView.evaluateJavaScript(updateJs, false).catch(() => {});
+      }
+    }
+    await presented;
+    console.log(
+      `🔎 REVIEW: UI closed — ${appliedCounts.applied} fix(es) applied, ${appliedCounts.failed} failed`,
+    );
+    return appliedCounts;
+  }
+
   // Display/Logging Adapter Implementation
   async logInfo(message) {
     console.log(message);
