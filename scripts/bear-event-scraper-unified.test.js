@@ -67,8 +67,11 @@ function createStubAdapter({ config, executeError = null, omitExecute = false, r
 
 // Subclass (never prototype mutation) so each test gets an isolated SharedCore
 // whose event-production stages are canned while run()'s real branching
-// executes. coreOptionsLog (optional array) records the constructor options so
-// tests can observe what run() wired into the core (e.g. the bars config).
+// executes. coreOptionsLog (optional array) records the constructor options
+// plus the core's bars AT processEvents TIME (`barsAtProcessEvents`) so tests
+// can observe what run() wired into the core — the bar-data refresh happens
+// after construction (it needs finalAdapter's pageCache config), so the
+// processEvents-time value is the one BarDataNormalizer actually sees.
 function createSharedCoreStub(events, coreOptionsLog = null) {
   return class StubSharedCore extends SharedCore {
     constructor(cities, options) {
@@ -76,6 +79,9 @@ function createSharedCoreStub(events, coreOptionsLog = null) {
       if (coreOptionsLog) coreOptionsLog.push(options);
     }
     async processEvents() {
+      if (coreOptionsLog && coreOptionsLog.length > 0) {
+        coreOptionsLog[coreOptionsLog.length - 1].barsAtProcessEvents = this.bars;
+      }
       return {
         totalEvents: events.length,
         rawBearEvents: events.length,
@@ -220,7 +226,8 @@ test('run() refreshes bar data with null cityKeys and wires the merged result in
   assert.equal(calls.refreshRemoteBars.length, 1, 'exactly one refresh per run');
   assert.equal(calls.refreshRemoteBars[0].cityKeys, null, 'the scraper cannot know its cities yet — all of them');
   assert.deepEqual(calls.refreshRemoteBars[0].localBars, localBars, 'local bars are offered as the fallback');
-  assert.deepEqual(coreOptionsLog[0].bars, remoteBars, 'SharedCore receives the merged (refreshed) bars');
+  assert.deepEqual(coreOptionsLog[0].barsAtProcessEvents, remoteBars,
+    'the core carries the merged (refreshed) bars by the time events are processed');
 });
 
 test('run() tolerates an adapter without refreshRemoteBars and keeps the local bars', async () => {
@@ -231,7 +238,7 @@ test('run() tolerates an adapter without refreshRemoteBars and keeps the local b
 
   const results = await orch.run();
 
-  assert.deepEqual(coreOptionsLog[0].bars, localBars, 'local bars flow through unchanged');
+  assert.deepEqual(coreOptionsLog[0].barsAtProcessEvents, localBars, 'local bars flow through unchanged');
   assert.equal(results.analyzedEvents.length, 2, 'the run completes normally');
   assert.equal(calls.displayResults.length, 1);
 });
@@ -252,7 +259,7 @@ test('run() keeps local bars and continues when the refresh throws', async () =>
   const results = await orch.run();
 
   assert.equal(calls.refreshRemoteBars.length, 1, 'the refresh was attempted');
-  assert.deepEqual(coreOptionsLog[0].bars, localBars, 'a refresh failure keeps the local bars');
+  assert.deepEqual(coreOptionsLog[0].barsAtProcessEvents, localBars, 'a refresh failure keeps the local bars');
   assert.equal(results.analyzedEvents.length, 2, 'the run continues');
   assert.equal(calls.showError.length, 0, 'a bars refresh failure is never fatal');
 });
