@@ -52,23 +52,23 @@ class NormalizerPipeline {
         return events.map(event => this.normalizeEvent(event));
     }
 
-    async normalizeEventAsync(event, httpAdapter) {
+    async normalizeEventAsync(event, httpAdapter, options = {}) {
         if (!event) return event;
         let normalized = { ...event };
         for (const normalizer of this.normalizers) {
             normalized = normalizer.normalize(normalized);
             if (typeof normalizer.normalizeAsync === 'function') {
-                normalized = await normalizer.normalizeAsync(normalized, httpAdapter);
+                normalized = await normalizer.normalizeAsync(normalized, httpAdapter, options);
             }
         }
         return normalized;
     }
 
-    async normalizeEventsAsync(events, httpAdapter) {
+    async normalizeEventsAsync(events, httpAdapter, options = {}) {
         if (!Array.isArray(events)) return [];
         const normalizedEvents = [];
         for (const event of events) {
-            normalizedEvents.push(await this.normalizeEventAsync(event, httpAdapter));
+            normalizedEvents.push(await this.normalizeEventAsync(event, httpAdapter, options));
         }
         return normalizedEvents;
     }
@@ -715,11 +715,13 @@ class LocationNormalizer extends BaseNormalizer {
 const CITY_CENTER_RADIUS_KM = 50;
 
 // Hard cap on Nominatim requests per event for the forward-geocode retry
-// ladder. 4 covers the full ladder (canonical address, postal/country strip,
-// directional strip, venue-name rescue); every request stays 1.1s-throttled
-// and later rungs only fire after earlier ones return nothing usable. Never
-// raise this without revisiting the rate-limit budget.
-const MAX_GEOCODE_QUERIES_PER_EVENT = 4;
+// ladder. 5 covers the full ladder (canonical address, unit/suite strip,
+// postal/country strip, directional strip, venue-name rescue); every request
+// stays 1.1s-throttled and later rungs only fire after earlier ones return
+// nothing usable. A single Photon rescue request may follow when every
+// Nominatim rung fails; it shares the same rate limiter. Never raise this
+// without revisiting the rate-limit budget.
+const MAX_GEOCODE_QUERIES_PER_EVENT = 5;
 
 // Street-type words a trailing directional can follow ("Cheshire Bridge Rd NE").
 const GEOCODE_STREET_TYPE_WORDS = 'Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Place|Pl|Court|Ct|Parkway|Pkwy|Highway|Hwy';
@@ -735,6 +737,47 @@ const GEOCODE_ADMIN_AREA_TYPES = [
     'city', 'borough', 'suburb', 'neighbourhood', 'quarter', 'town', 'village',
     'state', 'county', 'municipality', 'district', 'city_district', 'postcode'
 ];
+
+// Forward-geocode grade tiers, shared between Nominatim (class/type/addresstype
+// plus address.house_number) and Photon (osm_key/osm_value plus housenumber):
+//   exact  — a concrete venue/building or a house-numbered address match.
+//   street — a road-level match; tolerable only when the input address carries
+//            no house number (or the verification mode allows flagged accepts).
+//   coarse — a city/borough/suburb/state centroid. A coarse pin is always
+//            worse than no pin and is refused in EVERY verification mode.
+const GEOCODE_EXACT_GRADE_CLASSES = [
+    'building', 'amenity', 'shop', 'leisure', 'tourism', 'office', 'club', 'craft', 'nightclub'
+];
+const GEOCODE_STREET_GRADE_TYPES = ['road', 'street', 'pedestrian'];
+const GEOCODE_COARSE_GRADE_TYPES = [
+    'city', 'town', 'village', 'suburb', 'neighbourhood', 'quarter', 'borough',
+    'state', 'county', 'postcode', 'country'
+];
+
+// Street abbreviations expanded on BOTH sides of the reverse cross-check so
+// "Folsom St" / "Folsom Street" and "E" / "East" compare equal.
+const GEOCODE_ABBREVIATION_EXPANSIONS = {
+    st: 'street', ave: 'avenue', blvd: 'boulevard', rd: 'road', dr: 'drive',
+    ln: 'lane', hwy: 'highway', pl: 'place', ct: 'court',
+    e: 'east', w: 'west', n: 'north', s: 'south'
+};
+// Overlap on generic street-type/directional words alone never proves two
+// street names match ("Mission Street" vs "Folsom Street" share "street").
+const GEOCODE_GENERIC_STREET_TOKENS = [
+    'street', 'avenue', 'boulevard', 'road', 'drive', 'lane', 'highway',
+    'place', 'court', 'east', 'west', 'north', 'south', 'way', 'the'
+];
+
+// Unit/suite decoration ("Suite 200", "#4", "Apt 5B", "Fl 2") that chokes
+// Nominatim's free-text parser; stripped as its own retry rung. The word
+// tokens are boundary-guarded so street names like "Halsted" or "Steiner"
+// pass through untouched.
+const GEOCODE_UNIT_TOKEN_RE = /,?\s*(?:#|(?:ste|suite|apt|unit|fl|floor|rm|room)\b\.?)\s*[^\s,]+/gi;
+
+// Leading street number ("1192 Folsom St"). Used only to decide whether a
+// street-grade pin is tolerable for this input — a house-numbered address
+// deserves better than a road centroid.
+const GEOCODE_HOUSE_NUMBER_RE = /(^|\s)\d+[a-z]?\s+\S/i;
 
 // A directional that FOLLOWS a street-type word and ends the address or a
 // comma-separated segment ("...Cheshire Bridge Rd NE", "...Road Northeast,
@@ -970,6 +1013,128 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return GEOCODE_ADMIN_AREA_TYPES.includes(String(result.addresstype || '').toLowerCase());
     }
 
+    // Grade a forward-geocode candidate into the exact/street/coarse tiers (see
+    // the tier constants above). Kinds that fit no tier grade as 'street': never
+    // silently refused, but suspect enough to flag/replace for a house-numbered
+    // input.
+    classifyGeocodeGrade(resultClass, resultType, addressType, hasHouseNumber) {
+        const cls = String(resultClass || '').toLowerCase();
+        const type = String(resultType || '').toLowerCase();
+        const addr = String(addressType || '').toLowerCase();
+        if (hasHouseNumber || GEOCODE_EXACT_GRADE_CLASSES.includes(cls)) return 'exact';
+        if (cls === 'highway' || GEOCODE_STREET_GRADE_TYPES.includes(addr)) return 'street';
+        if (GEOCODE_COARSE_GRADE_TYPES.includes(addr) || GEOCODE_COARSE_GRADE_TYPES.includes(type) ||
+            cls === 'place' || cls === 'boundary') return 'coarse';
+        return 'street';
+    }
+
+    gradeNominatimResult(result) {
+        if (!result || typeof result !== 'object') return 'coarse';
+        const details = result.address && typeof result.address === 'object' ? result.address : {};
+        return this.classifyGeocodeGrade(result.class, result.type, result.addresstype, !!details.house_number);
+    }
+
+    // "1192 Folsom St Suite 200, San Francisco" → "1192 Folsom St, San
+    // Francisco": unit/suite/floor decoration chokes Nominatim's free-text
+    // parser. Returns the address unchanged when no unit token is present.
+    stripUnitTokens(address) {
+        return String(address || '')
+            .replace(GEOCODE_UNIT_TOKEN_RE, '')
+            .replace(/\s{2,}/g, ' ')
+            .replace(/\s+,/g, ',')
+            .replace(/^[,\s]+|[,\s]+$/g, '');
+    }
+
+    // Lowercased, punctuation-free tokens with street abbreviations expanded —
+    // the comparable form used on both sides of the reverse cross-check.
+    expandAddressTokens(text) {
+        return String(text || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(token => Object.prototype.hasOwnProperty.call(GEOCODE_ABBREVIATION_EXPANSIONS, token)
+                ? GEOCODE_ABBREVIATION_EXPANSIONS[token]
+                : token);
+    }
+
+    extractHouseNumber(text) {
+        const match = /(^|\s)(\d+[a-z]?)\s+\S/i.exec(String(text || ''));
+        return match ? match[2].toLowerCase() : '';
+    }
+
+    // Lenient reverse cross-check: compare an Apple placemark (subThoroughfare/
+    // thoroughfare/locality/postalCode) against the input address. Returns
+    // { matched, got } or null when the two sides share nothing comparable —
+    // this is a tripwire, not a parser.
+    comparePinToAddress(placemark, address) {
+        if (!placemark || typeof placemark !== 'object') return null;
+        const clean = value => (typeof value === 'string' || typeof value === 'number') ? String(value).trim() : '';
+        const pinHouse = clean(placemark.subThoroughfare).toLowerCase();
+        const pinStreet = clean(placemark.thoroughfare);
+        const pinLocality = clean(placemark.locality);
+        const pinPostal = clean(placemark.postalCode);
+        const got = [pinHouse, pinStreet, pinLocality].filter(part => part.length > 0).join(' ') || pinPostal || 'unknown place';
+        const inputTokens = this.expandAddressTokens(address);
+        const inputHouse = this.extractHouseNumber(address);
+
+        // Street-name comparison: at least one distinctive (non-generic,
+        // non-numeric) token of the pin's street must appear in the input.
+        const streetTokens = this.expandAddressTokens(pinStreet)
+            .filter(token => !GEOCODE_GENERIC_STREET_TOKENS.includes(token) && !/^\d/.test(token));
+        if (streetTokens.length > 0 && inputTokens.length > 0) {
+            const streetMatch = streetTokens.some(token => inputTokens.includes(token));
+            const houseMatch = inputHouse && pinHouse ? inputHouse === pinHouse : true;
+            return { matched: streetMatch && houseMatch, got };
+        }
+
+        // No street to compare — fall back to postal code, then locality.
+        const zipMatch = /\b(\d{5})(?:-\d{4})?\b/.exec(String(address || ''));
+        if (zipMatch && pinPostal) {
+            return { matched: zipMatch[1] === pinPostal.slice(0, 5), got };
+        }
+        if (pinLocality && inputTokens.length > 0) {
+            const localityTokens = this.expandAddressTokens(pinLocality);
+            return { matched: localityTokens.some(token => inputTokens.includes(token)), got };
+        }
+        return null;
+    }
+
+    // Final acceptance for a grade-gate-passing candidate: reverse cross-check
+    // against the input address (Apple placemark via the adapter, when that
+    // capability exists) plus suspect flagging per verification mode. Returns
+    // the "lat, lon" string to write, or null when enforce mode sends the
+    // ladder on to its next rung.
+    async confirmGeocodeCandidate(candidate, context, httpAdapter) {
+        const { title, address, inputHasHouseNumber, verifyMode, source, rung } = context;
+        let crossCheckRan = false;
+        if (verifyMode !== 'off' && typeof httpAdapter.reverseGeocodePlacemark === 'function') {
+            let placemark = null;
+            try {
+                placemark = await httpAdapter.reverseGeocodePlacemark(Number(candidate.lat), Number(candidate.lon));
+            } catch (err) {
+                placemark = null;
+            }
+            if (placemark) {
+                const comparison = this.comparePinToAddress(placemark, address);
+                if (comparison) {
+                    crossCheckRan = true;
+                    if (!comparison.matched) {
+                        console.warn(`🗺️ GEOCODE VERIFY: "${title}" pin failed reverse cross-check ("${comparison.got}" vs "${address}") — verify pin`);
+                        if (verifyMode === 'enforce') return null;
+                    }
+                }
+            }
+        }
+        if (candidate.grade === 'street' && inputHasHouseNumber && verifyMode === 'report') {
+            console.warn(`🗺️ GEOCODE VERIFY: "${title}" street-grade pin for house-numbered address "${address}" — verify pin`);
+        }
+        if (rung > 1 || crossCheckRan) {
+            console.log(`🗺️ GEOCODE VERIFY: "${title}" accepted ${candidate.grade} pin from ${source} (rung ${rung})`);
+        }
+        return `${candidate.lat}, ${candidate.lon}`;
+    }
+
     // Canonical addresses ("1192 Folsom St, San Francisco, CA 94103, USA") return
     // 0 Nominatim results while "1192 Folsom St, San Francisco" resolves — the
     // postal-code/country decoration chokes the free-text parser (verified live
@@ -1010,11 +1175,13 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     // at MAX_GEOCODE_QUERIES_PER_EVENT. Order:
     //   1. The query exactly as built today (city-anchored when the address
     //      doesn't already contain the city).
-    //   2. The address with postal-code/country decoration stripped (same
+    //   2. The address with unit/suite tokens stripped (same anchoring) —
+    //      "Suite 200" / "#4" decoration returns 0 results.
+    //   3. The address with postal-code/country decoration stripped (same
     //      anchoring) — Nominatim chokes on "…, CA 94103, USA" endings.
-    //   3. The address with trailing directionals stripped (same anchoring) —
+    //   4. The address with trailing directionals stripped (same anchoring) —
     //      Nominatim's free-text parser chokes on "Rd NE" / "Road Northeast".
-    //   4. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
+    //   5. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
     buildGeocodeQueryVariants(address, eventCity, bar) {
         const city = typeof eventCity === 'string' ? eventCity.trim() : '';
         const anchorToCity = (text) => {
@@ -1034,6 +1201,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
 
         const baseAddress = String(address || '').trim();
         push(anchorToCity(baseAddress));
+        const unitStripped = this.stripUnitTokens(baseAddress);
+        if (unitStripped && unitStripped !== baseAddress) push(anchorToCity(unitStripped));
         const postalStripped = this.stripPostalCodeAndCountry(baseAddress);
         if (postalStripped) push(anchorToCity(postalStripped));
         push(anchorToCity(this.stripTrailingDirectionals(baseAddress)));
@@ -1045,11 +1214,19 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return variants.slice(0, MAX_GEOCODE_QUERIES_PER_EVENT);
     }
 
-    async normalizeAsync(event, httpAdapter) {
+    async normalizeAsync(event, httpAdapter, pipelineOptions = {}) {
         if (!event || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return event;
 
         const hasAddress = typeof event.address === 'string' && event.address.trim().length > 0;
         const hasLocation = typeof event.location === 'string' && event.location.trim().length > 0 && event.location.includes(',');
+
+        // Pin verification knob (config.geocodeVerification.mode). The coarse
+        // grade gate is data correctness and stays active in every mode — the
+        // knob only governs the reverse cross-check and suspect handling.
+        const verification = pipelineOptions && pipelineOptions.geocodeVerification && typeof pipelineOptions.geocodeVerification === 'object'
+            ? pipelineOptions.geocodeVerification
+            : {};
+        const verifyMode = verification.mode === 'off' || verification.mode === 'enforce' ? verification.mode : 'report';
 
         let modified = false;
 
@@ -1074,12 +1251,14 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // fall back to rejecting results whose address details don't mention the city.
             const eventCity = typeof event.city === 'string' ? event.city.trim() : '';
             const cityCenter = this.getCityCenterCoordinates(eventCity);
-            const cityValidationParam = eventCity ? '&addressdetails=1' : '';
             const resultLimit = cityCenter ? 5 : 1;
+            const title = event.title || 'unknown';
+            const inputHasHouseNumber = GEOCODE_HOUSE_NUMBER_RE.test(address);
+            const verifyContext = { title, address, inputHasHouseNumber, verifyMode };
 
             // Retry ladder: when a query returns 0 candidates (or every candidate
-            // is rejected by the distance/city checks), retry with progressively
-            // simplified queries. Every attempt goes through
+            // is rejected by the grade gate / distance / city checks), retry with
+            // progressively simplified queries. Every attempt goes through
             // fetchDataWithCacheAndRateLimit (rate-limited AND cached) and the
             // ladder is hard-capped at MAX_GEOCODE_QUERIES_PER_EVENT requests.
             const queryVariants = this.buildGeocodeQueryVariants(address, eventCity, event.bar);
@@ -1087,14 +1266,14 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             let resolvedLocation = null;
             for (let i = 0; i < queryVariants.length && !resolvedLocation; i++) {
                 const queryText = queryVariants[i];
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}&limit=${resultLimit}${cityValidationParam}`;
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}&limit=${resultLimit}&addressdetails=1`;
                 attempts += 1;
                 try {
                     const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
                     // Simplified/fallback queries can degrade to a bare place name and
                     // match the admin area itself — reject those centroids. The first
-                    // (full-address) query keeps today's behavior: a full address that
-                    // resolves to an admin boundary is a different failure mode.
+                    // (full-address) query relies on the grade gate below: a full
+                    // address that resolves to an admin boundary is a coarse pin.
                     let candidates = Array.isArray(data) ? data : [];
                     if (i > 0 && candidates.length > 0) {
                         candidates = candidates.filter(result => {
@@ -1104,22 +1283,46 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                             return false;
                         });
                     }
-                    if (candidates.length > 0) {
+                    // Grade gate (all rungs, every mode): a coarse candidate never
+                    // becomes a pin; street-grade candidates are dropped up front
+                    // only when enforce mode demands house-number quality.
+                    const graded = [];
+                    for (const result of candidates) {
+                        const grade = this.gradeNominatimResult(result);
+                        if (grade === 'coarse') {
+                            const kind = result.addresstype || result.type || 'unknown';
+                            console.warn(`🗺️ GEOCODE VERIFY: "${title}" refused generic pin (${kind}) for address "${address}"`);
+                            continue;
+                        }
+                        if (grade === 'street' && inputHasHouseNumber && verifyMode === 'enforce') {
+                            continue;
+                        }
+                        graded.push({ result, grade });
+                    }
+                    if (graded.length > 0) {
+                        let pickedCandidate = null;
                         if (cityCenter) {
                             // Distance-ranked selection: nearest candidate within the radius wins
-                            const picked = this.pickNearestGeocodeCandidate(candidates, cityCenter, eventCity, queryText);
+                            const picked = this.pickNearestGeocodeCandidate(graded.map(entry => entry.result), cityCenter, eventCity, queryText);
                             if (picked) {
-                                resolvedLocation = `${picked.lat}, ${picked.lon}`;
+                                pickedCandidate = { lat: picked.lat, lon: picked.lon, grade: graded[picked.index].grade };
                             }
                         } else {
-                            const firstResult = candidates[0];
+                            const firstResult = graded[0].result;
                             if (firstResult.lat && firstResult.lon) {
                                 if (eventCity && !this.geocodeResultMatchesCity(firstResult, eventCity)) {
                                     console.warn(`🗺️ OpenStreetMapNormalizer: Geocode for "${queryText}" resolved outside event city "${eventCity}" ("${firstResult.display_name || 'no display name'}") — ignoring coordinates`);
                                 } else {
-                                    resolvedLocation = `${firstResult.lat}, ${firstResult.lon}`;
+                                    pickedCandidate = { lat: firstResult.lat, lon: firstResult.lon, grade: graded[0].grade };
                                 }
                             }
+                        }
+                        if (pickedCandidate) {
+                            resolvedLocation = await this.confirmGeocodeCandidate(
+                                pickedCandidate,
+                                { ...verifyContext, source: 'nominatim', rung: i + 1 },
+                                httpAdapter
+                            );
                         }
                     } else if ((!Array.isArray(data) || data.length === 0) && i < queryVariants.length - 1) {
                         console.log(`🗺️ OpenStreetMapNormalizer: 0 geocode results for "${queryText}" — trying next variant`);
@@ -1137,8 +1340,51 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 }
             }
             if (!resolvedLocation) {
+                // Photon rescue rung: a second geocoder with a friendlier free-text
+                // parser, tried once after every Nominatim rung failed. Same
+                // rate limiter, same caches. GeoJSON coordinates are [lon, lat].
+                const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1`;
+                attempts += 1;
+                try {
+                    const data = await this.fetchDataWithCacheAndRateLimit(photonUrl, options, httpAdapter);
+                    const feature = data && Array.isArray(data.features) && data.features.length > 0 ? data.features[0] : null;
+                    const coords = feature && feature.geometry && Array.isArray(feature.geometry.coordinates)
+                        ? feature.geometry.coordinates
+                        : null;
+                    const lon = coords ? Number(coords[0]) : NaN;
+                    const lat = coords ? Number(coords[1]) : NaN;
+                    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                        const props = feature.properties && typeof feature.properties === 'object' ? feature.properties : {};
+                        const grade = this.classifyGeocodeGrade(props.osm_key, props.osm_value, props.osm_value, !!props.housenumber);
+                        const withinRadius = !cityCenter ||
+                            this.haversineDistanceKm(lat, lon, cityCenter.lat, cityCenter.lng) <= CITY_CENTER_RADIUS_KM;
+                        if (grade === 'coarse') {
+                            console.warn(`🗺️ GEOCODE VERIFY: "${title}" refused generic pin (${props.osm_value || 'unknown'}) for address "${address}"`);
+                        } else if (grade === 'street' && inputHasHouseNumber && verifyMode === 'enforce') {
+                            // enforce demands house-number quality; stay unpinned
+                        } else if (withinRadius) {
+                            resolvedLocation = await this.confirmGeocodeCandidate(
+                                { lat: coords[1], lon: coords[0], grade },
+                                { ...verifyContext, source: 'photon', rung: queryVariants.length + 1 },
+                                httpAdapter
+                            );
+                        }
+                    }
+                } catch (err) {
+                    console.log(`🗺️ OpenStreetMapNormalizer: Failed to geocode address "${event.address}": ${err.message}`);
+                }
+                if (resolvedLocation) {
+                    event.location = resolvedLocation;
+                    modified = true;
+                    console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
+                }
+            }
+            if (!resolvedLocation) {
                 // Exact shape counted by run-log-summary's geocodeNoResults guard.
                 console.warn(`🗺️ OpenStreetMapNormalizer: No geocode results for "${address}" (${eventCity || 'no city'}) after ${attempts} ${attempts === 1 ? 'query' : 'queries'} — leaving location empty`);
+                if (inputHasHouseNumber) {
+                    console.warn(`🗺️ GEOCODE VERIFY: "${title}" full address but no usable geocoordinate — left unpinned`);
+                }
             }
         } else if (hasLocation && !hasAddress) {
             const parts = event.location.split(',').map(p => p.trim());

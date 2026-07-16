@@ -1883,8 +1883,9 @@ class SharedCore {
         // Use the passed pipeline or the instance property
         const pipelineToUse = normalizerPipeline || this.normalizerPipeline;
 
+        const globalConfig = mainConfig && mainConfig.config && typeof mainConfig.config === 'object' ? mainConfig.config : {};
         const enrichedEvents = pipelineToUse
-            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter)
+            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter, { geocodeVerification: globalConfig.geocodeVerification })
             : filteredEvents.map(event => this.normalizeEventTextFields(event));
 
         enrichedEvents.forEach((event, index) => {

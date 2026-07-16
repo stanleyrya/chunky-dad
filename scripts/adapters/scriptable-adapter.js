@@ -1263,54 +1263,76 @@ class ScriptableAdapter {
   }
 
   // Native reverse geocode via Scriptable's Location API (Apple's geocoding
-  // service — no network quota, no Nominatim rate-limit budget). Returns a
-  // "street, city, state zip" string or null when nothing usable comes back.
-  // normalizers.js calls this hook only when it exists; all Scriptable API
-  // usage stays in this adapter (pure-module rule).
-  async reverseGeocode(lat, lon) {
+  // service — no network quota, no Nominatim rate-limit budget). Returns the
+  // raw first placemark object (subThoroughfare/thoroughfare/locality/
+  // postalCode/postalAddress keys) or null. normalizers.js uses this for the
+  // geocode-verification cross-check; all Scriptable API usage stays in this
+  // adapter (pure-module rule). Results are memoized per run, keyed by the
+  // coordinates rounded to 5 decimals (~1 m).
+  async reverseGeocodePlacemark(lat, lon) {
     if (
       typeof Location === "undefined" ||
       typeof Location.reverseGeocode !== "function"
     ) {
       return null;
     }
+    if (!this.reverseGeocodeCache) {
+      this.reverseGeocodeCache = {};
+    }
+    const cacheKey = `${Number(lat).toFixed(5)},${Number(lon).toFixed(5)}`;
+    if (
+      Object.prototype.hasOwnProperty.call(this.reverseGeocodeCache, cacheKey)
+    ) {
+      return this.reverseGeocodeCache[cacheKey];
+    }
+    let mark = null;
     try {
       const placemarks = await Location.reverseGeocode(lat, lon);
-      const mark =
+      const first =
         Array.isArray(placemarks) && placemarks.length > 0
           ? placemarks[0]
           : null;
-      if (!mark || typeof mark !== "object") {
-        return null;
-      }
-      const postal =
-        mark.postalAddress && typeof mark.postalAddress === "object"
-          ? mark.postalAddress
-          : {};
-      const clean = (value) =>
-        typeof value === "string" || typeof value === "number"
-          ? String(value).trim()
-          : "";
-      let street = clean(postal.street);
-      if (!street) {
-        street = [clean(mark.subThoroughfare), clean(mark.thoroughfare)]
-          .filter((part) => part.length > 0)
-          .join(" ");
-      }
-      const city = clean(postal.city) || clean(mark.locality);
-      const state = clean(postal.state) || clean(mark.administrativeArea);
-      const zip = clean(postal.postalCode) || clean(mark.postalCode);
-      const stateZip = [state, zip].filter((part) => part.length > 0).join(" ");
-      const parts = [street, city, stateZip].filter(
-        (part) => part.length > 0,
-      );
-      return parts.length > 0 ? parts.join(", ") : null;
+      mark = first && typeof first === "object" ? first : null;
     } catch (error) {
       console.log(
         `📱 Scriptable: Native reverse geocode failed for ${lat},${lon}: ${error.message}`,
       );
+      mark = null;
+    }
+    this.reverseGeocodeCache[cacheKey] = mark;
+    return mark;
+  }
+
+  // Formatted "street, city, state zip" string built from the placemark hook
+  // above, or null when nothing usable comes back. normalizers.js calls this
+  // hook only when it exists (coords→address enrichment).
+  async reverseGeocode(lat, lon) {
+    const mark = await this.reverseGeocodePlacemark(lat, lon);
+    if (!mark) {
       return null;
     }
+    const postal =
+      mark.postalAddress && typeof mark.postalAddress === "object"
+        ? mark.postalAddress
+        : {};
+    const clean = (value) =>
+      typeof value === "string" || typeof value === "number"
+        ? String(value).trim()
+        : "";
+    let street = clean(postal.street);
+    if (!street) {
+      street = [clean(mark.subThoroughfare), clean(mark.thoroughfare)]
+        .filter((part) => part.length > 0)
+        .join(" ");
+    }
+    const city = clean(postal.city) || clean(mark.locality);
+    const state = clean(postal.state) || clean(mark.administrativeArea);
+    const zip = clean(postal.postalCode) || clean(mark.postalCode);
+    const stateZip = [state, zip].filter((part) => part.length > 0).join(" ");
+    const parts = [street, city, stateZip].filter(
+      (part) => part.length > 0,
+    );
+    return parts.length > 0 ? parts.join(", ") : null;
   }
 
   hasNonEmptyValue(value) {

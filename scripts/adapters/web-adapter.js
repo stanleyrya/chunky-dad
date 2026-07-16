@@ -49,6 +49,13 @@ class WebAdapter {
         }
     }
 
+    // Apple's native reverse geocoder is a Scriptable-only capability; Node has
+    // no equivalent, so this honestly reports absence and the normalizer skips
+    // its geocode-verification cross-check.
+    async reverseGeocodePlacemark() {
+        return null;
+    }
+
     getPageCacheConfig() {
         const pageCache = this.config.pageCache || {};
         const ttlDays = Number(pageCache.ttlDays);

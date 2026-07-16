@@ -3793,3 +3793,23 @@ test('dead-end store: maxAdditionalUrls 0 cannot fake a dead end when the parser
   assert.deepEqual(core.deadEndRunContext.store, {}, 'valid-but-budget-capped links keep the page productive');
   core.deadEndRunContext = null;
 });
+
+test('prepareParsedEvents threads the geocodeVerification knob into the normalizer pipeline', async () => {
+  const core = createCore();
+  let capturedOptions = null;
+  const pipeline = {
+    normalizeEventsAsync: async (events, httpAdapter, options) => {
+      capturedOptions = options;
+      return events;
+    }
+  };
+  const mainConfig = { config: { geocodeVerification: { mode: 'enforce' } } };
+
+  await core.prepareParsedEvents([{ title: 'CHUNK' }], {}, mainConfig, null, pipeline, {});
+
+  assert.deepEqual(capturedOptions, { geocodeVerification: { mode: 'enforce' } });
+
+  // No knob configured → the option is passed through as undefined (normalizers default to "report")
+  await core.prepareParsedEvents([{ title: 'CHUNK' }], {}, {}, null, pipeline, {});
+  assert.deepEqual(capturedOptions, { geocodeVerification: undefined });
+});
