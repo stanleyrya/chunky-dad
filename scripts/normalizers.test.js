@@ -491,12 +491,14 @@ test('stripPostalCodeAndCountry keeps street + city and drops postal/country dec
 
 test('buildGeocodeQueryVariants tries the postal/country-stripped core after the full address', () => {
   const normalizer = createOsmNormalizerWithNyc();
+  // Anchors carry the city DISPLAY name ("new york"), never the internal key
+  // ("nyc") — geocoders can't parse internal keys (see geocodeCityAnchorName).
   assert.deepEqual(
     normalizer.buildGeocodeQueryVariants('325 Franklin Ave, Brooklyn, NY 11238, USA', 'nyc', "C'mon Everybody"),
     [
-      '325 Franklin Ave, Brooklyn, NY 11238, USA, nyc',
-      '325 Franklin Ave, Brooklyn, nyc',
-      "C'mon Everybody, nyc"
+      '325 Franklin Ave, Brooklyn, NY 11238, USA, new york',
+      '325 Franklin Ave, Brooklyn, new york',
+      "C'mon Everybody, new york"
     ]
   );
   // With a strippable directional too, the full 4-rung ladder fits the cap and
@@ -533,8 +535,9 @@ test('a simplified-query admin-area match is rejected instead of poisoning coord
     warns.some(w => w.includes('Rejected admin-area result') && w.includes('type=borough')),
     `the rejection must be logged: ${warns.join(' | ')}`
   );
-  assert.equal(httpAdapter.requests.length, 4, 'the ladder continues past the rejected result through the Photon rescue');
-  assert.ok(httpAdapter.requests[3].includes('photon.komoot.io'), 'the final request is the Photon rescue');
+  assert.equal(httpAdapter.requests.length, 5, 'the ladder continues past the rejected result through the Census and Photon rescues');
+  assert.ok(httpAdapter.requests[3].includes('geocoding.geo.census.gov'), 'the US-looking address gets a Census rescue before Photon');
+  assert.ok(httpAdapter.requests[4].includes('photon.komoot.io'), 'the final request is the Photon rescue');
 });
 
 test('a venue-name simplified query still resolves through an amenity result', async () => {
@@ -553,7 +556,7 @@ test('a venue-name simplified query still resolves through an amenity result', a
 
   assert.equal(event.location, '40.6791213, -73.9556999', 'the amenity match must keep working');
   assert.ok(
-    logs.some(l => l.includes('Geocoded via simplified query "C\'mon Everybody, nyc"')),
+    logs.some(l => l.includes('Geocoded via simplified query "C\'mon Everybody, new york"')),
     `the simplified-query success log must be preserved: ${logs.join(' | ')}`
   );
 });
@@ -1009,6 +1012,243 @@ test('geocode verification: the coords→address reverse path is untouched by ve
   assert.equal(event.address, '1192 Folsom St, San Francisco, CA');
   assert.ok(requests[0].includes('nominatim.openstreetmap.org/reverse'), 'the reverse endpoint stays Nominatim');
   assert.ok(!lines.some(l => l.includes('GEOCODE VERIFY')), `the reverse path never emits verification flags: ${lines.join(' | ')}`);
+});
+
+// ---------------------------------------------------------------------------
+// 2026-07-15 run findings: reviewer proposed replacing correct pins with
+// street centroids ("3796 Fifth Avenue, San Diego" → Fifth Avenue downtown,
+// 4.7 km away). Fixes under test here: geocode verdict fields (_geocodeGrade
+// etc.), city display-name query anchoring, the US Census rescue rung, and
+// the tightened unit-strip rung.
+// ---------------------------------------------------------------------------
+
+const CITIES_SAN_DIEGO = {
+  'san-diego': {
+    timezone: 'America/Los_Angeles',
+    patterns: ['san diego'],
+    coordinates: { lat: 32.7157, lng: -117.1611 }
+  }
+};
+
+function createOsmNormalizerWithSanDiego() {
+  const core = new SharedCore(CITIES_SAN_DIEGO, { eventSchema: EventSchema });
+  return new OpenStreetMapNormalizer(core);
+}
+
+// The street "Fifth Avenue" itself — a highway-class match whose centroid sits
+// downtown, kilometers from house 3796 (inside the 50 km radius, so only the
+// grade gate can stop it).
+const FIFTH_AVENUE_STREET_RESULT = {
+  lat: '32.7150000',
+  lon: '-117.1590000',
+  class: 'highway',
+  type: 'residential',
+  addresstype: 'road',
+  display_name: 'Fifth Avenue, San Diego, California, United States',
+  address: { road: 'Fifth Avenue', city: 'San Diego' }
+};
+
+// US Census house-number interpolation for the same address. NOTE the
+// coordinates shape: {x: lon, y: lat}.
+const CENSUS_FIFTH_AVENUE_MATCH = {
+  result: {
+    addressMatches: [{
+      matchedAddress: '3796 FIFTH AVE, SAN DIEGO, CA, 92103',
+      coordinates: { x: -117.1609, y: 32.7481 }
+    }]
+  }
+};
+
+const FIFTH_AVENUE_PLACEMARK = {
+  subThoroughfare: '3796',
+  thoroughfare: 'Fifth Avenue',
+  locality: 'San Diego',
+  postalCode: '92103'
+};
+
+test('geocode verdict fields record grade, cross-check, source, and rung on accepted pins — and never leak into notes', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [['nominatim', [POWERHOUSE_POI_RESULT]]],
+    { reverseGeocodePlacemark: async () => FOLSOM_PLACEMARK }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+
+  assert.equal(event.location, '37.7756941, -122.4103049');
+  assert.equal(event._geocodeGrade, 'exact');
+  assert.equal(event._geocodeCrossCheck, 'pass');
+  assert.equal(event._geocodeSource, 'nominatim');
+  assert.equal(event._geocodeRung, 1);
+  assert.ok(typeof event.notes === 'string' && event.notes.length > 0, 'a successful geocode refreshes notes');
+  assert.ok(!event.notes.includes('_geocode'), `underscore verdict fields must never leak into notes: ${event.notes}`);
+});
+
+test('geocode verdict: report-mode cross-check failure and street-grade accepts are recorded truthfully', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const failAdapter = createRoutedStubAdapter(
+    [['nominatim', [WRONG_STREET_POI_RESULT]]],
+    { reverseGeocodePlacemark: async () => MISSION_PLACEMARK }
+  );
+  const failEvent = { title: 'CHUNK', address: '1192 Folsom St' };
+  await withCapturedConsole(() =>
+    normalizer.normalizeAsync(failEvent, failAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+  assert.equal(failEvent.location, '37.7752000, -122.4180000', 'report mode still keeps the suspect pin');
+  assert.equal(failEvent._geocodeCrossCheck, 'fail');
+  assert.equal(failEvent._geocodeGrade, 'exact');
+
+  const streetNormalizer = createOsmNormalizer();
+  streetNormalizer.delayForRateLimit = async () => {};
+  const streetAdapter = createRoutedStubAdapter([['nominatim', [FOLSOM_STREET_ONLY_RESULT]]]);
+  const streetEvent = { title: 'CHUNK', address: '1192 Folsom St' };
+  await withCapturedConsole(() =>
+    streetNormalizer.normalizeAsync(streetEvent, streetAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+  assert.equal(streetEvent._geocodeGrade, 'street');
+  assert.equal(streetEvent._geocodeCrossCheck, 'skipped', 'no placemark hook → the cross-check is skipped');
+});
+
+test('geocode verdict: enforce leaves a street-grade breadcrumb when the ladder ends unpinned', async () => {
+  const normalizer = createOsmNormalizerWithSanDiego();
+  normalizer.delayForRateLimit = async () => {};
+  // Nominatim only knows the street; Census has no match; Photon has nothing.
+  const httpAdapter = createRoutedStubAdapter([
+    ['nominatim', [FIFTH_AVENUE_STREET_RESULT]],
+    ['geocoding.geo.census.gov', { result: { addressMatches: [] } }]
+  ]);
+  const event = { title: 'SD BEAR', address: '3796 Fifth Avenue, San Diego, CA 92103', city: 'san-diego' };
+
+  await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.location, undefined, 'enforce refuses a street-grade pin for a house-numbered address');
+  assert.equal(event._geocodeGrade, 'street', 'the rejected street-grade candidate leaves a breadcrumb');
+  assert.equal(event._geocodeCrossCheck, 'skipped');
+  assert.equal(event._geocodeSource, 'nominatim');
+});
+
+test('geocode queries anchor with the city display name, never the internal key', () => {
+  const normalizer = createOsmNormalizer(); // CITIES: nyc → patterns ['new york', 'nyc']
+  assert.deepEqual(
+    normalizer.buildGeocodeQueryVariants('10-90 Wyckoff Avenue, Queens', 'nyc', ''),
+    ['10-90 Wyckoff Avenue, Queens, new york']
+  );
+  assert.deepEqual(
+    normalizer.buildGeocodeQueryVariants('Some Bar', 'nyc', 'Some Bar'),
+    ['Some Bar, new york'],
+    'the venue-name rescue rung is display-name-anchored too'
+  );
+  // A key with no cities config entry falls back to the key itself
+  assert.deepEqual(
+    normalizer.buildGeocodeQueryVariants('922 E. BURNSIDE', 'portland', ''),
+    ['922 E. BURNSIDE, portland']
+  );
+});
+
+test('census rescue: a house-numbered address that only street-grades on Nominatim gets a house-level Census pin', async () => {
+  const normalizer = createOsmNormalizerWithSanDiego();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [
+      ['nominatim', [FIFTH_AVENUE_STREET_RESULT]],
+      ['geocoding.geo.census.gov', CENSUS_FIFTH_AVENUE_MATCH]
+    ],
+    { reverseGeocodePlacemark: async () => FIFTH_AVENUE_PLACEMARK }
+  );
+  const event = { title: 'SD BEAR', address: '3796 Fifth Avenue, San Diego, CA 92103', city: 'san-diego' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.location, '32.7481, -117.1609', 'Census {x: lon, y: lat} must come out as "lat, lon"');
+  assert.equal(event._geocodeGrade, 'exact');
+  assert.equal(event._geocodeCrossCheck, 'pass');
+  assert.equal(event._geocodeSource, 'census');
+  const censusRequest = httpAdapter.requests.find(url => url.includes('geocoding.geo.census.gov'));
+  assert.ok(
+    censusRequest.includes('/geocoder/locations/onelineaddress?address=') &&
+    censusRequest.includes('benchmark=Public_AR_Current') &&
+    censusRequest.includes('format=json'),
+    `the Census request must use the onelineaddress endpoint: ${censusRequest}`
+  );
+  assert.ok(!httpAdapter.requests.some(url => url.includes('photon.komoot.io')), 'Census rescued the pin before Photon was needed');
+  assert.ok(
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "SD BEAR" accepted exact pin from census (rung 2)')),
+    `the Census accept must be logged: ${lines.join(' | ')}`
+  );
+});
+
+test('census rescue is skipped for non-US-looking addresses', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', []]]);
+  const event = { title: 'TORREMOLINOS BEARS', address: 'LA NOGALERA, Torremolinos' };
+
+  await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.ok(!httpAdapter.requests.some(url => url.includes('geocoding.geo.census.gov')), 'no Census request for a non-US address');
+  assert.ok(httpAdapter.requests.some(url => url.includes('photon.komoot.io')), 'the Photon rescue still runs');
+});
+
+test('census rescue: still subject to the reverse cross-check and the city-center radius', async () => {
+  // Cross-check mismatch in enforce mode → rejected, event stays unpinned
+  const normalizer = createOsmNormalizerWithSanDiego();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter(
+    [['geocoding.geo.census.gov', CENSUS_FIFTH_AVENUE_MATCH]],
+    { reverseGeocodePlacemark: async () => MISSION_PLACEMARK }
+  );
+  const event = { title: 'SD BEAR', address: '3796 Fifth Avenue, San Diego, CA 92103', city: 'san-diego' };
+  await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+  assert.equal(event.location, undefined, 'a cross-check-failed Census pin must not be written in enforce mode');
+  assert.equal(event._geocodeCrossCheck, 'fail', 'the rejection breadcrumb records the failed cross-check');
+
+  // A Census match outside the 50 km radius is ignored like any other candidate
+  const farNormalizer = createOsmNormalizerWithSanDiego();
+  farNormalizer.delayForRateLimit = async () => {};
+  const farAdapter = createRoutedStubAdapter([
+    ['geocoding.geo.census.gov', { result: { addressMatches: [{ matchedAddress: 'X', coordinates: { x: -74.006, y: 40.7128 } }] } }]
+  ]);
+  const farEvent = { title: 'SD BEAR', address: '3796 Fifth Avenue, San Diego, CA 92103', city: 'san-diego' };
+  await withCapturedConsole(() => farNormalizer.normalizeAsync(farEvent, farAdapter));
+  assert.equal(farEvent.location, undefined, 'a Census match outside the city radius must be ignored');
+});
+
+test('stripUnitTokens: hash-unit markers, trailing bare units, and state/ZIP tails', () => {
+  const normalizer = createOsmNormalizer();
+  // Simple hash markers keep stripping
+  assert.equal(normalizer.stripUnitTokens('1123 Folsom St #4, San Francisco'), '1123 Folsom St, San Francisco');
+  // "#UNIT 114" must go entirely, not leave a dangling "114"
+  assert.equal(
+    normalizer.stripUnitTokens('3796 Fifth Avenue #UNIT 114, San Diego'),
+    '3796 Fifth Avenue, San Diego'
+  );
+  // A trailing bare "Unit"/"Suite" with no token before a comma/end is stripped
+  assert.equal(
+    normalizer.stripUnitTokens('333 S Palm Canyon Dr Unit, Palm Springs'),
+    '333 S Palm Canyon Dr, Palm Springs'
+  );
+  assert.equal(normalizer.stripUnitTokens('333 S Palm Canyon Dr Suite'), '333 S Palm Canyon Dr');
+  // The classic forms keep working
+  assert.equal(normalizer.stripUnitTokens('1192 Folsom St Suite 200, San Francisco'), '1192 Folsom St, San Francisco');
+  assert.equal(normalizer.stripUnitTokens('123 Main St Fl. 2, Boston'), '123 Main St, Boston');
+  assert.equal(normalizer.stripUnitTokens('123 Main St Floor 2, Boston'), '123 Main St, Boston');
+  // Street names never match the boundary-guarded unit words
+  assert.equal(normalizer.stripUnitTokens('3702 N Halsted, Chicago'), '3702 N Halsted, Chicago');
+  assert.equal(normalizer.stripUnitTokens('2199 Steiner St, San Francisco'), '2199 Steiner St, San Francisco');
+  assert.equal(normalizer.stripUnitTokens('1500 Rue Sainte-Catherine, Montreal'), '1500 Rue Sainte-Catherine, Montreal');
+  // A Florida state+ZIP tail must never match the old bare "fl" token
+  assert.equal(normalizer.stripUnitTokens('101 Ocean Dr, Miami, FL 33101'), '101 Ocean Dr, Miami, FL 33101');
 });
 
 test('resolveWallClockDates ignores events without the wall-clock flag', () => {
