@@ -6066,7 +6066,8 @@ class SharedCore {
     // function (events, context) → findings; register future checks
     // (missing fields, duplicates, ...) in getCalendarReviewChecks.
     // Events are plain objects mapped by the adapter:
-    //   { id, calendarTitle, title, startDate, location, address, bar }
+    //   { id, calendarTitle, title, startDate, location, address, bar,
+    //     description }
     // Findings (one per event; 'ok' ones are countable for the summary):
     //   { id, calendarTitle, eventTitle, startDate, check, status,
     //     current: {location, address}, proposed: {location?, address?},
@@ -6133,8 +6134,11 @@ class SharedCore {
     // missing one side, and surface addresses that refuse to geocode.
     // context.geocodeNormalizer must be an OpenStreetMapNormalizer instance —
     // the scraper's forward ladder / grade gate / verification is reused, not
-    // reimplemented. Unique addresses are geocoded once: venues repeat across
-    // events and every Nominatim call costs 1.1s of throttle.
+    // reimplemented. context.barDataNormalizer (optional, a BarDataNormalizer
+    // instance whose core carries the bars config) makes curated bar data the
+    // authoritative source before any geocoding happens. Unique addresses are
+    // geocoded once: venues repeat across events and every Nominatim call
+    // costs 1.1s of throttle.
     async runGeocodeReviewCheck(events, context = {}) {
         const httpAdapter = context.httpAdapter || null;
         const geocoder = context.geocodeNormalizer;
@@ -6158,8 +6162,53 @@ class SharedCore {
         const forwardKeyFor = (city, address) => `${city}|${normalizeAddressKey(address)}`;
         const reverseKeyFor = (pin) => `${pin.lat.toFixed(5)},${pin.lng.toFixed(5)}`;
 
+        // Pass 0: curated bar data is the AUTHORITATIVE location source — a
+        // vague address like "Poconos, PA" can never geocode to the venue, but
+        // the bars config knows it exactly (2026-07-16 run: "FURBALL CAMP" at
+        // Camp Out got a pin-moved proposal 33 km off from a Nominatim POI).
+        // Each event's probe (location stripped so the bar's own coordinates
+        // must fill it) runs through the REAL BarDataNormalizer — the same
+        // name/title/address/coordinates/description matching the scraper
+        // pipeline applies. A match only counts when it yielded coordinates;
+        // matched events skip the geocode pool entirely.
+        const barNormalizer = context.barDataNormalizer && typeof context.barDataNormalizer.normalize === 'function'
+            ? context.barDataNormalizer
+            : null;
+        const barMatchByEvent = new Map();
+        if (barNormalizer) {
+            for (const event of events) {
+                if (!event) continue;
+                const city = this.cityForCalendarTitle(String(event.calendarTitle || ''));
+                const eventAddress = typeof event.address === 'string' ? event.address.trim() : '';
+                const probe = {
+                    title: event.title,
+                    address: eventAddress,
+                    city,
+                    bar: typeof event.bar === 'string' ? event.bar.trim() : '',
+                    description: typeof event.description === 'string' ? event.description : ''
+                };
+                barNormalizer.normalize(probe);
+                if (this.isCoordinatePair(probe.location)) {
+                    const curatedAddress = typeof probe.address === 'string' ? probe.address.trim() : '';
+                    barMatchByEvent.set(event, {
+                        barName: typeof probe.bar === 'string' && probe.bar.trim() ? probe.bar.trim() : 'curated bar',
+                        location: probe.location.trim(),
+                        // The normalizer already applied its own address heuristic
+                        // (missing or shorter event address loses to the curated
+                        // one), so any difference here IS a material upgrade.
+                        address: curatedAddress && curatedAddress !== eventAddress ? curatedAddress : ''
+                    });
+                }
+            }
+            if (barMatchByEvent.size > 0) {
+                console.log(`🔎 REVIEW: ${barMatchByEvent.size} event(s) matched curated bar data — skipping geocode for them`);
+            }
+        }
+
         // Pass 1: unique forward jobs (per city + address) and unique reverse
         // jobs (per stored pin), plus per-calendar counts for the progress log.
+        // Bar-matched events never enter the pools — curated data needs no
+        // external verification.
         const forwardJobs = new Map();
         const reverseJobs = new Map();
         const calendarCounts = new Map();
@@ -6169,6 +6218,7 @@ class SharedCore {
             const counts = calendarCounts.get(calendarTitle) || { events: 0, addresses: new Set() };
             counts.events += 1;
             calendarCounts.set(calendarTitle, counts);
+            if (barMatchByEvent.has(event)) continue;
             const city = this.cityForCalendarTitle(calendarTitle);
             const address = typeof event.address === 'string' ? event.address.trim() : '';
             const title = event.title || address || event.location || 'unknown';
@@ -6255,6 +6305,32 @@ class SharedCore {
                 proposed: {},
                 detail: ''
             };
+            const barMatch = barMatchByEvent.get(event) || null;
+            if (barMatch) {
+                // Curated bar data: grade 'exact' + crossCheck 'pass' by fiat —
+                // hand-maintained coordinates need no external verification, so
+                // the specificity gate and cross-check policy below never apply.
+                const withAddress = barMatch.address ? ' + address' : '';
+                if (!hasPin) {
+                    finding.status = 'missing-pin';
+                    finding.proposed.location = barMatch.location;
+                    if (barMatch.address) finding.proposed.address = barMatch.address;
+                    finding.detail = `pin${withAddress} from curated bar data (${barMatch.barName})`;
+                } else {
+                    const distanceKm = this.coordinatePairDistanceKm(location, barMatch.location);
+                    finding.distanceKm = distanceKm;
+                    if (distanceKm !== null && distanceKm > thresholdKm) {
+                        finding.status = 'pin-moved';
+                        finding.proposed.location = barMatch.location;
+                        if (barMatch.address) finding.proposed.address = barMatch.address;
+                        finding.detail = `stored pin is ${distanceKm.toFixed(1)}km off — pin${withAddress} from curated bar data (${barMatch.barName})`;
+                    } else {
+                        finding.detail = `matches curated bar data (${barMatch.barName})`;
+                    }
+                }
+                findings.push(finding);
+                continue;
+            }
             if (address) {
                 const fresh = freshPinByKey.get(forwardKeyFor(city, address)) || null;
                 const freshLocation = fresh && fresh.location ? fresh.location : null;
@@ -6264,11 +6340,22 @@ class SharedCore {
                 // still reach here for addresses without a parseable house number
                 // (e.g. hyphenated Queens numbers like "10-90 Wyckoff Avenue").
                 const proposalGrade = !!(freshLocation && fresh.grade === 'exact' && fresh.crossCheck !== 'fail');
+                // Input-specificity gate: geocoder answers for a vague input
+                // ("Poconos, PA") are arbitrary no matter their grade or
+                // cross-check — never proposal material (2026-07-16 run:
+                // Nominatim's POI candidate for "Poconos, PA" graded 'exact'
+                // and was proposed 33 km from the venue).
+                const streetSpecific = typeof geocoder.isStreetSpecificAddress === 'function'
+                    ? geocoder.isStreetSpecificAddress(address)
+                    : true;
                 if (!freshLocation && !(fresh && fresh.grade)) {
                     finding.status = 'unpinnable';
                     finding.detail = hasPin
                         ? 'address no longer geocodes to a usable pin — stored pin kept but unverified'
                         : 'no usable geocoordinate for this address (grade gate/ladder found nothing)';
+                } else if (!streetSpecific) {
+                    finding.status = 'unverified';
+                    finding.detail = 'address too vague to geocode reliably — fix the address or add a bar field first';
                 } else if (!proposalGrade) {
                     // A pin resolved (or a candidate was rejected by enforce) but
                     // it is not proposal-grade — never propose it, never touch the
@@ -6290,9 +6377,20 @@ class SharedCore {
                     const distanceKm = this.coordinatePairDistanceKm(location, freshLocation);
                     finding.distanceKm = distanceKm;
                     if (distanceKm !== null && distanceKm > thresholdKm) {
-                        finding.status = 'pin-moved';
-                        finding.proposed.location = freshLocation;
-                        finding.detail = `stored pin is ${distanceKm.toFixed(1)}km from the fresh verified geocode of this address`;
+                        // Destructively replacing a stored pin demands a PASSED
+                        // reverse cross-check. A 'skipped' cross-check (Apple
+                        // reverse geocoding rate-limited/unavailable) silently
+                        // removed the whole safety layer on the 2026-07-16 run —
+                        // additive missing-pin proposals stay allowed on
+                        // 'skipped', destructive pin-moved ones do not.
+                        if (fresh.crossCheck === 'pass') {
+                            finding.status = 'pin-moved';
+                            finding.proposed.location = freshLocation;
+                            finding.detail = `stored pin is ${distanceKm.toFixed(1)}km from the fresh verified geocode of this address`;
+                        } else {
+                            finding.status = 'unverified';
+                            finding.detail = 'reverse cross-check unavailable — re-run when Apple geocoding recovers';
+                        }
                     } else {
                         finding.detail = 'stored pin matches a fresh geocode of the address';
                     }

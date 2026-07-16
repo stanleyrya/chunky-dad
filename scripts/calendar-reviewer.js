@@ -63,6 +63,7 @@ class CalendarReviewerOrchestrator {
                 SharedCore: sharedCoreModule.SharedCore,
                 EventSchema: eventSchemaModule.EventSchema,
                 OpenStreetMapNormalizer: normalizersModule.OpenStreetMapNormalizer,
+                BarDataNormalizer: normalizersModule.BarDataNormalizer,
                 Adapter: scriptableAdapterModule.ScriptableAdapter,
                 cities: importModule('scraper-cities')
             };
@@ -71,10 +72,12 @@ class CalendarReviewerOrchestrator {
             // the pure modules load (CI syntax checking). The adapter is NOT
             // required here — it needs Scriptable globals at load time.
             console.log('🔎 Calendar Reviewer: Loading Node.js modules...');
+            const normalizersModule = require('./normalizers');
             this.modules = {
                 SharedCore: require('./shared-core').SharedCore,
                 EventSchema: require('./event-schema').EventSchema,
-                OpenStreetMapNormalizer: require('./normalizers').OpenStreetMapNormalizer,
+                OpenStreetMapNormalizer: normalizersModule.OpenStreetMapNormalizer,
+                BarDataNormalizer: normalizersModule.BarDataNormalizer,
                 Adapter: null,
                 cities: null
             };
@@ -94,13 +97,21 @@ class CalendarReviewerOrchestrator {
             cities: this.modules.cities,
             pageCache: config.pageCache || null
         });
+        // Curated bars config, loaded exactly the way the scraper's
+        // loadConfiguration loads scraper-bars.js (optional file → {}): the
+        // reviewer must consult BarDataNormalizer before geocoding, same as
+        // the scraper pipeline does.
+        const bars = await adapter.loadBarsConfiguration();
         const core = new this.modules.SharedCore(this.modules.cities, {
             eventSchema: this.modules.EventSchema,
-            additionalExcludedFields: this.modules.Adapter.NOTES_EXCLUDED_FIELDS
+            additionalExcludedFields: this.modules.Adapter.NOTES_EXCLUDED_FIELDS,
+            bars
         });
-        // The geocode check reuses the scraper's normalizer (grade gate, retry
-        // ladder, verification) rather than reimplementing any of it
+        // The geocode check reuses the scraper's normalizers (bar-data match,
+        // grade gate, retry ladder, verification) rather than reimplementing
+        // any of them
         const geocodeNormalizer = new this.modules.OpenStreetMapNormalizer(core);
+        const barDataNormalizer = new this.modules.BarDataNormalizer(core);
 
         try {
             const calendars = await adapter.getReviewCalendars(config.calendars);
@@ -113,6 +124,7 @@ class CalendarReviewerOrchestrator {
             const findings = await core.reviewCalendarEvents(events, {
                 httpAdapter: adapter,
                 geocodeNormalizer,
+                barDataNormalizer,
                 pinMovedThresholdKm: config.pinMovedThresholdKm
             });
 

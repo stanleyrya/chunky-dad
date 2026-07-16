@@ -436,6 +436,175 @@ test('loadDeadEnds tolerates corrupt or wrong-shaped files with an empty store',
 });
 
 // ---------------------------------------------------------------------------
+// Apple reverse-geocode quota hygiene: persistent placemark cache, pacing,
+// circuit breaker (2026-07-16 run: ~50 uncached calls in 6 s tripped Apple's
+// GLOBAL rate limit and every cross-check silently degraded to 'skipped')
+// ---------------------------------------------------------------------------
+
+const CAMP_OUT_PLACEMARK = {
+  subThoroughfare: '446',
+  thoroughfare: 'Mt Nebo Rd',
+  locality: 'East Stroudsburg',
+  postalCode: '18301'
+};
+
+function buildReverseGeocodeAdapter() {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+  adapter.sleepForReverseGeocode = async () => {};
+  return adapter;
+}
+
+test('reverseGeocodePlacemark round-trips placemarks through reverse-geocode-cache.json', async () => {
+  const adapter = buildReverseGeocodeAdapter();
+  let calls = 0;
+  global.Location = {
+    reverseGeocode: async () => { calls += 1; return [CAMP_OUT_PLACEMARK]; }
+  };
+  try {
+    const first = await adapter.reverseGeocodePlacemark(41.0219799, -75.1167816);
+    assert.deepEqual(first, CAMP_OUT_PLACEMARK);
+    assert.equal(calls, 1);
+
+    const cachePath = adapter.getReverseGeocodeCacheFilePath();
+    assert.ok(adapter.fm.files.has(cachePath), 'placemark persisted to reverse-geocode-cache.json');
+    const stored = JSON.parse(adapter.fm.files.get(cachePath));
+    assert.deepEqual(stored['41.02198,-75.11678'].placemark, CAMP_OUT_PLACEMARK);
+    assert.ok(Number.isFinite(stored['41.02198,-75.11678'].ts), 'entries carry a timestamp for TTL pruning');
+
+    // A fresh adapter (a later run) reads the disk cache instead of Apple
+    const laterRun = buildReverseGeocodeAdapter();
+    laterRun.fm = adapter.fm;
+    const second = await laterRun.reverseGeocodePlacemark(41.0219799, -75.1167816);
+    assert.deepEqual(second, CAMP_OUT_PLACEMARK);
+    assert.equal(calls, 1, 'a disk-cache hit spends no Apple quota');
+  } finally {
+    delete global.Location;
+  }
+});
+
+test('reverse geocode disk cache tolerates corrupt files, prunes stale entries, and never persists nulls', async () => {
+  const adapter = buildReverseGeocodeAdapter();
+  const cachePath = adapter.getReverseGeocodeCacheFilePath();
+  // Corrupt file → empty cache, never throws; a stale entry rides along to
+  // prove the TTL prune on the next save.
+  adapter.fm.files.set(cachePath, '{"41.00000,-75.00000": {broken json');
+  let calls = 0;
+  global.Location = {
+    reverseGeocode: async (lat) => {
+      calls += 1;
+      return lat < 41 ? [] : [CAMP_OUT_PLACEMARK]; // 40.x → no placemark
+    }
+  };
+  try {
+    assert.equal(await adapter.reverseGeocodePlacemark(40.7, -73.9), null, 'corrupt cache degrades to a live lookup');
+    assert.equal(calls, 1);
+    assert.equal(adapter.fm.files.get(cachePath), '{"41.00000,-75.00000": {broken json',
+      'a null result never writes the cache file');
+    assert.equal(await adapter.reverseGeocodePlacemark(40.7, -73.9), null);
+    assert.equal(calls, 1, 'null results stay memoized in memory for the run');
+
+    // Seed a stale entry in the loaded cache, then earn a success: the save
+    // prunes anything past the ~30-day TTL.
+    adapter.reverseGeocodeDiskCache['40.00000,-74.00000'] = {
+      placemark: { locality: 'Stale Town' },
+      ts: Date.now() - 31 * 24 * 60 * 60 * 1000
+    };
+    await adapter.reverseGeocodePlacemark(41.0219799, -75.1167816);
+    const stored = JSON.parse(adapter.fm.files.get(cachePath));
+    assert.deepEqual(Object.keys(stored), ['41.02198,-75.11678'],
+      'stale entries pruned on save; nulls absent');
+  } finally {
+    delete global.Location;
+  }
+});
+
+test('circuit breaker stops native reverse geocoding after 3 consecutive failures and logs once', async () => {
+  const adapter = buildReverseGeocodeAdapter();
+  let attempts = 0;
+  global.Location = {
+    reverseGeocode: async () => {
+      attempts += 1;
+      throw new Error('limited on how many reverse-geocoding requests');
+    }
+  };
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  try {
+    for (let i = 0; i < 5; i += 1) {
+      assert.equal(await adapter.reverseGeocodePlacemark(40 + i, -73), null);
+    }
+  } finally {
+    console.log = originalLog;
+    delete global.Location;
+  }
+  assert.equal(attempts, 3, 'the breaker opens after the third failure — later lookups never call Apple');
+  assert.equal(
+    logLines.filter((line) => line.includes(
+      'Apple reverse geocoding unavailable after 3 consecutive failures — skipping remaining lookups this run'
+    )).length,
+    1,
+    'the breaker line is logged exactly once'
+  );
+  assert.equal(
+    logLines.filter((line) => line.includes('Native reverse geocode failed for')).length,
+    3,
+    'the per-attempt failure line keeps its shape for attempts that do happen'
+  );
+});
+
+test('a success between failures resets the consecutive-failure count', async () => {
+  const adapter = buildReverseGeocodeAdapter();
+  let attempts = 0;
+  global.Location = {
+    reverseGeocode: async () => {
+      attempts += 1;
+      if (attempts === 3) return [CAMP_OUT_PLACEMARK];
+      throw new Error('rate limited');
+    }
+  };
+  try {
+    await adapter.reverseGeocodePlacemark(40.1, -73); // fail 1
+    await adapter.reverseGeocodePlacemark(40.2, -73); // fail 2
+    await adapter.reverseGeocodePlacemark(40.3, -73); // success → reset
+    await adapter.reverseGeocodePlacemark(40.4, -73); // fail 1 again
+    assert.equal(await adapter.reverseGeocodePlacemark(40.5, -73), null);
+    assert.equal(attempts, 5, 'the breaker never opened');
+    assert.notEqual(adapter.reverseGeocodeCircuitOpen, true);
+  } finally {
+    delete global.Location;
+  }
+});
+
+test('reverse geocode pacing waits ~500ms between actual Apple calls but never for cache hits', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+  const sleeps = [];
+  adapter.sleepForReverseGeocode = async (delayMs) => { sleeps.push(delayMs); };
+  let calls = 0;
+  global.Location = {
+    reverseGeocode: async () => { calls += 1; return [CAMP_OUT_PLACEMARK]; }
+  };
+  const realNow = Date.now;
+  Date.now = () => 1752600000000; // frozen clock: back-to-back calls are 0ms apart
+  try {
+    await adapter.reverseGeocodePlacemark(40.7, -73.9);
+    assert.deepEqual(sleeps, [], 'the first call never waits');
+
+    await adapter.reverseGeocodePlacemark(40.8, -73.8);
+    assert.deepEqual(sleeps, [500], 'an immediate second call waits the full spacing');
+
+    await adapter.reverseGeocodePlacemark(40.7, -73.9); // in-memory hit
+    assert.equal(calls, 2);
+    assert.deepEqual(sleeps, [500], 'cache hits never wait');
+  } finally {
+    Date.now = realNow;
+    delete global.Location;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Suggested-config tab in the URL Discovery UI section
 // ---------------------------------------------------------------------------
 

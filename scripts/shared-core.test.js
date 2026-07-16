@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { SharedCore } = require('./shared-core');
 const { EventSchema } = require('./event-schema');
-const { OpenStreetMapNormalizer } = require('./normalizers');
+const { OpenStreetMapNormalizer, BarDataNormalizer } = require('./normalizers');
 
 const CITIES = {
   dallas: { timezone: 'America/Chicago', patterns: ['dallas'] }
@@ -3918,9 +3918,20 @@ test('review: unique addresses are geocoded once, no matter how many events shar
   assert.equal(byId.get('c').proposed.location, '32.810535, -96.8110709');
 });
 
+// Apple placemark that agrees with PIN_TEST_ADDRESS — the reverse cross-check
+// passes, so destructive pin-moved proposals stay allowed.
+const STATION_4_PLACEMARK = {
+  subThoroughfare: '3911',
+  thoroughfare: 'Cedar Springs Road',
+  locality: 'Dallas',
+  postalCode: '75219'
+};
+
 test('review: pin-moved beyond the threshold proposes the fresh verified pin; below stays ok', async () => {
   const core = createCore();
-  const adapter = buildReviewGeocodeAdapter();
+  const adapter = buildReviewGeocodeAdapter(REVIEW_GEOCODE_RESULTS, {
+    reverseGeocodePlacemark: async () => STATION_4_PLACEMARK
+  });
   const events = [
     buildReviewEvent({ id: 'moved', location: '32.8285, -96.8110709' }), // ~2km off
     buildReviewEvent({ id: 'jitter', location: '32.8106, -96.8110709' }) // ~7m off
@@ -4179,4 +4190,154 @@ test('review: a hyphenated house number that only street-grades stays unverified
   assert.deepEqual(findings[0].proposed, {}, 'the street-grade pin must not replace the hand-verified pin');
   assert.equal(findings[0].current.location, '40.7002, -73.9070');
   assert.ok(findings[0].detail.includes('street-grade'), findings[0].detail);
+});
+
+// ---------------------------------------------------------------------------
+// Bar-data authority + input-specificity + cross-check tightening (2026-07-16
+// phone run: Apple's reverse geocoder was rate-limited for the WHOLE run, so
+// every cross-check silently became 'skipped' — and "FURBALL CAMP" with the
+// vague address "Poconos, PA" got a pin-moved proposal 33 km off from a
+// Nominatim POI that graded 'exact'. The correct answer only exists in the
+// curated bars config.)
+// ---------------------------------------------------------------------------
+
+const CAMP_OUT_BAR = {
+  name: 'Camp Out',
+  address: '446 MT NEBO RD, EAST STROUDSBURG, PA, 18301',
+  coordinates: '41.0219799, -75.1167816'
+};
+
+function createPoconosCore(withBars = true) {
+  return new SharedCore({
+    poconos: { timezone: 'America/New_York', calendar: 'chunky-dad-poconos', patterns: ['poconos'] }
+  }, {
+    eventSchema: EventSchema,
+    bars: withBars ? { poconos: [CAMP_OUT_BAR] } : {}
+  });
+}
+
+function buildPoconosEvent(overrides = {}) {
+  return {
+    id: 'furball-camp',
+    calendarTitle: 'chunky-dad-poconos',
+    title: 'FURBALL CAMP',
+    startDate: new Date('2026-08-15T00:00:00.000Z'),
+    location: '41.0, -75.5', // ~32 km west of the real Camp Out pin
+    address: 'Poconos, PA',
+    bar: 'Camp Out',
+    ...overrides
+  };
+}
+
+function createPoconosContext(core, adapter, overrides = {}) {
+  return createReviewContext(core, adapter, {
+    barDataNormalizer: new BarDataNormalizer(core),
+    ...overrides
+  });
+}
+
+test('review: Poconos regression — curated bar data backs the proposal and no geocode fetch is spent', async () => {
+  const core = createPoconosCore();
+  const adapter = buildReviewGeocodeAdapter([]); // must never be consulted
+  const events = [buildPoconosEvent()];
+
+  const { findings, logLines } = await captureReview(core, events, createPoconosContext(core, adapter));
+
+  assert.equal(findings.length, 1);
+  const finding = findings[0];
+  assert.equal(finding.status, 'pin-moved');
+  assert.equal(finding.proposed.location, '41.0219799, -75.1167816', 'the curated Camp Out pin is proposed');
+  assert.equal(finding.proposed.address, CAMP_OUT_BAR.address, 'one Apply fixes the pin AND the vague address');
+  assert.ok(finding.detail.includes('Camp Out'), `detail must name the bar: ${finding.detail}`);
+  assert.ok(finding.distanceKm > 30 && finding.distanceKm < 35, `distance carried, got ${finding.distanceKm}`);
+  assert.equal(adapter.calls.length, 0, 'bar-matched events never reach the geocoders');
+  assert.ok(logLines.includes('🔎 REVIEW: 1 event(s) matched curated bar data — skipping geocode for them'),
+    `skip log missing, got: ${JSON.stringify(logLines)}`);
+});
+
+test('review: bar-data missing pin proposes the curated pin and address together', async () => {
+  const core = createPoconosCore();
+  const adapter = buildReviewGeocodeAdapter([]);
+  const events = [buildPoconosEvent({ location: '' })];
+
+  const { findings } = await captureReview(core, events, createPoconosContext(core, adapter));
+
+  assert.equal(findings[0].status, 'missing-pin');
+  assert.equal(findings[0].proposed.location, '41.0219799, -75.1167816');
+  assert.equal(findings[0].proposed.address, CAMP_OUT_BAR.address);
+  assert.equal(findings[0].detail, 'pin + address from curated bar data (Camp Out)');
+  assert.equal(adapter.calls.length, 0);
+});
+
+test('review: bar-data within the threshold is ok with a bar-named detail', async () => {
+  const core = createPoconosCore();
+  const adapter = buildReviewGeocodeAdapter([]);
+  const events = [buildPoconosEvent({ location: '41.0220, -75.1168' })]; // a few meters off
+
+  const { findings } = await captureReview(core, events, createPoconosContext(core, adapter));
+
+  assert.equal(findings[0].status, 'ok');
+  assert.equal(findings[0].detail, 'matches curated bar data (Camp Out)');
+  assert.deepEqual(findings[0].proposed, {}, 'ok findings carry no proposal');
+  assert.equal(adapter.calls.length, 0);
+});
+
+// Without the bars config, "Poconos, PA" reaches Nominatim, which happily
+// returns an exact-grading POI for it — the real 2026-07-16 failure mode.
+const POCONOS_POI_RESULT = [{
+  lat: '41.3000000',
+  lon: '-75.3000000',
+  class: 'tourism',
+  type: 'attraction',
+  addresstype: 'tourism',
+  display_name: 'Some Attraction, Poconos, Pennsylvania, United States',
+  address: { county: 'Poconos' }
+}];
+
+test('review: input-specificity gate — a vague address is unverified no matter what the geocoder returns', async () => {
+  const core = createPoconosCore(false); // no bar match available
+  const adapter = buildReviewGeocodeAdapter(POCONOS_POI_RESULT);
+  const events = [
+    buildPoconosEvent(),                  // stored pin present → would have been pin-moved
+    buildPoconosEvent({ id: 'no-pin', location: '' }) // absent → would have been missing-pin
+  ];
+
+  const { findings } = await captureReview(core, events, createPoconosContext(core, adapter));
+  const byId = new Map(findings.map(finding => [finding.id, finding]));
+
+  for (const id of ['furball-camp', 'no-pin']) {
+    assert.equal(byId.get(id).status, 'unverified', `${id} must be unverified`);
+    assert.ok(byId.get(id).detail.includes('too vague'), byId.get(id).detail);
+    assert.ok(byId.get(id).detail.includes('add a bar field'), byId.get(id).detail);
+    assert.deepEqual(byId.get(id).proposed, {}, 'a vague input never backs a proposal');
+  }
+  assert.ok(adapter.calls.length > 0, 'the geocode path ran — the input gate refused its answer');
+});
+
+test('review: cross-check policy — replacing a stored pin needs a PASSED cross-check; additive pins tolerate skipped', async () => {
+  const core = createCore();
+  // No reverseGeocodePlacemark hook → every cross-check is 'skipped'
+  // (exactly what an Apple rate-limit outage looks like).
+  const skippedAdapter = buildReviewGeocodeAdapter();
+  const { findings } = await captureReview(core, [
+    buildReviewEvent({ id: 'moved', location: '32.8285, -96.8110709' }), // ~2 km off
+    buildReviewEvent({ id: 'missing', location: '' })
+  ], createReviewContext(core, skippedAdapter));
+  const byId = new Map(findings.map(finding => [finding.id, finding]));
+
+  assert.equal(byId.get('moved').status, 'unverified');
+  assert.equal(byId.get('moved').detail, 'reverse cross-check unavailable — re-run when Apple geocoding recovers');
+  assert.deepEqual(byId.get('moved').proposed, {}, 'a skipped cross-check never backs a destructive replacement');
+  assert.equal(byId.get('missing').status, 'missing-pin', 'additive proposals stay allowed on skipped');
+  assert.equal(byId.get('missing').proposed.location, '32.810535, -96.8110709');
+
+  // A passing cross-check restores the destructive proposal.
+  const passAdapter = buildReviewGeocodeAdapter(REVIEW_GEOCODE_RESULTS, {
+    reverseGeocodePlacemark: async () => STATION_4_PLACEMARK
+  });
+  const { findings: passFindings } = await captureReview(core,
+    [buildReviewEvent({ id: 'moved', location: '32.8285, -96.8110709' })],
+    createReviewContext(core, passAdapter));
+  assert.equal(passFindings[0].status, 'pin-moved');
+  assert.equal(passFindings[0].proposed.location, '32.810535, -96.8110709');
 });
