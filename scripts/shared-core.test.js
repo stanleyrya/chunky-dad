@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const { SharedCore } = require('./shared-core');
 const { EventSchema } = require('./event-schema');
+const { OpenStreetMapNormalizer } = require('./normalizers');
 
 const CITIES = {
   dallas: { timezone: 'America/Chicago', patterns: ['dallas'] }
@@ -1434,7 +1435,7 @@ test('unchanged address keeps the calendar pin; a divergent fresh geocode is fla
   const core = createCore();
   const adapter = buildArbitrationAdapter({});
 
-  // Geocode jitter (well under 1km): pin kept, logged, but not flagged
+  // Geocode jitter (well under the 0.4km threshold): pin kept, logged, but not flagged
   const near = await capturePinMerge(core,
     buildPinExisting(),
     buildPinScraped({ location: '32.8106, -96.8110709' }),
@@ -1442,9 +1443,20 @@ test('unchanged address keeps the calendar pin; a divergent fresh geocode is fla
   assert.equal(near.finalEvent.location, '32.810535, -96.8110709', 'the calendar pin must survive geocode jitter');
   assert.ok(near.logLines.includes('📍 MERGE: "FURBALL" location kept calendar pin (address unchanged)'),
     `the kept pin is logged, got: ${JSON.stringify(near.logLines)}`);
-  assert.ok(!near.logLines.some(line => line.includes('verify pin')), 'sub-km jitter is not flagged');
+  assert.ok(!near.logLines.some(line => line.includes('verify pin')), 'sub-threshold jitter is not flagged');
   assert.ok(!near.logLines.some(line => line.startsWith('🔄 MERGE:')),
     `a kept pin must not count as clobbered, got: ${JSON.stringify(near.logLines)}`);
+
+  // Fresh geocode ~0.6km away: beyond the 0.4km threshold — flagged. Fresh
+  // geocodes are grade-gated + cross-checked, so sub-km disagreement matters.
+  const mid = await capturePinMerge(core,
+    buildPinExisting(),
+    buildPinScraped({ location: '32.816, -96.8110709' }),
+    { httpAdapter: adapter });
+  assert.equal(mid.finalEvent.location, '32.810535, -96.8110709', 'a sub-km divergence still keeps the pin');
+  assert.ok(mid.logLines.some(line =>
+    /^📍 MERGE: "FURBALL" calendar pin is 0\.6km from fresh geocode of the same address — verify pin$/.test(line)),
+    `a 0.6km divergence is flagged, got: ${JSON.stringify(mid.logLines)}`);
 
   // Fresh geocode ~2km away: pin STILL kept (flag, don't drop), divergence flagged
   const far = await capturePinMerge(core,
@@ -3812,4 +3824,189 @@ test('prepareParsedEvents threads the geocodeVerification knob into the normaliz
   // No knob configured → the option is passed through as undefined (normalizers default to "report")
   await core.prepareParsedEvents([{ title: 'CHUNK' }], {}, {}, null, pipeline, {});
   assert.deepEqual(capturedOptions, { geocodeVerification: undefined });
+});
+
+// ---------------------------------------------------------------------------
+// Calendar reviewer core: geocode check statuses, unique-address dedup,
+// configurable pin-moved threshold, calendar-title → city mapping
+// ---------------------------------------------------------------------------
+
+// One exact-grade Nominatim candidate for the STATION 4 address.
+const REVIEW_GEOCODE_RESULTS = [{
+  lat: '32.810535',
+  lon: '-96.8110709',
+  class: 'amenity',
+  type: 'nightclub',
+  addresstype: 'amenity',
+  display_name: 'Station 4, Cedar Springs Road, Dallas, TX 75219',
+  address: { city: 'Dallas', house_number: '3911' }
+}];
+
+function buildReviewGeocodeAdapter(results = REVIEW_GEOCODE_RESULTS, extras = {}) {
+  const calls = [];
+  return {
+    calls,
+    async fetchData(url) {
+      calls.push(url);
+      return JSON.stringify(results);
+    },
+    ...extras
+  };
+}
+
+function createReviewContext(core, adapter, overrides = {}) {
+  const geocodeNormalizer = new OpenStreetMapNormalizer(core);
+  geocodeNormalizer.delayForRateLimit = async () => {}; // keep the suite fast
+  return { httpAdapter: adapter, geocodeNormalizer, ...overrides };
+}
+
+function buildReviewEvent(overrides = {}) {
+  return {
+    id: 'evt-1',
+    calendarTitle: 'chunky-dad-dallas',
+    title: 'FURBALL',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    location: '32.810535, -96.8110709',
+    address: PIN_TEST_ADDRESS,
+    bar: 'STATION 4',
+    ...overrides
+  };
+}
+
+async function captureReview(core, events, context) {
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let findings;
+  try {
+    findings = await core.reviewCalendarEvents(events, context);
+  } finally {
+    console.log = originalLog;
+  }
+  return { findings, logLines };
+}
+
+test('review: calendar title maps to city via the cities config, then the chunky-dad prefix', () => {
+  const core = new SharedCore({
+    nyc: { timezone: 'America/New_York', calendar: 'NYC Bears', patterns: ['nyc'] },
+    dallas: { timezone: 'America/Chicago', patterns: ['dallas'] }
+  }, { eventSchema: EventSchema });
+  assert.equal(core.cityForCalendarTitle('NYC Bears'), 'nyc');
+  assert.equal(core.cityForCalendarTitle('chunky-dad-dallas'), 'dallas');
+  assert.equal(core.cityForCalendarTitle('Personal'), '');
+});
+
+test('review: unique addresses are geocoded once, no matter how many events share them', async () => {
+  const core = createCore();
+  const adapter = buildReviewGeocodeAdapter();
+  const events = [
+    buildReviewEvent({ id: 'a' }),
+    buildReviewEvent({ id: 'b', title: 'FURBALL: ROUND 2' }),
+    buildReviewEvent({ id: 'c', title: 'FURBALL: NO PIN', location: '' })
+  ];
+
+  const { findings, logLines } = await captureReview(core, events, createReviewContext(core, adapter));
+
+  assert.equal(adapter.calls.length, 1, `one shared address → one geocode fetch, got: ${JSON.stringify(adapter.calls)}`);
+  assert.ok(logLines.includes('🔎 REVIEW: chunky-dad-dallas — 3 events, 1 unique addresses to geocode'),
+    `per-calendar progress line logged, got: ${JSON.stringify(logLines)}`);
+
+  const byId = new Map(findings.map(finding => [finding.id, finding]));
+  assert.equal(byId.get('a').status, 'ok');
+  assert.equal(byId.get('b').status, 'ok');
+  assert.equal(byId.get('c').status, 'missing-pin');
+  assert.equal(byId.get('c').proposed.location, '32.810535, -96.8110709');
+});
+
+test('review: pin-moved beyond the threshold proposes the fresh verified pin; below stays ok', async () => {
+  const core = createCore();
+  const adapter = buildReviewGeocodeAdapter();
+  const events = [
+    buildReviewEvent({ id: 'moved', location: '32.8285, -96.8110709' }), // ~2km off
+    buildReviewEvent({ id: 'jitter', location: '32.8106, -96.8110709' }) // ~7m off
+  ];
+
+  const { findings } = await captureReview(core, events, createReviewContext(core, adapter));
+  const byId = new Map(findings.map(finding => [finding.id, finding]));
+
+  const moved = byId.get('moved');
+  assert.equal(moved.status, 'pin-moved');
+  assert.equal(moved.proposed.location, '32.810535, -96.8110709');
+  assert.ok(moved.distanceKm > 1.9 && moved.distanceKm < 2.1, `distance carried on the finding, got ${moved.distanceKm}`);
+  assert.equal(moved.check, 'geocode');
+  assert.equal(moved.calendarTitle, 'chunky-dad-dallas');
+
+  const jitter = byId.get('jitter');
+  assert.equal(jitter.status, 'ok');
+  assert.deepEqual(jitter.proposed, {}, 'ok findings carry no proposal');
+});
+
+test('review: pinMovedThresholdKm is configurable', async () => {
+  const core = createCore();
+  const adapter = buildReviewGeocodeAdapter();
+  const events = [buildReviewEvent({ id: 'moved', location: '32.8285, -96.8110709' })];
+
+  const { findings } = await captureReview(core, events,
+    createReviewContext(core, adapter, { pinMovedThresholdKm: 5 }));
+
+  assert.equal(findings[0].status, 'ok', 'a 2km divergence is ok under a 5km threshold');
+});
+
+test('review: an address the ladder cannot pin is surfaced as unpinnable', async () => {
+  const core = createCore();
+  const adapter = buildReviewGeocodeAdapter([]); // every rung (and Photon) returns nothing
+  const events = [
+    buildReviewEvent({ id: 'no-pin', location: '' }),
+    buildReviewEvent({ id: 'has-pin' })
+  ];
+
+  const { findings } = await captureReview(core, events, createReviewContext(core, adapter));
+  const byId = new Map(findings.map(finding => [finding.id, finding]));
+
+  assert.equal(byId.get('no-pin').status, 'unpinnable');
+  assert.deepEqual(byId.get('no-pin').proposed, {});
+  assert.ok(byId.get('no-pin').detail.includes('no usable geocoordinate'));
+  // A stored pin whose address no longer geocodes is also surfaced — kept, unverified
+  assert.equal(byId.get('has-pin').status, 'unpinnable');
+  assert.ok(byId.get('has-pin').detail.includes('stored pin kept'));
+});
+
+test('review: a pin without an address proposes the reverse-geocoded address', async () => {
+  const core = createCore();
+  const adapter = buildReviewGeocodeAdapter([], {
+    reverseGeocode: async () => '3911 Cedar Springs Rd, Dallas, TX 75219'
+  });
+  const events = [
+    buildReviewEvent({ id: 'pin-only', address: '', bar: '' }),
+    buildReviewEvent({ id: 'nothing', address: '', bar: '', location: '' })
+  ];
+
+  const { findings } = await captureReview(core, events, createReviewContext(core, adapter));
+  const byId = new Map(findings.map(finding => [finding.id, finding]));
+
+  const pinOnly = byId.get('pin-only');
+  assert.equal(pinOnly.status, 'missing-address');
+  assert.equal(pinOnly.proposed.address, '3911 Cedar Springs Rd, Dallas, TX 75219');
+  assert.equal(adapter.calls.length, 0, 'the native reverse path never spends Nominatim budget');
+
+  assert.equal(byId.get('nothing').status, 'no-data');
+  assert.deepEqual(byId.get('nothing').proposed, {});
+});
+
+test('review: summarizeReviewFindings counts statuses and proposals', () => {
+  const summary = SharedCore.summarizeReviewFindings([
+    { status: 'ok', proposed: {} },
+    { status: 'ok', proposed: {} },
+    { status: 'pin-moved', proposed: { location: '1, 2' } },
+    { status: 'missing-pin', proposed: { location: '1, 2' } },
+    { status: 'missing-address', proposed: { address: 'x' } },
+    { status: 'unpinnable', proposed: {} }
+  ]);
+  assert.equal(summary.findings, 6);
+  assert.equal(summary.ok, 2);
+  assert.equal(summary.proposals, 3);
+  assert.equal(summary.missingProposals, 2);
+  assert.deepEqual(summary.byStatus, {
+    ok: 2, 'pin-moved': 1, 'missing-pin': 1, 'missing-address': 1, unpinnable: 1
+  });
 });

@@ -489,3 +489,186 @@ test('generateDiscoverySection keeps Mermaid default-active when no suggested co
   assert.ok(html.includes(`class="disc-tab-btn disc-tab-active" data-tab="mermaid_Old_Run_0"`), 'mermaid stays the default tab');
   assert.ok(html.includes(`<div id="mermaid_Old_Run_0" class="disc-tab-panel">`), 'mermaid panel visible');
 });
+
+// ---------------------------------------------------------------------------
+// Calendar reviewer: calendar filtering, apply-finding writes, findings UI
+// ---------------------------------------------------------------------------
+
+test('getReviewCalendars keeps writable chunky-dad calendars by default and honors explicit titles', async () => {
+  const adapter = buildAdapter();
+  const calendars = [
+    { title: 'chunky-dad-nyc', allowsContentModifications: true },
+    { title: 'chunky-dad-seattle', allowsContentModifications: false },
+    { title: 'Personal', allowsContentModifications: true }
+  ];
+  const originalForEvents = global.Calendar.forEvents;
+  global.Calendar.forEvents = async () => calendars;
+  try {
+    const auto = await adapter.getReviewCalendars([]);
+    assert.deepEqual(auto.map((calendar) => calendar.title), ['chunky-dad-nyc'],
+      'read-only and non-chunky-dad calendars are excluded by default');
+
+    const explicit = await adapter.getReviewCalendars(['Personal', 'chunky-dad-seattle']);
+    assert.deepEqual(explicit.map((calendar) => calendar.title), ['chunky-dad-seattle', 'Personal'],
+      'explicit titles override the default filter');
+  } finally {
+    global.Calendar.forEvents = originalForEvents;
+  }
+});
+
+test('applyReviewFinding mutates only the proposed fields on the stubbed CalendarEvent', async () => {
+  const adapter = buildAdapter();
+  const originalNotes = 'bar: STATION 4\naddress: 100 Old Rd, Dallas\nwebsite: https://x.example';
+  let saves = 0;
+  const stubEvent = {
+    title: 'FURBALL',
+    location: '1, 2',
+    notes: originalNotes,
+    save: async () => { saves += 1; }
+  };
+  adapter.reviewEventIndex = { 'evt-1': stubEvent };
+
+  // Location proposal: only the location field changes
+  const pinResult = await adapter.applyReviewFinding({
+    id: 'evt-1', eventTitle: 'FURBALL', calendarTitle: 'chunky-dad-dallas',
+    proposed: { location: '32.810535, -96.8110709' }
+  });
+  assert.equal(pinResult.success, true);
+  assert.deepEqual(pinResult.appliedFields, ['location']);
+  assert.equal(stubEvent.location, '32.810535, -96.8110709');
+  assert.equal(stubEvent.notes, originalNotes, 'notes untouched by a location-only fix');
+  assert.equal(stubEvent.title, 'FURBALL');
+  assert.equal(saves, 1);
+
+  // Address proposal: only the address line inside notes is rewritten
+  await adapter.applyReviewFinding({
+    id: 'evt-1', eventTitle: 'FURBALL', calendarTitle: 'chunky-dad-dallas',
+    proposed: { address: '3911 Cedar Springs Rd, Dallas, TX 75219' }
+  });
+  assert.equal(stubEvent.notes,
+    'bar: STATION 4\naddress: 3911 Cedar Springs Rd, Dallas, TX 75219\nwebsite: https://x.example');
+  assert.equal(stubEvent.location, '32.810535, -96.8110709', 'location untouched by an address-only fix');
+  assert.equal(saves, 2);
+
+  // Missing address line is appended; free text in notes survives
+  stubEvent.notes = 'Doors at 9pm, no cover\nbar: STATION 4';
+  await adapter.applyReviewFinding({
+    id: 'evt-1', eventTitle: 'FURBALL', calendarTitle: 'chunky-dad-dallas',
+    proposed: { address: '5025 Bowser Ave, Dallas' }
+  });
+  assert.equal(stubEvent.notes, 'Doors at 9pm, no cover\nbar: STATION 4\naddress: 5025 Bowser Ave, Dallas');
+
+  // Unknown finding id or an empty proposal never saves
+  const missing = await adapter.applyReviewFinding({ id: 'nope', proposed: { location: '1, 2' } });
+  assert.equal(missing.success, false);
+  const empty = await adapter.applyReviewFinding({ id: 'evt-1', proposed: {} });
+  assert.equal(empty.success, false);
+  assert.equal(saves, 3);
+});
+
+function buildReviewFindingsFixture() {
+  return [
+    {
+      id: 'ok-1', calendarTitle: 'chunky-dad-nyc', eventTitle: 'OK Event',
+      startDate: '2026-08-01T02:00:00.000Z', check: 'geocode', status: 'ok',
+      current: { location: '40.7, -73.9', address: '123 W 4th St' }, proposed: {},
+      detail: 'stored pin matches a fresh geocode of the address'
+    },
+    {
+      id: 'pm-"1"', calendarTitle: 'chunky-dad-nyc', eventTitle: 'Bear <b>Night</b>',
+      startDate: '2026-08-02T02:00:00.000Z', check: 'geocode', status: 'pin-moved',
+      current: { location: '40.7, -73.9', address: '123 W 4th St' },
+      proposed: { location: '40.71, -73.99' }, distanceKm: 1.25,
+      detail: 'stored pin is 1.3km from the fresh verified geocode of this address'
+    },
+    {
+      id: 'ma-1', calendarTitle: 'chunky-dad-seattle', eventTitle: 'Pin Only',
+      startDate: '2026-08-03T02:00:00.000Z', check: 'geocode', status: 'missing-address',
+      current: { location: '47.6, -122.3', address: '' },
+      proposed: { address: '1600 Broadway, Seattle' },
+      detail: 'pin has no address — reverse-geocoded address proposed'
+    },
+    {
+      id: 'up-1', calendarTitle: 'chunky-dad-seattle', eventTitle: 'Mystery Venue',
+      startDate: '2026-08-04T02:00:00.000Z', check: 'geocode', status: 'unpinnable',
+      current: { location: '', address: 'Somewhere Nowhere 123' }, proposed: {},
+      detail: 'no usable geocoordinate for this address (grade gate/ladder found nothing)'
+    }
+  ];
+}
+
+test('generateReviewHTML renders per-calendar sections, chips, buttons, and escaped payloads', () => {
+  const adapter = buildAdapter();
+  const html = adapter.generateReviewHTML(buildReviewFindingsFixture());
+
+  // Summary header: events reviewed / ok / needing attention
+  assert.ok(html.includes('Calendar Reviewer'));
+  assert.ok(html.includes('<span class="stat-value">4</span>'));
+  assert.ok(html.includes('<span class="stat-value">1</span>'));
+  assert.ok(html.includes('<span class="stat-value">3</span>'));
+
+  // One section per calendar
+  assert.ok(html.includes('chunky-dad-nyc'));
+  assert.ok(html.includes('chunky-dad-seattle'));
+
+  // OK events collapse into a single expandable line, with no buttons inside
+  assert.ok(html.includes('1 event looks right'));
+  const okDetails = html.match(/<details class="ok-details">[\s\S]*?<\/details>/);
+  assert.ok(okDetails && okDetails[0].includes('OK Event'));
+  assert.ok(!okDetails[0].includes('<button'));
+
+  // Status chips are color-coded per status
+  assert.ok(html.includes('status-chip status-pin-moved'));
+  assert.ok(html.includes('status-chip status-missing-address'));
+  assert.ok(html.includes('status-chip status-unpinnable'));
+
+  // Distance badge for pin-moved
+  assert.ok(html.includes('1.3 km'));
+
+  // Titles and ids are escaped — raw markup and quotes never leak into the DOM
+  assert.ok(!html.includes('<b>Night</b>'));
+  assert.ok(html.includes('Bear &lt;b&gt;Night&lt;/b&gt;'));
+  assert.ok(html.includes('data-finding-id="pm-&quot;1&quot;"'));
+
+  // Apply buttons only where a proposal exists (pin-moved + missing-address)
+  assert.equal((html.match(/class="apply-btn"/g) || []).length, 2);
+
+  // Map links: Apple Maps anchor plus a collapsed OSM iframe that only
+  // carries data-src (the frame src is assigned on first expand)
+  assert.ok(html.includes('https://maps.apple.com/?ll=40.71,-73.99&amp;q=Bear%20%3Cb%3ENight%3C%2Fb%3E'));
+  assert.ok(html.includes('data-src="https://www.openstreetmap.org/export/embed.html?bbox='));
+  assert.ok(!/<iframe[^>]* src=/.test(html), 'iframes must stay unloaded until expanded');
+
+  // Sticky footer bulk actions + the native bridge plumbing
+  assert.ok(html.includes('Add missing only'));
+  assert.ok(html.includes('Apply all'));
+  assert.ok(html.includes("applyBulk('missing-only')"));
+  assert.ok(html.includes("applyBulk('all')"));
+  assert.ok(html.includes('function postReviewAction'));
+  assert.ok(html.includes('function markFindingApplied'));
+
+  // Self-contained page: no external scripts or stylesheets
+  assert.ok(!html.includes('<link '));
+  assert.ok(!/<script[^>]+src=/.test(html));
+});
+
+test('selectReviewFindingsForAction resolves single, bulk, and missing-only payloads', () => {
+  const adapter = buildAdapter();
+  const findings = buildReviewFindingsFixture();
+
+  const single = adapter.selectReviewFindingsForAction({ action: 'apply', id: 'pm-"1"' }, findings);
+  assert.deepEqual(single.map((finding) => finding.id), ['pm-"1"']);
+
+  const missingOnly = adapter.selectReviewFindingsForAction({ action: 'apply-bulk', mode: 'missing-only' }, findings);
+  assert.deepEqual(missingOnly.map((finding) => finding.id), ['ma-1'],
+    'missing-only excludes pin-moved corrections');
+
+  const all = adapter.selectReviewFindingsForAction({ action: 'apply-bulk', mode: 'all' }, findings);
+  assert.deepEqual(all.map((finding) => finding.id), ['pm-"1"', 'ma-1'],
+    'bulk apply targets every finding with a proposal');
+
+  // Applied findings are never re-applied; proposal-less findings never match
+  findings[1]._applied = true;
+  assert.deepEqual(adapter.selectReviewFindingsForAction({ action: 'apply', id: 'pm-"1"' }, findings), []);
+  assert.deepEqual(adapter.selectReviewFindingsForAction({ action: 'apply', id: 'up-1' }, findings), []);
+});
