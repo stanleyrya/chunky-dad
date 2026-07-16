@@ -2826,12 +2826,42 @@ class AiWebParser {
         if (typeof address === 'string') return clean(address);
         if (Array.isArray(address)) return this.formatJsonLdAddress(address[0], clean);
         if (typeof address === 'object') {
-            return [address.streetAddress, address.addressLocality, address.addressRegion, address.postalCode]
+            // Eventbrite (and other ticketing) JSON-LD often packs the FULL
+            // address into streetAddress ("10-90 Wyckoff Avenue, Queens, NY
+            // 11385") while still supplying addressLocality/addressRegion —
+            // naive joining doubled the city/state ("..., Queens, NY, Queens,
+            // NY"), which churned merge arbitration every run and degraded
+            // geocoding. Skip a part that already appears in the address
+            // accumulated so far. Bear-site pages with a bare streetAddress
+            // ("123 Main St") still get locality/region/postal appended,
+            // because those parts are genuinely absent from the street text.
+            const parts = [address.streetAddress, address.addressLocality, address.addressRegion, address.postalCode]
                 .map(part => clean(part))
-                .filter(Boolean)
-                .join(', ');
+                .filter(Boolean);
+            const accumulated = [];
+            for (const part of parts) {
+                if (!this.addressAlreadyContainsPart(accumulated.join(', '), part)) {
+                    accumulated.push(part);
+                }
+            }
+            return accumulated.join(', ');
         }
         return '';
+    }
+
+    // True when `part` already appears in the address text built so far,
+    // compared case-insensitively on whitespace/punctuation-normalized word
+    // sequences. Whole word-boundary matching only — the region "NY" must not
+    // be considered "present" just because the street contains "SUNNYSIDE".
+    addressAlreadyContainsPart(builtSoFar, part) {
+        if (!builtSoFar || !part) return false;
+        const tokenize = (value) => String(value)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+        const needle = tokenize(part);
+        if (!needle) return false;
+        return ` ${tokenize(builtSoFar)} `.includes(` ${needle} `);
     }
 
     pickJsonLdImage(image) {

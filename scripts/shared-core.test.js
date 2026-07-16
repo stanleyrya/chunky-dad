@@ -1383,6 +1383,136 @@ test('location preserve-on-empty: an empty scrape never clears a calendar locati
   assert.equal(adapter.calls.length, 0, 'location is never AI-arbitrated');
 });
 
+// ---------------------------------------------------------------------------
+// Location follows the address decision (2026-07-15 run: "scraped coordinates
+// win" rewrote stored pins with whatever the geocoder produced that day and
+// would overwrite human-corrected pins)
+// ---------------------------------------------------------------------------
+
+const PIN_TEST_ADDRESS = '3911 Cedar Springs Rd, Dallas, TX 75219';
+
+function buildPinScraped(overrides = {}) {
+  const core = createCore();
+  return {
+    title: 'FURBALL',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    address: PIN_TEST_ADDRESS,
+    location: '32.810535, -96.8110709',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    ...overrides
+  };
+}
+
+function buildPinExisting(overrides = {}, address = PIN_TEST_ADDRESS) {
+  return {
+    title: 'FURBALL',
+    startDate: new Date('2026-07-05T22:00:00.000Z'),
+    endDate: new Date('2026-07-06T02:00:00.000Z'),
+    location: '32.810535, -96.8110709',
+    notes: address ? `address: ${address}` : '',
+    ...overrides
+  };
+}
+
+async function capturePinMerge(core, existing, scraped, options) {
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, options);
+  } finally {
+    console.log = originalLog;
+  }
+  return { finalEvent, logLines };
+}
+
+test('unchanged address keeps the calendar pin; a divergent fresh geocode is flagged, not applied', async () => {
+  const core = createCore();
+  const adapter = buildArbitrationAdapter({});
+
+  // Geocode jitter (well under 1km): pin kept, logged, but not flagged
+  const near = await capturePinMerge(core,
+    buildPinExisting(),
+    buildPinScraped({ location: '32.8106, -96.8110709' }),
+    { httpAdapter: adapter });
+  assert.equal(near.finalEvent.location, '32.810535, -96.8110709', 'the calendar pin must survive geocode jitter');
+  assert.ok(near.logLines.includes('📍 MERGE: "FURBALL" location kept calendar pin (address unchanged)'),
+    `the kept pin is logged, got: ${JSON.stringify(near.logLines)}`);
+  assert.ok(!near.logLines.some(line => line.includes('verify pin')), 'sub-km jitter is not flagged');
+  assert.ok(!near.logLines.some(line => line.startsWith('🔄 MERGE:')),
+    `a kept pin must not count as clobbered, got: ${JSON.stringify(near.logLines)}`);
+
+  // Fresh geocode ~2km away: pin STILL kept (flag, don't drop), divergence flagged
+  const far = await capturePinMerge(core,
+    buildPinExisting(),
+    buildPinScraped({ location: '32.8285, -96.8110709' }),
+    { httpAdapter: adapter });
+  assert.equal(far.finalEvent.location, '32.810535, -96.8110709', 'a divergent geocode must not silently move the pin');
+  assert.ok(far.logLines.some(line =>
+    /^📍 MERGE: "FURBALL" calendar pin is 2\.0km from fresh geocode of the same address — verify pin$/.test(line)),
+    `the divergence is flagged with its distance, got: ${JSON.stringify(far.logLines)}`);
+
+  // Identical pins stay quiet: no kept-pin line, no flag
+  const same = await capturePinMerge(core, buildPinExisting(), buildPinScraped(), { httpAdapter: adapter });
+  assert.equal(same.finalEvent.location, '32.810535, -96.8110709');
+  assert.ok(!same.logLines.some(line => line.includes('kept calendar pin')), 'identical pins log nothing');
+
+  assert.equal(adapter.calls.length, 0, 'location never consults the AI');
+});
+
+test('a changed address means the venue moved — scraped coordinates are adopted', async () => {
+  const core = createCore();
+  const movedAddress = '5025 Bowser Ave, Dallas, TX 75209';
+  const adapter = buildArbitrationAdapter({
+    address: { pick: 'scraped', value: movedAddress, reason: 'venue moved' }
+  });
+
+  const { finalEvent, logLines } = await capturePinMerge(core,
+    buildPinExisting(),
+    buildPinScraped({ address: movedAddress, location: '32.8285, -96.8300' }),
+    { httpAdapter: adapter });
+
+  assert.equal(finalEvent.address, movedAddress);
+  assert.equal(finalEvent.location, '32.8285, -96.8300', 'a changed address adopts the fresh geocode');
+  assert.ok(logLines.some(line => line.startsWith('🔄 MERGE:') && line.includes('location')),
+    `the adopted pin is tracked as clobbered, got: ${JSON.stringify(logLines)}`);
+
+  // A calendar event without coordinates is always filled by scraped ones
+  const filled = await core.createFinalEventObject(
+    buildPinExisting({ location: '' }),
+    buildPinScraped(),
+    { httpAdapter: buildArbitrationAdapter({}) });
+  assert.equal(filled.location, '32.810535, -96.8110709', 'an empty calendar location is filled by the scrape');
+});
+
+test('when arbitration keeps the calendar address, the calendar pin is kept too', async () => {
+  // The Eventbrite doubled-address bug: the scraped address is malformed, the
+  // AI keeps picking the clean calendar value — the venue did NOT move, so the
+  // pin must not follow the (rejected) scraped geocode. This only works if the
+  // location decision is deferred until the final merged address is known.
+  const core = createCore();
+  const doubledAddress = `${PIN_TEST_ADDRESS}, Dallas, TX`;
+  const adapter = buildArbitrationAdapter({
+    address: { pick: 'calendar', value: PIN_TEST_ADDRESS, reason: 'clean address' }
+  });
+
+  const { finalEvent, logLines } = await capturePinMerge(core,
+    buildPinExisting(),
+    buildPinScraped({ address: doubledAddress, location: '32.8285, -96.8110709' }),
+    { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'the address conflict itself still arbitrates');
+  assert.equal(finalEvent.address, PIN_TEST_ADDRESS);
+  assert.equal(finalEvent.location, '32.810535, -96.8110709',
+    'the AI keeping the calendar address means the venue did not move — keep the calendar pin');
+  assert.ok(logLines.includes('📍 MERGE: "FURBALL" location kept calendar pin (address unchanged)'),
+    `the kept pin is logged, got: ${JSON.stringify(logLines)}`);
+});
+
 test('mergeParsedEvents: an empty location loses to the non-empty side (text and coordinates)', async () => {
   const core = createCore();
   const priorities = core.getResolvedFieldPriorities({});
@@ -2881,7 +3011,46 @@ test('an empty scraped cover keeps the calendar cover and never appears clobbere
     `expected the kept-calendar summary to list cover, got: ${JSON.stringify(logLines)}`);
 });
 
-test('a genuinely differing scraped cover still reaches arbitration and the winner is applied', async () => {
+test('cover formatting twins are not a conflict: calendar value kept, no AI, no clobber', async () => {
+  // 2026-07-15 run: the old formatter spaced the range dash, the sticker-price
+  // formatter doesn't — the SAME price burned an AI arbitration every run.
+  const core = createCore();
+  const scraped = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    cover: '$22.10-$39.98',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = {
+    title: 'CHUNK DORE ALLEY',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    notes: 'cover: $22.10 - $39.98'
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'a whitespace-only cover twin must never reach the AI');
+  assert.equal(finalEvent.cover, '$22.10 - $39.98', 'the calendar formatting is kept — nothing churns');
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).cover, '$22.10 - $39.98');
+  assert.ok(!logLines.some(line => line.startsWith('🔄 MERGE:')),
+    `a formatting twin must not be tracked as clobbered, got: ${JSON.stringify(logLines)}`);
+});
+
+test('a genuinely differing scraped cover wins deterministically — freshness, not arbitration', async () => {
+  // Prices only ever come from the live ticket page; the calendar copy is last
+  // scrape's snapshot, so arbitration (which has no freshness signal) is the
+  // wrong tool for genuine cover differences.
   const core = createCore();
   const scraped = {
     title: 'CHUNK DORE ALLEY',
@@ -2897,15 +3066,28 @@ test('a genuinely differing scraped cover still reaches arbitration and the winn
     notes: 'cover: $25.63 - $61.50'
   };
   const adapter = buildArbitrationAdapter({
-    cover: { pick: 'scraped', value: '$46.13-$61.50', reason: 'current listed price' }
+    cover: { pick: 'calendar', value: '$25.63 - $61.50', reason: 'should never be asked' }
   });
 
-  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
 
-  assert.equal(adapter.calls.length, 1, 'a genuine cover conflict must reach arbitration');
-  assert.match(adapter.calls[0].prompt, /field: cover/);
-  assert.equal(finalEvent.cover, '$46.13-$61.50');
+  assert.equal(adapter.calls.length, 0, 'genuine cover differences must never reach the AI');
+  assert.equal(finalEvent.cover, '$46.13-$61.50', 'the live-page price wins');
   assert.equal(core.parseNotesIntoFields(finalEvent.notes).cover, '$46.13-$61.50');
+  assert.ok(logLines.some(line => line.startsWith('🔒 MERGE:')
+    && line.includes('field=cover')
+    && line.includes('cover reflects the live ticket page — freshness wins')),
+    `the deterministic decision must be logged, got: ${JSON.stringify(logLines)}`);
+  assert.ok(finalEvent._original.aiArbitration.deterministic.includes('cover'),
+    'the decision is recorded as deterministic for display/metrics');
 });
 
 test('PARSER MERGE summary lists only fields the merge actually changed on the outgoing record', async () => {
@@ -2946,6 +3128,104 @@ test('PARSER MERGE summary lists only fields the merge actually changed on the o
   assert.ok(summary, `expected a PARSER MERGE summary, got: ${JSON.stringify(logLines)}`);
   assert.match(summary, /1 field updated \(bar\)/, 'only the genuinely changed field is counted');
   assert.ok(!summary.includes('cover'), 'a preserved-from-base field must not be listed as updated');
+});
+
+// ---------------------------------------------------------------------------
+// gmaps is DERIVED (a pure function of bar + address) — never arbitrated,
+// always regenerated from the final merged values (2026-07-15 run: arbitrating
+// gmaps independently let it disagree with the merged bar/address)
+// ---------------------------------------------------------------------------
+
+const GMAPS_TEST_ADDRESS = '10-90 Wyckoff Avenue, Queens, NY 11385';
+
+function buildGmapsUrl(barName) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${barName}, ${GMAPS_TEST_ADDRESS}`)}`;
+}
+
+function buildGmapsScraped(overrides = {}) {
+  const core = createCore();
+  return {
+    title: 'MEGAWOOF',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    bar: 'Basement',
+    address: GMAPS_TEST_ADDRESS,
+    gmaps: buildGmapsUrl('Basement'),
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    ...overrides
+  };
+}
+
+function buildGmapsExisting(barName, gmapsValue) {
+  return {
+    title: 'MEGAWOOF',
+    startDate: new Date('2026-07-25T21:00:00.000Z'),
+    notes: [
+      `bar: ${barName}`,
+      `address: ${GMAPS_TEST_ADDRESS}`,
+      `gmaps: ${gmapsValue}`
+    ].join('\n')
+  };
+}
+
+test('gmaps is regenerated from the merged bar + address and never enters arbitration', async () => {
+  const core = createCore();
+
+  // AI picks the CALENDAR bar → gmaps is rebuilt around it
+  const calendarWins = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'HOLO', reason: 'official venue name' }
+  });
+  const holoEvent = await core.createFinalEventObject(
+    buildGmapsExisting('HOLO', 'https://www.google.com/maps/search/?api=1&query=stale'),
+    buildGmapsScraped(),
+    { httpAdapter: calendarWins });
+  assert.equal(calendarWins.calls.length, 1, 'only the bar conflict arbitrates');
+  assert.ok(!/field: gmaps/.test(calendarWins.calls[0].prompt), 'gmaps must never be in the AI batch');
+  assert.equal(holoEvent.bar, 'HOLO');
+  assert.equal(holoEvent.gmaps, buildGmapsUrl('HOLO'), 'gmaps follows the merged bar + address');
+  assert.equal(core.parseNotesIntoFields(holoEvent.notes).gmaps, buildGmapsUrl('HOLO'), 'the derived gmaps round-trips');
+
+  // AI picks the SCRAPED bar → gmaps is rebuilt around that instead
+  const scrapedWins = buildArbitrationAdapter({
+    bar: { pick: 'scraped', value: 'Basement', reason: 'venue changed' }
+  });
+  const basementEvent = await core.createFinalEventObject(
+    buildGmapsExisting('HOLO', buildGmapsUrl('HOLO')),
+    buildGmapsScraped(),
+    { httpAdapter: scrapedWins });
+  assert.equal(basementEvent.bar, 'Basement');
+  assert.equal(basementEvent.gmaps, buildGmapsUrl('Basement'), 'gmaps is rebuilt when the scraped bar wins');
+});
+
+test('gmaps clobber tracking: an unchanged regenerated URL is quiet, a changed one is reported', async () => {
+  const core = createCore();
+  const capture = async (existing, scraped) => {
+    const logLines = [];
+    const originalLog = console.log;
+    console.log = (message) => { logLines.push(String(message)); };
+    try {
+      await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+    } finally {
+      console.log = originalLog;
+    }
+    return logLines;
+  };
+
+  // Stored gmaps already equals the regenerated value → nothing reported, even
+  // though the scraped side carried a different (e.g. coordinate-form) URL
+  const quietLines = await capture(
+    buildGmapsExisting('Basement', buildGmapsUrl('Basement')),
+    buildGmapsScraped({ gmaps: 'https://www.google.com/maps/search/?api=1&query=40.7089%2C-73.9188' }));
+  assert.ok(!quietLines.some(line => line.startsWith('🔄 MERGE:')),
+    `an unchanged derived gmaps must not be reported clobbered, got: ${JSON.stringify(quietLines)}`);
+
+  // Stale stored gmaps → the regenerated value replaces it and IS reported
+  const changedLines = await capture(
+    buildGmapsExisting('Basement', 'https://www.google.com/maps/search/?api=1&query=stale'),
+    buildGmapsScraped());
+  assert.ok(changedLines.some(line => line.startsWith('🔄 MERGE:') && line.includes('gmaps')),
+    `a genuinely changed gmaps is tracked, got: ${JSON.stringify(changedLines)}`);
 });
 
 // ---------------------------------------------------------------------------

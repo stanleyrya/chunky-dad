@@ -768,6 +768,58 @@ test('extractEventsFromJsonLd builds a complete event from ticketing-page struct
   assert.equal(event.url, 'https://sickening.events/e/bearracuda-portland-pridefriday');
 });
 
+test('formatJsonLdAddress never duplicates locality/region already inside the street address', () => {
+  const parser = createParser();
+  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+  // Eventbrite shape (2026-07-15 Megawoof run): streetAddress already carries
+  // the FULL address — appending locality/region again produced
+  // "..., Queens, NY 11385, Queens, NY", which churned AI merge arbitration on
+  // address/gmaps every run and degraded geocoding.
+  assert.equal(
+    parser.formatJsonLdAddress({
+      streetAddress: '10-90 Wyckoff Avenue, Queens, NY 11385',
+      addressLocality: 'Queens',
+      addressRegion: 'NY',
+      postalCode: '11385'
+    }, clean),
+    '10-90 Wyckoff Avenue, Queens, NY 11385'
+  );
+
+  // Bare street (typical bear-site JSON-LD): locality/region/postal MUST still
+  // be appended — they are genuinely absent from the street text.
+  assert.equal(
+    parser.formatJsonLdAddress({
+      streetAddress: '123 Main St',
+      addressLocality: 'Phoenix',
+      addressRegion: 'AZ',
+      postalCode: '85004'
+    }, clean),
+    '123 Main St, Phoenix, AZ, 85004'
+  );
+
+  // Token guard: the region "NY" is NOT "present" just because the street
+  // contains "SUNNYSIDE" — containment is whole-token, not bare substring.
+  assert.equal(
+    parser.formatJsonLdAddress({
+      streetAddress: '4501 SUNNYSIDE AVE',
+      addressLocality: 'Brooklyn',
+      addressRegion: 'NY'
+    }, clean),
+    '4501 SUNNYSIDE AVE, Brooklyn, NY'
+  );
+
+  // String and array address shapes pass through unchanged.
+  assert.equal(
+    parser.formatJsonLdAddress('10-90 Wyckoff Avenue, Queens, NY 11385', clean),
+    '10-90 Wyckoff Avenue, Queens, NY 11385'
+  );
+  assert.equal(
+    parser.formatJsonLdAddress([{ streetAddress: '123 Main St', addressLocality: 'Phoenix' }], clean),
+    '123 Main St, Phoenix'
+  );
+});
+
 test('parseJsonLdDateValue anchors offset-less dates as wall-clock UTC and flags them', () => {
   const parser = createParser();
 
