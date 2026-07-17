@@ -3129,6 +3129,9 @@ class ScriptableAdapter {
 
     // Bars freshness line: where the curated bar data came from this run
     // (counts from refreshRemoteBars). Absent when the caller didn't refresh.
+    const barDataCount = list.filter(
+      (finding) => finding && finding.source === "bar-data",
+    ).length;
     const barsFreshness =
       options.barsFreshness && typeof options.barsFreshness === "object"
         ? options.barsFreshness
@@ -3162,7 +3165,7 @@ class ScriptableAdapter {
                         ${okFindings
                           .map(
                             (f) =>
-                              `<li>${this.escapeHtml(f.eventTitle)}${this.formatReviewDate(f.startDate) ? ` — ${this.escapeHtml(this.formatReviewDate(f.startDate))}` : ""}</li>`,
+                              `<li>${this.escapeHtml(f.eventTitle)}${this.formatReviewDate(f.startDate) ? ` — ${this.escapeHtml(this.formatReviewDate(f.startDate))}` : ""}${f.source === "bar-data" ? ` <span class="ok-bar-note">🍺 ${this.escapeHtml(f.detail || "bar data")}</span>` : ""}</li>`,
                           )
                           .join("\n")}
                     </ul>
@@ -3262,6 +3265,8 @@ class ScriptableAdapter {
 
         .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
         .bars-freshness { font-size: 12px; opacity: 0.85; margin-top: 10px; }
+        .review-error-banner { background: #b3261e; color: #fff; font-size: 13px; font-weight: 600; padding: 10px 16px; }
+        .ok-bar-note { opacity: 0.7; font-size: 12px; }
         .summary-chip {
             font-size: 12px;
             font-weight: 600;
@@ -3447,8 +3452,9 @@ class ScriptableAdapter {
             </div>
         </div>
         ${summaryChips ? `<div class="summary-chips">${summaryChips}</div>` : ""}
-        ${barsFreshnessLine ? `<div class="bars-freshness">🍺 Bars: ${this.escapeHtml(barsFreshnessLine)}</div>` : ""}
+        ${barDataCount > 0 ? `<div class="bars-freshness">🍺 ${barDataCount} event${barDataCount === 1 ? "" : "s"} verified against curated bar data${barsFreshnessLine ? ` — ${this.escapeHtml(barsFreshnessLine)}` : ""}</div>` : barsFreshnessLine ? `<div class="bars-freshness">🍺 Bars: ${this.escapeHtml(barsFreshnessLine)}</div>` : ""}
     </div>
+    <div id="reviewErrorBanner" class="review-error-banner" style="display:none"></div>
 
     ${sections.join("\n") || '<div class="section">No events found in the review window.</div>'}
 
@@ -3458,19 +3464,25 @@ class ScriptableAdapter {
     </div>
 
     <script>
-        // Native bridge: every action is queued and drained by the Scriptable
-        // side's evaluateJavaScript polling loop (see presentReviewResults).
-        window.__reviewQueue = [];
-        window.__reviewWaiter = null;
-        function postReviewAction(payload) {
-            var message = JSON.stringify(payload);
-            if (window.__reviewWaiter) {
-                var waiter = window.__reviewWaiter;
-                window.__reviewWaiter = null;
-                waiter(message);
-            } else {
-                window.__reviewQueue.push(message);
-            }
+        // Buttons signal native via a custom-scheme navigation that the
+        // Scriptable side intercepts with shouldAllowRequest (set before
+        // present()) — the battle-tested webview→native pattern. The nonce
+        // makes each tap a distinct navigation so repeat/identical taps still
+        // fire. No evaluateJavaScript is in the critical path.
+        window.__reviewNonce = 0;
+        window.onerror = function (message, source, line) {
+            try {
+                var banner = document.getElementById('reviewErrorBanner');
+                if (banner) {
+                    banner.style.display = 'block';
+                    banner.textContent = '⚠️ UI error: ' + message + ' (line ' + line + ')';
+                }
+            } catch (ignore) {}
+            return false;
+        };
+        function reviewSignal(action, id) {
+            window.location.href = 'chunkyreview://act?a=' + encodeURIComponent(action) +
+                '&id=' + encodeURIComponent(id || '') + '&n=' + (window.__reviewNonce++);
         }
 
         function pendingCards(missingOnly) {
@@ -3501,7 +3513,7 @@ class ScriptableAdapter {
             if (!card) return;
             btn.disabled = true;
             btn.textContent = '⏳ Applying…';
-            postReviewAction({ action: 'apply', id: card.getAttribute('data-finding-id') });
+            reviewSignal('apply', card.getAttribute('data-finding-id'));
         }
 
         function applyBulk(mode) {
@@ -3510,7 +3522,7 @@ class ScriptableAdapter {
                 var btn = cards[i].querySelector('.apply-btn');
                 if (btn) { btn.disabled = true; btn.textContent = '⏳ Queued…'; }
             }
-            postReviewAction({ action: 'apply-bulk', mode: mode });
+            reviewSignal('apply-bulk', mode);
         }
 
         // Called from native after each applyReviewFinding completes.
@@ -3552,77 +3564,110 @@ class ScriptableAdapter {
 </html>`;
   }
 
-  // Drained by the polling loop: hands the completion callback to the page
-  // when no action is queued, so the next button tap resolves it.
-  buildReviewBridgeJs() {
-    return `
-      if (window.__reviewQueue && window.__reviewQueue.length > 0) {
-        completion(window.__reviewQueue.shift());
-      } else {
-        window.__reviewWaiter = completion;
+  // Parse a chunkyreview:// action URL into { a, id } without `new URL` (the
+  // page sends "chunkyreview://act?a=apply&id=<finding>&n=<nonce>").
+  parseReviewActionUrl(url) {
+    const out = { a: "", id: "" };
+    const text = String(url || "");
+    const q = text.indexOf("?") >= 0 ? text.slice(text.indexOf("?") + 1) : "";
+    q.split("&").forEach((pair) => {
+      if (!pair) return;
+      const eq = pair.indexOf("=");
+      const rawKey = eq >= 0 ? pair.slice(0, eq) : pair;
+      const rawVal = eq >= 0 ? pair.slice(eq + 1) : "";
+      let key = rawKey;
+      let val = rawVal;
+      try {
+        key = decodeURIComponent(rawKey);
+        val = decodeURIComponent(rawVal);
+      } catch (error) {
+        /* keep raw */
       }
-    `;
+      out[key] = val;
+    });
+    return out;
   }
 
-  // Interactive findings UI. Unlike the scraper's static WebView.loadHTML,
-  // this uses an instance WebView so page buttons can call back into
-  // Scriptable: the loop awaits evaluateJavaScript(bridge, true) — the page
-  // resolves it with a JSON action payload — applies the fix natively, then
-  // pushes the result back into the page and re-arms. The bridge await is
-  // raced against present() so dismissing the sheet exits the loop cleanly.
+  async showReviewSummaryAlert(counts) {
+    try {
+      const alert = new Alert();
+      alert.title = "Calendar Reviewer";
+      const applied = `Applied ${counts.applied} fix${counts.applied === 1 ? "" : "es"}`;
+      alert.message = counts.failed
+        ? `${applied}, ${counts.failed} failed.`
+        : `${applied}.`;
+      alert.addAction("OK");
+      await alert.present();
+    } catch (error) {
+      /* summary alert is best-effort */
+    }
+  }
+
+  // Interactive findings UI. Unlike the scraper's static WebView.loadHTML, this
+  // needs page buttons to trigger native calendar writes. The reliable
+  // Scriptable pattern for that is shouldAllowRequest (NOT evaluateJavaScript,
+  // which is unreliable on a presented web view — a 2026-07-17 device run
+  // proved a callback/poll bridge dies silently): the handler is assigned
+  // BEFORE present(), fires synchronously each time a button navigates to
+  // chunkyreview://…, kicks off the native apply, and returns false to cancel
+  // the navigation so the page stays put. Chip feedback via evaluateJavaScript
+  // is fire-and-forget polish; the authoritative confirmation is the summary
+  // Alert after dismissal.
   async presentReviewResults(findings, options = {}) {
     const list = Array.isArray(findings) ? findings : [];
     const html = this.generateReviewHTML(list, options);
     const webView = new WebView();
     await webView.loadHTML(html);
 
-    const DISMISSED = "__review_dismissed__";
-    let dismissed = false;
-    const presented = webView.present(true).then(
-      () => {
-        dismissed = true;
-        return DISMISSED;
-      },
-      () => {
-        dismissed = true;
-        return DISMISSED;
-      },
-    );
-
     const appliedCounts = { applied: 0, failed: 0 };
-    while (!dismissed) {
-      const bridge = webView
-        .evaluateJavaScript(this.buildReviewBridgeJs(), true)
-        .catch(() => DISMISSED);
-      const message = await Promise.race([bridge, presented]);
-      if (dismissed || message === DISMISSED || typeof message !== "string") {
-        break;
+    const inFlight = [];
+
+    webView.shouldAllowRequest = (request) => {
+      const url = request && request.url ? String(request.url) : "";
+      if (url.indexOf("chunkyreview://") !== 0) {
+        return true; // normal navigation (OSM map iframes, about:blank, …)
       }
-      let payload = null;
-      try {
-        payload = JSON.parse(message);
-      } catch (error) {
-        continue;
-      }
+      const params = this.parseReviewActionUrl(url);
+      const payload =
+        params.a === "apply-bulk"
+          ? { action: "apply-bulk", mode: params.id }
+          : { action: "apply", id: params.id };
       const targets = this.selectReviewFindingsForAction(payload, list);
       for (const finding of targets) {
-        const result = await this.applyReviewFinding(finding);
-        finding._applied = result.success === true;
-        finding._applyFailed = result.success !== true;
-        if (result.success) {
-          appliedCounts.applied += 1;
-        } else {
-          appliedCounts.failed += 1;
-        }
-        const updateJs = `markFindingApplied(${JSON.stringify(String(finding.id))}, ${result.success === true}, ${JSON.stringify(result.message || "")})`;
-        await webView.evaluateJavaScript(updateJs, false).catch(() => {});
+        inFlight.push(this.applyReviewFindingAndReport(finding, webView, appliedCounts));
       }
-    }
-    await presented;
+      return false; // cancel the fake navigation; the page stays put
+    };
+
+    await webView.present(true); // blocks until the user dismisses the sheet
+    await Promise.allSettled(inFlight);
     console.log(
       `🔎 REVIEW: UI closed — ${appliedCounts.applied} fix(es) applied, ${appliedCounts.failed} failed`,
     );
+    if (appliedCounts.applied > 0 || appliedCounts.failed > 0) {
+      await this.showReviewSummaryAlert(appliedCounts);
+    }
     return appliedCounts;
+  }
+
+  // Apply one finding natively and (best-effort) reflect the result in the page.
+  // Called fire-and-forget from shouldAllowRequest, which must return a bool
+  // synchronously — so the await lives here, not in the handler.
+  async applyReviewFindingAndReport(finding, webView, appliedCounts) {
+    const result = await this.applyReviewFinding(finding);
+    finding._applied = result.success === true;
+    finding._applyFailed = result.success !== true;
+    if (result.success) {
+      appliedCounts.applied += 1;
+    } else {
+      appliedCounts.failed += 1;
+    }
+    const updateJs = `markFindingApplied(${JSON.stringify(String(finding.id))}, ${result.success === true}, ${JSON.stringify(result.message || "")})`;
+    try {
+      await webView.evaluateJavaScript(updateJs, false);
+    } catch (error) {
+      /* chip feedback is optional; the summary Alert is authoritative */
+    }
   }
 
   // Display/Logging Adapter Implementation
