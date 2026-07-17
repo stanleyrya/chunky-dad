@@ -63,6 +63,7 @@ class CalendarReviewerOrchestrator {
                 SharedCore: sharedCoreModule.SharedCore,
                 EventSchema: eventSchemaModule.EventSchema,
                 OpenStreetMapNormalizer: normalizersModule.OpenStreetMapNormalizer,
+                BarDataNormalizer: normalizersModule.BarDataNormalizer,
                 Adapter: scriptableAdapterModule.ScriptableAdapter,
                 cities: importModule('scraper-cities')
             };
@@ -71,10 +72,12 @@ class CalendarReviewerOrchestrator {
             // the pure modules load (CI syntax checking). The adapter is NOT
             // required here — it needs Scriptable globals at load time.
             console.log('🔎 Calendar Reviewer: Loading Node.js modules...');
+            const normalizersModule = require('./normalizers');
             this.modules = {
                 SharedCore: require('./shared-core').SharedCore,
                 EventSchema: require('./event-schema').EventSchema,
-                OpenStreetMapNormalizer: require('./normalizers').OpenStreetMapNormalizer,
+                OpenStreetMapNormalizer: normalizersModule.OpenStreetMapNormalizer,
+                BarDataNormalizer: normalizersModule.BarDataNormalizer,
                 Adapter: null,
                 cities: null
             };
@@ -94,13 +97,21 @@ class CalendarReviewerOrchestrator {
             cities: this.modules.cities,
             pageCache: config.pageCache || null
         });
+        // Curated bars config, loaded exactly the way the scraper's
+        // loadConfiguration loads scraper-bars.js (optional file → {}): the
+        // reviewer must consult BarDataNormalizer before geocoding, same as
+        // the scraper pipeline does.
+        const bars = await adapter.loadBarsConfiguration();
         const core = new this.modules.SharedCore(this.modules.cities, {
             eventSchema: this.modules.EventSchema,
-            additionalExcludedFields: this.modules.Adapter.NOTES_EXCLUDED_FIELDS
+            additionalExcludedFields: this.modules.Adapter.NOTES_EXCLUDED_FIELDS,
+            bars
         });
-        // The geocode check reuses the scraper's normalizer (grade gate, retry
-        // ladder, verification) rather than reimplementing any of it
+        // The geocode check reuses the scraper's normalizers (bar-data match,
+        // grade gate, retry ladder, verification) rather than reimplementing
+        // any of them
         const geocodeNormalizer = new this.modules.OpenStreetMapNormalizer(core);
+        const barDataNormalizer = new this.modules.BarDataNormalizer(core);
 
         try {
             const calendars = await adapter.getReviewCalendars(config.calendars);
@@ -110,16 +121,28 @@ class CalendarReviewerOrchestrator {
             }
 
             const events = await adapter.getReviewCalendarEvents(calendars, config);
+
+            // Bar data merged on the website is fresher than the phone's
+            // local scraper-bars.js copy: refresh the cities under review
+            // from chunky.dad (1-day cache TTL), keeping the local entry per
+            // city when the site is unreachable.
+            const cityKeys = [...new Set(events
+                .map(event => core.cityForCalendarTitle(event.calendarTitle))
+                .filter(Boolean))];
+            const refreshedBars = await adapter.refreshRemoteBars(cityKeys, bars);
+            core.bars = refreshedBars.bars;
+
             const findings = await core.reviewCalendarEvents(events, {
                 httpAdapter: adapter,
                 geocodeNormalizer,
+                barDataNormalizer,
                 pinMovedThresholdKm: config.pinMovedThresholdKm
             });
 
             const summary = this.modules.SharedCore.summarizeReviewFindings(findings);
             console.log(`🔎 REVIEW: ${summary.findings} event(s) reviewed — ${summary.ok} ok, ${summary.proposals} with proposed fixes`);
 
-            const appliedCounts = await adapter.presentReviewResults(findings, { config });
+            const appliedCounts = await adapter.presentReviewResults(findings, { config, barsFreshness: refreshedBars.counts });
             return { findings, summary, appliedCounts };
         } catch (error) {
             console.error(`🔎 Calendar Reviewer: ✗ Review failed: ${error}`);

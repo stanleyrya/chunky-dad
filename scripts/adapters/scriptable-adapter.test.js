@@ -436,6 +436,175 @@ test('loadDeadEnds tolerates corrupt or wrong-shaped files with an empty store',
 });
 
 // ---------------------------------------------------------------------------
+// Apple reverse-geocode quota hygiene: persistent placemark cache, pacing,
+// circuit breaker (2026-07-16 run: ~50 uncached calls in 6 s tripped Apple's
+// GLOBAL rate limit and every cross-check silently degraded to 'skipped')
+// ---------------------------------------------------------------------------
+
+const CAMP_OUT_PLACEMARK = {
+  subThoroughfare: '446',
+  thoroughfare: 'Mt Nebo Rd',
+  locality: 'East Stroudsburg',
+  postalCode: '18301'
+};
+
+function buildReverseGeocodeAdapter() {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+  adapter.sleepForReverseGeocode = async () => {};
+  return adapter;
+}
+
+test('reverseGeocodePlacemark round-trips placemarks through reverse-geocode-cache.json', async () => {
+  const adapter = buildReverseGeocodeAdapter();
+  let calls = 0;
+  global.Location = {
+    reverseGeocode: async () => { calls += 1; return [CAMP_OUT_PLACEMARK]; }
+  };
+  try {
+    const first = await adapter.reverseGeocodePlacemark(41.0219799, -75.1167816);
+    assert.deepEqual(first, CAMP_OUT_PLACEMARK);
+    assert.equal(calls, 1);
+
+    const cachePath = adapter.getReverseGeocodeCacheFilePath();
+    assert.ok(adapter.fm.files.has(cachePath), 'placemark persisted to reverse-geocode-cache.json');
+    const stored = JSON.parse(adapter.fm.files.get(cachePath));
+    assert.deepEqual(stored['41.02198,-75.11678'].placemark, CAMP_OUT_PLACEMARK);
+    assert.ok(Number.isFinite(stored['41.02198,-75.11678'].ts), 'entries carry a timestamp for TTL pruning');
+
+    // A fresh adapter (a later run) reads the disk cache instead of Apple
+    const laterRun = buildReverseGeocodeAdapter();
+    laterRun.fm = adapter.fm;
+    const second = await laterRun.reverseGeocodePlacemark(41.0219799, -75.1167816);
+    assert.deepEqual(second, CAMP_OUT_PLACEMARK);
+    assert.equal(calls, 1, 'a disk-cache hit spends no Apple quota');
+  } finally {
+    delete global.Location;
+  }
+});
+
+test('reverse geocode disk cache tolerates corrupt files, prunes stale entries, and never persists nulls', async () => {
+  const adapter = buildReverseGeocodeAdapter();
+  const cachePath = adapter.getReverseGeocodeCacheFilePath();
+  // Corrupt file → empty cache, never throws; a stale entry rides along to
+  // prove the TTL prune on the next save.
+  adapter.fm.files.set(cachePath, '{"41.00000,-75.00000": {broken json');
+  let calls = 0;
+  global.Location = {
+    reverseGeocode: async (lat) => {
+      calls += 1;
+      return lat < 41 ? [] : [CAMP_OUT_PLACEMARK]; // 40.x → no placemark
+    }
+  };
+  try {
+    assert.equal(await adapter.reverseGeocodePlacemark(40.7, -73.9), null, 'corrupt cache degrades to a live lookup');
+    assert.equal(calls, 1);
+    assert.equal(adapter.fm.files.get(cachePath), '{"41.00000,-75.00000": {broken json',
+      'a null result never writes the cache file');
+    assert.equal(await adapter.reverseGeocodePlacemark(40.7, -73.9), null);
+    assert.equal(calls, 1, 'null results stay memoized in memory for the run');
+
+    // Seed a stale entry in the loaded cache, then earn a success: the save
+    // prunes anything past the ~30-day TTL.
+    adapter.reverseGeocodeDiskCache['40.00000,-74.00000'] = {
+      placemark: { locality: 'Stale Town' },
+      ts: Date.now() - 31 * 24 * 60 * 60 * 1000
+    };
+    await adapter.reverseGeocodePlacemark(41.0219799, -75.1167816);
+    const stored = JSON.parse(adapter.fm.files.get(cachePath));
+    assert.deepEqual(Object.keys(stored), ['41.02198,-75.11678'],
+      'stale entries pruned on save; nulls absent');
+  } finally {
+    delete global.Location;
+  }
+});
+
+test('circuit breaker stops native reverse geocoding after 3 consecutive failures and logs once', async () => {
+  const adapter = buildReverseGeocodeAdapter();
+  let attempts = 0;
+  global.Location = {
+    reverseGeocode: async () => {
+      attempts += 1;
+      throw new Error('limited on how many reverse-geocoding requests');
+    }
+  };
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  try {
+    for (let i = 0; i < 5; i += 1) {
+      assert.equal(await adapter.reverseGeocodePlacemark(40 + i, -73), null);
+    }
+  } finally {
+    console.log = originalLog;
+    delete global.Location;
+  }
+  assert.equal(attempts, 3, 'the breaker opens after the third failure — later lookups never call Apple');
+  assert.equal(
+    logLines.filter((line) => line.includes(
+      'Apple reverse geocoding unavailable after 3 consecutive failures — skipping remaining lookups this run'
+    )).length,
+    1,
+    'the breaker line is logged exactly once'
+  );
+  assert.equal(
+    logLines.filter((line) => line.includes('Native reverse geocode failed for')).length,
+    3,
+    'the per-attempt failure line keeps its shape for attempts that do happen'
+  );
+});
+
+test('a success between failures resets the consecutive-failure count', async () => {
+  const adapter = buildReverseGeocodeAdapter();
+  let attempts = 0;
+  global.Location = {
+    reverseGeocode: async () => {
+      attempts += 1;
+      if (attempts === 3) return [CAMP_OUT_PLACEMARK];
+      throw new Error('rate limited');
+    }
+  };
+  try {
+    await adapter.reverseGeocodePlacemark(40.1, -73); // fail 1
+    await adapter.reverseGeocodePlacemark(40.2, -73); // fail 2
+    await adapter.reverseGeocodePlacemark(40.3, -73); // success → reset
+    await adapter.reverseGeocodePlacemark(40.4, -73); // fail 1 again
+    assert.equal(await adapter.reverseGeocodePlacemark(40.5, -73), null);
+    assert.equal(attempts, 5, 'the breaker never opened');
+    assert.notEqual(adapter.reverseGeocodeCircuitOpen, true);
+  } finally {
+    delete global.Location;
+  }
+});
+
+test('reverse geocode pacing waits ~500ms between actual Apple calls but never for cache hits', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+  const sleeps = [];
+  adapter.sleepForReverseGeocode = async (delayMs) => { sleeps.push(delayMs); };
+  let calls = 0;
+  global.Location = {
+    reverseGeocode: async () => { calls += 1; return [CAMP_OUT_PLACEMARK]; }
+  };
+  const realNow = Date.now;
+  Date.now = () => 1752600000000; // frozen clock: back-to-back calls are 0ms apart
+  try {
+    await adapter.reverseGeocodePlacemark(40.7, -73.9);
+    assert.deepEqual(sleeps, [], 'the first call never waits');
+
+    await adapter.reverseGeocodePlacemark(40.8, -73.8);
+    assert.deepEqual(sleeps, [500], 'an immediate second call waits the full spacing');
+
+    await adapter.reverseGeocodePlacemark(40.7, -73.9); // in-memory hit
+    assert.equal(calls, 2);
+    assert.deepEqual(sleeps, [500], 'cache hits never wait');
+  } finally {
+    Date.now = realNow;
+    delete global.Location;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Suggested-config tab in the URL Discovery UI section
 // ---------------------------------------------------------------------------
 
@@ -685,4 +854,100 @@ test('selectReviewFindingsForAction resolves single, bulk, and missing-only payl
   findings[1]._applied = true;
   assert.deepEqual(adapter.selectReviewFindingsForAction({ action: 'apply', id: 'pm-"1"' }, findings), []);
   assert.deepEqual(adapter.selectReviewFindingsForAction({ action: 'apply', id: 'up-1' }, findings), []);
+});
+
+// ---------------------------------------------------------------------------
+// refreshRemoteBars — website bar data wins per city, local file is fallback
+// ---------------------------------------------------------------------------
+
+function buildRemoteBarsAdapter(remoteByCity) {
+  const adapter = buildAdapter();
+  adapter.getPageCacheConfig = () => ({ enabled: true, ttlDays: 3 });
+  adapter.cacheReads = [];
+  adapter.cacheWrites = [];
+  adapter.fetches = [];
+  adapter.readCachedPage = async (url, config) => {
+    adapter.cacheReads.push({ url, config });
+    return null;
+  };
+  adapter.writeCachedPage = async (url, responseData, config) => {
+    adapter.cacheWrites.push({ url, config });
+  };
+  adapter.fetchData = async (url, options) => {
+    adapter.fetches.push({ url, options });
+    const cityKey = url.split('/').pop().replace('.json', '');
+    if (!(cityKey in remoteByCity)) {
+      throw new Error(`HTTP 404 error from ${url}`);
+    }
+    const body = remoteByCity[cityKey];
+    return { html: typeof body === 'string' ? body : JSON.stringify(body), url, statusCode: 200, headers: {} };
+  };
+  return adapter;
+}
+
+test('refreshRemoteBars replaces a city wholesale from chunky.dad and keeps local on failure', async () => {
+  const localBars = {
+    poconos: [{ name: 'Stale Camp Out', coordinates: '40.0, -75.0' }],
+    nyc: [{ name: 'Eagle NYC', coordinates: '40.7517, -74.0043' }],
+    seattle: [{ name: 'The Cuff', coordinates: '47.6138, -122.3142' }]
+  };
+  const adapter = buildRemoteBarsAdapter({
+    poconos: [{ name: 'Camp Out', city: 'poconos', address: '446 MT NEBO RD, EAST STROUDSBURG, PA, 18301', coordinates: '41.0219799, -75.1167816' }]
+    // nyc: 404 (no remote file) → local entry kept
+  });
+
+  const result = await adapter.refreshRemoteBars(['poconos', 'nyc', 'bogota'], localBars);
+
+  assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Camp Out'],
+    'remote city replaces the local entry wholesale');
+  assert.deepEqual(result.bars.nyc.map((b) => b.name), ['Eagle NYC'],
+    'fetch failure keeps the local entry');
+  assert.deepEqual(result.bars.seattle.map((b) => b.name), ['The Cuff'],
+    'cities not under review pass through untouched');
+  assert.equal(result.bars.bogota, undefined, 'no remote and no local stays absent');
+  assert.deepEqual(result.counts, { remote: 1, local: 1, unavailable: 1 });
+});
+
+test('refreshRemoteBars caches bars URLs with a 1-day TTL, separate from the global pageCache TTL', async () => {
+  const adapter = buildRemoteBarsAdapter({ poconos: [] });
+  await adapter.refreshRemoteBars(['poconos'], {});
+
+  assert.equal(adapter.cacheReads.length, 1);
+  assert.equal(adapter.cacheReads[0].config.ttlDays, 1, 'bars cache reads use the 1-day TTL');
+  assert.equal(adapter.cacheWrites.length, 1);
+  assert.equal(adapter.cacheWrites[0].config.ttlDays, 1, 'bars cache writes use the 1-day TTL');
+  assert.equal(adapter.fetches.length, 1);
+  assert.equal(adapter.fetches[0].options.isCacheableResponse(), false,
+    'fetchData is told to keep its global-TTL cache out of the way');
+
+  // A fresh 1-day cache hit spends no fetch at all
+  adapter.readCachedPage = async () => ({ html: JSON.stringify([{ name: 'Cached Bar' }]) });
+  const cachedRun = await adapter.refreshRemoteBars(['poconos'], {});
+  assert.equal(adapter.fetches.length, 1, 'cache hit performs no network fetch');
+  assert.deepEqual(cachedRun.bars.poconos.map((b) => b.name), ['Cached Bar']);
+});
+
+test('refreshRemoteBars survives invalid JSON and non-array payloads by keeping local data', async () => {
+  const adapter = buildRemoteBarsAdapter({
+    poconos: 'not json at all',
+    nyc: { object: 'not an array' }
+  });
+  const localBars = { poconos: [{ name: 'Local Camp Out' }] };
+  const result = await adapter.refreshRemoteBars(['poconos', 'nyc'], localBars);
+  assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Local Camp Out'], 'invalid JSON keeps local');
+  assert.equal(result.bars.nyc, undefined, 'non-array payload never becomes bar data');
+  assert.deepEqual(result.counts, { remote: 0, local: 1, unavailable: 1 });
+});
+
+test('generateReviewHTML renders the bars freshness line when counts are supplied', () => {
+  const adapter = buildAdapter();
+  const withCounts = adapter.generateReviewHTML([], {
+    barsFreshness: { remote: 18, local: 2, unavailable: 3 }
+  });
+  assert.ok(withCounts.includes('18 cities live from chunky.dad'), 'remote count rendered');
+  assert.ok(withCounts.includes('2 local fallback'), 'local fallback count rendered');
+  assert.ok(withCounts.includes('3 without bar data'), 'unavailable count rendered');
+
+  const without = adapter.generateReviewHTML([], {});
+  assert.ok(!without.includes('🍺 Bars:'), 'no freshness line without counts');
 });

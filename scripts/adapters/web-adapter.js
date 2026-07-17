@@ -56,6 +56,17 @@ class WebAdapter {
         return null;
     }
 
+    // On Scriptable the reviewer refreshes bar data from the live site; on
+    // Node the repo checkout IS the source the site deploys from, so the
+    // local bars are already current — pass them through honestly.
+    async refreshRemoteBars(cityKeys, localBars) {
+        const bars = localBars && typeof localBars === 'object' ? localBars : {};
+        return {
+            bars,
+            counts: { remote: 0, local: Object.keys(bars).length, unavailable: 0 }
+        };
+    }
+
     getPageCacheConfig() {
         const pageCache = this.config.pageCache || {};
         const ttlDays = Number(pageCache.ttlDays);

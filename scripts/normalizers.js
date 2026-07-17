@@ -794,6 +794,11 @@ const GEOCODE_UNIT_TOKEN_RE = new RegExp(
 // deserves better than a road centroid.
 const GEOCODE_HOUSE_NUMBER_RE = /(^|\s)\d+[a-z]?\s+\S/i;
 
+// Any street-type word on its own word boundary ("Folsom St", "Mt Nebo Rd").
+// Together with GEOCODE_HOUSE_NUMBER_RE this decides whether an INPUT address
+// carries street-level detail at all — see isStreetSpecificAddress.
+const GEOCODE_STREET_TYPE_WORD_RE = new RegExp(`\\b(?:${GEOCODE_STREET_TYPE_WORDS})\\b`, 'i');
+
 // A directional that FOLLOWS a street-type word and ends the address or a
 // comma-separated segment ("...Cheshire Bridge Rd NE", "...Road Northeast,
 // Atlanta"). Nominatim's free-text parser returns 0 results for these
@@ -854,6 +859,16 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // Ignore cache read errors
         }
         return null;
+    }
+
+    // Input-specificity gate for geocode-backed reviewer proposals: an address
+    // without street-level detail ("Poconos, PA", "LA NOGALERA, Torremolinos")
+    // asks a question no geocoder can answer precisely — whatever it returns
+    // (even an exact-grade POI) is an arbitrary same-named candidate, never
+    // proposal material. Street-specific = a house number OR a street-type word.
+    isStreetSpecificAddress(address) {
+        const text = String(address || '');
+        return GEOCODE_HOUSE_NUMBER_RE.test(text) || GEOCODE_STREET_TYPE_WORD_RE.test(text);
     }
 
     // Usable geocode payload: a non-empty array (forward search) or an object

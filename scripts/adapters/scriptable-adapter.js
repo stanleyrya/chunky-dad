@@ -1262,13 +1262,114 @@ class ScriptableAdapter {
     }
   }
 
+  // ---------------------------------------------------------------------
   // Native reverse geocode via Scriptable's Location API (Apple's geocoding
-  // service — no network quota, no Nominatim rate-limit budget). Returns the
-  // raw first placemark object (subThoroughfare/thoroughfare/locality/
-  // postalCode/postalAddress keys) or null. normalizers.js uses this for the
-  // geocode-verification cross-check; all Scriptable API usage stays in this
-  // adapter (pure-module rule). Results are memoized per run, keyed by the
-  // coordinates rounded to 5 decimals (~1 m).
+  // service). Apple rate-limits reverse geocoding GLOBALLY across all
+  // Scriptable users, so this path practices strict quota hygiene
+  // (2026-07-16 run: ~50 calls in 6 seconds tripped the global limit and
+  // every cross-check for the rest of the run silently degraded to
+  // 'skipped'):
+  //   1. In-memory memoization per run (successes AND failures), keyed by
+  //      the coordinates rounded to 5 decimals (~1 m).
+  //   2. Persistent placemark cache (reverse-geocode-cache.json alongside
+  //      dead-ends.json), successes only, ~30-day TTL, pruned on save;
+  //      corrupt file → empty cache, never throws.
+  //   3. ≥500 ms pacing between actual Location.reverseGeocode calls
+  //      (cache hits never wait).
+  //   4. Circuit breaker: 3 consecutive failures stop native attempts for
+  //      the rest of the run.
+  // Returns the raw first placemark object (subThoroughfare/thoroughfare/
+  // locality/postalCode/postalAddress keys) or null. normalizers.js uses
+  // this for the geocode-verification cross-check; all Scriptable API usage
+  // stays in this adapter (pure-module rule).
+  // ---------------------------------------------------------------------
+
+  getReverseGeocodeCacheFilePath() {
+    return this.fm.joinPath(this.baseDir, "reverse-geocode-cache.json");
+  }
+
+  // Lazy load-on-first-use; shape { "<lat5>,<lon5>": { placemark, ts } }.
+  loadReverseGeocodeDiskCache() {
+    if (this.reverseGeocodeDiskCache) {
+      return this.reverseGeocodeDiskCache;
+    }
+    let cache = {};
+    const path = this.getReverseGeocodeCacheFilePath();
+    try {
+      if (this.fm.fileExists(path)) {
+        const parsed = JSON.parse(this.fm.readString(path));
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          cache = parsed;
+        }
+      }
+    } catch (error) {
+      // Corrupt/unreadable cache must never break a run — it is a pure
+      // optimization and rebuilds itself over subsequent runs.
+      console.log(
+        `📱 Scriptable: Reverse geocode cache read failed (${error.message}) — starting with empty cache`,
+      );
+      cache = {};
+    }
+    this.reverseGeocodeDiskCache = cache;
+    return cache;
+  }
+
+  // Save after every write (paced native calls make this cheap) so a crash
+  // never loses earned placemarks; stale entries are pruned on the way out.
+  saveReverseGeocodeDiskCache() {
+    const cache = this.reverseGeocodeDiskCache;
+    if (!cache || typeof cache !== "object") {
+      return;
+    }
+    const ttlMs = 30 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - ttlMs;
+    for (const key of Object.keys(cache)) {
+      const entry = cache[key];
+      const ts = entry && Number(entry.ts);
+      if (!Number.isFinite(ts) || ts < cutoff) {
+        delete cache[key];
+      }
+    }
+    try {
+      this.ensureDirectoryExists(this.baseDir);
+      this.fm.writeString(
+        this.getReverseGeocodeCacheFilePath(),
+        JSON.stringify(cache),
+      );
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Reverse geocode cache write failed: ${error.message}`,
+      );
+    }
+  }
+
+  // Minimum spacing between actual Location.reverseGeocode calls — same
+  // pattern as normalizers.js delayForRateLimit, kept inside the adapter
+  // because the quota being protected is Apple's, not Nominatim's.
+  async delayForReverseGeocodeRateLimit() {
+    const minimumDelay = 500;
+    const now = Date.now();
+    const elapsed = now - (this.lastReverseGeocodeTime || 0);
+    if (this.lastReverseGeocodeTime && elapsed < minimumDelay) {
+      await this.sleepForReverseGeocode(minimumDelay - elapsed);
+    }
+    this.lastReverseGeocodeTime = Date.now();
+  }
+
+  sleepForReverseGeocode(delayMs) {
+    return new Promise((resolve) => {
+      if (typeof setTimeout !== "undefined") {
+        setTimeout(resolve, delayMs);
+      } else if (typeof Timer !== "undefined") {
+        const timer = new Timer();
+        timer.timeInterval = delayMs;
+        timer.schedule(() => resolve());
+      } else {
+        resolve();
+      }
+    });
+  }
+
   async reverseGeocodePlacemark(lat, lon) {
     if (
       typeof Location === "undefined" ||
@@ -1285,6 +1386,25 @@ class ScriptableAdapter {
     ) {
       return this.reverseGeocodeCache[cacheKey];
     }
+    // Durable second layer: placemarks earned on earlier runs never spend
+    // Apple quota again.
+    const diskCache = this.loadReverseGeocodeDiskCache();
+    const diskEntry = diskCache[cacheKey];
+    if (
+      diskEntry &&
+      typeof diskEntry === "object" &&
+      diskEntry.placemark &&
+      typeof diskEntry.placemark === "object"
+    ) {
+      this.reverseGeocodeCache[cacheKey] = diskEntry.placemark;
+      return diskEntry.placemark;
+    }
+    // Circuit breaker: once Apple's service proves unavailable this run,
+    // stop burning the global quota on attempts that cannot succeed.
+    if (this.reverseGeocodeCircuitOpen) {
+      return null;
+    }
+    await this.delayForReverseGeocodeRateLimit();
     let mark = null;
     try {
       const placemarks = await Location.reverseGeocode(lat, lon);
@@ -1293,13 +1413,30 @@ class ScriptableAdapter {
           ? placemarks[0]
           : null;
       mark = first && typeof first === "object" ? first : null;
+      // The service answered (even with no placemark) — failures are only
+      // consecutive when nothing succeeds in between.
+      this.reverseGeocodeConsecutiveFailures = 0;
     } catch (error) {
       console.log(
         `📱 Scriptable: Native reverse geocode failed for ${lat},${lon}: ${error.message}`,
       );
       mark = null;
+      this.reverseGeocodeConsecutiveFailures =
+        (this.reverseGeocodeConsecutiveFailures || 0) + 1;
+      if (this.reverseGeocodeConsecutiveFailures >= 3) {
+        this.reverseGeocodeCircuitOpen = true;
+        console.log(
+          "📱 Scriptable: Apple reverse geocoding unavailable after 3 consecutive failures — skipping remaining lookups this run",
+        );
+      }
     }
     this.reverseGeocodeCache[cacheKey] = mark;
+    if (mark) {
+      // Failures/nulls are NEVER persisted — only real placemarks earn a
+      // durable entry.
+      diskCache[cacheKey] = { placemark: mark, ts: Date.now() };
+      this.saveReverseGeocodeDiskCache();
+    }
     return mark;
   }
 
@@ -1920,6 +2057,96 @@ class ScriptableAdapter {
       );
       throw new Error(`Configuration loading failed: ${error.message}`);
     }
+  }
+
+  // Standalone bars-config loader for the calendar reviewer: same file, same
+  // module name, and the same optional semantics as loadConfiguration's
+  // scraper-bars.js load above (the scraper reads it into config.bars). The
+  // reviewer has no scraper-input.js run, so it loads bars directly; a
+  // missing/empty/broken file degrades to {} — bar matching simply finds
+  // nothing.
+  async loadBarsConfiguration() {
+    try {
+      const fm = FileManager.iCloud();
+      const scriptableDir = fm.documentsDirectory();
+      const configPath = fm.joinPath(scriptableDir, "scraper-bars.js");
+      if (!fm.fileExists(configPath)) {
+        return {};
+      }
+      const configText = fm.readString(configPath);
+      if (!configText || configText.trim().length === 0) {
+        return {};
+      }
+      const configModule = importModule("scraper-bars");
+      return configModule || eval(configText) || {};
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Bars configuration load failed (${error.message}) — continuing without curated bar data`,
+      );
+      return {};
+    }
+  }
+
+  // Bar data merged on the website is the source of truth; the phone's local
+  // scraper-bars.js copy goes stale the moment a bar edit lands. Fetch the
+  // per-city JSON the site already serves (data/bars/<city>.json) for the
+  // requested cities, replacing that city's local entry wholesale. Bars URLs
+  // carry their own 1-day cache TTL so runs stay fast without re-downloading
+  // every time; any failure (404 for cities without a file, offline, bad
+  // JSON) quietly keeps the local entry. Returns { bars, counts } — counts
+  // feed the review UI's freshness line.
+  async refreshRemoteBars(cityKeys, localBars) {
+    const merged = {
+      ...(localBars && typeof localBars === "object" ? localBars : {}),
+    };
+    const counts = { remote: 0, local: 0, unavailable: 0 };
+    const keys = Array.isArray(cityKeys) ? cityKeys.filter(Boolean) : [];
+    const barsCacheConfig = {
+      enabled: this.getPageCacheConfig().enabled,
+      ttlDays: 1,
+    };
+    for (const cityKey of keys) {
+      const url = `https://chunky.dad/data/bars/${encodeURIComponent(cityKey)}.json`;
+      let remoteList = null;
+      try {
+        let body = null;
+        const cached = await this.readCachedPage(url, barsCacheConfig);
+        if (cached && typeof cached.html === "string") {
+          body = cached.html;
+        } else {
+          const responseData = await this.fetchData(url, {
+            headers: { Accept: "application/json" },
+            // Bars URLs use barsCacheConfig's 1-day TTL, so keep fetchData's
+            // global-TTL cache out of the way and write back explicitly.
+            isCacheableResponse: () => false,
+          });
+          if (responseData && typeof responseData.html === "string") {
+            body = responseData.html;
+            await this.writeCachedPage(url, responseData, barsCacheConfig);
+          }
+        }
+        if (body) {
+          const parsed = JSON.parse(body);
+          if (Array.isArray(parsed)) {
+            remoteList = parsed;
+          }
+        }
+      } catch (error) {
+        remoteList = null;
+      }
+      if (remoteList) {
+        merged[cityKey] = remoteList;
+        counts.remote += 1;
+      } else if (merged[cityKey]) {
+        counts.local += 1;
+      } else {
+        counts.unavailable += 1;
+      }
+    }
+    console.log(
+      `📱 Scriptable: Bars data — ${counts.remote} cities from chunky.dad, ${counts.local} from local file, ${counts.unavailable} unavailable`,
+    );
+    return { bars: merged, counts };
   }
 
   // Get existing events for a specific event (called by shared-core)
@@ -2584,6 +2811,8 @@ class ScriptableAdapter {
           location: typeof item.location === "string" ? item.location : "",
           address: typeof fields.address === "string" ? fields.address : "",
           bar: typeof fields.bar === "string" ? fields.bar : "",
+          description:
+            typeof fields.description === "string" ? fields.description : "",
         });
         mapped += 1;
       }
@@ -2845,6 +3074,28 @@ class ScriptableAdapter {
       )
       .join("\n");
 
+    // Bars freshness line: where the curated bar data came from this run
+    // (counts from refreshRemoteBars). Absent when the caller didn't refresh.
+    const barsFreshness =
+      options.barsFreshness && typeof options.barsFreshness === "object"
+        ? options.barsFreshness
+        : null;
+    const barsFreshnessLine = barsFreshness
+      ? [
+          barsFreshness.remote > 0
+            ? `${barsFreshness.remote} ${barsFreshness.remote === 1 ? "city" : "cities"} live from chunky.dad`
+            : "",
+          barsFreshness.local > 0
+            ? `${barsFreshness.local} local fallback`
+            : "",
+          barsFreshness.unavailable > 0
+            ? `${barsFreshness.unavailable} without bar data`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : "";
+
     const sections = [];
     for (const [calendarTitle, calendarFindings] of byCalendar) {
       const okFindings = calendarFindings.filter((f) => f.status === "ok");
@@ -2957,6 +3208,7 @@ class ScriptableAdapter {
         .stat-label { font-size: 13px; opacity: 0.9; }
 
         .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+        .bars-freshness { font-size: 12px; opacity: 0.85; margin-top: 10px; }
         .summary-chip {
             font-size: 12px;
             font-weight: 600;
@@ -3142,6 +3394,7 @@ class ScriptableAdapter {
             </div>
         </div>
         ${summaryChips ? `<div class="summary-chips">${summaryChips}</div>` : ""}
+        ${barsFreshnessLine ? `<div class="bars-freshness">🍺 Bars: ${this.escapeHtml(barsFreshnessLine)}</div>` : ""}
     </div>
 
     ${sections.join("\n") || '<div class="section">No events found in the review window.</div>'}
