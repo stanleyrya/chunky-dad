@@ -1032,3 +1032,120 @@ test('generateReviewHTML renders the bars freshness line when counts are supplie
   const without = adapter.generateReviewHTML([], {});
   assert.ok(!without.includes('🍺 Bars:'), 'no freshness line without counts');
 });
+
+// ---------------------------------------------------------------------------
+// presentReviewResults — synchronous poll-drain bridge (the callback-style
+// bridge died silently on-device 2026-07-17: taps queued in-page, zero applied)
+// ---------------------------------------------------------------------------
+
+function buildPollFinding() {
+  return {
+    id: 'f1', calendarTitle: 'chunky-dad-nyc', eventTitle: 'MEGAMILK',
+    startDate: null, check: 'geocode', status: 'missing-pin',
+    current: { location: '', address: '10-90 Wyckoff Ave' },
+    proposed: { location: '40.69, -73.90' }, detail: 'fresh geocode proposed'
+  };
+}
+
+test('presentReviewResults drains page actions with synchronous evals only and applies fixes', async () => {
+  const adapter = buildAdapter();
+  adapter.sleepForReviewPoll = () => new Promise((resolve) => setImmediate(resolve));
+  let saved = 0;
+  adapter.reviewEventIndex = { f1: { location: '', notes: '', save: async () => { saved += 1; } } };
+
+  const pageQueue = ['{"action":"apply","id":"f1"}'];
+  const evals = [];
+  let resolvePresent = null;
+  global.WebView = class {
+    async loadHTML() {}
+    present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
+    async evaluateJavaScript(js, useCallback) {
+      evals.push({ js, useCallback });
+      if (js.includes('__reviewQueue')) {
+        return JSON.stringify(pageQueue.splice(0, pageQueue.length));
+      }
+      if (js.includes('markFindingApplied')) {
+        resolvePresent();
+      }
+      return undefined;
+    }
+  };
+  try {
+    const counts = await adapter.presentReviewResults([buildPollFinding()], {});
+    assert.deepEqual(counts, { applied: 1, failed: 0 });
+    assert.equal(saved, 1, 'the calendar event was saved');
+    assert.ok(evals.length >= 2, 'drain + markFindingApplied evals ran');
+    assert.ok(evals.every((e) => e.useCallback === false),
+      'every eval is synchronous — no stored-completion callbacks anywhere');
+    assert.ok(evals.some((e) => e.js.includes('markFindingApplied("f1", true')),
+      'the applied state was pushed back into the page');
+  } finally {
+    delete global.WebView;
+  }
+});
+
+test('presentReviewResults surfaces page errors and gives up loudly after repeated poll failures', async () => {
+  const adapter = buildAdapter();
+  adapter.sleepForReviewPoll = () => new Promise((resolve) => setImmediate(resolve));
+  adapter.reviewEventIndex = {};
+  const warns = [];
+  const originalWarn = console.warn;
+  console.warn = (msg) => { warns.push(String(msg)); };
+
+  // Page-error payloads reach the native log
+  let resolvePresent = null;
+  const pageQueue = ['{"action":"page-error","message":"boom (line 3)"}'];
+  global.WebView = class {
+    async loadHTML() {}
+    present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
+    async evaluateJavaScript(js) {
+      if (js.includes('__reviewQueue')) {
+        const out = JSON.stringify(pageQueue.splice(0, pageQueue.length));
+        if (out === '[]') resolvePresent();
+        return out;
+      }
+      return undefined;
+    }
+  };
+  try {
+    await adapter.presentReviewResults([buildPollFinding()], {});
+    assert.ok(warns.some((w) => w.includes('UI page error: boom (line 3)')),
+      'page-side errors are logged natively');
+
+    // Persistent poll failures: warned at 1 and 10, then the loop gives up
+    warns.length = 0;
+    global.WebView = class {
+      async loadHTML() {}
+      present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
+      async evaluateJavaScript() { throw new Error('bridge down'); }
+    };
+    const done = adapter.presentReviewResults([buildPollFinding()], {});
+    // the loop breaks after 10 failures; the UI stays up until dismissal
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    resolvePresent();
+    const counts = await done;
+    assert.deepEqual(counts, { applied: 0, failed: 0 });
+    assert.equal(warns.filter((w) => w.includes('UI bridge poll failed')).length, 2,
+      'warned on the first and the giving-up failure, not all ten');
+    assert.ok(warns.some((w) => w.includes('giving up on Apply buttons')),
+      'the give-up is loud, not silent');
+  } finally {
+    console.warn = originalWarn;
+    delete global.WebView;
+  }
+});
+
+test('review page carries the error banner, onerror trap, and bar-data visibility', () => {
+  const adapter = buildAdapter();
+  const barFinding = {
+    id: 'b1', calendarTitle: 'chunky-dad-poconos', eventTitle: 'FURBALL CAMP',
+    startDate: null, check: 'geocode', status: 'ok', source: 'bar-data',
+    current: { location: '41.02, -75.11', address: '446 MT NEBO RD' },
+    proposed: {}, detail: 'matches curated bar data (Camp Out)'
+  };
+  const html = adapter.generateReviewHTML([barFinding], { barsFreshness: { remote: 12, local: 0, unavailable: 10 } });
+  assert.ok(html.includes('reviewErrorBanner'), 'error banner div present');
+  assert.ok(html.includes('window.onerror'), 'page error trap installed');
+  assert.ok(html.includes('1 event verified against curated bar data'), 'bar-data count in header');
+  assert.ok(html.includes('matches curated bar data (Camp Out)'), 'ok entry shows the bar note');
+});
