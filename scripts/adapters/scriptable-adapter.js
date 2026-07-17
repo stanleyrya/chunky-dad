@@ -3129,6 +3129,9 @@ class ScriptableAdapter {
 
     // Bars freshness line: where the curated bar data came from this run
     // (counts from refreshRemoteBars). Absent when the caller didn't refresh.
+    const barDataCount = list.filter(
+      (finding) => finding && finding.source === "bar-data",
+    ).length;
     const barsFreshness =
       options.barsFreshness && typeof options.barsFreshness === "object"
         ? options.barsFreshness
@@ -3162,7 +3165,7 @@ class ScriptableAdapter {
                         ${okFindings
                           .map(
                             (f) =>
-                              `<li>${this.escapeHtml(f.eventTitle)}${this.formatReviewDate(f.startDate) ? ` — ${this.escapeHtml(this.formatReviewDate(f.startDate))}` : ""}</li>`,
+                              `<li>${this.escapeHtml(f.eventTitle)}${this.formatReviewDate(f.startDate) ? ` — ${this.escapeHtml(this.formatReviewDate(f.startDate))}` : ""}${f.source === "bar-data" ? ` <span class="ok-bar-note">🍺 ${this.escapeHtml(f.detail || "bar data")}</span>` : ""}</li>`,
                           )
                           .join("\n")}
                     </ul>
@@ -3262,6 +3265,8 @@ class ScriptableAdapter {
 
         .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
         .bars-freshness { font-size: 12px; opacity: 0.85; margin-top: 10px; }
+        .review-error-banner { background: #b3261e; color: #fff; font-size: 13px; font-weight: 600; padding: 10px 16px; }
+        .ok-bar-note { opacity: 0.7; font-size: 12px; }
         .summary-chip {
             font-size: 12px;
             font-weight: 600;
@@ -3447,8 +3452,9 @@ class ScriptableAdapter {
             </div>
         </div>
         ${summaryChips ? `<div class="summary-chips">${summaryChips}</div>` : ""}
-        ${barsFreshnessLine ? `<div class="bars-freshness">🍺 Bars: ${this.escapeHtml(barsFreshnessLine)}</div>` : ""}
+        ${barDataCount > 0 ? `<div class="bars-freshness">🍺 ${barDataCount} event${barDataCount === 1 ? "" : "s"} verified against curated bar data${barsFreshnessLine ? ` — ${this.escapeHtml(barsFreshnessLine)}` : ""}</div>` : barsFreshnessLine ? `<div class="bars-freshness">🍺 Bars: ${this.escapeHtml(barsFreshnessLine)}</div>` : ""}
     </div>
+    <div id="reviewErrorBanner" class="review-error-banner" style="display:none"></div>
 
     ${sections.join("\n") || '<div class="section">No events found in the review window.</div>'}
 
@@ -3462,6 +3468,21 @@ class ScriptableAdapter {
         // side's evaluateJavaScript polling loop (see presentReviewResults).
         window.__reviewQueue = [];
         window.__reviewWaiter = null;
+        // A dead page script means dead buttons with no trace — surface any
+        // page error as a banner AND ship it to the native log via the queue.
+        window.onerror = function (message, source, line) {
+            try {
+                var banner = document.getElementById('reviewErrorBanner');
+                if (banner) {
+                    banner.style.display = 'block';
+                    banner.textContent = '⚠️ UI error: ' + message;
+                }
+                if (window.__reviewQueue) {
+                    window.__reviewQueue.push(JSON.stringify({ action: 'page-error', message: String(message) + ' (line ' + line + ')' }));
+                }
+            } catch (ignore) {}
+            return false;
+        };
         function postReviewAction(payload) {
             var message = JSON.stringify(payload);
             if (window.__reviewWaiter) {
@@ -3554,68 +3575,102 @@ class ScriptableAdapter {
 
   // Drained by the polling loop: hands the completion callback to the page
   // when no action is queued, so the next button tap resolves it.
-  buildReviewBridgeJs() {
+  // Synchronous drain of the page's action queue. No useCallback, no stored
+  // completion: a 2026-07-17 device run proved the callback-style bridge can
+  // die silently (taps queued in-page, loop already gone, zero applied), so
+  // the native side now POLLS with plain synchronous evals — the dumbest
+  // primitive Scriptable offers, and the only one with nothing to reject.
+  buildReviewDrainJs() {
     return `
-      if (window.__reviewQueue && window.__reviewQueue.length > 0) {
-        completion(window.__reviewQueue.shift());
-      } else {
-        window.__reviewWaiter = completion;
-      }
+      JSON.stringify(
+        window.__reviewQueue && window.__reviewQueue.length > 0
+          ? window.__reviewQueue.splice(0, window.__reviewQueue.length)
+          : []
+      );
     `;
+  }
+
+  sleepForReviewPoll(delayMs) {
+    return this.sleepForReverseGeocode(delayMs);
   }
 
   // Interactive findings UI. Unlike the scraper's static WebView.loadHTML,
   // this uses an instance WebView so page buttons can call back into
-  // Scriptable: the loop awaits evaluateJavaScript(bridge, true) — the page
-  // resolves it with a JSON action payload — applies the fix natively, then
-  // pushes the result back into the page and re-arms. The bridge await is
-  // raced against present() so dismissing the sheet exits the loop cleanly.
+  // Scriptable: page buttons push JSON action payloads onto
+  // window.__reviewQueue, and the native loop drains that queue with a
+  // synchronous evaluateJavaScript every ~400ms while the sheet is up,
+  // applies fixes natively, and pushes each result back into the page.
+  // present() resolving flips the dismissed flag and ends the loop.
   async presentReviewResults(findings, options = {}) {
     const list = Array.isArray(findings) ? findings : [];
     const html = this.generateReviewHTML(list, options);
     const webView = new WebView();
     await webView.loadHTML(html);
 
-    const DISMISSED = "__review_dismissed__";
     let dismissed = false;
     const presented = webView.present(true).then(
       () => {
         dismissed = true;
-        return DISMISSED;
       },
       () => {
         dismissed = true;
-        return DISMISSED;
       },
     );
 
     const appliedCounts = { applied: 0, failed: 0 };
+    let pollFailures = 0;
     while (!dismissed) {
-      const bridge = webView
-        .evaluateJavaScript(this.buildReviewBridgeJs(), true)
-        .catch(() => DISMISSED);
-      const message = await Promise.race([bridge, presented]);
-      if (dismissed || message === DISMISSED || typeof message !== "string") {
-        break;
-      }
-      let payload = null;
+      await this.sleepForReviewPoll(400);
+      if (dismissed) break;
+      let messages = [];
       try {
-        payload = JSON.parse(message);
+        const drained = await webView.evaluateJavaScript(
+          this.buildReviewDrainJs(),
+          false,
+        );
+        messages = typeof drained === "string" ? JSON.parse(drained) : [];
+        pollFailures = 0;
       } catch (error) {
+        // A dismissal races the in-flight eval — that rejection is expected.
+        // Anything else must be VISIBLE: a silently dead bridge is exactly
+        // the failure mode this poll design replaces.
+        if (dismissed) break;
+        pollFailures += 1;
+        if (pollFailures === 1 || pollFailures === 10) {
+          console.warn(
+            `🔎 REVIEW: UI bridge poll failed (${error.message})${pollFailures >= 10 ? " — giving up on Apply buttons this run" : ""}`,
+          );
+        }
+        if (pollFailures >= 10) break;
         continue;
       }
-      const targets = this.selectReviewFindingsForAction(payload, list);
-      for (const finding of targets) {
-        const result = await this.applyReviewFinding(finding);
-        finding._applied = result.success === true;
-        finding._applyFailed = result.success !== true;
-        if (result.success) {
-          appliedCounts.applied += 1;
-        } else {
-          appliedCounts.failed += 1;
+      if (!Array.isArray(messages)) continue;
+      for (const message of messages) {
+        let payload = null;
+        try {
+          payload = JSON.parse(message);
+        } catch (error) {
+          continue;
         }
-        const updateJs = `markFindingApplied(${JSON.stringify(String(finding.id))}, ${result.success === true}, ${JSON.stringify(result.message || "")})`;
-        await webView.evaluateJavaScript(updateJs, false).catch(() => {});
+        if (payload && payload.action === "page-error") {
+          console.warn(
+            `🔎 REVIEW: UI page error: ${payload.message || "unknown"}`,
+          );
+          continue;
+        }
+        const targets = this.selectReviewFindingsForAction(payload, list);
+        for (const finding of targets) {
+          const result = await this.applyReviewFinding(finding);
+          finding._applied = result.success === true;
+          finding._applyFailed = result.success !== true;
+          if (result.success) {
+            appliedCounts.applied += 1;
+          } else {
+            appliedCounts.failed += 1;
+          }
+          const updateJs = `markFindingApplied(${JSON.stringify(String(finding.id))}, ${result.success === true}, ${JSON.stringify(result.message || "")})`;
+          await webView.evaluateJavaScript(updateJs, false).catch(() => {});
+        }
       }
     }
     await presented;

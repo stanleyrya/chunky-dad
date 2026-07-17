@@ -6310,6 +6310,9 @@ class SharedCore {
                 // Curated bar data: grade 'exact' + crossCheck 'pass' by fiat —
                 // hand-maintained coordinates need no external verification, so
                 // the specificity gate and cross-check policy below never apply.
+                // The source tag lets the UI show which events bar data vouched
+                // for (summary count + 🍺 notes on collapsed ok entries).
+                finding.source = 'bar-data';
                 const withAddress = barMatch.address ? ' + address' : '';
                 if (!hasPin) {
                     finding.status = 'missing-pin';
