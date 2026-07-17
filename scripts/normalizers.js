@@ -86,12 +86,46 @@ class BaseNormalizer {
 
 class BasicDataNormalizer extends BaseNormalizer {
     normalize(event) {
+        // Stamp page-provenance defaults BEFORE any bar match or geocoding runs
+        // (BasicDataNormalizer is first in the pipeline, ahead of BarData and
+        // OSM in both the sync and async paths). Coordinates/address that
+        // arrived on the event from the parser (JSON-LD/page text) are
+        // provenance 'page'; the later writers OVERWRITE the source only when
+        // THEY set/replace the value (bar→curated, geocode→geocoded-*,
+        // reverse→inferred). Pure and idempotent — only stamps an unset source
+        // when the corresponding value is present.
+        event = this.stampPageProvenanceDefaults(event);
+
         if (!this.core) return event;
         // Sync URL and website fields
         event = this.syncUrlAndWebsiteFields(event);
 
         // Normalize basic text fields
         return this.core.normalizeEventTextFields(event);
+    }
+
+    // Coordinate-pair check kept local so this normalizer stays platform-pure
+    // (mirrors SharedCore.isCoordinatePair: two finite floats, lat within ±90,
+    // lng within ±180).
+    isCoordinatePairString(value) {
+        if (typeof value !== 'string') return false;
+        const match = value.trim().match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
+        if (!match) return false;
+        const lat = Number(match[1]);
+        const lng = Number(match[2]);
+        return Number.isFinite(lat) && Number.isFinite(lng)
+            && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    }
+
+    stampPageProvenanceDefaults(event) {
+        if (!event || typeof event !== 'object') return event;
+        if (!event.pinSource && this.isCoordinatePairString(event.location)) {
+            event.pinSource = 'page';
+        }
+        if (!event.addressSource && typeof event.address === 'string' && event.address.trim().length > 0) {
+            event.addressSource = 'page';
+        }
+        return event;
     }
 
     syncUrlAndWebsiteFields(event) {
@@ -251,6 +285,7 @@ class BarDataNormalizer extends BaseNormalizer {
             if (matchedBar.address) {
                 if (!event.address || event.address.length < matchedBar.address.length) {
                     event.address = matchedBar.address;
+                    event.addressSource = 'curated';
                     modified = true;
                 }
             }
@@ -258,6 +293,7 @@ class BarDataNormalizer extends BaseNormalizer {
             // Prefer the bar's coordinates if missing in event
             if (matchedBar.coordinates && !event.location) {
                 event.location = matchedBar.coordinates;
+                event.pinSource = 'curated';
                 modified = true;
             }
 
@@ -1571,6 +1607,15 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 event._geocodeSource = verdict.source;
                 event._geocodeRung = verdict.rung;
             }
+            if (resolvedLocation) {
+                // Provenance for the forward-geocoded pin: an exact grade whose
+                // reverse cross-check did not fail is our best pin
+                // (geocoded-exact). Everything else — street/photon/census-grade
+                // or a failed cross-check — is only approximate (geocoded-approx).
+                event.pinSource = (resolvedVerdict && resolvedVerdict.grade === 'exact' && resolvedVerdict.crossCheck !== 'fail')
+                    ? 'geocoded-exact'
+                    : 'geocoded-approx';
+            }
             if (!resolvedLocation) {
                 // Exact shape counted by run-log-summary's geocodeNoResults guard.
                 console.warn(`🗺️ OpenStreetMapNormalizer: No geocode results for "${address}" (${eventCity || 'no city'}) after ${attempts} ${attempts === 1 ? 'query' : 'queries'} — leaving location empty`);
@@ -1598,6 +1643,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                     }
                     if (typeof nativeAddress === 'string' && nativeAddress.trim().length > 0) {
                         event.address = nativeAddress.trim();
+                        // Reverse-geocoded from the pin — the address is inferred.
+                        event.addressSource = 'inferred';
                         modified = true;
                         console.log(`🗺️ OpenStreetMapNormalizer: Found address for coordinates "${event.location}" -> ${event.address} (native reverse geocode)`);
                     } else {
@@ -1606,6 +1653,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                             const data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
                             if (data && data.display_name) {
                                 event.address = data.display_name;
+                                // Reverse-geocoded from the pin — the address is inferred.
+                                event.addressSource = 'inferred';
                                 modified = true;
                                 console.log(`🗺️ OpenStreetMapNormalizer: Found address for coordinates "${event.location}" -> ${event.address}`);
                             }
