@@ -827,7 +827,8 @@ test('generateReviewHTML renders per-calendar sections, chips, buttons, and esca
   assert.ok(html.includes('Apply all'));
   assert.ok(html.includes("applyBulk('missing-only')"));
   assert.ok(html.includes("applyBulk('all')"));
-  assert.ok(html.includes('function postReviewAction'));
+  assert.ok(html.includes('function reviewSignal'));
+  assert.ok(html.includes('chunkyreview://act'));
   assert.ok(html.includes('function markFindingApplied'));
 
   // Self-contained page: no external scripts or stylesheets
@@ -1034,11 +1035,12 @@ test('generateReviewHTML renders the bars freshness line when counts are supplie
 });
 
 // ---------------------------------------------------------------------------
-// presentReviewResults — synchronous poll-drain bridge (the callback-style
-// bridge died silently on-device 2026-07-17: taps queued in-page, zero applied)
+// presentReviewResults — shouldAllowRequest bridge (the reliable Scriptable
+// webview→native pattern; the callback/poll bridge died silently on-device
+// 2026-07-17 because evaluateJavaScript on a presented web view is unreliable)
 // ---------------------------------------------------------------------------
 
-function buildPollFinding() {
+function buildBridgeFinding() {
   return {
     id: 'f1', calendarTitle: 'chunky-dad-nyc', eventTitle: 'MEGAMILK',
     startDate: null, check: 'geocode', status: 'missing-pin',
@@ -1047,95 +1049,132 @@ function buildPollFinding() {
   };
 }
 
-test('presentReviewResults drains page actions with synchronous evals only and applies fixes', async () => {
+// A fake WebView that lets a test drive shouldAllowRequest like the device
+// does: tap → navigate to a URL → handler fires synchronously → present()
+// resolves on dismissal.
+function installFakeWebView() {
+  let handler = null;
+  let resolvePresent = null;
+  const evals = [];
+  global.WebView = class {
+    async loadHTML() {}
+    set shouldAllowRequest(fn) { handler = fn; }
+    get shouldAllowRequest() { return handler; }
+    present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
+    async evaluateJavaScript(js) { evals.push(js); return undefined; }
+  };
+  return {
+    tap: (url) => handler({ url }),
+    dismiss: () => resolvePresent(),
+    evals,
+    getHandler: () => handler
+  };
+}
+
+test('parseReviewActionUrl decodes action and id without new URL', () => {
   const adapter = buildAdapter();
-  adapter.sleepForReviewPoll = () => new Promise((resolve) => setImmediate(resolve));
+  const single = adapter.parseReviewActionUrl('chunkyreview://act?a=apply&id=f%2F1&n=3');
+  assert.equal(single.a, 'apply');
+  assert.equal(single.id, 'f/1', 'percent-encoded id is decoded');
+  const bulk = adapter.parseReviewActionUrl('chunkyreview://act?a=apply-bulk&id=missing-only&n=9');
+  assert.equal(bulk.a, 'apply-bulk');
+  assert.equal(bulk.id, 'missing-only');
+});
+
+test('presentReviewResults applies via shouldAllowRequest and cancels the navigation', async () => {
+  const adapter = buildAdapter();
   let saved = 0;
   adapter.reviewEventIndex = { f1: { location: '', notes: '', save: async () => { saved += 1; } } };
+  let summaryShown = null;
+  adapter.showReviewSummaryAlert = async (counts) => { summaryShown = counts; };
 
-  const pageQueue = ['{"action":"apply","id":"f1"}'];
-  const evals = [];
-  let resolvePresent = null;
-  global.WebView = class {
-    async loadHTML() {}
-    present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
-    async evaluateJavaScript(js, useCallback) {
-      evals.push({ js, useCallback });
-      if (js.includes('__reviewQueue')) {
-        return JSON.stringify(pageQueue.splice(0, pageQueue.length));
-      }
-      if (js.includes('markFindingApplied')) {
-        resolvePresent();
-      }
-      return undefined;
-    }
-  };
+  const wv = installFakeWebView();
   try {
-    const counts = await adapter.presentReviewResults([buildPollFinding()], {});
+    const done = adapter.presentReviewResults([buildBridgeFinding()], {});
+    await new Promise((r) => setImmediate(r)); // let present() wire up
+
+    // A normal navigation (OSM map iframe) is allowed through.
+    assert.equal(wv.getHandler()({ url: 'https://www.openstreetmap.org/x' }), true,
+      'non-scheme navigation is allowed');
+
+    // A button tap: handler returns false (cancels nav) and kicks off the apply.
+    assert.equal(wv.tap('chunkyreview://act?a=apply&id=f1&n=1'), false,
+      'the fake navigation is cancelled');
+    await new Promise((r) => setImmediate(r)); // let the fire-and-forget apply settle
+
+    wv.dismiss();
+    const counts = await done;
     assert.deepEqual(counts, { applied: 1, failed: 0 });
     assert.equal(saved, 1, 'the calendar event was saved');
-    assert.ok(evals.length >= 2, 'drain + markFindingApplied evals ran');
-    assert.ok(evals.every((e) => e.useCallback === false),
-      'every eval is synchronous — no stored-completion callbacks anywhere');
-    assert.ok(evals.some((e) => e.js.includes('markFindingApplied("f1", true')),
-      'the applied state was pushed back into the page');
+    assert.ok(wv.evals.some((js) => js.includes('markFindingApplied("f1", true')),
+      'chip feedback pushed to the page (best-effort)');
+    assert.deepEqual(summaryShown, { applied: 1, failed: 0 },
+      'the authoritative summary Alert is shown after dismissal');
   } finally {
     delete global.WebView;
   }
 });
 
-test('presentReviewResults surfaces page errors and gives up loudly after repeated poll failures', async () => {
+test('presentReviewResults survives evaluateJavaScript rejection — the apply still lands', async () => {
   const adapter = buildAdapter();
-  adapter.sleepForReviewPoll = () => new Promise((resolve) => setImmediate(resolve));
-  adapter.reviewEventIndex = {};
-  const warns = [];
-  const originalWarn = console.warn;
-  console.warn = (msg) => { warns.push(String(msg)); };
+  let saved = 0;
+  adapter.reviewEventIndex = { f1: { location: '', notes: '', save: async () => { saved += 1; } } };
+  adapter.showReviewSummaryAlert = async () => {};
 
-  // Page-error payloads reach the native log
+  let handler = null;
   let resolvePresent = null;
-  const pageQueue = ['{"action":"page-error","message":"boom (line 3)"}'];
   global.WebView = class {
     async loadHTML() {}
+    set shouldAllowRequest(fn) { handler = fn; }
     present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
-    async evaluateJavaScript(js) {
-      if (js.includes('__reviewQueue')) {
-        const out = JSON.stringify(pageQueue.splice(0, pageQueue.length));
-        if (out === '[]') resolvePresent();
-        return out;
-      }
-      return undefined;
-    }
+    // Mirrors the device failure: evaluateJavaScript on a presented web view throws.
+    async evaluateJavaScript() { throw new Error('evaluateJavaScript unavailable'); }
   };
   try {
-    await adapter.presentReviewResults([buildPollFinding()], {});
-    assert.ok(warns.some((w) => w.includes('UI page error: boom (line 3)')),
-      'page-side errors are logged natively');
-
-    // Persistent poll failures: warned at 1 and 10, then the loop gives up
-    warns.length = 0;
-    global.WebView = class {
-      async loadHTML() {}
-      present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
-      async evaluateJavaScript() { throw new Error('bridge down'); }
-    };
-    const done = adapter.presentReviewResults([buildPollFinding()], {});
-    // the loop breaks after 10 failures; the UI stays up until dismissal
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    const done = adapter.presentReviewResults([buildBridgeFinding()], {});
+    await new Promise((r) => setImmediate(r));
+    handler({ url: 'chunkyreview://act?a=apply&id=f1&n=1' });
+    await new Promise((r) => setImmediate(r));
     resolvePresent();
     const counts = await done;
-    assert.deepEqual(counts, { applied: 0, failed: 0 });
-    assert.equal(warns.filter((w) => w.includes('UI bridge poll failed')).length, 2,
-      'warned on the first and the giving-up failure, not all ten');
-    assert.ok(warns.some((w) => w.includes('giving up on Apply buttons')),
-      'the give-up is loud, not silent');
+    assert.deepEqual(counts, { applied: 1, failed: 0 },
+      'a dead chip-feedback channel never blocks the native apply');
+    assert.equal(saved, 1, 'the calendar write happened regardless');
   } finally {
-    console.warn = originalWarn;
     delete global.WebView;
   }
 });
 
-test('review page carries the error banner, onerror trap, and bar-data visibility', () => {
+test('presentReviewResults bulk apply resolves every eligible finding', async () => {
+  const adapter = buildAdapter();
+  const saves = [];
+  adapter.reviewEventIndex = {
+    m1: { location: '', notes: '', save: async () => { saves.push('m1'); } },
+    p1: { location: '1,2', notes: '', save: async () => { saves.push('p1'); } }
+  };
+  adapter.showReviewSummaryAlert = async () => {};
+  const findings = [
+    { id: 'm1', calendarTitle: 'c', eventTitle: 'M', startDate: null, check: 'geocode', status: 'missing-pin', current: { location: '', address: 'x' }, proposed: { location: '3,4' }, detail: 'd' },
+    { id: 'p1', calendarTitle: 'c', eventTitle: 'P', startDate: null, check: 'geocode', status: 'pin-moved', current: { location: '1,2', address: 'y' }, proposed: { location: '5,6' }, detail: 'd' }
+  ];
+
+  const wv = installFakeWebView();
+  try {
+    const done = adapter.presentReviewResults(findings, {});
+    await new Promise((r) => setImmediate(r));
+    // "missing only" applies just the missing-pin finding.
+    wv.tap('chunkyreview://act?a=apply-bulk&id=missing-only&n=1');
+    await new Promise((r) => setImmediate(r));
+    wv.dismiss();
+    const counts = await done;
+    assert.deepEqual(saves, ['m1'], 'only the missing-pin finding was applied');
+    assert.deepEqual(counts, { applied: 1, failed: 0 });
+  } finally {
+    delete global.WebView;
+  }
+});
+
+test('review page uses the chunkyreview scheme, error banner, and bar-data visibility', () => {
   const adapter = buildAdapter();
   const barFinding = {
     id: 'b1', calendarTitle: 'chunky-dad-poconos', eventTitle: 'FURBALL CAMP',
@@ -1144,6 +1183,9 @@ test('review page carries the error banner, onerror trap, and bar-data visibilit
     proposed: {}, detail: 'matches curated bar data (Camp Out)'
   };
   const html = adapter.generateReviewHTML([barFinding], { barsFreshness: { remote: 12, local: 0, unavailable: 10 } });
+  assert.ok(html.includes('chunkyreview://act'), 'buttons signal via the custom scheme');
+  assert.ok(!html.includes('__reviewQueue') && !html.includes('postReviewAction'),
+    'no leftover poll/callback bridge plumbing in the page');
   assert.ok(html.includes('reviewErrorBanner'), 'error banner div present');
   assert.ok(html.includes('window.onerror'), 'page error trap installed');
   assert.ok(html.includes('1 event verified against curated bar data'), 'bar-data count in header');
