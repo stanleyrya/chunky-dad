@@ -6,35 +6,8 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-phoenix
 X-WR-TIMEZONE:America/Phoenix
 BEGIN:VEVENT
-DTSTART:20251005T040000Z
-DTEND:20251005T090000Z
-DTSTAMP:20260717T182142Z
-UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
-CREATED:20251001T000958Z
-DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
- nbar: Kobalt\naddress: 3110 North Central Avenue\, Phoenix\, AZ 85012\ntime
- zone: America/Phoenix\nurl: https://linktr.ee/megawoof_america\nticketUrl: 
- https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-
- tickets-1675720327609\ncover: $11.58 - $22.10 (as of 10/1)\nimage: https://
- img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722
- 403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&aut
- o=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc5
- 3f0c3a8efa5\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/meg
- awoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.48
- 33086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM\nkey: megaw
- oof|2025-10-05|kobalt|eventbrite
-LAST-MODIFIED:20251002T003853Z
-LOCATION:33.4833086\, -112.0754149
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260524T043000Z
-DTSTAMP:20260717T182142Z
+DTSTAMP:20260717T221553Z
 UID:9165A83C-32B2-497F-A522-7C5ADF7B9A2A
 CREATED:20260507T001637Z
 DESCRIPTION:description: Bearracuda PhoenixRELAUNCH PARTYSaturday\, May 23t
@@ -60,9 +33,36 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20251005T040000Z
+DTEND:20251005T090000Z
+DTSTAMP:20260717T221553Z
+UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
+CREATED:20251001T000958Z
+DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
+ nbar: Kobalt\naddress: 3110 North Central Avenue\, Phoenix\, AZ 85012\ntime
+ zone: America/Phoenix\nurl: https://linktr.ee/megawoof_america\nticketUrl: 
+ https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-
+ tickets-1675720327609\ncover: $11.58 - $22.10 (as of 10/1)\nimage: https://
+ img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722
+ 403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&aut
+ o=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc5
+ 3f0c3a8efa5\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/meg
+ awoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.48
+ 33086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM\nkey: megaw
+ oof|2025-10-05|kobalt|eventbrite
+LAST-MODIFIED:20251002T003853Z
+LOCATION:33.4833086\, -112.0754149
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260809T043000Z
 DTEND:20260809T090000Z
-DTSTAMP:20260717T182142Z
+DTSTAMP:20260717T221553Z
 UID:DBB2B903-E956-45AE-8645-08B4C4A8A455
 CREATED:20260712T004132Z
 DESCRIPTION:description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: 
@@ -74,10 +74,10 @@ DESCRIPTION:description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar:
  5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezo
  ne: America/Phoenix\nshortName: MEGA-WOOF\ninstagram: https://www.instagram
  .com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\nkey: me
- gawoof-america-phoenix-summer-woofers|2026-08-09|kobalt\ngmaps: https://www
- .google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20A
- venue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012
-LAST-MODIFIED:20260717T181912Z
+ gawoof-america-phoenix-summer-woofers|2026-08-09|kobalt\naddressSource: pag
+ e\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%
+ 20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012
+LAST-MODIFIED:20260717T211436Z
 LOCATION:33.4832996\, -112.0753159
 SEQUENCE:0
 STATUS:CONFIRMED

@@ -67,9 +67,13 @@
       "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
+      "coordinates": {
+        "lat": 29.9559524,
+        "lng": -90.0738975
+      },
       "startDate": "2025-08-29T21:00:00",
       "endDate": "2025-08-30T02:00:00",
-      "unprocessedDescription": "description: Music & Entertainment\n• Matt Stands &amp; Freddy\r King of Pants (Seattle)\n• Decor &amp; Photos by Dusti Cunningham\nbar: Joy Theatre\naddress: 1200 Canal St, New Orleans, LA 70112\ntimezone: America/Chicago\nurl: https://bearracuda.com/events/new-orleans/\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-nola-august-2025-web.jpg\nfacebook: https://www.facebook.com/share/1EZ2P4X4Ek/\nticketUrl: https://www.ticketmaster.com/bearracuda-new-orleans-louisiana-08-29-2025/event/1B006275D3607BD4\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=1200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112\nkey: bearracuda-2025-08-30-new-orleans",
+      "unprocessedDescription": "description: Music & Entertainment\n• Matt Stands &amp; Freddy\r King of Pants (Seattle)\n• Decor &amp; Photos by Dusti Cunningham\nbar: Joy Theatre\naddress: 1200 Canal St, New Orleans, LA 70112\ntimezone: America/Chicago\nurl: https://bearracuda.com/events/new-orleans/\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-nola-august-2025-web.jpg\nfacebook: https://www.facebook.com/share/1EZ2P4X4Ek/\nticketUrl: https://www.ticketmaster.com/bearracuda-new-orleans-louisiana-08-29-2025/event/1B006275D3607BD4\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=1200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112\nkey: bearracuda-2025-08-30-new-orleans\npinSource: geocoded-exact",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
