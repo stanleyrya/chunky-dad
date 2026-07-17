@@ -22,211 +22,45 @@
   },
   "events": [
     {
-      "name": "MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.044092,
-        "lng": -118.2542355
-      },
-      "startDate": "2026-06-06T21:00:00",
-      "endDate": "2026-06-07T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th\re Globe\naddress: 740 South Broadway, Los Angeles, CA 90014\nticketUrl: https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc80cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2026-06-07|the globe",
-      "startTimezone": null,
-      "endTimezone": null,
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "startDate": "2025-07-17T17:00:00",
+      "endDate": "2025-07-17T21:00:00",
+      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nShorter: BHH\nInstagram: https://www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour",
+      "startTimezone": "America/Vancouver",
+      "endTimezone": "America/Vancouver",
       "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "FC6AD30A-ABEE-4135-91A0-18E30D96674D",
-      "uid": "FC6AD30A-ABEE-4135-91A0-18E30D96674D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "The Globe",
-      "cover": "FREE",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc80cfbaa15ecbe0f81f67bae150",
-      "tea": "MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -",
-      "address": "740 South Broadway, Los Angeles, CA 90014",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-pride-free-june-6th-free-tkts-the-globe-0bb27076"
-    },
-    {
-      "name": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.874454,
-        "lng": -118.1680614
-      },
-      "startDate": "2026-05-16T21:00:00",
-      "endDate": "2026-05-17T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N\rorth\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\nticketUrl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long-beach-pride|2026-05-17|falcon north",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
-      "uid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Falcon North",
-      "cover": "$11.58-$22.09",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd",
-      "tea": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
-      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-america-long-beach-pride-152ddd6b"
-    },
-    {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "10PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2025-10-25T22:00:00",
-      "endDate": "2025-10-26T05:00:00",
-      "unprocessedDescription": "description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED\rITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
-      "uid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
+      "wasUTC": false,
+      "sourceUid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "cover": "$22.10 - $39.98 (as of 10/1)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a",
-      "tea": "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION",
+      "bar": "Check instagram for this week’s location.",
+      "tea": "Popular happy hour that changes location every week.",
       "address": null,
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "ticketUrl": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
-      "shortName": "MEGA-WOOF",
+      "website": "https://linktr.ee/bearhappyhour",
+      "instagram": "https://www.instagram.com/bearhappyhourla",
+      "shorterName": "BHH",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
+          "url": "https://linktr.ee/bearhappyhour",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
+          "url": "https://www.instagram.com/bearhappyhourla",
           "label": "📷 Instagram"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "megawoof-33341c08"
-    },
-    {
-      "name": "Club Chub",
-      "day": "Sunday",
-      "time": "3PM-9PM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
-      "coordinates": {
-        "lat": 34.0498043,
-        "lng": -118.2493258
-      },
-      "startDate": "2025-07-20T15:00:00",
-      "endDate": "2025-07-20T21:00:00",
-      "unprocessedDescription": "Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6\roMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
-      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Precinct DTLA",
-      "address": null,
-      "website": null,
-      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "club-chub-0e67a66c"
+      "slug": "bear-happy-hour-67a26f5d"
     },
     {
       "name": "MEGAWOOF",
@@ -281,45 +115,48 @@
       "slug": "megawoof-69e037bc"
     },
     {
-      "name": "Bear Happy Hour",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "weekly",
+      "name": "Club Chub",
+      "day": "Sunday",
+      "time": "3PM-9PM",
+      "eventType": "monthly",
       "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "startDate": "2025-07-17T17:00:00",
-      "endDate": "2025-07-17T21:00:00",
-      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nShorter: BHH\nInstagram: https://www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour",
-      "startTimezone": "America/Vancouver",
-      "endTimezone": "America/Vancouver",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
+      "coordinates": {
+        "lat": 34.0498043,
+        "lng": -118.2493258
+      },
+      "startDate": "2025-07-20T15:00:00",
+      "endDate": "2025-07-20T21:00:00",
+      "unprocessedDescription": "Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6\roMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": false,
-      "sourceUid": "9vnvsm6kjpievu62279lco139k@google.com",
-      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "sourceUid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 1,
       "overrideIdentityType": null,
-      "bar": "Check instagram for this week’s location.",
-      "tea": "Popular happy hour that changes location every week.",
+      "bar": "Precinct DTLA",
       "address": null,
-      "website": "https://linktr.ee/bearhappyhour",
-      "instagram": "https://www.instagram.com/bearhappyhourla",
-      "shorterName": "BHH",
+      "website": null,
+      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
       "bearReview": null,
       "links": [
         {
-          "type": "website",
-          "url": "https://linktr.ee/bearhappyhour",
-          "label": "🌐 Website"
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+          "label": "📷 Instagram"
         },
         {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearhappyhourla",
-          "label": "📷 Instagram"
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+          "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "bear-happy-hour-67a26f5d"
+      "slug": "club-chub-0e67a66c"
     },
     {
       "name": "MEGAWOOF",
@@ -380,6 +217,122 @@
       "slug": "megawoof-6062add7"
     },
     {
+      "name": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.874454,
+        "lng": -118.1680614
+      },
+      "startDate": "2026-05-16T21:00:00",
+      "endDate": "2026-05-17T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N\rorth\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\nticketUrl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long-beach-pride|2026-05-17|falcon north",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
+      "uid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Falcon North",
+      "cover": "$11.58-$22.09",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd",
+      "tea": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
+      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-long-beach-pride-152ddd6b"
+    },
+    {
+      "name": "MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.044092,
+        "lng": -118.2542355
+      },
+      "startDate": "2026-06-06T21:00:00",
+      "endDate": "2026-06-07T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th\re Globe\naddress: 740 South Broadway, Los Angeles, CA 90014\nticketUrl: https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc80cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2026-06-07|the globe",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "FC6AD30A-ABEE-4135-91A0-18E30D96674D",
+      "uid": "FC6AD30A-ABEE-4135-91A0-18E30D96674D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "The Globe",
+      "cover": "FREE",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc80cfbaa15ecbe0f81f67bae150",
+      "tea": "MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -",
+      "address": "740 South Broadway, Los Angeles, CA 90014",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-pride-free-june-6th-free-tkts-the-globe-0bb27076"
+    },
+    {
       "name": "D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY and SPECIAL\r GUEST",
       "day": "Saturday",
       "time": "10PM-4:30AM",
@@ -387,7 +340,7 @@
       "recurring": false,
       "startDate": "2026-08-01T22:00:00",
       "endDate": "2026-08-02T04:30:00",
-      "unprocessedDescription": "description: D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM \rPARTY and SPECIAL GUEST\nbar: TBA\nticketUrl: https://www.eventbrite.com/e/duro-is-back-new-outdoor-location-night-foam-party-and-special-guest-tickets-1991255145744\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188494288%2F185013722403%2F1%2Foriginal.20260708-215523?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=fe83a13945d2758b3e20c2c7e84a0aa1\ntimezone: America/Los_Angeles\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\nkey: d-u>r-o-is-back-new-outdoor-location-night-foam-party-and-special-guest|2026-08-02|tba\ncover: $22.10 - $39.98",
+      "unprocessedDescription": "description: D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM \rPARTY and SPECIAL GUEST\nbar: TBA\nticketUrl: https://www.eventbrite.com/e/duro-is-back-new-outdoor-location-night-foam-party-and-special-guest-tickets-1991255145744\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188494288%2F185013722403%2F1%2Foriginal.20260708-215523?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=fe83a13945d2758b3e20c2c7e84a0aa1\ncover: $22.10 - $39.98\ntimezone: America/Los_Angeles\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\nkey: d-u>r-o-is-back-new-outdoor-location-night-foam-party-and-special-guest|2026-08-02|tba",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
@@ -426,6 +379,53 @@
         }
       ],
       "slug": "duro-is-back-new-outdoor-location-night-foam-party-and-special-guest-5bba8406"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "10PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2025-10-25T22:00:00",
+      "endDate": "2025-10-26T05:00:00",
+      "unprocessedDescription": "description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED\rITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
+      "uid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "cover": "$22.10 - $39.98 (as of 10/1)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a",
+      "tea": "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION",
+      "address": null,
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "ticketUrl": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-33341c08"
     }
   ]
 }

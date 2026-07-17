@@ -63,64 +63,6 @@
       "slug": "megawoof-2f8a9cb8"
     },
     {
-      "name": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
-      "day": "Saturday",
-      "time": "9:30PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.4832996,
-        "lng": -112.0753159
-      },
-      "startDate": "2026-08-08T21:30:00",
-      "endDate": "2026-08-09T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: \rKobalt\nticketUrl: https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\nkey: megawoof-america-phoenix-summer-woofers|2026-08-09|kobalt\naddress: 3110 North Central Avenue, #175, Phoenix, AZ 85012\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Phoenix",
-      "wasUTC": true,
-      "sourceUid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
-      "uid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Kobalt",
-      "cover": "$11.58-$22.10",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61",
-      "tea": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
-      "address": "3110 North Central Avenue, #175, Phoenix, AZ 85012",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-america-phoenix-summer-woofers-007d0b12"
-    },
-    {
       "name": "Bearracuda Phoenix RELAUNCH Party!",
       "day": "Saturday",
       "time": "9:30PM",
@@ -176,6 +118,64 @@
         }
       ],
       "slug": "bearracuda-phoenix-relaunch-party-320faa75"
+    },
+    {
+      "name": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
+      "day": "Saturday",
+      "time": "9:30PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.4832996,
+        "lng": -112.0753159
+      },
+      "startDate": "2026-08-08T21:30:00",
+      "endDate": "2026-08-09T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: \rKobalt\naddress: 3110 North Central Avenue, #175, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\nkey: megawoof-america-phoenix-summer-woofers|2026-08-09|kobalt\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
+      "uid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Kobalt",
+      "cover": "$11.58-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61",
+      "tea": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
+      "address": "3110 North Central Avenue, #175, Phoenix, AZ 85012",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-phoenix-summer-woofers-007d0b12"
     }
   ]
 }
