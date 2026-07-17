@@ -610,6 +610,83 @@ test('non-conflicts never reach the AI and keep clobber semantics', async () => 
   assert.equal(finalEvent.cover, '$10', 'one-sided fields are added via clobber semantics');
 });
 
+// ---------------------------------------------------------------------------
+// Geo-provenance merge: pinSource/addressSource follow the finalized value,
+// deterministically and never via AI (calendar-is-database, no mislabeling).
+// ---------------------------------------------------------------------------
+
+// address uses clobber so the merge stays fully deterministic (no AI) — the
+// provenance logic must never depend on arbitration.
+const PROVENANCE_PRIORITIES = { address: { merge: 'clobber' } };
+
+test('merge: a fresh scraped pin that wins carries the scrape pinSource/addressSource', async () => {
+  const core = createCore();
+  const adapter = buildArbitrationAdapter({});
+  const scraped = {
+    title: 'FURBALL', city: 'dallas', source: 'ai-web', _fieldPriorities: PROVENANCE_PRIORITIES,
+    location: '32.8105, -96.8110', address: '3911 Cedar Springs Rd, Dallas',
+    pinSource: 'geocoded-exact', addressSource: 'page'
+  };
+  const existing = {
+    title: 'FURBALL', location: '32.7000, -96.7000', url: '',
+    notes: ['address: 100 Old Rd, Dallas', 'pinSource: page', 'addressSource: page'].join('\n')
+  };
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'provenance never triggers an AI request');
+  assert.equal(finalEvent.location, '32.8105, -96.8110', 'the fresh pin wins (address changed)');
+  assert.equal(finalEvent.pinSource, 'geocoded-exact', 'pinSource follows the fresh scraped pin');
+  assert.equal(finalEvent.addressSource, 'page', 'addressSource follows the fresh scraped address');
+  const parsed = core.parseNotesIntoFields(finalEvent.notes);
+  assert.equal(parsed.pinSource, 'geocoded-exact');
+  assert.equal(parsed.addressSource, 'page');
+});
+
+test('merge: a kept calendar pin (address unchanged) keeps the calendar stored sources, never relabeled', async () => {
+  const core = createCore();
+  const adapter = buildArbitrationAdapter({});
+  // Fresh geocode DIFFERS from the stored (curated) pin; the scrape brought no
+  // address, so the calendar address is kept → address unchanged → pin kept.
+  const scraped = {
+    title: 'FURBALL', city: 'dallas', source: 'ai-web', _fieldPriorities: PROVENANCE_PRIORITIES,
+    location: '32.9999, -96.9999', pinSource: 'geocoded-approx'
+  };
+  const existing = {
+    title: 'FURBALL', location: '32.7000, -96.7000', url: '',
+    notes: ['address: 100 Old Rd, Dallas', 'pinSource: curated', 'addressSource: curated'].join('\n')
+  };
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'provenance never triggers an AI request');
+  assert.equal(finalEvent.location, '32.7000, -96.7000', 'the calendar pin is kept');
+  assert.equal(finalEvent.pinSource, 'curated', 'kept calendar pin keeps its stored pinSource, not the fresh geocode label');
+  assert.equal(finalEvent.addressSource, 'curated', 'kept calendar address keeps its stored addressSource');
+});
+
+test('merge: a kept calendar pin with NO stored source leaves the merged source absent (hand-fix not mislabeled)', async () => {
+  const core = createCore();
+  const adapter = buildArbitrationAdapter({});
+  // Hand-fixed calendar pin (no pinSource on record); the fresh geocode differs
+  // and the address is unchanged → the calendar pin is kept.
+  const scraped = {
+    title: 'FURBALL', city: 'dallas', source: 'ai-web', _fieldPriorities: PROVENANCE_PRIORITIES,
+    location: '32.9999, -96.9999', pinSource: 'geocoded-approx'
+  };
+  const existing = {
+    title: 'FURBALL', location: '32.7000, -96.7000', url: '',
+    notes: 'address: 100 Old Rd, Dallas'
+  };
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'provenance never triggers an AI request');
+  assert.equal(finalEvent.location, '32.7000, -96.7000', 'the hand-fixed calendar pin is kept');
+  assert.equal(finalEvent.pinSource, undefined, 'no fresh geocode label is stamped onto a pin we kept but did not produce');
+  assert.ok(!/pinSource/.test(finalEvent.notes), 'no pinSource line is written to the notes');
+});
+
 test('same-instant Date vs ISO string is not a conflict; differing instants are', () => {
   const core = createCore();
   assert.equal(

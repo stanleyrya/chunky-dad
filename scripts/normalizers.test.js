@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { LocationNormalizer, OpenStreetMapNormalizer } = require('./normalizers');
+const { LocationNormalizer, OpenStreetMapNormalizer, BasicDataNormalizer, BarDataNormalizer } = require('./normalizers');
 const { SharedCore } = require('./shared-core');
 const { EventSchema } = require('./event-schema');
 
@@ -1383,4 +1383,145 @@ test('resolveWallClockDates ignores events without the wall-clock flag', () => {
 
   assert.equal(event.startDate.toISOString(), '2026-07-18T02:00:00.000Z');
   assert.equal(event.timezone, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Geo-provenance: pinSource / addressSource stamping across the normalizers
+// (page → curated → geocoded-* → inferred).
+// ---------------------------------------------------------------------------
+
+function createBasicNormalizer() {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema });
+  return new BasicDataNormalizer(core);
+}
+
+test('BasicDataNormalizer stamps page provenance for coordinates and address that arrived from the parser', () => {
+  const normalizer = createBasicNormalizer();
+  const event = { title: 'PAGE PIN', city: 'nyc', location: '40.7128, -74.006', address: '123 W 4th St' };
+
+  normalizer.normalize(event);
+
+  assert.equal(event.pinSource, 'page', 'a coordinate pair on the event → pinSource page');
+  assert.equal(event.addressSource, 'page', 'a non-empty address on the event → addressSource page');
+});
+
+test('BasicDataNormalizer leaves sources absent when the corresponding value is absent', () => {
+  const normalizer = createBasicNormalizer();
+  const noPin = { title: 'NO PIN', city: 'nyc', address: '123 W 4th St' };
+  normalizer.normalize(noPin);
+  assert.equal(noPin.pinSource, undefined, 'no coordinates → no pinSource');
+  assert.equal(noPin.addressSource, 'page');
+
+  const noAddress = { title: 'NO ADDR', city: 'nyc', location: '40.7128, -74.006' };
+  normalizer.normalize(noAddress);
+  assert.equal(noAddress.pinSource, 'page');
+  assert.equal(noAddress.addressSource, undefined, 'no address → no addressSource');
+
+  const textLocation = { title: 'TEXT LOC', city: 'nyc', location: 'somewhere downtown' };
+  normalizer.normalize(textLocation);
+  assert.equal(textLocation.pinSource, undefined, 'a non-coordinate location is not a page pin');
+});
+
+test('BasicDataNormalizer never overwrites a source that is already set', () => {
+  const normalizer = createBasicNormalizer();
+  const event = {
+    title: 'ALREADY SOURCED', city: 'nyc', location: '40.7128, -74.006', address: '123 W 4th St',
+    pinSource: 'curated', addressSource: 'curated'
+  };
+  normalizer.normalize(event);
+  assert.equal(event.pinSource, 'curated');
+  assert.equal(event.addressSource, 'curated');
+});
+
+function createBarNormalizerWithBar() {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    bars: {
+      nyc: [
+        {
+          name: 'The Eagle NYC',
+          address: '554 W 28th St, New York, NY 10001',
+          coordinates: '40.7506, -74.0035',
+          googleMaps: 'https://maps.example/eagle'
+        }
+      ]
+    }
+  });
+  return new BarDataNormalizer(core);
+}
+
+test('BarDataNormalizer stamps curated provenance when a bar match fills location and address', () => {
+  const normalizer = createBarNormalizerWithBar();
+  const event = { title: 'Bear Night', city: 'nyc', bar: 'The Eagle NYC' };
+
+  normalizer.normalize(event);
+
+  assert.equal(event.location, '40.7506, -74.0035');
+  assert.equal(event.pinSource, 'curated', 'bar coordinates → pinSource curated');
+  assert.equal(event.address, '554 W 28th St, New York, NY 10001');
+  assert.equal(event.addressSource, 'curated', 'bar address → addressSource curated');
+});
+
+test('BarDataNormalizer does not stamp curated for a value it did not write', () => {
+  const normalizer = createBarNormalizerWithBar();
+  // Event already has coordinates → bar coordinates are not applied, so pinSource stays as-is.
+  const event = { title: 'Bear Night', city: 'nyc', bar: 'The Eagle NYC', location: '41.0, -73.0', pinSource: 'page' };
+
+  normalizer.normalize(event);
+
+  assert.equal(event.location, '41.0, -73.0', 'existing pin is kept');
+  assert.equal(event.pinSource, 'page', 'pinSource is untouched when bar coordinates are not applied');
+  // Bar address is longer than none → address (and its source) do get written.
+  assert.equal(event.addressSource, 'curated');
+});
+
+// Nominatim result with a house number → grade 'exact'. Coordinates sit within
+// the Portland acceptance radius so distance ranking keeps it.
+const PORTLAND_EXACT_RESULT = {
+  lat: '45.5230622',
+  lon: '-122.6564816',
+  display_name: '722, East Burnside Street, Portland, Multnomah County, Oregon, 97214, United States',
+  class: 'place',
+  type: 'house',
+  address: { house_number: '722', road: 'East Burnside Street', city: 'Portland', county: 'Multnomah County', state: 'Oregon' }
+};
+
+test('OpenStreetMapNormalizer forward geocode of an exact-grade result → pinSource geocoded-exact', async () => {
+  const normalizer = createOsmNormalizerWithCoords();
+  const httpAdapter = createStubHttpAdapter([PORTLAND_EXACT_RESULT]);
+  const event = { title: 'EXACT PIN', address: '722 E Burnside', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '45.5230622, -122.6564816');
+  assert.equal(event.pinSource, 'geocoded-exact', 'exact grade + non-failed cross-check → geocoded-exact');
+});
+
+test('OpenStreetMapNormalizer forward geocode of a street-grade result → pinSource geocoded-approx', async () => {
+  const normalizer = createOsmNormalizerWithCoords();
+  // PORTLAND_RESULT carries no house number → street grade.
+  const httpAdapter = createStubHttpAdapter([PORTLAND_RESULT]);
+  const event = { title: 'STREET PIN', address: '722 E Burnside', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '45.5230622, -122.6564816');
+  assert.equal(event.pinSource, 'geocoded-approx', 'street/photon/census-grade → geocoded-approx');
+});
+
+test('OpenStreetMapNormalizer reverse geocode of a pin without an address → addressSource inferred', async () => {
+  const normalizer = createOsmNormalizer();
+  const httpAdapter = {
+    requests: [],
+    fetchData: async (url) => {
+      httpAdapter.requests.push(url);
+      return JSON.stringify({ display_name: '350 5th Ave, New York, NY 10118, USA' });
+    }
+  };
+  const event = { title: 'REVERSE ADDR', location: '40.748817, -73.985428' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.address, '350 5th Ave, New York, NY 10118, USA');
+  assert.equal(event.addressSource, 'inferred', 'reverse-geocoded address → addressSource inferred');
 });

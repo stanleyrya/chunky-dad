@@ -26,6 +26,28 @@ test('notes round-trip: colons, backslashes, and newlines in values survive exac
   assert.equal(parsed.title, undefined, 'excluded fields never enter the notes');
 });
 
+test('notes round-trip: pinSource/addressSource persist while underscore _geocode* fields are excluded', () => {
+  const event = {
+    bar: 'The Eagle',
+    address: '554 W 28th St, New York, NY 10001',
+    pinSource: 'geocoded-exact',
+    addressSource: 'page',
+    // Underscore-prefixed geocode verdict fields must never enter the notes.
+    _geocodeGrade: 'exact',
+    _geocodeCrossCheck: 'pass',
+    _geocodeSource: 'nominatim'
+  };
+
+  const notes = EventSchema.formatEventNotes(event);
+  const parsed = EventSchema.parseNotesIntoFields(notes);
+
+  assert.equal(parsed.pinSource, 'geocoded-exact', 'pinSource round-trips through notes');
+  assert.equal(parsed.addressSource, 'page', 'addressSource round-trips through notes');
+  assert.ok(!/_geocode/.test(notes), 'underscore geocode fields are excluded from notes');
+  assert.equal(parsed._geocodeGrade, undefined);
+  assert.equal(parsed._geocodeCrossCheck, undefined);
+});
+
 test('notes round-trip: URL-like values keep their unescaped colons', () => {
   const event = {
     ticketUrl: 'https://tickets.example/e/furball?time=21:00',

@@ -705,17 +705,23 @@ test('applyReviewFinding mutates only the proposed fields on the stubbed Calenda
   assert.equal(pinResult.success, true);
   assert.deepEqual(pinResult.appliedFields, ['location']);
   assert.equal(stubEvent.location, '32.810535, -96.8110709');
-  assert.equal(stubEvent.notes, originalNotes, 'notes untouched by a location-only fix');
+  // A location fix now also stamps pin provenance in notes. This finding carries
+  // no source/grade, so it defaults to geocoded-approx; only the pinSource line
+  // is added — the rest of the notes are untouched.
+  assert.equal(stubEvent.notes,
+    originalNotes + '\npinSource: geocoded-approx',
+    'location fix stamps pinSource but leaves other notes untouched');
   assert.equal(stubEvent.title, 'FURBALL');
   assert.equal(saves, 1);
 
-  // Address proposal: only the address line inside notes is rewritten
+  // Address proposal: the address line inside notes is rewritten and the
+  // reverse-geocoded address is labeled inferred (non-bar-data finding).
   await adapter.applyReviewFinding({
     id: 'evt-1', eventTitle: 'FURBALL', calendarTitle: 'chunky-dad-dallas',
     proposed: { address: '3911 Cedar Springs Rd, Dallas, TX 75219' }
   });
   assert.equal(stubEvent.notes,
-    'bar: STATION 4\naddress: 3911 Cedar Springs Rd, Dallas, TX 75219\nwebsite: https://x.example');
+    'bar: STATION 4\naddress: 3911 Cedar Springs Rd, Dallas, TX 75219\nwebsite: https://x.example\npinSource: geocoded-approx\naddressSource: inferred');
   assert.equal(stubEvent.location, '32.810535, -96.8110709', 'location untouched by an address-only fix');
   assert.equal(saves, 2);
 
@@ -725,7 +731,7 @@ test('applyReviewFinding mutates only the proposed fields on the stubbed Calenda
     id: 'evt-1', eventTitle: 'FURBALL', calendarTitle: 'chunky-dad-dallas',
     proposed: { address: '5025 Bowser Ave, Dallas' }
   });
-  assert.equal(stubEvent.notes, 'Doors at 9pm, no cover\nbar: STATION 4\naddress: 5025 Bowser Ave, Dallas');
+  assert.equal(stubEvent.notes, 'Doors at 9pm, no cover\nbar: STATION 4\naddress: 5025 Bowser Ave, Dallas\naddressSource: inferred');
 
   // Unknown finding id or an empty proposal never saves
   const missing = await adapter.applyReviewFinding({ id: 'nope', proposed: { location: '1, 2' } });
@@ -733,6 +739,43 @@ test('applyReviewFinding mutates only the proposed fields on the stubbed Calenda
   const empty = await adapter.applyReviewFinding({ id: 'evt-1', proposed: {} });
   assert.equal(empty.success, false);
   assert.equal(saves, 3);
+});
+
+test('applyReviewFinding stamps provenance by finding origin (bar-data curated, geocode graded, reverse inferred)', async () => {
+  const adapter = buildAdapter();
+
+  // Bar-data finding applying pin + address → both are curated.
+  const barEvent = {
+    title: 'MEGAWOOF', location: '', notes: 'bar: EAGLE',
+    save: async () => {}
+  };
+  adapter.reviewEventIndex = { 'bar-1': barEvent };
+  await adapter.applyReviewFinding({
+    id: 'bar-1', eventTitle: 'MEGAWOOF', calendarTitle: 'chunky-dad-la',
+    source: 'bar-data',
+    proposed: { location: '34.05, -118.24', address: '4219 Santa Monica Blvd, Los Angeles' }
+  });
+  assert.ok(barEvent.notes.includes('pinSource: curated'), 'bar-data pin is curated');
+  assert.ok(barEvent.notes.includes('addressSource: curated'), 'bar-data address is curated');
+
+  // Geocode finding carrying an exact + passing verdict → geocoded-exact.
+  const exactEvent = { title: 'FUR', location: '', notes: 'bar: X', save: async () => {} };
+  adapter.reviewEventIndex = { 'geo-1': exactEvent };
+  await adapter.applyReviewFinding({
+    id: 'geo-1', eventTitle: 'FUR', calendarTitle: 'chunky-dad-nyc',
+    grade: 'exact', crossCheck: 'pass',
+    proposed: { location: '40.71, -73.99' }
+  });
+  assert.ok(exactEvent.notes.includes('pinSource: geocoded-exact'), 'exact+pass verdict → geocoded-exact');
+
+  // Reverse-geocoded address (no bar-data source) → addressSource inferred.
+  const reverseEvent = { title: 'PIN', location: '47.6, -122.3', notes: '', save: async () => {} };
+  adapter.reviewEventIndex = { 'rev-1': reverseEvent };
+  await adapter.applyReviewFinding({
+    id: 'rev-1', eventTitle: 'PIN', calendarTitle: 'chunky-dad-seattle',
+    proposed: { address: '1600 Broadway, Seattle' }
+  });
+  assert.ok(reverseEvent.notes.includes('addressSource: inferred'), 'reverse-geocoded address is inferred');
 });
 
 function buildReviewFindingsFixture() {

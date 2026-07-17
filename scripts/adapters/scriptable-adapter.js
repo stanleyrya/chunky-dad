@@ -2940,12 +2940,27 @@ class ScriptableAdapter {
           ? finding.proposed
           : {};
       const appliedFields = [];
+      // Provenance for applied fixes: the reviewer knows each finding's origin
+      // (finding.source === 'bar-data' → curated; otherwise the geocode verdict
+      // for a pin, or a reverse-geocoded address). Stamp the source ONLY for a
+      // field this finding actually wrote.
+      const isBarData = finding && finding.source === "bar-data";
       if (
         typeof proposed.location === "string" &&
         proposed.location.trim().length > 0
       ) {
         target.location = proposed.location.trim();
         appliedFields.push("location");
+        const pinSource = isBarData
+          ? "curated"
+          : finding && finding.grade === "exact" && finding.crossCheck !== "fail"
+            ? "geocoded-exact"
+            : "geocoded-approx";
+        target.notes = this.upsertNotesField(
+          target.notes || "",
+          "pinSource",
+          pinSource,
+        );
       }
       if (
         typeof proposed.address === "string" &&
@@ -2955,6 +2970,12 @@ class ScriptableAdapter {
           target.notes || "",
           "address",
           proposed.address.trim(),
+        );
+        // Curated bar address vs a reverse-geocoded (inferred) one.
+        target.notes = this.upsertNotesField(
+          target.notes || "",
+          "addressSource",
+          isBarData ? "curated" : "inferred",
         );
         appliedFields.push("address");
       }

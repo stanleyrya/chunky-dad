@@ -373,8 +373,35 @@ class SharedCore {
         // bar + address), so arbitrating it independently let it disagree with
         // the merged bar/address — createFinalEventObject regenerates it from
         // the final merged values instead.
+        // pinSource/addressSource are provenance metadata that must FOLLOW the
+        // finalized location/address deterministically (see setProvenanceSource
+        // in createFinalEventObject) — never sent to the AI, so a hand-fixed
+        // pin/address is never relabeled with a source the scrape didn't produce.
         return name !== 'key' && name !== 'notes' && name !== 'source'
-            && name !== 'location' && name !== 'gmaps';
+            && name !== 'location' && name !== 'gmaps'
+            && name !== 'pinSource' && name !== 'addressSource';
+    }
+
+    // Provenance (pinSource/addressSource) follows the finalized value: whichever
+    // side's value the merge kept for `valueField`, copy that side's `sourceField`
+    // onto the merged object. A value the merge produced fresh from the scrape
+    // carries the scrape's source; a value KEPT from the calendar carries the
+    // calendar's stored source (absent → left absent, so a hand-fixed pin/address
+    // is never relabeled with a source the scrape didn't produce for it). Purely
+    // deterministic value comparison — never AI-arbitrated.
+    setProvenanceSource(mergedObject, valueField, sourceField, scraperObject, calendarObject) {
+        const finalValue = mergedObject[valueField];
+        if (finalValue === undefined || finalValue === null || finalValue === '') return;
+        const scraperMatches = this.mergeValuesEqualForTracking(finalValue, scraperObject[valueField]);
+        const calendarMatches = this.mergeValuesEqualForTracking(finalValue, calendarObject[valueField]);
+        const isUsableSource = (value) => typeof value === 'string' && value.trim().length > 0;
+        let source;
+        if (scraperMatches && isUsableSource(scraperObject[sourceField])) {
+            source = scraperObject[sourceField].trim();
+        } else if (calendarMatches && isUsableSource(calendarObject[sourceField])) {
+            source = calendarObject[sourceField].trim();
+        }
+        if (source) mergedObject[sourceField] = source;
     }
 
     // "lat, lng" / "lat,lng": two finite floats with lat in [-90, 90] and lng in
@@ -3182,6 +3209,12 @@ class SharedCore {
             // the final merged bar/address so it can never disagree with them.
             if (fieldName === 'gmaps') continue;
 
+            // pinSource/addressSource are provenance metadata that must FOLLOW
+            // the finalized location/address (set by setProvenanceSource after
+            // STEP 3c) — they never merge or arbitrate on their own, or the
+            // generic loop could clobber a kept-pin's source with a stale one.
+            if (fieldName === 'pinSource' || fieldName === 'addressSource') continue;
+
             const priorityConfig = fieldPriorities[fieldName];
             const mergeStrategy = priorityConfig?.merge || 'upsert';
             const scraperValue = scraperObject[fieldName];
@@ -3448,6 +3481,15 @@ class SharedCore {
                 }
             }
         }
+
+        // Provenance follows the finalized value (deterministic, never AI-
+        // arbitrated): now that location and address are final, stamp
+        // pinSource/addressSource to match whichever side's value won. A fresh
+        // scraped value carries the scrape's source; a kept calendar value keeps
+        // the calendar's stored source (absent → absent) so a hand-fixed pin or
+        // address is never mislabeled with a source the scrape didn't produce.
+        this.setProvenanceSource(mergedObject, 'location', 'pinSource', scraperObject, calendarObject);
+        this.setProvenanceSource(mergedObject, 'address', 'addressSource', scraperObject, calendarObject);
 
         // STEP 4: regenerate gmaps from the FINAL merged bar + address. gmaps
         // is a derived field — a pure function of bar + address — so merging or
@@ -6443,6 +6485,10 @@ class SharedCore {
                 } else if (!hasPin) {
                     finding.status = 'missing-pin';
                     finding.proposed.location = freshLocation;
+                    // Carry the geocode verdict so applyReviewFinding can stamp
+                    // the pin's provenance (geocoded-exact vs geocoded-approx).
+                    finding.grade = fresh.grade;
+                    finding.crossCheck = fresh.crossCheck;
                     finding.detail = location
                         ? `location "${location}" is not a coordinate pair — fresh geocode proposed`
                         : 'address geocodes but no pin is stored — fresh geocode proposed';
@@ -6459,6 +6505,10 @@ class SharedCore {
                         if (fresh.crossCheck === 'pass') {
                             finding.status = 'pin-moved';
                             finding.proposed.location = freshLocation;
+                            // Carry the geocode verdict so applyReviewFinding can
+                            // stamp the pin's provenance (geocoded-exact/approx).
+                            finding.grade = fresh.grade;
+                            finding.crossCheck = fresh.crossCheck;
                             finding.detail = `stored pin is ${distanceKm.toFixed(1)}km from the fresh verified geocode of this address`;
                         } else {
                             finding.status = 'unverified';
