@@ -224,7 +224,9 @@ class BearEventScraperOrchestrator {
             
             // Load configuration early so we can pass cities config to SharedCore
             const config = await adapter.loadConfiguration();
-            
+
+            const bars = config.bars || {};
+
             // Create the normalizer pipeline first
             const normalizerPipeline = new this.modules.NormalizerPipeline();
 
@@ -234,7 +236,7 @@ class BearEventScraperOrchestrator {
                 normalizerPipeline: normalizerPipeline,
                 additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
                 pageClassificationRules: config.config?.pageClassificationRules || [],
-                bars: config.bars || {}
+                bars
             });
             
             // Wire the core back into the pipeline
@@ -253,6 +255,25 @@ class BearEventScraperOrchestrator {
                     runtime: config.runtime || null,
                     ...this.config
                 });
+            }
+
+            // Curated bar data: the website's merged copy is fresher than any
+            // local scraper-bars.js the moment a bar edit lands. Refresh ALL
+            // cities up front (null cityKeys — the scraper can't know its
+            // cities before normalization assigns them) on finalAdapter, whose
+            // pageCache config gives the combined file its 1-day TTL. Fail-soft:
+            // any error keeps the local bars, and adapters without the method
+            // (web) are tolerated — scraping must never depend on chunky.dad
+            // being up.
+            if (typeof finalAdapter.refreshRemoteBars === 'function') {
+                try {
+                    const refreshed = await finalAdapter.refreshRemoteBars(null, bars);
+                    if (refreshed && refreshed.bars && typeof refreshed.bars === 'object') {
+                        sharedCore.bars = refreshed.bars;
+                    }
+                } catch (error) {
+                    console.log(`🐻 Orchestrator: Bar data refresh failed (${error.message}) — continuing with local bars`);
+                }
             }
 
             // Create parser instances

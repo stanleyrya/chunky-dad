@@ -56,6 +56,14 @@ class WebAdapter {
         return null;
     }
 
+    // Adapter self-description for normalizers' enforce mode: Node has no
+    // Apple geocoding service, so the reverse cross-check capability is
+    // structurally absent — a skipped cross-check here is not a failure and
+    // enforce mode accepts it as before.
+    supportsReverseGeocode() {
+        return false;
+    }
+
     // On Scriptable the reviewer refreshes bar data from the live site; on
     // Node the repo checkout IS the source the site deploys from, so the
     // local bars are already current — pass them through honestly.

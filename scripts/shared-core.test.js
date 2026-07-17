@@ -4341,3 +4341,27 @@ test('review: cross-check policy — replacing a stored pin needs a PASSED cross
   assert.equal(passFindings[0].status, 'pin-moved');
   assert.equal(passFindings[0].proposed.location, '32.810535, -96.8110709');
 });
+
+test('review: on a platform that CAN cross-check, an Apple outage rejects candidates with the recover hint', async () => {
+  const core = createCore();
+  // supportsReverseGeocode() true + no placemark = Apple rate-limited/down on
+  // the phone: enforce probes now reject the exact-grade candidate outright
+  // (skipped ≠ pass), leaving a { grade: 'exact', crossCheck: 'skipped' }
+  // breadcrumb the finding renders as "re-run when Apple geocoding recovers".
+  const adapter = buildReviewGeocodeAdapter(REVIEW_GEOCODE_RESULTS, {
+    reverseGeocodePlacemark: async () => null,
+    supportsReverseGeocode: () => true
+  });
+  const { findings } = await captureReview(core, [
+    buildReviewEvent({ id: 'moved', location: '32.8285, -96.8110709' }), // ~2 km off
+    buildReviewEvent({ id: 'missing', location: '' })
+  ], createReviewContext(core, adapter));
+  const byId = new Map(findings.map(finding => [finding.id, finding]));
+
+  for (const id of ['moved', 'missing']) {
+    assert.equal(byId.get(id).status, 'unverified', `${id} must be unverified`);
+    assert.ok(byId.get(id).detail.includes('re-run when Apple geocoding recovers'), byId.get(id).detail);
+    assert.deepEqual(byId.get(id).proposed, {}, 'no proposal may ride on an unavailable cross-check');
+  }
+  assert.equal(byId.get('moved').current.location, '32.8285, -96.8110709', 'the stored pin is untouched');
+});
