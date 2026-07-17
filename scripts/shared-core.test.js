@@ -1078,6 +1078,125 @@ test('guardrail: logo-path image loses to event artwork in both directions; both
   assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['image']);
 });
 
+test('looksLikeStreetAddress: leading house number + street-type word; real venue names never match', () => {
+  const core = createCore();
+  for (const positive of ['10-90 Wyckoff Ave', '1090 Wyckoff Avenue', '446 MT NEBO RD']) {
+    assert.equal(core.looksLikeStreetAddress(positive), true, `"${positive}" is address-shaped`);
+  }
+  // Pinned venue names: a number without a street word, an ordinal street word
+  // without a house number, and no-number names must all stay venue names.
+  for (const negative of ['3 Dollar Bill', '9th Avenue Saloon', 'Rockbar', 'Eagle NYC', 'The Rail', '', null]) {
+    assert.equal(core.looksLikeStreetAddress(negative), false, `"${negative}" is NOT address-shaped`);
+  }
+});
+
+test('guardrail: an address-shaped bar never beats a named venue — the MEGAMILK regression, zero AI calls', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  // Observed production shape (2026-07-17): Eventbrite JSON-LD carried the
+  // street address in the venue-name slot, and the model picked it over the
+  // calendar's real venue with exactly backwards reasoning.
+  scraped.title = 'MEGAWOOF & BEARMILK present MEGAMILK';
+  existing.title = scraped.title;
+  scraped.bar = '10-90 Wyckoff Ave';
+  existing.notes = existing.notes.replace('bar: S4', 'bar: HOLO');
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'the only conflict resolved deterministically — no AI request at all');
+  assert.equal(finalEvent.bar, 'HOLO', 'the named venue wins over the street address');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['bar']);
+  assert.deepEqual(finalEvent._original.aiArbitration.fallbacks, [], 'resolved, not a fallback');
+  const record = finalEvent._mergeDecisions.find(decision => decision.field === 'bar');
+  assert.equal(record.source, 'deterministic');
+  assert.equal(record.reason, 'a street address is not a venue name');
+  assert.ok(logLines.includes(
+    '🔒 MERGE: "MEGAWOOF & BEARMILK present MEGAMILK" field=bar resolved deterministically — a street address is not a venue name'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+});
+
+test('guardrail: exactly one address-shaped bar loses in both directions; bar-only rule', () => {
+  const core = createCore();
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'HOLO', '10-90 Wyckoff Ave'),
+    { winner: 'a', reason: 'a street address is not a venue name' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', '10-90 Wyckoff Ave', 'HOLO'),
+    { winner: 'b', reason: 'a street address is not a venue name' });
+  assert.equal(core.resolveConflictDeterministically('bar', 'HOLO', 'The Rail'), null,
+    'two named venues still arbitrate');
+  assert.equal(core.resolveConflictDeterministically('shortName', 'HOLO', '10-90 Wyckoff Ave'), null,
+    'the address-shape rule applies to bar only');
+});
+
+test('guardrail: both bars address-shaped still reaches the AI, with the prompt backstop rule', async () => {
+  const core = createCore();
+  assert.equal(
+    core.resolveConflictDeterministically('bar', '10-90 Wyckoff Ave', '446 Mt Nebo Rd'), null,
+    'both sides address-shaped → arbitrate');
+
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.bar = '10-90 Wyckoff Ave';
+  existing.notes = existing.notes.replace('bar: S4', 'bar: 446 Mt Nebo Rd');
+  const adapter = buildArbitrationAdapter({
+    bar: { pick: 'scraped', value: '10-90 Wyckoff Ave', reason: 'matches the ticket page' }
+  });
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 1, 'both-address conflict still batches to the AI');
+  assert.equal(finalEvent.bar, '10-90 Wyckoff Ave');
+  assert.match(adapter.calls[0].prompt, /A street address \(e\.g\. "10-90 Wyckoff Ave"\) is never a venue name/,
+    'the prompt carries the defense-in-depth rule');
+});
+
+test('guardrail: a bar matching curated city bar data beats a non-matching side', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    bars: { dallas: [{ name: 'Eagle NYC', address: '554 W 28th St' }] }
+  });
+  const context = { cityKey: 'dallas' };
+  // Normalized matching (lowercase, non-alphanumerics stripped — same as
+  // BarDataNormalizer) in both directions
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'eagle-nyc', 'Dallas Woody\'s', context),
+    { winner: 'a', reason: 'matches curated bar data (Eagle NYC)' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'Dallas Woody\'s', 'Eagle NYC', context),
+    { winner: 'b', reason: 'matches curated bar data (Eagle NYC)' });
+  // Curated match outranks the address-shape rule: the curated side wins even
+  // against a side the address heuristic would also have picked
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', '554 W 28th St', 'Eagle NYC', context),
+    { winner: 'b', reason: 'matches curated bar data (Eagle NYC)' });
+  // Both sides matching curated is no tiebreak — still arbitrates
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'Eagle NYC', 'Eagle N.Y.C.', context), null,
+    'both sides curated → arbitrate');
+  // No city context or unknown city → curated rule inert (address rule may still apply)
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'Eagle NYC', 'Dallas Woody\'s'), null);
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'Eagle NYC', 'Dallas Woody\'s', { cityKey: 'denver' }), null);
+
+  // End-to-end: the curated calendar venue survives without an AI request
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.bar = 'Woody\'s Rooftop';
+  existing.notes = existing.notes.replace('bar: S4', 'bar: Eagle NYC');
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'curated-name rule decides the only conflict — no AI request');
+  assert.equal(finalEvent.bar, 'Eagle NYC');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['bar']);
+});
+
 test('mergeParsedEvents: same-host root-vs-deep website resolves deterministically too', async () => {
   const core = createCore();
   const priorities = { website: { priority: ['ai-web'], merge: 'ai' } };

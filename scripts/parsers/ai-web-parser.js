@@ -2736,8 +2736,18 @@ class AiWebParser {
         const end = this.parseJsonLdDateValue(node.endDate);
 
         const place = this.pickJsonLdPlace(node.location);
-        const bar = place ? clean(place.name) : '';
         const address = place ? this.formatJsonLdAddress(place.address, clean) : '';
+        let bar = place ? clean(place.name) : '';
+        // Ticketing JSON-LD sometimes fills the venue NAME with the street
+        // address (observed 2026-07-17: Eventbrite location.name was "10-90
+        // Wyckoff Ave" for an event at HOLO) — an address-shaped bar then
+        // fights the calendar's curated venue name in merge. Drop it: an
+        // absent bar is a gap that bar-data normalization or the calendar
+        // fills, never a conflict. The address field is unaffected.
+        if (bar && this.venueNameLooksLikeStreetAddress(bar, address)) {
+            console.log(`🤖 AI Web: JSON-LD venue name "${bar}" looks like a street address — not using it as bar`);
+            bar = '';
+        }
 
         const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
         const offerUrl = offer && typeof offer === 'object' ? this.normalizeHttpUrlValue(offer.url) : '';
@@ -2862,6 +2872,35 @@ class AiWebParser {
         const needle = tokenize(part);
         if (!needle) return false;
         return ` ${tokenize(builtSoFar)} `.includes(` ${needle} `);
+    }
+
+    // True when a JSON-LD venue NAME is really a street address: either shaped
+    // like one (shared-core's looksLikeStreetAddress heuristic), or a
+    // normalized duplicate of the address's street line — lowercase,
+    // punctuation collapsed to token boundaries, common street-type
+    // abbreviations expanded so "10-90 Wyckoff Ave" duplicates the street line
+    // of "10-90 Wyckoff Avenue, Queens, NY 11385".
+    venueNameLooksLikeStreetAddress(name, address) {
+        if (this.core && typeof this.core.looksLikeStreetAddress === 'function'
+            && this.core.looksLikeStreetAddress(name)) {
+            return true;
+        }
+        const streetLine = String(address || '').split(',')[0];
+        const expandAbbreviation = {
+            st: 'street', ave: 'avenue', blvd: 'boulevard', rd: 'road',
+            dr: 'drive', ln: 'lane', pl: 'place', ct: 'court',
+            pkwy: 'parkway', hwy: 'highway', mt: 'mount'
+        };
+        const normalizeStreetText = (value) => String(value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim()
+            .split(' ')
+            .filter(Boolean)
+            .map(token => expandAbbreviation[token] || token)
+            .join(' ');
+        const normalizedName = normalizeStreetText(name);
+        return normalizedName.length > 0 && normalizedName === normalizeStreetText(streetLine);
     }
 
     pickJsonLdImage(image) {

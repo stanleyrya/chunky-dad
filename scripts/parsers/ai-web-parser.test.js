@@ -934,6 +934,49 @@ test('buildEventFromJsonLdNode resolves city and timezone from the address', () 
   assert.equal(bare[0].city, undefined);
 });
 
+test('buildEventFromJsonLdNode never uses an address-shaped venue name as the bar', () => {
+  const parser = createParser();
+  const buildNode = (venueName, streetAddress = '10-90 Wyckoff Avenue, Queens, NY 11385') => ({
+    '@type': 'MusicEvent',
+    name: 'MEGAWOOF & BEARMILK present MEGAMILK',
+    startDate: '2026-07-18T22:00:00-04:00',
+    location: {
+      '@type': 'Place',
+      name: venueName,
+      address: { '@type': 'PostalAddress', streetAddress }
+    }
+  });
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let addressShaped;
+  let streetLineTwin;
+  let realVenue;
+  try {
+    // Observed 2026-07-17: Eventbrite filled location.name with the street address
+    addressShaped = parser.buildEventFromJsonLdNode(buildNode('10-90 Wyckoff Ave'), 'https://tickets.example/e/megamilk');
+    // Not address-shaped (no street-type word), but a normalized duplicate of
+    // the address's street line — still never a venue name
+    streetLineTwin = parser.buildEventFromJsonLdNode(buildNode('10-90 Wyckoff', '10-90 Wyckoff, Queens, NY'), 'https://tickets.example/e/megamilk');
+    // A real venue name is emitted exactly as today
+    realVenue = parser.buildEventFromJsonLdNode(buildNode('HOLO'), 'https://tickets.example/e/megamilk');
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(addressShaped.bar, '', 'the address-shaped venue name must not become the bar');
+  assert.equal(addressShaped.address, '10-90 Wyckoff Avenue, Queens, NY 11385', 'the address field is unaffected');
+  assert.ok(logLines.includes(
+    '🤖 AI Web: JSON-LD venue name "10-90 Wyckoff Ave" looks like a street address — not using it as bar'
+  ), `drop log line expected, got: ${JSON.stringify(logLines)}`);
+
+  assert.equal(streetLineTwin.bar, '', 'a street-line duplicate must not become the bar');
+
+  assert.equal(realVenue.bar, 'HOLO');
+  assert.ok(!logLines.some(line => line.includes('"HOLO"')), 'a real venue name is never logged as dropped');
+});
+
 test('getAiConfig delegates to SharedCore.resolveAiConfig', () => {
   const parser = createParser();
   const viaParser = parser.getAiConfig({ ai: { provider: 'ollama', numPredict: 1234 } });

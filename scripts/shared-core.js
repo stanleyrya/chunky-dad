@@ -557,11 +557,33 @@ class SharedCore {
         return candidates.has(normalizedTitle);
     }
 
+    // A value shaped like a street address is NEVER a venue name. Anchored on
+    // a leading house number (incl. hyphenated Queens style "10-90") with a
+    // street-type word appearing somewhere after it. The leading-number anchor
+    // is what keeps real venue names out: "9th Avenue Saloon" (ordinal, not a
+    // house number), "3 Dollar Bill" (number but no street word), "Rockbar" /
+    // "Eagle NYC" / "The Rail" (no leading number) all classify as NOT
+    // address-shaped.
+    looksLikeStreetAddress(value) {
+        if (typeof value !== 'string') return false;
+        const text = value.trim();
+        // Leading house number: digits (optionally hyphenated) followed by
+        // whitespace — "9th" never anchors because the digits run straight
+        // into the ordinal suffix instead of a space.
+        const houseNumber = text.match(/^\d{1,6}(?:-\d{1,6})?\s+/);
+        if (!houseNumber) return false;
+        // A street-type word after the house number ("Wyckoff Ave", "MT NEBO
+        // RD"): whole word, optional trailing period, case-insensitive.
+        const afterNumber = text.slice(houseNumber[0].length);
+        return /(?:^|[\s,])(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Pl|Place|Ct|Court|Pkwy|Hwy)\.?(?:$|[\s,])/i.test(afterNumber);
+    }
+
     // Deterministic conflict resolution consulted by BOTH merge paths
     // (createFinalEventObject and mergeParsedEvents) before a field is queued
     // for AI arbitration. Returns { winner: 'a'|'b', reason } or null (→
     // arbitrate as usual). Callers map a/b onto their own labels and thread
-    // event context (currently { cityKey }) for the city-aware title rule.
+    // event context (currently { cityKey }) for the city-aware title and
+    // curated-bar rules.
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
@@ -625,6 +647,48 @@ class SharedCore {
                 }
             }
         }
+        // A street address is never a venue name: Eventbrite JSON-LD shipped
+        // location.name as the street line ("10-90 Wyckoff Ave") and AI
+        // arbitration picked it over the calendar's real venue ("HOLO") with
+        // exactly backwards reasoning (observed 2026-07-17). Decidable
+        // deterministically, in order: 1) exactly one side matching a curated
+        // bar name for the event's city wins; 2) exactly one address-shaped
+        // side LOSES. Both sides curated, both address-shaped, or neither rule
+        // applying still arbitrate (with a prompt rule as backstop).
+        if (fieldName === 'bar') {
+            const barCityKey = context && context.cityKey ? String(context.cityKey) : '';
+            const cityBars = barCityKey && this.bars
+                ? (this.bars[barCityKey] || this.bars[barCityKey.trim().toLowerCase()])
+                : null;
+            if (Array.isArray(cityBars) && cityBars.length > 0) {
+                // Same normalization BarDataNormalizer matches with (lowercase,
+                // strip non-alphanumerics) so curated matching agrees everywhere.
+                const normalizeBarName = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const findCuratedBar = value => {
+                    const normalized = normalizeBarName(value);
+                    if (!normalized) return null;
+                    return cityBars.find(bar => bar && typeof bar.name === 'string'
+                        && normalizeBarName(bar.name) === normalized) || null;
+                };
+                const curatedA = findCuratedBar(valueA);
+                const curatedB = findCuratedBar(valueB);
+                if (Boolean(curatedA) !== Boolean(curatedB)) {
+                    const matched = curatedA || curatedB;
+                    return {
+                        winner: curatedA ? 'a' : 'b',
+                        reason: `matches curated bar data (${matched.name})`
+                    };
+                }
+            }
+            const addressShapedA = this.looksLikeStreetAddress(valueA);
+            const addressShapedB = this.looksLikeStreetAddress(valueB);
+            if (addressShapedA !== addressShapedB) {
+                return {
+                    winner: addressShapedA ? 'b' : 'a',
+                    reason: 'a street address is not a venue name'
+                };
+            }
+        }
         // Case-only variants are not a real conflict: production runs burned
         // 1.5–7s AI arbitrations on bar="NOVA PDX" vs "Nova PDX" and
         // title="TREASURE TRAIL Portland PRIDE" vs "Treasure Trail Portland
@@ -684,6 +748,7 @@ class SharedCore {
             'Rules:',
             '- You MUST copy one of the two provided values EXACTLY. Never invent, edit, merge, or reformat a value.',
             '- "bar" must be the physical venue where the event takes place — never the promoter, organizer, or brand whose name appears in page titles.',
+            '- A street address (e.g. "10-90 Wyckoff Ave") is never a venue name — for "bar", prefer a named venue over an address.',
             organizer ? `- KNOWN ORGANIZER: ${JSON.stringify(String(organizer))} — never pick a bar value equal to the organizer.` : '',
             '- For "title", prefer the actual event name — do not prefer a variant just because it appends status text (e.g. sold-out notices) or site branding.',
             '- For "title", a bare city name is not an event name — prefer the variant that names the event or its organizer.',
