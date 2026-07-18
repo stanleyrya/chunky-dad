@@ -78,6 +78,12 @@
     "faviconFg": "#ff5000"
   },
   {
+    "slug": "portland-pride-friday-4b51bcfe",
+    "url": "https://bearracuda.com/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
     "slug": "portland-pride-saturday-17cdfbd9",
     "url": "https://bearracuda.com/events/portland-pride-saturday/",
     "faviconBg": "#ff1901",
@@ -110,6 +116,12 @@
   {
     "slug": "treasure-trail-portland-saturday-jan-24th-50c8389e",
     "url": "https://bearracuda.com/events/treasurepdx/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000"
+  },
+  {
+    "slug": "treasure-trail-portland-tix-at-the-door-0c12f2cc",
+    "url": "https://bearracuda.com/events/portland-pridefriday/",
     "faviconBg": "#ff1901",
     "faviconFg": "#ff5000"
   }
