@@ -47,7 +47,7 @@ const scraperConfig = {
       // (scraped clobbers). This global block also serves events from non-AI
       // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
       arbitrateMerges: true,
-      bearCheck: { mode: "report" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior.
+      bearCheck: { mode: "report" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior. (Also accepted as a top-level config.bearCheck, like geocodeVerification; canonical location is here under ai.)
       // extraContext (override-only): free-form text appended VERBATIM to the
       // context of every AI extraction prompt. Organizer/brand context is
       // normally derived automatically from each page's own metadata (JSON-LD

@@ -2161,6 +2161,42 @@ test('resolveEffectiveParserConfig without global blocks returns the parser entr
   assert.equal(core.resolveEffectiveParserConfig(parserEntry, null), parserEntry);
 });
 
+test('top-level config.bearCheck is an alias for config.ai.bearCheck and reaches getBearCheckMode', () => {
+  const core = createCore();
+
+  // Top-level alias with NO global ai block at all (the real-world case):
+  // it must still fold into the parser's ai.bearCheck and drive enforce mode.
+  const aliasOnly = core.resolveEffectiveParserConfig(
+    { name: 'Bearracuda', alwaysBear: false },
+    { config: { bearCheck: { mode: 'enforce' } } }
+  );
+  assert.deepEqual(aliasOnly.ai.bearCheck, { mode: 'enforce' });
+  assert.equal(core.getBearCheckMode(aliasOnly), 'enforce');
+
+  // Canonical config.ai.bearCheck wins when BOTH are set.
+  const both = core.resolveEffectiveParserConfig(
+    { name: 'B' },
+    { config: { bearCheck: { mode: 'enforce' }, ai: { bearCheck: { mode: 'off' }, model: 'm' } } }
+  );
+  assert.equal(core.getBearCheckMode(both), 'off');
+  assert.equal(both.ai.model, 'm', 'the rest of the global ai block still inherits');
+
+  // A per-parser ai.bearCheck still wins over the top-level alias.
+  const perParser = core.resolveEffectiveParserConfig(
+    { name: 'B', ai: { bearCheck: { mode: 'report' } } },
+    { config: { bearCheck: { mode: 'enforce' } } }
+  );
+  assert.equal(core.getBearCheckMode(perParser), 'report');
+
+  // The alias folds into an existing global ai block that lacks bearCheck.
+  const intoExistingAi = core.resolveEffectiveParserConfig(
+    { name: 'B' },
+    { config: { bearCheck: { mode: 'enforce' }, ai: { model: 'global-m' } } }
+  );
+  assert.equal(core.getBearCheckMode(intoExistingAi), 'enforce');
+  assert.equal(intoExistingAi.ai.model, 'global-m');
+});
+
 test('resolveEffectiveParserConfig unions global discoveryBlockedPatterns with the parser list', () => {
   const core = createCore();
   const globalPattern = /\/(shop|cart)(?:\/|[?#]|$)/;

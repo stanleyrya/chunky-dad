@@ -1409,11 +1409,27 @@ class SharedCore {
         const globalConfig = mainConfig && mainConfig.config && typeof mainConfig.config === 'object'
             ? mainConfig.config
             : {};
-        const globalAi = globalConfig.ai && typeof globalConfig.ai === 'object' ? globalConfig.ai : null;
         const globalOcr = globalConfig.ocr && typeof globalConfig.ocr === 'object' ? globalConfig.ocr : null;
         const globalBlockedPatterns = Array.isArray(globalConfig.discoveryBlockedPatterns) && globalConfig.discoveryBlockedPatterns.length > 0
             ? globalConfig.discoveryBlockedPatterns
             : null;
+
+        // bearCheck is read from `<parser>.ai.bearCheck`, but geocodeVerification
+        // (a sibling {mode} knob) is read from the top-level `config`, so a
+        // top-level `config.bearCheck` is an easy and reasonable mistake. Accept
+        // it as an alias for `config.ai.bearCheck`: fold it into the global ai
+        // block when the canonical nested location didn't set one. Canonical
+        // `config.ai.bearCheck` wins over the top-level alias; a per-parser
+        // `ai.bearCheck` still wins over both via the deepMergeConfig below.
+        const rawGlobalAi = globalConfig.ai && typeof globalConfig.ai === 'object' ? globalConfig.ai : null;
+        const topLevelBearCheck = globalConfig.bearCheck && typeof globalConfig.bearCheck === 'object'
+            ? globalConfig.bearCheck
+            : null;
+        let globalAi = rawGlobalAi;
+        if (topLevelBearCheck && !(rawGlobalAi && rawGlobalAi.bearCheck)) {
+            globalAi = { ...(rawGlobalAi || {}), bearCheck: topLevelBearCheck };
+        }
+
         if (!globalAi && !globalOcr && !globalBlockedPatterns) return parser;
 
         const parserAi = parser.ai && typeof parser.ai === 'object' ? parser.ai : null;
