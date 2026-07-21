@@ -4000,6 +4000,15 @@ class SharedCore {
             return `https:${normalized}`;
         }
 
+        // Flyer OCR and AI-extracted fields carry scheme-less URLs ("WWW.MASSIVE.CLUB",
+        // "BEARRACUDA.COM") that would otherwise be resolved as relative paths (or, on
+        // iOS, returned verbatim and fail to fetch as "unsupported URL"). Must run
+        // BEFORE relative resolution, which would silently misresolve them.
+        const schemelessHost = this.normalizeSchemelessHostUrl(normalized);
+        if (schemelessHost) {
+            return schemelessHost;
+        }
+
         try {
             const resolved = new URL(normalized, baseUrl).toString();
             return resolved;
@@ -4013,6 +4022,35 @@ class SharedCore {
         }
 
         return normalized;
+    }
+
+    // A candidate is treated as a scheme-less host only when unambiguous:
+    // it starts with "www." (path allowed), or it is a bare dotted domain with
+    // NO path whose final label is a plausible TLD — never a path-bearing
+    // relative href like "events/foo" or a filename like "index.html".
+    normalizeSchemelessHostUrl(candidate) {
+        const text = String(candidate || '').trim();
+        if (!text || /\s/.test(text)) return null;
+        if (/^[a-z][a-z0-9+.-]*:/i.test(text)) return null; // already has a scheme
+
+        const hostEnd = text.search(/[/?#]/);
+        const host = hostEnd === -1 ? text : text.slice(0, hostEnd);
+        const rest = hostEnd === -1 ? '' : text.slice(hostEnd);
+        const hostPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/i;
+        if (!hostPattern.test(host)) return null;
+
+        if (!/^www\./i.test(host)) {
+            if (rest !== '') return null; // path-bearing non-www stays relative
+            const tld = host.slice(host.lastIndexOf('.') + 1).toLowerCase();
+            if (!/^[a-z]{2,24}$/.test(tld)) return null;
+            // Dotted filenames are relative paths, not hosts ("index.html")
+            const fileExtensions = ['html', 'htm', 'shtml', 'php', 'asp', 'aspx', 'jsp',
+                'xml', 'json', 'txt', 'pdf', 'md', 'css', 'js',
+                'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico'];
+            if (fileExtensions.includes(tld)) return null;
+        }
+
+        return `https://${host.toLowerCase()}${rest}`;
     }
 
     decodeUrlEscapes(url) {

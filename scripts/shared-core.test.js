@@ -4597,3 +4597,28 @@ test('review: on a platform that CAN cross-check, an Apple outage rejects candid
   }
   assert.equal(byId.get('moved').current.location, '32.8285, -96.8110709', 'the stored pin is untouched');
 });
+
+test('normalizeUrl: scheme-less flyer hosts become https URLs; relative paths keep resolving', () => {
+  const core = createCore();
+  // OCR ticket URLs ("ADVANCED TIX AT WWW.MASSIVE.CLUB") previously failed the
+  // crawl fetch as "unsupported URL" and were stored verbatim as ticketUrl.
+  assert.equal(core.normalizeUrl('WWW.MASSIVE.CLUB', 'https://bearracuda.com/events/treasure-trail-seattle/'), 'https://www.massive.club');
+  assert.equal(core.normalizeUrl('BEARRACUDA.COM', ''), 'https://bearracuda.com');
+  assert.equal(core.normalizeUrl('www.example.com/tickets?ref=1', ''), 'https://www.example.com/tickets?ref=1');
+  // Ambiguous candidates keep today's behavior: relative resolution against the page.
+  assert.equal(core.normalizeUrl('events/foo', 'https://bearracuda.com/'), 'https://bearracuda.com/events/foo');
+  assert.equal(core.normalizeUrl('index.html', 'https://bearracuda.com/'), 'https://bearracuda.com/index.html');
+  // Real absolute URLs pass through untouched.
+  assert.equal(core.normalizeUrl('https://massive.club/x', ''), 'https://massive.club/x');
+});
+
+test('adaptive crawl follows a scheme-less OCR ticketUrl as a fetchable https URL', () => {
+  const core = createCore();
+  const links = core.selectAdaptiveFollowLinks(
+    'event-page',
+    [],
+    { events: [{ ticketUrl: 'WWW.MASSIVE.CLUB' }] },
+    'https://bearracuda.com/events/treasure-trail-seattle/'
+  );
+  assert.deepEqual(links, ['https://www.massive.club']);
+});
