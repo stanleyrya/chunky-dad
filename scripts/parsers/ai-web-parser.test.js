@@ -2962,3 +2962,26 @@ test('extractAdditionalUrls tags uniqueValidCount (pre-budget) non-enumerably fo
   assert.equal(links.uniqueValidCount, 3, 'but the pre-budget valid count is preserved');
   assert.ok(!Object.keys(links).includes('uniqueValidCount'), 'tag is non-enumerable');
 });
+
+test('getImageSizeFromUrl and OCR consolidation work without URLSearchParams (iOS JavaScriptCore)', () => {
+  const parser = createParser();
+  // Scriptable's JavaScriptCore has no URLSearchParams — this exact gap crashed the
+  // Decadence page ("Failed to parse AI event: ReferenceError: Can't find variable:
+  // URLSearchParams" from consolidateDuplicateOcrResults → getImageSizeFromUrl).
+  const original = global.URLSearchParams;
+  delete global.URLSearchParams;
+  try {
+    const large = parser.getImageSizeFromUrl('https://cdn.example.com/img.jpg?w=1920&h=1080');
+    const small = parser.getImageSizeFromUrl('https://cdn.example.com/img.jpg?w=100&h=100');
+    assert.ok(large > small, 'width/height params still rank images');
+    assert.ok(parser.getImageSizeFromUrl('https://cdn.example.com/img.jpg?size=large') >= 5000, 'named size params still score');
+
+    const consolidated = parser.consolidateDuplicateOcrResults([
+      { url: 'https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg', text: 'DECADENCE NEW ORLEANS SAT AUG 29' },
+      { url: 'https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2-768x1187.jpg', text: 'DECADENCE NEW ORLEANS SAT AUG 29' }
+    ]);
+    assert.equal(consolidated.length, 1, 'duplicate size variants consolidate without throwing');
+  } finally {
+    global.URLSearchParams = original;
+  }
+});

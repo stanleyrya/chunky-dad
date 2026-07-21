@@ -3758,12 +3758,13 @@ class AiWebParser {
         const search = String(parsed.search || '').toLowerCase();
         const path = String(parsed.pathname || '').toLowerCase();
 
-        // Check query parameters for size indicators
-        const searchParams = new URLSearchParams(search);
+        // Check query parameters for size indicators (extractSearchParamValue,
+        // not URLSearchParams — the latter doesn't exist in iOS JavaScriptCore)
+        const getParam = (key) => this.extractSearchParamValue(search, key);
 
         // Width/height parameters (e.g., ?w=1920, ?width=1080, ?h=1080, ?height=1920)
-        const width = searchParams.get('w') || searchParams.get('width') || searchParams.get('wpx');
-        const height = searchParams.get('h') || searchParams.get('height') || searchParams.get('hpx');
+        const width = getParam('w') || getParam('width') || getParam('wpx');
+        const height = getParam('h') || getParam('height') || getParam('hpx');
 
         if (width) {
             const w = parseInt(width, 10);
@@ -3775,7 +3776,7 @@ class AiWebParser {
         }
 
         // Size scale parameters (e.g., ?scale=2, ?size=large)
-        const scale = searchParams.get('scale') || searchParams.get('size');
+        const scale = getParam('scale') || getParam('size');
         if (scale) {
             const s = scale.toLowerCase();
             if (s === 'large' || s === 'big' || s === 'max' || s === 'original' || s === 'full') {
