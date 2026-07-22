@@ -805,6 +805,15 @@ const GEOCODE_GENERIC_STREET_TOKENS = [
     'place', 'court', 'east', 'west', 'north', 'south', 'way', 'the'
 ];
 
+// Generic venue-type words stripped SYMMETRICALLY from the tail of both sides
+// of the geo-POI ↔ bar comparison ("Massive" matches the map POI "Massive
+// Nightclub"), only ever when a non-empty remainder is left. The remainder
+// must equal the other side token-for-token — never a substring — so "Eagle"
+// can't claim "Eagle Creek Cafe".
+const GEOCODE_GENERIC_VENUE_SUFFIXES = [
+    'nightclub', 'club', 'bar', 'lounge', 'theater', 'theatre', 'tavern', 'pub', 'hall'
+];
+
 // Unit/suite decoration ("Suite 200", "#4", "#UNIT 114", "Apt 5B", "Fl. 2")
 // that chokes Nominatim's free-text parser; stripped as its own retry rung.
 // Three alternatives (2026-07-15 run findings shaped each one):
@@ -1166,15 +1175,156 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return null;
     }
 
+    // -----------------------------------------------------------------------
+    // Geo-POI harvest + bar corroboration (bar corroboration phase 3): the
+    // geocoder responses the pipeline ALREADY fetches name the place at the
+    // pinned coordinates; when that map-grade name matches the event's bar,
+    // the bar is corroborated by an authority independent of the source page.
+    // ZERO new network calls — every name below rides on a response an
+    // existing rung fetched anyway.
+    // -----------------------------------------------------------------------
+
+    // POI name from a forward-geocode result the ladder picked. Prefer the
+    // explicit name field(s); fall back to the leading display_name component,
+    // which is the POI for venue hits ("Massive, 619, East Pine Street, …")
+    // but the house number for bare-address hits ("619, East Pine Street, …")
+    // — leading-digit components are never harvested. Photon results reuse
+    // this via { name: properties.name } (no display_name → same guards).
+    extractNominatimPoiName(result) {
+        if (!result || typeof result !== 'object') return '';
+        const clean = value => typeof value === 'string' ? value.trim() : '';
+        const explicit = clean(result.name)
+            || (result.namedetails && typeof result.namedetails === 'object'
+                ? clean(result.namedetails.name)
+                : '');
+        if (explicit && !/^\d/.test(explicit)) return explicit;
+        const first = clean(String(result.display_name || '').split(',')[0]);
+        if (first && !/^\d/.test(first)) return first;
+        return '';
+    }
+
+    // POI names from an Apple reverse placemark the cross-check already
+    // fetched: `name` plus any `areasOfInterest` entries. Apple sets `name`
+    // to the street address line when it knows no POI at the point — leading-
+    // digit names and names equal to the thoroughfare are skipped. Cached
+    // placemarks from before these fields were harvested simply lack them →
+    // empty harvest (fail open).
+    extractPlacemarkPoiNames(placemark) {
+        if (!placemark || typeof placemark !== 'object') return [];
+        const clean = value => typeof value === 'string' ? value.trim() : '';
+        const names = [];
+        const thoroughfare = clean(placemark.thoroughfare).toLowerCase();
+        const name = clean(placemark.name);
+        if (name && !/^\d/.test(name) && name.toLowerCase() !== thoroughfare) {
+            names.push(name);
+        }
+        if (Array.isArray(placemark.areasOfInterest)) {
+            for (const area of placemark.areasOfInterest) {
+                const areaName = clean(area);
+                if (areaName && !/^\d/.test(areaName)) names.push(areaName);
+            }
+        }
+        return names;
+    }
+
+    // Names attached to an accepted pin: the forward result's POI (exact-grade
+    // hits only — a street hit's "name" is the street, not a venue) plus
+    // whatever the reverse cross-check placemark exposed.
+    collectAcceptedPoiNames(forwardPoiName, confirmed) {
+        const names = [];
+        if (forwardPoiName) names.push(forwardPoiName);
+        if (confirmed && Array.isArray(confirmed.poiNames)) {
+            for (const name of confirmed.poiNames) {
+                if (name) names.push(name);
+            }
+        }
+        return names;
+    }
+
+    // Comparable token list for the POI ↔ bar comparison: lowercase,
+    // punctuation → token breaks, leading "the" dropped — the same
+    // normalization spirit as shared-core's findCuratedBarByName, kept
+    // token-shaped so the generic-suffix rule can demand full-token alignment.
+    tokenizePoiBarName(name) {
+        const tokens = String(name || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .split(/\s+/)
+            .filter(Boolean);
+        if (tokens.length > 1 && tokens[0] === 'the') tokens.shift();
+        return tokens;
+    }
+
+    // Trailing generic-venue word(s) dropped for matching, only when a
+    // non-empty remainder is left ("night club" is the one two-token form).
+    stripGenericVenueSuffix(tokens) {
+        if (tokens.length >= 3 && tokens[tokens.length - 2] === 'night' && tokens[tokens.length - 1] === 'club') {
+            return tokens.slice(0, -2);
+        }
+        if (tokens.length >= 2 && GEOCODE_GENERIC_VENUE_SUFFIXES.includes(tokens[tokens.length - 1])) {
+            return tokens.slice(0, -1);
+        }
+        return tokens;
+    }
+
+    // Full-name equality after normalization, with the generic venue suffix
+    // stripped symmetrically: "Massive" ↔ "Massive Nightclub" match because
+    // the stripped remainder equals the other side exactly; "Eagle" ↔ "Eagle
+    // Creek Cafe" never match (no substring/prefix matching).
+    poiNameMatchesBar(poiName, barName) {
+        const poiTokens = this.tokenizePoiBarName(poiName);
+        const barTokens = this.tokenizePoiBarName(barName);
+        if (poiTokens.length === 0 || barTokens.length === 0) return false;
+        const poiFull = poiTokens.join('');
+        const barFull = barTokens.join('');
+        if (poiFull === barFull) return true;
+        const poiStripped = this.stripGenericVenueSuffix(poiTokens).join('');
+        const barStripped = this.stripGenericVenueSuffix(barTokens).join('');
+        return poiStripped === barFull || poiFull === barStripped || poiStripped === barStripped;
+    }
+
+    // After a pin is accepted, map POI names vouch for the event's bar:
+    //   match → an unstamped or `uncorroborated` bar upgrades to
+    //           barSource 'geo-poi'; the equal-or-higher-trust stamps
+    //           (curated/venue-site/page-adjacent) are NEVER overwritten;
+    //   POI present but ≠ an `uncorroborated` bar → log-only mismatch flag
+    //           (flag-don't-drop);
+    //   no POI / no bar → nothing (fail open).
+    corroborateBarWithGeoPoi(event, poiNames) {
+        if (!event || typeof event !== 'object') return;
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        const names = [];
+        for (const name of Array.isArray(poiNames) ? poiNames : []) {
+            const cleanName = typeof name === 'string' ? name.trim() : '';
+            if (cleanName && !names.includes(cleanName)) names.push(cleanName);
+        }
+        if (!bar || names.length === 0) return;
+        const title = event.title || 'unknown';
+        const stamp = typeof event.barSource === 'string' ? event.barSource.trim() : '';
+        const matched = names.find(name => this.poiNameMatchesBar(name, bar));
+        if (matched) {
+            if (!stamp || stamp === 'uncorroborated') {
+                event.barSource = 'geo-poi';
+            }
+            console.log(`🗺️ GEOCODE VERIFY: "${title}" bar "${bar}" corroborated by map POI "${matched}"`);
+            return;
+        }
+        if (stamp === 'uncorroborated') {
+            console.warn(`🗺️ GEOCODE VERIFY: "${title}" address POI is "${names[0]}" but bar is "${bar}" — possible venue-name mismatch`);
+        }
+    }
+
     // Final acceptance for a grade-gate-passing candidate: reverse cross-check
     // against the input address (Apple placemark via the adapter, when that
     // capability exists) plus suspect flagging per verification mode. Returns
-    // { location, crossCheck } — the "lat, lon" string to write plus the
+    // { location, crossCheck, poiNames } — the "lat, lon" string to write, the
     // cross-check verdict ('pass' | 'fail' | 'skipped'; 'fail' only survives
-    // in report mode) — or, when enforce mode sends the ladder on to its next
-    // rung, { location: null, crossCheck } carrying the rejection breadcrumb
-    // ('fail' for a failed cross-check, 'skipped' for a vague input or an
-    // unavailable cross-check).
+    // in report mode), and any POI names harvested from the reverse placemark
+    // the cross-check already fetched (geo-POI bar corroboration; empty when
+    // no placemark or no name) — or, when enforce mode sends the ladder on to
+    // its next rung, { location: null, crossCheck } carrying the rejection
+    // breadcrumb ('fail' for a failed cross-check, 'skipped' for a vague
+    // input or an unavailable cross-check).
     async confirmGeocodeCandidate(candidate, context, httpAdapter) {
         const { title, address, inputHasHouseNumber, verifyMode, streetSpecific, flags, source, rung } = context;
         // Vague-input rule (enforce only): an address without street-level
@@ -1191,6 +1341,7 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             return { location: null, crossCheck: 'skipped' };
         }
         let crossCheck = 'skipped';
+        let poiNames = [];
         if (verifyMode !== 'off' && typeof httpAdapter.reverseGeocodePlacemark === 'function') {
             let placemark = null;
             try {
@@ -1199,6 +1350,9 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 placemark = null;
             }
             if (placemark) {
+                // Geo-POI harvest from the SAME placemark the cross-check
+                // fetched — no additional reverse-geocode call.
+                poiNames = this.extractPlacemarkPoiNames(placemark);
                 const comparison = this.comparePinToAddress(placemark, address);
                 if (comparison) {
                     crossCheck = comparison.matched ? 'pass' : 'fail';
@@ -1237,7 +1391,7 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         if (rung > 1 || crossCheck !== 'skipped') {
             console.log(`🗺️ GEOCODE VERIFY: "${title}" accepted ${candidate.grade} pin from ${source} (rung ${rung})`);
         }
-        return { location: `${candidate.lat}, ${candidate.lon}`, crossCheck };
+        return { location: `${candidate.lat}, ${candidate.lon}`, crossCheck, poiNames };
     }
 
     // Canonical addresses ("1192 Folsom St, San Francisco, CA 94103, USA") return
@@ -1409,6 +1563,9 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // resolves at all". Coarse refusals never leave a breadcrumb.
             let resolvedVerdict = null;
             let rejectedVerdict = null;
+            // POI names harvested from the responses that produced/verified the
+            // accepted pin (geo-POI bar corroboration; empty when unpinned).
+            let resolvedPoiNames = [];
             for (let i = 0; i < queryVariants.length && !resolvedLocation; i++) {
                 const queryText = queryVariants[i];
                 const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}&limit=${resultLimit}&addressdetails=1`;
@@ -1449,11 +1606,13 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                     }
                     if (graded.length > 0) {
                         let pickedCandidate = null;
+                        let pickedResult = null;
                         if (cityCenter) {
                             // Distance-ranked selection: nearest candidate within the radius wins
                             const picked = this.pickNearestGeocodeCandidate(graded.map(entry => entry.result), cityCenter, eventCity, queryText);
                             if (picked) {
                                 pickedCandidate = { lat: picked.lat, lon: picked.lon, grade: graded[picked.index].grade };
+                                pickedResult = graded[picked.index].result;
                             }
                         } else {
                             const firstResult = graded[0].result;
@@ -1462,6 +1621,7 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                                     console.warn(`🗺️ OpenStreetMapNormalizer: Geocode for "${queryText}" resolved outside event city "${eventCity}" ("${firstResult.display_name || 'no display name'}") — ignoring coordinates`);
                                 } else {
                                     pickedCandidate = { lat: firstResult.lat, lon: firstResult.lon, grade: graded[0].grade };
+                                    pickedResult = firstResult;
                                 }
                             }
                         }
@@ -1474,6 +1634,10 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                             if (confirmed.location) {
                                 resolvedLocation = confirmed.location;
                                 resolvedVerdict = { grade: pickedCandidate.grade, crossCheck: confirmed.crossCheck, source: 'nominatim', rung: i + 1 };
+                                resolvedPoiNames = this.collectAcceptedPoiNames(
+                                    pickedCandidate.grade === 'exact' ? this.extractNominatimPoiName(pickedResult) : '',
+                                    confirmed
+                                );
                             } else if (!rejectedVerdict) {
                                 // enforce-mode rejection: 'fail' for a failed
                                 // cross-check, 'skipped' for a vague input or
@@ -1528,6 +1692,9 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                             if (confirmed.location) {
                                 resolvedLocation = confirmed.location;
                                 resolvedVerdict = { grade: 'exact', crossCheck: confirmed.crossCheck, source: 'census', rung: attempts };
+                                // Census names no POIs (address interpolation
+                                // only) — harvest just the cross-check side.
+                                resolvedPoiNames = this.collectAcceptedPoiNames('', confirmed);
                             } else if (!rejectedVerdict) {
                                 rejectedVerdict = { grade: 'exact', crossCheck: confirmed.crossCheck, source: 'census', rung: attempts };
                             }
@@ -1582,6 +1749,10 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                             if (confirmed.location) {
                                 resolvedLocation = confirmed.location;
                                 resolvedVerdict = { grade, crossCheck: confirmed.crossCheck, source: 'photon', rung: attempts };
+                                resolvedPoiNames = this.collectAcceptedPoiNames(
+                                    grade === 'exact' ? this.extractNominatimPoiName({ name: props.name }) : '',
+                                    confirmed
+                                );
                             } else if (!rejectedVerdict) {
                                 rejectedVerdict = { grade, crossCheck: confirmed.crossCheck, source: 'photon', rung: attempts };
                             }
@@ -1615,6 +1786,9 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 event.pinSource = (resolvedVerdict && resolvedVerdict.grade === 'exact' && resolvedVerdict.crossCheck !== 'fail')
                     ? 'geocoded-exact'
                     : 'geocoded-approx';
+                // Geo-POI bar corroboration: the map names harvested from the
+                // accepted pin's own responses vouch for (or question) the bar.
+                this.corroborateBarWithGeoPoi(event, resolvedPoiNames);
             }
             if (!resolvedLocation) {
                 // Exact shape counted by run-log-summary's geocodeNoResults guard.

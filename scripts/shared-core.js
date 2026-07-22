@@ -420,8 +420,9 @@ class SharedCore {
         // the finalized image deterministically (setProvenanceSource), never
         // be arbitrated as content.
         // barSource is bar provenance (page-adjacent/venue-site/curated/
-        // uncorroborated — whether the extracted venue was corroborated by the
-        // source page); like imageSource it must FOLLOW the finalized bar
+        // geo-poi/uncorroborated — whether the extracted venue was
+        // corroborated by the source page or a map POI); like imageSource it
+        // must FOLLOW the finalized bar
         // deterministically (setProvenanceSource), never be arbitrated as
         // content.
         return name !== 'key' && name !== 'notes' && name !== 'source'
@@ -1241,8 +1242,10 @@ class SharedCore {
             // Corroboration demotion rung: barSource provenance stamped at
             // extraction (page-adjacent = bar found next to the address in the
             // source; venue-site = the venue's own site; curated = curated
-            // bars data; uncorroborated = the address was in the source but
-            // the bar was NOT near it — the flyer-subtitle failure shape).
+            // bars data; geo-poi = a reverse/forward-geocode POI name matched
+            // the bar (OpenStreetMapNormalizer, phase 3); uncorroborated =
+            // the address was in the source but the bar was NOT near it — the
+            // flyer-subtitle failure shape).
             // Exactly one candidate stamped uncorroborated while the other is
             // corroborated → the corroborated one wins without AI. Attribution
             // is strict like the image provenance rung: a record's barSource
@@ -1260,7 +1263,8 @@ class SharedCore {
                     return typeof record.barSource === 'string' ? record.barSource.trim() : '';
                 };
                 const isCorroboratedStamp = stamp =>
-                    stamp === 'page-adjacent' || stamp === 'venue-site' || stamp === 'curated';
+                    stamp === 'page-adjacent' || stamp === 'venue-site' || stamp === 'curated'
+                    || stamp === 'geo-poi';
                 const matchesCuratedBar = value =>
                     Boolean(cityBars && this.findCuratedBarByName(cityBars, value));
                 const provenanceA = getBarProvenance(barContextRecords.a, valueA);

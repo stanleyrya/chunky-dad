@@ -1288,7 +1288,11 @@ class ScriptableAdapter {
   //   4. Circuit breaker: 3 consecutive failures stop native attempts for
   //      the rest of the run.
   // Returns the raw first placemark object (subThoroughfare/thoroughfare/
-  // locality/postalCode/postalAddress keys) or null. normalizers.js uses
+  // locality/postalCode/postalAddress keys — plus name/areasOfInterest when
+  // Apple knows a POI at the point, which the geo-POI bar corroboration in
+  // normalizers.js harvests; the raw object is persisted verbatim, so cached
+  // entries carry those fields forward and pre-harvest entries without them
+  // simply yield no POI names — fail open) or null. normalizers.js uses
   // this for the geocode-verification cross-check; all Scriptable API usage
   // stays in this adapter (pure-module rule).
   // ---------------------------------------------------------------------

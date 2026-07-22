@@ -1592,3 +1592,51 @@ test('wired-then-restored console does not double-append into a capturing logger
     delete console.__consoleTeeRestore;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Geo-POI bar corroboration (phase 3): the raw placemark is persisted
+// verbatim, so newly cached entries carry Apple's POI fields (name/
+// areasOfInterest) forward for the normalizers' geo-POI harvest, while
+// pre-harvest entries without them are still served unchanged (fail open —
+// the old cache is never invalidated).
+// ---------------------------------------------------------------------------
+
+test('reverse-geocode cache carries POI fields forward on new entries; old nameless entries stay served', async () => {
+  const POI_PLACEMARK = {
+    subThoroughfare: '1192',
+    thoroughfare: 'Folsom Street',
+    locality: 'San Francisco',
+    postalCode: '94103',
+    name: 'Powerhouse',
+    areasOfInterest: ['SoMa']
+  };
+  const adapter = buildReverseGeocodeAdapter();
+  let calls = 0;
+  global.Location = {
+    reverseGeocode: async () => { calls += 1; return [POI_PLACEMARK]; }
+  };
+  try {
+    await adapter.reverseGeocodePlacemark(37.7756941, -122.4103049);
+    const stored = JSON.parse(adapter.fm.files.get(adapter.getReverseGeocodeCacheFilePath()));
+    const entry = stored['37.77569,-122.41030'];
+    assert.equal(entry.placemark.name, 'Powerhouse', 'newly written entries carry the POI name');
+    assert.deepEqual(entry.placemark.areasOfInterest, ['SoMa'], 'areasOfInterest rides along too');
+
+    // A later run serves the POI fields from disk without spending quota
+    const laterRun = buildReverseGeocodeAdapter();
+    laterRun.fm = adapter.fm;
+    const served = await laterRun.reverseGeocodePlacemark(37.7756941, -122.4103049);
+    assert.equal(served.name, 'Powerhouse');
+    assert.equal(calls, 1, 'disk hit — no Apple call');
+
+    // Pre-harvest entry (no name/areasOfInterest) is served as-is: the
+    // normalizers' harvest finds no POI and fails open; never refetched.
+    const oldEntry = { subThoroughfare: '446', thoroughfare: 'Mt Nebo Rd', locality: 'East Stroudsburg' };
+    laterRun.reverseGeocodeDiskCache['41.02198,-75.11678'] = { placemark: oldEntry, ts: Date.now() };
+    const legacy = await laterRun.reverseGeocodePlacemark(41.0219799, -75.1167816);
+    assert.deepEqual(legacy, oldEntry, 'old cache entries are honored, not invalidated');
+    assert.equal(calls, 1, 'no refetch for nameless legacy entries');
+  } finally {
+    delete global.Location;
+  }
+});
