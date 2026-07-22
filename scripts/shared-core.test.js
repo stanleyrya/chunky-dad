@@ -6464,3 +6464,85 @@ test('incident phase 2 (calendar flow): uncorroborated scraped bar never clobber
   assert.equal(adapterD.calls.length, 1, 'both-uncorroborated still reaches the AI');
   assert.equal(finalD.bar, 'MASSIVE');
 });
+
+// ---------------------------------------------------------------------------
+// Bar corroboration phase 3: `geo-poi` (a reverse/forward-geocode POI name
+// matched the bar) counts as corroborated in the demotion rung — same tier
+// as page-adjacent/venue-site/curated, both merge flows, zero AI calls.
+// ---------------------------------------------------------------------------
+
+test('phase 3: geo-poi counts as corroborated in the demotion rung', () => {
+  const core = createCore();
+  const context = (recordA, recordB, sideLabels = { a: 'existing', b: 'incoming' }) => ({
+    sideLabels,
+    records: { a: recordA, b: recordB }
+  });
+
+  // geo-poi beats uncorroborated in both directions
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE', barSource: 'geo-poi' }, { bar: 'Shore Thing', barSource: 'uncorroborated' })),
+    { winner: 'a', reason: 'corroborated bar beats uncorroborated' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'Shore Thing', 'MASSIVE',
+      context({ bar: 'Shore Thing', barSource: 'uncorroborated' }, { bar: 'MASSIVE', barSource: 'geo-poi' })),
+    { winner: 'b', reason: 'corroborated bar beats uncorroborated' });
+
+  // geo-poi vs a corroborated stamp is NOT a demotion case — falls through
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE', barSource: 'geo-poi' }, { bar: 'Shore Thing', barSource: 'page-adjacent' })),
+    null, 'two corroborated bars stay a genuine question');
+});
+
+test('phase 3 (enrich flow): a geo-poi bar beats an uncorroborated bar with zero AI calls; stamp follows the winner', async () => {
+  const core = createCore();
+  const priorities = { bar: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const base = { title: 'BEARRACUDA SEATTLE', city: 'seattle', source: 'ai-web', _fieldPriorities: priorities };
+
+  const adapter = buildArbitrationAdapter({});
+  const merged = await core.mergeParsedEvents(
+    { ...base, bar: 'MASSIVE', barSource: 'geo-poi' },
+    { ...base, bar: 'Shore Thing', barSource: 'uncorroborated', _parserConfig: aiParserConfig },
+    { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'geo-poi corroboration settles the bar without AI (zero postJson)');
+  assert.equal(merged.bar, 'MASSIVE');
+  assert.equal(merged.barSource, 'geo-poi', 'the geo-poi stamp follows the winning bar');
+
+  const adapterReversed = buildArbitrationAdapter({});
+  const mergedReversed = await core.mergeParsedEvents(
+    { ...base, bar: 'Shore Thing', barSource: 'uncorroborated' },
+    { ...base, bar: 'MASSIVE', barSource: 'geo-poi', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterReversed });
+  assert.equal(adapterReversed.calls.length, 0);
+  assert.equal(mergedReversed.bar, 'MASSIVE');
+  assert.equal(mergedReversed.barSource, 'geo-poi');
+});
+
+test('phase 3 (calendar flow): a geo-poi scraped bar beats an uncorroborated calendar bar with zero AI calls', async () => {
+  const core = createCore();
+  const pair = buildAlignedArbitrationPair();
+  pair.scraped.bar = 'MASSIVE';
+  pair.scraped.barSource = 'geo-poi';
+  pair.existing.notes = pair.existing.notes.replace('bar: S4', 'bar: Shore Thing\nbarSource: uncorroborated');
+  const adapter = buildArbitrationAdapter({});
+  const final = await core.createFinalEventObject(pair.existing, pair.scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'zero postJson');
+  assert.equal(final.bar, 'MASSIVE', 'the map-corroborated scraped bar wins');
+  assert.equal(final.barSource, 'geo-poi');
+  assert.deepEqual(final._original.aiArbitration.deterministic, ['bar']);
+  const parsedNotes = core.parseNotesIntoFields(final.notes);
+  assert.equal(parsedNotes.barSource, 'geo-poi', 'the stamp persists to notes for the next run');
+
+  // And an uncorroborated scraped bar still loses to a geo-poi calendar bar
+  const reversed = buildAlignedArbitrationPair();
+  reversed.scraped.bar = 'Shore Thing';
+  reversed.scraped.barSource = 'uncorroborated';
+  reversed.existing.notes = reversed.existing.notes.replace('bar: S4', 'bar: MASSIVE\nbarSource: geo-poi');
+  const adapterB = buildArbitrationAdapter({});
+  const finalB = await core.createFinalEventObject(reversed.existing, reversed.scraped, { httpAdapter: adapterB });
+  assert.equal(adapterB.calls.length, 0);
+  assert.equal(finalB.bar, 'MASSIVE');
+  assert.equal(finalB.barSource, 'geo-poi', 'the notes-parsed geo-poi stamp participates and survives');
+});

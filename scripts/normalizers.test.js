@@ -1525,3 +1525,265 @@ test('OpenStreetMapNormalizer reverse geocode of a pin without an address → ad
   assert.equal(event.address, '350 5th Ave, New York, NY 10118, USA');
   assert.equal(event.addressSource, 'inferred', 'reverse-geocoded address → addressSource inferred');
 });
+
+// ---------------------------------------------------------------------------
+// Geo-POI bar corroboration (bar corroboration phase 3): POI names harvested
+// from geocoder responses the pipeline ALREADY fetches (Nominatim forward
+// results, Apple reverse placemarks) vouch for the event's bar. Zero new
+// network calls — every test below asserts the request counts stay exactly
+// what the geocode ladder spent before this feature existed.
+// ---------------------------------------------------------------------------
+
+// Venue hit with the explicit name field (modern Nominatim json output).
+const MASSIVE_POI_RESULT = {
+  lat: '47.6152000',
+  lon: '-122.3204000',
+  class: 'amenity',
+  type: 'nightclub',
+  addresstype: 'amenity',
+  name: 'Massive',
+  display_name: 'Massive, 619, East Pine Street, Seattle, King County, Washington, 98122, United States',
+  address: { house_number: '619', road: 'East Pine Street', city: 'Seattle' }
+};
+
+// The same address as a bare-address hit: exact grade (house number) but the
+// leading display_name component is the house number — never a POI name.
+const PINE_STREET_ADDRESS_RESULT = {
+  lat: '47.6152000',
+  lon: '-122.3204000',
+  class: 'place',
+  type: 'house',
+  addresstype: 'place',
+  display_name: '619, East Pine Street, Seattle, King County, Washington, 98122, United States',
+  address: { house_number: '619', road: 'East Pine Street', city: 'Seattle' }
+};
+
+test('geo-POI harvest: extractNominatimPoiName prefers name, falls back to a non-numeric display_name lead', () => {
+  const normalizer = createOsmNormalizer();
+  // Explicit name field wins
+  assert.equal(normalizer.extractNominatimPoiName(MASSIVE_POI_RESULT), 'Massive');
+  // namedetails.name serves when the top-level name is absent
+  assert.equal(
+    normalizer.extractNominatimPoiName({ namedetails: { name: 'Massive' }, display_name: '619, East Pine Street' }),
+    'Massive'
+  );
+  // Venue-led display_name (no name field — cached/older responses)
+  assert.equal(normalizer.extractNominatimPoiName(POWERHOUSE_POI_RESULT), 'Powerhouse');
+  // Bare-address display_name: numeric first component is a house number, not a POI
+  assert.equal(normalizer.extractNominatimPoiName(PINE_STREET_ADDRESS_RESULT), '');
+  // Garbage shapes fail open
+  assert.equal(normalizer.extractNominatimPoiName(null), '');
+  assert.equal(normalizer.extractNominatimPoiName({}), '');
+});
+
+test('geo-POI harvest: extractPlacemarkPoiNames takes name + areasOfInterest, skips address-shaped names', () => {
+  const normalizer = createOsmNormalizer();
+  assert.deepEqual(
+    normalizer.extractPlacemarkPoiNames({ ...FOLSOM_PLACEMARK, name: 'Powerhouse', areasOfInterest: ['SoMa'] }),
+    ['Powerhouse', 'SoMa']
+  );
+  // Apple sets name to the address line when it knows no POI at the point
+  assert.deepEqual(
+    normalizer.extractPlacemarkPoiNames({ ...FOLSOM_PLACEMARK, name: '1192 Folsom St' }),
+    []
+  );
+  // …or to the bare street name for street-level hits
+  assert.deepEqual(
+    normalizer.extractPlacemarkPoiNames({ ...FOLSOM_PLACEMARK, name: 'Folsom Street' }),
+    []
+  );
+  // Cached placemarks from before harvesting simply lack the fields → fail open
+  assert.deepEqual(normalizer.extractPlacemarkPoiNames(FOLSOM_PLACEMARK), []);
+  assert.deepEqual(normalizer.extractPlacemarkPoiNames(null), []);
+});
+
+test('geo-POI matching: full-name equality with symmetric generic-suffix stripping, never substrings', () => {
+  const normalizer = createOsmNormalizer();
+  assert.equal(normalizer.poiNameMatchesBar('Massive', 'MASSIVE'), true, 'case-insensitive');
+  assert.equal(normalizer.poiNameMatchesBar('Massive Nightclub', 'Massive'), true, 'generic suffix strips');
+  assert.equal(normalizer.poiNameMatchesBar('Massive', 'Massive Nightclub'), true, 'suffix strips symmetrically');
+  assert.equal(normalizer.poiNameMatchesBar('Massive Night Club', 'Massive'), true, 'two-token "night club" form');
+  assert.equal(normalizer.poiNameMatchesBar('Heretic', 'The Heretic'), true, 'leading "the" drops on either side');
+  assert.equal(normalizer.poiNameMatchesBar('The Eagle', 'Eagle'), true);
+  assert.equal(normalizer.poiNameMatchesBar('Eagle Creek Cafe', 'Eagle'), false, 'no prefix/substring matching');
+  assert.equal(normalizer.poiNameMatchesBar('Massive Nightclub', 'Mass'), false, 'stripped remainder must match exactly');
+  assert.equal(normalizer.poiNameMatchesBar('Nightclub', 'Massive'), false, 'suffix never strips to empty');
+  assert.equal(normalizer.poiNameMatchesBar('', 'Massive'), false);
+  assert.equal(normalizer.poiNameMatchesBar('Massive', ''), false);
+});
+
+test('geo-POI corroboration: an uncorroborated bar upgrades to geo-poi with the corroboration log, one request only', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
+  const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'MASSIVE', barSource: 'uncorroborated' };
+
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.location, '47.6152000, -122.3204000');
+  assert.equal(event.barSource, 'geo-poi', 'uncorroborated upgrades to geo-poi');
+  assert.ok(
+    lines.includes('🗺️ GEOCODE VERIFY: "BEARRACUDA" bar "MASSIVE" corroborated by map POI "Massive"'),
+    `the corroboration log must emit verbatim: ${lines.join(' | ')}`
+  );
+  assert.equal(httpAdapter.requests.length, 1, 'harvesting spends ZERO requests beyond the geocode itself');
+});
+
+test('geo-POI corroboration: an unstamped bar upgrades via the venue-led display_name (no name field)', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [POWERHOUSE_POI_RESULT]]]);
+  const event = { title: 'CHUNK', address: '1192 Folsom St', bar: 'The Powerhouse' };
+
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.barSource, 'geo-poi', 'unstamped bars are upgradeable too');
+  assert.ok(
+    lines.includes('🗺️ GEOCODE VERIFY: "CHUNK" bar "The Powerhouse" corroborated by map POI "Powerhouse"'),
+    `display_name-harvested POI corroborates: ${lines.join(' | ')}`
+  );
+  assert.equal(httpAdapter.requests.length, 1);
+});
+
+test('geo-POI corroboration: curated/venue-site/page-adjacent stamps are never overwritten', async () => {
+  for (const stamp of ['curated', 'venue-site', 'page-adjacent']) {
+    const normalizer = createOsmNormalizer();
+    normalizer.delayForRateLimit = async () => {};
+    const httpAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
+    const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Massive', barSource: stamp };
+
+    const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+    assert.equal(event.barSource, stamp, `${stamp} is equal-or-higher trust and must survive`);
+    assert.ok(
+      lines.some(l => l.includes('corroborated by map POI "Massive"')),
+      `the corroboration is still logged additively for ${stamp}: ${lines.join(' | ')}`
+    );
+  }
+});
+
+test('geo-POI corroboration: POI ≠ uncorroborated bar flags a possible venue-name mismatch, value untouched', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
+  const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Neighbours', barSource: 'uncorroborated' };
+
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.bar, 'Neighbours', 'flag-don\'t-drop: the value never changes');
+  assert.equal(event.barSource, 'uncorroborated', 'a mismatch never restamps');
+  assert.ok(
+    lines.includes('🗺️ GEOCODE VERIFY: "BEARRACUDA" address POI is "Massive" but bar is "Neighbours" — possible venue-name mismatch'),
+    `the mismatch flag must emit verbatim: ${lines.join(' | ')}`
+  );
+
+  // The same mismatch against a corroborated (or unstamped) bar stays silent
+  for (const stamp of ['page-adjacent', undefined]) {
+    const quietNormalizer = createOsmNormalizer();
+    quietNormalizer.delayForRateLimit = async () => {};
+    const quietAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
+    const quietEvent = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Neighbours' };
+    if (stamp) quietEvent.barSource = stamp;
+    const quietLines = await withCapturedConsole(() => quietNormalizer.normalizeAsync(quietEvent, quietAdapter));
+    assert.ok(
+      !quietLines.some(l => l.includes('possible venue-name mismatch')),
+      `the flag fires ONLY for uncorroborated bars (stamp=${stamp}): ${quietLines.join(' | ')}`
+    );
+    assert.equal(quietEvent.barSource, stamp, 'no restamping either way');
+  }
+});
+
+test('geo-POI corroboration: bare-address hits and street-grade pins harvest nothing — fully inert', async () => {
+  // Exact-grade bare-address hit: house-number lead is never a POI name
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [PINE_STREET_ADDRESS_RESULT]]]);
+  const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Massive', barSource: 'uncorroborated' };
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+  assert.equal(event.location, '47.6152000, -122.3204000', 'the pin itself is unaffected');
+  assert.equal(event.barSource, 'uncorroborated', 'no POI → no upgrade (fail open)');
+  assert.ok(
+    !lines.some(l => l.includes('map POI') || l.includes('venue-name mismatch')),
+    `no corroboration lines without a POI: ${lines.join(' | ')}`
+  );
+
+  // Street-grade pin: the result's "name" is the street, never harvested
+  const streetNormalizer = createOsmNormalizer();
+  streetNormalizer.delayForRateLimit = async () => {};
+  const streetAdapter = createRoutedStubAdapter([['nominatim', [FOLSOM_STREET_ONLY_RESULT]]]);
+  const streetEvent = { title: 'CHUNK', address: 'Folsom St', bar: 'Folsom', barSource: 'uncorroborated' };
+  const streetLines = await withCapturedConsole(() => streetNormalizer.normalizeAsync(streetEvent, streetAdapter));
+  assert.equal(streetEvent.location, '37.7740000, -122.4120000');
+  assert.equal(streetEvent.barSource, 'uncorroborated', 'a street name must never corroborate a bar');
+  assert.ok(
+    !streetLines.some(l => l.includes('map POI') || l.includes('venue-name mismatch')),
+    `street-grade pins are inert: ${streetLines.join(' | ')}`
+  );
+
+  // No pin at all → nothing runs
+  const unpinnedNormalizer = createOsmNormalizer();
+  unpinnedNormalizer.delayForRateLimit = async () => {};
+  const unpinnedAdapter = createRoutedStubAdapter([['nominatim', []]]);
+  const unpinnedEvent = { title: 'CHUNK', address: '1192 Folsom St', bar: 'Powerhouse', barSource: 'uncorroborated' };
+  const unpinnedLines = await withCapturedConsole(() => unpinnedNormalizer.normalizeAsync(unpinnedEvent, unpinnedAdapter));
+  assert.equal(unpinnedEvent.location, undefined);
+  assert.equal(unpinnedEvent.barSource, 'uncorroborated');
+  assert.ok(!unpinnedLines.some(l => l.includes('map POI') || l.includes('venue-name mismatch')));
+});
+
+test('geo-POI corroboration: the Apple reverse placemark corroborates when the forward hit is address-only', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  let reverseCalls = 0;
+  // Bare-address forward hit (no POI) + the cross-check placemark Apple
+  // already returns naming the venue at the point.
+  const httpAdapter = createRoutedStubAdapter(
+    [['nominatim', [{
+      ...PINE_STREET_ADDRESS_RESULT,
+      lat: '37.7756941',
+      lon: '-122.4103049',
+      display_name: '1192, Folsom Street, San Francisco, California, 94103, United States',
+      address: { house_number: '1192', road: 'Folsom Street', city: 'San Francisco' }
+    }]]],
+    {
+      reverseGeocodePlacemark: async () => {
+        reverseCalls += 1;
+        return { ...FOLSOM_PLACEMARK, name: 'Powerhouse', areasOfInterest: ['SoMa'] };
+      }
+    }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St', bar: 'Powerhouse', barSource: 'uncorroborated' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+
+  assert.equal(event.location, '37.7756941, -122.4103049');
+  assert.equal(event.barSource, 'geo-poi', 'the placemark name corroborates the bar');
+  assert.ok(
+    lines.includes('🗺️ GEOCODE VERIFY: "CHUNK" bar "Powerhouse" corroborated by map POI "Powerhouse"'),
+    `Apple-harvested POI corroborates: ${lines.join(' | ')}`
+  );
+  assert.equal(httpAdapter.requests.length, 1, 'one forward geocode fetch, exactly as before');
+  assert.equal(reverseCalls, 1, 'the SAME single cross-check reverse call — harvesting adds none');
+
+  // A pre-harvest cached placemark (no name field) fails open: pin accepted,
+  // no corroboration, no mismatch flag.
+  const staleNormalizer = createOsmNormalizer();
+  staleNormalizer.delayForRateLimit = async () => {};
+  const staleAdapter = createRoutedStubAdapter(
+    [['nominatim', [POWERHOUSE_POI_RESULT]]],
+    { reverseGeocodePlacemark: async () => FOLSOM_PLACEMARK }
+  );
+  const staleEvent = { title: 'CHUNK', address: '1192 Folsom St', bar: 'Some Other Bar', barSource: 'uncorroborated' };
+  const staleLines = await withCapturedConsole(() =>
+    staleNormalizer.normalizeAsync(staleEvent, staleAdapter, { geocodeVerification: { mode: 'report' } })
+  );
+  assert.equal(staleEvent.location, '37.7756941, -122.4103049');
+  // POWERHOUSE_POI_RESULT still names the venue, so the mismatch flag comes
+  // from the forward harvest — but the nameless placemark contributed nothing.
+  assert.ok(
+    staleLines.includes('🗺️ GEOCODE VERIFY: "CHUNK" address POI is "Powerhouse" but bar is "Some Other Bar" — possible venue-name mismatch'),
+    `forward POI still flags; the stale placemark stays silent: ${staleLines.join(' | ')}`
+  );
+});
