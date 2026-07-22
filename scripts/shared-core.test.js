@@ -6546,3 +6546,104 @@ test('phase 3 (calendar flow): a geo-poi scraped bar beats an uncorroborated cal
   assert.equal(finalB.bar, 'MASSIVE');
   assert.equal(finalB.barSource, 'geo-poi', 'the notes-parsed geo-poi stamp participates and survives');
 });
+
+// ---------------------------------------------------------------------------
+// Provenance companion fields: canonical list + trust-tier ranking
+// (provenance-aware merge verification — upgrades are good news)
+// ---------------------------------------------------------------------------
+
+test('PROVENANCE_COMPANION_FIELDS is exported and matches the arbitration-exclusion set', () => {
+  const { PROVENANCE_COMPANION_FIELDS } = require('./shared-core');
+  assert.deepEqual(
+    [...PROVENANCE_COMPANION_FIELDS].sort(),
+    ['addressSource', 'barSource', 'bearSource', 'imageSource', 'pinSource']
+  );
+  assert.equal(PROVENANCE_COMPANION_FIELDS, SharedCore.PROVENANCE_COMPANION_FIELDS,
+    'named export and the SharedCore static are the SAME canonical list');
+  assert.ok(Object.isFrozen(PROVENANCE_COMPANION_FIELDS));
+
+  const core = createCore();
+  for (const field of PROVENANCE_COMPANION_FIELDS) {
+    assert.equal(SharedCore.isProvenanceCompanionField(field), true);
+    assert.equal(core.isArbitrationEligibleField(field), false,
+      `${field} must stay excluded from AI arbitration`);
+  }
+  // The list is exactly the companion stamps — value fields and the other
+  // non-arbitrable fields are NOT provenance companions.
+  for (const field of ['location', 'image', 'bar', 'address', 'key', 'notes', 'source', 'gmaps']) {
+    assert.equal(SharedCore.isProvenanceCompanionField(field), false);
+  }
+  // The rewrite kept the non-provenance exclusions byte-for-byte.
+  for (const field of ['key', 'notes', 'source', 'location', 'gmaps']) {
+    assert.equal(core.isArbitrationEligibleField(field), false);
+  }
+  assert.equal(core.isArbitrationEligibleField('bar'), true);
+});
+
+test('pinSource trust tiers: curated > geocoded-exact > geocoded-approx > page > unstamped', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('pinSource', value);
+  assert.ok(tier('curated') > tier('geocoded-exact'));
+  assert.ok(tier('geocoded-exact') > tier('geocoded-approx'));
+  assert.ok(tier('geocoded-approx') > tier('page'));
+  assert.ok(tier('page') > tier(undefined), 'unstamped is the floor');
+  assert.equal(tier(''), 0);
+  assert.equal(tier(null), 0);
+});
+
+test('addressSource trust tiers: curated > page > inferred', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('addressSource', value);
+  assert.ok(tier('curated') > tier('page'));
+  assert.ok(tier('page') > tier('inferred'));
+  assert.ok(tier('inferred') > tier(undefined));
+});
+
+test('barSource trust tiers: curated > corroborated class (venue-site/page-adjacent/geo-poi) > uncorroborated > unstamped', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('barSource', value);
+  assert.ok(tier('curated') > tier('venue-site'));
+  // The three corroborated stamps share a tier, matching isCorroboratedStamp's
+  // one-class treatment — moves among them are never downgrades.
+  assert.equal(tier('venue-site'), tier('page-adjacent'));
+  assert.equal(tier('page-adjacent'), tier('geo-poi'));
+  assert.ok(tier('geo-poi') > tier('uncorroborated'));
+  assert.ok(tier('uncorroborated') > tier(undefined));
+});
+
+test('imageSource trust tiers: og-image and jsonld share the meta-artwork tier above page', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('imageSource', value);
+  assert.equal(tier('og-image'), tier('jsonld'));
+  assert.ok(tier('og-image') > tier('page'));
+  assert.ok(tier('page') > tier(undefined));
+});
+
+test('bearSource trust tiers: manual-* always outranks automatic (keyword/ai/config)', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('bearSource', value);
+  for (const automatic of ['keyword', 'ai', 'config']) {
+    assert.ok(tier('manual-bear') > tier(automatic), `manual-bear > ${automatic}`);
+    assert.ok(tier('manual-not-bear') > tier(automatic), `manual-not-bear > ${automatic}`);
+  }
+  assert.equal(tier('keyword'), tier('ai'));
+  assert.equal(tier('ai'), tier('config'));
+});
+
+test('suffixed provenance values rank by their prefix at a word boundary', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('bearSource', value);
+  // The exact shape buildManualBearSource records.
+  assert.equal(tier('manual-bear (overrode ai: drag show)'), tier('manual-bear'));
+  assert.ok(tier('manual-bear (overrode ai: drag show)') > tier('ai'));
+  // Longest prefix wins — a manual-not-bear record never ranks as manual-bear.
+  assert.equal(tier('manual-not-bear (overrode ai: club night)'), tier('manual-not-bear'));
+  // Case/whitespace-insensitive like the rest of the stamp handling.
+  assert.equal(tier('  Manual-Bear (overrode ai: x)  '), tier('manual-bear'));
+  // A prefix WITHOUT a word boundary is not a match — fail open.
+  assert.equal(tier('aime'), null);
+  assert.equal(SharedCore.getProvenanceTrustTier('pinSource', 'curatedish'), null);
+});
+
+test('unknown provenance values and unknown fields rank null so callers fail open', () => {
+  assert.equal(SharedCore.getProvenanceTrustTier('pinSource', 'weird-stamp'), null);
+  assert.equal(SharedCore.getProvenanceTrustTier('bearSource', 'manual'), null,
+    'bare manual- prefix without a known verdict is unknown');
+  assert.equal(SharedCore.getProvenanceTrustTier('title', 'curated'), null,
+    'non-provenance fields have no tiers');
+  assert.equal(SharedCore.getProvenanceTrustTier('', 'curated'), null);
+});

@@ -8817,9 +8817,36 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
               '<span style="color: #007aff;">PRESERVED UNDEFINED (ignored scraped)</span>';
           }
         } else {
-          // Preserve didn't work as expected - should always keep existing
-          flowIcon = "⚠️";
-          resultText = `<span style="color: #ff3b30;">PRESERVE FAILED (expected: ${existingValue === undefined ? "undefined" : existingValue}, got: ${finalValue === undefined ? "undefined" : finalValue})</span>`;
+          // Provenance companion fields (pinSource/addressSource/imageSource/
+          // barSource/bearSource) legitimately CHANGE under preserve: the
+          // stamp follows the finalized value (setProvenanceSource), so when a
+          // higher authority vouches for the SAME kept value the attribution
+          // upgrades (e.g. pinSource geocoded-exact → curated once the bar
+          // joins the curated data). Equal-or-higher tier → informational;
+          // lower tier → a genuine downgrade warning. Unknown values (null
+          // tier) fail open to the PRESERVE FAILED line, byte-identical to
+          // before — as do all non-provenance fields.
+          const existingTier = SharedCore.isProvenanceCompanionField(field)
+            ? SharedCore.getProvenanceTrustTier(field, existingValue)
+            : null;
+          const finalTier = SharedCore.isProvenanceCompanionField(field)
+            ? SharedCore.getProvenanceTrustTier(field, finalValue)
+            : null;
+          const describeStamp = (val) =>
+            val === undefined || val === null || String(val).trim() === ""
+              ? "unstamped"
+              : this.escapeHtml(String(val));
+          if (existingTier !== null && finalTier !== null && finalTier >= existingTier) {
+            flowIcon = "→";
+            resultText = `<span style="color: #34c759;">PROVENANCE UPGRADED (${describeStamp(existingValue)} → ${describeStamp(finalValue)})</span>`;
+          } else if (existingTier !== null && finalTier !== null) {
+            flowIcon = "⚠️";
+            resultText = `<span style="color: #ff3b30;">PROVENANCE DOWNGRADED (${describeStamp(existingValue)} → ${describeStamp(finalValue)})</span>`;
+          } else {
+            // Preserve didn't work as expected - should always keep existing
+            flowIcon = "⚠️";
+            resultText = `<span style="color: #ff3b30;">PRESERVE FAILED (expected: ${existingValue === undefined ? "undefined" : existingValue}, got: ${finalValue === undefined ? "undefined" : finalValue})</span>`;
+          }
         }
       } else if (wasUsed === "existing") {
         // Merge strategy explicitly chose existing value
