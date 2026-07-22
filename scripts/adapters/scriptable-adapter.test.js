@@ -1640,3 +1640,81 @@ test('reverse-geocode cache carries POI fields forward on new entries; old namel
     delete global.Location;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Provenance-aware preserve verification in the merge-detail comparison rows:
+// companion stamps legitimately CHANGE under preserve when a higher authority
+// vouches for the kept value — upgrades are good news, only downgrades warn.
+// ---------------------------------------------------------------------------
+
+function buildPreserveComparisonEvent(field, { existing, scraped, final: finalValue }) {
+  // title/startDate agree on every side so their rows render as SAME VALUE —
+  // the row under test is the only one that can warn.
+  return {
+    title: 'MEGAWOOF: MASSIVE',
+    startDate: '2026-08-01T02:00:00.000Z',
+    _action: 'merge',
+    [field]: finalValue,
+    _fieldPriorities: { [field]: { merge: 'preserve' } },
+    _original: {
+      scraper: { title: 'MEGAWOOF: MASSIVE', startDate: '2026-08-01T02:00:00.000Z', [field]: scraped },
+      calendar: { title: 'MEGAWOOF: MASSIVE', startDate: '2026-08-01T02:00:00.000Z', [field]: existing },
+      merged: {}
+    }
+  };
+}
+
+test('run 20260722-150336 case: pinSource preserve geocoded-exact → curated renders PROVENANCE UPGRADED, not a failure', () => {
+  const adapter = buildAdapter();
+  const rows = adapter.generateComparisonRows(buildPreserveComparisonEvent('pinSource', {
+    existing: 'geocoded-exact', scraped: 'curated', final: 'curated'
+  }));
+
+  assert.ok(rows.includes('PROVENANCE UPGRADED (geocoded-exact → curated)'), rows);
+  assert.ok(rows.includes('#34c759'), 'renders in the informational green style');
+  assert.ok(!rows.includes('PRESERVE FAILED'), 'must NOT be reported as a failure');
+  assert.ok(!rows.includes('⚠️'), 'no warning icon for an upgrade');
+});
+
+test('a provenance downgrade (curated → geocoded-approx) keeps the red warning, reworded as PROVENANCE DOWNGRADED', () => {
+  const adapter = buildAdapter();
+  const rows = adapter.generateComparisonRows(buildPreserveComparisonEvent('pinSource', {
+    existing: 'curated', scraped: 'geocoded-approx', final: 'geocoded-approx'
+  }));
+
+  assert.ok(rows.includes('PROVENANCE DOWNGRADED (curated → geocoded-approx)'), rows);
+  assert.ok(rows.includes('<span style="color: #ff3b30;">PROVENANCE DOWNGRADED'), 'existing red style');
+  assert.ok(rows.includes('⚠️'), 'downgrades keep the warning icon');
+  assert.ok(!rows.includes('PRESERVE FAILED'));
+});
+
+test('non-provenance preserve mismatch still renders PRESERVE FAILED byte-identically', () => {
+  const adapter = buildAdapter();
+  const rows = adapter.generateComparisonRows(buildPreserveComparisonEvent('shortName', {
+    existing: 'FURBALL', scraped: 'MEGAWOOF', final: 'MEGAWOOF'
+  }));
+
+  assert.ok(rows.includes('<span style="color: #ff3b30;">PRESERVE FAILED (expected: FURBALL, got: MEGAWOOF)</span>'), rows);
+  assert.ok(!rows.includes('PROVENANCE'));
+});
+
+test('an unknown provenance value fails open to the existing PRESERVE FAILED behavior', () => {
+  const adapter = buildAdapter();
+  const rows = adapter.generateComparisonRows(buildPreserveComparisonEvent('pinSource', {
+    existing: 'weird-stamp', scraped: 'curated', final: 'curated'
+  }));
+
+  assert.ok(rows.includes('<span style="color: #ff3b30;">PRESERVE FAILED (expected: weird-stamp, got: curated)</span>'), rows);
+  assert.ok(!rows.includes('PROVENANCE'));
+});
+
+test('an equal-tier provenance change (venue-site → geo-poi, same corroborated class) is informational, not a warning', () => {
+  const adapter = buildAdapter();
+  const rows = adapter.generateComparisonRows(buildPreserveComparisonEvent('barSource', {
+    existing: 'venue-site', scraped: 'geo-poi', final: 'geo-poi'
+  }));
+
+  assert.ok(rows.includes('PROVENANCE UPGRADED (venue-site → geo-poi)'), rows);
+  assert.ok(!rows.includes('PRESERVE FAILED'));
+  assert.ok(!rows.includes('⚠️'));
+});

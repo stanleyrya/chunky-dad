@@ -425,11 +425,48 @@ class SharedCore {
         // must FOLLOW the finalized bar
         // deterministically (setProvenanceSource), never be arbitrated as
         // content.
+        if (SharedCore.isProvenanceCompanionField(name)) return false;
         return name !== 'key' && name !== 'notes' && name !== 'source'
-            && name !== 'location' && name !== 'gmaps'
-            && name !== 'pinSource' && name !== 'addressSource'
-            && name !== 'bearSource' && name !== 'imageSource'
-            && name !== 'barSource';
+            && name !== 'location' && name !== 'gmaps';
+    }
+
+    // True for the provenance companion fields (the canonical list lives on
+    // SharedCore.PROVENANCE_COMPANION_FIELDS) — metadata that FOLLOWS its value
+    // field deterministically (setProvenanceSource / the bearSource merge rule)
+    // and is never arbitrated as content.
+    static isProvenanceCompanionField(fieldName) {
+        return SharedCore.PROVENANCE_COMPANION_FIELDS.indexOf(String(fieldName || '')) !== -1;
+    }
+
+    // Trust tier for a provenance companion field's value — higher number =
+    // higher authority (per-family vocabularies live on
+    // SharedCore.PROVENANCE_TRUST_TIERS). Used by merge verification to tell a
+    // legitimate provenance UPGRADE (a higher authority now vouches for the
+    // same value, e.g. pinSource geocoded-exact → curated once the bar joins
+    // the curated data) apart from a genuine DOWNGRADE.
+    //   - unstamped (null/undefined/blank) → 0, the floor of every family
+    //     (a fresh stamp where the calendar had none is an upgrade)
+    //   - recorded suffixes rank by their prefix at a word boundary, so
+    //     `manual-bear (overrode ai: ...)` ranks as `manual-bear`
+    //   - unknown/unparseable values (and unknown field names) → null, so
+    //     callers FAIL OPEN to today's behavior
+    static getProvenanceTrustTier(fieldName, value) {
+        const tiers = SharedCore.PROVENANCE_TRUST_TIERS[String(fieldName || '')];
+        if (!tiers) return null;
+        const normalized = (value === null || value === undefined) ? '' : String(value).trim().toLowerCase();
+        if (!normalized) return 0;
+        if (Object.prototype.hasOwnProperty.call(tiers, normalized)) return tiers[normalized];
+        // Longest prefix wins so 'manual-not-bear ...' can never rank as
+        // 'manual-bear'; the prefix must end at a word boundary (space or an
+        // opening paren, the shapes buildManualBearSource records).
+        const keys = Object.keys(tiers).sort((a, b) => b.length - a.length);
+        for (const key of keys) {
+            if (normalized.length > key.length && normalized.startsWith(key)) {
+                const boundary = normalized.charAt(key.length);
+                if (boundary === ' ' || boundary === '(' || boundary === '\t') return tiers[key];
+            }
+        }
+        return null;
     }
 
     // True when a bearSource value records the calendar owner's manual verdict
@@ -7666,9 +7703,47 @@ class SharedCore {
 
 }
 
+// Canonical list of provenance companion fields — metadata stamps that record
+// WHERE a value field's content came from (pinSource↔location,
+// addressSource↔address, imageSource↔image, barSource↔bar,
+// bearSource↔bear verdict). They follow their value field deterministically
+// (setProvenanceSource / the bearSource merge rule), are excluded from AI
+// arbitration (isArbitrationEligibleField), and legitimately CHANGE under a
+// preserve merge when a higher authority vouches for the kept value. This is
+// the ONE list — do not scatter per-file copies.
+SharedCore.PROVENANCE_COMPANION_FIELDS = Object.freeze([
+    'pinSource', 'addressSource', 'imageSource', 'barSource', 'bearSource'
+]);
+
+// Trust tiers per provenance family (higher = more authoritative). Values are
+// the REAL vocabularies stamped by the pipeline:
+//   - pinSource:     normalizers.js (page/geocoded-exact/geocoded-approx,
+//                    curated via bar-data), scriptable-adapter review-apply
+//   - addressSource: normalizers.js (page/curated/inferred),
+//                    scriptable-adapter review-apply (curated/inferred)
+//   - barSource:     ai-web-parser.js (curated/venue-site/page-adjacent/
+//                    uncorroborated), normalizers.js (geo-poi); the three
+//                    corroborated stamps share a tier, matching
+//                    isCorroboratedStamp's one-class treatment in the bar
+//                    demotion rung
+//   - imageSource:   ai-web-parser.js (og-image/jsonld/page); og-image and
+//                    jsonld share a tier, matching the meta-artwork class in
+//                    the image provenance rung
+//   - bearSource:    shared-core bear cascade (keyword/ai/config) and the
+//                    results-UI manual override (manual-bear/manual-not-bear
+//                    — manual always outranks automatic)
+// Values absent from a family rank null (fail open); blank ranks 0 (unstamped).
+SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
+    pinSource: Object.freeze({ 'curated': 4, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
+    addressSource: Object.freeze({ 'curated': 3, 'page': 2, 'inferred': 1 }),
+    barSource: Object.freeze({ 'curated': 3, 'venue-site': 2, 'page-adjacent': 2, 'geo-poi': 2, 'uncorroborated': 1 }),
+    imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'page': 1 }),
+    bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'keyword': 1, 'ai': 1, 'config': 1 })
+});
+
 // Export for both environments
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { SharedCore };
+    module.exports = { SharedCore, PROVENANCE_COMPANION_FIELDS: SharedCore.PROVENANCE_COMPANION_FIELDS };
 } else if (typeof window !== 'undefined') {
     window.SharedCore = SharedCore;
 } else {
