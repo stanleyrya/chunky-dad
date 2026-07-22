@@ -1446,7 +1446,10 @@ test('guardrail: case-only variants keep the less-uppercased form without AI', (
     { winner: 'a', reason: 'case-only variants — kept less-uppercased form' });
   // Genuinely different values must still go to AI
   assert.equal(core.resolveConflictDeterministically('bar', 'The Heretic', 'The Heretic Atlanta'), null);
-  assert.equal(core.resolveConflictDeterministically('address', '722 E Burnside', '722 East Burnside Street'), null);
+  // ("722 E Burnside" vs "722 East Burnside Street" used to be the example
+  // here — the address ladder now resolves same-address variants like that
+  // deterministically; see the deterministic address ladder tests below.)
+  assert.equal(core.resolveConflictDeterministically('address', '722 E Burnside', '1200 Canal Street'), null);
 });
 
 test('guardrail: earlier deterministic rules keep priority over the case-only rule', () => {
@@ -1470,6 +1473,243 @@ test('guardrail: earlier deterministic rules keep priority over the case-only ru
   assert.deepEqual(
     cityCore.resolveConflictDeterministically('title', 'BEARRACUDA: New Orleans⚜️', 'New Orleans⚜️', { cityKey: 'nola' }),
     { winner: 'a', reason: 'named title beats bare city title' });
+});
+
+// ---------------------------------------------------------------------------
+// Deterministic address ladder (run 20260722-124758: ALL SIX address merge
+// conflicts were the SAME address in different formats, each burning an AI
+// arbitration call with coin-flip risk)
+// ---------------------------------------------------------------------------
+
+const SAME_ADDRESS_REASON = 'same address, kept the more complete form';
+
+// Five of the six real pairs from the run, as [more complete, less complete].
+// The first five replay through the scraped-vs-calendar flow below; the sixth
+// pair (observed in the enrich flow) replays through mergeParsedEvents.
+const RUN_20260722_ADDRESS_PAIRS = [
+  { complete: '619 East Pine Street, Seattle, WA, 98122', partial: '619 E. Pine St, Seattle, WA' },
+  { complete: '2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324', partial: '2069 CHESHIRE BRIDGE RD NE' },
+  { complete: '1200 Canal Street, New Orleans, LA', partial: '1200 Canal Street' },
+  { complete: '619 E. Pine, Seattle, WA, 98122', partial: '619 E. Pine Street' },
+  { complete: '161 Erie Street, San Francisco, CA, 94103', partial: '161 Erie St' }
+];
+
+test('address rung 1: every run-20260722 pair resolves to the more complete form, in both directions', () => {
+  const core = createCore();
+  for (const { complete, partial } of RUN_20260722_ADDRESS_PAIRS) {
+    assert.deepEqual(
+      core.resolveConflictDeterministically('address', complete, partial),
+      { winner: 'a', reason: SAME_ADDRESS_REASON }, `${complete} vs ${partial}`);
+    assert.deepEqual(
+      core.resolveConflictDeterministically('address', partial, complete),
+      { winner: 'b', reason: SAME_ADDRESS_REASON }, `${partial} vs ${complete}`);
+  }
+  // The enrich-flow pair carries the same components on both sides — the
+  // comma-separated (calendar-canonical) format counts as the more complete
+  // form over the run-on one.
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', '619 E. PINE ST. SEATTLE, WA', '619 E. Pine St, Seattle, WA'),
+    { winner: 'b', reason: SAME_ADDRESS_REASON });
+});
+
+test('run 20260722 (scraped-vs-calendar flow): same-address conflicts resolve with ZERO AI calls', async () => {
+  for (const { complete, partial } of RUN_20260722_ADDRESS_PAIRS) {
+    const core = createCore();
+    const { scraped, existing } = buildAlignedArbitrationPair();
+    scraped.address = partial;
+    existing.notes = existing.notes.replace(
+      'address: 3911 Cedar Springs Rd, Dallas, TX 75219', `address: ${complete}`);
+    const adapter = buildArbitrationAdapter({});
+
+    const logLines = [];
+    const originalLog = console.log;
+    console.log = (message) => { logLines.push(String(message)); };
+    let finalEvent;
+    try {
+      finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+    } finally {
+      console.log = originalLog;
+    }
+
+    assert.equal(adapter.calls.length, 0, `no AI request for "${partial}" vs "${complete}"`);
+    assert.equal(finalEvent.address, complete, 'the more complete form wins');
+    assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['address']);
+    assert.ok(logLines.includes(
+      `🔒 MERGE: "FURBALL DALLAS" field=address resolved deterministically — ${SAME_ADDRESS_REASON}`
+    ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+  }
+});
+
+test('run 20260722 (enrich flow): "619 E. PINE ST. SEATTLE, WA" vs "619 E. Pine St, Seattle, WA" — AI never called', async () => {
+  const core = createSeattleCore();
+  const priorities = { address: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const existing = { title: 'BEARRACUDA SEATTLE', address: '619 E. PINE ST. SEATTLE, WA', city: 'seattle', source: 'ai-web', _fieldPriorities: priorities };
+  const incoming = { title: 'BEARRACUDA SEATTLE', address: '619 E. Pine St, Seattle, WA', city: 'seattle', source: 'ai-web', _parserConfig: aiParserConfig, _fieldPriorities: priorities };
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let merged;
+  try {
+    merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'same-address conflict resolves deterministically in the enrich flow');
+  assert.equal(merged.address, '619 E. Pine St, Seattle, WA', 'the comma-separated form is the more complete one');
+  assert.ok(logLines.includes(
+    `🔒 MERGE: "BEARRACUDA SEATTLE" field=address resolved deterministically — ${SAME_ADDRESS_REASON}`
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+});
+
+test('address rung 1: abbreviation/directional symmetry, case-insensitivity, punctuation', () => {
+  const core = createCore();
+  // RD NE ↔ Road Northeast (directionals fuse: "N.E." == "NE" == "Northeast")
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', '2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324', '2069 CHESHIRE BRIDGE RD N.E.'),
+    { winner: 'a', reason: SAME_ADDRESS_REASON });
+  // Symmetric in both abbreviation directions
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', '161 Erie St', '161 Erie Street, San Francisco, CA, 94103'),
+    { winner: 'b', reason: SAME_ADDRESS_REASON });
+  // Case and punctuation never block the match
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', '619 e pine st seattle wa', '619 E. Pine St., Seattle, WA, 98122'),
+    { winner: 'b', reason: SAME_ADDRESS_REASON });
+});
+
+test('address rung 1 is conservative: genuinely different addresses still reach the AI', () => {
+  const core = createCore();
+  // Different street numbers, same street
+  assert.equal(core.resolveConflictDeterministically('address', '617 E Pine St, Seattle, WA', '619 E Pine St, Seattle, WA'), null);
+  // Same number, different streets
+  assert.equal(core.resolveConflictDeterministically('address', '314 E Pike St, Seattle, WA', '314 E Pine St, Seattle, WA'), null);
+  // Entirely different addresses (the fail-open cases from the task)
+  assert.equal(core.resolveConflictDeterministically('address', '619 E Pine St', '1200 Canal Street'), null);
+  assert.equal(core.resolveConflictDeterministically('address', '314 E Pike St', '619 E Pine St'), null);
+  // A candidate without a leading street number never matches
+  assert.equal(core.resolveConflictDeterministically('address', 'Massive Nightclub, Seattle', '619 E Pine St, Seattle, WA'), null);
+  // Different explicit ZIPs are different places even with equal street lines
+  assert.equal(core.resolveConflictDeterministically('address', '619 E Pine St, Seattle, WA 98122', '619 E Pine St, Tacoma, WA 98402'), null);
+  // The Eventbrite doubled-address shape must keep arbitrating — repetition is
+  // malformation, not completeness (the AI reliably picks the clean form)
+  assert.equal(core.resolveConflictDeterministically('address',
+    '3911 Cedar Springs Rd, Dallas, TX 75219', '3911 Cedar Springs Rd, Dallas, TX 75219, Dallas, TX'), null);
+  // The ladder is scoped to the address field
+  assert.equal(core.resolveConflictDeterministically('shortName', '619 E Pine St', '619 East Pine Street, Seattle'), null);
+  // Empty candidates never resolve here (existing empty-field handling owns them)
+  assert.equal(core.resolveConflictDeterministically('address', '', '619 E Pine St, Seattle, WA'), null);
+});
+
+test('address flow: an empty scraped address keeps the calendar value without AI (existing handling untouched)', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.address = '';
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'one-sided address is not a conflict');
+  assert.equal(finalEvent.address, '3911 Cedar Springs Rd, Dallas, TX 75219', 'calendar address kept');
+  const arbitration = finalEvent._original && finalEvent._original.aiArbitration;
+  assert.ok(!arbitration || arbitration.deterministic.length === 0,
+    'the empty-scrape rule, not the ladder, decided');
+});
+
+test('address rung 2: the curated bar address anchors the conflict when the event bar matches curated data', () => {
+  const core = createSeattleCore({ seattle: [{ name: 'Massive', address: '619 E Pine St, Seattle, WA 98122' }] });
+  const context = { cityKey: 'seattle', barNames: ['MASSIVE'] };
+  // A curated-address variant beats a non-address candidate, in both directions
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', 'somewhere else entirely', '619 East Pine Street, Seattle, WA', context),
+    { winner: 'b', reason: 'matches curated bar address (Massive)' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', '619 East Pine Street, Seattle, WA', 'somewhere else entirely', context),
+    { winner: 'a', reason: 'matches curated bar address (Massive)' });
+  // Contradiction: the other candidate is a DIFFERENT parseable address —
+  // never silently resolved, the AI sees it
+  assert.equal(
+    core.resolveConflictDeterministically('address', '1200 Canal Street, New Orleans, LA', '619 East Pine Street, Seattle, WA', context),
+    null, 'a parseable address contradicting curated data still arbitrates');
+  // Both candidates differ from the curated address → AI
+  assert.equal(
+    core.resolveConflictDeterministically('address', 'somewhere else entirely', '2069 Cheshire Bridge Rd NE', context),
+    null, 'both differing from curated → arbitrate');
+  // No curated match for the event's bar, no bar context, or no curated
+  // address on file → rung inert, AI path unchanged
+  assert.equal(
+    core.resolveConflictDeterministically('address', 'somewhere else entirely', '619 East Pine Street, Seattle, WA',
+      { cityKey: 'seattle', barNames: ['Neighbours'] }),
+    null);
+  assert.equal(
+    core.resolveConflictDeterministically('address', 'somewhere else entirely', '619 East Pine Street, Seattle, WA',
+      { cityKey: 'seattle' }),
+    null);
+  const noAddressCore = createSeattleCore(); // curated Massive has no address field
+  assert.equal(
+    noAddressCore.resolveConflictDeterministically('address', 'somewhere else entirely', '619 East Pine Street, Seattle, WA', context),
+    null);
+});
+
+test('address rung 2 (calendar flow): bar=Massive anchors the calendar address without AI', async () => {
+  const core = createSeattleCore({ seattle: [{ name: 'Massive', address: '619 E Pine St, Seattle, WA 98122' }] });
+  const scraped = {
+    title: 'BEARRACUDA SEATTLE',
+    bar: 'Massive',
+    address: 'somewhere else entirely',
+    city: 'seattle',
+    startDate: new Date('2026-08-01T05:00:00.000Z'),
+    endDate: new Date('2026-08-01T09:00:00.000Z'),
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } }
+  };
+  const existing = {
+    title: 'BEARRACUDA SEATTLE',
+    startDate: new Date(scraped.startDate.getTime()),
+    endDate: new Date(scraped.endDate.getTime()),
+    notes: ['bar: Massive', 'address: 619 East Pine Street, Seattle, WA'].join('\n')
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'curated bar address settles the only conflict — no AI request');
+  assert.equal(finalEvent.address, '619 East Pine Street, Seattle, WA', 'the curated-matching candidate wins');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['address']);
+  assert.ok(logLines.includes(
+    '🔒 MERGE: "BEARRACUDA SEATTLE" field=address resolved deterministically — matches curated bar address (Massive)'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+});
+
+test('address completeness: component count wins, normalized length breaks ties, full ties fall through', () => {
+  const core = createCore();
+  // zip+state+city beats the bare street line (component count)
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', '161 Erie Street, San Francisco, CA, 94103', '161 Erie St'),
+    { winner: 'a', reason: SAME_ADDRESS_REASON });
+  // Equal component count → the longer normalized form wins
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', '619 E Pine St, Seattle, WA', '619 East Pine Street, Seattle, Washington'),
+    { winner: 'b', reason: SAME_ADDRESS_REASON });
+  // Pure case twins tie completely and fall through to the case-only rule
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', '619 E PINE ST, SEATTLE, WA', '619 E Pine St, Seattle, WA'),
+    { winner: 'b', reason: 'case-only variants — kept less-uppercased form' });
+  // Abbreviation-only twins with identical components and normalized length
+  // are a genuine toss-up — stably deferred to the AI, exactly as today
+  assert.equal(
+    core.resolveConflictDeterministically('address', '619 E Pine St, Seattle, WA', '619 East Pine St, Seattle, WA'),
+    null);
 });
 
 test('resolveAiConfig defaults and the arbitrateMerges flag', () => {

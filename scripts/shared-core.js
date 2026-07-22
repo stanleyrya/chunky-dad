@@ -32,6 +32,29 @@ const ADAPTIVE_CRAWL_MAX_HOPS = 4;
 // and the calendar reviewer's pin-moved check.
 const PIN_MOVED_THRESHOLD_KM = 0.4;
 
+// Merge-time address comparison: street-type abbreviations and directionals
+// expanded on BOTH sides so "619 E. Pine St" and "619 East Pine Street"
+// tokenize identically. Modeled on normalizers.js
+// GEOCODE_ABBREVIATION_EXPANSIONS (the geocode reverse cross-check) and the
+// ai-web-parser street-line matcher — both of those maps are deliberately
+// narrower (each tuned to its own run-verified check), and both modules sit
+// DOWNSTREAM of shared-core (they receive a core instance; shared-core can
+// import from neither), so the merge ladder carries its own superset map.
+const ADDRESS_ABBREVIATION_EXPANSIONS = {
+    st: 'street', ave: 'avenue', rd: 'road', blvd: 'boulevard', dr: 'drive',
+    ln: 'lane', pl: 'place', ct: 'court', hwy: 'highway', pkwy: 'parkway',
+    n: 'north', s: 'south', e: 'east', w: 'west',
+    ne: 'northeast', nw: 'northwest', se: 'southeast', sw: 'southwest'
+};
+// Generic street-type designators: a street line that only ADDS one of these
+// ("619 E. Pine" vs "619 E. Pine Street") is the same street line; any other
+// surplus token ("Pine Street" vs "Pine Avenue", or a different street name)
+// is a real difference and must still arbitrate.
+const ADDRESS_STREET_TYPE_TOKENS = [
+    'street', 'avenue', 'road', 'boulevard', 'drive', 'lane', 'place',
+    'court', 'highway', 'parkway', 'way'
+];
+
 class SharedCore {
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
@@ -641,12 +664,126 @@ class SharedCore {
         return /(?:^|[\s,])(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Pl|Place|Ct|Court|Pkwy|Hwy)\.?(?:$|[\s,])/i.test(afterNumber);
     }
 
+    // Lowercased, punctuation-free address tokens with street abbreviations
+    // and directionals expanded (see ADDRESS_ABBREVIATION_EXPANSIONS), so
+    // every spelling of the same address compares equal token-for-token.
+    normalizeAddressTokens(text) {
+        const expanded = String(text || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(token => Object.prototype.hasOwnProperty.call(ADDRESS_ABBREVIATION_EXPANSIONS, token)
+                ? ADDRESS_ABBREVIATION_EXPANSIONS[token]
+                : token);
+        // Compound directionals: "N. E." / "North East" → "northeast", so
+        // every compound spelling matches the fused "NE"/"Northeast" forms.
+        const fused = [];
+        for (const token of expanded) {
+            const previous = fused[fused.length - 1];
+            if ((previous === 'north' || previous === 'south') && (token === 'east' || token === 'west')) {
+                fused[fused.length - 1] = previous + token;
+            } else {
+                fused.push(token);
+            }
+        }
+        return fused;
+    }
+
+    // Parse an address candidate for the same-address merge rung. Returns
+    // null unless the value leads with a house number (incl. hyphenated
+    // Queens style) — a candidate without one is never comparable here.
+    parseAddressForComparison(value) {
+        if (typeof value !== 'string') return null;
+        const text = value.trim();
+        const numberMatch = text.match(/^(\d{1,6}(?:-\d{1,6})?)\s+\S/);
+        if (!numberMatch) return null;
+        const rest = text.slice(numberMatch[1].length);
+        const tokens = this.normalizeAddressTokens(rest);
+        if (tokens.length === 0) return null;
+        return {
+            streetNumber: numberMatch[1].toLowerCase(),
+            tokens,
+            // First comma-separated segment: the street line proper (comma-less
+            // formats fold the city in here; the full-token prefix rule covers
+            // those).
+            streetLineTokens: this.normalizeAddressTokens(rest.split(',')[0]),
+            zips: tokens.filter(token => /^\d{5}$/.test(token))
+        };
+    }
+
+    // Same-address detection for two parseAddressForComparison results.
+    // Conservative on purpose: equal street numbers AND (one full token
+    // sequence a prefix of the other — the longer just adds city/state/zip —
+    // OR equal street lines, tolerating only a trailing generic street-type
+    // designator). Anything else — differing numbers, differing streets,
+    // differing explicit ZIPs — is NOT the same address (no fuzzy scoring),
+    // and the conflict falls through to AI arbitration.
+    isSameStreetAddress(parsedA, parsedB) {
+        if (!parsedA || !parsedB) return false;
+        if (parsedA.streetNumber !== parsedB.streetNumber) return false;
+        // A candidate with repeated tokens is malformed, not more complete —
+        // the Eventbrite doubled-address bug ("3911 Cedar Springs Rd, Dallas,
+        // TX 75219, Dallas, TX") would otherwise OUTSCORE the clean form on
+        // components. Repetition is malformation, not information: those
+        // conflicts keep arbitrating (the AI reliably picks the clean form).
+        const hasDuplicateTokens = parsed => new Set(parsed.tokens).size !== parsed.tokens.length;
+        if (hasDuplicateTokens(parsedA) || hasDuplicateTokens(parsedB)) return false;
+        if (parsedA.zips.length > 0 && parsedB.zips.length > 0
+            && !parsedA.zips.some(zip => parsedB.zips.includes(zip))) return false;
+        const isPrefix = (shorter, longer) => shorter.length <= longer.length
+            && shorter.every((token, index) => token === longer[index]);
+        if (isPrefix(parsedA.tokens, parsedB.tokens) || isPrefix(parsedB.tokens, parsedA.tokens)) return true;
+        const lineA = parsedA.streetLineTokens;
+        const lineB = parsedB.streetLineTokens;
+        if (lineA.length === 0 || lineB.length === 0) return false;
+        const [shorterLine, longerLine] = lineA.length <= lineB.length ? [lineA, lineB] : [lineB, lineA];
+        if (!isPrefix(shorterLine, longerLine)) return false;
+        return longerLine.slice(shorterLine.length).every(token => ADDRESS_STREET_TYPE_TOKENS.includes(token));
+    }
+
+    // Completeness score for the same-address winner: comma-separated
+    // components beyond the street line (city, state, zip each usually get
+    // their own segment) plus an explicit ZIP bonus. Comma-formatted
+    // candidates deliberately outscore comma-less twins carrying the same
+    // components — the calendar's canonical address format is comma-separated.
+    scoreAddressCompleteness(value, parsed) {
+        const segments = String(value).split(',').map(segment => segment.trim()).filter(Boolean);
+        return Math.max(0, segments.length - 1) + (parsed.zips.length > 0 ? 1 : 0);
+    }
+
+    // Curated bars for a merge-context city — shared by the curated-bar-name
+    // rule and the curated-address rung in resolveConflictDeterministically.
+    // Returns a non-empty array or null (missing city/bars data fails open).
+    getCuratedCityBars(cityKey) {
+        const key = cityKey ? String(cityKey) : '';
+        if (!key || !this.bars) return null;
+        const cityBars = this.bars[key] || this.bars[key.trim().toLowerCase()];
+        return Array.isArray(cityBars) && cityBars.length > 0 ? cityBars : null;
+    }
+
+    // Same normalization BarDataNormalizer matches with (lowercase, strip
+    // non-alphanumerics) so curated matching agrees everywhere, plus a leading
+    // "the " is dropped on BOTH sides ("The Eagle" is the curated "Eagle" and
+    // vice versa). Full-name equality only — never substring — so "Eagle"
+    // can't claim "Eagle Bar" vs "Dallas Eagle" ambiguously within a city.
+    findCuratedBarByName(cityBars, value) {
+        const normalizeBarName = name => String(name || '')
+            .toLowerCase()
+            .replace(/^\s*the\s+/, '')
+            .replace(/[^a-z0-9]/g, '');
+        const normalized = normalizeBarName(value);
+        if (!normalized) return null;
+        return cityBars.find(bar => bar && typeof bar.name === 'string'
+            && normalizeBarName(bar.name) === normalized) || null;
+    }
+
     // Deterministic conflict resolution consulted by BOTH merge paths
     // (createFinalEventObject and mergeParsedEvents) before a field is queued
     // for AI arbitration. Returns { winner: 'a'|'b', reason } or null (→
     // arbitrate as usual). Callers map a/b onto their own labels and thread
-    // event context (currently { cityKey }) for the city-aware title and
-    // curated-bar rules.
+    // event context (currently { cityKey, barNames }) for the city-aware
+    // title, curated-bar, and curated-address rules.
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
@@ -726,29 +863,10 @@ class SharedCore {
         // backstop) — this path FAILS OPEN to today's behavior, as do a
         // missing city and missing bars data.
         if (fieldName === 'bar') {
-            const barCityKey = context && context.cityKey ? String(context.cityKey) : '';
-            const cityBars = barCityKey && this.bars
-                ? (this.bars[barCityKey] || this.bars[barCityKey.trim().toLowerCase()])
-                : null;
-            if (Array.isArray(cityBars) && cityBars.length > 0) {
-                // Same normalization BarDataNormalizer matches with (lowercase,
-                // strip non-alphanumerics) so curated matching agrees everywhere,
-                // plus a leading "the " is dropped on BOTH sides ("The Eagle" is
-                // the curated "Eagle" and vice versa). Full-name equality only —
-                // never substring — so "Eagle" can't claim "Eagle Bar" vs
-                // "Dallas Eagle" ambiguously within a city.
-                const normalizeBarName = value => String(value || '')
-                    .toLowerCase()
-                    .replace(/^\s*the\s+/, '')
-                    .replace(/[^a-z0-9]/g, '');
-                const findCuratedBar = value => {
-                    const normalized = normalizeBarName(value);
-                    if (!normalized) return null;
-                    return cityBars.find(bar => bar && typeof bar.name === 'string'
-                        && normalizeBarName(bar.name) === normalized) || null;
-                };
-                const curatedA = findCuratedBar(valueA);
-                const curatedB = findCuratedBar(valueB);
+            const cityBars = this.getCuratedCityBars(context && context.cityKey);
+            if (cityBars) {
+                const curatedA = this.findCuratedBarByName(cityBars, valueA);
+                const curatedB = this.findCuratedBarByName(cityBars, valueB);
                 if (Boolean(curatedA) !== Boolean(curatedB)) {
                     const matched = curatedA || curatedB;
                     return {
@@ -764,6 +882,67 @@ class SharedCore {
                     winner: addressShapedA ? 'b' : 'a',
                     reason: 'a street address is not a venue name'
                 };
+            }
+        }
+        // Deterministic address ladder: EVERY address conflict in run
+        // 20260722-124758 (all six) was the SAME address in two formats
+        // ("619 East Pine Street, Seattle, WA, 98122" vs "619 E. Pine St,
+        // Seattle, WA"), each burning an AI arbitration with coin-flip risk.
+        // Rung 1: same-address detection — equal street numbers plus a
+        // normalized-token prefix/street-line match (isSameStreetAddress) means
+        // the two candidates denote one address, and the MORE COMPLETE form
+        // wins (component count, then normalized length; a full tie falls
+        // through so the case-only rule below can still settle pure case
+        // twins). Rung 2: when either record's bar matches a curated bar for
+        // the event's city and exactly one candidate is that bar's curated
+        // address (in any format), the curated one wins — but ONLY when the
+        // other candidate is not itself a parseable street address: a
+        // parseable candidate that failed the same-address check is a genuine
+        // CONTRADICTION of curated data and is never silently resolved.
+        // Rung 3 (future): geocode-equality — two candidates geocoding to the
+        // same pin are the same address — needs adapter/network threading in
+        // the merge path, deliberately out of scope here. Everything not
+        // decided above FAILS OPEN to AI arbitration exactly as today.
+        if (fieldName === 'address' && typeof valueA === 'string' && typeof valueB === 'string') {
+            const parsedA = this.parseAddressForComparison(valueA);
+            const parsedB = this.parseAddressForComparison(valueB);
+            if (parsedA && parsedB && this.isSameStreetAddress(parsedA, parsedB)) {
+                const scoreA = this.scoreAddressCompleteness(valueA, parsedA);
+                const scoreB = this.scoreAddressCompleteness(valueB, parsedB);
+                const lengthA = parsedA.tokens.join(' ').length;
+                const lengthB = parsedB.tokens.join(' ').length;
+                if (scoreA !== scoreB || lengthA !== lengthB) {
+                    return {
+                        winner: scoreA !== scoreB
+                            ? (scoreA > scoreB ? 'a' : 'b')
+                            : (lengthA > lengthB ? 'a' : 'b'),
+                        reason: 'same address, kept the more complete form'
+                    };
+                }
+                // Full tie → fall through (case-only rule below, else AI).
+            } else {
+                const cityBars = this.getCuratedCityBars(context && context.cityKey);
+                const barNames = context && Array.isArray(context.barNames) ? context.barNames : [];
+                let curatedBar = null;
+                if (cityBars) {
+                    for (const barName of barNames) {
+                        curatedBar = this.findCuratedBarByName(cityBars, barName);
+                        if (curatedBar) break;
+                    }
+                }
+                const curatedAddress = curatedBar && typeof curatedBar.address === 'string'
+                    ? curatedBar.address.trim() : '';
+                const parsedCurated = curatedAddress ? this.parseAddressForComparison(curatedAddress) : null;
+                if (parsedCurated) {
+                    const matchesCuratedA = this.isSameStreetAddress(parsedA, parsedCurated);
+                    const matchesCuratedB = this.isSameStreetAddress(parsedB, parsedCurated);
+                    if (matchesCuratedA !== matchesCuratedB && !(matchesCuratedA ? parsedB : parsedA)) {
+                        return {
+                            winner: matchesCuratedA ? 'a' : 'b',
+                            reason: `matches curated bar address (${curatedBar.name})`
+                        };
+                    }
+                }
             }
         }
         // Case-only variants are not a real conflict: production runs burned
@@ -3066,8 +3245,12 @@ class SharedCore {
         const mergeEventTitle = newEvent.title || existingEvent.title || 'event';
         // City context for the city-aware title rule (a bare city title loses
         // to a named title) — both records describe the same event, so either
-        // side's resolved city works.
-        const mergeContext = { cityKey: newEvent.city || existingEvent.city || '' };
+        // side's resolved city works. barNames feeds the curated-address rung:
+        // either record's bar matching a curated bar anchors the address.
+        const mergeContext = {
+            cityKey: newEvent.city || existingEvent.city || '',
+            barNames: [existingEvent.bar, newEvent.bar]
+        };
         const queueArbitrationConflict = (fieldName, existingValue, newValue, fallbackPick, fallbackReason) => {
             const resolved = this.resolveConflictDeterministically(fieldName, existingValue, newValue, mergeContext);
             if (!resolved) {
@@ -3481,8 +3664,13 @@ class SharedCore {
         // resolveConflictDeterministically so behavior is identical.
         // City context for the city-aware title rule (a bare city title loses
         // to a named title) — the scraper object carries the resolved city; the
-        // calendar object may carry one parsed from its notes.
-        const mergeContext = { cityKey: scraperObject.city || calendarObject.city || '' };
+        // calendar object may carry one parsed from its notes. barNames feeds
+        // the curated-address rung: either record's bar matching a curated bar
+        // anchors the address.
+        const mergeContext = {
+            cityKey: scraperObject.city || calendarObject.city || '',
+            barNames: [calendarObject.bar, scraperObject.bar]
+        };
         const queueArbitrationConflict = (fieldName, calendarValue, scraperValue) => {
             const resolved = this.resolveConflictDeterministically(fieldName, calendarValue, scraperValue, mergeContext);
             if (!resolved) {
