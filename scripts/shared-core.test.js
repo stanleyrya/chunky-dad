@@ -1274,6 +1274,137 @@ test('guardrail: a bar matching curated city bar data beats a non-matching side'
   assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['bar']);
 });
 
+// Seattle fixture for the 2026-07-22 incident: arbitration hallucinated
+// "'MASSIVE' is the organizer (BEARRACUDA)" and picked the flyer's edition
+// subtitle "Shore Thing" over the curated venue — in BOTH merge flows.
+const SEATTLE_CITIES = { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } };
+function createSeattleCore(bars = { seattle: [{ name: 'Massive' }] }) {
+  return new SharedCore(SEATTLE_CITIES, { eventSchema: EventSchema, bars });
+}
+
+test('guardrail: a leading "the" is dropped on both sides of curated bar matching — full-name equality only', () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    bars: { dallas: [{ name: 'Eagle NYC' }, { name: 'The Round-Up Saloon' }] }
+  });
+  const context = { cityKey: 'dallas' };
+  // Candidate carries the article, curated name does not
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'The Eagle NYC', 'Dallas Woody\'s', context),
+    { winner: 'a', reason: 'matches curated bar data (Eagle NYC)' });
+  // Curated name carries the article, candidate does not
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'Dallas Woody\'s', 'Round-Up Saloon', context),
+    { winner: 'b', reason: 'matches curated bar data (The Round-Up Saloon)' });
+  // Still no substring matching: a bare "Eagle" is NOT the curated "Eagle NYC"
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'Eagle', 'Dallas Woody\'s', context), null,
+    'partial names never match curated data');
+});
+
+test('guardrail: both candidates case-variants of the same curated bar fall through to the case-only rule', () => {
+  const core = createSeattleCore();
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Massive', { cityKey: 'seattle' }),
+    { winner: 'b', reason: 'case-only variants — kept less-uppercased form' },
+    'both-curated is no tiebreak — the existing case-only rule still decides');
+});
+
+test('guardrail: curated rule fails open — no bars data or unknown city leaves the AI path untouched', () => {
+  const noBarsCore = new SharedCore(SEATTLE_CITIES, { eventSchema: EventSchema });
+  assert.equal(
+    noBarsCore.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing', { cityKey: 'seattle' }), null,
+    'no bars data → arbitrate as today');
+  const core = createSeattleCore();
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing', { cityKey: 'portland' }), null,
+    'city with no curated bars → arbitrate as today');
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing', { cityKey: '' }), null,
+    'no resolved city → arbitrate as today');
+});
+
+test('incident 2026-07-22 (enrich flow): existing "MASSIVE" beats incoming "Shore Thing" via curated Seattle bars — AI never called', async () => {
+  const core = createSeattleCore();
+  const priorities = { bar: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const existing = { title: 'BEARRACUDA SEATTLE', bar: 'MASSIVE', city: 'seattle', source: 'ai-web', _organizer: 'Bearracuda', _fieldPriorities: priorities };
+  const incoming = { title: 'BEARRACUDA SEATTLE', bar: 'Shore Thing', city: 'seattle', source: 'ai-web', _parserConfig: aiParserConfig, _fieldPriorities: priorities };
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let merged;
+  try {
+    merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'curated bar data settles the bar field — no AI arbitration request');
+  assert.equal(merged.bar, 'MASSIVE', 'the venue survives the enrich merge');
+  assert.ok(logLines.includes(
+    '🔒 MERGE: "BEARRACUDA SEATTLE" field=bar resolved deterministically — matches curated bar data (Massive)'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+});
+
+test('incident 2026-07-22 (calendar flow): calendar "Massive" beats scraped "Shore Thing" via curated Seattle bars — AI never called', async () => {
+  const core = createSeattleCore();
+  const scraped = {
+    title: 'BEARRACUDA SEATTLE',
+    bar: 'Shore Thing',
+    city: 'seattle',
+    startDate: new Date('2026-08-01T05:00:00.000Z'),
+    endDate: new Date('2026-08-01T09:00:00.000Z'),
+    source: 'ai-web',
+    _organizer: 'Bearracuda',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } }
+  };
+  const existing = {
+    title: 'BEARRACUDA SEATTLE',
+    startDate: new Date(scraped.startDate.getTime()),
+    endDate: new Date(scraped.endDate.getTime()),
+    notes: 'bar: Massive'
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'curated bar data settles the only conflict — no AI request');
+  assert.equal(finalEvent.bar, 'Massive', 'the calendar venue survives the merge');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['bar']);
+});
+
+test('incident names with NO curated match still arbitrate via AI exactly as today', async () => {
+  const core = createSeattleCore({ seattle: [{ name: 'Neighbours' }] });
+  const scraped = {
+    title: 'BEARRACUDA SEATTLE',
+    bar: 'Shore Thing',
+    city: 'seattle',
+    startDate: new Date('2026-08-01T05:00:00.000Z'),
+    endDate: new Date('2026-08-01T09:00:00.000Z'),
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } }
+  };
+  const existing = {
+    title: 'BEARRACUDA SEATTLE',
+    startDate: new Date(scraped.startDate.getTime()),
+    endDate: new Date(scraped.endDate.getTime()),
+    notes: 'bar: MASSIVE'
+  };
+  const adapter = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'MASSIVE', reason: 'venue' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'neither side curated → the AI is consulted as before');
+  assert.equal(finalEvent.bar, 'MASSIVE');
+});
+
 test('mergeParsedEvents: same-host root-vs-deep website resolves deterministically too', async () => {
   const core = createCore();
   const priorities = { website: { priority: ['ai-web'], merge: 'ai' } };
@@ -3097,6 +3228,34 @@ test('arbitration prompt includes the organizer line when an event carries _orga
     adapter.calls[0].prompt,
     /- KNOWN ORGANIZER: "Bearracuda" — never pick a bar value equal to the organizer\./
   );
+});
+
+test('arbitration prompt carries the organizer-hallucination backstop rule with and without a known organizer', async () => {
+  const backstopRule = /- Never reject a bar value as "the organizer" unless it is the SAME NAME as the known organizer — a venue sharing a page or flyer with the organizer is still the venue\./;
+
+  // With a known organizer, the backstop follows the KNOWN ORGANIZER rule
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair();
+  scraped._organizer = 'Bearracuda';
+  const adapter = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'STATION 4', reason: 'venue' }
+  });
+  await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 1);
+  assert.match(adapter.calls[0].prompt, backstopRule);
+  assert.ok(
+    adapter.calls[0].prompt.indexOf('KNOWN ORGANIZER') < adapter.calls[0].prompt.search(backstopRule),
+    'the backstop rule follows the KNOWN ORGANIZER rule');
+
+  // Without one, the backstop still guards the generic never-the-organizer rule
+  const bareCore = createCore();
+  const bare = buildArbitrationPair();
+  const bareAdapter = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'STATION 4', reason: 'venue' }
+  });
+  await bareCore.createFinalEventObject(bare.existing, bare.scraped, { httpAdapter: bareAdapter });
+  assert.equal(bareAdapter.calls.length, 1);
+  assert.match(bareAdapter.calls[0].prompt, backstopRule);
 });
 
 test('arbitration prompt omits the organizer line when no event carries _organizer', async () => {
