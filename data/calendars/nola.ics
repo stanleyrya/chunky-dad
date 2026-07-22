@@ -6,32 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-new-orleans
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
-DTSTART:20260905T020000Z
-DTEND:20260905T070000Z
-DTSTAMP:20260717T221553Z
-UID:74648B34-07A1-4BD2-8E78-D67B991A920E
-CREATED:20260514T005857Z
-DESCRIPTION:bar: Joy Theater\ntimezone: America/Chicago\ninstagram: https:/
- /www.instagram.com/bearracuda\nimage: https://bearracuda.com/wp-content/upl
- oads/2026/03/webnola-2.jpg\nshortName: Bear-rac-uda\nwebsite: https://bearr
- acuda.com/events/decadence/\nkey: bearracuda-2026-09-05-nola\ndescription: 
- Music & Entertainment\n• DJ MATEO SEGADE\n• KELLY (Shoes) LIVE!\naddress: 1
- 200 Canal Street\, New Orleans\, LA\nticketUrl: https://www.ticketmaster.co
- m/event/1B006454A32CE162\ngmaps: https://www.google.com/maps/search/?api=1&
- query=Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20Orleans%2C%20LA
-LAST-MODIFIED:20260713T213048Z
-LOCATION:29.9559524\, -90.0738975
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEARRACUDA: New Orleans⚜️
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T070000Z
-DTSTAMP:20260717T221553Z
+DTSTAMP:20260722T182512Z
 UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
 CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
@@ -50,6 +27,30 @@ LOCATION:29.9559524\, -90.0738975
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260905T020000Z
+DTEND:20260905T070000Z
+DTSTAMP:20260722T182512Z
+UID:74648B34-07A1-4BD2-8E78-D67B991A920E
+CREATED:20260514T005857Z
+DESCRIPTION:bar: Joy Theater\ntimezone: America/Chicago\ninstagram: https:/
+ /www.instagram.com/bearracuda\nshortName: Bear-rac-uda\nwebsite: https://be
+ arracuda.com/events/decadence/\nbearSource: keyword\nkey: bearracuda-new-or
+ leans⚜️|2026-09-05|joy theater\ndescription: Music & Entertainment\n• DJ MA
+ TEO SEGADE\n• KELLY (Shoes) LIVE!\naddress: 1200 Canal Street\, New Orleans
+ \, LA\nticketUrl: https://www.ticketmaster.com/event/1B006454A32CE162\nimag
+ e: https://bearracuda.com/wp-content/uploads/2026/03/webnola-2.jpg\npinSour
+ ce: geocoded-exact\ngmaps: https://www.google.com/maps/search/?api=1&query=
+ Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20Orleans%2C%20LA
+LAST-MODIFIED:20260722T164810Z
+LOCATION:29.9559524\, -90.0738975
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARRACUDA: New Orleans⚜️
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
