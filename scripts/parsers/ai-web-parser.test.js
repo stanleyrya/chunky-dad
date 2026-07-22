@@ -3069,3 +3069,164 @@ test('every log-producing importModule module exports the __wireConsoleTee shim'
   }
   // event-schema is intentionally absent: it never logs, so it needs no shim.
 });
+
+// ---------------------------------------------------------------------------
+// Time-evidence hardening: extraction-invented times must never survive the
+// evidence gate. Times/dates are never merge-arbitrated downstream (scraped
+// clobbers), so an invented time flows straight into calendars. Observed
+// on-device: endTime "03:00" with evidence "LATE in OCR_IMAGE_TEXT —
+// interpreted as ~3am (common club close time)" at confidence 60 passed the
+// gate on a stray digit.
+// ---------------------------------------------------------------------------
+
+test('evidence gate drops an invented endTime the source never states (the ~3am case)', () => {
+  const parser = createParser();
+  // OCR text says "LATE", never 3am. "DECEMBER 3" plants the stray bare digit
+  // that used to corroborate 03:00; "@10"/"10PM" are the real (start) times.
+  const source = 'MEGAWOOF DECEMBER 3 DOORS @10 10PM TIL LATE';
+  const evidenceContext = parser.buildAiEvidenceContextFromText(source);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  const result = parser.validateAiEventEvidence(
+    {
+      endTime: '03:00',
+      __fieldEvidence: { endTime: 'LATE in OCR_IMAGE_TEXT — interpreted as ~3am (common club close time)' }
+    },
+    { html: source }, {}, null,
+    { evidenceContext, validationContext }
+  );
+  assert.equal(result.event.endTime, undefined, 'invented 03:00 must be dropped');
+  assert.ok(result.report.dropped.some(entry => entry.key === 'endTime'), 'drop must be reported in the existing shape');
+
+  // Same value with NO model evidence string: the bare "3" in "DECEMBER 3"
+  // still must not corroborate a time.
+  const bareDigit = parser.validateAiEventEvidence(
+    { endTime: '03:00' }, { html: source }, {}, null,
+    { evidenceContext, validationContext }
+  );
+  assert.equal(bareDigit.event.endTime, undefined, 'a bare digit in the source is not time evidence');
+});
+
+test('evidence gate keeps legitimate time conversions (9PM -> 21:00, 01H, midnight)', () => {
+  const parser = createParser();
+  const validationContext = { imageEvidenceUrls: new Set() };
+  const check = (source, field, value) => parser.validateAiEventEvidence(
+    { [field]: value }, { html: source }, {}, null,
+    { evidenceContext: parser.buildAiEvidenceContextFromText(source), validationContext }
+  ).event[field];
+
+  assert.equal(check('DOORS 9PM SATURDAY', 'startTime', '21:00'), '21:00', '9PM in source corroborates 21:00');
+  assert.equal(check('BEARRACUDA JUSQU\'A 01H', 'endTime', '01:00'), '01:00', '01H military format still corroborates');
+  assert.equal(check('PARTY TIL MIDNIGHT', 'endTime', '00:00'), '00:00', 'the word midnight corroborates 00:00');
+  assert.equal(check('SHOW AT 10:30PM', 'startTime', '22:30'), '22:30', '10:30PM corroborates 22:30');
+});
+
+test('inference language in the model evidence fails corroboration even when a time token matches', () => {
+  const parser = createParser();
+  const source = 'SAT DEC 12 9PM - 3AM';
+  const evidenceContext = parser.buildAiEvidenceContextFromText(source);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  // The source DOES contain 3AM — but the model admits it inferred the value,
+  // so the corroboration is not trusted.
+  const inferred = parser.validateAiEventEvidence(
+    {
+      endTime: '03:00',
+      __fieldEvidence: { endTime: 'no explicit end time; typically 3am at this venue' }
+    },
+    { html: source }, {}, null, { evidenceContext, validationContext }
+  );
+  assert.equal(inferred.event.endTime, undefined, 'inference language must fail corroboration');
+
+  // The same value with verbatim evidence is kept.
+  const verbatim = parser.validateAiEventEvidence(
+    { endTime: '03:00', __fieldEvidence: { endTime: '9PM - 3AM' } },
+    { html: source }, {}, null, { evidenceContext, validationContext }
+  );
+  assert.equal(verbatim.event.endTime, '03:00', 'verbatim-backed 3AM stays');
+});
+
+test('extraction captures per-field evidence so the gate can reject the exact on-device case', async () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createParser();
+  const response = JSON.stringify({
+    title: { value: 'MEGAWOOF', evidence: 'MEGAWOOF', confidence: 95 },
+    endTime: { value: '03:00', evidence: 'LATE in OCR_IMAGE_TEXT — interpreted as ~3am (common club close time)', confidence: 60 }
+  });
+  parser.core.callAiGenerate = async () => response;
+
+  const source = 'MEGAWOOF 10PM TIL LATE';
+  const event = await parser.extractEventWithTwoPassAi(
+    { html: `<p>${source}</p>`, url: 'https://x.example/events' },
+    {}, null, {}, ['title', 'endTime'], source, 'test',
+    { dataFlags: { jsonLd: true } }
+  );
+  assert.equal(event.endTime, '03:00', 'confidence 60 passes the confidence filter');
+  assert.equal(
+    event.__fieldEvidence.endTime,
+    'LATE in OCR_IMAGE_TEXT — interpreted as ~3am (common club close time)',
+    'the evidence string must be carried for the gate'
+  );
+
+  const validated = parser.validateAiEventEvidence(event, { html: source }, {}, null, {
+    evidenceContext: parser.buildAiEvidenceContextFromText(source),
+    validationContext: { imageEvidenceUrls: new Set() }
+  });
+  assert.equal(validated.event.title, 'MEGAWOOF', 'verbatim title survives');
+  assert.equal(validated.event.endTime, undefined, 'the invented end time is dropped by the gate');
+});
+
+test('date-mode values with a time component need that time in the source (T00:00 placeholder exempt)', () => {
+  const parser = createParser();
+  const validationContext = { imageEvidenceUrls: new Set() };
+  const check = (source, value) => parser.validateAiEventEvidence(
+    { startDate: value }, { html: source }, {}, null,
+    { evidenceContext: parser.buildAiEvidenceContextFromText(source), validationContext }
+  ).event.startDate;
+
+  assert.equal(check('DEC 12 BEAR NIGHT 3AM', '2026-12-12T03:00'), '2026-12-12T03:00', 'stated 3AM corroborates the component');
+  assert.equal(check('DEC 12 BEAR NIGHT', '2026-12-12T03:00'), undefined, 'an invented time component drops the field');
+  assert.equal(check('DEC 12 BEAR NIGHT', '2026-12-12T00:00'), '2026-12-12T00:00', 'T00:00 is the no-time placeholder, not a claim');
+  assert.equal(check('DEC 12 BEAR NIGHT', '2026-12-12'), '2026-12-12', 'date-only values are unaffected');
+});
+
+// ---------------------------------------------------------------------------
+// NYE year-jump: a Dec 31 event ending 2am must land on Jan 1 of the NEXT
+// year — never the same year's Jan 1 eleven months in the past (which used to
+// collapse the end onto the start).
+// ---------------------------------------------------------------------------
+
+test('normalizeEventDates rolls a same-year Jan 1 end across the year boundary', () => {
+  const parser = createParser();
+  parser.now = () => new Date(Date.UTC(2026, 0, 15)); // mid-January: Jan 1 of the CURRENT year sits inside the past window
+  const start = new Date(Date.UTC(2026, 11, 31, 22, 0, 0)); // Dec 31 2026 22:00 (weekday-pinned)
+  const wrongEnd = new Date(Date.UTC(2026, 0, 1, 2, 0, 0)); // Jan 1 2026 02:00 — in-window, so year repair leaves it
+
+  const result = parser.normalizeEventDates(new Date(start), new Date(wrongEnd), { start: true });
+  assert.equal(result.startDate.toISOString(), '2026-12-31T22:00:00.000Z');
+  assert.equal(result.endDate.toISOString(), '2027-01-01T02:00:00.000Z', 'the end must land on Jan 1 of the NEXT year');
+
+  // A weekday-pinned end is deterministic — never bumped; existing collapse applies.
+  const pinnedEnd = parser.normalizeEventDates(new Date(start), new Date(wrongEnd), { start: true, end: true });
+  assert.equal(pinnedEnd.endDate.toISOString(), '2026-12-31T22:00:00.000Z', 'pinned ends keep the collapse-to-start behavior');
+
+  // An end genuinely months before the start (not a year-boundary tail) still collapses.
+  const farEnd = parser.normalizeEventDates(
+    new Date(start), new Date(Date.UTC(2026, 5, 1, 2, 0, 0)), { start: true });
+  assert.equal(farEnd.endDate.toISOString(), '2026-12-31T22:00:00.000Z', 'non-NYE past ends keep today\'s behavior');
+});
+
+test('normalizeAiEvent keeps Dec 31 22:00 -> Jan 1 02:00 in the next year (endTime rollover path)', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = FROZEN_NOW; // 2026-07-13: Dec 31 2026 is inside the future window
+  const normalized = parser.normalizeAiEvent({
+    title: 'NYE BEAR BASH',
+    startDate: '2026-12-31',
+    startTime: '22:00',
+    endTime: '02:00'
+  }, {}, null, null, null);
+  assert.ok(normalized);
+  assert.equal(normalized.startDate.toISOString(), '2026-12-31T22:00:00.000Z');
+  assert.equal(normalized.endDate.toISOString(), '2027-01-01T02:00:00.000Z', 'the 2am end lands on next year\'s Jan 1');
+});

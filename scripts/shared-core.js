@@ -55,6 +55,16 @@ const ADDRESS_STREET_TYPE_TOKENS = [
     'court', 'highway', 'parkway', 'way'
 ];
 
+// Known ticketing platforms for the cross-host ticketUrl merge rung. This is a
+// PREFERENCE HEURISTIC, not a gate: a ticketing-platform URL only beats a BARE
+// domain root on a non-ticketing host; hosts missing from this list (or any
+// non-ticketing candidate with a real path) simply fall through to AI
+// arbitration — nothing is ever dropped or blocked for not being listed here.
+const TICKETING_PLATFORM_HOSTS = [
+    'sickening.events', 'eventbrite.com', 'tixr.com', 'ticketmaster.com',
+    'ticketleap.com', 'dice.fm', 'eventeny.com', 'showclix.com'
+];
+
 class SharedCore {
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
@@ -604,6 +614,142 @@ class SharedCore {
         return { host, segments, hasQuery };
     }
 
+    // Exact host or subdomain of a known ticketing platform (host must already
+    // be lowercased/www-stripped, as getUrlRuleParts returns it). Subdomain
+    // matching covers e.g. events.ticketleap.com.
+    isKnownTicketingPlatformHost(host) {
+        const normalized = String(host || '').toLowerCase();
+        if (!normalized) return false;
+        return TICKETING_PLATFORM_HOSTS.some(platform =>
+            normalized === platform || normalized.endsWith(`.${platform}`));
+    }
+
+    // Query-string parameter lookup built on plain string splitting —
+    // URLSearchParams does not exist in iOS JavaScriptCore (Scriptable).
+    extractSearchParamValue(search, key) {
+        if (!search || !key) return '';
+        const normalizedKey = String(key).trim().toLowerCase();
+        const searchText = String(search).replace(/^\?/, '');
+        if (!normalizedKey || !searchText) return '';
+        for (const pair of searchText.split('&')) {
+            if (!pair) continue;
+            const separatorIndex = pair.indexOf('=');
+            const rawKey = separatorIndex >= 0 ? pair.slice(0, separatorIndex) : pair;
+            const rawValue = separatorIndex >= 0 ? pair.slice(separatorIndex + 1) : '';
+            let decodedKey = rawKey;
+            try {
+                decodedKey = decodeURIComponent(rawKey.replace(/\+/g, ' '));
+            } catch (_) {}
+            if (String(decodedKey || '').trim().toLowerCase() !== normalizedKey) continue;
+            try {
+                return decodeURIComponent(rawValue.replace(/\+/g, ' '));
+            } catch (_) {
+                return rawValue;
+            }
+        }
+        return '';
+    }
+
+    // Pure size score for an image URL — higher means larger. Canonical home of
+    // the scoring the ai-web-parser previously owned (its getImageSizeFromUrl
+    // now delegates here) so the deterministic image merge rung below and OCR
+    // dedup in the parser rank candidates on the SAME scale. No network calls:
+    // the score reads width/height/scale query params and resolution-ish path
+    // segments; when a URL advertises nothing, the URL length is a weak
+    // fallback signal (kept for parser parity — the merge rung's margin guard
+    // deliberately ignores that noise floor).
+    getImageSizeScoreFromUrl(url) {
+        if (!url || typeof url !== 'string') return -1;
+
+        const parsed = this.parseUrl(url);
+        if (!parsed) {
+            // Fallback: longer URL often means higher quality
+            return url.length;
+        }
+
+        let score = 0;
+        const search = String(parsed.search || '').toLowerCase();
+        const path = String(parsed.pathname || '').toLowerCase();
+        const getParam = (key) => this.extractSearchParamValue(search, key);
+
+        // Width/height parameters (e.g., ?w=1920, ?width=1080, ?h=1080)
+        const width = getParam('w') || getParam('width') || getParam('wpx');
+        const height = getParam('h') || getParam('height') || getParam('hpx');
+        if (width) {
+            const w = parseInt(width, 10);
+            if (!isNaN(w)) score += w;
+        }
+        if (height) {
+            const h = parseInt(height, 10);
+            if (!isNaN(h)) score += h;
+        }
+
+        // Size scale parameters (e.g., ?scale=2, ?size=large)
+        const scale = getParam('scale') || getParam('size');
+        if (scale) {
+            const s = scale.toLowerCase();
+            if (s === 'large' || s === 'big' || s === 'max' || s === 'original' || s === 'full') {
+                score += 5000;
+            } else if (s === 'medium' || s === 'mid') {
+                score += 2500;
+            } else if (s === 'small' || s === 'tiny') {
+                score += 500;
+            } else {
+                const num = parseInt(s, 10);
+                if (!isNaN(num)) score += num;
+            }
+        }
+
+        // Path resolution indicators (e.g., /1920x1080/, /large/, /original/)
+        for (const segment of path.split('/').filter(Boolean)) {
+            const resolutionMatch = segment.match(/(\d+)x(\d+)/);
+            if (resolutionMatch) {
+                score += parseInt(resolutionMatch[1], 10) * parseInt(resolutionMatch[2], 10);
+            }
+            const pxMatch = segment.match(/(\d+)px/);
+            if (pxMatch) {
+                score += parseInt(pxMatch[1], 10);
+            }
+            if (segment === 'large' || segment === 'big' || segment === 'max' || segment === 'original' || segment === 'full' || segment === 'high') {
+                score += 5000;
+            } else if (segment === 'medium' || segment === 'mid') {
+                score += 2500;
+            } else if (segment === 'small' || segment === 'tiny') {
+                score += 500;
+            }
+        }
+
+        // Fallback: longer URL often means higher quality
+        if (score === 0) {
+            score = url.length;
+        }
+        return score;
+    }
+
+    // Normalized view of a description for the strict-superset merge rule:
+    // lowercased, basic HTML entities decoded, whitespace collapsed. BOTH
+    // candidates pass through this, so entity/whitespace differences never
+    // block a genuine containment.
+    normalizeDescriptionForContainment(value) {
+        return String(value || '')
+            .replace(/&amp;/gi, '&')
+            .replace(/&(?:rsquo|lsquo|apos|#8217|#8216|#39);/gi, "'")
+            .replace(/&(?:rdquo|ldquo|quot|#8221|#8220|#34);/gi, '"')
+            .replace(/&(?:nbsp|#160);/gi, ' ')
+            .replace(/&(?:ndash|mdash|#8211|#8212);/gi, '-')
+            .replace(/&(?:hellip|#8230);/gi, '...')
+            // Fold the literal unicode twins of those entities too, so an
+            // entity-encoded copy contains its decoded (curly-quote) twin.
+            .replace(/[\u2018\u2019]/g, "'")
+            .replace(/[\u201C\u201D]/g, '"')
+            .replace(/\u00A0/g, ' ')
+            .replace(/[\u2013\u2014]/g, '-')
+            .replace(/\u2026/g, '...')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     // Emoji/pictograph-stripped view of a title: pictograph blocks, variation
     // selectors, the keycap combiner and ZWJ removed, whitespace collapsed.
     // Conservative on purpose: ASCII and real punctuation are never stripped.
@@ -931,6 +1077,26 @@ class SharedCore {
                     return { winner: 'a', reason: 'same-host deeper URL beats domain root' };
                 }
             }
+            // Cross-host ticketUrl: a candidate on a known ticketing platform
+            // (TICKETING_PLATFORM_HOSTS — a preference heuristic, not a gate)
+            // beats a BARE domain root on a non-ticketing host: the root of an
+            // organizer/venue site is never the ticket page. Conservative on
+            // purpose: a non-ticketing candidate WITH a real path could itself
+            // be the event page, and two ticketing candidates are a genuine
+            // question — both still arbitrate (fail open).
+            if (fieldName === 'ticketUrl' && urlA.host !== urlB.host) {
+                const ticketingA = this.isKnownTicketingPlatformHost(urlA.host);
+                const ticketingB = this.isKnownTicketingPlatformHost(urlB.host);
+                if (ticketingA !== ticketingB) {
+                    const isBareRoot = (parts) => parts.segments.length === 0 && !parts.hasQuery;
+                    if (ticketingA && isBareRoot(urlB)) {
+                        return { winner: 'a', reason: 'ticketing-platform URL beats bare non-ticketing domain root' };
+                    }
+                    if (ticketingB && isBareRoot(urlA)) {
+                        return { winner: 'b', reason: 'ticketing-platform URL beats bare non-ticketing domain root' };
+                    }
+                }
+            }
             // A logo-path image never beats a non-logo image: ticketing
             // services attach their own ".../saas/logos/..." asset, which the
             // model picked over the actual event poster. Matches path
@@ -942,6 +1108,23 @@ class SharedCore {
                 const logoB = hasLogoSegment(urlB);
                 if (logoA !== logoB) {
                     return { winner: logoA ? 'b' : 'a', reason: 'event artwork beats logo-path image' };
+                }
+                // Resolution rung: when one URL advertises a clearly larger
+                // image (same scoring the parser uses for OCR dedup —
+                // getImageSizeScoreFromUrl), prefer it deterministically; the
+                // arbitration model contradicted itself between runs on exactly
+                // this shape (called a real og:image flyer "a generic
+                // placeholder", then reversed). Requires a meaningful margin
+                // (winner >= 2x loser or +500) so near-ties still arbitrate,
+                // and the winner must score above the URL-length noise floor —
+                // a score that could just be a long URL decides nothing.
+                const scoreA = this.getImageSizeScoreFromUrl(String(valueA).trim());
+                const scoreB = this.getImageSizeScoreFromUrl(String(valueB).trim());
+                const winnerScore = Math.max(scoreA, scoreB);
+                const loserScore = Math.min(scoreA, scoreB);
+                if (winnerScore >= 500 && loserScore >= 0 && winnerScore > loserScore
+                    && (winnerScore >= 2 * loserScore || winnerScore - loserScore >= 500)) {
+                    return { winner: scoreA > scoreB ? 'a' : 'b', reason: 'clearly higher-resolution image URL' };
                 }
             }
         }
@@ -1091,6 +1274,25 @@ class SharedCore {
                     // street mismatch always leaves a manual-review trail.
                     const mismatchEventTitle = context && context.eventTitle ? context.eventTitle : 'event';
                     console.warn(`⚠️ MERGE: "${mismatchEventTitle}" field=address street mismatch arbitrated by AI ("${valueA}" vs "${valueB}") — verify manually`);
+                }
+            }
+        }
+        // Description strict superset: when one candidate's normalized text
+        // (lowercased, entities decoded, whitespace collapsed — see
+        // normalizeDescriptionForContainment) CONTAINS the other's ENTIRE
+        // normalized text and is longer, the superset carries strictly more
+        // information — keep it without burning an AI arbitration. Partial
+        // overlap is a genuine conflict and still arbitrates; equal-after-
+        // normalization pairs fall through to the case-only rule below.
+        if (fieldName === 'description' && typeof valueA === 'string' && typeof valueB === 'string') {
+            const containA = this.normalizeDescriptionForContainment(valueA);
+            const containB = this.normalizeDescriptionForContainment(valueB);
+            if (containA && containB && containA !== containB) {
+                if (containA.includes(containB)) {
+                    return { winner: 'a', reason: 'description contains the other candidate\'s full text' };
+                }
+                if (containB.includes(containA)) {
+                    return { winner: 'b', reason: 'description contains the other candidate\'s full text' };
                 }
             }
         }
