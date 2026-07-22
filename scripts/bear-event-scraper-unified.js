@@ -81,7 +81,27 @@ class BearEventScraperOrchestrator {
             const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
             const scriptableUrlParserModule = importModule('parsers/scriptable-url-parser');
             const aiWebParserModule = importModule('parsers/ai-web-parser');
-            
+
+            // Scriptable gives every imported module (and this main script) its
+            // own console binding, so the adapter's console capture only ever
+            // saw the adapter's own lines. Route each module's console — and
+            // this script's own — into the adapter's run-log file logger.
+            const consoleTee = typeof scriptableAdapterModule.getConsoleTee === 'function'
+                ? scriptableAdapterModule.getConsoleTee()
+                : null;
+            wireConsoleTees(consoleTee, [
+                sharedCoreModule,
+                eventSchemaModule,
+                normalizersModule,
+                bearracudaParserModule,
+                chunkParserModule,
+                linktreeParserModule,
+                redeyeticketsParserModule,
+                scriptableUrlParserModule,
+                aiWebParserModule,
+                { __wireConsoleTee } // this orchestrator script's own console
+            ]);
+
             // Store modules
             this.modules = {
                 SharedCore: sharedCoreModule.SharedCore,
@@ -450,6 +470,31 @@ class BearEventScraperOrchestrator {
     }
 }
 
+// Wire the adapter's run-log tee into each loaded module's console. Modules
+// without a __wireConsoleTee helper are skipped (event-schema never logs); a
+// missing tee is a no-op — the Node/web adapters never expose one, so nothing
+// changes off-device. Returns the collected restore functions (used by tests).
+function wireConsoleTees(tee, modules) {
+    const restores = [];
+    if (typeof tee !== 'function' || !Array.isArray(modules)) {
+        return restores;
+    }
+    for (const moduleExports of modules) {
+        if (!moduleExports || typeof moduleExports.__wireConsoleTee !== 'function') {
+            continue;
+        }
+        try {
+            const restore = moduleExports.__wireConsoleTee(tee);
+            if (typeof restore === 'function') {
+                restores.push(restore);
+            }
+        } catch (wireError) {
+            // Log wiring must never block startup.
+        }
+    }
+    return restores;
+}
+
 // Auto-execute when loaded — but never on require(): in Node, only run when
 // invoked directly, so tests/tools can import the orchestrator without scraping.
 // Scriptable also defines a module global, so check importModule first.
@@ -476,10 +521,58 @@ if (!isNodeEnvironment || isDirectNodeRun) {
 
 // Export for manual execution if needed
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BearEventScraperOrchestrator };
+    module.exports = { BearEventScraperOrchestrator, wireConsoleTees };
 } else if (typeof window !== 'undefined') {
     window.BearEventScraperOrchestrator = BearEventScraperOrchestrator;
 } else {
     // Scriptable environment
     this.BearEventScraperOrchestrator = BearEventScraperOrchestrator;
+}
+
+// Scriptable gives every imported module its own console binding, so the
+// adapter's console capture (run-log file) can't see this module's output.
+// The orchestrator wires the adapter's file logger in here at startup.
+// Returns a restore function; no-ops (returns null) if tee is not a function.
+// log/warn/error keep echoing to the visible console; debug becomes file-only
+// (full AI payload dumps belong in the run log, not on screen). Idempotent per
+// console object: re-wiring returns the existing restore instead of stacking.
+function __wireConsoleTee(tee) {
+    if (typeof tee !== 'function' || typeof console === 'undefined' || !console) {
+        return null;
+    }
+    if (typeof console.__consoleTeeRestore === 'function') {
+        return console.__consoleTeeRestore;
+    }
+    const original = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+        debug: console.debug
+    };
+    const wrap = (level, method, echo) => function (...args) {
+        try {
+            tee(level, args);
+        } catch (teeError) {
+            // Log capture must never break the caller.
+        }
+        if (echo && typeof method === 'function') {
+            method.apply(console, args);
+        }
+    };
+    console.log = wrap('info', original.log, true);
+    console.warn = wrap('warn', original.warn, true);
+    console.error = wrap('error', original.error, true);
+    console.debug = wrap('debug', original.debug, false);
+    const restore = function () {
+        console.log = original.log;
+        console.warn = original.warn;
+        console.error = original.error;
+        console.debug = original.debug;
+        delete console.__consoleTeeRestore;
+    };
+    console.__consoleTeeRestore = restore;
+    return restore;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.__wireConsoleTee = __wireConsoleTee;
 }

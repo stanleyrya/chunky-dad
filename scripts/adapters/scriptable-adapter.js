@@ -194,6 +194,15 @@ class FileLogger {
     }
   }
 
+  // Scriptable gives every imported module its own console binding, so
+  // captureConsole() above only sees THIS module's output. getConsoleTee()
+  // hands out a sink the orchestrator can wire into the other modules'
+  // consoles (via their __wireConsoleTee helpers) so their lines land in the
+  // same run-log file with identical formatting and captureMode gating.
+  getConsoleTee() {
+    return (level, args) => this.append(level, this.formatArgs(args));
+  }
+
   append(level, message) {
     const normalized = this.normalizeLevel(level);
     if (this.captureMode === "none") {
@@ -10170,5 +10179,12 @@ ScriptableAdapter.NOTES_EXCLUDED_FIELDS = new Set([
   "searchEndDate",
 ]);
 
-// Export for Scriptable environment
-module.exports = { ScriptableAdapter };
+// The run-log console tee: appends (level, args) into this module's singleton
+// FileLogger — the same buffer captureConsole() fills — so the orchestrator can
+// route other modules' per-module consoles into the saved run log.
+function getConsoleTee() {
+  return logger.getConsoleTee();
+}
+
+// Export for Scriptable environment (FileLogger exported for tests)
+module.exports = { ScriptableAdapter, FileLogger, getConsoleTee };

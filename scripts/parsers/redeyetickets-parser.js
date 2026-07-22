@@ -526,3 +526,51 @@ if (typeof module !== 'undefined' && module.exports) {
     // Scriptable environment
     this.RedEyeTicketsParser = RedEyeTicketsParser;
 }
+
+// Scriptable gives every imported module its own console binding, so the
+// adapter's console capture (run-log file) can't see this module's output.
+// The orchestrator wires the adapter's file logger in here at startup.
+// Returns a restore function; no-ops (returns null) if tee is not a function.
+// log/warn/error keep echoing to the visible console; debug becomes file-only
+// (full AI payload dumps belong in the run log, not on screen). Idempotent per
+// console object: re-wiring returns the existing restore instead of stacking.
+function __wireConsoleTee(tee) {
+    if (typeof tee !== 'function' || typeof console === 'undefined' || !console) {
+        return null;
+    }
+    if (typeof console.__consoleTeeRestore === 'function') {
+        return console.__consoleTeeRestore;
+    }
+    const original = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+        debug: console.debug
+    };
+    const wrap = (level, method, echo) => function (...args) {
+        try {
+            tee(level, args);
+        } catch (teeError) {
+            // Log capture must never break the caller.
+        }
+        if (echo && typeof method === 'function') {
+            method.apply(console, args);
+        }
+    };
+    console.log = wrap('info', original.log, true);
+    console.warn = wrap('warn', original.warn, true);
+    console.error = wrap('error', original.error, true);
+    console.debug = wrap('debug', original.debug, false);
+    const restore = function () {
+        console.log = original.log;
+        console.warn = original.warn;
+        console.error = original.error;
+        console.debug = original.debug;
+        delete console.__consoleTeeRestore;
+    };
+    console.__consoleTeeRestore = restore;
+    return restore;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.__wireConsoleTee = __wireConsoleTee;
+}
