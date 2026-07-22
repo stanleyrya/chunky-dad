@@ -1155,6 +1155,162 @@ test('guardrail: logo-path image loses to event artwork in both directions; both
   assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['image']);
 });
 
+// ---------------------------------------------------------------------------
+// Deterministic image resolution rung: a URL advertising a clearly larger
+// image wins without AI (the arbitration model contradicted itself between
+// runs on exactly this shape). Near-ties and size-less URLs still arbitrate.
+// ---------------------------------------------------------------------------
+
+test('guardrail: clearly higher-resolution image URL wins in both directions without AI', async () => {
+  const core = createCore();
+  const hiRes = 'https://cdn.example.com/uploads/1920x1080/poster.jpg';
+  const plain = 'https://bearracuda.com/wp-content/uploads/poster.jpg';
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', hiRes, plain),
+    { winner: 'a', reason: 'clearly higher-resolution image URL' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', plain, hiRes),
+    { winner: 'b', reason: 'clearly higher-resolution image URL' });
+  // Query-param sizes rank on the same scale as the parser's OCR dedup
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image',
+      'https://cdn.example.com/img.jpg?w=1920&h=1080', 'https://cdn.example.com/thumbs/img.jpg?w=150&h=150'),
+    { winner: 'a', reason: 'clearly higher-resolution image URL' });
+
+  // End-to-end: zero AI calls on a deterministic resolution win
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.image = hiRes;
+  existing.notes += `\nimage: ${plain}`;
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'a clear resolution margin never reaches the AI');
+  assert.equal(finalEvent.image, hiRes);
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['image']);
+});
+
+test('guardrail: image URLs without a clear resolution margin still go to the AI', () => {
+  const core = createCore();
+  // Below the meaningful margin (no 2x, no +500) → arbitrate
+  assert.equal(
+    core.resolveConflictDeterministically('image',
+      'https://cdn.example.com/img.jpg?w=800', 'https://cdn.example.com/img.jpg?w=700'),
+    null, 'an 800-vs-700 width is a near-tie');
+  // Neither URL advertises a size: the URL-length fallback is noise, never a 🔒 win
+  assert.equal(
+    core.resolveConflictDeterministically('image',
+      'https://a.example/p.jpg',
+      'https://cdn.other-host.example/wp-content/uploads/2026/05/some-quite-long-poster-file-name.jpg'),
+    null, 'length-only scores decide nothing');
+  // Equal scores → arbitrate (logo rule and case-only rule aside)
+  assert.equal(
+    core.resolveConflictDeterministically('image',
+      'https://a.example/x/poster.jpg?w=900', 'https://b.example/y/poster.jpg?w=900'),
+    null, 'equal advertised sizes still arbitrate');
+});
+
+// ---------------------------------------------------------------------------
+// Deterministic cross-host ticketUrl rung: a known ticketing-platform URL
+// beats a bare non-ticketing domain root. Preference heuristic, not a gate —
+// everything else falls through to AI exactly as before.
+// ---------------------------------------------------------------------------
+
+test('guardrail: ticketing-platform URL beats a bare non-ticketing domain root in both directions', async () => {
+  const core = createCore();
+  const ticketing = 'https://www.eventbrite.com/e/megawoof-dallas-tickets-1234';
+  const bareRoot = 'https://megawoof.com/';
+  assert.deepEqual(
+    core.resolveConflictDeterministically('ticketUrl', ticketing, bareRoot),
+    { winner: 'a', reason: 'ticketing-platform URL beats bare non-ticketing domain root' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('ticketUrl', bareRoot, ticketing),
+    { winner: 'b', reason: 'ticketing-platform URL beats bare non-ticketing domain root' });
+  // Subdomains of listed platforms count (events.ticketleap.com)
+  assert.deepEqual(
+    core.resolveConflictDeterministically('ticketUrl', 'https://events.ticketleap.com/venue/show', 'https://somebar.example'),
+    { winner: 'a', reason: 'ticketing-platform URL beats bare non-ticketing domain root' });
+
+  // End-to-end: zero AI calls on the deterministic win
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.ticketUrl = ticketing;
+  existing.notes = existing.notes.replace(
+    'ticketUrl: https://tickets.example/furball',
+    `ticketUrl: ${bareRoot}`);
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'ticketing-vs-bare-root never reaches the AI');
+  assert.equal(finalEvent.ticketUrl, ticketing);
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['ticketUrl']);
+});
+
+test('guardrail: conservative ticketUrl fall-throughs still go to the AI', () => {
+  const core = createCore();
+  // Non-ticketing candidate with a REAL path could itself be the event page
+  assert.equal(
+    core.resolveConflictDeterministically('ticketUrl',
+      'https://www.eventbrite.com/e/megawoof-tickets-1234', 'https://megawoof.com/events/dec-31'),
+    null, 'a non-ticketing event page is a genuine question');
+  // A root with a query string is not a bare root
+  assert.equal(
+    core.resolveConflictDeterministically('ticketUrl',
+      'https://www.eventbrite.com/e/megawoof-tickets-1234', 'https://megawoof.com/?event=123'),
+    null, 'query-bearing roots are not bare');
+  // Two ticketing platforms are a genuine question
+  assert.equal(
+    core.resolveConflictDeterministically('ticketUrl',
+      'https://www.eventbrite.com/e/tickets-1234', 'https://dice.fm/event/abcdef'),
+    null, 'both-ticketing still arbitrates');
+  // The rung is ticketUrl-only: website keeps today's cross-host AI behavior
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://www.eventbrite.com/e/tickets-1234', 'https://megawoof.com/'),
+    null, 'website is not a ticket field');
+});
+
+// ---------------------------------------------------------------------------
+// Description strict-superset rule: the candidate containing the other's
+// ENTIRE normalized text carries strictly more information — no AI needed.
+// Partial overlap still arbitrates; equal pairs keep existing behavior.
+// ---------------------------------------------------------------------------
+
+test('guardrail: description strict superset wins in both directions (entities and whitespace normalized)', async () => {
+  const core = createCore();
+  const subset = 'It&rsquo;s the biggest bear party in Dallas &amp; beyond.';
+  const superset = 'MEGAWOOF PRESENTS!  It’s the biggest   bear party in Dallas & beyond. Doors at 9PM.';
+  assert.deepEqual(
+    core.resolveConflictDeterministically('description', superset, subset),
+    { winner: 'a', reason: 'description contains the other candidate\'s full text' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('description', subset, superset),
+    { winner: 'b', reason: 'description contains the other candidate\'s full text' });
+
+  // End-to-end: zero AI calls on the deterministic win
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.description = superset;
+  existing.notes += `\ndescription: ${subset}`;
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'a strict superset never reaches the AI');
+  assert.equal(finalEvent.description, superset);
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['description']);
+});
+
+test('guardrail: partial-overlap descriptions still arbitrate; equal pairs keep existing behavior', () => {
+  const core = createCore();
+  // Shared prefix but neither contains the other's FULL text → AI
+  assert.equal(
+    core.resolveConflictDeterministically('description',
+      'Bear party with go-go dancers all night', 'Bear party with DJ sets till 4am'),
+    null, 'partial overlap is a genuine conflict');
+  // Equal after normalization → the existing case-only rule decides (not the superset rule)
+  assert.deepEqual(
+    core.resolveConflictDeterministically('description', 'BEAR PARTY  TONIGHT', 'Bear Party Tonight'),
+    { winner: 'b', reason: 'case-only variants — kept less-uppercased form' });
+  // The rule is description-only: other text fields keep today's behavior
+  assert.equal(
+    core.resolveConflictDeterministically('title', 'MEGAWOOF: DECADENCE EDITION', 'DECADENCE'),
+    null, 'titles never use the superset rule');
+});
+
 test('looksLikeStreetAddress: leading house number + street-type word; real venue names never match', () => {
   const core = createCore();
   for (const positive of ['10-90 Wyckoff Ave', '1090 Wyckoff Avenue', '446 MT NEBO RD']) {

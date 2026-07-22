@@ -3765,89 +3765,17 @@ class AiWebParser {
     /**
      * Extract a size score from a URL to determine which image is larger.
      * Returns a numeric score - higher means larger image.
+     * The scoring itself lives in SharedCore.getImageSizeScoreFromUrl so the
+     * merge's deterministic image rung ranks candidates on the SAME scale as
+     * the OCR dedup here. Core is always wired in production; the URL-length
+     * fallback only covers stubbed cores in isolated tests.
      */
     getImageSizeFromUrl(url) {
         if (!url || typeof url !== 'string') return -1;
-
-        const lowerUrl = url.toLowerCase();
-        const parsed = this.parseUrlComponents(url);
-
-        if (!parsed) {
-            // Fallback: longer URL often means higher quality
-            return url.length;
+        if (this.core && typeof this.core.getImageSizeScoreFromUrl === 'function') {
+            return this.core.getImageSizeScoreFromUrl(url);
         }
-
-        let score = 0;
-        const search = String(parsed.search || '').toLowerCase();
-        const path = String(parsed.pathname || '').toLowerCase();
-
-        // Check query parameters for size indicators (extractSearchParamValue,
-        // not URLSearchParams — the latter doesn't exist in iOS JavaScriptCore)
-        const getParam = (key) => this.extractSearchParamValue(search, key);
-
-        // Width/height parameters (e.g., ?w=1920, ?width=1080, ?h=1080, ?height=1920)
-        const width = getParam('w') || getParam('width') || getParam('wpx');
-        const height = getParam('h') || getParam('height') || getParam('hpx');
-
-        if (width) {
-            const w = parseInt(width, 10);
-            if (!isNaN(w)) score += w;
-        }
-        if (height) {
-            const h = parseInt(height, 10);
-            if (!isNaN(h)) score += h;
-        }
-
-        // Size scale parameters (e.g., ?scale=2, ?size=large)
-        const scale = getParam('scale') || getParam('size');
-        if (scale) {
-            const s = scale.toLowerCase();
-            if (s === 'large' || s === 'big' || s === 'max' || s === 'original' || s === 'full') {
-                score += 5000;
-            } else if (s === 'medium' || s === 'mid') {
-                score += 2500;
-            } else if (s === 'small' || s === 'tiny') {
-                score += 500;
-            } else {
-                const num = parseInt(s, 10);
-                if (!isNaN(num)) score += num;
-            }
-        }
-
-        // Check path for resolution indicators (e.g., /1920x1080/, /large/, /original/)
-        const pathSegments = path.split('/').filter(Boolean);
-        for (const segment of pathSegments) {
-            // Match resolution patterns like 1920x1080, 1080p, 4k
-            const resolutionMatch = segment.match(/(\d+)x(\d+)/);
-            if (resolutionMatch) {
-                const w = parseInt(resolutionMatch[1], 10);
-                const h = parseInt(resolutionMatch[2], 10);
-                score += w * h;
-            }
-
-            // Match pixel patterns like 1920px, 1080px
-            const pxMatch = segment.match(/(\d+)px/);
-            if (pxMatch) {
-                const px = parseInt(pxMatch[1], 10);
-                score += px;
-            }
-
-            // Check for size keywords
-            if (segment === 'large' || segment === 'big' || segment === 'max' || segment === 'original' || segment === 'full' || segment === 'high') {
-                score += 5000;
-            } else if (segment === 'medium' || segment === 'mid') {
-                score += 2500;
-            } else if (segment === 'small' || segment === 'tiny') {
-                score += 500;
-            }
-        }
-
-        // Fallback: longer URL often means higher quality (more parameters, paths, etc.)
-        if (score === 0) {
-            score = url.length;
-        }
-
-        return score;
+        return url.length;
     }
 
     /**
@@ -5426,6 +5354,17 @@ class AiWebParser {
                 };
                 return;
             }
+            // Per-field model evidence strings (see parseAndFilterConfidence): union
+            // across passes like the pin flags — each pass's evidence covers the
+            // fields that pass extracted. Consumed by the evidence gate at pass time;
+            // harmless (and internal-only) afterwards.
+            if (key === '__fieldEvidence' && value && typeof value === 'object') {
+                merged.__fieldEvidence = {
+                    ...(merged.__fieldEvidence && typeof merged.__fieldEvidence === 'object' ? merged.__fieldEvidence : {}),
+                    ...value
+                };
+                return;
+            }
             if (!this.isUsableAiFieldValue(value)) return;
             const normalizedName = this.normalizePromptFieldName(key);
             if (this.hasResolvedFieldValue(merged, normalizedName)) return;
@@ -6427,6 +6366,17 @@ TEXT:
                         continue; // Drop it
                     }
                     let value = fieldData.value;
+                    // Carry the model's per-field evidence string forward as internal
+                    // metadata: the evidence gate (validateAiEventEvidence) uses it to
+                    // reject time values whose evidence admits inference ("interpreted
+                    // as ~3am (common club close time)") instead of quoting the source.
+                    // Internal __ keys never reach calendar notes or merge field loops.
+                    if (typeof fieldData.evidence === 'string' && fieldData.evidence.trim()) {
+                        if (!filteredEvent.__fieldEvidence || typeof filteredEvent.__fieldEvidence !== 'object') {
+                            filteredEvent.__fieldEvidence = {};
+                        }
+                        filteredEvent.__fieldEvidence[key] = fieldData.evidence.trim();
+                    }
                     // Weekday-pinned year inference: the evidence string is only
                     // available here (it is discarded when field objects flatten to
                     // scalars), so this is the seam where "Sat, Aug 22" can pin the
@@ -7023,11 +6973,19 @@ TEXT:
             .some(variant => normalizedEvidence.includes(variant));
         if (!hasDateMatch) return false;
         if (!dateParts.hasTime) return true;
-        const evidenceHasTimeSignal = /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}:\d{2}\b|\b(?:noon|midnight)\b/i.test(normalizedEvidence);
-        if (!evidenceHasTimeSignal) return true;
+        // T00:00 is the pipeline's "no time stated" placeholder (see
+        // isInventedMidnight in normalizeAiEvent) — not a time claim.
+        if (Number(dateParts.hour) === 0 && Number(dateParts.minute) === 0) return true;
         const timeVariants = this.buildTimeEvidenceVariants(dateParts);
         if (timeVariants.length === 0) return true;
-        return timeVariants.some(variant => normalizedEvidence.includes(variant));
+        if (timeVariants.some(variant => normalizedEvidence.includes(variant))) return true;
+        // The claimed time component must appear somewhere in the source in a
+        // recognized format — hasTimeEvidence also understands OCR forms ("01H",
+        // "@10", "noon"/"midnight"). Times are never merge-arbitrated downstream
+        // (scraped clobbers), so an invented time here would flow straight into
+        // calendars; if the source never states it, drop the field.
+        const timeComponent = `${String(Number(dateParts.hour)).padStart(2, '0')}:${String(Math.max(0, Number(dateParts.minute) || 0)).padStart(2, '0')}`;
+        return this.hasTimeEvidence(evidenceContext, timeComponent);
     }
 
     hasTimeEvidence(evidenceContext, value) {
@@ -7050,6 +7008,10 @@ TEXT:
             return true;
         }
 
+        // Midnight and noon are written as words, not digits
+        if (normalizedTime === '00:00' && /\bmidnight\b/.test(lowerEvidence)) return true;
+        if (normalizedTime === '12:00' && /\bnoon\b/.test(lowerEvidence)) return true;
+
         // Also check for OCR-specific formats in raw evidence
         const rawEvidence = String(evidenceContext && evidenceContext.raw ? evidenceContext.raw : '');
         const lowerRaw = rawEvidence.toLowerCase();
@@ -7058,14 +7020,20 @@ TEXT:
         const hour24 = parseInt(normalizedTime.split(':')[0], 10);
         const hour12 = hour24 % 12 || 12;
 
-        // Pattern 1: @HH, @HHmm, @HHH, @HH H, @HH H mm (OCR time indicators)
-        // Matches: @10PM, @10PM30, 01H, 10H, @10, @10 H, etc.
-        const ocrTimePattern = /(?:^|[\s,@"'`(]|at\s)(\d{1,2})(?::?(\d{2}))?\s*(H|[ap]m)?/gi;
+        // Pattern 1: @HH, @HHmm, @HH H, 01H, 10PM (OCR time indicators).
+        // A BARE number is NOT time evidence — "MAY 3", "$3" or a street number
+        // must never corroborate an invented "03:00" (observed on-device: endTime
+        // 03:00 whose evidence said "interpreted as ~3am" passed on a stray
+        // digit). Require an explicit time marker: an @/"at" prefix or an
+        // H/am/pm suffix. Colon forms ("22:00", "10:30pm") are covered by the
+        // variant path above and the standalone path below.
+        const ocrTimePattern = /(?:(@|\bat\s+)|^|[\s,"'`(])(\d{1,2})(?::?(\d{2}))?\s*(h\b|[ap]m)?/gi;
         let ocrMatch;
         while ((ocrMatch = ocrTimePattern.exec(lowerRaw)) !== null) {
-            const ocrHour = parseInt(ocrMatch[1], 10);
-            const ocrMinute = ocrMatch[2] ? parseInt(ocrMatch[2], 10) : 0;
-            const ocrSuffix = ocrMatch[3] ? ocrMatch[3].toLowerCase() : null;
+            const hasTimeMarkerPrefix = Boolean(ocrMatch[1]);
+            const ocrHour = parseInt(ocrMatch[2], 10);
+            const ocrSuffix = ocrMatch[4] ? ocrMatch[4].trim().toLowerCase() : null;
+            if (!hasTimeMarkerPrefix && !ocrSuffix) continue; // bare number — not a time
 
             // Convert OCR hour to 24-hour format
             let ocrHour24 = ocrHour;
@@ -7316,11 +7284,47 @@ TEXT:
     }
 
     /**
+     * True when the value claims a specific time of day: time-mode fields
+     * (startTime/endTime) always do; date-mode fields (start/end/startDate/
+     * endDate) only when they carry a non-midnight time component — T00:00 is
+     * the pipeline's "no time stated" placeholder (see isInventedMidnight in
+     * normalizeAiEvent) and must never be treated as a time claim.
+     */
+    valueClaimsTimeOfDay(mode, value) {
+        if (mode === 'time') return true;
+        if (mode !== 'date') return false;
+        const parts = this.extractDateEvidenceParts(String(value === null || value === undefined ? '' : value));
+        if (!parts || !parts.hasTime) return false;
+        return !(Number(parts.hour) === 0 && Number(parts.minute) === 0);
+    }
+
+    /**
+     * Tell-tale inference language in a model evidence string: the model is
+     * admitting it derived the value ("interpreted as ~3am (common club close
+     * time)", "no explicit end time") instead of quoting the source. Used to
+     * fail time-value corroboration even when some time-like token matches.
+     */
+    evidenceAdmitsInference(evidence) {
+        const text = String(evidence || '').toLowerCase();
+        if (!text) return false;
+        return /\b(?:interpret(?:ed|s|ing)?|assum(?:e|ed|es|ing|ption)|typical(?:ly)?|common(?:ly)?|inferr?(?:ed|ing)?|infers?|guess(?:ed|ing)?|estimat(?:e|ed|es|ing)|presum(?:e|ed|es|ing|ably)|probabl[ey]|likely|usually|implie[ds]|implicit(?:ly)?)\b|no explicit|not (?:stated|shown|specified|listed|visible|explicit)/.test(text);
+    }
+
+    /**
      * Validate a single field value against evidence.
      * Returns true if valid, false if should be dropped.
      */
-    validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report) {
-        const hasEvidence = this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
+    validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelEvidence = '') {
+        // Times are never merge-arbitrated downstream (scraped clobbers), so an
+        // invented time here flows straight into calendars. A time value whose
+        // own evidence string admits inference fails corroboration outright —
+        // even if some time-like token in the source happens to match (observed
+        // on-device: endTime "03:00" with evidence "LATE in OCR_IMAGE_TEXT —
+        // interpreted as ~3am (common club close time)" passed the gate).
+        const inventedTime = this.valueClaimsTimeOfDay(rule.mode, value)
+            && this.evidenceAdmitsInference(modelEvidence);
+        const hasEvidence = !inventedTime
+            && this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
         if (!hasEvidence) {
             report.dropped.push({
                 field: rule.field,
@@ -7384,6 +7388,12 @@ TEXT:
             : null;
 
         // === STEP 3: Validate Each Field ===
+        // Model-provided per-field evidence strings (captured at confidence-
+        // filter time; see parseAndFilterConfidence) — consulted for time
+        // fields so inference-language evidence fails corroboration.
+        const modelFieldEvidence = aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object'
+            ? aiEvent.__fieldEvidence
+            : {};
         Object.keys(aiEvent).forEach(key => {
             const rule = this.getFieldValidationRule(key, validationConfig);
 
@@ -7400,7 +7410,7 @@ TEXT:
 
             // Validate field value against evidence
             const value = aiEvent[key];
-            const isValid = this.validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report);
+            const isValid = this.validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelFieldEvidence[key]);
             if (!isValid) {
                 delete validated[key];
             }
@@ -8307,7 +8317,26 @@ TEXT:
         }
         let normalizedEnd = adjustedEnd || new Date(adjustedStart);
         if (normalizedEnd < adjustedStart) {
-            normalizedEnd = new Date(adjustedStart);
+            // NYE year-jump: a Dec 31 event ending "2am Jan 1" can arrive with
+            // the end on the SAME year's Jan 1 — eleven months BEFORE the start
+            // — when the model reuses the start's year and the window repair
+            // leaves it (e.g. it falls inside the past window). Bump the end
+            // one year forward, but ONLY when that lands it within a week
+            // AFTER the start (a genuine overnight/multi-day tail across the
+            // year boundary); anything else keeps today's collapse-to-start.
+            // Weekday-pinned ends are deterministic and never bumped.
+            if (!pinned.end) {
+                const bumpedEnd = new Date(normalizedEnd);
+                bumpedEnd.setFullYear(bumpedEnd.getFullYear() + 1);
+                const tailMs = bumpedEnd.getTime() - adjustedStart.getTime();
+                if (tailMs >= 0 && tailMs <= 7 * this.extractionLimits.millisPerDay) {
+                    console.log(`🤖 AI Web: End predates start by ~a year — rolled end across the year boundary: ${bumpedEnd.toISOString()}`);
+                    normalizedEnd = bumpedEnd;
+                }
+            }
+            if (normalizedEnd < adjustedStart) {
+                normalizedEnd = new Date(adjustedStart);
+            }
         }
         return { startDate: adjustedStart, endDate: normalizedEnd };
     }
