@@ -715,9 +715,16 @@ class SharedCore {
         // arbitration picked it over the calendar's real venue ("HOLO") with
         // exactly backwards reasoning (observed 2026-07-17). Decidable
         // deterministically, in order: 1) exactly one side matching a curated
-        // bar name for the event's city wins; 2) exactly one address-shaped
-        // side LOSES. Both sides curated, both address-shaped, or neither rule
-        // applying still arbitrate (with a prompt rule as backstop).
+        // bar name for the event's city wins — curated bar data OUTRANKS
+        // anything derived, so the bar field must never reach AI arbitration
+        // when curated data settles it (observed 2026-07-22: arbitration
+        // hallucinated "'MASSIVE' is the organizer (BEARRACUDA)" and picked a
+        // flyer subtitle "Shore Thing" over the curated Seattle venue Massive,
+        // in BOTH the enrich and calendar merges); 2) exactly one
+        // address-shaped side LOSES. Both sides curated, both address-shaped,
+        // or neither rule applying still arbitrate (with a prompt rule as
+        // backstop) — this path FAILS OPEN to today's behavior, as do a
+        // missing city and missing bars data.
         if (fieldName === 'bar') {
             const barCityKey = context && context.cityKey ? String(context.cityKey) : '';
             const cityBars = barCityKey && this.bars
@@ -725,8 +732,15 @@ class SharedCore {
                 : null;
             if (Array.isArray(cityBars) && cityBars.length > 0) {
                 // Same normalization BarDataNormalizer matches with (lowercase,
-                // strip non-alphanumerics) so curated matching agrees everywhere.
-                const normalizeBarName = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                // strip non-alphanumerics) so curated matching agrees everywhere,
+                // plus a leading "the " is dropped on BOTH sides ("The Eagle" is
+                // the curated "Eagle" and vice versa). Full-name equality only —
+                // never substring — so "Eagle" can't claim "Eagle Bar" vs
+                // "Dallas Eagle" ambiguously within a city.
+                const normalizeBarName = value => String(value || '')
+                    .toLowerCase()
+                    .replace(/^\s*the\s+/, '')
+                    .replace(/[^a-z0-9]/g, '');
                 const findCuratedBar = value => {
                     const normalized = normalizeBarName(value);
                     if (!normalized) return null;
@@ -813,6 +827,7 @@ class SharedCore {
             '- "bar" must be the physical venue where the event takes place — never the promoter, organizer, or brand whose name appears in page titles.',
             '- A street address (e.g. "10-90 Wyckoff Ave") is never a venue name — for "bar", prefer a named venue over an address.',
             organizer ? `- KNOWN ORGANIZER: ${JSON.stringify(String(organizer))} — never pick a bar value equal to the organizer.` : '',
+            '- Never reject a bar value as "the organizer" unless it is the SAME NAME as the known organizer — a venue sharing a page or flyer with the organizer is still the venue.',
             '- For "title", when both variants name the same event, prefer the MORE DESCRIPTIVE one — a subtitle, theme, edition, or anniversary (e.g. "Treasure Trail Seattle: Summer Sausage" over "Treasure Trail Seattle") is part of the event\'s identity, not noise.',
             '- For "title", extra text does NOT count as descriptive when it is only status text (e.g. sold-out notices) or site branding — never prefer a variant for those.',
             '- For "title", a bare city name is not an event name — prefer the variant that names the event or its organizer.',
