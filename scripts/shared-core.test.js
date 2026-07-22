@@ -2734,6 +2734,271 @@ test('bearReview round-trips notes and an existing calendar value survives merge
 });
 
 // ---------------------------------------------------------------------------
+// Manual bear/not-bear overrides: dropped events carried to results,
+// bearSource provenance, and prep-time calendar-record overrides
+// ---------------------------------------------------------------------------
+
+test('filterBearEvents enforce: drops land in the collector with verdict info, kept behavior unchanged', async () => {
+  const core = createCore();
+  const adapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'drag show, no bear context' });
+  const dropCollector = [];
+  const result = await core.filterBearEvents(
+    [
+      { title: 'Bear Night', bar: 'The Eagle', startDate: new Date('2026-08-01T21:00:00.000Z') },
+      { title: 'Twink Bash', bar: 'Neon Room', startDate: new Date('2026-08-02T21:00:00.000Z'), url: 'https://promoter.example/twink-bash' }
+    ],
+    bearCheckConfig('enforce'),
+    adapter,
+    dropCollector
+  );
+
+  // Kept behavior unchanged: the keyword event survives with its stamps
+  assert.deepEqual(result.map(e => e.title), ['Bear Night']);
+  assert.equal(result[0].isBearEvent, true);
+
+  // The drop is carried through with its verdict info, not silently gone
+  assert.equal(dropCollector.length, 1);
+  const dropped = dropCollector[0];
+  assert.equal(dropped.title, 'Twink Bash');
+  assert.equal(dropped.venue, 'Neon Room');
+  assert.equal(dropped.reason, 'ai: drag show, no bear context');
+  assert.equal(dropped.host, 'promoter.example');
+  assert.equal(dropped.event.title, 'Twink Bash');
+  assert.ok(dropped.startDate instanceof Date);
+});
+
+test('filterBearEvents report/off modes never fill the drop collector', async () => {
+  for (const mode of ['report', 'off']) {
+    const core = createCore();
+    const adapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'drag show' });
+    const dropCollector = [];
+    await core.filterBearEvents(
+      [{ title: 'Twink Bash' }],
+      bearCheckConfig(mode),
+      adapter,
+      dropCollector
+    );
+    assert.equal(dropCollector.length, 0, `mode ${mode} must not collect drops`);
+  }
+});
+
+test('bearSource: stamped keyword/ai on enforce keeps and round-trips through notes', async () => {
+  // keyword tier
+  const keywordCore = createCore();
+  const keywordKept = await keywordCore.filterBearEvents(
+    [{ title: 'Bear Night' }],
+    bearCheckConfig('enforce'),
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'unused' })
+  );
+  assert.equal(keywordKept[0].bearSource, 'keyword');
+
+  // ai tier
+  const aiCore = createCore();
+  const aiKept = await aiCore.filterBearEvents(
+    [{ title: 'Treasure Trail Seattle' }],
+    bearCheckConfig('enforce'),
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'bear promoter event' })
+  );
+  assert.equal(aiKept[0].bearSource, 'ai');
+
+  // config tier (trusted promoter, AI unavailable)
+  const configCore = createCore();
+  const configKept = await configCore.filterBearEvents(
+    [{ title: 'DENVER @ Ophelia\'s' }],
+    bearCheckConfig('enforce', { alwaysBear: true }),
+    buildBearVerdictAdapter(null, { fail: true })
+  );
+  assert.equal(configKept[0].bearSource, 'config');
+
+  // Notes codec round-trip (values contain colons — must escape/unescape)
+  const core = createCore();
+  for (const value of ['ai', 'manual-not-bear (overrode ai: drag show)', 'manual-bear (overrode ai: lesbian night)']) {
+    const notes = core.formatEventNotes({ bar: 'Eagle', bearSource: value });
+    assert.equal(core.parseNotesIntoFields(notes).bearSource, value);
+  }
+});
+
+test('bearSource: excluded from arbitration and a scraped value never clobbers manual-*', async () => {
+  const core = createCore();
+  assert.equal(core.isArbitrationEligibleField('bearSource'), false);
+  assert.equal(core.isArbitrationEligibleField('bearReview'), true, 'bearReview keeps its own dedicated rule');
+
+  // A stored manual-* verdict survives a fresh automatic stamp
+  const manualKept = await core.createFinalEventObject(
+    buildCalendarEvent({}, 'bar: STATION 4\nbearSource: manual-bear (overrode ai: drag show)'),
+    buildScrapedEvent({ bearSource: 'ai' }),
+    {}
+  );
+  assert.equal(manualKept.bearSource, 'manual-bear (overrode ai: drag show)');
+  assert.equal(core.parseNotesIntoFields(manualKept.notes).bearSource, 'manual-bear (overrode ai: drag show)');
+
+  // A fresh automatic verdict follows this run over a stale automatic one
+  const freshAuto = await core.createFinalEventObject(
+    buildCalendarEvent({}, 'bar: STATION 4\nbearSource: ai'),
+    buildScrapedEvent({ bearSource: 'keyword' }),
+    {}
+  );
+  assert.equal(freshAuto.bearSource, 'keyword');
+
+  // A freshly tapped manual override (scraped side) is the owner's newest word
+  const freshManual = await core.createFinalEventObject(
+    buildCalendarEvent({}, 'bar: STATION 4\nbearSource: manual-not-bear (overrode ai: x)\nbearReview: unlikely — manual\\: marked not-bear by calendar owner'),
+    buildScrapedEvent({ bearSource: 'manual-bear (overrode ai: x)' }),
+    {}
+  );
+  assert.equal(freshManual.bearSource, 'manual-bear (overrode ai: x)');
+  // ...and it clears the tombstone's hide flag so the rescue is visible again
+  assert.equal(core.parseNotesIntoFields(freshManual.notes).bearReview, undefined);
+});
+
+test('buildManualBearSource: one line, ai-prefix stripped, reason truncated ~80 chars', () => {
+  assert.equal(
+    SharedCore.buildManualBearSource('bear', 'ai: drag show'),
+    'manual-bear (overrode ai: drag show)'
+  );
+  assert.equal(SharedCore.buildManualBearSource('not-bear', ''), 'manual-not-bear');
+  const long = SharedCore.buildManualBearSource('not-bear', 'x'.repeat(200));
+  assert.ok(long.startsWith('manual-not-bear (overrode ai: '));
+  assert.ok(long.length <= 'manual-not-bear (overrode ai: )'.length + 80);
+  assert.ok(!long.includes('\n'));
+});
+
+// Calendar adapter stub for prep-time override tests: every event search
+// returns the same canned records, and calls are counted.
+function buildPrepCalendarAdapter(records) {
+  const calls = [];
+  return {
+    calls,
+    getExistingEvents: async (event) => {
+      calls.push(event.title);
+      return records;
+    }
+  };
+}
+
+function buildOverrideContext(droppedEvents = []) {
+  return { droppedEvents, demoted: [], rescued: [] };
+}
+
+test('prep-time override: dropped event with a manual-bear calendar match is rescued into the plan', async () => {
+  const core = createCore();
+  const calendarRecord = {
+    title: 'OUTDRAG',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    endDate: new Date('2026-08-02T01:00:00.000Z'),
+    location: '',
+    notes: 'bar: The Eagle\nbearSource: manual-bear (overrode ai: drag show)'
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  const droppedEntry = {
+    title: 'OUTDRAG',
+    reason: 'ai: drag show',
+    event: { title: 'OUTDRAG', startDate: new Date('2026-08-01T21:00:00.000Z'), bar: 'The Eagle' }
+  };
+  const context = buildOverrideContext([droppedEntry]);
+
+  const analyzed = await core.prepareEventsForCalendar([], adapter, {}, context);
+
+  assert.equal(analyzed.length, 1, 'the dropped event is rescued into the plan');
+  assert.equal(analyzed[0]._action, 'merge', 'rescue proceeds through the normal merge path');
+  assert.equal(analyzed[0].isBearEvent, true);
+  assert.equal(
+    core.parseNotesIntoFields(analyzed[0].notes).bearSource,
+    'manual-bear (overrode ai: drag show)',
+    'the calendar record\'s manual verdict follows the merged event'
+  );
+  assert.equal(droppedEntry.rescued, true);
+  assert.deepEqual(context.rescued, [droppedEntry]);
+});
+
+test('prep-time override: kept event with a manual-not-bear calendar match is demoted, record untouched', async () => {
+  const core = createCore();
+  const tombstoneNotes = 'bar: Neon Room\nbearSource: manual-not-bear (overrode ai: kept wrongly)\nbearReview: unlikely — manual\\: marked not-bear by calendar owner';
+  const calendarRecord = {
+    title: 'Bronze Babez',
+    startDate: new Date('2026-08-05T21:00:00.000Z'),
+    endDate: new Date('2026-08-06T01:00:00.000Z'),
+    location: '',
+    notes: tombstoneNotes
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  const keptEvent = { title: 'Bronze Babez', startDate: new Date('2026-08-05T21:00:00.000Z'), bar: 'Neon Room', bearSource: 'ai' };
+  const context = buildOverrideContext();
+
+  const analyzed = await core.prepareEventsForCalendar([keptEvent], adapter, {}, context);
+
+  assert.equal(analyzed.length, 0, 'demoted events never enter the write plan');
+  assert.equal(context.demoted.length, 1);
+  assert.equal(context.demoted[0].title, 'Bronze Babez');
+  assert.equal(context.demoted[0].reason, 'manual-not-bear (manual override on calendar record)');
+  assert.equal(calendarRecord.notes, tombstoneNotes, 'the calendar tombstone stays exactly as-is');
+  assert.equal(adapter.calls.length, 1, 'the demote check reuses prep\'s one existing-event search');
+});
+
+test('prep-time override: no calendar match (or no manual verdict) leaves behavior unchanged', async () => {
+  // Kept event, empty calendar → analyzed as new, nothing demoted
+  const core = createCore();
+  const emptyAdapter = buildPrepCalendarAdapter([]);
+  const context = buildOverrideContext([
+    { title: 'Twink Bash', reason: 'ai: drag show', event: { title: 'Twink Bash', startDate: new Date('2026-08-02T21:00:00.000Z') } }
+  ]);
+  const analyzed = await core.prepareEventsForCalendar(
+    [{ title: 'Bear Night', startDate: new Date('2026-08-01T21:00:00.000Z'), bearSource: 'keyword' }],
+    emptyAdapter,
+    {},
+    context
+  );
+  assert.equal(analyzed.length, 1);
+  assert.equal(analyzed[0]._action, 'new');
+  assert.equal(context.demoted.length, 0);
+  assert.equal(context.rescued.length, 0, 'an unmatched drop stays dropped');
+
+  // A matching record WITHOUT a manual verdict never rescues or demotes
+  const autoCore = createCore();
+  const autoRecord = {
+    title: 'Twink Bash',
+    startDate: new Date('2026-08-02T21:00:00.000Z'),
+    endDate: new Date('2026-08-03T01:00:00.000Z'),
+    location: '',
+    notes: 'bar: Neon Room\nbearSource: ai'
+  };
+  const autoContext = buildOverrideContext([
+    { title: 'Twink Bash', reason: 'ai: drag show', event: { title: 'Twink Bash', startDate: new Date('2026-08-02T21:00:00.000Z') } }
+  ]);
+  const autoAnalyzed = await autoCore.prepareEventsForCalendar([], buildPrepCalendarAdapter([autoRecord]), {}, autoContext);
+  assert.equal(autoAnalyzed.length, 0);
+  assert.equal(autoContext.rescued.length, 0);
+});
+
+test('prep-time override: a freshly tapped manual-bear event is never demoted by the old tombstone', async () => {
+  const core = createCore();
+  const calendarRecord = {
+    title: 'Bronze Babez',
+    startDate: new Date('2026-08-05T21:00:00.000Z'),
+    endDate: new Date('2026-08-06T01:00:00.000Z'),
+    location: '',
+    notes: 'bar: Neon Room\nbearSource: manual-not-bear (overrode ai: kept wrongly)'
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  const flippedEvent = {
+    title: 'Bronze Babez',
+    startDate: new Date('2026-08-05T21:00:00.000Z'),
+    bar: 'Neon Room',
+    bearSource: 'manual-bear (overrode ai: kept wrongly)'
+  };
+  const context = buildOverrideContext();
+
+  const analyzed = await core.prepareEventsForCalendar([flippedEvent], adapter, {}, context);
+
+  assert.equal(analyzed.length, 1, 'the owner\'s fresh verdict wins over the stored one');
+  assert.equal(context.demoted.length, 0);
+  assert.equal(
+    core.parseNotesIntoFields(analyzed[0].notes).bearSource,
+    'manual-bear (overrode ai: kept wrongly)'
+  );
+});
+
+// ---------------------------------------------------------------------------
 // logDebug / logAiPayloadDebug (two-tier logging)
 // ---------------------------------------------------------------------------
 
