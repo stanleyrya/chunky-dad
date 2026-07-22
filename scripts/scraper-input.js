@@ -16,7 +16,7 @@ const scraperConfig = {
       ttlDays: 3,
     },
     // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
-    // geocodeVerification: { mode: "report" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
+    geocodeVerification: { mode: "enforce" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
     // NOTE: Eventbrite /e/ confidence defaults (JSON-LD cover/image/ticketUrl,
     // meta location) are built into shared-core now — an aiConfidenceDefaults
     // block here is only needed to extend or override them.
@@ -47,7 +47,7 @@ const scraperConfig = {
       // (scraped clobbers). This global block also serves events from non-AI
       // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
       arbitrateMerges: true,
-      bearCheck: { mode: "report" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior. (Also accepted as a top-level config.bearCheck, like geocodeVerification; canonical location is here under ai.)
+      bearCheck: { mode: "enforce" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior. (Also accepted as a top-level config.bearCheck, like geocodeVerification; canonical location is here under ai.)
       // extraContext (override-only): free-form text appended VERBATIM to the
       // context of every AI extraction prompt. Organizer/brand context is
       // normally derived automatically from each page's own metadata (JSON-LD
@@ -111,7 +111,7 @@ const scraperConfig = {
   parsers: [
     {
       name: "Megawoof America",
-      enabled: true,
+      enabled: false,
       automationEnabled: true,
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
@@ -127,12 +127,11 @@ const scraperConfig = {
     },
     {
       name: "Coach After Dark",
-      enabled: true,
+      enabled: false,
       automationEnabled: true,
       parser: "ai-web",
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
-      urlDiscoveryDepth: 1, // Depth 1: discover /e/ event links from the /o/ organizer listing
       fieldPriorities: {
         shortName: { priority: ["static"], merge: "upsert" },
       },
@@ -160,52 +159,37 @@ const scraperConfig = {
     {
       name: "Bearracuda Events",
       enabled: true,
-      parser: "ai-web",
       automationEnabled: true,
       urls: [
         "https://bearracuda.com/",
-        //"https://www.eventbrite.com/o/bearracuda-21867032189"
+        "https://www.eventbrite.com/o/bearracuda-21867032189",
       ],
-      alwaysBear: true,
-      urlDiscoveryDepth: 2,
-      discoveryBlockedPatterns: ["bearracuda.com/?p="],
-      keyTemplate: "bearracuda-${date}-${city}",
-      fieldPriorities: {
-        title: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
-        description: { priority: ["bearracuda", "ai-web"], merge: "clobber" },
-        bar: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
-        address: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
-        startDate: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
-        endDate: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
-        url: { priority: ["bearracuda", "ai-web"], merge: "clobber" },
-        location: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
-        gmaps: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
-        image: { priority: ["bearracuda", "ai-web"], merge: "clobber" },
-        cover: { priority: ["ai-web", "bearracuda"], merge: "clobber" },
-        facebook: { priority: ["bearracuda", "ai-web"], merge: "clobber" },
-        ticketUrl: { priority: ["bearracuda", "ai-web"], merge: "clobber" },
-        key: { priority: ["bearracuda", "ai-web"], merge: "clobber" },
-      },
+      // NOT alwaysBear: Bearracuda also throws non-bear events (e.g. HOT TAKE) —
+      // enforce-mode bear check judges each event with promoter context instead.
+      alwaysBear: false,
       metadata: {
-        shortName: { value: "Bear-rac-uda" },
+        shortName: {
+          value: "Bear-rac-uda",
+          conditionalValues: [
+            { keywords: ["hot take"], value: "HOT TAKE" },
+            { keywords: ["treasure trail"], value: "TREAS-URE TRAIL" },
+          ],
+        },
         instagram: { value: "https://www.instagram.com/bearracuda" },
+        url: { value: "https://bearracuda.com/" },
       },
     },
     {
       name: "CHUNK",
-      enabled: true,
+      enabled: false,
       automationEnabled: true,
       parser: "auto", // chunk-party.com auto-detects the chunk parser (absent = pinned ai-web)
       urls: ["https://www.chunk-party.com"],
       alwaysBear: true, // Trusted bear-scene promoter: prompt context + fallback for the bear-check cascade (still a full bypass while bearCheck mode is report/off)
-      urlDiscoveryDepth: 1, // Depth 1 to find detail pages from main page // No limit on additional URLs discovered           // Override global dryRun if needed
+      // Deliberate exclusions only — /shop, /contact, /_api/ etc. are blocked built-in
       discoveryBlockedPatterns: [
         "chunk-party.com/chunkbearandcubsocial",
-        "chunk-party.com/shop",
         "chunk-party.com/chunk",
-        "chunk-party.com/_api/",
-        "chunk-party.com/contact",
       ],
 
       // Field priorities for merging data from different sources
@@ -229,17 +213,17 @@ const scraperConfig = {
       metadata: {
         shortName: { value: "CHUNK" },
         instagram: { value: "https://www.instagram.com/chunkparty" },
+        website: { value: "https://www.chunk-party.com" },
       },
     },
     {
       name: "Furball",
-      enabled: true,
+      enabled: false,
       automationEnabled: false,
       parser: "ai-web",
       urls: ["https://www.furball.nyc"],
       alwaysBear: true,
-      maxAdditionalUrls: 0,
-      discoveryBlockedPatterns: ["furball.nyc/"],
+      urlDiscoveryDepth: 0, // Never crawl: the multi-event page itself carries everything
       fieldPriorities: {
         title: { priority: ["ai-web", "static"], merge: "clobber" },
         shortName: { priority: ["static"], merge: "upsert" },
@@ -248,18 +232,18 @@ const scraperConfig = {
         title: { value: "FURBALL" },
         shortName: { value: "FUR-BALL" },
         instagram: { value: "https://instagram.com/furballnyc/" },
+        url: { value: "https://www.furball.nyc" },
+        favicon: { value: "https://linktr.ee/furballnyc" }, // deliberate: icon-source override resolved dynamically by the website
       },
     },
     {
       name: "Cubhouse",
-      enabled: true,
+      enabled: false,
       automationEnabled: true,
       urls: ["https://linktr.ee/cubhouse"],
       parser: "auto", // linktr.ee auto-detects the linktree parser; discovered ticket links auto-switch to ai-web
       alwaysBear: true, // Cubhouse events are always bear events
-      urlDiscoveryDepth: 2, // Depth 2 to follow ticket links and their detail pages
-      maxAdditionalUrls: 10, // Limit additional URLs discovered
-      discoveryBlockedPatterns: ["www.eventbrite.com/o/", "linktr.ee"], // Override global dryRun if needed
+      discoveryBlockedPatterns: ["www.eventbrite.com/o/", "linktr.ee"], // Deliberate: follow direct ticket links only, never back into organizer/linktree pages
 
       // Field priorities for merging data from different sources
       // AI-web extraction from discovered links takes priority for most fields
@@ -288,7 +272,7 @@ const scraperConfig = {
     },
     {
       name: "Goldiloxx",
-      enabled: true,
+      enabled: false,
       automationEnabled: true,
       parser: "auto", // api.redeyetickets.com auto-detects the redeyetickets parser (absent = pinned ai-web)
       urls: [
@@ -325,9 +309,13 @@ const scraperConfig = {
     },
     {
       name: "Twisted Bear",
-      enabled: true,
+      enabled: false,
       automationEnabled: true,
-      urls: ["https://www.eventbrite.com/o/nab-events-llc-51471535173"],
+      // discoveryOnly: true, // flip on for a first-run mapping + 📋 SUGGESTED CONFIG block
+      urls: [
+        "https://www.eventbrite.com/o/nab-events-llc-51471535173",
+        "https://www.eventbrite.com/o/121474797695",
+      ],
       alwaysBear: true,
       fieldPriorities: {
         shortName: { priority: ["static"], merge: "upsert" },
@@ -340,7 +328,7 @@ const scraperConfig = {
     },
     {
       name: "Dallas Eagle",
-      enabled: true,
+      enabled: false,
       automationEnabled: false,
       urls: ["https://www.eventbrite.com/o/77139864473"],
       alwaysBear: false,
@@ -349,6 +337,7 @@ const scraperConfig = {
         website: { value: "https://www.thedallaseagle.com" },
         facebook: { value: "https://www.facebook.com/lonestareagle" },
         instagram: { value: "https://www.instagram.com/thedallaseagle/" },
+        mastodon: { value: "https://mastodon.social/@dallaseagle" },
       },
     },
     {
