@@ -1712,6 +1712,336 @@ test('address completeness: component count wins, normalized length breaks ties,
     null);
 });
 
+// ---------------------------------------------------------------------------
+// Address evidence rung (rung 3): genuinely-different addresses decided by
+// pins the pipeline already produced — one verified pin, city-center sanity,
+// curated-bar proximity — before any AI arbitration. No network calls.
+// ---------------------------------------------------------------------------
+
+const EVIDENCE_CITIES = {
+  seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'], coordinates: { lat: 47.6062, lng: -122.3321 } }
+};
+function createEvidenceCore(bars = null) {
+  return new SharedCore(EVIDENCE_CITIES, { eventSchema: EventSchema, ...(bars ? { bars } : {}) });
+}
+// Two genuinely different addresses (different street AND number — rung 1
+// can never match them, rung 2 never silently overrides a parseable pair).
+const CANAL_ADDRESS = '1200 Canal Street, New Orleans, LA';
+const PINE_ADDRESS = '619 E Pine St, Seattle, WA';
+// Distances from the Seattle center above (haversine, precomputed):
+const NEAR_CENTER_PIN = '47.6062, -122.3241';   // ~0.6 km from center
+const ABSURD_PIN = '48.3249, -122.3321';        // ~79.9 km from center
+const MASSIVE_PIN = '47.6152, -122.3225';       // curated Massive (~1.2 km from center)
+const NEAR_MASSIVE_PIN = '47.6157, -122.3225';  // ~56 m from Massive (~1.3 km from center)
+const FAR_MASSIVE_PIN = '47.6252, -122.3225';   // ~1.1 km from Massive (~2.2 km from center)
+
+function evidenceContext(recordA, recordB, extra = {}) {
+  return {
+    cityKey: 'seattle',
+    eventTitle: 'BEARRACUDA SEATTLE',
+    sideLabels: { a: 'calendar', b: 'scraped' },
+    records: { a: recordA, b: recordB },
+    ...extra
+  };
+}
+
+test('address evidence step 1: exactly one verified pin wins, in both directions', () => {
+  const core = createEvidenceCore();
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'geocoded-exact' },
+      { address: PINE_ADDRESS })),
+    { winner: 'a', reason: 'only "calendar" has a verified pin' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS },
+      { address: PINE_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'geocoded-exact' })),
+    { winner: 'b', reason: 'only "scraped" has a verified pin' });
+  // A curated pin stamped alongside a curated address is verified too
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS },
+      { address: PINE_ADDRESS, location: MASSIVE_PIN, pinSource: 'curated', addressSource: 'curated' })),
+    { winner: 'b', reason: 'only "scraped" has a verified pin' });
+});
+
+test('address evidence step 1 is conservative: unverified or unattributable pins never decide alone', () => {
+  const core = createEvidenceCore();
+  // The only pin is geocoded-approx (street grade / failed cross-check) → AI
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS },
+      { address: PINE_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'geocoded-approx' })),
+    null);
+  // A page pin was never derived from the address → no attribution → AI
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS },
+      { address: PINE_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'page' })),
+    null);
+  // A pin with no provenance at all (hand-fixed) → uncertain → AI
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS },
+      { address: PINE_ADDRESS, location: NEAR_CENTER_PIN })),
+    null);
+  // A curated pin WITHOUT a curated address was not derived from this address
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS },
+      { address: PINE_ADDRESS, location: MASSIVE_PIN, pinSource: 'curated', addressSource: 'page' })),
+    null);
+  // No records threaded (direct/legacy callers) → rung inert
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS,
+      { cityKey: 'seattle' }),
+    null);
+});
+
+test('address evidence attribution: a pin not derived from the candidate address is treated as no-pin', () => {
+  const core = createEvidenceCore();
+  // The record carries a verified pin, but its own address is NOT the
+  // candidate value being merged — attribution is uncertain, so the pin must
+  // not count and the conflict falls through to the AI.
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS },
+      { address: '500 Somewhere Else Ave, Seattle, WA', location: NEAR_CENTER_PIN, pinSource: 'geocoded-exact' })),
+    null);
+});
+
+test('address evidence step 2: a sane city-center distance beats an absurd one, in both directions', () => {
+  const core = createEvidenceCore();
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: ABSURD_PIN, pinSource: 'geocoded-approx' },
+      { address: PINE_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'geocoded-exact' })),
+    { winner: 'b', reason: 'only "scraped" pin is near the city center (1 km vs 80 km)' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'geocoded-exact' },
+      { address: PINE_ADDRESS, location: ABSURD_PIN, pinSource: 'geocoded-exact' })),
+    { winner: 'a', reason: 'only "calendar" pin is near the city center (1 km vs 80 km)' });
+});
+
+test('address evidence step 2 fails open: both sane, gray zone, or no city center → AI as today', () => {
+  const core = createEvidenceCore();
+  // Both pins within 30 km → ambiguous (no curated bar → nothing decides)
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: MASSIVE_PIN, pinSource: 'geocoded-exact' },
+      { address: PINE_ADDRESS, location: FAR_MASSIVE_PIN, pinSource: 'geocoded-exact' })),
+    null);
+  // The 30–50 km band is ambiguous on purpose: ~40 km is neither sane nor absurd
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: '47.9659, -122.3321', pinSource: 'geocoded-exact' },
+      { address: PINE_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'geocoded-exact' })),
+    null);
+  // No city-center coordinates in the cities config → step 2 inert
+  const noCenterCore = new SharedCore(
+    { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } },
+    { eventSchema: EventSchema });
+  assert.equal(
+    noCenterCore.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: ABSURD_PIN, pinSource: 'geocoded-exact' },
+      { address: PINE_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'geocoded-exact' })),
+    null);
+});
+
+test('address evidence step 3: exactly one pin within 150 m of the curated bar pin wins', () => {
+  const core = createEvidenceCore({ seattle: [{ name: 'Massive', coordinates: MASSIVE_PIN }] });
+  const barContext = { barNames: ['MASSIVE'] };
+  // Both pins are sane city distances (step 2 stays silent) — proximity decides
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: FAR_MASSIVE_PIN, pinSource: 'geocoded-approx' },
+      { address: PINE_ADDRESS, location: NEAR_MASSIVE_PIN, pinSource: 'geocoded-approx' }, barContext)),
+    { winner: 'b', reason: 'pin matches curated bar "Massive"' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: NEAR_MASSIVE_PIN, pinSource: 'geocoded-approx' },
+      { address: PINE_ADDRESS, location: FAR_MASSIVE_PIN, pinSource: 'geocoded-approx' }, barContext)),
+    { winner: 'a', reason: 'pin matches curated bar "Massive"' });
+  // A lone geocoded-approx pin (too weak for step 1) matching the curated pin
+  // still wins here — the curated coordinates ARE the verification
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS },
+      { address: PINE_ADDRESS, location: NEAR_MASSIVE_PIN, pinSource: 'geocoded-approx' }, barContext)),
+    { winner: 'b', reason: 'pin matches curated bar "Massive"' });
+});
+
+test('address evidence step 3 fails open: both pins near, both far, or no curated coordinates → AI', () => {
+  const core = createEvidenceCore({ seattle: [{ name: 'Massive', coordinates: MASSIVE_PIN }] });
+  const barContext = { barNames: ['MASSIVE'] };
+  // Both within 150 m → ambiguous
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: MASSIVE_PIN, pinSource: 'geocoded-approx' },
+      { address: PINE_ADDRESS, location: NEAR_MASSIVE_PIN, pinSource: 'geocoded-approx' }, barContext)),
+    null);
+  // Both outside 150 m → ambiguous
+  assert.equal(
+    core.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: FAR_MASSIVE_PIN, pinSource: 'geocoded-approx' },
+      { address: PINE_ADDRESS, location: NEAR_CENTER_PIN, pinSource: 'geocoded-approx' }, barContext)),
+    null);
+  // Curated bar with no coordinates on file → step 3 inert
+  const noCoordsCore = createEvidenceCore({ seattle: [{ name: 'Massive' }] });
+  assert.equal(
+    noCoordsCore.resolveConflictDeterministically('address', CANAL_ADDRESS, PINE_ADDRESS, evidenceContext(
+      { address: CANAL_ADDRESS, location: FAR_MASSIVE_PIN, pinSource: 'geocoded-approx' },
+      { address: PINE_ADDRESS, location: NEAR_MASSIVE_PIN, pinSource: 'geocoded-approx' },
+      { barNames: ['MASSIVE'] })),
+    null);
+});
+
+function captureMergeLogs() {
+  const lines = [];
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+  console.log = (message) => { lines.push(String(message)); };
+  console.warn = (message) => { lines.push(String(message)); };
+  return { lines, restore: () => { console.log = originalLog; console.warn = originalWarn; } };
+}
+
+function buildEvidenceFlowScrape(core, overrides = {}) {
+  return {
+    title: 'BEARRACUDA SEATTLE',
+    city: 'seattle',
+    startDate: new Date('2026-08-01T05:00:00.000Z'),
+    endDate: new Date('2026-08-01T09:00:00.000Z'),
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } },
+    ...overrides
+  };
+}
+
+test('address evidence (calendar flow): the scraped side\'s verified pin wins with ZERO AI calls', async () => {
+  const core = createEvidenceCore();
+  const scraped = buildEvidenceFlowScrape(core, {
+    address: PINE_ADDRESS, location: MASSIVE_PIN, pinSource: 'geocoded-exact'
+  });
+  const existing = {
+    title: 'BEARRACUDA SEATTLE',
+    startDate: new Date(scraped.startDate.getTime()),
+    endDate: new Date(scraped.endDate.getTime()),
+    notes: `address: ${CANAL_ADDRESS}`
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const capture = captureMergeLogs();
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    capture.restore();
+  }
+
+  assert.equal(adapter.calls.length, 0, 'the verified pin settles the only conflict — no AI request');
+  assert.equal(finalEvent.address, PINE_ADDRESS, 'the pinned scraped address wins');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['address']);
+  assert.ok(capture.lines.includes(
+    '🔒 MERGE: "BEARRACUDA SEATTLE" field=address resolved deterministically — only "scraped" has a verified pin'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(capture.lines)}`);
+  assert.ok(!capture.lines.some(line => line.includes('street mismatch arbitrated by AI')),
+    'a deterministically resolved mismatch never emits the manual-review warning');
+});
+
+test('address evidence (calendar flow): the calendar side\'s stored verified pin wins with ZERO AI calls', async () => {
+  const core = createEvidenceCore();
+  const scraped = buildEvidenceFlowScrape(core, { address: CANAL_ADDRESS });
+  const existing = {
+    title: 'BEARRACUDA SEATTLE',
+    startDate: new Date(scraped.startDate.getTime()),
+    endDate: new Date(scraped.endDate.getTime()),
+    location: MASSIVE_PIN,
+    notes: [`address: ${PINE_ADDRESS}`, 'pinSource: geocoded-exact'].join('\n')
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const capture = captureMergeLogs();
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    capture.restore();
+  }
+
+  assert.equal(adapter.calls.length, 0, 'the stored calendar pin settles the only conflict — no AI request');
+  assert.equal(finalEvent.address, PINE_ADDRESS, 'the pinned calendar address wins');
+  assert.equal(finalEvent.location, MASSIVE_PIN, 'the calendar pin is kept');
+  assert.ok(capture.lines.includes(
+    '🔒 MERGE: "BEARRACUDA SEATTLE" field=address resolved deterministically — only "calendar" has a verified pin'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(capture.lines)}`);
+});
+
+test('address evidence (enrich flow): one verified pin decides in both directions with ZERO AI calls', async () => {
+  const priorities = { address: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const buildPinned = () => ({
+    title: 'BEARRACUDA SEATTLE', city: 'seattle', source: 'ai-web', _fieldPriorities: priorities,
+    _parserConfig: aiParserConfig,
+    address: PINE_ADDRESS, location: MASSIVE_PIN, pinSource: 'geocoded-exact'
+  });
+  const buildUnpinned = () => ({
+    title: 'BEARRACUDA SEATTLE', city: 'seattle', source: 'ai-web', _fieldPriorities: priorities,
+    _parserConfig: aiParserConfig,
+    address: CANAL_ADDRESS
+  });
+
+  for (const [existing, incoming, winnerLabel] of [
+    [buildPinned(), buildUnpinned(), 'existing'],
+    [buildUnpinned(), buildPinned(), 'incoming']
+  ]) {
+    const core = createEvidenceCore();
+    const adapter = buildArbitrationAdapter({});
+    const capture = captureMergeLogs();
+    let merged;
+    try {
+      merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+    } finally {
+      capture.restore();
+    }
+    assert.equal(adapter.calls.length, 0, `no AI request when "${winnerLabel}" carries the verified pin`);
+    assert.equal(merged.address, PINE_ADDRESS, 'the pinned address wins');
+    assert.ok(capture.lines.includes(
+      `🔒 MERGE: "BEARRACUDA SEATTLE" field=address resolved deterministically — only "${winnerLabel}" has a verified pin`
+    ), `stable 🔒 log line expected, got: ${JSON.stringify(capture.lines)}`);
+  }
+});
+
+test('address evidence step 4: an undecidable street mismatch reaches the AI exactly as today, plus the ⚠️ warning', async () => {
+  const core = createEvidenceCore();
+  const scraped = buildEvidenceFlowScrape(core, { address: PINE_ADDRESS });
+  const existing = {
+    title: 'BEARRACUDA SEATTLE',
+    startDate: new Date(scraped.startDate.getTime()),
+    endDate: new Date(scraped.endDate.getTime()),
+    notes: `address: ${CANAL_ADDRESS}`
+  };
+  const adapter = buildArbitrationAdapter({
+    address: { pick: 'scraped', value: PINE_ADDRESS, reason: 'matches the event city' }
+  });
+
+  const capture = captureMergeLogs();
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    capture.restore();
+  }
+
+  assert.equal(adapter.calls.length, 1, 'no evidence on either side → the AI arbitrates exactly as before');
+  assert.match(adapter.calls[0].prompt, /field: address/, 'the address conflict reaches the prompt');
+  assert.equal(finalEvent.address, PINE_ADDRESS, 'the AI pick still lands');
+  assert.ok(capture.lines.includes(
+    `⚠️ MERGE: "BEARRACUDA SEATTLE" field=address street mismatch arbitrated by AI ("${CANAL_ADDRESS}" vs "${PINE_ADDRESS}") — verify manually`
+  ), `additive ⚠️ warning expected, got: ${JSON.stringify(capture.lines)}`);
+});
+
 test('resolveAiConfig defaults and the arbitrateMerges flag', () => {
   const core = createCore();
   const defaults = core.resolveAiConfig({});
