@@ -642,6 +642,15 @@
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJRUOyfc5qkFQRDZLLFj1Q264",
       "gayCities": "https://seattle.gaycities.com/bars/2442-pony",
       "gayCitiesLastScrapedAt": "2026-06-13T15:19:22.288Z"
+    },
+    {
+      "name": "Massive",
+      "city": "seattle",
+      "address": "619 E Pine St, Seattle, WA 98122",
+      "coordinates": "47.6150824, -122.3237201",
+      "website": "https://www.massive.club",
+      "instagram": "https://www.instagram.com/massive_club",
+      "gayCities": "https://seattle.gaycities.com/bars/511-massive-nightclub"
     }
   ],
   "sf": [
