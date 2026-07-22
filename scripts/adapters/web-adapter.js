@@ -762,7 +762,11 @@ async saveFailureNote(url, error, metadata = {}) {
             results.parserResults.forEach(result => {
                 console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
             });
-            
+
+            if (results.discoveredVenueSummary) {
+                console.log('\n' + results.discoveredVenueSummary);
+            }
+
             // Show summary and recommended actions
             await this.displaySummaryAndActions(results);
             

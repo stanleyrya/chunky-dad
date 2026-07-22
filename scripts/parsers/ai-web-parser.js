@@ -656,6 +656,28 @@ class AiWebParser {
         return `🤖 AI Web: Extracted ${sourceUrl} → ${parts.join(', ')}`;
     }
 
+    // The page's own listing title for a segment: the first non-empty page-text
+    // line that is not a date/time line, not a SEGMENT_*/OCR marker line, and
+    // not a URL. Multi-event listings put the event name first (segment
+    // discovery splits on exactly that title/date structure), so this recovers
+    // the site's title even when flyer OCR is stylized taglines/DJ names.
+    // Returns '' when no plausible listing title exists.
+    deriveSegmentListingTitle(segment) {
+        const lines = segment && Array.isArray(segment.lines) ? segment.lines : [];
+        for (const rawLine of lines) {
+            const line = this.normalizeWhitespace(rawLine);
+            if (!line) continue;
+            if (/^(SEGMENT_[A-Z_]+|OCR_IMAGE_TEXT)/i.test(line)) continue;
+            if (this.hasMultiEventDateSignal(line)) continue;
+            if (/^\d{1,2}(:\d{2})?\s*(am|pm)?(\s*[-–]\s*\d{1,2}(:\d{2})?\s*(am|pm)?)?$/i.test(line)) continue;
+            if (/^https?:\/\//i.test(line)) continue;
+            // First candidate decides: a plausible title is short; a long first
+            // line is prose/description, so no hint is derived at all.
+            return line.length <= this.extractionLimits.multiEventTitleMaxChars ? line : '';
+        }
+        return '';
+    }
+
     buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments, ocrResults = []) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
@@ -682,6 +704,7 @@ class AiWebParser {
             aiEvent: null,
             aiExtraction: null,
             ocrResults: segmentOcrResults,
+            segmentListingTitle: this.deriveSegmentListingTitle(segment),
             dataFlags: { ocr: true, segment: true }  // Segments are unstructured data
         };
     }
@@ -6252,6 +6275,19 @@ ${String(snippet || '')}`;
             steeringContext += `\n`;
         }
 
+        // Multi-event segment listing title: the site's own name for this event,
+        // taken from the listing text. Anchors "title" so stylized flyer OCR
+        // (taglines, DJ names) can't displace the page's own title.
+        const segmentListingTitle = htmlData && typeof htmlData.segmentListingTitle === 'string'
+            ? htmlData.segmentListingTitle.trim()
+            : '';
+        const segmentListingContext = segmentListingTitle
+            ? `SEGMENT_LISTING_TITLE (the page's own listing title for this event): ${JSON.stringify(segmentListingTitle)}\n\n`
+            : '';
+        const segmentListingTitleRule = segmentListingTitle
+            ? `\n- For "title", prefer SEGMENT_LISTING_TITLE or a fuller variant of the same name from the flyer; flyer text that does not contain it (taglines, DJ names, stylized graphics text) is NOT the title.`
+            : '';
+
         const exampleOutput = `EXAMPLE OUTPUT FORMAT (structure only, not real data):\n{"city": {"value": "miami", "evidence": "Miami, FL", "confidence": 90}, "bar": {"value": "Eagle Bar", "evidence": "@ Eagle Bar", "confidence": 95}}`;
 
         const templates = {
@@ -6259,12 +6295,12 @@ ${String(snippet || '')}`;
 
 Format the output as a single JSON object where each requested key maps to an object containing "value", "evidence", and "confidence".
 
-${dataProvided}${sourceData}${additionalContext}${steeringContext}Preferred keys:
+${dataProvided}${sourceData}${additionalContext}${steeringContext}${segmentListingContext}Preferred keys:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list, formatted as objects with value, evidence, and confidence (0-100)
-- Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.
+- Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.${segmentListingTitleRule}
 
 ${exampleOutput}
 
@@ -6273,13 +6309,13 @@ ${exampleOutput}
 
 Format the output as a single JSON object where each requested key maps to an object containing "value", "evidence", and "confidence".
 
-${dataProvided}${sourceData}${additionalContext}${steeringContext}Fields to find:
+${dataProvided}${sourceData}${additionalContext}${steeringContext}${segmentListingContext}Fields to find:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
 - Include only fields whose values are found verbatim in the text below, formatted as objects with value, evidence, and confidence (0-100)
 - Do not guess, invent, or infer missing values
-- Omit any field not explicitly present in the source
+- Omit any field not explicitly present in the source${segmentListingTitleRule}
 
 ${exampleOutput}
 

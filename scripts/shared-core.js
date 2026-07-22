@@ -1088,6 +1088,16 @@ class SharedCore {
             results.automationSkippedParsers = automationSkipped;
         }
 
+        // Discovered venue calendars (enrich-only ticket crawl drops): logged
+        // here and attached to results so the UI summaries can render the same
+        // block with a paste-ready parser entry.
+        const discoveredVenueCalendars = this.buildDiscoveredVenueCalendars(results.parserResults);
+        if (discoveredVenueCalendars.length > 0) {
+            results.discoveredVenueCalendars = discoveredVenueCalendars;
+            results.discoveredVenueSummary = this.buildDiscoveredVenueSummaryText(discoveredVenueCalendars);
+            await displayAdapter.logInfo(results.discoveredVenueSummary);
+        }
+
         await this.finalizeDeadEndRun(displayAdapter, results);
 
         const duplicateSummary = results.duplicatesRemoved > 0
@@ -1167,6 +1177,10 @@ class SharedCore {
             }
             : null;
 
+        // Sibling events dropped by the enrich-only ticket crawl (flag, don't
+        // drop silently): surfaced as a discovered-venue suggestion block.
+        const enrichDropCollector = [];
+
         await this.crawlUrlsForEvents({
             urls: effectiveParserConfig.urls || [],
             allEvents,
@@ -1183,7 +1197,9 @@ class SharedCore {
             urlClassifications,
             includeInlineInput: hasInlineInput,
             discoveryOnly,
-            discoveryTreeCollector
+            discoveryTreeCollector,
+            enrichOnlyByUrl: null,
+            enrichDropCollector
         });
 
         // Metadata is applied dynamically by parsers using the {value, merge} format
@@ -1211,6 +1227,10 @@ class SharedCore {
             urlClassifications,
             config: effectiveParserConfig // Include config for orchestrator to use
         };
+
+        if (enrichDropCollector.length > 0) {
+            result.enrichOnlyDrops = enrichDropCollector;
+        }
 
         if (discoveryOnly && discoveryTreeCollector) {
             const discoveryTree = {
@@ -1274,6 +1294,77 @@ class SharedCore {
         lines.push('  },');
         lines.push('},');
         return lines.join('\n');
+    }
+
+    // ------------------------------------------------------------------
+    // Discovered venue calendars (flag, don't drop): siblings dropped by the
+    // enrich-only ticket crawl are surfaced as a paste-ready parser entry
+    // suggestion instead of being silently discarded.
+    // ------------------------------------------------------------------
+
+    // Aggregate per-parser enrichOnlyDrops into one entry per host.
+    buildDiscoveredVenueCalendars(parserResults) {
+        const byHost = new Map();
+        for (const parserResult of Array.isArray(parserResults) ? parserResults : []) {
+            const drops = parserResult && Array.isArray(parserResult.enrichOnlyDrops) ? parserResult.enrichOnlyDrops : [];
+            for (const drop of drops) {
+                if (!drop || !drop.host) continue;
+                const hostKey = String(drop.host).toLowerCase();
+                if (!byHost.has(hostKey)) {
+                    byHost.set(hostKey, {
+                        host: drop.host,
+                        origin: `https://${drop.host}`,
+                        suggestedName: String(drop.host).replace(/^www\./i, ''),
+                        parentTitle: drop.parentTitle || '',
+                        sourceEntryName: parserResult && parserResult.name ? parserResult.name : '',
+                        droppedCount: 0,
+                        droppedEvents: []
+                    });
+                }
+                const entry = byHost.get(hostKey);
+                const dropped = Array.isArray(drop.droppedEvents) ? drop.droppedEvents : [];
+                entry.droppedCount += dropped.length;
+                entry.droppedEvents.push(...dropped);
+            }
+        }
+        const venues = [];
+        for (const entry of byHost.values()) {
+            if (entry.droppedCount === 0) continue;
+            entry.sampleTitles = entry.droppedEvents.slice(0, 8).map(event => {
+                const dateLabel = this.formatDiscoveredVenueDateLabel(event.startDate);
+                return dateLabel ? `${event.title} (${dateLabel})` : event.title;
+            });
+            entry.parserEntrySnippet = `{ name: ${JSON.stringify(entry.suggestedName)}, enabled: false, urls: [${JSON.stringify(entry.origin)}], alwaysBear: false },`;
+            delete entry.droppedEvents;
+            venues.push(entry);
+        }
+        return venues;
+    }
+
+    // Short "Jul 23" label for a dropped sibling's start date ('' when unknown).
+    formatDiscoveredVenueDateLabel(startDate) {
+        const date = startDate instanceof Date ? startDate : this.parseDate(startDate);
+        if (!date || Number.isNaN(date.getTime())) return '';
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${months[date.getMonth()]} ${date.getDate()}`;
+    }
+
+    // Text block for the results summary ('' when nothing was dropped).
+    buildDiscoveredVenueSummaryText(venues) {
+        const list = Array.isArray(venues) ? venues : [];
+        if (list.length === 0) return '';
+        const blocks = list.map(venue => {
+            const extraCount = venue.droppedCount - venue.sampleTitles.length;
+            const titlesLine = venue.sampleTitles.join(', ') + (extraCount > 0 ? `, … (+${extraCount} more)` : '');
+            return [
+                `📋 DISCOVERED VENUE CALENDAR: ${venue.host}`,
+                `   ${venue.droppedCount} event(s) found but not ingested (enrich-only ticket crawl)`,
+                `   Titles: ${titlesLine}`,
+                '   To scrape this venue, add a parser entry to scraper-input.js:',
+                `   ${venue.parserEntrySnippet}`
+            ].join('\n');
+        });
+        return blocks.join('\n\n');
     }
 
     // Baked-in platform confidence expectations: Eventbrite /e/ event pages ship
@@ -1557,7 +1648,13 @@ class SharedCore {
         urlClassifications = null,
         includeInlineInput = false,
         discoveryOnly = false,
-        discoveryTreeCollector = null
+        discoveryTreeCollector = null,
+        // Enrich-only ticket crawl: pages reached via an event-page's follow
+        // links (rule-classified event links + extracted ticketUrls) may only
+        // ENRICH the originating event, never spawn new events. Keyed by URL
+        // dedupe key → { parentEvents, parentTitle, parentUrl }.
+        enrichOnlyByUrl = null,
+        enrichDropCollector = null
     }) {
         const adaptiveCrawl = maxDepth === ADAPTIVE_CRAWL_DEPTH;
         const urlsToProcess = currentDepth > 0
@@ -1668,11 +1765,56 @@ class SharedCore {
                 // whether it was productive (raw pre-filter counts) or a dead end.
                 this.recordDeadEndObservation({ url, currentDepth, parseResult, pageClassification, discoveryOnly });
 
+                const enrichContext = !discoveryOnly && enrichOnlyByUrl
+                    ? (enrichOnlyByUrl[this.getUrlDedupeKey(url)] || null)
+                    : null;
+
+                let pageEventsForEnrich = [];
                 if (!discoveryOnly) {
-                    const parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter);
+                    let parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter);
+                    // Each event remembers the page it was actually extracted from
+                    // (underscore field: never serialized into notes/schema). The
+                    // bear-check provenance uses it for honest cross-host wording.
+                    parsedEvents.forEach(event => {
+                        if (!event._sourcePageUrl) {
+                            event._sourcePageUrl = url;
+                        }
+                    });
+                    if (enrichContext && parsedEvents.length > 0) {
+                        // Enrich-only page: keep ONLY events that are the same event
+                        // as the originating (parent) event — same identity predicate
+                        // the parser-level dedup uses — and drop the venue's sibling
+                        // events (they belong to the venue calendar, not this source).
+                        const keptEvents = [];
+                        const droppedEvents = [];
+                        for (const childEvent of parsedEvents) {
+                            const matchesParent = enrichContext.parentEvents.some(parentEvent =>
+                                this.getSameEventIdentitySignal(childEvent, parentEvent, { requireCloseStartTimes: false }));
+                            (matchesParent ? keptEvents : droppedEvents).push(childEvent);
+                        }
+                        if (droppedEvents.length > 0) {
+                            const childHost = this.getHostFromUrl(url) || url;
+                            await displayAdapter.logInfo(`SYSTEM: Enrich-only crawl: kept ${keptEvents.length} matching event(s), dropped ${droppedEvents.length} sibling event(s) from ${childHost} (reached via ticket link from "${enrichContext.parentTitle}")`);
+                            if (enrichDropCollector) {
+                                enrichDropCollector.push({
+                                    host: childHost,
+                                    url,
+                                    parentTitle: enrichContext.parentTitle,
+                                    parentUrl: enrichContext.parentUrl,
+                                    keptCount: keptEvents.length,
+                                    droppedEvents: droppedEvents.map(event => ({
+                                        title: event.title || 'Untitled event',
+                                        startDate: event.startDate
+                                    }))
+                                });
+                            }
+                        }
+                        parsedEvents = keptEvents;
+                    }
                     if (parsedEvents.length > 0) {
                         allEvents.push(...parsedEvents);
                     }
+                    pageEventsForEnrich = parsedEvents;
                 }
 
                 const additionalLinks = parseResult?.additionalLinks || [];
@@ -1681,7 +1823,14 @@ class SharedCore {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
                     linksToConsider = this.selectAdaptiveFollowLinks(pageClassification, additionalLinks, parseResult, url);
-                    if (linksToConsider.length > 0 && currentDepth >= ADAPTIVE_CRAWL_MAX_HOPS) {
+                    if (enrichContext) {
+                        // No fan-out from enrich-only pages: a venue calendar reached
+                        // through a ticket link must never seed further crawling.
+                        if (linksToConsider.length > 0) {
+                            await displayAdapter.logInfo(`SYSTEM: Enrich-only crawl: not following ${linksToConsider.length} link(s) from ${url}`);
+                        }
+                        linksToConsider = [];
+                    } else if (linksToConsider.length > 0 && currentDepth >= ADAPTIVE_CRAWL_MAX_HOPS) {
                         await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: chain cap (${ADAPTIVE_CRAWL_MAX_HOPS} hops) reached at ${url} — not following ${linksToConsider.length} link(s)`);
                         linksToConsider = [];
                     } else if (linksToConsider.length > 0) {
@@ -1713,6 +1862,25 @@ class SharedCore {
                     // before enqueueing (discoveryOnly always fetches everything).
                     const enqueueUrls = this.filterKnownDeadEndUrls(deduplicatedUrls, discoveryOnly);
                     if (enqueueUrls.length > 0) {
+                        // Links followed FROM an event-page (rule-classified event
+                        // links + extracted ticketUrls) are enrich-only for the
+                        // page's own event(s): child pages may confirm/enrich that
+                        // event but never contribute unrelated sibling events.
+                        let childEnrichOnlyByUrl = null;
+                        if (adaptiveCrawl && !discoveryOnly && pageClassification === 'event-page' && pageEventsForEnrich.length > 0) {
+                            childEnrichOnlyByUrl = {};
+                            const parentTitle = pageEventsForEnrich[0].title || 'event';
+                            for (const enqueueUrl of enqueueUrls) {
+                                const enqueueKey = this.getUrlDedupeKey(enqueueUrl);
+                                if (enqueueKey) {
+                                    childEnrichOnlyByUrl[enqueueKey] = {
+                                        parentEvents: pageEventsForEnrich,
+                                        parentTitle,
+                                        parentUrl: url
+                                    };
+                                }
+                            }
+                        }
                         await this.crawlUrlsForEvents({
                             urls: enqueueUrls,
                             allEvents,
@@ -1729,7 +1897,9 @@ class SharedCore {
                             urlClassifications: null,
                             includeInlineInput: false,
                             discoveryOnly,
-                            discoveryTreeCollector
+                            discoveryTreeCollector,
+                            enrichOnlyByUrl: childEnrichOnlyByUrl,
+                            enrichDropCollector
                         });
                     }
                 } else {
@@ -2085,6 +2255,22 @@ class SharedCore {
         return String(url || '').replace(/^https?:\/\//, '');
     }
 
+    // Host portion of an http(s) URL ('' when absent). Regex, not `new URL`
+    // (iOS JavaScriptCore has no URL global).
+    getHostFromUrl(url) {
+        const match = String(url || '').match(/^https?:\/\/([^/?#]+)/i);
+        return match ? match[1] : '';
+    }
+
+    // Hosts compared case-insensitively with a leading "www." ignored, so
+    // www.bearracuda.com and bearracuda.com count as the same site.
+    areUrlHostsSameSite(hostA, hostB) {
+        const normalize = (host) => String(host || '').toLowerCase().replace(/^www\./, '');
+        const a = normalize(hostA);
+        const b = normalize(hostB);
+        return Boolean(a) && a === b;
+    }
+
     // Build a Mermaid graph LR string from a URL tree.
     buildMermaidGraph(treeData) {
         const { allNodes, edges } = treeData;
@@ -2401,6 +2587,25 @@ class SharedCore {
     // that promoter context is what lets the model keep promoter events with
     // zero bear vocabulary (validated against real calendar data).
     buildBearCheckProvenance(event, parserConfig) {
+        // Honest cross-host provenance: when the event was actually extracted
+        // from a page on a DIFFERENT site than the parser's configured host(s)
+        // (e.g. a venue calendar reached via a ticket link), say so — otherwise
+        // the model wrongly trusts the source entry's promoter framing for
+        // events that promoter never produced.
+        const actualPageUrl = typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl : '';
+        const actualHost = this.getHostFromUrl(actualPageUrl);
+        const configuredUrls = Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
+        const configuredHosts = configuredUrls.map(configuredUrl => this.getHostFromUrl(configuredUrl)).filter(Boolean);
+        const isCrossHost = Boolean(actualHost) && configuredHosts.length > 0 &&
+            !configuredHosts.some(configuredHost => this.areUrlHostsSameSite(actualHost, configuredHost));
+        if (isCrossHost) {
+            let crossProvenance = `extracted from ${actualHost}, a page discovered while crawling source entry "${parserConfig.name || 'unknown'}" (${configuredHosts[0]}). The source entry's promoter did NOT necessarily produce this event — judge by the event content and the hosting site.`;
+            if (parserConfig.alwaysBear === true) {
+                crossProvenance += " The calendar owner has marked the source entry's promoter as a trusted bear-scene promoter, but that trust only covers that promoter's own events.";
+            }
+            return crossProvenance;
+        }
+
         const sourceUrl = String(event.url || event.website || (parserConfig.urls && parserConfig.urls[0]) || '');
         const hostMatch = sourceUrl.match(/^https?:\/\/([^/?#]+)/i);
         const origin = hostMatch ? hostMatch[1] : (sourceUrl || 'unknown source');
@@ -2426,7 +2631,10 @@ class SharedCore {
         const title = String(event.title || '').trim();
         const description = String(event.description || '').trim();
         const bar = String(event.bar || '').trim();
-        const memoKey = `${title}|${description}|${bar}`;
+        // The actual source host is part of the key: provenance wording differs
+        // for cross-host events, so verdicts must not be shared across hosts.
+        const memoHost = this.getHostFromUrl(typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl : '');
+        const memoKey = `${title}|${description}|${bar}|${memoHost}`;
         if (!this._bearVerdictMemo) {
             this._bearVerdictMemo = new Map();
         }

@@ -4653,3 +4653,180 @@ test('merge arbitration prompt: descriptive subtitles/editions win for title; st
   assert.match(capturedPrompt, /bare city name is not an event name/);
   assert.deepEqual(result, { title: { pick: 'calendar', reason: 'richer name' } });
 });
+
+// ---------------------------------------------------------------------------
+// Enrich-only ticket crawl: pages reached via an event-page's follow links may
+// only enrich the originating event, never spawn new (sibling) events.
+// ---------------------------------------------------------------------------
+
+const ENRICH_RULES = [
+  { pattern: /promoter\.example\/e\//i, classification: 'event-page' },
+  { pattern: /venue\.example/i, classification: 'multi-event-page' }
+];
+
+test('enrich-only crawl: ticket link to a venue calendar keeps the matching event and drops siblings', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: ENRICH_RULES
+  });
+  const display = createDisplayAdapterStub();
+  const partyDate = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    'https://promoter.example/e/bear-party': {
+      events: [{ title: 'Bear Party', bar: 'Venue Club', startDate: partyDate, ticketUrl: 'https://venue.example/calendar' }]
+    },
+    'https://venue.example/calendar': {
+      events: [
+        { title: 'Bear Party', bar: 'Venue Club', startDate: partyDate },
+        { title: 'HOSTILE NOISE', bar: 'Venue Club', startDate: new Date(partyDate.getTime() + 86400000) },
+        { title: 'Twink Bash', bar: 'Venue Club', startDate: new Date(partyDate.getTime() + 2 * 86400000) }
+      ],
+      additionalLinks: ['https://venue.example/other-page']
+    },
+    'https://venue.example/other-page': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const result = await core.processParser(
+    { name: 'Bear Promoter', urls: ['https://promoter.example/e/bear-party'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  // The ticket link is followed and the venue calendar parsed...
+  assert.ok(fetched.includes('https://venue.example/calendar'), 'ticket link is still followed');
+  // ...but only the identity-matching event survives; siblings are dropped.
+  assert.equal(result.totalEvents, 2, 'parent event + matching child event; siblings never ingested');
+  assert.equal(result.events.length, 1, 'matching child merges into the parent through the existing dedup');
+  assert.equal(result.events[0].title, 'Bear Party');
+  assert.ok(
+    display.logs.includes('SYSTEM: Enrich-only crawl: kept 1 matching event(s), dropped 2 sibling event(s) from venue.example (reached via ticket link from "Bear Party")'),
+    `expected enrich-only drop log, got: ${JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))}`
+  );
+
+  // Dropped siblings are collected for the discovered-venue suggestion block.
+  assert.equal(result.enrichOnlyDrops.length, 1);
+  assert.equal(result.enrichOnlyDrops[0].host, 'venue.example');
+  assert.equal(result.enrichOnlyDrops[0].parentTitle, 'Bear Party');
+  assert.deepEqual(result.enrichOnlyDrops[0].droppedEvents.map(e => e.title), ['HOSTILE NOISE', 'Twink Bash']);
+
+  // No fan-out from enrich-only pages: the venue calendar's own links stay unfollowed.
+  assert.ok(!fetched.includes('https://venue.example/other-page'), 'no links are followed from an enrich-only page');
+  assert.ok(
+    display.logs.includes('SYSTEM: Enrich-only crawl: not following 1 link(s) from https://venue.example/calendar'),
+    `expected enrich-only no-follow log, got: ${JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))}`
+  );
+});
+
+test('enrich-only crawl: aggregator and multi-event-page crawls still ingest every event', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /venuehub\.example\/$/i, classification: 'multi-event-page' },
+      { pattern: /venuehub\.example\/events\//i, classification: 'event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const day = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    'https://venuehub.example/': {
+      events: [
+        { title: 'Bear Tea Dance', bar: 'Hub Hall', startDate: day },
+        { title: 'Drag Brunch', bar: 'Hub Hall', startDate: new Date(day.getTime() + 86400000) }
+      ],
+      additionalLinks: ['https://venuehub.example/events/underwear-night', 'https://venuehub.example/events/leather-social']
+    },
+    'https://venuehub.example/events/underwear-night': {
+      events: [{ title: 'Underwear Night', bar: 'Hub Hall', startDate: new Date(day.getTime() + 2 * 86400000) }]
+    },
+    'https://venuehub.example/events/leather-social': {
+      events: [{ title: 'Leather Social', bar: 'Hub Hall', startDate: new Date(day.getTime() + 3 * 86400000) }]
+    }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const result = await core.processParser(
+    { name: 'Venue Hub', urls: ['https://venuehub.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.equal(fetched.length, 3, 'multi-event-page links are all followed');
+  assert.equal(result.totalEvents, 4, 'every event from the multi-event page AND its detail pages is ingested');
+  assert.equal(result.enrichOnlyDrops, undefined, 'nothing was dropped');
+  assert.ok(!display.logs.some(l => l.includes('Enrich-only')), 'no enrich-only logs on aggregator/multi-event crawls');
+});
+
+test('bear-check provenance: same-host keeps legacy wording exactly; cross-host gets honest wording', async () => {
+  // Same host (configured promoter.example, page on www.promoter.example)
+  const sameHostAdapter = buildBearVerdictAdapter({ verdict: 'bear', reason: 'promoter party' });
+  await createCore().filterBearEvents(
+    [{ title: 'HOT TAKE', url: 'https://promoter.example/events/hot-take', _sourcePageUrl: 'https://www.promoter.example/events/hot-take' }],
+    bearCheckConfig('enforce'),
+    sameHostAdapter
+  );
+  assert.match(
+    sameHostAdapter.calls[0].prompt,
+    /- Provenance: Scraped from promoter\.example, source entry "Test Promoter"\./,
+    'same-host events keep the legacy provenance wording byte-for-byte'
+  );
+
+  // No _sourcePageUrl at all → legacy wording (existing behavior untouched)
+  const legacyAdapter = buildBearVerdictAdapter({ verdict: 'bear', reason: 'promoter party' });
+  await createCore().filterBearEvents([{ title: 'HOT TAKE' }], bearCheckConfig('enforce'), legacyAdapter);
+  assert.match(legacyAdapter.calls[0].prompt, /- Provenance: Scraped from promoter\.example, source entry "Test Promoter"\./);
+
+  // Cross host (page on www.massive.club, configured promoter.example)
+  const crossAdapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'punk show' });
+  await createCore().filterBearEvents(
+    [{ title: 'HOSTILE NOISE', _sourcePageUrl: 'https://www.massive.club/calendar' }],
+    bearCheckConfig('enforce'),
+    crossAdapter
+  );
+  const crossPrompt = crossAdapter.calls[0].prompt;
+  assert.match(crossPrompt, /- Provenance: extracted from www\.massive\.club, a page discovered while crawling source entry "Test Promoter" \(promoter\.example\)\./);
+  assert.match(crossPrompt, /The source entry's promoter did NOT necessarily produce this event — judge by the event content and the hosting site\./);
+  assert.ok(!crossPrompt.includes('Scraped from'), 'cross-host events never claim to be scraped from the source entry');
+
+  // Cross host + alwaysBear: trust is scoped to the promoter's own events
+  const trustedCrossAdapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'punk show' });
+  await createCore().filterBearEvents(
+    [{ title: 'HOSTILE NOISE', _sourcePageUrl: 'https://www.massive.club/calendar' }],
+    bearCheckConfig('enforce', { alwaysBear: true }),
+    trustedCrossAdapter
+  );
+  assert.match(trustedCrossAdapter.calls[0].prompt, /trust only covers that promoter's own events/);
+  assert.ok(!trustedCrossAdapter.calls[0].prompt.includes('has marked this promoter as a trusted bear-scene promoter'),
+    'the unscoped trusted-promoter sentence never appears for cross-host events');
+});
+
+test('discovered-venue summary block renders only when siblings were dropped', () => {
+  const core = createCore();
+
+  // No drops → no block
+  assert.equal(core.buildDiscoveredVenueSummaryText(core.buildDiscoveredVenueCalendars([])), '');
+  assert.equal(core.buildDiscoveredVenueSummaryText(core.buildDiscoveredVenueCalendars([{ name: 'X' }])), '');
+
+  const parserResults = [{
+    name: 'Bearracuda Events',
+    enrichOnlyDrops: [{
+      host: 'www.massive.club',
+      url: 'https://www.massive.club/calendar',
+      parentTitle: 'BEARRACUDA: LA',
+      parentUrl: 'https://bearracuda.com/events/la',
+      keptCount: 1,
+      droppedEvents: [
+        { title: 'Butt Blast', startDate: new Date('2026-07-23T15:00:00.000Z') },
+        { title: 'Twink Bash: Birthday Suit', startDate: new Date('2026-08-01T15:00:00.000Z') }
+      ]
+    }]
+  }];
+  const venues = core.buildDiscoveredVenueCalendars(parserResults);
+  assert.equal(venues.length, 1);
+  assert.equal(venues[0].droppedCount, 2);
+
+  const text = core.buildDiscoveredVenueSummaryText(venues);
+  assert.ok(text.includes('📋 DISCOVERED VENUE CALENDAR: www.massive.club'));
+  assert.ok(text.includes('2 event(s) found but not ingested (enrich-only ticket crawl)'));
+  assert.ok(text.includes('Titles: Butt Blast (Jul 23), Twink Bash: Birthday Suit (Aug 1)'));
+  assert.ok(text.includes('To scrape this venue, add a parser entry to scraper-input.js:'));
+  assert.ok(text.includes('{ name: "massive.club", enabled: false, urls: ["https://www.massive.club"], alwaysBear: false },'));
+});
