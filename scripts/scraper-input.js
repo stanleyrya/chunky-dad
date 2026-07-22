@@ -266,6 +266,9 @@ const scraperConfig = {
       // discoveryBlockedPatterns: ["example.com/members-only"], // Deliberate exclusions only — generic junk is blocked built-in and dead ends are learned + auto-retried (default: none)
       // discoveryBlockedHosts: ["example.com"], // Suppress ALL discovered links to these hostnames (default: none)
       //
+      // Extraction steering:
+      // siteRole: "venue", // "venue" | "organizer" — who this SITE is (top precedence over page-derived detection). "venue": events on the page happen AT this venue — its own name may be returned as bar, and the KNOWN VENUE extraction context is injected. "organizer": promoter/brand site — the site name is never the bar. Omit → derived from page facts (JSON-LD types, observed addresses); undetermined changes nothing.
+      //
       // Run behavior:
       // dryRun: true, // Preview this parser's events without writing to the calendar (default: false — global config.dryRun also applies)
       // automationEnabled: false, // Skip this parser in scheduled automation runs (default: true)

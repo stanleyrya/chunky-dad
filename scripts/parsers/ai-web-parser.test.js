@@ -3281,3 +3281,259 @@ test('normalizeAiEvent keeps Dec 31 22:00 -> Jan 1 02:00 in the next year (endTi
   assert.equal(normalized.startDate.toISOString(), '2026-12-31T22:00:00.000Z');
   assert.equal(normalized.endDate.toISOString(), '2027-01-01T02:00:00.000Z', 'the 2am end lands on next year\'s Jan 1');
 });
+
+// ---------------------------------------------------------------------------
+// Bar corroboration (barSource): address-adjacency on the extraction corpus,
+// venue-site stamping, curated stamping, and the siteRole facts. All checks
+// fail open — no bar, no address, or an unlocatable address stamps nothing.
+// ---------------------------------------------------------------------------
+
+// The real incident shape: flyer OCR where the edition subtitle ("SHORE
+// THING") sits far above the address while the actual venue is adjacent to it
+// ("MASSIVE: 619 E. PINE ST"). Padding lines keep SHORE THING outside both
+// the ±2-line and ~150-character windows.
+const SHORE_THING_CORPUS = [
+  'OCR_IMAGE_TEXT (https://massive.club/media/shore-thing-flyer.jpg):',
+  'BEARRACUDA SEATTLE PRESENTS',
+  'SHORE THING',
+  'THE ANNUAL SUMMER KICKOFF FOR BEARS AND CUBS OF THE PACIFIC NORTHWEST',
+  'FEATURING DJ BEARZERKER SPINNING DISCO AND HOUSE ALL NIGHT LONG',
+  'WITH SPECIAL GUEST DJ TOPHER JOINING US FROM SAN FRANCISCO',
+  'GOGO BEARS SURPRISE PERFORMANCES GIVEAWAYS AND MORE',
+  'SATURDAY AUGUST 1ST 2026 FROM TEN UNTIL LATE',
+  'TICKETS TWENTY DOLLARS AT THE DOOR OR ONLINE WHILE THEY LAST',
+  '10PM - 2AM • 21+',
+  'MASSIVE: 619 E. PINE ST',
+  'SEATTLE WA 98122'
+].join('\n');
+
+function captureLogs(fn) {
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  try {
+    fn();
+  } finally {
+    console.log = originalLog;
+  }
+  return lines;
+}
+
+test('Shore Thing incident: subtitle bar far from the address is stamped uncorroborated with flag + adjacent candidate logs', () => {
+  const parser = createParser();
+  const evidenceContext = parser.buildAiEvidenceContextFromText(SHORE_THING_CORPUS);
+  const event = {
+    title: 'BEARRACUDA SEATTLE',
+    bar: 'Shore Thing',
+    address: '619 E. Pine St, Seattle, WA 98122'
+  };
+  const logs = captureLogs(() => {
+    parser.stampBarSourceProvenance(event, evidenceContext, { url: 'https://bearracuda.com/seattle', html: '' });
+  });
+  assert.equal(event.bar, 'Shore Thing', 'flag-don\'t-drop: the value is never changed');
+  assert.equal(event.barSource, 'uncorroborated');
+  assert.ok(logs.includes(
+    '🤖 AI Web: Bar "Shore Thing" not found near address "619 E. Pine St" in source — flagging as uncorroborated'
+  ), `flag log expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(logs.includes('🤖 AI Web: Adjacent venue candidate: "MASSIVE"'),
+    `candidate log expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('bar adjacent to the address stamps page-adjacent: same-line, multi-line, and emoji/punctuation tolerance', () => {
+  const parser = createParser();
+
+  // Same line as the address ("MASSIVE: 619 E. PINE ST")
+  const sameLine = { title: 'X', bar: 'MASSIVE', address: '619 E. Pine St, Seattle, WA 98122' };
+  parser.stampBarSourceProvenance(sameLine, parser.buildAiEvidenceContextFromText(SHORE_THING_CORPUS), null);
+  assert.equal(sameLine.barSource, 'page-adjacent');
+
+  // Within ±2 lines
+  const multiLineCorpus = [
+    'UPCOMING EVENTS',
+    'MASSIVE',
+    'NIGHTCLUB AND EVENT SPACE',
+    '619 E. PINE ST, SEATTLE, WA',
+    'DOORS AT TEN'
+  ].join('\n');
+  const multiLine = { title: 'X', bar: 'Massive', address: '619 E Pine St, Seattle' };
+  parser.stampBarSourceProvenance(multiLine, parser.buildAiEvidenceContextFromText(multiLineCorpus), null);
+  assert.equal(multiLine.barSource, 'page-adjacent', 'case/punctuation-insensitive containment across the line window');
+
+  // Emoji + punctuation noise, suffix-less street line
+  const emojiCorpus = 'Weekly parties\n🪩 Cell Block / 3702 N Halsted\nChicago bears night';
+  const emoji = { title: 'X', bar: 'Cell Block', address: '3702 N Halsted, Chicago, IL 60613' };
+  parser.stampBarSourceProvenance(emoji, parser.buildAiEvidenceContextFromText(emojiCorpus), null);
+  assert.equal(emoji.barSource, 'page-adjacent');
+});
+
+test('no stamp when the address is absent from the corpus, missing, or the bar/corpus is empty (fail open)', () => {
+  const parser = createParser();
+
+  const addressAbsent = { title: 'X', bar: 'Shore Thing', address: '4067 W Pico Blvd, Los Angeles, CA' };
+  parser.stampBarSourceProvenance(addressAbsent, parser.buildAiEvidenceContextFromText(SHORE_THING_CORPUS), null);
+  assert.equal('barSource' in addressAbsent, false, 'address not locatable in source → no stamp');
+
+  const noAddress = { title: 'X', bar: 'Shore Thing' };
+  parser.stampBarSourceProvenance(noAddress, parser.buildAiEvidenceContextFromText(SHORE_THING_CORPUS), null);
+  assert.equal('barSource' in noAddress, false);
+
+  const noBar = { title: 'X', address: '619 E. Pine St, Seattle, WA 98122' };
+  parser.stampBarSourceProvenance(noBar, parser.buildAiEvidenceContextFromText(SHORE_THING_CORPUS), null);
+  assert.equal('barSource' in noBar, false);
+
+  const noCorpus = { title: 'X', bar: 'Shore Thing', address: '619 E. Pine St, Seattle' };
+  parser.stampBarSourceProvenance(noCorpus, null, null);
+  assert.equal('barSource' in noCorpus, false);
+
+  // A street line without a leading house number is never searched for
+  const unparseable = { title: 'X', bar: 'Shore Thing', address: 'Pier Sixty, New York' };
+  parser.stampBarSourceProvenance(unparseable, parser.buildAiEvidenceContextFromText(SHORE_THING_CORPUS), null);
+  assert.equal('barSource' in unparseable, false);
+});
+
+test('curated bars data (when reachable through core) outranks adjacency: curated stamp even when not adjacent', () => {
+  const parser = createParser();
+  parser.core = new SharedCore({}, {
+    eventSchema: EventSchema,
+    bars: { seattle: [{ name: 'Massive' }] }
+  });
+  const event = { title: 'X', bar: 'MASSIVE', city: 'seattle', address: '4067 W Pico Blvd, Los Angeles' };
+  parser.stampBarSourceProvenance(event, parser.buildAiEvidenceContextFromText('no addresses here'), null);
+  assert.equal(event.barSource, 'curated');
+
+  // No bars data for the city → the adjacency path still runs (fail open)
+  const unknownCity = { title: 'X', bar: 'MASSIVE', city: 'portland', address: '619 E. Pine St, Seattle' };
+  parser.stampBarSourceProvenance(unknownCity, parser.buildAiEvidenceContextFromText(SHORE_THING_CORPUS), null);
+  assert.equal(unknownCity.barSource, 'page-adjacent');
+});
+
+// ---------------------------------------------------------------------------
+// siteRole classification: hard facts only, config override on top.
+// ---------------------------------------------------------------------------
+
+const VENUE_SITE_HTML = `<html><head>
+  <meta property="og:site_name" content="MASSIVE" />
+  <script type="application/ld+json">{"@type":"NightClub","name":"Massive","url":"https://massive.club"}</script>
+</head><body>MASSIVE NIGHTCLUB SEATTLE</body></html>`;
+
+test('siteRole: JSON-LD venue-ish @type classifies the page as venue; config override wins over it', () => {
+  const parser = createParser();
+  const htmlData = { url: 'https://massive.club/events', html: VENUE_SITE_HTML };
+  assert.equal(parser.resolvePageSiteRole(htmlData, {}), 'venue');
+  assert.equal(parser.getPageSiteRole(htmlData), 'venue', 'cached for downstream copies');
+
+  // Config override has top precedence — even against a venue-typed page
+  const overridden = { url: 'https://massive.club/events', html: VENUE_SITE_HTML };
+  assert.equal(parser.resolvePageSiteRole(overridden, { siteRole: 'organizer' }), 'organizer');
+  const venueOverride = { url: 'https://promoter.example/events', html: '<html><body>hi</body></html>' };
+  assert.equal(parser.resolvePageSiteRole(venueOverride, { siteRole: 'venue' }), 'venue');
+
+  // A venue-typed Place nested inside an Event is the EVENT's location, not the page's identity
+  const eventNested = {
+    url: 'https://promoter.example/e/1',
+    html: `<script type="application/ld+json">{"@type":"Event","name":"Bear Night","location":{"@type":"NightClub","name":"Massive"}}</script>`
+  };
+  assert.equal(parser.resolvePageSiteRole(eventNested, {}), '');
+});
+
+test('siteRole: segment facts — multiple distinct addresses under an Organization → organizer; single recurring address + footer → venue', () => {
+  const parser = createParser();
+
+  const organizerHtml = `<html><head>
+    <script type="application/ld+json">{"@type":"Organization","name":"Bearracuda"}</script>
+  </head><body>tour dates</body></html>`;
+  const organizerData = { url: 'https://bearracuda.example/events', html: organizerHtml };
+  const multiCitySegments = [
+    { lines: ['FURBALL BLACKOUT', 'JULY 10', '619 E. PINE ST, SEATTLE'] },
+    { lines: ['FURBALL LA', 'JULY 24', '4067 W PICO BLVD, LOS ANGELES'] }
+  ];
+  assert.equal(parser.resolvePageSiteRole(organizerData, {}, multiCitySegments), 'organizer');
+
+  const venueHtml = `<html><body>
+    <div>AUG 1 BEAR NIGHT at 619 E. PINE ST</div>
+    <div>AUG 8 UNDERWEAR PARTY</div>
+    <footer>MASSIVE • 619 E. PINE ST • SEATTLE, WA 98122</footer>
+  </body></html>`;
+  const venueData = { url: 'https://massive.club/calendar', html: venueHtml };
+  const singleAddressSegments = [
+    { lines: ['BEAR NIGHT', 'AUG 1', '619 E. PINE ST'] },
+    { lines: ['UNDERWEAR PARTY', 'AUG 8'] }
+  ];
+  assert.equal(parser.resolvePageSiteRole(venueData, {}, singleAddressSegments), 'venue');
+
+  // Multiple addresses WITHOUT an Organization/PerformingGroup type stays undetermined
+  const bareData = { url: 'https://somewhere.example/events', html: '<html><body>list</body></html>' };
+  assert.equal(parser.resolvePageSiteRole(bareData, {}, multiCitySegments), '');
+});
+
+test('siteRole: undetermined pages log once and inject no venue context', () => {
+  const parser = createParser();
+  const htmlData = { url: 'https://promoter.example/events', html: '<html><body>events</body></html>' };
+  assert.equal(parser.resolvePageSiteRole(htmlData, {}), '');
+  const logs = captureLogs(() => {
+    parser.logPageSiteRoleOnce(htmlData);
+    parser.logPageSiteRoleOnce(htmlData);
+  });
+  assert.deepEqual(logs, ['🤖 AI Web: siteRole for promoter.example undetermined'], 'exactly once per page');
+});
+
+test('KNOWN VENUE line appears in extraction prompts only for venue pages, replacing KNOWN ORGANIZER there', () => {
+  const parser = createParser();
+  const venueData = { url: 'https://massive.club/events', html: VENUE_SITE_HTML };
+  parser.resolvePageSiteRole(venueData, {});
+  const venuePrompt = parser.buildExtractionPrompt(venueData, {}, null, {}, ['title', 'bar'], 'SNIPPET', 'default', {});
+  assert.match(venuePrompt,
+    /KNOWN VENUE \(this is the venue's own site\): "MASSIVE" — events on this page take place AT this venue unless the page states another location; DJ names, taglines, and edition subtitles are NOT the venue\./);
+  assert.ok(!/KNOWN ORGANIZER/.test(venuePrompt),
+    'the organizer line would contradict KNOWN VENUE on the venue\'s own site');
+
+  // Undetermined page with a brand keeps today's organizer line, no venue line
+  const organizerData = {
+    url: 'https://bearracuda.example/events',
+    html: '<html><head><meta property="og:site_name" content="Bearracuda" /></head><body></body></html>'
+  };
+  parser.resolvePageSiteRole(organizerData, {});
+  const organizerPrompt = parser.buildExtractionPrompt(organizerData, {}, null, {}, ['title', 'bar'], 'SNIPPET', 'default', {});
+  assert.match(organizerPrompt, /KNOWN ORGANIZER \(derived from page metadata\): "Bearracuda"/);
+  assert.ok(!/KNOWN VENUE/.test(organizerPrompt));
+});
+
+test('venue-site: a bar equal to the known venue is stamped venue-site and survives the brand guards', () => {
+  const parser = createParser();
+  const htmlData = { url: 'https://massive.club/events', html: VENUE_SITE_HTML };
+  parser.resolvePageSiteRole(htmlData, {});
+
+  // The pass-level brand guard must NOT reject the venue's own name as bar
+  const guarded = parser.rejectBrandLikePassFields({ bar: 'MASSIVE' }, htmlData, 'test');
+  assert.equal(guarded.bar, 'MASSIVE', 'venue site: the site name IS the venue');
+
+  // normalizeAiEvent keeps the bar, stamps no _organizer on a venue site
+  const event = parser.normalizeAiEvent(
+    { title: 'BEAR NIGHT', startDate: '2026-08-01', startTime: '21:00', bar: 'MASSIVE' },
+    {}, htmlData, null, null);
+  assert.equal(event.bar, 'MASSIVE', 'the organizer bar-drop guard is off on venue sites');
+  assert.equal(event._organizer, undefined, 'no organizer stamp — arbitration must not veto the venue as bar');
+
+  // And the corroboration stamp marks it venue-site
+  parser.stampBarSourceProvenance(event, parser.buildAiEvidenceContextFromText('no addresses in this corpus'), htmlData);
+  assert.equal(event.barSource, 'venue-site');
+
+  // A different bar on the same venue page is NOT stamped venue-site
+  const other = { title: 'OFFSITE', bar: 'The Cuff', address: '1533 13th Ave, Seattle' };
+  parser.stampBarSourceProvenance(other, parser.buildAiEvidenceContextFromText('somewhere else entirely'), htmlData);
+  assert.equal('barSource' in other, false);
+});
+
+test('venue name derivation prefers declared names and falls back to the host base', () => {
+  const parser = createParser();
+  // og:site_name wins
+  assert.equal(parser.getPageVenueName({ url: 'https://massive.club/e', html: VENUE_SITE_HTML }), 'MASSIVE');
+  // JSON-LD venue node name when no og:site_name
+  const jsonLdOnly = {
+    url: 'https://massive.club/e',
+    html: '<script type="application/ld+json">{"@type":"NightClub","name":"Massive"}</script>'
+  };
+  assert.equal(parser.getPageVenueName(jsonLdOnly), 'Massive');
+  // Host base as last resort ("massive" from www.massive.club)
+  assert.equal(parser.getPageVenueName({ url: 'https://www.massive.club/events', html: '<html></html>' }), 'massive');
+});

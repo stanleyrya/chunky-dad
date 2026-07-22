@@ -335,6 +335,13 @@ class AiWebParser {
                 console.log(`🤖 AI Web: Page organizer/brand derived from metadata: ${pageBrandNames.map(name => `"${name}"`).join(', ')}`);
             }
 
+            // Classify who this SITE is (venue vs organizer) from hard facts
+            // only — parser config override, then the page's own JSON-LD types
+            // (segment-derived facts are layered in on multi-event pages).
+            // 'venue' switches extraction steering from KNOWN ORGANIZER to
+            // KNOWN VENUE; undetermined changes nothing (fail open).
+            this.resolvePageSiteRole(htmlData, parserConfig);
+
             // Deterministic extraction from schema.org Event JSON-LD. Ticketing pages
             // (sickening.events, tryst.events, Eventbrite) hand us complete structured
             // data — when it covers title + start + venue, OCR and AI extraction add
@@ -370,6 +377,10 @@ class AiWebParser {
                 // an image the gap-fill pulled from page content gets its own
                 // og-image/page provenance here (no image → no stamp).
                 completeJsonLdEvents.forEach(event => this.stampImageProvenance(event, htmlData));
+                // Bar provenance for the structured-data path: curated/
+                // venue-site stamps only — there is no extraction evidence
+                // corpus here, so the adjacency check never runs (fail open).
+                completeJsonLdEvents.forEach(event => this.stampBarSourceProvenance(event, null, htmlData));
                 return {
                     events: completeJsonLdEvents,
                     additionalLinks: additionalLinks,
@@ -504,6 +515,10 @@ class AiWebParser {
     }
 
     async extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = [], httpAdapter = null) {
+        // Site role (venue/organizer/undetermined) was resolved page-level in
+        // parseEvents; announce it once before extraction prompts are built.
+        this.resolvePageSiteRole(htmlData, parserConfig);
+        this.logPageSiteRoleOnce(htmlData);
         const segmentHtmlData = {
             ...htmlData,
             ocrResults: ocrResults
@@ -535,6 +550,14 @@ class AiWebParser {
 
         // OCR any segment images the capped page-level pass missed
         await this.ensureSegmentOcrCoverage(segments, ocrResults, parserConfig, sourceUrl, httpAdapter);
+
+        // Segment-derived site-role facts (multiple distinct addresses →
+        // organizer; one recurring address that also appears outside the
+        // listings → venue) can settle what the JSON-LD types alone could not.
+        // Must run BEFORE the per-segment htmlData copies are spread below so
+        // every segment inherits the page-level determination.
+        this.resolvePageSiteRole(htmlData, parserConfig, segments);
+        this.logPageSiteRoleOnce(htmlData);
 
         // Segments are unstructured data (page content + OCR), so always use split fields
         const segmentDataFlags = { ocr: true, segment: true };
@@ -612,6 +635,10 @@ class AiWebParser {
             console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
             return null;
         }
+        // Bar corroboration stamp (barSource): checks the final bar+address
+        // pair against the same corpora the evidence gate uses (page text,
+        // OCR text, segment text). Flag-don't-drop: values are never changed.
+        this.stampBarSourceProvenance(event, evidenceContext, promptHtmlData);
         console.log(this.formatExtractionSummary(event, htmlData && htmlData.url ? htmlData.url : 'unknown URL'));
         const confidenceDiagnostics = aiEvent && aiEvent.__confidenceDiagnostics && typeof aiEvent.__confidenceDiagnostics === 'object'
             ? aiEvent.__confidenceDiagnostics
@@ -5419,7 +5446,11 @@ class AiWebParser {
             const value = guarded[key];
             if (typeof value !== 'string' || !value.trim()) return;
             const normalizedField = this.normalizePromptFieldName(key);
-            if (normalizedField === 'bar' && brandNames.length > 0 && this.matchesPageBrandName(value, brandNames)) {
+            // On a venue's own site the brand IS the venue — a bar equal to
+            // the site name is the correct answer there, never a leak.
+            if (normalizedField === 'bar' && brandNames.length > 0
+                && this.getPageSiteRole(htmlData) !== 'venue'
+                && this.matchesPageBrandName(value, brandNames)) {
                 console.log(`🤖 AI Web: Rejecting bar "${value}" from ${passName} pass — matches page organizer/brand; keeping field open for later passes`);
                 delete guarded[key];
                 return;
@@ -6211,7 +6242,16 @@ ${String(snippet || '')}`;
         // which is appended verbatim.
         let steeringContext = '';
         const pageBrandNames = this.getPageBrandNames(htmlData);
-        if (pageBrandNames.length > 0) {
+        // A page classified as the VENUE's own site gets the KNOWN VENUE
+        // steering line instead of KNOWN ORGANIZER: on a venue site the brand
+        // IS the venue, and telling the model "never return it as bar" is
+        // exactly backwards there. Organizer/undetermined pages keep today's
+        // organizer line verbatim.
+        const siteRole = this.getPageSiteRole(htmlData);
+        const knownVenueName = siteRole === 'venue' ? this.getPageVenueName(htmlData) : '';
+        if (knownVenueName) {
+            steeringContext += `KNOWN VENUE (this is the venue's own site): "${knownVenueName}" — events on this page take place AT this venue unless the page states another location; DJ names, taglines, and edition subtitles are NOT the venue.\n`;
+        } else if (pageBrandNames.length > 0 && siteRole !== 'venue') {
             const aliasSuffix = pageBrandNames.length > 1
                 ? ` (also appears as ${pageBrandNames.slice(1).map(name => `"${name}"`).join(', ')})`
                 : '';
@@ -6299,10 +6339,15 @@ TEXT:
 
     buildJsonRepairPrompt(rawResponse, aiConfig, cityConfig, parserConfig, fields, dataFlags = {}, htmlData = null) {
         // The repair pass sees only the broken JSON text, but still needs the
-        // page-level steering context (organizer brand, ai.extraContext). Pass the
-        // cached brand names through WITHOUT the page html so the repair prompt
+        // page-level steering context (organizer brand or known venue,
+        // ai.extraContext). Pass the cached brand names + site-role
+        // determination through WITHOUT the page html so the repair prompt
         // stays free of page/OCR payload.
-        const contextHtmlData = htmlData ? { pageBrandNames: this.getPageBrandNames(htmlData) } : null;
+        const contextHtmlData = htmlData ? {
+            pageBrandNames: this.getPageBrandNames(htmlData),
+            pageSiteRole: this.getPageSiteRole(htmlData),
+            pageVenueName: this.getPageSiteRole(htmlData) === 'venue' ? this.getPageVenueName(htmlData) : ''
+        } : null;
         return this.buildExtractionPrompt(contextHtmlData, aiConfig, cityConfig, parserConfig, fields, rawResponse, 'repair', dataFlags);
     }
 
@@ -7484,11 +7529,16 @@ TEXT:
         // see extractPageBrandNames — never from a hardcoded organizer list.
         // (Cached per page; parseEvents primes the cache on the original html.)
         const pageBrandNames = this.getPageBrandNames(htmlData);
+        // A page classified as the venue's own site (siteRole 'venue') is the
+        // one case where the site brand IS the venue: the organizer bar-drop
+        // guard must not fire there, and the merge-side organizer stamp would
+        // wrongly veto the venue as bar.
+        const pageIsVenueSite = this.getPageSiteRole(htmlData) === 'venue';
         if (pageBrandNames.length > 0) {
             // Only AI-extracted values are guarded: an explicitly configured bar is a
             // deliberate override and must survive even when it matches the site brand
             // (venue sites ARE their own brand, e.g. a bar scraping its own homepage).
-            if (bar && bar === aiBar && this.matchesPageBrandName(bar, pageBrandNames)) {
+            if (!pageIsVenueSite && bar && bar === aiBar && this.matchesPageBrandName(bar, pageBrandNames)) {
                 console.log(`🤖 AI Web: Dropping bar "${bar}" — matches the page's organizer/site name, not a venue`);
                 bar = configBar;
             }
@@ -7769,7 +7819,9 @@ TEXT:
         // Stamp the derived organizer as internal metadata (underscore fields are
         // excluded from calendar notes and merge field loops) so downstream merge
         // arbitration can warn the model off picking the organizer as the venue.
-        if (pageBrandNames.length > 0) {
+        // Never on a venue's own site: there the brand IS the venue, and the
+        // organizer stamp would make arbitration veto the correct bar.
+        if (pageBrandNames.length > 0 && !pageIsVenueSite) {
             event._organizer = pageBrandNames[0];
         }
 
@@ -8748,6 +8800,417 @@ TEXT:
         const canonical = this.canonicalizeImageUrlForComparison(image);
         const metaImageUrls = this.getPageMetaImageUrls(htmlData);
         event.imageSource = canonical && metaImageUrls.includes(canonical) ? 'og-image' : 'page';
+        return event;
+    }
+
+    // ========================================================================
+    // SITE ROLE (venue vs organizer) + BAR CORROBORATION (barSource)
+    // ========================================================================
+    // Page-derived trust signals for the extracted bar, protecting venues the
+    // curated bars data has never seen. All determinations are hard facts
+    // (config override, the page's own JSON-LD types, observed addresses) —
+    // no AI tiebreak. Everything fails open: undetermined role injects no
+    // context, an unverifiable bar gets no stamp.
+
+    // 'venue' | 'organizer' | '' — normalized siteRole value.
+    normalizeSiteRoleValue(value) {
+        const text = String(value || '').trim().toLowerCase();
+        return text === 'venue' || text === 'organizer' ? text : '';
+    }
+
+    // Cache-only reader for the page's resolved site role. Segment/OCR
+    // htmlData copies spread the original object, so the page-level
+    // determination (resolvePageSiteRole) is inherited everywhere.
+    getPageSiteRole(htmlData) {
+        return htmlData && typeof htmlData === 'object' && typeof htmlData.pageSiteRole === 'string'
+            ? this.normalizeSiteRoleValue(htmlData.pageSiteRole)
+            : '';
+    }
+
+    // Resolve who this SITE is, hard facts in precedence order:
+    //   1) parser config override `siteRole: "venue" | "organizer"`;
+    //   2) the page's own JSON-LD @type being venue-ish (NightClub/BarOrPub/
+    //      EventVenue/MusicVenue) → venue;
+    //   3) segment-derived facts when segments are provided (multi-event
+    //      pages): a JSON-LD Organization/PerformingGroup whose listings sit
+    //      at MULTIPLE distinct street addresses → organizer; a single
+    //      recurring street address that ALSO appears outside the listings
+    //      (footer/contact) → venue.
+    // Anything else stays '' (undetermined — no steering context injected).
+    // The result is cached on htmlData so every downstream copy inherits it.
+    resolvePageSiteRole(htmlData, parserConfig = {}, segments = null) {
+        const configRole = this.normalizeSiteRoleValue(parserConfig && parserConfig.siteRole);
+        if (configRole) {
+            if (htmlData && typeof htmlData === 'object' && Object.isExtensible(htmlData)) {
+                htmlData.pageSiteRole = configRole;
+                htmlData.pageSiteRoleReason = 'parser config siteRole';
+                if (configRole === 'venue') this.getPageVenueName(htmlData);
+            }
+            return configRole;
+        }
+        if (!htmlData || typeof htmlData !== 'object') return '';
+        if (typeof htmlData.pageSiteRole !== 'string') {
+            const signals = this.getJsonLdSiteSignals(htmlData);
+            const role = signals.venueType ? 'venue' : '';
+            if (Object.isExtensible(htmlData)) {
+                htmlData.pageSiteRole = role;
+                htmlData.pageSiteRoleReason = role ? `json-ld @type ${signals.venueType}` : '';
+            }
+        }
+        if (htmlData.pageSiteRole === '' && Array.isArray(segments) && segments.length > 0
+            && !htmlData.pageSiteRoleSegmentsChecked && Object.isExtensible(htmlData)) {
+            htmlData.pageSiteRoleSegmentsChecked = true;
+            const derived = this.deriveSiteRoleFromSegments(htmlData, segments);
+            if (derived.role) {
+                htmlData.pageSiteRole = derived.role;
+                htmlData.pageSiteRoleReason = derived.reason;
+            }
+        }
+        // Prime the venue-name cache on the ORIGINAL htmlData while its full
+        // html (meta tags, JSON-LD) is still present — segment copies replace
+        // html with segment text and could no longer derive it.
+        if (htmlData.pageSiteRole === 'venue') this.getPageVenueName(htmlData);
+        return this.getPageSiteRole(htmlData);
+    }
+
+    // One line per page describing the site-role outcome (determined or not).
+    logPageSiteRoleOnce(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object' || htmlData.pageSiteRoleLogged) return;
+        if (Object.isExtensible(htmlData)) htmlData.pageSiteRoleLogged = true;
+        const components = this.parseUrlComponents(typeof htmlData.url === 'string' ? htmlData.url : '');
+        const host = components && components.hostname ? components.hostname : 'unknown-host';
+        const role = this.getPageSiteRole(htmlData);
+        if (!role) {
+            console.log(`🤖 AI Web: siteRole for ${host} undetermined`);
+            return;
+        }
+        const reason = typeof htmlData.pageSiteRoleReason === 'string' && htmlData.pageSiteRoleReason
+            ? ` (${htmlData.pageSiteRoleReason})`
+            : '';
+        console.log(`🤖 AI Web: siteRole for ${host}: ${role}${reason}`);
+    }
+
+    // JSON-LD facts about the page's own identity. Same traversal rule as
+    // extractPageBrandNames: top-level nodes and @graph containers only — a
+    // venue-typed Place nested inside an Event is that EVENT's location, not
+    // the page's identity. Cached per page.
+    getJsonLdSiteSignals(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') {
+            return { venueType: '', venueName: '', organizationTypeFound: false };
+        }
+        if (htmlData.pageJsonLdSiteSignals && typeof htmlData.pageJsonLdSiteSignals === 'object') {
+            return htmlData.pageJsonLdSiteSignals;
+        }
+        const signals = this.extractJsonLdSiteSignals(typeof htmlData.html === 'string' ? htmlData.html : '');
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageJsonLdSiteSignals = signals;
+        }
+        return signals;
+    }
+
+    extractJsonLdSiteSignals(html) {
+        const source = String(html || '').slice(0, 500000);
+        const signals = { venueType: '', venueName: '', organizationTypeFound: false };
+        const venueTypePattern = /^(NightClub|BarOrPub|EventVenue|MusicVenue)$/i;
+        const organizerTypePattern = /^(Organization|PerformingGroup)$/i;
+        const collect = (node, depth) => {
+            if (!node || depth > 6) return;
+            if (Array.isArray(node)) {
+                node.forEach(child => collect(child, depth + 1));
+                return;
+            }
+            if (typeof node !== 'object') return;
+            const types = (Array.isArray(node['@type']) ? node['@type'] : [node['@type']])
+                .map(type => String(type || '').replace(/^https?:\/\/schema\.org\//i, '').trim());
+            const venueType = types.find(type => venueTypePattern.test(type));
+            if (venueType) {
+                if (!signals.venueType) signals.venueType = venueType;
+                if (!signals.venueName && typeof node.name === 'string') {
+                    signals.venueName = this.normalizeWhitespace(this.decodeBasicEntities(node.name));
+                }
+            }
+            if (types.some(type => organizerTypePattern.test(type))) {
+                signals.organizationTypeFound = true;
+            }
+            if (node['@graph']) collect(node['@graph'], depth + 1);
+        };
+        const scriptRegex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptRegex.exec(source)) !== null) {
+            const text = this.normalizeWhitespace(this.decodeBasicEntities(match[1] || ''));
+            if (!text) continue;
+            let parsed = null;
+            try {
+                parsed = JSON.parse(text);
+            } catch (_) {
+                continue;
+            }
+            collect(parsed, 0);
+        }
+        return signals;
+    }
+
+    // Segment-derived site-role facts for multi-event pages (hard facts only).
+    deriveSiteRoleFromSegments(htmlData, segments) {
+        const streetCounts = new Map();
+        for (const segment of Array.isArray(segments) ? segments : []) {
+            const text = segment && Array.isArray(segment.lines) ? segment.lines.join('\n') : '';
+            for (const street of this.extractStreetLineCandidates(text)) {
+                const normalized = this.normalizeAdjacencyText(street);
+                if (!normalized) continue;
+                streetCounts.set(normalized, (streetCounts.get(normalized) || 0) + 1);
+            }
+        }
+        if (streetCounts.size >= 2 && this.getJsonLdSiteSignals(htmlData).organizationTypeFound) {
+            return { role: 'organizer', reason: `json-ld organization with events at ${streetCounts.size} distinct addresses` };
+        }
+        if (streetCounts.size === 1) {
+            const [streetNormalized, segmentCount] = streetCounts.entries().next().value;
+            const pageText = this.normalizeAdjacencyText(
+                this.getPageTextForSiteRole(htmlData && typeof htmlData.html === 'string' ? htmlData.html : ''));
+            if (this.countOccurrences(pageText, streetNormalized) > segmentCount) {
+                return { role: 'venue', reason: 'single recurring address also appears outside the event listings' };
+            }
+        }
+        return { role: '', reason: '' };
+    }
+
+    // Full-page text INCLUDING footer/contact regions (extractBodyParts strips
+    // them, but "the venue's address in the site footer" is exactly the
+    // signal the single-recurring-address fact needs).
+    getPageTextForSiteRole(html) {
+        let text = String(html || '').slice(0, 500000);
+        text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
+        text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
+        text = text.replace(/<!--[\s\S]*?-->/g, ' ');
+        text = text.replace(/<[^>]+>/g, ' ');
+        return this.decodeBasicEntities(text);
+    }
+
+    // Street-line shapes in free text: house number + 1-4 name words + a
+    // street-type word ("619 E. PINE ST"). Suffix-less styles ("3702 N
+    // Halsted") are deliberately not matched here — this feeds the site-role
+    // facts, which fail open when nothing matches.
+    extractStreetLineCandidates(text) {
+        const results = [];
+        // [ \t] only — a street line never spans corpus lines here, and \s+
+        // would glue a date line's trailing number onto the next line's street.
+        const pattern = /\b\d{1,6}(?:-\d{1,4})?(?:[ \t]+[\w][\w.'’-]*){1,4}[ \t]+(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pl|Place|Ct|Court|Pkwy|Parkway|Sq|Square|Ter|Terrace)\b\.?/gi;
+        let match;
+        while ((match = pattern.exec(String(text || ''))) !== null) {
+            results.push(match[0]);
+        }
+        return results;
+    }
+
+    countOccurrences(text, needle) {
+        if (!text || !needle) return 0;
+        let count = 0;
+        let from = 0;
+        let position;
+        while ((position = text.indexOf(needle, from)) !== -1) {
+            count += 1;
+            from = position + needle.length;
+        }
+        return count;
+    }
+
+    // The venue's display name for a venue-role page, best declared source
+    // first: og:site_name → the JSON-LD venue node's name → the page brand
+    // name → the host's base label ("massive" from massive.club). Cached per
+    // page (resolvePageSiteRole primes it before segment copies are made).
+    getPageVenueName(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return '';
+        if (typeof htmlData.pageVenueName === 'string') return htmlData.pageVenueName;
+        let name = this.getPageOgSiteName(htmlData)
+            || this.getJsonLdSiteSignals(htmlData).venueName
+            || (this.getPageBrandNames(htmlData)[0] || '');
+        if (!name) {
+            const components = this.parseUrlComponents(typeof htmlData.url === 'string' ? htmlData.url : '');
+            const host = components && components.hostname
+                ? components.hostname.split(':')[0].replace(/^www\./, '')
+                : '';
+            name = host ? host.split('.')[0] : '';
+        }
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageVenueName = name;
+        }
+        return name;
+    }
+
+    // Comparison view for bar/address adjacency: lowercased, emoji and
+    // punctuation noise stripped (the 🪩 marker etc.), whitespace collapsed.
+    normalizeAdjacencyText(value) {
+        return String(value || '')
+            .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0E}\u{FE0F}\u{20E3}\u{200D}]/gu, ' ')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+    }
+
+    // The address's street line: the first comma/newline segment that starts
+    // with a house number and contains letters ("619 E. Pine St" from
+    // "619 E. Pine St, Seattle, WA 98122"). '' when none (fail open).
+    getAddressStreetLine(address) {
+        const segments = String(address || '').split(/[,\n]/);
+        for (const segment of segments) {
+            const text = segment.trim();
+            if (!text) continue;
+            if (/^\d{1,6}(?:-\d{1,6})?\s+/.test(text) && /[a-z]/i.test(text)) return text;
+        }
+        return '';
+    }
+
+    // Deterministic adjacency test: does the bar name appear within ±2 lines
+    // (or ~150 characters) of ANY occurrence of the address street line in
+    // the source corpus? Case/whitespace-insensitive containment on the
+    // normalized (emoji/punctuation-stripped) view.
+    checkBarAddressAdjacency(bar, streetLine, corpusText) {
+        const barNormalized = this.normalizeAdjacencyText(bar);
+        const streetNormalized = this.normalizeAdjacencyText(streetLine);
+        if (!barNormalized || !streetNormalized) {
+            return { addressFound: false, adjacent: false, rawLines: [], occurrenceLines: [] };
+        }
+        const rawLines = String(corpusText || '').split('\n');
+        const normalizedLines = rawLines.map(line => this.normalizeAdjacencyText(line));
+        const occurrenceLines = [];
+        normalizedLines.forEach((line, index) => {
+            if (line && line.includes(streetNormalized)) occurrenceLines.push(index);
+        });
+        let adjacent = false;
+        for (const index of occurrenceLines) {
+            const windowText = normalizedLines.slice(Math.max(0, index - 2), index + 3).join(' ');
+            if (windowText.includes(barNormalized)) {
+                adjacent = true;
+                break;
+            }
+        }
+        // ~150-character fallback on the flattened text: catches street lines
+        // broken across corpus lines, which per-line containment cannot see.
+        let addressFound = occurrenceLines.length > 0;
+        if (!adjacent) {
+            const flatText = normalizedLines.filter(Boolean).join(' ');
+            let from = 0;
+            let position;
+            while ((position = flatText.indexOf(streetNormalized, from)) !== -1) {
+                addressFound = true;
+                const windowText = flatText.slice(Math.max(0, position - 150), position + streetNormalized.length + 150);
+                if (windowText.includes(barNormalized)) {
+                    adjacent = true;
+                    break;
+                }
+                from = position + 1;
+            }
+        }
+        return { addressFound, adjacent, rawLines, occurrenceLines };
+    }
+
+    // Deterministic rescue signal (log only, never auto-applied): when the
+    // extracted bar was NOT adjacent to the address, look for exactly one
+    // OTHER capitalized token-run directly adjacent (±1 line) to the address
+    // — the shape of "MASSIVE: 619 E. PINE ST". Runs that are the organizer,
+    // part of the address, address-shaped, or boilerplate words are excluded;
+    // anything other than exactly one surviving candidate returns '' (a noisy
+    // window proves nothing).
+    findAdjacentVenueCandidate(event, adjacency, htmlData) {
+        const occurrenceLines = adjacency && Array.isArray(adjacency.occurrenceLines)
+            ? adjacency.occurrenceLines : [];
+        const rawLines = adjacency && Array.isArray(adjacency.rawLines) ? adjacency.rawLines : [];
+        if (occurrenceLines.length === 0 || rawLines.length === 0) return '';
+        const barNormalized = this.normalizeAdjacencyText(event && event.bar);
+        const addressNormalized = this.normalizeAdjacencyText(event && event.address);
+        const brandNames = this.getPageBrandNames(htmlData);
+        const organizer = event && typeof event._organizer === 'string' ? event._organizer : '';
+        const stopwords = new Set([
+            'doors', 'tickets', 'presents', 'free', 'rsvp', 'vip', 'info', 'ages',
+            'admission', 'cover', 'at', 'the', 'and', 'door', 'pm', 'am',
+            'ocr', 'image', 'text', 'url', 'segment', 'index'
+        ]);
+        const runPattern = /[A-Z][A-Za-z0-9&'’.-]*(?:[ \t]+[A-Z][A-Za-z0-9&'’.-]*)*/g;
+        const windowLineIndexes = new Set();
+        occurrenceLines.forEach(lineIndex => {
+            for (let delta = -1; delta <= 1; delta += 1) {
+                const index = lineIndex + delta;
+                if (index >= 0 && index < rawLines.length) windowLineIndexes.add(index);
+            }
+        });
+        const candidates = new Map();
+        for (const index of windowLineIndexes) {
+            const line = String(rawLines[index] || '');
+            let match;
+            runPattern.lastIndex = 0;
+            while ((match = runPattern.exec(line)) !== null) {
+                const run = match[0].replace(/[.,:;|]+$/, '').trim();
+                if (run.length < 2 || run.length > 30) continue;
+                const runNormalized = this.normalizeAdjacencyText(run);
+                if (!runNormalized) continue;
+                if (barNormalized && (runNormalized.includes(barNormalized) || barNormalized.includes(runNormalized))) continue;
+                if (addressNormalized && addressNormalized.includes(runNormalized)) continue;
+                const tokens = runNormalized.split(' ');
+                if (tokens.every(token => stopwords.has(token) || /^\d+$/.test(token))) continue;
+                if (organizer && this.matchesPageBrandName(run, [organizer])) continue;
+                if (brandNames.length > 0 && this.matchesPageBrandName(run, brandNames)) continue;
+                if (this.core && typeof this.core.looksLikeStreetAddress === 'function'
+                    && this.core.looksLikeStreetAddress(run)) continue;
+                if (/\d/.test(run)
+                    && /(?:^|\s)(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Hwy|Pl|Place|Ct|Court)\.?(?:\s|$)/i.test(run)) continue;
+                if (!candidates.has(runNormalized)) candidates.set(runNormalized, run);
+                if (candidates.size > 1) return '';
+            }
+        }
+        return candidates.size === 1 ? candidates.values().next().value : '';
+    }
+
+    // barSource provenance stamp (notes-serialized like imageSource, excluded
+    // from AI arbitration — see shared-core's corroboration demotion rung):
+    //   - 'curated'       the bar matches curated bars data for its city
+    //                     (only when bars data is reachable via this.core);
+    //   - 'venue-site'    the bar IS the venue whose own site this page is;
+    //   - 'page-adjacent' the bar sits next to the address in the source;
+    //   - 'uncorroborated' the address is in the source but the bar is NOT
+    //                     near it (flag-don't-drop: the value is kept).
+    // No bar, no address, address not locatable in the corpus, or an already
+    // stamped event → left untouched (fail open).
+    stampBarSourceProvenance(event, evidenceContext, htmlData) {
+        if (!event || typeof event !== 'object' || event.barSource) return event;
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (!bar) return event;
+        if (this.core && typeof this.core.getCuratedCityBars === 'function'
+            && typeof this.core.findCuratedBarByName === 'function') {
+            try {
+                const cityBars = this.core.getCuratedCityBars(event.city);
+                if (cityBars && this.core.findCuratedBarByName(cityBars, bar)) {
+                    event.barSource = 'curated';
+                    return event;
+                }
+            } catch (_) {
+                // curated matching is best-effort — fail open to the checks below
+            }
+        }
+        if (this.getPageSiteRole(htmlData) === 'venue') {
+            const venueName = this.getPageVenueName(htmlData);
+            if (venueName && this.matchesPageBrandName(bar, [venueName])) {
+                event.barSource = 'venue-site';
+                return event;
+            }
+        }
+        const address = typeof event.address === 'string' ? event.address.trim() : '';
+        const corpus = evidenceContext && typeof evidenceContext.raw === 'string' ? evidenceContext.raw : '';
+        if (!address || !corpus) return event;
+        const streetLine = this.getAddressStreetLine(address);
+        if (!streetLine) return event;
+        const adjacency = this.checkBarAddressAdjacency(bar, streetLine, corpus);
+        if (!adjacency.addressFound) return event;
+        if (adjacency.adjacent) {
+            event.barSource = 'page-adjacent';
+            return event;
+        }
+        event.barSource = 'uncorroborated';
+        console.log(`🤖 AI Web: Bar "${bar}" not found near address "${streetLine}" in source — flagging as uncorroborated`);
+        const candidate = this.findAdjacentVenueCandidate(event, adjacency, htmlData);
+        if (candidate) {
+            console.log(`🤖 AI Web: Adjacent venue candidate: "${candidate}"`);
+        }
         return event;
     }
 

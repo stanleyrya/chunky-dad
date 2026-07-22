@@ -419,10 +419,16 @@ class SharedCore {
         // image value came from at extraction); like pinSource it must FOLLOW
         // the finalized image deterministically (setProvenanceSource), never
         // be arbitrated as content.
+        // barSource is bar provenance (page-adjacent/venue-site/curated/
+        // uncorroborated — whether the extracted venue was corroborated by the
+        // source page); like imageSource it must FOLLOW the finalized bar
+        // deterministically (setProvenanceSource), never be arbitrated as
+        // content.
         return name !== 'key' && name !== 'notes' && name !== 'source'
             && name !== 'location' && name !== 'gmaps'
             && name !== 'pinSource' && name !== 'addressSource'
-            && name !== 'bearSource' && name !== 'imageSource';
+            && name !== 'bearSource' && name !== 'imageSource'
+            && name !== 'barSource';
     }
 
     // True when a bearSource value records the calendar owner's manual verdict
@@ -1231,6 +1237,57 @@ class SharedCore {
                     winner: addressShapedA ? 'b' : 'a',
                     reason: 'a street address is not a venue name'
                 };
+            }
+            // Corroboration demotion rung: barSource provenance stamped at
+            // extraction (page-adjacent = bar found next to the address in the
+            // source; venue-site = the venue's own site; curated = curated
+            // bars data; uncorroborated = the address was in the source but
+            // the bar was NOT near it — the flyer-subtitle failure shape).
+            // Exactly one candidate stamped uncorroborated while the other is
+            // corroborated → the corroborated one wins without AI. Attribution
+            // is strict like the image provenance rung: a record's barSource
+            // only speaks for the candidate when the record's own bar field IS
+            // that candidate value. Both uncorroborated, both corroborated, or
+            // stamps missing → fall through to today's behavior (fail open).
+            const barContextRecords = context && context.records && typeof context.records === 'object'
+                ? context.records : null;
+            if (barContextRecords) {
+                const getBarProvenance = (record, value) => {
+                    if (!record || typeof record !== 'object') return '';
+                    const recordBar = typeof record.bar === 'string' ? record.bar.trim() : '';
+                    const candidate = typeof value === 'string' ? value.trim() : '';
+                    if (!recordBar || !candidate || recordBar !== candidate) return '';
+                    return typeof record.barSource === 'string' ? record.barSource.trim() : '';
+                };
+                const isCorroboratedStamp = stamp =>
+                    stamp === 'page-adjacent' || stamp === 'venue-site' || stamp === 'curated';
+                const matchesCuratedBar = value =>
+                    Boolean(cityBars && this.findCuratedBarByName(cityBars, value));
+                const provenanceA = getBarProvenance(barContextRecords.a, valueA);
+                const provenanceB = getBarProvenance(barContextRecords.b, valueB);
+                const uncorroboratedA = provenanceA === 'uncorroborated';
+                const uncorroboratedB = provenanceB === 'uncorroborated';
+                if (uncorroboratedA !== uncorroboratedB) {
+                    const corroboratedA = isCorroboratedStamp(provenanceA) || matchesCuratedBar(valueA);
+                    const corroboratedB = isCorroboratedStamp(provenanceB) || matchesCuratedBar(valueB);
+                    if (uncorroboratedA && corroboratedB) {
+                        return { winner: 'b', reason: 'corroborated bar beats uncorroborated' };
+                    }
+                    if (uncorroboratedB && corroboratedA) {
+                        return { winner: 'a', reason: 'corroborated bar beats uncorroborated' };
+                    }
+                    // Demotion doctrine: an uncorroborated SCRAPED bar never
+                    // clobbers ANY calendar bar deterministically — calendar
+                    // records are curated-by-usage, so an unstamped (legacy)
+                    // calendar bar still outranks a flagged scrape. Calendar
+                    // flow only (side "a" is the calendar record there); the
+                    // enrich flow's two scraped records keep today's behavior.
+                    const sideLabels = context.sideLabels && typeof context.sideLabels === 'object'
+                        ? context.sideLabels : null;
+                    if (sideLabels && sideLabels.a === 'calendar' && uncorroboratedB && !provenanceA) {
+                        return { winner: 'a', reason: 'corroborated bar beats uncorroborated' };
+                    }
+                }
             }
         }
         // Deterministic address ladder: EVERY address conflict in run
@@ -3678,6 +3735,10 @@ class SharedCore {
             // winning image with the LOSING side's provenance stamp.
             if (fieldName === 'imageSource') return;
 
+            // barSource is bar provenance and must FOLLOW the finalized bar
+            // the same way (recomputed after the loop + arbitration).
+            if (fieldName === 'barSource') return;
+
             const priorityConfig = fieldPriorities[fieldName];
             const existingValue = existingEvent[fieldName];
             const newValue = newEvent[fieldName];
@@ -3951,6 +4012,12 @@ class SharedCore {
         delete mergedEvent.imageSource;
         this.setProvenanceSource(mergedEvent, 'image', 'imageSource', newEvent, existingEvent);
 
+        // barSource follows the finalized bar exactly like imageSource above:
+        // the corroboration stamp must always describe the WINNING bar value —
+        // a final bar neither side stamped carries no barSource (fail open).
+        delete mergedEvent.barSource;
+        this.setProvenanceSource(mergedEvent, 'bar', 'barSource', newEvent, existingEvent);
+
         // _timezoneUnresolved must describe the merged event's DATES, not the base
         // record: the `{ ...newEvent }` spread above copies newEvent's flag even
         // when existing's anchored dates won, and drops existing's flag even when
@@ -4134,12 +4201,13 @@ class SharedCore {
             // the final merged bar/address so it can never disagree with them.
             if (fieldName === 'gmaps') continue;
 
-            // pinSource/addressSource/imageSource are provenance metadata that
-            // must FOLLOW the finalized location/address/image (set by
-            // setProvenanceSource after STEP 3c) — they never merge or arbitrate
-            // on their own, or the generic loop could clobber a kept value's
-            // source with a stale one.
-            if (fieldName === 'pinSource' || fieldName === 'addressSource' || fieldName === 'imageSource') continue;
+            // pinSource/addressSource/imageSource/barSource are provenance
+            // metadata that must FOLLOW the finalized location/address/image/
+            // bar (set by setProvenanceSource after STEP 3c) — they never merge
+            // or arbitrate on their own, or the generic loop could clobber a
+            // kept value's source with a stale one.
+            if (fieldName === 'pinSource' || fieldName === 'addressSource'
+                || fieldName === 'imageSource' || fieldName === 'barSource') continue;
 
             const priorityConfig = fieldPriorities[fieldName];
             const mergeStrategy = priorityConfig?.merge || 'upsert';
@@ -4447,6 +4515,7 @@ class SharedCore {
         this.setProvenanceSource(mergedObject, 'location', 'pinSource', scraperObject, calendarObject);
         this.setProvenanceSource(mergedObject, 'address', 'addressSource', scraperObject, calendarObject);
         this.setProvenanceSource(mergedObject, 'image', 'imageSource', scraperObject, calendarObject);
+        this.setProvenanceSource(mergedObject, 'bar', 'barSource', scraperObject, calendarObject);
 
         // STEP 4: regenerate gmaps from the FINAL merged bar + address. gmaps
         // is a derived field — a pure function of bar + address — so merging or
