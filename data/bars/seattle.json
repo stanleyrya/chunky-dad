@@ -81,6 +81,8 @@
     "instagram": "https://www.instagram.com/massive_club",
     "gayCities": "https://seattle.gaycities.com/bars/511-massive-nightclub",
     "faviconBg": "#010102",
-    "faviconFg": "#535557"
+    "faviconFg": "#535557",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
+    "gayCitiesLastScrapedAt": "2026-07-22T18:31:06.867Z"
   }
 ]
