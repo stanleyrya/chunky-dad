@@ -112,14 +112,9 @@ const scraperConfig = {
     {
       name: "Megawoof America",
       enabled: false,
-      automationEnabled: true,
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
-      fieldPriorities: {
-        shortName: { priority: ["static"], merge: "upsert" },
-      },
       metadata: {
-        title: { value: "MEGAWOOF" },
         shortName: { value: "MEGA-WOOF" },
         instagram: { value: "https://www.instagram.com/megawoof_america" },
         url: { value: "https://linktr.ee/megawoof_america" },
@@ -128,30 +123,17 @@ const scraperConfig = {
     {
       name: "Coach After Dark",
       enabled: false,
-      automationEnabled: true,
-      parser: "ai-web",
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
-      fieldPriorities: {
-        shortName: { priority: ["static"], merge: "upsert" },
-      },
       metadata: {
         shortName: {
           value: "COACH",
-          conditionalValues: [
-            {
-              keywords: ["beefwitch"],
-              value: "BEEFWITCH",
-            },
-          ],
+          conditionalValues: [{ keywords: ["beefwitch"], value: "BEEFWITCH" }],
         },
         instagram: {
           value: "https://www.instagram.com/coachafterdark",
           conditionalValues: [
-            {
-              keywords: ["beefwitch"],
-              value: "https://www.instagram.com/thebeefwitch",
-            },
+            { keywords: ["beefwitch"], value: "https://www.instagram.com/thebeefwitch" },
           ],
         },
       },
@@ -159,7 +141,6 @@ const scraperConfig = {
     {
       name: "Bearracuda Events",
       enabled: true,
-      automationEnabled: true,
       urls: [
         "https://bearracuda.com/",
         "https://www.eventbrite.com/o/bearracuda-21867032189",
@@ -182,34 +163,13 @@ const scraperConfig = {
     {
       name: "CHUNK",
       enabled: false,
-      automationEnabled: true,
-      parser: "auto", // chunk-party.com auto-detects the chunk parser (absent = pinned ai-web)
       urls: ["https://www.chunk-party.com"],
-      alwaysBear: true, // Trusted bear-scene promoter: prompt context + fallback for the bear-check cascade (still a full bypass while bearCheck mode is report/off)
-      // Deliberate exclusions only — /shop, /contact, /_api/ etc. are blocked built-in
+      // Deliberate exclusions only — /shop, /contact, /_api/ are blocked built-in
       discoveryBlockedPatterns: [
         "chunk-party.com/chunkbearandcubsocial",
         "chunk-party.com/chunk",
       ],
-
-      // Field priorities for merging data from different sources
-      fieldPriorities: {
-        title: { priority: ["chunk"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
-        description: { priority: ["chunk"], merge: "clobber" },
-        bar: { priority: ["chunk"], merge: "clobber" },
-        address: { priority: ["chunk"], merge: "clobber" },
-        startDate: { priority: ["chunk"], merge: "clobber" },
-        endDate: { priority: ["chunk"], merge: "clobber" },
-        url: { priority: ["chunk"], merge: "clobber" },
-        location: { priority: ["chunk"], merge: "clobber" },
-        gmaps: { priority: ["chunk"], merge: "clobber" },
-        image: { priority: ["chunk"], merge: "clobber" },
-        cover: { priority: ["chunk"], merge: "clobber" },
-        ticketUrl: { priority: ["chunk"], merge: "clobber" },
-      },
-
-      // Static metadata to add to all Chunk events
+      alwaysBear: true,
       metadata: {
         shortName: { value: "CHUNK" },
         instagram: { value: "https://www.instagram.com/chunkparty" },
@@ -219,51 +179,22 @@ const scraperConfig = {
     {
       name: "Furball",
       enabled: false,
-      automationEnabled: false,
-      parser: "ai-web",
       urls: ["https://www.furball.nyc"],
       alwaysBear: true,
-      urlDiscoveryDepth: 0, // Never crawl: the multi-event page itself carries everything
-      fieldPriorities: {
-        title: { priority: ["ai-web", "static"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
-      },
+      urlDiscoveryDepth: 0,
       metadata: {
-        title: { value: "FURBALL" },
         shortName: { value: "FUR-BALL" },
         instagram: { value: "https://instagram.com/furballnyc/" },
         url: { value: "https://www.furball.nyc" },
-        favicon: { value: "https://linktr.ee/furballnyc" }, // deliberate: icon-source override resolved dynamically by the website
+        favicon: { value: "https://linktr.ee/furballnyc" },
       },
     },
     {
       name: "Cubhouse",
       enabled: false,
-      automationEnabled: true,
       urls: ["https://linktr.ee/cubhouse"],
-      parser: "auto", // linktr.ee auto-detects the linktree parser; discovered ticket links auto-switch to ai-web
-      alwaysBear: true, // Cubhouse events are always bear events
-      discoveryBlockedPatterns: ["www.eventbrite.com/o/", "linktr.ee"], // Deliberate: follow direct ticket links only, never back into organizer/linktree pages
-
-      // Field priorities for merging data from different sources
-      // AI-web extraction from discovered links takes priority for most fields
-      fieldPriorities: {
-        title: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        shortName: { priority: ["static"], merge: "upsert" },
-        description: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        bar: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        address: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        startDate: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        endDate: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        url: { priority: ["static"], merge: "clobber" }, // Always use static Linktree URL
-        location: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        gmaps: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        image: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        cover: { priority: ["ai-web", "linktree"], merge: "clobber" },
-        ticketUrl: { priority: ["ai-web", "linktree"], merge: "clobber" },
-      },
-
-      // Static metadata to add to all Cubhouse events
+      discoveryBlockedPatterns: ["www.eventbrite.com/o/", "linktr.ee"],
+      alwaysBear: true,
       metadata: {
         shortName: { value: "CUB-HOUSE" },
         instagram: { value: "https://www.instagram.com/cubhouse.philly" },
@@ -273,33 +204,11 @@ const scraperConfig = {
     {
       name: "Goldiloxx",
       enabled: false,
-      automationEnabled: true,
-      parser: "auto", // api.redeyetickets.com auto-detects the redeyetickets parser (absent = pinned ai-web)
       urls: [
         "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
       ],
-      alwaysBear: true, // Goldiloxx is a bear party
-      urlDiscoveryDepth: 1, // Follow API search results to event detail endpoints           // Override global dryRun if needed
+      alwaysBear: true,
       calendarSearchRangeDays: 40, // Look +/- days for wildcard key matches
-
-      // Field priorities for merging data from different sources
-      fieldPriorities: {
-        title: { priority: ["redeyetickets"], merge: "clobber" },
-        description: { priority: ["redeyetickets"], merge: "clobber" },
-        bar: { priority: ["redeyetickets"], merge: "clobber" },
-        address: { priority: ["redeyetickets"], merge: "clobber" },
-        startDate: { priority: ["redeyetickets"], merge: "clobber" },
-        endDate: { priority: ["redeyetickets"], merge: "clobber" },
-        url: { priority: ["redeyetickets"], merge: "clobber" },
-        location: { priority: ["redeyetickets"], merge: "upsert" },
-        gmaps: { priority: ["redeyetickets"], merge: "clobber" },
-        image: { priority: ["redeyetickets"], merge: "clobber" },
-        cover: { priority: ["redeyetickets"], merge: "clobber" },
-        ticketUrl: { priority: ["redeyetickets"], merge: "clobber" },
-        matchKey: { priority: ["static"], merge: "upsert" },
-      },
-
-      // Static metadata to add to all Goldiloxx events
       metadata: {
         shortName: { value: "GOLDI-LOXX" },
         shorterName: { value: "GLX" },
@@ -310,16 +219,12 @@ const scraperConfig = {
     {
       name: "Twisted Bear",
       enabled: false,
-      automationEnabled: true,
-      // discoveryOnly: true, // flip on for a first-run mapping + 📋 SUGGESTED CONFIG block
+      // discoveryOnly: true,
       urls: [
         "https://www.eventbrite.com/o/nab-events-llc-51471535173",
         "https://www.eventbrite.com/o/121474797695",
       ],
       alwaysBear: true,
-      fieldPriorities: {
-        shortName: { priority: ["static"], merge: "upsert" },
-      },
       metadata: {
         shortName: { value: "TWIST-ED BEAR" },
         instagram: { value: "https://www.instagram.com/twistedbearparty" },
@@ -329,10 +234,7 @@ const scraperConfig = {
     {
       name: "Dallas Eagle",
       enabled: false,
-      automationEnabled: false,
       urls: ["https://www.eventbrite.com/o/77139864473"],
-      alwaysBear: false,
-      fieldPriorities: {},
       metadata: {
         website: { value: "https://www.thedallaseagle.com" },
         facebook: { value: "https://www.facebook.com/lonestareagle" },
