@@ -6273,3 +6273,194 @@ test('__wireConsoleTee keeps working when a tee throws (logging never breaks the
     restoreConsole(saved);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Bar corroboration demotion rung (phase 2): a bar stamped `uncorroborated`
+// at extraction (address in source, bar NOT near it) loses deterministically
+// to a corroborated bar (page-adjacent/venue-site/curated stamp, or a curated
+// bars match) — and an uncorroborated SCRAPED bar never clobbers ANY calendar
+// bar, stamped or not. Attribution is strict like the image provenance rung;
+// stamps missing keeps today's behavior byte-identical.
+// ---------------------------------------------------------------------------
+
+test('guardrail: corroborated bar beats uncorroborated in both directions; ambiguity falls through', () => {
+  const core = createCore();
+  const context = (recordA, recordB, sideLabels = { a: 'existing', b: 'incoming' }) => ({
+    sideLabels,
+    records: { a: recordA, b: recordB }
+  });
+
+  // page-adjacent beats uncorroborated in both directions
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE', barSource: 'page-adjacent' }, { bar: 'Shore Thing', barSource: 'uncorroborated' })),
+    { winner: 'a', reason: 'corroborated bar beats uncorroborated' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'Shore Thing', 'MASSIVE',
+      context({ bar: 'Shore Thing', barSource: 'uncorroborated' }, { bar: 'MASSIVE', barSource: 'page-adjacent' })),
+    { winner: 'b', reason: 'corroborated bar beats uncorroborated' });
+
+  // venue-site and curated stamps are corroborated too
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE', barSource: 'venue-site' }, { bar: 'Shore Thing', barSource: 'uncorroborated' })),
+    { winner: 'a', reason: 'corroborated bar beats uncorroborated' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE', barSource: 'curated' }, { bar: 'Shore Thing', barSource: 'uncorroborated' })),
+    { winner: 'a', reason: 'corroborated bar beats uncorroborated' });
+
+  // Both uncorroborated → genuine question, arbitrate as today
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE', barSource: 'uncorroborated' }, { bar: 'Shore Thing', barSource: 'uncorroborated' })),
+    null);
+
+  // Enrich flow (two scraped records): uncorroborated vs UNSTAMPED falls
+  // through — the calendar doctrine applies to the calendar flow only
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE' }, { bar: 'Shore Thing', barSource: 'uncorroborated' })),
+    null);
+
+  // Calendar flow: an unstamped (legacy) calendar bar still beats an
+  // uncorroborated scraped bar — calendar records are curated-by-usage
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE' }, { bar: 'Shore Thing', barSource: 'uncorroborated' },
+        { a: 'calendar', b: 'scraped' })),
+    { winner: 'a', reason: 'corroborated bar beats uncorroborated' });
+  // ...but an uncorroborated CALENDAR bar vs unstamped scraped is not decided here
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'Shore Thing', 'MASSIVE',
+      context({ bar: 'Shore Thing', barSource: 'uncorroborated' }, { bar: 'MASSIVE' },
+        { a: 'calendar', b: 'scraped' })),
+    null);
+
+  // Attribution caution: a stamp only speaks for the record's OWN bar value
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'Neighbours', barSource: 'page-adjacent' }, { bar: 'Shore Thing', barSource: 'uncorroborated' })),
+    null, 'a stray stamp on a different bar value decides nothing');
+
+  // Stamps missing entirely (or no records context) → byte-identical today
+  assert.equal(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE' }, { bar: 'Shore Thing' })),
+    null);
+  assert.equal(core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing'), null);
+});
+
+test('barSource is never arbitration-eligible and round-trips through notes like imageSource', () => {
+  const core = createCore();
+  assert.equal(core.isArbitrationEligibleField('barSource'), false);
+  assert.equal(core.isArbitrationEligibleField('bar'), true, 'the bar VALUE itself still arbitrates');
+
+  const notes = core.formatEventNotes({ bar: 'MASSIVE', barSource: 'page-adjacent' });
+  assert.match(notes, /barSource: page-adjacent/);
+  const parsed = core.parseNotesIntoFields(notes);
+  assert.equal(parsed.bar, 'MASSIVE');
+  assert.equal(parsed.barSource, 'page-adjacent');
+});
+
+test('incident phase 2 (enrich flow): corroborated bar beats uncorroborated in both directions — zero AI calls, stamp follows the winner', async () => {
+  const core = createCore();
+  const priorities = { bar: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const base = { title: 'BEARRACUDA SEATTLE', city: 'seattle', source: 'ai-web', _fieldPriorities: priorities };
+
+  const adapterA = buildArbitrationAdapter({});
+  const logLinesA = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLinesA.push(String(message)); };
+  let mergedA;
+  try {
+    mergedA = await core.mergeParsedEvents(
+      { ...base, bar: 'MASSIVE', barSource: 'page-adjacent' },
+      { ...base, bar: 'Shore Thing', barSource: 'uncorroborated', _parserConfig: aiParserConfig },
+      { httpAdapter: adapterA });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(adapterA.calls.length, 0, 'corroboration settles the bar without AI');
+  assert.equal(mergedA.bar, 'MASSIVE');
+  assert.equal(mergedA.barSource, 'page-adjacent', 'barSource follows the winning bar');
+  assert.ok(logLinesA.includes(
+    '🔒 MERGE: "BEARRACUDA SEATTLE" field=bar resolved deterministically — corroborated bar beats uncorroborated'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLinesA)}`);
+
+  const adapterB = buildArbitrationAdapter({});
+  const mergedB = await core.mergeParsedEvents(
+    { ...base, bar: 'Shore Thing', barSource: 'uncorroborated' },
+    { ...base, bar: 'MASSIVE', barSource: 'page-adjacent', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterB });
+  assert.equal(adapterB.calls.length, 0);
+  assert.equal(mergedB.bar, 'MASSIVE');
+  assert.equal(mergedB.barSource, 'page-adjacent',
+    'the incoming base-spread stamp is replaced by the winning side\'s');
+
+  // Both uncorroborated → the AI is consulted exactly as today
+  const adapterC = buildArbitrationAdapter({
+    bar: { pick: 'existing', value: 'MASSIVE', reason: 'venue' }
+  });
+  const mergedC = await core.mergeParsedEvents(
+    { ...base, bar: 'MASSIVE', barSource: 'uncorroborated' },
+    { ...base, bar: 'Shore Thing', barSource: 'uncorroborated', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterC });
+  assert.equal(adapterC.calls.length, 1, 'both-uncorroborated is a genuine question');
+  assert.equal(mergedC.bar, 'MASSIVE');
+});
+
+test('incident phase 2 (calendar flow): uncorroborated scraped bar never clobbers the calendar bar — stamped or legacy-unstamped', async () => {
+  const core = createCore();
+
+  // Calendar stamped page-adjacent (from a previous run's notes round-trip)
+  const stamped = buildAlignedArbitrationPair();
+  stamped.scraped.bar = 'Shore Thing';
+  stamped.scraped.barSource = 'uncorroborated';
+  stamped.existing.notes = stamped.existing.notes.replace('bar: S4', 'bar: MASSIVE\nbarSource: page-adjacent');
+  const adapterA = buildArbitrationAdapter({});
+  const finalA = await core.createFinalEventObject(stamped.existing, stamped.scraped, { httpAdapter: adapterA });
+  assert.equal(adapterA.calls.length, 0, 'no AI request at all');
+  assert.equal(finalA.bar, 'MASSIVE');
+  assert.equal(finalA.barSource, 'page-adjacent', 'the notes-parsed calendar stamp participates and survives');
+  assert.deepEqual(finalA._original.aiArbitration.deterministic, ['bar']);
+  const parsedNotesA = core.parseNotesIntoFields(finalA.notes);
+  assert.equal(parsedNotesA.bar, 'MASSIVE');
+  assert.equal(parsedNotesA.barSource, 'page-adjacent', 'the stamp persists to notes for the next run');
+
+  // Legacy calendar record with NO stamp still wins (curated-by-usage)
+  const legacy = buildAlignedArbitrationPair();
+  legacy.scraped.bar = 'Shore Thing';
+  legacy.scraped.barSource = 'uncorroborated';
+  legacy.existing.notes = legacy.existing.notes.replace('bar: S4', 'bar: MASSIVE');
+  const adapterB = buildArbitrationAdapter({});
+  const finalB = await core.createFinalEventObject(legacy.existing, legacy.scraped, { httpAdapter: adapterB });
+  assert.equal(adapterB.calls.length, 0, 'the demotion doctrine needs no AI');
+  assert.equal(finalB.bar, 'MASSIVE');
+  assert.equal(finalB.barSource, undefined, 'an unstamped winner never inherits the loser\'s stamp');
+  assert.deepEqual(finalB._original.aiArbitration.deterministic, ['bar']);
+
+  // Reverse: a corroborated SCRAPED bar beats an uncorroborated calendar bar
+  const reversed = buildAlignedArbitrationPair();
+  reversed.scraped.bar = 'MASSIVE';
+  reversed.scraped.barSource = 'page-adjacent';
+  reversed.existing.notes = reversed.existing.notes.replace('bar: S4', 'bar: Shore Thing\nbarSource: uncorroborated');
+  const adapterC = buildArbitrationAdapter({});
+  const finalC = await core.createFinalEventObject(reversed.existing, reversed.scraped, { httpAdapter: adapterC });
+  assert.equal(adapterC.calls.length, 0);
+  assert.equal(finalC.bar, 'MASSIVE', 'the corroborated scraped bar wins');
+  assert.equal(finalC.barSource, 'page-adjacent');
+
+  // Both uncorroborated → AI arbitration exactly as today
+  const contested = buildAlignedArbitrationPair();
+  contested.scraped.bar = 'Shore Thing';
+  contested.scraped.barSource = 'uncorroborated';
+  contested.existing.notes = contested.existing.notes.replace('bar: S4', 'bar: MASSIVE\nbarSource: uncorroborated');
+  const adapterD = buildArbitrationAdapter({
+    bar: { pick: 'calendar', value: 'MASSIVE', reason: 'venue' }
+  });
+  const finalD = await core.createFinalEventObject(contested.existing, contested.scraped, { httpAdapter: adapterD });
+  assert.equal(adapterD.calls.length, 1, 'both-uncorroborated still reaches the AI');
+  assert.equal(finalD.bar, 'MASSIVE');
+});
