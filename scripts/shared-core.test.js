@@ -4622,3 +4622,34 @@ test('adaptive crawl follows a scheme-less OCR ticketUrl as a fetchable https UR
   );
   assert.deepEqual(links, ['https://www.massive.club']);
 });
+
+test('merge arbitration prompt: descriptive subtitles/editions win for title; status text still loses', async () => {
+  const core = createCore();
+  let capturedPrompt = '';
+  const httpAdapter = {
+    postJson: async (endpoint, payload) => {
+      capturedPrompt = Array.isArray(payload.messages)
+        ? payload.messages.map(m => m.content).join('\n')
+        : String(payload.prompt || '');
+      const content = JSON.stringify({
+        choices: { title: { pick: 'calendar', value: 'Treasure Trail Seattle: Summer Sausage', reason: 'richer name' } }
+      });
+      return { ok: true, text: JSON.stringify({ choices: [{ message: { content } }] }) };
+    }
+  };
+  const result = await core.arbitrateMergeConflicts({
+    conflicts: [{ field: 'title', values: { calendar: 'Treasure Trail Seattle: Summer Sausage', scraped: 'Treasure Trail Seattle' } }],
+    labels: ['calendar', 'scraped'],
+    aiConfig: { enabled: true, provider: 'openai', endpoint: 'http://test.local/v1/chat/completions', model: 'test-model' },
+    httpAdapter,
+    eventContext: '"Treasure Trail Seattle" starting 2026-08-16T04:00:00.000Z'
+  });
+  // The rule set must say richer variants win (2026-07-21 run stripped
+  // ": Summer Sausage" and "Horse Meat Disco" from calendar titles)...
+  assert.match(capturedPrompt, /MORE DESCRIPTIVE/);
+  assert.match(capturedPrompt, /subtitle, theme, edition, or anniversary/);
+  // ...while status text / branding / bare-city guards stay in place.
+  assert.match(capturedPrompt, /status text \(e\.g\. sold-out notices\) or site branding/);
+  assert.match(capturedPrompt, /bare city name is not an event name/);
+  assert.deepEqual(result, { title: { pick: 'calendar', reason: 'richer name' } });
+});
