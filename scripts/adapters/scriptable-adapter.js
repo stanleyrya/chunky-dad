@@ -4550,6 +4550,9 @@ class ScriptableAdapter {
       // webview→native pattern, see presentReviewResults). Currently used by
       // the discovered-venue "Copy parser entry" buttons (chunkyscrape://).
       const venueEntrySnippets = this.collectVenueEntrySnippets(results);
+      // Manual bear/not-bear override taps recorded during the WebView session,
+      // applied after dismissal. Keyed by row id so repeat taps stay idempotent.
+      const bearOverridePending = { markedBear: {}, markedNotBear: {} };
       const webView = new WebView();
       await webView.loadHTML(html);
       webView.shouldAllowRequest = (request) => {
@@ -4564,10 +4567,28 @@ class ScriptableAdapter {
             // Fire-and-forget: the handler must return a bool synchronously
             this.copyVenueEntryAndReport(snippet, params.id, webView);
           }
+        } else if (params.a === "mark-bear" || params.a === "mark-not-bear") {
+          // Fire-and-forget: records the override natively; the page gets
+          // best-effort "Marked ✓" feedback via evaluateJavaScript.
+          this.recordBearOverrideAndReport(
+            params.a,
+            params.id,
+            results,
+            bearOverridePending,
+            webView,
+          );
         }
         return false; // cancel the fake navigation; the page stays put
       };
       await webView.present(true);
+
+      // Apply recorded overrides: marked-bear drops get the same calendar prep
+      // as normally kept events and join the write plan; marked-not-bear events
+      // are adjusted in the plan into hidden tombstones.
+      const bearOverrideCounts = await this.applyPendingBearOverrides(
+        results,
+        bearOverridePending,
+      );
 
       // After displaying results, prompt for calendar execution if we have analyzed events
       // Don't prompt when displaying saved runs (they should use isDryRun override instead)
@@ -4592,6 +4613,7 @@ class ScriptableAdapter {
           const executedCount = await this.promptForCalendarExecution(
             eventsFromActiveParsers,
             results.config,
+            bearOverrideCounts,
           );
           results.calendarEvents = executedCount;
         } else {
@@ -6045,6 +6067,10 @@ class ScriptableAdapter {
         : ""
     }
 
+    ${this.generateBearDroppedSection(results)}
+
+    ${this.generateBearKeptOverrideSection(results)}
+
     ${this.generateDiscoveredVenueSection(results)}
 
     ${this.generateDiscoverySection(results)}
@@ -6071,6 +6097,27 @@ class ScriptableAdapter {
                 if (btn) {
                     btn.textContent = '✅ Copied!';
                     setTimeout(function () { btn.textContent = '📋 Copy parser entry'; }, 2000);
+                }
+            } catch (ignore) {}
+        }
+
+        // Manual bear/not-bear override buttons use the same chunkyscrape://
+        // navigation bridge (shouldAllowRequest, set before present()); the
+        // per-tap nonce keeps repeat taps firing as distinct navigations.
+        window.__bearOverrideNonce = 0;
+        function markBearOverride(btn) {
+            var idx = btn ? (btn.getAttribute('data-bear-idx') || '') : '';
+            var act = btn ? (btn.getAttribute('data-bear-act') || '') : '';
+            if (act !== 'mark-bear' && act !== 'mark-not-bear') return;
+            window.location.href = 'chunkyscrape://act?a=' + encodeURIComponent(act) +
+                '&id=' + encodeURIComponent(idx) + '&n=' + (window.__bearOverrideNonce++);
+        }
+        function markBearOverrideDone(idx, act) {
+            try {
+                var btn = document.querySelector('.bear-override-btn[data-bear-idx="' + idx + '"][data-bear-act="' + act + '"]');
+                if (btn) {
+                    btn.textContent = act === 'mark-bear' ? 'Marked bear ✓' : 'Marked not-bear ✓';
+                    btn.disabled = true;
                 }
             } catch (ignore) {}
         }
@@ -7150,6 +7197,246 @@ class ScriptableAdapter {
     } catch (error) {
       /* button feedback is optional polish; the copy already happened */
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Manual bear/not-bear overrides (results-UI ↔ chunkyscrape:// bridge).
+  // The owner's verdict is stamped as `bearSource: manual-*` in the event's
+  // notes, so it persists on the calendar record and wins over the AI on
+  // future scrapes (see SharedCore.prepareEventsForCalendar).
+  // ---------------------------------------------------------------------------
+
+  // Compact date label for override rows ("" when absent/unparseable).
+  formatBearOverrideDate(value) {
+    if (!value) return "";
+    const date = value instanceof Date ? value : new Date(value);
+    if (isNaN(date.getTime())) return "";
+    return date.toDateString();
+  }
+
+  // "Dropped as non-bear (N)" section: enforce-mode bear-check drops with the
+  // AI's one-line reason and a "Mark bear & save" button per row. Buttons are
+  // omitted for saved-run display (no post-dismissal execution there) and for
+  // rows already rescued by a calendar manual-bear record.
+  generateBearDroppedSection(results) {
+    const entries = Array.isArray(results && results.bearDroppedEvents)
+      ? results.bearDroppedEvents
+      : [];
+    if (entries.length === 0) return "";
+    const interactive =
+      !results || results._isDisplayingSavedRun !== true;
+
+    const rows = entries
+      .map((entry, index) => {
+        if (!entry) return "";
+        const metaBits = [
+          this.formatBearOverrideDate(entry.startDate),
+          entry.venue || "",
+          entry.host ? `from ${entry.host}` : "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        const control = entry.rescued
+          ? `<span style="font-size:12px; color:var(--text-secondary);">🐻 Rescued (manual override on calendar record)</span>`
+          : interactive
+            ? `<button onclick="markBearOverride(this)" class="log-copy-btn bear-override-btn" data-bear-idx="${index}" data-bear-act="mark-bear">🐻 Mark bear &amp; save</button>`
+            : "";
+        return `
+        <div class="bear-dropped-item" style="margin-bottom:12px; padding:10px; background:var(--background-light); border-radius:8px;">
+            <div style="font-weight:600;">${this.escapeHtml(entry.title || "Unknown")}</div>
+            ${metaBits ? `<div style="font-size:12px; color:var(--text-secondary);">${this.escapeHtml(metaBits)}</div>` : ""}
+            ${entry.reason ? `<div style="font-size:12px; margin:4px 0; color:var(--text-secondary);">${this.escapeHtml(entry.reason)}</div>` : ""}
+            ${control}
+        </div>`;
+      })
+      .join("");
+
+    return `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🚫</span>
+            <span class="section-title">Dropped as non-bear</span>
+            <span class="section-count">${entries.length}</span>
+        </div>
+        ${rows}
+    </div>
+    `;
+  }
+
+  // Compact symmetric section for kept/analyzed events: each row gets a
+  // "Mark not-bear" button (per-card buttons would tangle the event-card HTML;
+  // a dedicated list keeps the bridge indexes 1:1 with results.analyzedEvents).
+  // Live runs only — saved-run display has no post-dismissal execution.
+  generateBearKeptOverrideSection(results) {
+    if (results && results._isDisplayingSavedRun === true) return "";
+    const events = Array.isArray(results && results.analyzedEvents)
+      ? results.analyzedEvents
+      : [];
+    if (events.length === 0) return "";
+
+    const rows = events
+      .map((event, index) => {
+        if (!event) return "";
+        const meta = [
+          this.formatBearOverrideDate(event.startDate),
+          event.bar || event.venue || "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        return `
+        <div class="bear-kept-item" style="display:flex; align-items:center; gap:8px; justify-content:space-between; margin-bottom:6px; padding:6px 10px; background:var(--background-light); border-radius:8px;">
+            <div style="min-width:0;">
+                <span style="font-weight:600;">${this.escapeHtml(event.title || "Unknown")}</span>
+                ${meta ? `<span style="font-size:12px; color:var(--text-secondary);"> — ${this.escapeHtml(meta)}</span>` : ""}
+            </div>
+            <button onclick="markBearOverride(this)" class="log-copy-btn bear-override-btn" data-bear-idx="${index}" data-bear-act="mark-not-bear">🚫 Mark not-bear</button>
+        </div>`;
+      })
+      .join("");
+
+    return `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🐻</span>
+            <span class="section-title">Kept as bear — mark mistakes not-bear</span>
+            <span class="section-count">${events.length}</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">Marked events are still saved to the calendar but hidden on the website, and the override sticks on future scrapes.</div>
+        ${rows}
+    </div>
+    `;
+  }
+
+  // Record one override tap natively and (best-effort) flash the row's button.
+  // Called fire-and-forget from shouldAllowRequest, which must synchronously
+  // return a bool — so the await lives here, not in the handler. Repeat taps
+  // (per-tap nonce keeps them firing) overwrite the same pending slot.
+  async recordBearOverrideAndReport(action, id, results, pending, webView) {
+    try {
+      const key = String(id || "");
+      const index = Number(key);
+      if (!Number.isInteger(index) || index < 0) return;
+      let title = "";
+      if (action === "mark-bear") {
+        const entries = Array.isArray(results && results.bearDroppedEvents)
+          ? results.bearDroppedEvents
+          : [];
+        const entry = entries[index];
+        if (!entry || !entry.event || entry.rescued) return;
+        pending.markedBear[key] = entry;
+        title = entry.title || "";
+      } else {
+        const events = Array.isArray(results && results.analyzedEvents)
+          ? results.analyzedEvents
+          : [];
+        const event = events[index];
+        if (!event) return;
+        pending.markedNotBear[key] = event;
+        title = event.title || "";
+      }
+      console.log(
+        `📱 Scriptable: Bear override tapped — ${action} #${key} "${title}"`,
+      );
+      const feedbackJs = `markBearOverrideDone(${JSON.stringify(key)}, ${JSON.stringify(String(action))})`;
+      try {
+        await webView.evaluateJavaScript(feedbackJs, false);
+      } catch (error) {
+        /* in-page feedback is optional polish; the override is recorded */
+      }
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to record bear override: ${error.message}`,
+      );
+    }
+  }
+
+  // Apply the overrides recorded during the WebView session. Returns
+  // { markedBear, markedNotBear } counts for the execution-confirmation Alert.
+  async applyPendingBearOverrides(results, pending) {
+    const counts = { markedBear: 0, markedNotBear: 0 };
+    const markedBearIds = Object.keys(
+      pending && pending.markedBear ? pending.markedBear : {},
+    );
+    const markedNotBearIds = Object.keys(
+      pending && pending.markedNotBear ? pending.markedNotBear : {},
+    );
+    if (markedBearIds.length === 0 && markedNotBearIds.length === 0) {
+      return counts;
+    }
+    const core = this.getIdentityCore();
+    if (!core) {
+      console.warn(
+        "📱 Scriptable: Bear overrides skipped (identity core failed to initialize)",
+      );
+      return counts;
+    }
+
+    // Marked not-bear: the analyzed event stays in the write plan but is
+    // adjusted in place — its one write stamps the hidden tombstone (the
+    // bearReview flag the website already hides, plus bearSource manual-*).
+    for (const id of markedNotBearIds) {
+      const event = pending.markedNotBear[id];
+      if (!event) continue;
+      const overriddenReason =
+        typeof event.bearReview === "string" && event.bearReview
+          ? event.bearReview
+          : typeof event.bearSource === "string" && event.bearSource
+            ? `${event.bearSource} verdict`
+            : "";
+      event.bearSource = SharedCore.buildManualBearSource(
+        "not-bear",
+        overriddenReason,
+      );
+      if (!/^(unlikely|unsure)/i.test(String(event.bearReview || "").trim())) {
+        event.bearReview = "unlikely — manual: marked not-bear by calendar owner";
+      }
+      event.notes = core.formatEventNotes(event);
+      counts.markedNotBear += 1;
+      console.log(
+        `📱 Scriptable: Manual override — "${event.title || "Unknown"}" marked not-bear (hidden tombstone will be written)`,
+      );
+    }
+
+    // Marked bear: stamp the manual verdict, then run the SAME calendar prep
+    // (calendar assignment + merge analysis) the normal flow uses so these
+    // late-added events join the write plan as fully analyzed events.
+    const toPrep = [];
+    for (const id of markedBearIds) {
+      const entry = pending.markedBear[id];
+      if (!entry || !entry.event) continue;
+      toPrep.push({
+        ...entry.event,
+        isBearEvent: true,
+        bearSource: SharedCore.buildManualBearSource("bear", entry.reason),
+      });
+      entry.manuallyMarkedBear = true;
+    }
+    if (toPrep.length > 0) {
+      try {
+        const globalConfig =
+          (results && results.config && results.config.config) || {};
+        const prepped = await core.prepareEventsForCalendar(
+          toPrep,
+          this,
+          globalConfig,
+        );
+        if (!Array.isArray(results.analyzedEvents)) {
+          results.analyzedEvents = [];
+        }
+        results.analyzedEvents.push(...prepped);
+        counts.markedBear = prepped.length;
+        prepped.forEach((event) =>
+          console.log(
+            `📱 Scriptable: Manual override — "${event.title || "Unknown"}" marked bear and prepped for calendar (${event._action || "new"})`,
+          ),
+        );
+      } catch (error) {
+        console.warn(
+          `📱 Scriptable: Manual bear override prep failed: ${error.message}`,
+        );
+      }
+    }
+    return counts;
   }
 
   // Generate HTML for URL discovery section (discoveryOnly mode results)
@@ -8734,7 +9021,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   }
 
   // Prompt user for calendar execution after displaying results
-  async promptForCalendarExecution(analyzedEvents, config) {
+  async promptForCalendarExecution(analyzedEvents, config, overrideCounts = null) {
     if (!analyzedEvents || analyzedEvents.length === 0) {
       return false;
     }
@@ -8742,7 +9029,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     const alert = new Alert();
     alert.title = "Execute Calendar Actions?";
 
-    // Count actions by type (intent and write)
+    // Count actions by type (intent and write) — analyzedEvents already
+    // includes manually marked-bear rescues and adjusted not-bear tombstones,
+    // so these counts reflect the adjusted plan.
     const intentCounts = this.countMetricsActions(analyzedEvents);
     const writeCounts = this.countMetricsCalendarActions(analyzedEvents);
 
@@ -8762,6 +9051,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (writeCounts.skip) message += `⚠️ Skip ${writeCounts.skip} events\n`;
     if (writeCounts.other)
       message += `❓ Other write actions: ${writeCounts.other}\n`;
+    if (
+      overrideCounts &&
+      (overrideCounts.markedBear || overrideCounts.markedNotBear)
+    ) {
+      message += `\n🐻 Manual overrides: ${overrideCounts.markedBear || 0} marked bear, ${overrideCounts.markedNotBear || 0} marked not-bear (hidden)\n`;
+    }
 
     alert.message = message;
     alert.addAction("Execute");

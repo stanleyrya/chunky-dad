@@ -327,22 +327,44 @@ class BearEventScraperOrchestrator {
                 results.analyzedEvents = [];
             }
 
-            // Add to calendar if not dry run and we have events
-            if (results.allProcessedEvents && results.allProcessedEvents.length > 0) {
+            // Add to calendar if not dry run and we have events. Enforce-mode
+            // bear-check drops still get their prep-time manual-override check
+            // (a calendar record stamped `bearSource: manual-bear…` rescues
+            // them) even when every scraped event was dropped.
+            const hasBearDrops = Array.isArray(results.bearDroppedEvents) && results.bearDroppedEvents.length > 0;
+            if ((results.allProcessedEvents && results.allProcessedEvents.length > 0) || hasBearDrops) {
                 console.log(`🐻 Orchestrator: Preparing ${results.allProcessedEvents.length} events for calendar...`);
 
                 let calendarEvents = 0;
 
                 // Check if we should add to calendar
                 const isDryRun = Boolean(config.config?.dryRun);
-                
+
                 // Always prepare events for analysis (even in dry run mode) to show action types
                 // Perform cross-parser deduplication to merge events from different parsers
                 const deduplicatedEvents = await sharedCore.deduplicateEvents(results.allProcessedEvents, finalAdapter, config.config);
-                
-                const analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config);
+
+                // Manual bear/not-bear overrides stored on calendar records win
+                // over this run's automatic verdicts, in both directions.
+                const bearOverrideContext = {
+                    droppedEvents: hasBearDrops ? results.bearDroppedEvents : [],
+                    demoted: [],
+                    rescued: []
+                };
+
+                const analyzedEvents = await sharedCore.prepareEventsForCalendar(deduplicatedEvents, finalAdapter, config.config, bearOverrideContext);
                 console.log(`🐻 Orchestrator: Calendar analysis complete (${deduplicatedEvents.length} unique)`);
-                
+
+                // Demoted events (kept by the cascade, overridden by a calendar
+                // manual-not-bear record) surface alongside the cascade's drops;
+                // rescued drops are already flagged `rescued` on their entries.
+                if (bearOverrideContext.demoted.length > 0) {
+                    if (!Array.isArray(results.bearDroppedEvents)) {
+                        results.bearDroppedEvents = [];
+                    }
+                    results.bearDroppedEvents.push(...bearOverrideContext.demoted);
+                }
+
                 // Store analyzed events back into results for display
                 results.analyzedEvents = analyzedEvents;
                 

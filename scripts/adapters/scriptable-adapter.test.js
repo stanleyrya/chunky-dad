@@ -1328,3 +1328,161 @@ test('presentRichResults copies a venue parser entry natively via shouldAllowReq
     delete global.Pasteboard;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Manual bear/not-bear overrides: results-UI sections + chunkyscrape:// bridge
+// ---------------------------------------------------------------------------
+
+const { EventSchema: TestEventSchema } = require(path.join(__dirname, '..', 'event-schema'));
+
+function buildBearDroppedFixture() {
+  return {
+    title: 'Twink Bash',
+    startDate: '2026-08-02T21:00:00.000Z',
+    venue: 'Neon Room',
+    reason: 'ai: drag show, no bear context',
+    host: 'promoter.example',
+    event: {
+      title: 'Twink Bash',
+      startDate: '2026-08-02T21:00:00.000Z',
+      bar: 'Neon Room',
+      city: 'dallas'
+    }
+  };
+}
+
+test('parseReviewActionUrl decodes mark-bear/mark-not-bear actions with their nonce', () => {
+  const adapter = buildAdapter();
+  const markBear = adapter.parseReviewActionUrl('chunkyscrape://act?a=mark-bear&id=3&n=7');
+  assert.equal(markBear.a, 'mark-bear');
+  assert.equal(markBear.id, '3');
+  assert.equal(markBear.n, '7');
+  const markNotBear = adapter.parseReviewActionUrl('chunkyscrape://act?a=mark-not-bear&id=0&n=12');
+  assert.equal(markNotBear.a, 'mark-not-bear');
+  assert.equal(markNotBear.id, '0');
+  assert.equal(markNotBear.n, '12');
+});
+
+test('generateBearDroppedSection renders drops with reason and button only when drops exist', () => {
+  const adapter = buildAdapter();
+
+  assert.equal(adapter.generateBearDroppedSection({}), '', 'no section without drops');
+  assert.equal(adapter.generateBearDroppedSection({ bearDroppedEvents: [] }), '', 'no section for an empty list');
+
+  const html = adapter.generateBearDroppedSection({ bearDroppedEvents: [buildBearDroppedFixture()] });
+  assert.ok(html.includes('Dropped as non-bear'), 'section title present');
+  assert.ok(html.includes('Twink Bash'), 'title shown');
+  assert.ok(html.includes('Neon Room'), 'venue shown');
+  assert.ok(html.includes('ai: drag show, no bear context'), 'AI reason shown');
+  assert.ok(html.includes('from promoter.example'), 'source host shown');
+  assert.ok(html.includes('data-bear-idx="0"'), 'row index carried on the button');
+  assert.ok(html.includes('data-bear-act="mark-bear"'), 'mark-bear action wired');
+  assert.ok(html.includes('markBearOverride(this)'), 'button signals via the bridge');
+
+  // A rescued row shows its badge instead of a button
+  const rescuedHtml = adapter.generateBearDroppedSection({
+    bearDroppedEvents: [{ ...buildBearDroppedFixture(), rescued: true }]
+  });
+  assert.ok(rescuedHtml.includes('Rescued (manual override on calendar record)'));
+  assert.ok(!rescuedHtml.includes('data-bear-act="mark-bear"'), 'no button on rescued rows');
+
+  // Saved-run display lists the drops but offers no buttons
+  const savedHtml = adapter.generateBearDroppedSection({
+    _isDisplayingSavedRun: true,
+    bearDroppedEvents: [buildBearDroppedFixture()]
+  });
+  assert.ok(savedHtml.includes('Twink Bash'));
+  assert.ok(!savedHtml.includes('data-bear-act="mark-bear"'));
+});
+
+test('generateBearKeptOverrideSection lists kept events with mark-not-bear buttons on live runs only', () => {
+  const adapter = buildAdapter();
+  const results = buildResultsStub();
+
+  const html = adapter.generateBearKeptOverrideSection(results);
+  assert.ok(html.includes('mark mistakes not-bear'), 'section title present');
+  assert.ok(html.includes('data-bear-idx="0"'));
+  assert.ok(html.includes('data-bear-idx="1"'));
+  assert.ok(html.includes('data-bear-act="mark-not-bear"'));
+
+  assert.equal(
+    adapter.generateBearKeptOverrideSection({ ...results, _isDisplayingSavedRun: true }),
+    '',
+    'saved-run display has no post-dismissal execution, so no buttons'
+  );
+  assert.equal(adapter.generateBearKeptOverrideSection({ analyzedEvents: [] }), '');
+});
+
+test('generateRichHTML embeds the dropped section only when bearDroppedEvents is non-empty', async () => {
+  const adapter = buildAdapter();
+  const withDrops = await adapter.generateRichHTML({
+    ...buildResultsStub(),
+    bearDroppedEvents: [buildBearDroppedFixture()]
+  });
+  assert.ok(withDrops.includes('Dropped as non-bear'), 'dropped section present');
+  assert.ok(withDrops.includes('chunkyscrape://act?a='), 'override buttons signal via the custom scheme');
+  assert.ok(withDrops.includes('__bearOverrideNonce'), 'per-tap nonce keeps repeat taps distinct navigations');
+  assert.ok(withDrops.includes('markBearOverrideDone'), 'best-effort feedback handler defined');
+
+  const withoutDrops = await adapter.generateRichHTML(buildResultsStub());
+  assert.ok(!withoutDrops.includes('Dropped as non-bear'), 'no dropped section without drops');
+});
+
+test('presentRichResults records override taps and applies them after dismissal', async () => {
+  const adapter = buildAdapter();
+  const droppedEntry = buildBearDroppedFixture();
+  // calendarEvents already set → the execution prompt path is skipped
+  const results = {
+    ...buildResultsStub(),
+    calendarEvents: 1,
+    config: { config: {} },
+    bearDroppedEvents: [droppedEntry]
+  };
+  const keptEvent = results.analyzedEvents[0];
+
+  const wv = installFakeWebView();
+  try {
+    const done = adapter.presentRichResults(results);
+    for (let i = 0; i < 200 && !wv.getHandler(); i++) {
+      await new Promise((r) => setImmediate(r));
+    }
+    assert.ok(wv.getHandler(), 'shouldAllowRequest assigned before present()');
+
+    // Taps: rescue the dropped event, bury a kept one. Navigation cancelled.
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-bear&id=0&n=1'), false);
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-not-bear&id=0&n=2'), false);
+    await new Promise((r) => setImmediate(r));
+    assert.ok(
+      wv.evals.some((js) => js.includes('markBearOverrideDone("0", "mark-bear")')),
+      'in-page "Marked" feedback pushed (best-effort)'
+    );
+
+    // Out-of-range ids are ignored without crashing.
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-bear&id=99&n=3'), false);
+
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+  }
+
+  // Marked not-bear: adjusted in the plan as a hidden tombstone — the
+  // bearReview flag matches the exact regex the website hides on
+  // (js/calendar-core.js isHiddenForBearReview) plus bearSource manual-*.
+  assert.ok(/^(unlikely|unsure)/i.test(keptEvent.bearReview), 'tombstone carries the site-hidden bearReview flag');
+  assert.ok(String(keptEvent.bearSource).startsWith('manual-not-bear'), 'manual verdict stamped');
+  const tombstoneFields = TestEventSchema.parseNotesIntoFields(keptEvent.notes);
+  assert.equal(tombstoneFields.bearSource, keptEvent.bearSource, 'bearSource persisted in notes');
+  assert.equal(tombstoneFields.bearReview, keptEvent.bearReview, 'hide flag persisted in notes');
+
+  // Marked bear: prepped through the normal calendar flow and appended to the
+  // plan (the stubbed environment yields action "new").
+  assert.equal(results.analyzedEvents.length, 3, 'rescued event joined the plan');
+  const rescued = results.analyzedEvents[2];
+  assert.equal(rescued.title, 'Twink Bash');
+  assert.equal(rescued._action, 'new');
+  assert.equal(rescued.isBearEvent, true);
+  assert.ok(String(rescued.bearSource).startsWith('manual-bear (overrode ai: drag show'), 'manual verdict records what it overrode');
+  assert.equal(TestEventSchema.parseNotesIntoFields(rescued.notes).bearSource, rescued.bearSource);
+  assert.equal(droppedEntry.manuallyMarkedBear, true);
+});

@@ -377,9 +377,45 @@ class SharedCore {
         // finalized location/address deterministically (see setProvenanceSource
         // in createFinalEventObject) — never sent to the AI, so a hand-fixed
         // pin/address is never relabeled with a source the scrape didn't produce.
+        // bearSource is bear-verdict provenance (keyword/ai/config or a
+        // manual-* owner override) — like pinSource it is metadata about how a
+        // value was decided, never content the AI may arbitrate; its merge is
+        // resolved deterministically in createFinalEventObject so a manual
+        // override can never be relabeled by a scraped verdict.
         return name !== 'key' && name !== 'notes' && name !== 'source'
             && name !== 'location' && name !== 'gmaps'
-            && name !== 'pinSource' && name !== 'addressSource';
+            && name !== 'pinSource' && name !== 'addressSource'
+            && name !== 'bearSource';
+    }
+
+    // True when a bearSource value records the calendar owner's manual verdict
+    // ("manual-bear ..." / "manual-not-bear ..." as stamped by the results UI).
+    isManualBearSource(value) {
+        return typeof value === 'string' && value.trim().toLowerCase().startsWith('manual-');
+    }
+
+    // The owner's manual verdict stored on a calendar record's notes, or null.
+    // Accepts any object carrying `notes` (Scriptable CalendarEvent or plain).
+    getManualBearVerdictFromRecord(record) {
+        if (!record || typeof record !== 'object') return null;
+        const fields = this.parseNotesIntoFields(record.notes || '');
+        const value = typeof fields.bearSource === 'string' ? fields.bearSource.trim().toLowerCase() : '';
+        if (value.startsWith('manual-not-bear')) return 'manual-not-bear';
+        if (value.startsWith('manual-bear')) return 'manual-bear';
+        return null;
+    }
+
+    // One-line manual bearSource value: `manual-bear (overrode ai: <reason>)` /
+    // `manual-not-bear (overrode ai: <reason>)`, reason truncated to ~80 chars.
+    static buildManualBearSource(direction, overriddenReason) {
+        const label = direction === 'bear' ? 'manual-bear' : 'manual-not-bear';
+        let reason = String(overriddenReason || '').replace(/\s+/g, ' ').trim();
+        // The stored verdict reasons are prefixed with their cascade tier
+        // ("ai: drag show") — the label already says "overrode ai", so strip it.
+        reason = reason.replace(/^ai:\s*/i, '');
+        if (!reason) return label;
+        if (reason.length > 80) reason = `${reason.slice(0, 77)}...`;
+        return `${label} (overrode ai: ${reason})`;
     }
 
     // Provenance (pinSource/addressSource) follows the finalized value: whichever
@@ -995,7 +1031,11 @@ class SharedCore {
             duplicatesRemoved: 0,
             errors: [],
             parserResults: [],
-            allProcessedEvents: [] // All events ready for calendar
+            allProcessedEvents: [], // All events ready for calendar
+            // Enforce-mode bear-check drops, surfaced for the results UI and the
+            // prep-time manual-override check. Never enter the write plan,
+            // dedup, or calendar analysis by default.
+            bearDroppedEvents: []
         };
         const disabledParsers = [];
         const automationContext = this.resolveAutomationContext(config);
@@ -1058,7 +1098,21 @@ class SharedCore {
                     });
                     results.allProcessedEvents.push(...parserResult.events);
                 }
-                
+
+                // Aggregate enforce-mode bear-check drops. Their event objects
+                // carry the effective parser config too — a prep-time manual
+                // rescue needs calendar assignment and dry-run filtering to
+                // behave exactly like a normally kept event.
+                if (Array.isArray(parserResult.bearDroppedEvents) && parserResult.bearDroppedEvents.length > 0) {
+                    const stampedConfig = parserResult.config || parserConfig;
+                    for (const dropped of parserResult.bearDroppedEvents) {
+                        if (dropped && dropped.event && Object.isExtensible(dropped.event)) {
+                            dropped.event._parserConfig = stampedConfig;
+                        }
+                    }
+                    results.bearDroppedEvents.push(...parserResult.bearDroppedEvents);
+                }
+
                 await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${parserResult.bearEvents} bear events`);
                 
             } catch (error) {
@@ -1204,9 +1258,11 @@ class SharedCore {
 
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
-        // Filter and process events
+        // Filter and process events. Enforce-mode bear-check drops are carried
+        // through to results (flag, don't drop) — never into the write plan.
+        const bearDropCollector = [];
         const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
-        const bearEvents = await this.filterBearEvents(futureEvents, effectiveParserConfig, httpAdapter);
+        const bearEvents = await this.filterBearEvents(futureEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
         const deduplicatedEvents = await this.deduplicateEvents(bearEvents, httpAdapter, mainConfig?.config || mainConfig || null);
         
         // Calculate deduplication stats
@@ -1230,6 +1286,10 @@ class SharedCore {
 
         if (enrichDropCollector.length > 0) {
             result.enrichOnlyDrops = enrichDropCollector;
+        }
+
+        if (bearDropCollector.length > 0) {
+            result.bearDroppedEvents = bearDropCollector;
         }
 
         if (discoveryOnly && discoveryTreeCollector) {
@@ -2457,7 +2517,7 @@ class SharedCore {
     // would-be decision while returning exactly today's behavior; 'enforce'
     // keeps/flags/rescues/drops on the cascade's decisions; 'off' is exact
     // legacy behavior (alwaysBear bypass, keyword filter) with no new logs.
-    async filterBearEvents(events, parserConfig, httpAdapter = null) {
+    async filterBearEvents(events, parserConfig, httpAdapter = null, dropCollector = null) {
         const legacyFilter = () => parserConfig.alwaysBear
             ? events.map(event => ({...event, isBearEvent: true}))
             : events.filter(event => this.isBearEvent(event, parserConfig));
@@ -2483,10 +2543,32 @@ class SharedCore {
                     ? ' (would-rescue — legacy keyword filter still drops it)'
                     : '';
                 console.log(`🐻 BEAR CHECK${tag}: "${title}" → bear (${decision.provenance})${rescueNote}`);
-                kept.push({...event, isBearEvent: true});
+                // bearSource provenance stamp (notes-serialized like pinSource):
+                // records which cascade tier produced the bear verdict so a
+                // later manual override can say what it overrode.
+                const bearSource = decision.provenance.startsWith('keyword:') ? 'keyword'
+                    : decision.provenance.startsWith('ai:') ? 'ai'
+                        : decision.provenance.startsWith('config:') ? 'config'
+                            : '';
+                kept.push(bearSource
+                    ? {...event, isBearEvent: true, bearSource}
+                    : {...event, isBearEvent: true});
             } else if (decision.result === 'not_bear' && !trusted) {
                 counts.dropped++;
                 console.log(`🐻 BEAR CHECK${tag}: "${title}" → DROP (${decision.provenance})`);
+                // Flag, don't drop silently: enforce-mode drops are surfaced to
+                // the results UI (and prep-time manual-override rescue) via the
+                // caller's collector. Report mode changes nothing.
+                if (dropCollector && mode === 'enforce') {
+                    dropCollector.push({
+                        title,
+                        startDate: event.startDate || event.date || null,
+                        venue: event.bar || event.venue || '',
+                        reason: decision.provenance,
+                        host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
+                        event: { ...event }
+                    });
+                }
             } else {
                 // alwaysBear sources never lose events: not_bear/unsure is kept
                 // with a review flag; untrusted unsure is likewise kept+flagged.
@@ -3502,9 +3584,39 @@ class SharedCore {
             // the field never enters clobber/arbitration tracking (a fresh flag
             // differing from the human's edit would otherwise churn every run).
             if (fieldName === 'bearReview') {
+                // Exception to calendar-wins: a fresh manual-bear override from
+                // the results UI is the owner's newest verdict — it must clear a
+                // stored hide/review flag (e.g. a manual-not-bear tombstone's
+                // "unlikely — …" flag), or the rescued event stays hidden.
+                const scraperBearSource = typeof scraperObject.bearSource === 'string'
+                    ? scraperObject.bearSource.trim().toLowerCase()
+                    : '';
+                if (scraperBearSource.startsWith('manual-bear')) {
+                    if (!this.isEmptyArbitrationValue(scraperValue)) {
+                        mergedObject[fieldName] = scraperValue;
+                    }
+                    continue;
+                }
                 mergedObject[fieldName] = !this.isEmptyArbitrationValue(calendarValue)
                     ? calendarValue
                     : scraperValue;
+                continue;
+            }
+
+            // bearSource is bear-verdict provenance, resolved deterministically
+            // (never arbitrated, see isArbitrationEligibleField): a freshly
+            // tapped manual-* override (scraped side) is the owner's newest
+            // word and wins; otherwise a stored manual-* value is never
+            // clobbered by an automatic keyword/ai/config stamp; otherwise the
+            // fresh automatic verdict follows this run's cascade decision.
+            if (fieldName === 'bearSource') {
+                if (this.isManualBearSource(scraperValue)) {
+                    mergedObject[fieldName] = scraperValue;
+                } else if (this.isManualBearSource(calendarValue) || this.isEmptyArbitrationValue(scraperValue)) {
+                    mergedObject[fieldName] = calendarValue;
+                } else {
+                    mergedObject[fieldName] = scraperValue;
+                }
                 continue;
             }
 
@@ -4932,22 +5044,84 @@ class SharedCore {
     }
 
     // Prepare events for calendar integration with conflict analysis
-    async prepareEventsForCalendar(events, calendarAdapter, config = {}) {
+    async prepareEventsForCalendar(events, calendarAdapter, config = {}, bearOverrideContext = null) {
         // Events are already properly formatted - no need for additional formatting
-        
+
+        // Use default merge mode since parser-level mergeMode is handled by field priorities
+        const mergeMode = config.mergeMode || 'upsert';
+
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
-        
+
         for (const event of events) {
-            // Use default merge mode since parser-level mergeMode is handled by field priorities
-            const mergeMode = config.mergeMode || 'upsert';
-            
             // Get existing events from the adapter
             const existingEvents = await calendarAdapter.getExistingEvents(event);
-            
+
             // Analyze what action to take
             const analysis = this.analyzeEventAction(event, existingEvents, mergeMode);
-            
+
+            // Manual override, demote direction: a kept event whose identity-
+            // matched calendar record carries `bearSource: manual-not-bear…` is
+            // NOT merged/written — the calendar record stays as-is (the hidden
+            // tombstone) and the event surfaces as an overridden drop instead.
+            // A scraped manual-* verdict (a fresh owner tap from the results
+            // UI) is newer than the stored one and is never demoted by it.
+            // Reuses the existing-event search prep just performed — no extra
+            // calendar scans.
+            if (bearOverrideContext && !this.isManualBearSource(event.bearSource)) {
+                const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
+                if (matchedRecord && this.getManualBearVerdictFromRecord(matchedRecord) === 'manual-not-bear') {
+                    console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" → not_bear (manual override on calendar record)`);
+                    if (Array.isArray(bearOverrideContext.demoted)) {
+                        bearOverrideContext.demoted.push({
+                            title: event.title || 'Unknown',
+                            startDate: event.startDate || null,
+                            venue: event.bar || event.venue || '',
+                            reason: 'manual-not-bear (manual override on calendar record)',
+                            host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
+                            event: { ...event },
+                            demoted: true
+                        });
+                    }
+                    continue;
+                }
+            }
+
+            analyzedEvents.push(await this.buildAnalyzedCalendarEvent(event, analysis, calendarAdapter, config));
+        }
+
+        // Manual override, rescue direction: an enforce-mode dropped event whose
+        // identity-matched calendar record carries `bearSource: manual-bear…`
+        // is treated as kept and proceeds through the normal merge/write path.
+        // Only ambiguous (dropped) events get this one extra existing-event
+        // search — absence of a match simply means the drop stands.
+        if (bearOverrideContext && Array.isArray(bearOverrideContext.droppedEvents)) {
+            for (const dropped of bearOverrideContext.droppedEvents) {
+                const droppedEvent = dropped && dropped.event;
+                if (!droppedEvent || dropped.rescued) continue;
+                const existingEvents = await calendarAdapter.getExistingEvents(droppedEvent);
+                const analysis = this.analyzeEventAction(droppedEvent, existingEvents, mergeMode);
+                const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
+                if (!matchedRecord || this.getManualBearVerdictFromRecord(matchedRecord) !== 'manual-bear') continue;
+                console.log(`🐻 BEAR CHECK: "${droppedEvent.title || 'Unknown'}" → bear (manual override on calendar record)`);
+                const rescuedEvent = { ...droppedEvent, isBearEvent: true };
+                analyzedEvents.push(await this.buildAnalyzedCalendarEvent(rescuedEvent, analysis, calendarAdapter, config));
+                dropped.rescued = true;
+                if (Array.isArray(bearOverrideContext.rescued)) {
+                    bearOverrideContext.rescued.push(dropped);
+                }
+            }
+        }
+
+        return analyzedEvents;
+    }
+
+    // One event's calendar-prep analysis (extracted from prepareEventsForCalendar
+    // so manually rescued events run the exact same merge/diff pipeline).
+    async buildAnalyzedCalendarEvent(event, analysis, calendarAdapter, config = {}) {
+        // (Block wrapper keeps the extracted loop body byte-identical to its
+        // original prepareEventsForCalendar form — minimal, reviewable diff.)
+        {
             // Create a new object with all properties to avoid readonly errors
             let analyzedEvent = { ...event };
             
@@ -5071,13 +5245,11 @@ class SharedCore {
             if (!analyzedEvent.notes) {
                 analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
             }
-            
-            analyzedEvents.push(analyzedEvent);
+
+            return analyzedEvent;
         }
-        
-        return analyzedEvents;
     }
-    
+
     // Analyze events against existing calendar events and determine actions
     // This is pure business logic - adapters provide the existing events data
     analyzeEventActions(newEvents, existingEventsData) {
